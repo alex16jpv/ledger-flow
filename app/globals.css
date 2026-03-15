@@ -1,1 +1,117 @@
 @import "tailwindcss";
+
+@theme {
+  /* Font Families */
+  --font-display: "Playfair Display", serif;
+  --font-sans: "DM Sans", sans-serif;
+  --font-mono: "DM Mono", monospace;
+
+  /* Teal */
+  --color-teal-50: #e1f5ee;
+  --color-teal-100: #9fe1cb;
+  --color-teal-400: #1d9e75;
+  --color-teal-600: #0f6e56;
+  --color-teal-800: #085041;
+
+  /* Amber */
+  --color-amber-50: #faeeda;
+  --color-amber-200: #fac775;
+  --color-amber-400: #ba7517;
+  --color-amber-600: #854f0b;
+
+  /* Red */
+  --color-red-50: #fcebeb;
+  --color-red-400: #e24b4a;
+  --color-red-600: #a32d2d;
+
+  /* Purple */
+  --color-purple-50: #eeedfe;
+  --color-purple-200: #afa9ec;
+  --color-purple-400: #7f77dd;
+  --color-purple-600: #534ab7;
+  --color-purple-800: #3c3489;
+
+  /* Blue */
+  --color-blue-50: #e6f1fb;
+  --color-blue-100: #b5d4f4;
+  --color-blue-400: #378add;
+  --color-blue-600: #185fa5;
+
+  /* Stone */
+  --color-stone-50: #f1efe8;
+  --color-stone-100: #d3d1c7;
+  --color-stone-200: #b4b2a9;
+  --color-stone-400: #888780;
+  --color-stone-600: #5f5e5a;
+  --color-stone-800: #444441;
+  --color-stone-900: #2c2c2a;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  font-family: "DM Sans", sans-serif;
+  margin: 0;
+}
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d3d1c7;
+  border-radius: 2px;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #5f5e5a;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  white-space: nowrap;
+}
+.nav-link:hover {
+  background: #f1efe8;
+  color: #444441;
+}
+.nav-link.active {
+  background: #e1f5ee;
+  color: #085041;
+  font-weight: 500;
+}
+.nav-link.active .nav-dot {
+  background: #1d9e75;
+}
+.progress-track {
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #f1efe8;
+}
+.sparkline {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+.spark-bar {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  min-height: 3px;
+}
