@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function BottomNav() {
   return (
     <>
@@ -7,60 +9,58 @@ export default function BottomNav() {
       >
         <ul className="flex justify-around py-2" role="list">
           <li>
-            <a
-              href="01-dashboard.html"
+            <Link
+              href="/dashboard"
               className="flex flex-col items-center gap-1 px-3 py-1"
             >
               <span className="text-lg leading-none">⊞</span>
               <span className="w-1 h-1 rounded-full bg-teal-400"></span>
-              <span className="font-mono text-[10px] text-teal-600">
-                inicio
-              </span>
-            </a>
+              <span className="font-mono text-[10px] text-teal-600">Home</span>
+            </Link>
           </li>
           <li>
-            <a
-              href="04-movimientos.html"
+            <Link
+              href="/transactions"
               className="flex flex-col items-center gap-1 px-3 py-1"
             >
               <span className="text-lg leading-none">↕</span>
               <span className="font-mono text-[10px] text-stone-400">
-                movimientos
+                Transactions
               </span>
-            </a>
+            </Link>
           </li>
           <li>
-            <a
-              href="03-cuentas.html"
+            <Link
+              href="/accounts"
               className="flex flex-col items-center gap-1 px-3 py-1"
             >
               <span className="text-lg leading-none">◈</span>
               <span className="font-mono text-[10px] text-stone-400">
-                cuentas
+                Accounts
               </span>
-            </a>
+            </Link>
           </li>
           <li>
-            <a
-              href="05-budgets.html"
+            <Link
+              href="/budgets"
               className="flex flex-col items-center gap-1 px-3 py-1"
             >
               <span className="text-lg leading-none">◎</span>
               <span className="font-mono text-[10px] text-stone-400">
-                budgets
+                Budgets
               </span>
-            </a>
+            </Link>
           </li>
           <li>
-            <a
-              href="06-reportes.html"
+            <Link
+              href="/reports"
               className="flex flex-col items-center gap-1 px-3 py-1"
             >
               <span className="text-lg leading-none">⌇</span>
               <span className="font-mono text-[10px] text-stone-400">
-                reportes
+                Reports
               </span>
-            </a>
+            </Link>
           </li>
         </ul>
       </nav>

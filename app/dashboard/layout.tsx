@@ -1,6 +1,6 @@
-import Sidebar from "../components/sidebar";
-import Header from "../components/header";
-import BottomNav from "../components/bottomNav";
+import Sidebar from "@/components/sidebar";
+import Header from "@/components/header";
+import BottomNav from "@/components/bottomNav";
 
 export default function DashboardLayout({
   children,
