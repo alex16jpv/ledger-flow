@@ -11,9 +11,11 @@ export default function DashboardLayout({
 }>) {
   return (
     <>
+      {/* App Container */}
       <div className="flex min-h-screen">
         <Sidebar />
 
+        {/* Main Container */}
         <div className="flex-1 flex flex-col lg:ml-56 xl:ml-60 min-h-screen">
           <Header
             title="Dashboard"

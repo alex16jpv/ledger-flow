@@ -115,3 +115,260 @@ body {
   border-radius: 2px 2px 0 0;
   min-height: 3px;
 }
+
+/*  */
+
+/* ── Field label ── */
+.field-label {
+  font-family: "DM Mono", monospace;
+  font-size: 11px;
+  color: #888780;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* ── Shared input base ── */
+.input-base {
+  width: 100%;
+  background: #f1efe8;
+  border: 1.5px solid #d3d1c7;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: "DM Sans", sans-serif;
+  font-size: 14px;
+  color: #444441;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.input-base::placeholder {
+  color: #b4b2a9;
+}
+.input-base:focus {
+  border-color: #1d9e75;
+  box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.12);
+  background: #fff;
+}
+.input-base:hover:not(:focus) {
+  border-color: #888780;
+}
+
+/* ── Select arrow ── */
+.select-wrap {
+  position: relative;
+}
+.select-wrap::after {
+  content: "▾";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888780;
+  font-size: 12px;
+  pointer-events: none;
+}
+.select-wrap select {
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+/* ── Amount input — large ── */
+.input-amount {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: "Playfair Display", serif;
+  font-size: clamp(28px, 5vw, 48px);
+  font-weight: 500;
+  color: #444441;
+  text-align: center;
+  padding: 8px 0;
+  transition: color 0.15s;
+}
+.input-amount::placeholder {
+  color: #d3d1c7;
+}
+.input-amount:focus {
+  color: #085041;
+}
+/* Remove number input arrows */
+.input-amount::-webkit-outer-spin-button,
+.input-amount::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.input-amount[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ── Amount wrapper ── */
+.amount-wrapper {
+  background: #f1efe8;
+  border: 1.5px solid #d3d1c7;
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+.amount-wrapper:focus-within {
+  border-color: #1d9e75;
+  box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.12);
+  background: #fff;
+}
+.amount-currency {
+  font-family: "Playfair Display", serif;
+  font-size: clamp(20px, 3vw, 32px);
+  font-weight: 500;
+  color: #d3d1c7;
+  padding-top: 4px;
+  transition: color 0.15s;
+}
+.amount-wrapper:focus-within .amount-currency {
+  color: #9fe1cb;
+}
+
+/* ── Tab button ── */
+.tab-btn {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 10px;
+  font-family: "DM Mono", monospace;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1.5px solid #d3d1c7;
+  background: #fff;
+  color: #888780;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.tab-btn:hover {
+  border-color: #888780;
+  color: #444441;
+}
+
+/* Tab active states per type */
+.tab-btn.active-gasto {
+  border-color: #e24b4a;
+  background: #fcebeb;
+  color: #a32d2d;
+}
+.tab-btn.active-ingreso {
+  border-color: #1d9e75;
+  background: #e1f5ee;
+  color: #085041;
+}
+.tab-btn.active-transfer {
+  border-color: #378add;
+  background: #e6f1fb;
+  color: #185fa5;
+}
+
+/* ── Tab content panels ── */
+/* .tab-panel {
+  display: none;
+}
+.tab-panel.active {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+} */
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Category chip grid ── */
+.cat-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border-radius: 10px;
+  border: 1.5px solid #d3d1c7;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  min-width: 0;
+}
+.cat-chip:hover {
+  border-color: #888780;
+}
+.cat-chip.selected {
+  border-color: #1d9e75;
+  background: #e1f5ee;
+}
+.cat-chip .cat-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+.cat-chip .cat-name {
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  color: #888780;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.cat-chip.selected .cat-name {
+  color: #0f6e56;
+}
+
+/* ── Transfer arrow connector ── */
+.transfer-arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f1efe8;
+  border: 1.5px solid #d3d1c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888780;
+  font-size: 14px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.transfer-arrow:hover {
+  background: #e6f1fb;
+  border-color: #378add;
+  color: #185fa5;
+}
+
+/* ── Preview card ── */
+.preview-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1efe8;
+}
+.preview-row:last-child {
+  border-bottom: none;
+}
