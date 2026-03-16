@@ -1,4 +1,5 @@
 import { TransactionType } from "@/types/Transaction.types";
+import { formatAmount } from "@/utils/utils";
 
 const TYPE_COLORS = {
   EXPENSE: "text-red-600",
@@ -64,10 +65,11 @@ export default function TransactionItem({
 
   const amountColor = TYPE_COLORS[transaction.type];
   const amountPrefix = TYPE_PREFIXES[transaction.type];
-  const formattedAmount = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(transaction.amount);
+  const formattedAmount = formatAmount({
+    amount: transaction.amount,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
   const amountAriaLabel = `${TYPE_LABELS[transaction.type]}: ${formattedAmount}`;
 
   return (

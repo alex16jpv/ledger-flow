@@ -1,20 +1,13 @@
 import { BudgetType } from "@/types/Budget.type";
+import { formatAmount, percentMinMax } from "@/utils/utils";
 
 export default function BudgetItem({ budget }: { budget: BudgetType }) {
-  const progress = Math.min(
-    100,
-    Math.max(0, (budget.spent / budget.amount) * 100),
-  );
-
+  const progress = percentMinMax((budget.spent / budget.amount) * 100);
   const isOverBudget = budget.spent > budget.amount;
   const progressColor = isOverBudget ? "red-400" : budget.color;
   const textColor = isOverBudget ? "text-red-400" : "text-stone-400";
-  const amountFormat = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
+  const formattedSpent = formatAmount({ amount: budget.spent });
+  const formattedAmount = formatAmount({ amount: budget.amount });
 
   return (
     <div>
@@ -23,7 +16,7 @@ export default function BudgetItem({ budget }: { budget: BudgetType }) {
           {budget.emoji} {budget.name}
         </span>
         <span className={`font-mono text-xs ${textColor}`}>
-          {`${amountFormat.format(budget.spent)} / ${amountFormat.format(budget.amount)}`}
+          {`${formattedSpent} / ${formattedAmount}`}
         </span>
       </div>
       <div className="progress-track">
