@@ -1,6 +1,7 @@
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
+import ButtonLink from "@/components/ButtonLink";
 import { formatDate } from "@/utils/utils";
 
 export default function DashboardLayout({
@@ -20,7 +21,14 @@ export default function DashboardLayout({
               date: new Date(),
               options: { month: "long", year: "numeric" },
             })}
-          />
+          >
+            <ButtonLink
+              icon="＋"
+              text="New Transaction"
+              link="/new-transaction"
+              color="teal"
+            />
+          </Header>
           {children}
         </div>
       </div>
