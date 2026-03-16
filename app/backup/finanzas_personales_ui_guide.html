@@ -1,0 +1,909 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ff-display: 'Playfair Display', serif;
+    --ff-body: 'DM Sans', sans-serif;
+    --ff-mono: 'DM Mono', monospace;
+    --teal-50: #E1F5EE; --teal-100: #9FE1CB; --teal-400: #1D9E75; --teal-600: #0F6E56; --teal-800: #085041;
+    --amber-50: #FAEEDA; --amber-200: #FAC775; --amber-400: #BA7517; --amber-600: #854F0B;
+    --red-50: #FCEBEB; --red-400: #E24B4A; --red-600: #A32D2D;
+    --purple-50: #EEEDFE; --purple-400: #7F77DD; --purple-600: #534AB7; --purple-800: #3C3489;
+    --blue-50: #E6F1FB; --blue-400: #378ADD; --blue-600: #185FA5;
+    --gray-50: #F1EFE8; --gray-100: #D3D1C7; --gray-400: #888780; --gray-600: #5F5E5A; --gray-800: #444441;
+  }
+
+  .guide-root {
+    font-family: var(--ff-body);
+    color: var(--color-text-primary);
+    padding: 0 0 3rem 0;
+  }
+
+  .section-label {
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    padding-top: 2.5rem;
+    border-top: 0.5px solid var(--color-border-tertiary);
+  }
+
+  .section-label:first-of-type { border-top: none; padding-top: 0.5rem; }
+
+  .screen-frame {
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    background: var(--color-background-secondary);
+  }
+
+  .screen-topbar {
+    background: var(--color-background-primary);
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .screen-topbar .app-name {
+    font-family: var(--ff-display);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--teal-400);
+    flex-shrink: 0;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .avatar-sm {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--purple-50);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 500;
+    color: var(--purple-800);
+    border: 0.5px solid var(--color-border-tertiary);
+  }
+
+  .icon-btn {
+    width: 32px; height: 32px;
+    border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--color-border-tertiary);
+    background: var(--color-background-secondary);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+
+  .screen-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .metric-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metric-card {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 14px 16px;
+  }
+
+  .metric-card .m-label {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    margin-bottom: 6px;
+    font-family: var(--ff-mono);
+    letter-spacing: 0.04em;
+  }
+
+  .metric-card .m-value {
+    font-size: 22px;
+    font-weight: 500;
+    font-family: var(--ff-display);
+    line-height: 1;
+  }
+
+  .metric-card .m-sub {
+    font-size: 11px;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .badge-up { color: var(--teal-600); background: var(--teal-50); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 500; }
+  .badge-down { color: var(--red-600); background: var(--red-50); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 500; }
+
+  .card {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 16px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  .link-sm {
+    font-size: 11px;
+    color: var(--teal-600);
+    cursor: pointer;
+    font-family: var(--ff-mono);
+  }
+
+  .tx-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .tx-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: var(--border-radius-md);
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+  }
+
+  .tx-icon {
+    width: 34px; height: 34px;
+    border-radius: var(--border-radius-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-meta { font-size: 11px; color: var(--color-text-secondary); margin-top: 1px; }
+
+  .tx-amount { font-family: var(--ff-mono); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .tx-amount.positive { color: var(--teal-600); }
+  .tx-amount.negative { color: var(--color-text-primary); }
+
+  .budget-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .budget-item { display: flex; flex-direction: column; gap: 5px; }
+  .budget-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .budget-name { font-size: 13px; font-weight: 500; }
+  .budget-values { font-size: 11px; color: var(--color-text-secondary); font-family: var(--ff-mono); }
+
+  .progress-track {
+    height: 5px;
+    border-radius: 3px;
+    background: var(--color-background-secondary);
+    overflow: hidden;
+    border: 0.5px solid var(--color-border-tertiary);
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+
+  .accounts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .account-card {
+    border-radius: var(--border-radius-lg);
+    padding: 14px;
+    border: 0.5px solid var(--color-border-tertiary);
+  }
+
+  .account-card .ac-type { font-size: 10px; font-family: var(--ff-mono); letter-spacing: 0.08em; margin-bottom: 6px; }
+  .account-card .ac-name { font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+  .account-card .ac-balance { font-size: 18px; font-weight: 500; font-family: var(--ff-display); }
+
+  .mini-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 36px;
+    margin-top: 8px;
+  }
+
+  .bar {
+    flex: 1;
+    border-radius: 2px 2px 0 0;
+    min-height: 4px;
+  }
+
+  .fab {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin-top: 4px;
+  }
+
+  .fab-btn {
+    background: var(--teal-400);
+    color: white;
+    border: none;
+    border-radius: 100px;
+    padding: 10px 24px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--ff-body);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.01em;
+  }
+
+  .divider { height: 0.5px; background: var(--color-border-tertiary); margin: 4px 0; }
+
+  .nav-bar {
+    background: var(--color-background-primary);
+    border-top: 0.5px solid var(--color-border-tertiary);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0 6px;
+  }
+
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    cursor: pointer; padding: 2px 12px;
+  }
+
+  .nav-item .nav-icon { font-size: 16px; }
+  .nav-item .nav-label { font-size: 10px; color: var(--color-text-secondary); font-family: var(--ff-mono); }
+  .nav-item.active .nav-label { color: var(--teal-600); }
+  .nav-item.active .nav-icon { position: relative; }
+  .nav-active-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--teal-400); margin: 0 auto; }
+
+  .two-col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+
+  .transfer-card {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 18px;
+  }
+
+  .transfer-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+
+  .transfer-account {
+    flex: 1;
+    background: var(--color-background-secondary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    padding: 10px 12px;
+  }
+
+  .ta-label { font-size: 10px; color: var(--color-text-secondary); font-family: var(--ff-mono); margin-bottom: 3px; }
+  .ta-name { font-size: 13px; font-weight: 500; }
+  .ta-balance { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; font-family: var(--ff-mono); }
+
+  .arrow-icon { font-size: 18px; color: var(--color-text-secondary); flex-shrink: 0; }
+
+  .amount-input-mock {
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    padding: 10px 14px;
+    font-family: var(--ff-display);
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    text-align: center;
+    width: 100%;
+    background: var(--color-background-secondary);
+    margin-bottom: 12px;
+  }
+
+  .field-row {
+    display: flex; gap: 8px; margin-bottom: 10px;
+  }
+
+  .field-mock {
+    flex: 1;
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    padding: 8px 12px;
+    font-size: 12px;
+    background: var(--color-background-secondary);
+    color: var(--color-text-secondary);
+  }
+
+  .tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+
+  .tag {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    border: 0.5px solid var(--color-border-tertiary);
+    cursor: pointer;
+    font-family: var(--ff-mono);
+  }
+
+  .tag.active-tag {
+    background: var(--teal-50);
+    color: var(--teal-800);
+    border-color: var(--teal-400);
+  }
+
+  .save-btn {
+    width: 100%;
+    background: var(--teal-400);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-md);
+    padding: 11px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--ff-body);
+    cursor: pointer;
+  }
+
+  .insight-card {
+    background: var(--purple-50);
+    border: 0.5px solid var(--purple-400);
+    border-radius: var(--border-radius-lg);
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .insight-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+
+  .insight-text .i-title { font-size: 13px; font-weight: 500; color: var(--purple-800); margin-bottom: 3px; }
+  .insight-text .i-body { font-size: 12px; color: var(--purple-600); line-height: 1.5; }
+
+  .flow-row { display: flex; align-items: stretch; gap: 6px; }
+
+  .flow-in, .flow-out {
+    flex: 1;
+    border-radius: var(--border-radius-md);
+    padding: 12px 14px;
+    border: 0.5px solid var(--color-border-tertiary);
+  }
+
+  .flow-in { background: var(--teal-50); }
+  .flow-out { background: var(--red-50); }
+
+  .flow-label { font-size: 10px; font-family: var(--ff-mono); letter-spacing: 0.06em; margin-bottom: 4px; }
+  .flow-label.in { color: var(--teal-600); }
+  .flow-label.out { color: var(--red-600); }
+  .flow-value { font-size: 19px; font-weight: 500; font-family: var(--ff-display); }
+  .flow-value.in { color: var(--teal-800); }
+  .flow-value.out { color: var(--red-600); }
+  .flow-sub { font-size: 10px; color: var(--color-text-secondary); margin-top: 2px; }
+
+  .flow-net {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    padding: 10px 14px;
+    background: var(--color-background-primary);
+    min-width: 80px;
+  }
+
+  .net-label { font-size: 10px; color: var(--color-text-secondary); font-family: var(--ff-mono); }
+  .net-value { font-size: 15px; font-weight: 500; font-family: var(--ff-display); color: var(--teal-600); }
+
+  .chip-filter {
+    display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 14px;
+  }
+
+  .chip {
+    font-size: 11px; white-space: nowrap;
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 0.5px solid var(--color-border-tertiary);
+    background: var(--color-background-primary);
+    color: var(--color-text-secondary);
+    cursor: pointer; font-family: var(--ff-mono);
+  }
+
+  .chip.active { background: var(--teal-400); color: white; border-color: var(--teal-400); }
+
+  .report-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .report-row:last-child { border-bottom: none; }
+  .report-cat { font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .report-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .report-pct { font-size: 11px; color: var(--color-text-secondary); font-family: var(--ff-mono); }
+  .report-amount { font-size: 13px; font-weight: 500; font-family: var(--ff-mono); }
+</style>
+
+<div class="guide-root">
+
+  <p class="section-label" style="border-top:none; padding-top:0">01 — Dashboard principal</p>
+
+  <div class="screen-frame">
+    <div class="screen-topbar">
+      <div class="app-name"><div class="logo-dot"></div>Ledger</div>
+      <div class="topbar-right">
+        <div class="icon-btn">🔔</div>
+        <div class="avatar-sm">MA</div>
+      </div>
+    </div>
+    <div class="screen-body">
+
+      <div class="flow-row">
+        <div class="flow-in">
+          <div class="flow-label in">INGRESOS · MAR</div>
+          <div class="flow-value in">$8,450</div>
+          <div class="flow-sub">+2 fuentes</div>
+        </div>
+        <div class="flow-net">
+          <div class="net-label">NETO</div>
+          <div class="net-value">+$2,130</div>
+        </div>
+        <div class="flow-out">
+          <div class="flow-label out">GASTOS · MAR</div>
+          <div class="flow-value out">$6,320</div>
+          <div class="flow-sub">18 transacciones</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Transacciones recientes</span>
+          <span class="link-sm">ver todo →</span>
+        </div>
+        <div class="tx-list">
+          <div class="tx-item">
+            <div class="tx-icon" style="background:var(--teal-50)">🛒</div>
+            <div class="tx-info">
+              <div class="tx-name">Mercado Libre</div>
+              <div class="tx-meta">Compras · Banco Nación</div>
+            </div>
+            <div class="tx-amount negative">−$3,200</div>
+          </div>
+          <div class="tx-item">
+            <div class="tx-icon" style="background:var(--teal-50)">💼</div>
+            <div class="tx-info">
+              <div class="tx-name">Salario empresa</div>
+              <div class="tx-meta">Ingreso · Galicia</div>
+            </div>
+            <div class="tx-amount positive">+$8,450</div>
+          </div>
+          <div class="tx-item">
+            <div class="tx-icon" style="background:var(--amber-50)">🍔</div>
+            <div class="tx-info">
+              <div class="tx-name">Rappi — cena</div>
+              <div class="tx-meta">Comida · Tarjeta Visa</div>
+            </div>
+            <div class="tx-amount negative">−$850</div>
+          </div>
+          <div class="tx-item">
+            <div class="tx-icon" style="background:var(--blue-50)">⇄</div>
+            <div class="tx-info">
+              <div class="tx-name">Transfer → Ahorro</div>
+              <div class="tx-meta">Movimiento interno</div>
+            </div>
+            <div class="tx-amount" style="color:var(--blue-600)">⇄ $2,000</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Budgets del mes</span>
+          <span class="link-sm">gestionar →</span>
+        </div>
+        <div class="budget-list">
+          <div class="budget-item">
+            <div class="budget-row">
+              <span class="budget-name">🍔 Comida</span>
+              <span class="budget-values">$4,200 / $5,000</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:84%; background:var(--amber-200)"></div>
+            </div>
+          </div>
+          <div class="budget-item">
+            <div class="budget-row">
+              <span class="budget-name">🚌 Transporte</span>
+              <span class="budget-values">$1,100 / $3,000</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:37%; background:var(--teal-400)"></div>
+            </div>
+          </div>
+          <div class="budget-item">
+            <div class="budget-row">
+              <span class="budget-name">🎬 Entretenimiento</span>
+              <span class="budget-values">$2,400 / $2,000</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:100%; background:var(--red-400)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-icon">✦</div>
+        <div class="insight-text">
+          <div class="i-title">Entretenimiento superado</div>
+          <div class="i-body">Gastaste $400 por encima de tu presupuesto. Quedan 17 días del mes.</div>
+        </div>
+      </div>
+
+      <div class="fab">
+        <button class="fab-btn">＋ Nueva transacción</button>
+      </div>
+
+    </div>
+    <div class="nav-bar">
+      <div class="nav-item active">
+        <div class="nav-icon">⊞</div>
+        <div class="nav-active-dot"></div>
+        <div class="nav-label" style="color:var(--teal-600)">inicio</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">↕</div>
+        <div class="nav-label">movimientos</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">◈</div>
+        <div class="nav-label">cuentas</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">◎</div>
+        <div class="nav-label">budgets</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">⌇</div>
+        <div class="nav-label">reportes</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-label">02 — Registrar transacción</p>
+
+  <div class="screen-frame">
+    <div class="screen-topbar">
+      <span style="font-size:13px; color:var(--color-text-secondary)">← volver</span>
+      <span style="font-size:14px; font-weight:500">Nueva transacción</span>
+      <span style="width:48px"></span>
+    </div>
+    <div class="screen-body">
+
+      <div class="tag-row">
+        <div class="tag active-tag">Gasto</div>
+        <div class="tag">Ingreso</div>
+        <div class="tag">Transferencia</div>
+      </div>
+
+      <div class="amount-input-mock">$0.00</div>
+
+      <div class="field-row">
+        <div class="field-mock" style="flex:2">Descripción del gasto…</div>
+        <div class="field-mock" style="flex:1">📅 14 mar</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-mock">🏦 Cuenta de débito ▾</div>
+        <div class="field-mock">🏷 Categoría ▾</div>
+      </div>
+
+      <div class="card" style="padding:12px 14px">
+        <div class="card-header" style="margin-bottom:8px">
+          <span style="font-size:12px; color:var(--color-text-secondary); font-family:var(--ff-mono)">ETIQUETAS RÁPIDAS</span>
+        </div>
+        <div class="tag-row" style="margin:0">
+          <div class="tag active-tag">🍔 Comida</div>
+          <div class="tag">🚌 Transporte</div>
+          <div class="tag">🏠 Hogar</div>
+          <div class="tag">💊 Salud</div>
+          <div class="tag">🎬 Ocio</div>
+          <div class="tag">＋</div>
+        </div>
+      </div>
+
+      <div class="field-mock" style="padding:10px 14px; height:60px; align-items:flex-start; display:flex">Nota opcional…</div>
+
+      <button class="save-btn">Guardar transacción</button>
+    </div>
+  </div>
+
+  <p class="section-label">03 — Cuentas y movimiento entre cuentas</p>
+
+  <div class="screen-frame">
+    <div class="screen-topbar">
+      <span style="font-size:14px; font-weight:500">Mis cuentas</span>
+      <span class="link-sm">＋ agregar cuenta</span>
+    </div>
+    <div class="screen-body">
+
+      <div class="accounts-grid">
+        <div class="account-card" style="background:var(--teal-50); border-color:var(--teal-400)">
+          <div class="ac-type" style="color:var(--teal-600)">DÉBITO</div>
+          <div class="ac-name">Banco Nación</div>
+          <div class="ac-balance" style="color:var(--teal-800)">$32,400</div>
+          <div class="mini-chart">
+            <div class="bar" style="height:30%; background:var(--teal-100)"></div>
+            <div class="bar" style="height:55%; background:var(--teal-100)"></div>
+            <div class="bar" style="height:40%; background:var(--teal-100)"></div>
+            <div class="bar" style="height:80%; background:var(--teal-400)"></div>
+            <div class="bar" style="height:65%; background:var(--teal-100)"></div>
+            <div class="bar" style="height:90%; background:var(--teal-400)"></div>
+          </div>
+        </div>
+        <div class="account-card" style="background:var(--purple-50); border-color:var(--purple-400)">
+          <div class="ac-type" style="color:var(--purple-600)">AHORRO</div>
+          <div class="ac-name">Galicia Ahorro</div>
+          <div class="ac-balance" style="color:var(--purple-800)">$18,750</div>
+          <div class="mini-chart">
+            <div class="bar" style="height:50%; background:#CECBF6"></div>
+            <div class="bar" style="height:60%; background:#CECBF6"></div>
+            <div class="bar" style="height:70%; background:#CECBF6"></div>
+            <div class="bar" style="height:75%; background:#AFA9EC"></div>
+            <div class="bar" style="height:85%; background:#AFA9EC"></div>
+            <div class="bar" style="height:95%; background:var(--purple-400)"></div>
+          </div>
+        </div>
+        <div class="account-card" style="background:var(--amber-50); border-color:var(--amber-400)">
+          <div class="ac-type" style="color:var(--amber-600)">CRÉDITO</div>
+          <div class="ac-name">Visa Santander</div>
+          <div class="ac-balance" style="color:var(--amber-600)">−$5,200</div>
+          <div class="mini-chart">
+            <div class="bar" style="height:20%; background:#FAC775"></div>
+            <div class="bar" style="height:35%; background:#FAC775"></div>
+            <div class="bar" style="height:50%; background:#FAC775"></div>
+            <div class="bar" style="height:70%; background:var(--amber-400)"></div>
+            <div class="bar" style="height:80%; background:var(--amber-400)"></div>
+            <div class="bar" style="height:65%; background:#FAC775"></div>
+          </div>
+        </div>
+        <div class="account-card" style="background:var(--blue-50); border-color:var(--blue-400)">
+          <div class="ac-type" style="color:var(--blue-600)">DIGITAL</div>
+          <div class="ac-name">Mercado Pago</div>
+          <div class="ac-balance" style="color:var(--blue-600)">$4,100</div>
+          <div class="mini-chart">
+            <div class="bar" style="height:60%; background:#B5D4F4"></div>
+            <div class="bar" style="height:55%; background:#B5D4F4"></div>
+            <div class="bar" style="height:70%; background:#B5D4F4"></div>
+            <div class="bar" style="height:50%; background:#B5D4F4"></div>
+            <div class="bar" style="height:45%; background:#85B7EB"></div>
+            <div class="bar" style="height:60%; background:#85B7EB"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider" style="margin:4px 0 8px"></div>
+
+      <div class="transfer-card">
+        <div class="card-header" style="margin-bottom:14px">
+          <span class="card-title">Mover dinero entre cuentas</span>
+        </div>
+        <div class="transfer-row">
+          <div class="transfer-account">
+            <div class="ta-label">ORIGEN</div>
+            <div class="ta-name">Banco Nación</div>
+            <div class="ta-balance">Disponible $32,400</div>
+          </div>
+          <div class="arrow-icon">→</div>
+          <div class="transfer-account">
+            <div class="ta-label">DESTINO</div>
+            <div class="ta-name">Galicia Ahorro</div>
+            <div class="ta-balance">Saldo $18,750</div>
+          </div>
+        </div>
+        <div class="amount-input-mock" style="font-size:22px; margin-bottom:10px">$2,000.00</div>
+        <button class="save-btn">Confirmar transferencia</button>
+      </div>
+
+    </div>
+  </div>
+
+  <p class="section-label">04 — Movimientos filtrados</p>
+
+  <div class="screen-frame">
+    <div class="screen-topbar">
+      <span style="font-size:14px; font-weight:500">Movimientos</span>
+      <div class="topbar-right">
+        <div class="icon-btn">⊟</div>
+        <div class="icon-btn">⌕</div>
+      </div>
+    </div>
+    <div class="screen-body">
+      <div class="chip-filter">
+        <div class="chip active">Todos</div>
+        <div class="chip">Gastos</div>
+        <div class="chip">Ingresos</div>
+        <div class="chip">Transferencias</div>
+        <div class="chip">Comida</div>
+        <div class="chip">Transporte</div>
+      </div>
+
+      <div style="font-size:11px; color:var(--color-text-secondary); font-family:var(--ff-mono); margin-bottom:8px; letter-spacing:0.06em">HOYYO — 14 MAR</div>
+      <div class="tx-list" style="margin-bottom:14px">
+        <div class="tx-item">
+          <div class="tx-icon" style="background:var(--teal-50)">☕</div>
+          <div class="tx-info"><div class="tx-name">Café Havanna</div><div class="tx-meta">Comida · Mercado Pago · 09:32</div></div>
+          <div class="tx-amount negative">−$420</div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-icon" style="background:var(--blue-50)">🚌</div>
+          <div class="tx-info"><div class="tx-name">SUBE recarga</div><div class="tx-meta">Transporte · Débito · 08:10</div></div>
+          <div class="tx-amount negative">−$1,000</div>
+        </div>
+      </div>
+
+      <div style="font-size:11px; color:var(--color-text-secondary); font-family:var(--ff-mono); margin-bottom:8px; letter-spacing:0.06em">AYER — 13 MAR</div>
+      <div class="tx-list">
+        <div class="tx-item">
+          <div class="tx-icon" style="background:var(--teal-50)">💼</div>
+          <div class="tx-info"><div class="tx-name">Factura freelance</div><div class="tx-meta">Ingreso · Banco Nación · 18:00</div></div>
+          <div class="tx-amount positive">+$4,500</div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-icon" style="background:var(--amber-50)">🎬</div>
+          <div class="tx-info"><div class="tx-name">Netflix + Spotify</div><div class="tx-meta">Ocio · Visa · 14:00</div></div>
+          <div class="tx-amount negative">−$1,800</div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-icon" style="background:var(--blue-50)">⇄</div>
+          <div class="tx-info"><div class="tx-name">Transfer → Ahorro</div><div class="tx-meta">Movimiento interno · 12:30</div></div>
+          <div class="tx-amount" style="color:var(--blue-600)">⇄ $3,000</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-label">05 — Reportes y análisis</p>
+
+  <div class="screen-frame">
+    <div class="screen-topbar">
+      <span style="font-size:14px; font-weight:500">Reportes</span>
+      <div class="topbar-right">
+        <div class="field-mock" style="font-size:12px; padding:6px 12px; border-radius:100px">Marzo 2025 ▾</div>
+      </div>
+    </div>
+    <div class="screen-body">
+
+      <div class="metric-row">
+        <div class="metric-card">
+          <div class="m-label">ingresos</div>
+          <div class="m-value" style="color:var(--teal-800)">$8,450</div>
+          <div class="m-sub"><span class="badge-up">+12%</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="m-label">gastos</div>
+          <div class="m-value">$6,320</div>
+          <div class="m-sub"><span class="badge-down">+8%</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="m-label">ahorro</div>
+          <div class="m-value" style="color:var(--teal-600)">25%</div>
+          <div class="m-sub" style="color:var(--color-text-secondary); font-size:11px">de ingresos</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Por categoría</span></div>
+          <div>
+            <div class="report-row">
+              <div class="report-cat"><div class="report-cat-dot" style="background:var(--amber-400)"></div>Comida<span class="report-pct" style="margin-left:4px">42%</span></div>
+              <div class="report-amount">$2,650</div>
+            </div>
+            <div class="report-row">
+              <div class="report-cat"><div class="report-cat-dot" style="background:var(--purple-400)"></div>Ocio<span class="report-pct" style="margin-left:4px">19%</span></div>
+              <div class="report-amount">$1,200</div>
+            </div>
+            <div class="report-row">
+              <div class="report-cat"><div class="report-cat-dot" style="background:var(--blue-400)"></div>Transp.<span class="report-pct" style="margin-left:4px">17%</span></div>
+              <div class="report-amount">$1,070</div>
+            </div>
+            <div class="report-row">
+              <div class="report-cat"><div class="report-cat-dot" style="background:var(--gray-400)"></div>Otros<span class="report-pct" style="margin-left:4px">22%</span></div>
+              <div class="report-amount">$1,400</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Por cuenta</span></div>
+          <div>
+            <div class="report-row">
+              <div class="report-cat"><div class="report-cat-dot" style="background:var(--teal-400)"></div>Nación</div>
+              <div class="report-amount">$3,200</div>
+            </div>
+            <div class="report-row">
+              <div class="report-cat"><div class="report-cat-dot" style="background:var(--amber-400)"></div>Visa</div>
+              <div class="report-amount">$2,120</div>
+            </div>
+            <div class="report-row">
+              <div class="report-cat"><div class="report-cat-dot" style="background:var(--blue-400)"></div>Mercado P.</div>
+              <div class="report-amount">$1,000</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Flujo semanal</span></div>
+        <div style="display:flex; align-items:flex-end; gap:4px; height:70px">
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px">
+            <div style="flex:1; width:100%; display:flex; flex-direction:column; justify-content:flex-end">
+              <div style="height:40%; background:var(--teal-100); border-radius:2px 2px 0 0; min-height:6px"></div>
+            </div>
+            <div style="font-size:9px; color:var(--color-text-secondary); font-family:var(--ff-mono)">L</div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px">
+            <div style="flex:1; width:100%; display:flex; flex-direction:column; justify-content:flex-end">
+              <div style="height:65%; background:var(--teal-400); border-radius:2px 2px 0 0; min-height:6px"></div>
+            </div>
+            <div style="font-size:9px; color:var(--color-text-secondary); font-family:var(--ff-mono)">M</div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px">
+            <div style="flex:1; width:100%; display:flex; flex-direction:column; justify-content:flex-end">
+              <div style="height:30%; background:var(--teal-100); border-radius:2px 2px 0 0; min-height:6px"></div>
+            </div>
+            <div style="font-size:9px; color:var(--color-text-secondary); font-family:var(--ff-mono)">M</div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px">
+            <div style="flex:1; width:100%; display:flex; flex-direction:column; justify-content:flex-end">
+              <div style="height:80%; background:var(--teal-400); border-radius:2px 2px 0 0; min-height:6px"></div>
+            </div>
+            <div style="font-size:9px; color:var(--color-text-secondary); font-family:var(--ff-mono)">J</div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px">
+            <div style="flex:1; width:100%; display:flex; flex-direction:column; justify-content:flex-end">
+              <div style="height:55%; background:var(--teal-100); border-radius:2px 2px 0 0; min-height:6px"></div>
+            </div>
+            <div style="font-size:9px; color:var(--color-text-secondary); font-family:var(--ff-mono)">V</div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px">
+            <div style="flex:1; width:100%; display:flex; flex-direction:column; justify-content:flex-end">
+              <div style="height:90%; background:var(--teal-400); border-radius:2px 2px 0 0; min-height:6px"></div>
+            </div>
+            <div style="font-size:9px; color:var(--color-text-secondary); font-family:var(--ff-mono)">S</div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px">
+            <div style="flex:1; width:100%; display:flex; flex-direction:column; justify-content:flex-end">
+              <div style="height:45%; background:var(--teal-100); border-radius:2px 2px 0 0; min-height:6px"></div>
+            </div>
+            <div style="font-size:9px; color:var(--color-text-secondary); font-family:var(--ff-mono)">D</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>

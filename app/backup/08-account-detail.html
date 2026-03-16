@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ledger — Detalle de cuenta</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ["Playfair Display", "serif"],
+            sans:    ["DM Sans", "sans-serif"],
+            mono:    ["DM Mono", "monospace"],
+          },
+          colors: {
+            teal:   { 50:"#E1F5EE", 100:"#9FE1CB", 400:"#1D9E75", 600:"#0F6E56", 800:"#085041" },
+            amber:  { 50:"#FAEEDA", 200:"#FAC775", 400:"#BA7517", 600:"#854F0B" },
+            red:    { 50:"#FCEBEB", 400:"#E24B4A", 600:"#A32D2D" },
+            purple: { 50:"#EEEDFE", 200:"#AFA9EC", 400:"#7F77DD", 600:"#534AB7", 800:"#3C3489" },
+            blue:   { 50:"#E6F1FB", 100:"#B5D4F4", 400:"#378ADD", 600:"#185FA5" },
+            stone:  { 50:"#F1EFE8", 100:"#D3D1C7", 200:"#B4B2A9", 400:"#888780", 600:"#5F5E5A", 800:"#444441", 900:"#2C2C2A" },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: "DM Sans", sans-serif; margin: 0; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #D3D1C7; border-radius: 2px; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 10px; font-size: 13px; color: #5F5E5A; text-decoration: none; transition: background 0.15s, color 0.15s; white-space: nowrap; }
+    .nav-link:hover { background: #F1EFE8; color: #444441; }
+    .nav-link.active { background: #E1F5EE; color: #085041; font-weight: 500; }
+
+    /* ── Bar chart columns ── */
+    .bar-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; height: 100%; }
+    .bar-fill { width: 100%; border-radius: 3px 3px 0 0; min-height: 3px; }
+
+    /* ── Sparkline ── */
+    .sparkline { display: flex; align-items: flex-end; gap: 2px; }
+    .spark-bar { flex: 1; border-radius: 2px 2px 0 0; min-height: 3px; }
+
+    /* ── Stat card ── */
+    .stat-card { background: #fff; border: 1px solid #D3D1C7; border-radius: 12px; padding: 16px 20px; }
+  </style>
+</head>
+
+<body class="bg-stone-50 min-h-screen">
+
+  <div class="flex min-h-screen">
+
+    <!-- ══════════════════════════════════════════════════════
+         SIDEBAR
+    ══════════════════════════════════════════════════════ -->
+    <aside class="hidden lg:flex flex-col w-56 xl:w-60 bg-white border-r border-stone-100 min-h-screen fixed top-0 left-0 z-30">
+
+      <div class="flex items-center gap-2.5 px-5 py-5 border-b border-stone-100">
+        <span class="w-3 h-3 rounded-full bg-teal-400 flex-shrink-0"></span>
+        <span class="font-display font-semibold text-xl text-stone-900">Ledger</span>
+      </div>
+
+      <nav class="flex-1 px-3 py-4 flex flex-col gap-1">
+        <a href="01-dashboard.html"         class="nav-link"><span class="text-base leading-none">⊞</span><span>Dashboard</span></a>
+        <a href="07-nueva-transaccion.html" class="nav-link"><span class="text-base leading-none">＋</span><span>Nueva transacción</span></a>
+        <a href="04-movimientos.html"       class="nav-link"><span class="text-base leading-none">↕</span><span>Movimientos</span></a>
+        <a href="03-cuentas.html"           class="nav-link active" aria-current="page"><span class="text-base leading-none">◈</span><span>Cuentas</span></a>
+        <a href="05-budgets.html"           class="nav-link"><span class="text-base leading-none">◎</span><span>Budgets</span></a>
+        <a href="06-reportes.html"          class="nav-link"><span class="text-base leading-none">⌇</span><span>Reportes</span></a>
+      </nav>
+
+      <div class="px-4 py-4 border-t border-stone-100 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-purple-50 border border-purple-200 flex items-center justify-center font-mono text-xs font-medium text-purple-800 flex-shrink-0">MA</div>
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-stone-800 truncate">Miguel A.</p>
+          <p class="font-mono text-[10px] text-stone-400">cuenta personal</p>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ══════════════════════════════════════════════════════
+         MAIN
+    ══════════════════════════════════════════════════════ -->
+    <div class="flex-1 flex flex-col lg:ml-56 xl:ml-60 min-h-screen">
+
+      <!-- ── TOPBAR ────────────────────────────────────────── -->
+      <header class="sticky top-0 z-20 bg-white border-b border-stone-100 px-5 lg:px-8 py-4 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <button class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-stone-100 bg-stone-50 text-stone-500" aria-label="Menú">☰</button>
+          <div>
+            <h1 class="font-display font-medium text-lg text-stone-900">Banco Nación</h1>
+            <p class="hidden sm:block font-mono text-[11px] text-stone-400 -mt-0.5">Cuenta corriente · débito</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="03-cuentas.html" class="font-mono text-xs text-stone-400 hover:text-stone-600 transition-colors hidden sm:block">← volver</a>
+          <button class="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-100 bg-stone-50 hover:bg-stone-100 transition-colors text-sm" aria-label="Editar cuenta">✎</button>
+          <a href="07-nueva-transaccion.html" class="flex items-center gap-1.5 bg-teal-400 hover:bg-teal-600 text-white text-sm font-medium rounded-lg px-3.5 py-2 transition-colors">
+            <span class="text-base leading-none">＋</span>
+            <span class="hidden sm:inline">Nueva transacción</span>
+          </a>
+        </div>
+      </header>
+
+      <!-- ── PAGE BODY ─────────────────────────────────────── -->
+      <main class="flex-1 px-5 lg:px-8 py-6 flex flex-col gap-6">
+
+        <!-- ── ROW 1: Account hero + quick stats ─────────── -->
+        <section aria-label="Resumen de cuenta" class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+
+          <!-- Hero card — takes 2/4 columns -->
+          <div class="lg:col-span-2 bg-teal-50 border border-teal-100 rounded-xl p-6 flex flex-col justify-between min-h-[160px]">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="font-mono text-xs tracking-widest text-teal-600 uppercase mb-1">Débito · Cuenta corriente</p>
+                <p class="text-lg font-medium text-teal-800">Banco Nación</p>
+              </div>
+              <!-- Account type badge -->
+              <span class="bg-teal-100 text-teal-800 font-mono text-[10px] px-2.5 py-1 rounded-full border border-teal-200">Activa</span>
+            </div>
+
+            <div>
+              <p class="font-mono text-xs text-teal-600 mb-1">Saldo disponible</p>
+              <p class="font-display text-4xl font-medium text-teal-800 leading-none">$32,400</p>
+            </div>
+
+            <!-- Sparkline -->
+            <div class="sparkline h-10 mt-2" aria-hidden="true">
+              <div class="spark-bar bg-teal-200" style="height:30%"></div>
+              <div class="spark-bar bg-teal-200" style="height:50%"></div>
+              <div class="spark-bar bg-teal-200" style="height:40%"></div>
+              <div class="spark-bar bg-teal-400" style="height:80%"></div>
+              <div class="spark-bar bg-teal-200" style="height:60%"></div>
+              <div class="spark-bar bg-teal-400" style="height:90%"></div>
+              <div class="spark-bar bg-teal-200" style="height:70%"></div>
+              <div class="spark-bar bg-teal-400" style="height:85%"></div>
+            </div>
+          </div>
+
+          <!-- Stat: ingresos -->
+          <div class="stat-card">
+            <p class="font-mono text-xs text-stone-400 uppercase tracking-widest mb-2">Ingresos · Mar</p>
+            <p class="font-display text-2xl font-medium text-teal-800 leading-none mb-2">$8,450</p>
+            <div class="flex items-center gap-2">
+              <span class="bg-teal-50 text-teal-600 font-mono text-xs px-2 py-0.5 rounded-full">+12%</span>
+              <span class="font-mono text-xs text-stone-400">vs feb</span>
+            </div>
+          </div>
+
+          <!-- Stat: gastos -->
+          <div class="stat-card">
+            <p class="font-mono text-xs text-stone-400 uppercase tracking-widest mb-2">Gastos · Mar</p>
+            <p class="font-display text-2xl font-medium text-stone-800 leading-none mb-2">$6,320</p>
+            <div class="flex items-center gap-2">
+              <span class="bg-red-50 text-red-600 font-mono text-xs px-2 py-0.5 rounded-full">+8%</span>
+              <span class="font-mono text-xs text-stone-400">vs feb</span>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ── ROW 2: Chart + transactions ────────────────── -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          <!-- ── Transactions list (2/3) ──────────────────── -->
+          <div class="lg:col-span-2 flex flex-col gap-4">
+
+            <!-- Filter row -->
+            <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1" role="group">
+              <button class="flex-shrink-0 bg-teal-400 border border-teal-400 text-white font-mono text-xs rounded-full px-3 py-1.5">Todos</button>
+              <button class="flex-shrink-0 bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors">Créditos</button>
+              <button class="flex-shrink-0 bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors">Débitos</button>
+              <button class="flex-shrink-0 bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors">Transferencias</button>
+              <div class="flex-shrink-0 bg-white border border-stone-100 rounded-full px-3 py-1.5 flex items-center gap-1.5">
+                <span class="font-mono text-xs text-stone-400">Mar 2025</span>
+                <span class="text-stone-300 text-xs">▾</span>
+              </div>
+            </div>
+
+            <!-- Transaction groups -->
+            <div>
+              <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2.5">14 Mar</p>
+              <div class="bg-white border border-stone-100 rounded-xl overflow-hidden">
+                <ul class="divide-y divide-stone-50" role="list">
+
+                  <li class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors cursor-pointer">
+                    <div class="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-lg flex-shrink-0">🛒</div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-stone-800">Mercado Libre</p>
+                      <p class="text-xs text-stone-400 mt-0.5">Compras · 16:40</p>
+                    </div>
+                    <div class="hidden sm:block">
+                      <span class="bg-stone-100 text-stone-600 font-mono text-[10px] px-2 py-0.5 rounded-full">Compras</span>
+                    </div>
+                    <div class="text-right ml-2">
+                      <p class="font-mono text-sm font-medium text-stone-700">−$3,200</p>
+                      <p class="font-mono text-[10px] text-stone-300 mt-0.5">Débito</p>
+                    </div>
+                  </li>
+
+                </ul>
+              </div>
+            </div>
+
+            <div>
+              <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2.5">13 Mar</p>
+              <div class="bg-white border border-stone-100 rounded-xl overflow-hidden">
+                <ul class="divide-y divide-stone-50" role="list">
+
+                  <li class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors cursor-pointer">
+                    <div class="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-lg flex-shrink-0">💼</div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-stone-800">Salario empresa</p>
+                      <p class="text-xs text-stone-400 mt-0.5">Acreditación · 09:00</p>
+                    </div>
+                    <div class="hidden sm:block">
+                      <span class="bg-teal-50 text-teal-800 font-mono text-[10px] px-2 py-0.5 rounded-full">Ingreso</span>
+                    </div>
+                    <div class="text-right ml-2">
+                      <p class="font-mono text-sm font-medium text-teal-600">+$8,450</p>
+                      <p class="font-mono text-[10px] text-stone-300 mt-0.5">Crédito</p>
+                    </div>
+                  </li>
+
+                </ul>
+              </div>
+            </div>
+
+            <div>
+              <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2.5">12 Mar</p>
+              <div class="bg-white border border-stone-100 rounded-xl overflow-hidden">
+                <ul class="divide-y divide-stone-50" role="list">
+
+                  <li class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors cursor-pointer">
+                    <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-sm font-mono font-medium text-blue-600 flex-shrink-0">⇄</div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-stone-800">Transfer → Galicia Ahorro</p>
+                      <p class="text-xs text-stone-400 mt-0.5">Transferencia saliente · 12:30</p>
+                    </div>
+                    <div class="hidden sm:block">
+                      <span class="bg-blue-50 text-blue-600 font-mono text-[10px] px-2 py-0.5 rounded-full">Transferencia</span>
+                    </div>
+                    <div class="text-right ml-2">
+                      <p class="font-mono text-sm font-medium text-blue-600">−$3,000</p>
+                      <p class="font-mono text-[10px] text-stone-300 mt-0.5">Débito</p>
+                    </div>
+                  </li>
+
+                  <li class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors cursor-pointer">
+                    <div class="w-10 h-10 rounded-xl bg-stone-50 flex items-center justify-center text-lg flex-shrink-0">🏠</div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-stone-800">Alquiler marzo</p>
+                      <p class="text-xs text-stone-400 mt-0.5">Débito automático · 10:00</p>
+                    </div>
+                    <div class="hidden sm:block">
+                      <span class="bg-stone-100 text-stone-600 font-mono text-[10px] px-2 py-0.5 rounded-full">Hogar</span>
+                    </div>
+                    <div class="text-right ml-2">
+                      <p class="font-mono text-sm font-medium text-stone-700">−$28,000</p>
+                      <p class="font-mono text-[10px] text-stone-300 mt-0.5">Débito</p>
+                    </div>
+                  </li>
+
+                  <li class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors cursor-pointer">
+                    <div class="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-lg flex-shrink-0">💊</div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-stone-800">Farmacia del pueblo</p>
+                      <p class="text-xs text-stone-400 mt-0.5">Compras · 17:45</p>
+                    </div>
+                    <div class="hidden sm:block">
+                      <span class="bg-teal-50 text-teal-800 font-mono text-[10px] px-2 py-0.5 rounded-full">Salud</span>
+                    </div>
+                    <div class="text-right ml-2">
+                      <p class="font-mono text-sm font-medium text-stone-700">−$680</p>
+                      <p class="font-mono text-[10px] text-stone-300 mt-0.5">Débito</p>
+                    </div>
+                  </li>
+
+                </ul>
+              </div>
+            </div>
+
+            <!-- Load more -->
+            <button class="w-full border border-dashed border-stone-200 hover:border-stone-300 text-stone-400 hover:text-stone-500 font-mono text-xs rounded-xl py-3 transition-colors">
+              Cargar más transacciones
+            </button>
+
+          </div>
+
+          <!-- ── Right panel: chart + account info (1/3) ──── -->
+          <div class="flex flex-col gap-4">
+
+            <!-- Monthly bar chart -->
+            <div class="bg-white border border-stone-100 rounded-xl p-5">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-sm font-medium text-stone-800">Flujo mensual</h2>
+                <span class="font-mono text-[10px] text-stone-400">últimos 6 meses</span>
+              </div>
+
+              <div class="flex items-end gap-1.5 h-28" aria-hidden="true">
+
+                <div class="bar-col">
+                  <div class="flex-1 w-full flex flex-col justify-end gap-0.5">
+                    <div class="bar-fill bg-teal-100" style="height:45%"></div>
+                  </div>
+                  <span class="font-mono text-[9px] text-stone-400">Oct</span>
+                </div>
+                <div class="bar-col">
+                  <div class="flex-1 w-full flex flex-col justify-end gap-0.5">
+                    <div class="bar-fill bg-teal-100" style="height:60%"></div>
+                  </div>
+                  <span class="font-mono text-[9px] text-stone-400">Nov</span>
+                </div>
+                <div class="bar-col">
+                  <div class="flex-1 w-full flex flex-col justify-end gap-0.5">
+                    <div class="bar-fill bg-teal-100" style="height:50%"></div>
+                  </div>
+                  <span class="font-mono text-[9px] text-stone-400">Dic</span>
+                </div>
+                <div class="bar-col">
+                  <div class="flex-1 w-full flex flex-col justify-end gap-0.5">
+                    <div class="bar-fill bg-teal-400" style="height:70%"></div>
+                  </div>
+                  <span class="font-mono text-[9px] text-stone-400">Ene</span>
+                </div>
+                <div class="bar-col">
+                  <div class="flex-1 w-full flex flex-col justify-end gap-0.5">
+                    <div class="bar-fill bg-teal-400" style="height:80%"></div>
+                  </div>
+                  <span class="font-mono text-[9px] text-stone-400">Feb</span>
+                </div>
+                <div class="bar-col">
+                  <div class="flex-1 w-full flex flex-col justify-end gap-0.5">
+                    <div class="bar-fill bg-teal-600" style="height:95%"></div>
+                  </div>
+                  <span class="font-mono text-[9px] text-teal-600">Mar</span>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Account metadata -->
+            <div class="bg-white border border-stone-100 rounded-xl p-5">
+              <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-4">Información de la cuenta</p>
+              <dl class="flex flex-col gap-3">
+
+                <div class="flex justify-between items-start">
+                  <dt class="font-mono text-xs text-stone-400">Banco</dt>
+                  <dd class="text-sm text-stone-700 text-right">Banco de la Nación Argentina</dd>
+                </div>
+                <div class="h-px bg-stone-50"></div>
+
+                <div class="flex justify-between items-start">
+                  <dt class="font-mono text-xs text-stone-400">Tipo</dt>
+                  <dd class="text-sm text-stone-700">Cuenta corriente</dd>
+                </div>
+                <div class="h-px bg-stone-50"></div>
+
+                <div class="flex justify-between items-start">
+                  <dt class="font-mono text-xs text-stone-400">CBU</dt>
+                  <dd class="text-sm text-stone-700 font-mono text-right">0110458430045801</dd>
+                </div>
+                <div class="h-px bg-stone-50"></div>
+
+                <div class="flex justify-between items-start">
+                  <dt class="font-mono text-xs text-stone-400">Alias</dt>
+                  <dd class="text-sm text-stone-700 font-mono">MIGUEL.NACION</dd>
+                </div>
+                <div class="h-px bg-stone-50"></div>
+
+                <div class="flex justify-between items-start">
+                  <dt class="font-mono text-xs text-stone-400">Moneda</dt>
+                  <dd class="text-sm text-stone-700">Pesos argentinos (ARS)</dd>
+                </div>
+                <div class="h-px bg-stone-50"></div>
+
+                <div class="flex justify-between items-start">
+                  <dt class="font-mono text-xs text-stone-400">Agregada</dt>
+                  <dd class="text-sm text-stone-700">12 ene 2024</dd>
+                </div>
+
+              </dl>
+            </div>
+
+            <!-- Quick actions -->
+            <div class="bg-white border border-stone-100 rounded-xl p-5">
+              <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-3">Acciones rápidas</p>
+              <div class="flex flex-col gap-2">
+
+                <a href="07-nueva-transaccion.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-teal-50 transition-colors group">
+                  <span class="w-7 h-7 rounded-lg bg-teal-50 group-hover:bg-teal-100 flex items-center justify-center text-sm transition-colors">＋</span>
+                  <span class="text-sm text-stone-700 group-hover:text-teal-800 transition-colors">Nueva transacción</span>
+                </a>
+
+                <button class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-blue-50 transition-colors group w-full text-left">
+                  <span class="w-7 h-7 rounded-lg bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center text-sm transition-colors">⇄</span>
+                  <span class="text-sm text-stone-700 group-hover:text-blue-800 transition-colors">Transferir fondos</span>
+                </button>
+
+                <button class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-stone-50 transition-colors group w-full text-left">
+                  <span class="w-7 h-7 rounded-lg bg-stone-50 group-hover:bg-stone-100 flex items-center justify-center text-sm transition-colors">↓</span>
+                  <span class="text-sm text-stone-700 transition-colors">Exportar movimientos</span>
+                </button>
+
+                <button class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-stone-50 transition-colors group w-full text-left">
+                  <span class="w-7 h-7 rounded-lg bg-stone-50 group-hover:bg-stone-100 flex items-center justify-center text-sm transition-colors">✎</span>
+                  <span class="text-sm text-stone-700 transition-colors">Editar cuenta</span>
+                </button>
+
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <!-- ── MOBILE BOTTOM NAV ────────────────────────────────── -->
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-stone-100">
+    <ul class="flex justify-around py-2" role="list">
+      <li><a href="01-dashboard.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">⊞</span>
+        <span class="font-mono text-[10px] text-stone-400">inicio</span>
+      </a></li>
+      <li><a href="04-movimientos.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">↕</span>
+        <span class="font-mono text-[10px] text-stone-400">movimientos</span>
+      </a></li>
+      <li><a href="07-nueva-transaccion.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">＋</span>
+        <span class="font-mono text-[10px] text-stone-400">nueva</span>
+      </a></li>
+      <li><a href="03-cuentas.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">◈</span>
+        <span class="w-1 h-1 rounded-full bg-teal-400"></span>
+        <span class="font-mono text-[10px] text-teal-600">cuentas</span>
+      </a></li>
+      <li><a href="06-reportes.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">⌇</span>
+        <span class="font-mono text-[10px] text-stone-400">reportes</span>
+      </a></li>
+    </ul>
+  </nav>
+  <div class="lg:hidden h-16"></div>
+
+</body>
+</html>

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ledger — Reportes</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ["Playfair Display", "serif"],
+            sans:    ["DM Sans", "sans-serif"],
+            mono:    ["DM Mono", "monospace"],
+          },
+          colors: {
+            teal:   { 50:"#E1F5EE", 100:"#9FE1CB", 400:"#1D9E75", 600:"#0F6E56", 800:"#085041" },
+            amber:  { 50:"#FAEEDA", 200:"#FAC775", 400:"#BA7517", 600:"#854F0B" },
+            red:    { 50:"#FCEBEB", 400:"#E24B4A", 600:"#A32D2D" },
+            purple: { 50:"#EEEDFE", 400:"#7F77DD", 600:"#534AB7", 800:"#3C3489" },
+            blue:   { 50:"#E6F1FB", 400:"#378ADD", 600:"#185FA5" },
+            stone:  { 50:"#F1EFE8", 100:"#D3D1C7", 200:"#B4B2A9", 400:"#888780", 600:"#5F5E5A", 800:"#444441", 900:"#2C2C2A" },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: "DM Sans", sans-serif; margin: 0; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #D3D1C7; border-radius: 2px; }
+    .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 10px; font-size: 13px; color: #5F5E5A; cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; text-decoration: none; }
+    .nav-link:hover { background: #F1EFE8; color: #444441; }
+    .nav-link.active { background: #E1F5EE; color: #085041; font-weight: 500; }
+    /* Bar chart bars */
+    .bar-col { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; height: 100%; }
+    .bar-fill { width: 100%; border-radius: 3px 3px 0 0; min-height: 4px; transition: height 0.3s ease; }
+  </style>
+</head>
+
+<body class="bg-stone-50 min-h-screen">
+
+  <div class="flex min-h-screen">
+
+    <!-- ── SIDEBAR ────────────────────────────────────────────── -->
+    <aside class="hidden lg:flex flex-col w-56 xl:w-60 bg-white border-r border-stone-100 min-h-screen fixed top-0 left-0 z-30">
+      <div class="flex items-center gap-2.5 px-5 py-5 border-b border-stone-100">
+        <span class="w-3 h-3 rounded-full bg-teal-400 flex-shrink-0"></span>
+        <span class="font-display font-semibold text-xl text-stone-900">Ledger</span>
+      </div>
+      <nav class="flex-1 px-3 py-4 flex flex-col gap-1">
+        <a href="01-dashboard.html" class="nav-link"><span class="text-base leading-none">⊞</span><span>Dashboard</span></a>
+        <a href="02-nueva-transaccion.html" class="nav-link"><span class="text-base leading-none">＋</span><span>Nueva transacción</span></a>
+        <a href="04-movimientos.html" class="nav-link"><span class="text-base leading-none">↕</span><span>Movimientos</span></a>
+        <a href="03-cuentas.html" class="nav-link"><span class="text-base leading-none">◈</span><span>Cuentas</span></a>
+        <a href="05-budgets.html" class="nav-link"><span class="text-base leading-none">◎</span><span>Budgets</span></a>
+        <a href="06-reportes.html" class="nav-link active" aria-current="page"><span class="text-base leading-none">⌇</span><span>Reportes</span></a>
+      </nav>
+      <div class="px-4 py-4 border-t border-stone-100 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-purple-50 border border-purple-200 flex items-center justify-center font-mono text-xs font-medium text-purple-800 flex-shrink-0">MA</div>
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-stone-800 truncate">Miguel A.</p>
+          <p class="font-mono text-[10px] text-stone-400">cuenta personal</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── MAIN ─────────────────────────────────────────────────── -->
+    <div class="flex-1 flex flex-col lg:ml-56 xl:ml-60 min-h-screen">
+
+      <header class="sticky top-0 z-20 bg-white border-b border-stone-100 px-5 lg:px-8 py-4 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <button class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-stone-100 bg-stone-50 text-stone-500" aria-label="Menú">☰</button>
+          <h1 class="font-display font-medium text-lg text-stone-900">Reportes</h1>
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- Period selector -->
+          <button class="font-mono text-xs text-stone-600 border border-stone-100 rounded-lg px-3 py-2 bg-white hover:bg-stone-50 transition-colors">
+            Marzo 2025 ▾
+          </button>
+          <button class="hidden sm:flex items-center gap-1.5 border border-stone-100 bg-white hover:bg-stone-50 text-stone-600 text-sm rounded-lg px-3.5 py-2 transition-colors">
+            <span class="text-base leading-none">↓</span>
+            Exportar PDF
+          </button>
+        </div>
+      </header>
+
+      <main class="flex-1 px-5 lg:px-8 py-6 flex flex-col gap-6">
+
+        <!-- ── ROW 1: KPI cards ───────────────────────────────── -->
+        <section aria-label="Métricas del período" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+
+          <div class="bg-white border border-stone-100 rounded-xl p-5">
+            <p class="font-mono text-xs text-stone-400 uppercase tracking-widest mb-2">Ingresos</p>
+            <p class="font-display text-2xl font-medium text-teal-800 leading-none mb-2">$8,450</p>
+            <span class="bg-teal-50 text-teal-600 font-mono text-xs px-2 py-0.5 rounded-full">+12% vs feb</span>
+          </div>
+
+          <div class="bg-white border border-stone-100 rounded-xl p-5">
+            <p class="font-mono text-xs text-stone-400 uppercase tracking-widest mb-2">Gastos</p>
+            <p class="font-display text-2xl font-medium text-stone-800 leading-none mb-2">$6,320</p>
+            <span class="bg-red-50 text-red-600 font-mono text-xs px-2 py-0.5 rounded-full">+8% vs feb</span>
+          </div>
+
+          <div class="bg-white border border-stone-100 rounded-xl p-5">
+            <p class="font-mono text-xs text-stone-400 uppercase tracking-widest mb-2">Balance</p>
+            <p class="font-display text-2xl font-medium text-teal-800 leading-none mb-2">+$2,130</p>
+            <span class="bg-teal-50 text-teal-600 font-mono text-xs px-2 py-0.5 rounded-full">positivo</span>
+          </div>
+
+          <div class="bg-white border border-stone-100 rounded-xl p-5">
+            <p class="font-mono text-xs text-stone-400 uppercase tracking-widest mb-2">Tasa de ahorro</p>
+            <p class="font-display text-2xl font-medium text-teal-600 leading-none mb-2">25%</p>
+            <span class="bg-teal-50 text-teal-600 font-mono text-xs px-2 py-0.5 rounded-full">de ingresos</span>
+          </div>
+
+        </section>
+
+        <!-- ── ROW 2: Bar chart + donut breakdown ─────────────── -->
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+          <!-- Weekly bar chart (3/5) -->
+          <section aria-label="Flujo semanal de gastos" class="lg:col-span-3 bg-white border border-stone-100 rounded-xl p-6">
+
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-sm font-medium text-stone-800">Gastos por semana</h2>
+              <div class="flex gap-1.5">
+                <button class="bg-teal-50 border border-teal-400 text-teal-800 font-mono text-xs rounded-full px-2.5 py-1">Semana</button>
+                <button class="bg-white border border-stone-100 text-stone-400 font-mono text-xs rounded-full px-2.5 py-1 hover:border-stone-200 transition-colors">Mes</button>
+              </div>
+            </div>
+
+            <!-- Bar chart — pure CSS, proportional heights -->
+            <div class="flex items-end gap-2 h-36" aria-hidden="true">
+
+              <div class="bar-col">
+                <span class="font-mono text-[9px] text-stone-300">$820</span>
+                <div class="flex-1 w-full flex flex-col justify-end">
+                  <div class="bar-fill bg-teal-100" style="height: 38%"></div>
+                </div>
+                <span class="font-mono text-[9px] text-stone-400">Lun</span>
+              </div>
+
+              <div class="bar-col">
+                <span class="font-mono text-[9px] text-stone-300">$1,450</span>
+                <div class="flex-1 w-full flex flex-col justify-end">
+                  <div class="bar-fill bg-teal-400" style="height: 68%"></div>
+                </div>
+                <span class="font-mono text-[9px] text-stone-400">Mar</span>
+              </div>
+
+              <div class="bar-col">
+                <span class="font-mono text-[9px] text-stone-300">$520</span>
+                <div class="flex-1 w-full flex flex-col justify-end">
+                  <div class="bar-fill bg-teal-100" style="height: 25%"></div>
+                </div>
+                <span class="font-mono text-[9px] text-stone-400">Mié</span>
+              </div>
+
+              <div class="bar-col">
+                <span class="font-mono text-[9px] text-stone-300">$1,800</span>
+                <div class="flex-1 w-full flex flex-col justify-end">
+                  <div class="bar-fill bg-teal-400" style="height: 84%"></div>
+                </div>
+                <span class="font-mono text-[9px] text-stone-400">Jue</span>
+              </div>
+
+              <div class="bar-col">
+                <span class="font-mono text-[9px] text-stone-300">$1,100</span>
+                <div class="flex-1 w-full flex flex-col justify-end">
+                  <div class="bar-fill bg-teal-100" style="height: 52%"></div>
+                </div>
+                <span class="font-mono text-[9px] text-stone-400">Vie</span>
+              </div>
+
+              <div class="bar-col">
+                <span class="font-mono text-[9px] text-stone-300 text-amber-400">$2,150</span>
+                <div class="flex-1 w-full flex flex-col justify-end">
+                  <div class="bar-fill bg-amber-200" style="height: 100%"></div>
+                </div>
+                <span class="font-mono text-[9px] text-stone-400">Sáb</span>
+              </div>
+
+              <div class="bar-col">
+                <span class="font-mono text-[9px] text-stone-300">$980</span>
+                <div class="flex-1 w-full flex flex-col justify-end">
+                  <div class="bar-fill bg-teal-100" style="height: 46%"></div>
+                </div>
+                <span class="font-mono text-[9px] text-stone-400">Dom</span>
+              </div>
+
+            </div>
+
+          </section>
+
+          <!-- Category breakdown (2/5) -->
+          <section aria-label="Gastos por categoría" class="lg:col-span-2 bg-white border border-stone-100 rounded-xl p-6">
+
+            <h2 class="text-sm font-medium text-stone-800 mb-5">Por categoría</h2>
+
+            <ul class="flex flex-col gap-3.5" role="list">
+
+              <li>
+                <div class="flex justify-between items-baseline mb-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-stone-400 flex-shrink-0"></span>
+                    <span class="text-sm text-stone-700">Hogar</span>
+                  </div>
+                  <span class="font-mono text-xs font-medium text-stone-700">$28,000</span>
+                </div>
+                <div class="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                  <div class="h-full rounded-full bg-stone-400" style="width: 100%"></div>
+                </div>
+              </li>
+
+              <li>
+                <div class="flex justify-between items-baseline mb-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0"></span>
+                    <span class="text-sm text-stone-700">Comida</span>
+                  </div>
+                  <span class="font-mono text-xs font-medium text-stone-700">$4,200</span>
+                </div>
+                <div class="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                  <div class="h-full rounded-full bg-amber-400" style="width: 42%"></div>
+                </div>
+              </li>
+
+              <li>
+                <div class="flex justify-between items-baseline mb-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-purple-400 flex-shrink-0"></span>
+                    <span class="text-sm text-stone-700">Ocio</span>
+                  </div>
+                  <span class="font-mono text-xs font-medium text-stone-700">$2,400</span>
+                </div>
+                <div class="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                  <div class="h-full rounded-full bg-purple-400" style="width: 24%"></div>
+                </div>
+              </li>
+
+              <li>
+                <div class="flex justify-between items-baseline mb-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-blue-400 flex-shrink-0"></span>
+                    <span class="text-sm text-stone-700">Transporte</span>
+                  </div>
+                  <span class="font-mono text-xs font-medium text-stone-700">$1,100</span>
+                </div>
+                <div class="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                  <div class="h-full rounded-full bg-blue-400" style="width: 11%"></div>
+                </div>
+              </li>
+
+              <li>
+                <div class="flex justify-between items-baseline mb-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-teal-400 flex-shrink-0"></span>
+                    <span class="text-sm text-stone-700">Salud</span>
+                  </div>
+                  <span class="font-mono text-xs font-medium text-stone-700">$680</span>
+                </div>
+                <div class="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                  <div class="h-full rounded-full bg-teal-400" style="width: 7%"></div>
+                </div>
+              </li>
+
+            </ul>
+
+          </section>
+
+        </div>
+
+        <!-- ── ROW 3: By account + month comparison ───────────── -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+          <!-- By account -->
+          <section aria-label="Gastos por cuenta" class="bg-white border border-stone-100 rounded-xl p-6">
+            <h2 class="text-sm font-medium text-stone-800 mb-5">Por cuenta</h2>
+            <ul class="flex flex-col divide-y divide-stone-50" role="list">
+              <li class="flex items-center justify-between py-3">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-teal-400 flex-shrink-0"></span>
+                  <span class="text-sm text-stone-700">Banco Nación</span>
+                </div>
+                <span class="font-mono text-sm font-medium text-stone-700">$3,200</span>
+              </li>
+              <li class="flex items-center justify-between py-3">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0"></span>
+                  <span class="text-sm text-stone-700">Visa Santander</span>
+                </div>
+                <span class="font-mono text-sm font-medium text-stone-700">$2,120</span>
+              </li>
+              <li class="flex items-center justify-between py-3">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-400 flex-shrink-0"></span>
+                  <span class="text-sm text-stone-700">Mercado Pago</span>
+                </div>
+                <span class="font-mono text-sm font-medium text-stone-700">$1,000</span>
+              </li>
+            </ul>
+          </section>
+
+          <!-- Month over month comparison -->
+          <section aria-label="Comparación mensual" class="bg-white border border-stone-100 rounded-xl p-6">
+            <h2 class="text-sm font-medium text-stone-800 mb-5">Comparación mensual</h2>
+            <ul class="flex flex-col divide-y divide-stone-50" role="list">
+              <li class="flex items-center justify-between py-3">
+                <span class="text-sm text-stone-400 font-mono">Ene</span>
+                <span class="font-mono text-sm text-stone-700">$5,100</span>
+              </li>
+              <li class="flex items-center justify-between py-3">
+                <span class="text-sm text-stone-400 font-mono">Feb</span>
+                <span class="font-mono text-sm text-stone-700">$5,850</span>
+              </li>
+              <li class="flex items-center justify-between py-3 bg-teal-50 -mx-2 px-2 rounded-lg">
+                <span class="text-sm text-teal-800 font-mono font-medium">Mar</span>
+                <span class="font-mono text-sm font-medium text-teal-800">$6,320</span>
+              </li>
+            </ul>
+          </section>
+
+          <!-- Savings trend -->
+          <section aria-label="Tendencia de ahorro" class="bg-white border border-stone-100 rounded-xl p-6">
+            <h2 class="text-sm font-medium text-stone-800 mb-5">Tasa de ahorro</h2>
+            <ul class="flex flex-col divide-y divide-stone-50" role="list">
+              <li class="flex items-center justify-between py-3">
+                <span class="text-sm text-stone-400 font-mono">Ene</span>
+                <span class="font-mono text-sm text-stone-700">18%</span>
+              </li>
+              <li class="flex items-center justify-between py-3">
+                <span class="text-sm text-stone-400 font-mono">Feb</span>
+                <span class="font-mono text-sm text-stone-700">22%</span>
+              </li>
+              <li class="flex items-center justify-between py-3 bg-teal-50 -mx-2 px-2 rounded-lg">
+                <span class="text-sm text-teal-800 font-mono font-medium">Mar</span>
+                <span class="font-mono text-sm font-medium text-teal-800">25% ↑</span>
+              </li>
+            </ul>
+          </section>
+
+        </div>
+
+        <!-- Export row -->
+        <div class="flex justify-end pb-2">
+          <button class="flex items-center gap-2 border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 text-sm font-medium rounded-xl px-5 py-2.5 transition-colors">
+            <span class="text-base leading-none">↓</span>
+            Exportar reporte completo PDF
+          </button>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-stone-100">
+    <ul class="flex justify-around py-2" role="list">
+      <li><a href="01-dashboard.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">⊞</span>
+        <span class="font-mono text-[10px] text-stone-400">inicio</span>
+      </a></li>
+      <li><a href="04-movimientos.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">↕</span>
+        <span class="font-mono text-[10px] text-stone-400">movimientos</span>
+      </a></li>
+      <li><a href="02-nueva-transaccion.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">＋</span>
+        <span class="font-mono text-[10px] text-stone-400">nueva</span>
+      </a></li>
+      <li><a href="03-cuentas.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">◈</span>
+        <span class="font-mono text-[10px] text-stone-400">cuentas</span>
+      </a></li>
+      <li><a href="06-reportes.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">⌇</span>
+        <span class="w-1 h-1 rounded-full bg-teal-400"></span>
+        <span class="font-mono text-[10px] text-teal-600">reportes</span>
+      </a></li>
+    </ul>
+  </nav>
+  <div class="lg:hidden h-16"></div>
+
+</body>
+</html>

@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ledger — Nueva transacción</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ["Playfair Display", "serif"],
+            sans:    ["DM Sans", "sans-serif"],
+            mono:    ["DM Mono", "monospace"],
+          },
+          colors: {
+            teal:   { 50:"#E1F5EE", 100:"#9FE1CB", 400:"#1D9E75", 600:"#0F6E56", 800:"#085041" },
+            amber:  { 50:"#FAEEDA", 200:"#FAC775", 400:"#BA7517", 600:"#854F0B" },
+            red:    { 50:"#FCEBEB", 400:"#E24B4A", 600:"#A32D2D" },
+            purple: { 50:"#EEEDFE", 200:"#AFA9EC", 400:"#7F77DD", 600:"#534AB7", 800:"#3C3489" },
+            blue:   { 50:"#E6F1FB", 100:"#B5D4F4", 400:"#378ADD", 600:"#185FA5" },
+            stone:  { 50:"#F1EFE8", 100:"#D3D1C7", 200:"#B4B2A9", 400:"#888780", 600:"#5F5E5A", 800:"#444441", 900:"#2C2C2A" },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: "DM Sans", sans-serif; margin: 0; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #D3D1C7; border-radius: 2px; }
+
+    /* ── Sidebar ── */
+    .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 10px; font-size: 13px; color: #5F5E5A; text-decoration: none; transition: background 0.15s, color 0.15s; white-space: nowrap; }
+    .nav-link:hover { background: #F1EFE8; color: #444441; }
+    .nav-link.active { background: #E1F5EE; color: #085041; font-weight: 500; }
+
+    /* ── Field label ── */
+    .field-label { font-family: "DM Mono", monospace; font-size: 11px; color: #888780; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; display: block; }
+
+    /* ── Shared input base ── */
+    .input-base {
+      width: 100%;
+      background: #F1EFE8;
+      border: 1.5px solid #D3D1C7;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-family: "DM Sans", sans-serif;
+      font-size: 14px;
+      color: #444441;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .input-base::placeholder { color: #B4B2A9; }
+    .input-base:focus { border-color: #1D9E75; box-shadow: 0 0 0 3px rgba(29,158,117,0.12); background: #fff; }
+    .input-base:hover:not(:focus) { border-color: #888780; }
+
+    /* ── Select arrow ── */
+    .select-wrap { position: relative; }
+    .select-wrap::after { content: "▾"; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #888780; font-size: 12px; pointer-events: none; }
+    .select-wrap select { padding-right: 36px; cursor: pointer; }
+
+    /* ── Amount input — large ── */
+    .input-amount {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: "Playfair Display", serif;
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 500;
+      color: #444441;
+      text-align: center;
+      padding: 8px 0;
+      transition: color 0.15s;
+    }
+    .input-amount::placeholder { color: #D3D1C7; }
+    .input-amount:focus { color: #085041; }
+    /* Remove number input arrows */
+    .input-amount::-webkit-outer-spin-button,
+    .input-amount::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .input-amount[type=number] { -moz-appearance: textfield; }
+
+    /* ── Amount wrapper ── */
+    .amount-wrapper {
+      background: #F1EFE8;
+      border: 1.5px solid #D3D1C7;
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    .amount-wrapper:focus-within { border-color: #1D9E75; box-shadow: 0 0 0 3px rgba(29,158,117,0.12); background: #fff; }
+    .amount-currency { font-family: "Playfair Display", serif; font-size: clamp(20px, 3vw, 32px); font-weight: 500; color: #D3D1C7; padding-top: 4px; transition: color 0.15s; }
+    .amount-wrapper:focus-within .amount-currency { color: #9FE1CB; }
+
+    /* ── Tab button ── */
+    .tab-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border-radius: 10px;
+      font-family: "DM Mono", monospace;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1.5px solid #D3D1C7;
+      background: #fff;
+      color: #888780;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .tab-btn:hover { border-color: #888780; color: #444441; }
+
+    /* Tab active states per type */
+    .tab-btn.active-gasto     { border-color: #E24B4A; background: #FCEBEB; color: #A32D2D; }
+    .tab-btn.active-ingreso   { border-color: #1D9E75; background: #E1F5EE; color: #085041; }
+    .tab-btn.active-transfer  { border-color: #378ADD; background: #E6F1FB; color: #185FA5; }
+
+    /* ── Tab content panels ── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── Category chip grid ── */
+    .cat-chip {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 10px 6px;
+      border-radius: 10px;
+      border: 1.5px solid #D3D1C7;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      min-width: 0;
+    }
+    .cat-chip:hover { border-color: #888780; }
+    .cat-chip.selected { border-color: #1D9E75; background: #E1F5EE; }
+    .cat-chip .cat-emoji { font-size: 20px; line-height: 1; }
+    .cat-chip .cat-name { font-family: "DM Mono", monospace; font-size: 9px; color: #888780; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .cat-chip.selected .cat-name { color: #0F6E56; }
+
+    /* ── Transfer arrow connector ── */
+    .transfer-arrow {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #F1EFE8;
+      border: 1.5px solid #D3D1C7;
+      display: flex; align-items: center; justify-content: center;
+      color: #888780;
+      font-size: 14px;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .transfer-arrow:hover { background: #E6F1FB; border-color: #378ADD; color: #185FA5; }
+
+    /* ── Preview card ── */
+    .preview-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #F1EFE8; }
+    .preview-row:last-child { border-bottom: none; }
+  </style>
+</head>
+
+<body class="bg-stone-50 min-h-screen">
+
+  <div class="flex min-h-screen">
+
+    <!-- ══════════════════════════════════════════════════════
+         SIDEBAR
+    ══════════════════════════════════════════════════════ -->
+    <aside class="hidden lg:flex flex-col w-56 xl:w-60 bg-white border-r border-stone-100 min-h-screen fixed top-0 left-0 z-30">
+
+      <div class="flex items-center gap-2.5 px-5 py-5 border-b border-stone-100">
+        <span class="w-3 h-3 rounded-full bg-teal-400 flex-shrink-0"></span>
+        <span class="font-display font-semibold text-xl text-stone-900">Ledger</span>
+      </div>
+
+      <nav class="flex-1 px-3 py-4 flex flex-col gap-1">
+        <a href="01-dashboard.html"         class="nav-link"><span class="text-base leading-none">⊞</span><span>Dashboard</span></a>
+        <a href="07-nueva-transaccion.html" class="nav-link active" aria-current="page"><span class="text-base leading-none">＋</span><span>Nueva transacción</span></a>
+        <a href="04-movimientos.html"       class="nav-link"><span class="text-base leading-none">↕</span><span>Movimientos</span></a>
+        <a href="03-cuentas.html"           class="nav-link"><span class="text-base leading-none">◈</span><span>Cuentas</span></a>
+        <a href="05-budgets.html"           class="nav-link"><span class="text-base leading-none">◎</span><span>Budgets</span></a>
+        <a href="06-reportes.html"          class="nav-link"><span class="text-base leading-none">⌇</span><span>Reportes</span></a>
+      </nav>
+
+      <div class="px-4 py-4 border-t border-stone-100 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-purple-50 border border-purple-200 flex items-center justify-center font-mono text-xs font-medium text-purple-800 flex-shrink-0">MA</div>
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-stone-800 truncate">Miguel A.</p>
+          <p class="font-mono text-[10px] text-stone-400">cuenta personal</p>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ══════════════════════════════════════════════════════
+         MAIN
+    ══════════════════════════════════════════════════════ -->
+    <div class="flex-1 flex flex-col lg:ml-56 xl:ml-60 min-h-screen">
+
+      <!-- ── TOPBAR ─────────────────────────────────────────── -->
+      <header class="sticky top-0 z-20 bg-white border-b border-stone-100 px-5 lg:px-8 py-4 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <button class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-stone-100 bg-stone-50 text-stone-500" aria-label="Menú">☰</button>
+          <h1 class="font-display font-medium text-lg text-stone-900">Nueva transacción</h1>
+        </div>
+        <a href="01-dashboard.html" class="font-mono text-xs text-stone-400 hover:text-stone-600 transition-colors">
+          ← volver al dashboard
+        </a>
+      </header>
+
+      <!-- ── PAGE BODY ──────────────────────────────────────── -->
+      <main class="flex-1 px-5 lg:px-8 py-6">
+
+        <div class="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+          <!-- ════════════════════════════════
+               LEFT: Form (3/5)
+          ════════════════════════════════ -->
+          <div class="lg:col-span-3 flex flex-col gap-5">
+
+            <!-- ── CARD: Transaction type tabs + amount ──── -->
+            <section class="bg-white border border-stone-100 rounded-xl p-6">
+
+              <!-- Type selector tabs -->
+              <div class="flex gap-2 mb-6" role="tablist" aria-label="Tipo de transacción">
+                <button
+                  id="tab-gasto"
+                  class="tab-btn active-gasto"
+                  role="tab"
+                  aria-selected="true"
+                  aria-controls="panel-gasto"
+                  onclick="switchTab('gasto')"
+                >
+                  <span>↓</span> Gasto
+                </button>
+                <button
+                  id="tab-ingreso"
+                  class="tab-btn"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="panel-ingreso"
+                  onclick="switchTab('ingreso')"
+                >
+                  <span>↑</span> Ingreso
+                </button>
+                <button
+                  id="tab-transfer"
+                  class="tab-btn"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="panel-transfer"
+                  onclick="switchTab('transfer')"
+                >
+                  <span>⇄</span> Transferencia
+                </button>
+              </div>
+
+              <!-- Amount input — shared across all tabs -->
+              <div>
+                <label for="amount" class="field-label">Monto</label>
+                <div class="amount-wrapper">
+                  <span class="amount-currency">$</span>
+                  <input
+                    id="amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="input-amount"
+                    placeholder="0.00"
+                    autocomplete="off"
+                  />
+                </div>
+              </div>
+
+            </section>
+
+            <!-- ══════════════════════════════════════
+                 TAB PANEL: GASTO
+            ══════════════════════════════════════ -->
+            <div id="panel-gasto" class="tab-panel active" role="tabpanel" aria-labelledby="tab-gasto">
+
+              <!-- Description + date -->
+              <section class="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-4">
+
+                <div>
+                  <label for="gasto-desc" class="field-label">Descripción</label>
+                  <input
+                    id="gasto-desc"
+                    type="text"
+                    class="input-base"
+                    placeholder="Ej: Almuerzo, Netflix, nafta…"
+                    autocomplete="off"
+                  />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+
+                  <div>
+                    <label for="gasto-fecha" class="field-label">Fecha</label>
+                    <input id="gasto-fecha" type="date" class="input-base" value="2025-03-14" />
+                  </div>
+
+                  <div>
+                    <label for="gasto-hora" class="field-label">Hora</label>
+                    <input id="gasto-hora" type="time" class="input-base" value="12:00" />
+                  </div>
+
+                </div>
+
+              </section>
+
+              <!-- Account + category -->
+              <section class="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-4">
+
+                <div>
+                  <label for="gasto-cuenta" class="field-label">Cuenta</label>
+                  <div class="select-wrap">
+                    <select id="gasto-cuenta" class="input-base">
+                      <option value="">Seleccionar cuenta…</option>
+                      <option value="nacion" selected>🏦 Banco Nación — $32,400</option>
+                      <option value="visa">💳 Visa Santander</option>
+                      <option value="galicia">🏦 Galicia Ahorro — $18,750</option>
+                      <option value="mp">📱 Mercado Pago — $4,100</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Category chips -->
+                <div>
+                  <span class="field-label">Categoría</span>
+                  <div class="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                    <button type="button" class="cat-chip" onclick="selectCategory(this)">
+                      <span class="cat-emoji">🍔</span><span class="cat-name">Comida</span>
+                    </button>
+                    <button type="button" class="cat-chip selected" onclick="selectCategory(this)" aria-pressed="true">
+                      <span class="cat-emoji">🚌</span><span class="cat-name">Transp.</span>
+                    </button>
+                    <button type="button" class="cat-chip" onclick="selectCategory(this)">
+                      <span class="cat-emoji">🏠</span><span class="cat-name">Hogar</span>
+                    </button>
+                    <button type="button" class="cat-chip" onclick="selectCategory(this)">
+                      <span class="cat-emoji">💊</span><span class="cat-name">Salud</span>
+                    </button>
+                    <button type="button" class="cat-chip" onclick="selectCategory(this)">
+                      <span class="cat-emoji">🎬</span><span class="cat-name">Ocio</span>
+                    </button>
+                    <button type="button" class="cat-chip" onclick="selectCategory(this)">
+                      <span class="cat-emoji">✈️</span><span class="cat-name">Viajes</span>
+                    </button>
+                    <button type="button" class="cat-chip" onclick="selectCategory(this)">
+                      <span class="cat-emoji">＋</span><span class="cat-name">Más</span>
+                    </button>
+                  </div>
+                </div>
+
+              </section>
+
+              <!-- Tags + note -->
+              <section class="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-4">
+
+                <div>
+                  <label for="gasto-tags" class="field-label">Etiquetas (separadas por coma)</label>
+                  <input
+                    id="gasto-tags"
+                    type="text"
+                    class="input-base"
+                    placeholder="Ej: recurrente, trabajo, deducible…"
+                  />
+                </div>
+
+                <div>
+                  <label for="gasto-nota" class="field-label">Nota</label>
+                  <textarea
+                    id="gasto-nota"
+                    class="input-base"
+                    rows="2"
+                    placeholder="Agrega un comentario opcional…"
+                  ></textarea>
+                </div>
+
+              </section>
+
+            </div><!-- /panel-gasto -->
+
+            <!-- ══════════════════════════════════════
+                 TAB PANEL: INGRESO
+            ══════════════════════════════════════ -->
+            <div id="panel-ingreso" class="tab-panel" role="tabpanel" aria-labelledby="tab-ingreso">
+
+              <!-- Description + date -->
+              <section class="bg-white border border-teal-100 rounded-xl p-6 flex flex-col gap-4">
+
+                <div>
+                  <label for="ingreso-desc" class="field-label">Descripción del ingreso</label>
+                  <input
+                    id="ingreso-desc"
+                    type="text"
+                    class="input-base"
+                    placeholder="Ej: Salario, factura, freelance…"
+                  />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label for="ingreso-fecha" class="field-label">Fecha</label>
+                    <input id="ingreso-fecha" type="date" class="input-base" value="2025-03-14" />
+                  </div>
+                  <div>
+                    <label for="ingreso-hora" class="field-label">Hora</label>
+                    <input id="ingreso-hora" type="time" class="input-base" value="09:00" />
+                  </div>
+                </div>
+
+              </section>
+
+              <!-- Destination account + source -->
+              <section class="bg-white border border-teal-100 rounded-xl p-6 flex flex-col gap-4">
+
+                <div>
+                  <label for="ingreso-cuenta" class="field-label">Cuenta de destino</label>
+                  <div class="select-wrap">
+                    <select id="ingreso-cuenta" class="input-base">
+                      <option value="">Seleccionar cuenta…</option>
+                      <option value="nacion" selected>🏦 Banco Nación — $32,400</option>
+                      <option value="galicia">🏦 Galicia Ahorro — $18,750</option>
+                      <option value="mp">📱 Mercado Pago — $4,100</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label for="ingreso-fuente" class="field-label">Fuente del ingreso</label>
+                  <div class="select-wrap">
+                    <select id="ingreso-fuente" class="input-base">
+                      <option value="">Seleccionar fuente…</option>
+                      <option value="salario" selected>💼 Salario / Sueldo</option>
+                      <option value="freelance">🖥 Freelance / Proyecto</option>
+                      <option value="alquiler">🏠 Alquiler</option>
+                      <option value="inversion">📈 Inversión</option>
+                      <option value="regalo">🎁 Regalo</option>
+                      <option value="otro">📦 Otro</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label for="ingreso-emisor" class="field-label">Emisor / Pagador</label>
+                  <input
+                    id="ingreso-emisor"
+                    type="text"
+                    class="input-base"
+                    placeholder="Nombre de la empresa o persona…"
+                    value="Acme Corp S.A."
+                  />
+                </div>
+
+              </section>
+
+              <!-- Note -->
+              <section class="bg-white border border-teal-100 rounded-xl p-6">
+                <label for="ingreso-nota" class="field-label">Nota</label>
+                <textarea
+                  id="ingreso-nota"
+                  class="input-base"
+                  rows="2"
+                  placeholder="Ej: Pago correspondiente al mes de marzo…"
+                ></textarea>
+              </section>
+
+            </div><!-- /panel-ingreso -->
+
+            <!-- ══════════════════════════════════════
+                 TAB PANEL: TRANSFERENCIA
+            ══════════════════════════════════════ -->
+            <div id="panel-transfer" class="tab-panel" role="tabpanel" aria-labelledby="tab-transfer">
+
+              <!-- Origin → Destination -->
+              <section class="bg-white border border-blue-100 rounded-xl p-6 flex flex-col gap-4">
+
+                <div>
+                  <span class="field-label">De / Origen</span>
+                  <div class="select-wrap">
+                    <select id="transfer-origen" class="input-base">
+                      <option value="">Seleccionar cuenta origen…</option>
+                      <option value="nacion" selected>🏦 Banco Nación — $32,400 disp.</option>
+                      <option value="visa">💳 Visa Santander</option>
+                      <option value="galicia">🏦 Galicia Ahorro — $18,750</option>
+                      <option value="mp">📱 Mercado Pago — $4,100</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Arrow connector between accounts -->
+                <div class="flex items-center gap-4">
+                  <div class="flex-1 h-px bg-stone-100"></div>
+                  <div class="transfer-arrow" aria-label="Dirección de la transferencia" title="Click para invertir dirección">⇄</div>
+                  <div class="flex-1 h-px bg-stone-100"></div>
+                </div>
+
+                <div>
+                  <span class="field-label">A / Destino</span>
+                  <div class="select-wrap">
+                    <select id="transfer-destino" class="input-base">
+                      <option value="">Seleccionar cuenta destino…</option>
+                      <option value="nacion">🏦 Banco Nación</option>
+                      <option value="galicia" selected>🏦 Galicia Ahorro — $18,750</option>
+                      <option value="mp">📱 Mercado Pago — $4,100</option>
+                    </select>
+                  </div>
+                </div>
+
+              </section>
+
+              <!-- Date + time + note -->
+              <section class="bg-white border border-blue-100 rounded-xl p-6 flex flex-col gap-4">
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label for="transfer-fecha" class="field-label">Fecha</label>
+                    <input id="transfer-fecha" type="date" class="input-base" value="2025-03-14" />
+                  </div>
+                  <div>
+                    <label for="transfer-hora" class="field-label">Hora</label>
+                    <input id="transfer-hora" type="time" class="input-base" value="12:00" />
+                  </div>
+                </div>
+
+                <div>
+                  <label for="transfer-desc" class="field-label">Concepto / Motivo</label>
+                  <input
+                    id="transfer-desc"
+                    type="text"
+                    class="input-base"
+                    placeholder="Ej: Ahorro mensual, pago a tercero…"
+                  />
+                </div>
+
+                <div>
+                  <label for="transfer-nota" class="field-label">Nota</label>
+                  <textarea
+                    id="transfer-nota"
+                    class="input-base"
+                    rows="2"
+                    placeholder="Comentario adicional…"
+                  ></textarea>
+                </div>
+
+              </section>
+
+              <!-- Exchange rate section (for multi-currency) -->
+              <section class="bg-blue-50 border border-blue-100 rounded-xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                  <p class="text-sm font-medium text-blue-800">Tipo de cambio</p>
+                  <span class="font-mono text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">Opcional</span>
+                </div>
+                <p class="font-mono text-xs text-blue-600 mb-3">
+                  Si las cuentas tienen monedas distintas, ingresá el tipo de cambio aplicado.
+                </p>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label for="transfer-moneda-origen" class="field-label">Moneda origen</label>
+                    <div class="select-wrap">
+                      <select id="transfer-moneda-origen" class="input-base">
+                        <option>ARS — Pesos</option>
+                        <option>USD — Dólares</option>
+                        <option>EUR — Euros</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label for="transfer-tc" class="field-label">Tasa de cambio</label>
+                    <input
+                      id="transfer-tc"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      class="input-base"
+                      placeholder="1.00"
+                    />
+                  </div>
+                </div>
+              </section>
+
+            </div><!-- /panel-transfer -->
+
+          </div>
+
+          <!-- ════════════════════════════════
+               RIGHT: Live preview (2/5)
+          ════════════════════════════════ -->
+          <div class="lg:col-span-2 flex flex-col gap-5">
+
+            <div class="sticky top-24 flex flex-col gap-4">
+
+              <!-- Preview card -->
+              <div class="bg-white border border-stone-100 rounded-xl overflow-hidden">
+
+                <div class="px-5 py-4 border-b border-stone-100">
+                  <p class="text-sm font-medium text-stone-800">Vista previa</p>
+                </div>
+
+                <div class="p-5 flex flex-col gap-4">
+
+                  <!-- Amount preview -->
+                  <div id="preview-amount-wrap" class="bg-red-50 rounded-xl p-4 text-center border border-red-100 transition-all">
+                    <p id="preview-type-label" class="font-mono text-[10px] uppercase tracking-widest text-red-600 mb-1">Gasto</p>
+                    <p id="preview-amount" class="font-display text-3xl font-medium text-stone-800">$0.00</p>
+                  </div>
+
+                  <!-- Details -->
+                  <div class="flex flex-col gap-0">
+
+                    <div class="preview-row">
+                      <span class="font-mono text-xs text-stone-400">Tipo</span>
+                      <span id="preview-tipo" class="text-sm text-stone-700">Gasto</span>
+                    </div>
+
+                    <div class="preview-row" id="preview-cuenta-row">
+                      <span class="font-mono text-xs text-stone-400">Cuenta</span>
+                      <span id="preview-cuenta" class="text-sm text-stone-700">Banco Nación</span>
+                    </div>
+
+                    <div class="preview-row" id="preview-transfer-row" style="display:none">
+                      <span class="font-mono text-xs text-stone-400">Movimiento</span>
+                      <span class="text-sm text-blue-600 font-mono text-xs">Nación → Galicia</span>
+                    </div>
+
+                    <div class="preview-row" id="preview-cat-row">
+                      <span class="font-mono text-xs text-stone-400">Categoría</span>
+                      <span class="text-sm text-stone-700">🚌 Transporte</span>
+                    </div>
+
+                    <div class="preview-row">
+                      <span class="font-mono text-xs text-stone-400">Fecha</span>
+                      <span class="text-sm text-stone-700">14 mar 2025 · 12:00</span>
+                    </div>
+
+                  </div>
+
+                  <!-- Budget impact (visible for gastos) -->
+                  <div id="preview-budget" class="bg-stone-50 border border-stone-100 rounded-xl p-3.5">
+                    <p class="font-mono text-[10px] text-stone-400 uppercase tracking-wider mb-2">Impacto en budget</p>
+                    <div class="flex justify-between items-baseline mb-1.5">
+                      <span class="text-xs text-stone-600">Transporte</span>
+                      <span class="font-mono text-xs text-stone-500">$1,100 / $3,000</span>
+                    </div>
+                    <div class="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                      <div class="h-full rounded-full bg-teal-400" style="width: 37%"></div>
+                    </div>
+                  </div>
+
+                  <!-- Save button -->
+                  <button
+                    id="save-btn"
+                    type="submit"
+                    class="w-full bg-red-400 hover:bg-red-600 text-white font-medium text-sm rounded-xl py-3 transition-colors"
+                  >
+                    Guardar gasto
+                  </button>
+
+                  <a href="01-dashboard.html" class="text-center text-stone-400 hover:text-stone-600 font-mono text-xs py-1 transition-colors block">
+                    Cancelar
+                  </a>
+
+                </div>
+              </div>
+
+              <!-- Tip -->
+              <div class="bg-stone-50 border border-stone-100 rounded-xl p-4 flex gap-3 items-start">
+                <span class="text-base flex-shrink-0 mt-0.5">💡</span>
+                <p id="tip-text" class="text-xs text-stone-500 leading-relaxed">
+                  Presioná <strong class="text-stone-700">Tab</strong> para moverte entre campos. Los gastos se imputarán automáticamente al budget de la categoría seleccionada.
+                </p>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="lg:hidden max-w-4xl mx-auto mt-4 pb-6">
+          <button type="submit" class="w-full bg-teal-400 hover:bg-teal-600 text-white font-medium text-sm rounded-xl py-3.5 transition-colors">
+            Guardar transacción
+          </button>
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <!-- ── MOBILE BOTTOM NAV ────────────────────────────────── -->
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-stone-100">
+    <ul class="flex justify-around py-2" role="list">
+      <li><a href="01-dashboard.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">⊞</span>
+        <span class="font-mono text-[10px] text-stone-400">inicio</span>
+      </a></li>
+      <li><a href="04-movimientos.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">↕</span>
+        <span class="font-mono text-[10px] text-stone-400">movimientos</span>
+      </a></li>
+      <li><a href="07-nueva-transaccion.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">＋</span>
+        <span class="w-1 h-1 rounded-full bg-teal-400"></span>
+        <span class="font-mono text-[10px] text-teal-600">nueva</span>
+      </a></li>
+      <li><a href="03-cuentas.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">◈</span>
+        <span class="font-mono text-[10px] text-stone-400">cuentas</span>
+      </a></li>
+      <li><a href="06-reportes.html" class="flex flex-col items-center gap-1 px-3 py-1">
+        <span class="text-lg leading-none">⌇</span>
+        <span class="font-mono text-[10px] text-stone-400">reportes</span>
+      </a></li>
+    </ul>
+  </nav>
+  <div class="lg:hidden h-16"></div>
+
+  <!-- ══════════════════════════════════════════════════════
+       TAB SWITCHING LOGIC
+  ══════════════════════════════════════════════════════ -->
+  <script>
+    // ── Tab configuration ──────────────────────────────────
+    const TAB_CONFIG = {
+      gasto: {
+        activeClass:     "active-gasto",
+        amountBg:        "bg-red-50",
+        amountBorder:    "border-red-100",
+        typeLabel:       "Gasto",
+        typeLabelColor:  "text-red-600",
+        saveBtnBg:       "bg-red-400",
+        saveBtnHover:    "hover:bg-red-600",
+        saveBtnLabel:    "Guardar gasto",
+        tip:             "Presioná <strong class=\"text-stone-700\">Tab</strong> para moverte entre campos. Los gastos se imputarán automáticamente al budget de la categoría seleccionada.",
+        showCatRow:      true,
+        showTransferRow: false,
+      },
+      ingreso: {
+        activeClass:     "active-ingreso",
+        amountBg:        "bg-teal-50",
+        amountBorder:    "border-teal-100",
+        typeLabel:       "Ingreso",
+        typeLabelColor:  "text-teal-600",
+        saveBtnBg:       "bg-teal-400",
+        saveBtnHover:    "hover:bg-teal-600",
+        saveBtnLabel:    "Guardar ingreso",
+        tip:             "Los ingresos acreditan directamente en la cuenta seleccionada. Podés asociarlos a una fuente para llevar estadísticas.",
+        showCatRow:      false,
+        showTransferRow: false,
+      },
+      transfer: {
+        activeClass:     "active-transfer",
+        amountBg:        "bg-blue-50",
+        amountBorder:    "border-blue-100",
+        typeLabel:       "Transferencia",
+        typeLabelColor:  "text-blue-600",
+        saveBtnBg:       "bg-blue-400",
+        saveBtnHover:    "hover:bg-blue-600",
+        saveBtnLabel:    "Confirmar transferencia",
+        tip:             "Las transferencias mueven dinero entre tus cuentas. No afectan el total de patrimonio, solo rebalancean el saldo entre cuentas.",
+        showCatRow:      false,
+        showTransferRow: true,
+      },
+    };
+
+    let currentTab = "gasto";
+
+    // ── Switch active tab ───────────────────────────────────
+    function switchTab(tab) {
+      const prev = TAB_CONFIG[currentTab];
+      const next = TAB_CONFIG[tab];
+
+      // Deactivate all tab buttons
+      document.querySelectorAll("[role='tab']").forEach(btn => {
+        btn.classList.remove("active-gasto", "active-ingreso", "active-transfer");
+        btn.setAttribute("aria-selected", "false");
+      });
+
+      // Activate clicked tab button
+      document.getElementById("tab-" + tab).classList.add(next.activeClass);
+      document.getElementById("tab-" + tab).setAttribute("aria-selected", "true");
+
+      // Hide all panels, show target panel
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      document.getElementById("panel-" + tab).classList.add("active");
+
+      // Update preview card
+      const wrap = document.getElementById("preview-amount-wrap");
+      wrap.className = "rounded-xl p-4 text-center border transition-all " + next.amountBg + " " + next.amountBorder;
+
+      document.getElementById("preview-type-label").className =
+        "font-mono text-[10px] uppercase tracking-widest mb-1 " + next.typeLabelColor;
+      document.getElementById("preview-type-label").textContent = next.typeLabel;
+      document.getElementById("preview-tipo").textContent = next.typeLabel;
+
+      // Show/hide rows
+      document.getElementById("preview-cat-row").style.display   = next.showCatRow      ? "" : "none";
+      document.getElementById("preview-transfer-row").style.display = next.showTransferRow ? "" : "none";
+      document.getElementById("preview-cuenta-row").style.display   = next.showTransferRow ? "none" : "";
+      document.getElementById("preview-budget").style.display    = next.showCatRow      ? "" : "none";
+
+      // Update save button
+      const btn = document.getElementById("save-btn");
+      btn.className = "w-full " + next.saveBtnBg + " " + next.saveBtnHover + " text-white font-medium text-sm rounded-xl py-3 transition-colors";
+      btn.textContent = next.saveBtnLabel;
+
+      // Update tip
+      document.getElementById("tip-text").innerHTML = next.tip;
+
+      currentTab = tab;
+    }
+
+    // ── Category chip single-select ────────────────────────
+    function selectCategory(chip) {
+      const parent = chip.closest("[role='group'], div");
+      parent.querySelectorAll(".cat-chip").forEach(c => {
+        c.classList.remove("selected");
+        c.setAttribute("aria-pressed", "false");
+      });
+      chip.classList.add("selected");
+      chip.setAttribute("aria-pressed", "true");
+    }
+
+    // ── Live amount mirror to preview ─────────────────────
+    document.getElementById("amount").addEventListener("input", function () {
+      const val = parseFloat(this.value);
+      const formatted = isNaN(val) ? "$0.00" : "$" + val.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById("preview-amount").textContent = formatted;
+    });
+  </script>
+
+</body>
+</html>
