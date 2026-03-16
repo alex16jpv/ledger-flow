@@ -9,6 +9,12 @@ export default function BudgetItem({ budget }: { budget: BudgetType }) {
   const isOverBudget = budget.spent > budget.amount;
   const progressColor = isOverBudget ? "red-400" : budget.color;
   const textColor = isOverBudget ? "text-red-400" : "text-stone-400";
+  const amountFormat = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
 
   return (
     <div>
@@ -17,7 +23,7 @@ export default function BudgetItem({ budget }: { budget: BudgetType }) {
           {budget.emoji} {budget.name}
         </span>
         <span className={`font-mono text-xs ${textColor}`}>
-          ${budget.spent} / ${budget.amount}
+          {`${amountFormat.format(budget.spent)} / ${amountFormat.format(budget.amount)}`}
         </span>
       </div>
       <div className="progress-track">
