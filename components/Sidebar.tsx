@@ -47,10 +47,10 @@ export default function Sidebar() {
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-stone-800 truncate">
-            Miguel A.
+            John Doe
           </p>
           <p className="font-mono text-[10px] text-stone-400 truncate">
-            cuenta personal
+            Personal Account
           </p>
         </div>
       </div> */}
