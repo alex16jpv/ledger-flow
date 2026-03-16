@@ -1,5 +1,5 @@
 import { TransactionType } from "@/types/Transaction.types";
-import { formatAmount } from "@/utils/utils";
+import { formatAmount, formatDate } from "@/utils/utils";
 
 const TYPE_COLORS = {
   EXPENSE: "text-red-600",
@@ -59,7 +59,10 @@ export default function TransactionItem({
 }: {
   transaction: TransactionType;
 }) {
-  const dateString = transaction.date.toLocaleDateString("en-US", DATE_OPTIONS);
+  const dateString = formatDate({
+    date: transaction.date,
+    options: DATE_OPTIONS,
+  });
   const timeString = transaction.date.toLocaleTimeString("en-US", TIME_OPTIONS);
   const dateTimeString = `${dateString} · ${timeString}`;
 

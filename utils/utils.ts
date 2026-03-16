@@ -22,3 +22,19 @@ export const percentMinMax = (
 ): number => {
   return Math.min(max, Math.max(min, value));
 };
+
+export const formatDate = ({
+  date,
+  options = {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  },
+}: {
+  date: Date;
+  options?: Intl.DateTimeFormatOptions;
+}): string => {
+  return date.toLocaleDateString("en-US", {
+    ...options,
+  });
+};
