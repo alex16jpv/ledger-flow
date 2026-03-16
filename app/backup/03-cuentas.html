@@ -1,328 +1,682 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ledger — Cuentas</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ledger — Cuentas</title>
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
 
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            display: ["Playfair Display", "serif"],
-            sans:    ["DM Sans", "sans-serif"],
-            mono:    ["DM Mono", "monospace"],
-          },
-          colors: {
-            teal:   { 50:"#E1F5EE", 100:"#9FE1CB", 400:"#1D9E75", 600:"#0F6E56", 800:"#085041" },
-            amber:  { 50:"#FAEEDA", 200:"#FAC775", 400:"#BA7517", 600:"#854F0B" },
-            red:    { 50:"#FCEBEB", 400:"#E24B4A", 600:"#A32D2D" },
-            purple: { 50:"#EEEDFE", 200:"#AFA9EC", 400:"#7F77DD", 600:"#534AB7", 800:"#3C3489" },
-            blue:   { 50:"#E6F1FB", 100:"#B5D4F4", 400:"#378ADD", 600:"#185FA5" },
-            stone:  { 50:"#F1EFE8", 100:"#D3D1C7", 200:"#B4B2A9", 400:"#888780", 600:"#5F5E5A", 800:"#444441", 900:"#2C2C2A" },
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              display: ["Playfair Display", "serif"],
+              sans: ["DM Sans", "sans-serif"],
+              mono: ["DM Mono", "monospace"],
+            },
+            colors: {
+              teal: {
+                50: "#E1F5EE",
+                100: "#9FE1CB",
+                400: "#1D9E75",
+                600: "#0F6E56",
+                800: "#085041",
+              },
+              amber: {
+                50: "#FAEEDA",
+                200: "#FAC775",
+                400: "#BA7517",
+                600: "#854F0B",
+              },
+              red: { 50: "#FCEBEB", 400: "#E24B4A", 600: "#A32D2D" },
+              purple: {
+                50: "#EEEDFE",
+                200: "#AFA9EC",
+                400: "#7F77DD",
+                600: "#534AB7",
+                800: "#3C3489",
+              },
+              blue: {
+                50: "#E6F1FB",
+                100: "#B5D4F4",
+                400: "#378ADD",
+                600: "#185FA5",
+              },
+              stone: {
+                50: "#F1EFE8",
+                100: "#D3D1C7",
+                200: "#B4B2A9",
+                400: "#888780",
+                600: "#5F5E5A",
+                800: "#444441",
+                900: "#2C2C2A",
+              },
+            },
           },
         },
-      },
-    };
-  </script>
+      };
+    </script>
 
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: "DM Sans", sans-serif; margin: 0; }
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #D3D1C7; border-radius: 2px; }
-    .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 10px; font-size: 13px; color: #5F5E5A; cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; text-decoration: none; }
-    .nav-link:hover { background: #F1EFE8; color: #444441; }
-    .nav-link.active { background: #E1F5EE; color: #085041; font-weight: 500; }
-    .sparkline { display: flex; align-items: flex-end; gap: 2px; }
-    .spark-bar { flex: 1; border-radius: 2px 2px 0 0; min-height: 3px; }
-    .progress-track { height: 6px; border-radius: 3px; overflow: hidden; background: #F1EFE8; }
-  </style>
-</head>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "DM Sans", sans-serif;
+        margin: 0;
+      }
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #d3d1c7;
+        border-radius: 2px;
+      }
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 14px;
+        border-radius: 10px;
+        font-size: 13px;
+        color: #5f5e5a;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          color 0.15s;
+        white-space: nowrap;
+        text-decoration: none;
+      }
+      .nav-link:hover {
+        background: #f1efe8;
+        color: #444441;
+      }
+      .nav-link.active {
+        background: #e1f5ee;
+        color: #085041;
+        font-weight: 500;
+      }
+      .sparkline {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+      }
+      .spark-bar {
+        flex: 1;
+        border-radius: 2px 2px 0 0;
+        min-height: 3px;
+      }
+      .progress-track {
+        height: 6px;
+        border-radius: 3px;
+        overflow: hidden;
+        background: #f1efe8;
+      }
+    </style>
+  </head>
 
-<body class="bg-stone-50 min-h-screen">
-
-  <div class="flex min-h-screen">
-
-    <!-- ── SIDEBAR ──────────────────────────────────────────── -->
-    <aside class="hidden lg:flex flex-col w-56 xl:w-60 bg-white border-r border-stone-100 min-h-screen fixed top-0 left-0 z-30">
-      <div class="flex items-center gap-2.5 px-5 py-5 border-b border-stone-100">
-        <span class="w-3 h-3 rounded-full bg-teal-400 flex-shrink-0"></span>
-        <span class="font-display font-semibold text-xl text-stone-900">Ledger</span>
-      </div>
-      <nav class="flex-1 px-3 py-4 flex flex-col gap-1">
-        <a href="01-dashboard.html" class="nav-link"><span class="text-base leading-none">⊞</span><span>Dashboard</span></a>
-        <a href="02-nueva-transaccion.html" class="nav-link"><span class="text-base leading-none">＋</span><span>Nueva transacción</span></a>
-        <a href="04-movimientos.html" class="nav-link"><span class="text-base leading-none">↕</span><span>Movimientos</span></a>
-        <a href="03-cuentas.html" class="nav-link active" aria-current="page"><span class="text-base leading-none">◈</span><span>Cuentas</span></a>
-        <a href="05-budgets.html" class="nav-link"><span class="text-base leading-none">◎</span><span>Budgets</span></a>
-        <a href="06-reportes.html" class="nav-link"><span class="text-base leading-none">⌇</span><span>Reportes</span></a>
-      </nav>
-      <div class="px-4 py-4 border-t border-stone-100 flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full bg-purple-50 border border-purple-200 flex items-center justify-center font-mono text-xs font-medium text-purple-800 flex-shrink-0">MA</div>
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-stone-800 truncate">Miguel A.</p>
-          <p class="font-mono text-[10px] text-stone-400">cuenta personal</p>
+  <body class="bg-stone-50 min-h-screen">
+    <div class="flex min-h-screen">
+      <!-- ── SIDEBAR ──────────────────────────────────────────── -->
+      <aside
+        class="hidden lg:flex flex-col w-56 xl:w-60 bg-white border-r border-stone-100 min-h-screen fixed top-0 left-0 z-30"
+      >
+        <div
+          class="flex items-center gap-2.5 px-5 py-5 border-b border-stone-100"
+        >
+          <span class="w-3 h-3 rounded-full bg-teal-400 flex-shrink-0"></span>
+          <span class="font-display font-semibold text-xl text-stone-900"
+            >Ledger</span
+          >
         </div>
-      </div>
-    </aside>
-
-    <!-- ── MAIN ───────────────────────────────────────────────── -->
-    <div class="flex-1 flex flex-col lg:ml-56 xl:ml-60 min-h-screen">
-
-      <header class="sticky top-0 z-20 bg-white border-b border-stone-100 px-5 lg:px-8 py-4 flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <button class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-stone-100 bg-stone-50 text-stone-500" aria-label="Menú">☰</button>
-          <div>
-            <h1 class="font-display font-medium text-lg text-stone-900">Cuentas</h1>
-            <p class="hidden sm:block font-mono text-[11px] text-stone-400 -mt-0.5">4 cuentas activas</p>
+        <nav class="flex-1 px-3 py-4 flex flex-col gap-1">
+          <a href="01-dashboard.html" class="nav-link"
+            ><span class="text-base leading-none">⊞</span
+            ><span>Dashboard</span></a
+          >
+          <a href="07-nueva-transaccion.html" class="nav-link"
+            ><span class="text-base leading-none">＋</span
+            ><span>Nueva transacción</span></a
+          >
+          <a href="04-movimientos.html" class="nav-link"
+            ><span class="text-base leading-none">↕</span
+            ><span>Movimientos</span></a
+          >
+          <a href="03-cuentas.html" class="nav-link active" aria-current="page"
+            ><span class="text-base leading-none">◈</span
+            ><span>Cuentas</span></a
+          >
+          <a href="05-budgets.html" class="nav-link"
+            ><span class="text-base leading-none">◎</span
+            ><span>Budgets</span></a
+          >
+          <a href="06-reportes.html" class="nav-link"
+            ><span class="text-base leading-none">⌇</span
+            ><span>Reportes</span></a
+          >
+        </nav>
+        <div
+          class="px-4 py-4 border-t border-stone-100 flex items-center gap-3"
+        >
+          <div
+            class="w-8 h-8 rounded-full bg-purple-50 border border-purple-200 flex items-center justify-center font-mono text-xs font-medium text-purple-800 flex-shrink-0"
+          >
+            MA
+          </div>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-stone-800 truncate">Miguel A.</p>
+            <p class="font-mono text-[10px] text-stone-400">cuenta personal</p>
           </div>
         </div>
-        <button class="flex items-center gap-1.5 bg-teal-400 hover:bg-teal-600 text-white text-sm font-medium rounded-lg px-3.5 py-2 transition-colors">
-          <span class="text-base leading-none">＋</span>
-          <span class="hidden sm:inline">Agregar cuenta</span>
-        </button>
-      </header>
+      </aside>
 
-      <main class="flex-1 px-5 lg:px-8 py-6 flex flex-col gap-6">
-
-        <!-- ── SECTION: Account cards ─────────────────────────── -->
-        <section aria-label="Mis cuentas">
-          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
-            <!-- Débito -->
-            <article class="bg-teal-50 border border-teal-100 rounded-xl p-5 flex flex-col">
-              <div class="flex items-start justify-between mb-3">
-                <div>
-                  <p class="font-mono text-[10px] tracking-widest text-teal-600 uppercase mb-1">Débito</p>
-                  <p class="text-sm font-medium text-teal-800">Banco Nación</p>
-                </div>
-                <button class="text-teal-400 hover:text-teal-600 transition-colors text-sm" aria-label="Opciones">⋯</button>
-              </div>
-              <p class="font-display text-2xl font-medium text-teal-800 mb-3">$32,400</p>
-              <div class="sparkline h-10 mt-auto" aria-hidden="true">
-                <div class="spark-bar bg-teal-100" style="height:35%"></div>
-                <div class="spark-bar bg-teal-100" style="height:55%"></div>
-                <div class="spark-bar bg-teal-100" style="height:40%"></div>
-                <div class="spark-bar bg-teal-400" style="height:80%"></div>
-                <div class="spark-bar bg-teal-100" style="height:65%"></div>
-                <div class="spark-bar bg-teal-400" style="height:90%"></div>
-                <div class="spark-bar bg-teal-100" style="height:70%"></div>
-              </div>
-            </article>
-
-            <!-- Ahorro -->
-            <article class="bg-purple-50 border border-purple-200 rounded-xl p-5 flex flex-col">
-              <div class="flex items-start justify-between mb-3">
-                <div>
-                  <p class="font-mono text-[10px] tracking-widest text-purple-600 uppercase mb-1">Ahorro</p>
-                  <p class="text-sm font-medium text-purple-800">Galicia Ahorro</p>
-                </div>
-                <button class="text-purple-400 hover:text-purple-600 transition-colors text-sm" aria-label="Opciones">⋯</button>
-              </div>
-              <p class="font-display text-2xl font-medium text-purple-800 mb-3">$18,750</p>
-              <div class="sparkline h-10 mt-auto" aria-hidden="true">
-                <div class="spark-bar bg-purple-200" style="height:50%"></div>
-                <div class="spark-bar bg-purple-200" style="height:60%"></div>
-                <div class="spark-bar bg-purple-200" style="height:70%"></div>
-                <div class="spark-bar bg-purple-400" style="height:80%"></div>
-                <div class="spark-bar bg-purple-400" style="height:90%"></div>
-                <div class="spark-bar bg-purple-400" style="height:95%"></div>
-                <div class="spark-bar bg-purple-400" style="height:88%"></div>
-              </div>
-            </article>
-
-            <!-- Crédito -->
-            <article class="bg-amber-50 border border-amber-200 rounded-xl p-5 flex flex-col">
-              <div class="flex items-start justify-between mb-3">
-                <div>
-                  <p class="font-mono text-[10px] tracking-widest text-amber-600 uppercase mb-1">Crédito</p>
-                  <p class="text-sm font-medium text-amber-600">Visa Santander</p>
-                </div>
-                <button class="text-amber-400 hover:text-amber-600 transition-colors text-sm" aria-label="Opciones">⋯</button>
-              </div>
-              <p class="font-display text-2xl font-medium text-amber-600 mb-3">−$5,200</p>
-              <div class="sparkline h-10 mt-auto" aria-hidden="true">
-                <div class="spark-bar bg-amber-200" style="height:20%"></div>
-                <div class="spark-bar bg-amber-200" style="height:35%"></div>
-                <div class="spark-bar bg-amber-200" style="height:50%"></div>
-                <div class="spark-bar bg-amber-400" style="height:70%"></div>
-                <div class="spark-bar bg-amber-400" style="height:80%"></div>
-                <div class="spark-bar bg-amber-200" style="height:65%"></div>
-                <div class="spark-bar bg-amber-200" style="height:55%"></div>
-              </div>
-            </article>
-
-            <!-- Digital -->
-            <article class="bg-blue-50 border border-blue-100 rounded-xl p-5 flex flex-col">
-              <div class="flex items-start justify-between mb-3">
-                <div>
-                  <p class="font-mono text-[10px] tracking-widest text-blue-600 uppercase mb-1">Digital</p>
-                  <p class="text-sm font-medium text-blue-600">Mercado Pago</p>
-                </div>
-                <button class="text-blue-400 hover:text-blue-600 transition-colors text-sm" aria-label="Opciones">⋯</button>
-              </div>
-              <p class="font-display text-2xl font-medium text-blue-600 mb-3">$4,100</p>
-              <div class="sparkline h-10 mt-auto" aria-hidden="true">
-                <div class="spark-bar bg-blue-100" style="height:60%"></div>
-                <div class="spark-bar bg-blue-100" style="height:50%"></div>
-                <div class="spark-bar bg-blue-100" style="height:70%"></div>
-                <div class="spark-bar bg-blue-100" style="height:55%"></div>
-                <div class="spark-bar bg-blue-100" style="height:45%"></div>
-                <div class="spark-bar bg-blue-400" style="height:60%"></div>
-                <div class="spark-bar bg-blue-100" style="height:50%"></div>
-              </div>
-            </article>
-
-          </div>
-        </section>
-
-        <!-- ── SECTION: Transfer + recent per account ─────────── -->
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-
-          <!-- Transfer panel (2/5) -->
-          <section aria-label="Transferir entre cuentas" class="lg:col-span-2 bg-white border border-stone-100 rounded-xl overflow-hidden">
-            <div class="px-5 py-4 border-b border-stone-100">
-              <h2 class="text-sm font-medium text-stone-800">Mover dinero entre cuentas</h2>
+      <!-- ── MAIN ───────────────────────────────────────────────── -->
+      <div class="flex-1 flex flex-col lg:ml-56 xl:ml-60 min-h-screen">
+        <header
+          class="sticky top-0 z-20 bg-white border-b border-stone-100 px-5 lg:px-8 py-4 flex items-center justify-between gap-4"
+        >
+          <div class="flex items-center gap-3">
+            <button
+              class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-stone-100 bg-stone-50 text-stone-500"
+              aria-label="Menú"
+            >
+              ☰
+            </button>
+            <div>
+              <h1 class="font-display font-medium text-lg text-stone-900">
+                Cuentas
+              </h1>
+              <p
+                class="hidden sm:block font-mono text-[11px] text-stone-400 -mt-0.5"
+              >
+                4 cuentas activas
+              </p>
             </div>
-            <div class="p-5 flex flex-col gap-4">
+          </div>
+          <button
+            class="flex items-center gap-1.5 bg-teal-400 hover:bg-teal-600 text-white text-sm font-medium rounded-lg px-3.5 py-2 transition-colors"
+          >
+            <span class="text-base leading-none">＋</span>
+            <span class="hidden sm:inline">Agregar cuenta</span>
+          </button>
+        </header>
 
-              <!-- Origin → Destination -->
-              <div class="flex items-center gap-3">
-                <div class="flex-1 bg-stone-50 border border-stone-100 rounded-xl p-3.5">
-                  <p class="font-mono text-[10px] text-stone-400 uppercase tracking-wider mb-1">Origen</p>
-                  <p class="text-sm font-medium text-stone-800">Banco Nación</p>
-                  <p class="font-mono text-xs text-stone-400 mt-1">$32,400 disp.</p>
+        <main class="flex-1 px-5 lg:px-8 py-6 flex flex-col gap-6">
+          <!-- ── SECTION: Account cards ─────────────────────────── -->
+          <section aria-label="Mis cuentas">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <!-- Débito -->
+              <article
+                class="bg-teal-50 border border-teal-100 rounded-xl p-5 flex flex-col"
+              >
+                <div class="flex items-start justify-between mb-3">
+                  <div>
+                    <p
+                      class="font-mono text-[10px] tracking-widest text-teal-600 uppercase mb-1"
+                    >
+                      Débito
+                    </p>
+                    <p class="text-sm font-medium text-teal-800">
+                      Banco Nación
+                    </p>
+                  </div>
+                  <button
+                    class="text-teal-400 hover:text-teal-600 transition-colors text-sm"
+                    aria-label="Opciones"
+                  >
+                    ⋯
+                  </button>
                 </div>
-                <div class="flex flex-col items-center gap-1 flex-shrink-0">
-                  <span class="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 text-sm">→</span>
+                <p class="font-display text-2xl font-medium text-teal-800 mb-3">
+                  $32,400
+                </p>
+                <div class="sparkline h-10 mt-auto" aria-hidden="true">
+                  <div class="spark-bar bg-teal-100" style="height: 35%"></div>
+                  <div class="spark-bar bg-teal-100" style="height: 55%"></div>
+                  <div class="spark-bar bg-teal-100" style="height: 40%"></div>
+                  <div class="spark-bar bg-teal-400" style="height: 80%"></div>
+                  <div class="spark-bar bg-teal-100" style="height: 65%"></div>
+                  <div class="spark-bar bg-teal-400" style="height: 90%"></div>
+                  <div class="spark-bar bg-teal-100" style="height: 70%"></div>
                 </div>
-                <div class="flex-1 bg-stone-50 border border-stone-100 rounded-xl p-3.5">
-                  <p class="font-mono text-[10px] text-stone-400 uppercase tracking-wider mb-1">Destino</p>
-                  <p class="text-sm font-medium text-stone-800">Galicia Ahorro</p>
-                  <p class="font-mono text-xs text-stone-400 mt-1">$18,750 saldo</p>
+              </article>
+
+              <!-- Ahorro -->
+              <article
+                class="bg-purple-50 border border-purple-200 rounded-xl p-5 flex flex-col"
+              >
+                <div class="flex items-start justify-between mb-3">
+                  <div>
+                    <p
+                      class="font-mono text-[10px] tracking-widest text-purple-600 uppercase mb-1"
+                    >
+                      Ahorro
+                    </p>
+                    <p class="text-sm font-medium text-purple-800">
+                      Galicia Ahorro
+                    </p>
+                  </div>
+                  <button
+                    class="text-purple-400 hover:text-purple-600 transition-colors text-sm"
+                    aria-label="Opciones"
+                  >
+                    ⋯
+                  </button>
                 </div>
-              </div>
+                <p
+                  class="font-display text-2xl font-medium text-purple-800 mb-3"
+                >
+                  $18,750
+                </p>
+                <div class="sparkline h-10 mt-auto" aria-hidden="true">
+                  <div
+                    class="spark-bar bg-purple-200"
+                    style="height: 50%"
+                  ></div>
+                  <div
+                    class="spark-bar bg-purple-200"
+                    style="height: 60%"
+                  ></div>
+                  <div
+                    class="spark-bar bg-purple-200"
+                    style="height: 70%"
+                  ></div>
+                  <div
+                    class="spark-bar bg-purple-400"
+                    style="height: 80%"
+                  ></div>
+                  <div
+                    class="spark-bar bg-purple-400"
+                    style="height: 90%"
+                  ></div>
+                  <div
+                    class="spark-bar bg-purple-400"
+                    style="height: 95%"
+                  ></div>
+                  <div
+                    class="spark-bar bg-purple-400"
+                    style="height: 88%"
+                  ></div>
+                </div>
+              </article>
 
-              <!-- Amount -->
-              <div class="bg-stone-50 border border-stone-100 rounded-xl px-4 py-3 text-center">
-                <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-1.5">Monto</p>
-                <p class="font-display text-3xl font-medium text-stone-800">$2,000.00</p>
-              </div>
+              <!-- Crédito -->
+              <article
+                class="bg-amber-50 border border-amber-200 rounded-xl p-5 flex flex-col"
+              >
+                <div class="flex items-start justify-between mb-3">
+                  <div>
+                    <p
+                      class="font-mono text-[10px] tracking-widest text-amber-600 uppercase mb-1"
+                    >
+                      Crédito
+                    </p>
+                    <p class="text-sm font-medium text-amber-600">
+                      Visa Santander
+                    </p>
+                  </div>
+                  <button
+                    class="text-amber-400 hover:text-amber-600 transition-colors text-sm"
+                    aria-label="Opciones"
+                  >
+                    ⋯
+                  </button>
+                </div>
+                <p
+                  class="font-display text-2xl font-medium text-amber-600 mb-3"
+                >
+                  −$5,200
+                </p>
+                <div class="sparkline h-10 mt-auto" aria-hidden="true">
+                  <div class="spark-bar bg-amber-200" style="height: 20%"></div>
+                  <div class="spark-bar bg-amber-200" style="height: 35%"></div>
+                  <div class="spark-bar bg-amber-200" style="height: 50%"></div>
+                  <div class="spark-bar bg-amber-400" style="height: 70%"></div>
+                  <div class="spark-bar bg-amber-400" style="height: 80%"></div>
+                  <div class="spark-bar bg-amber-200" style="height: 65%"></div>
+                  <div class="spark-bar bg-amber-200" style="height: 55%"></div>
+                </div>
+              </article>
 
-              <!-- Note -->
-              <div class="bg-stone-50 border border-stone-100 rounded-lg px-3 py-2">
-                <p class="font-mono text-[10px] text-stone-400 uppercase tracking-wider mb-1">Nota</p>
-                <p class="text-sm text-stone-400">Ahorro mensual…</p>
-              </div>
-
-              <button class="w-full bg-teal-400 hover:bg-teal-600 text-white font-medium text-sm rounded-xl py-3 transition-colors">
-                Confirmar transferencia
-              </button>
-
+              <!-- Digital -->
+              <article
+                class="bg-blue-50 border border-blue-100 rounded-xl p-5 flex flex-col"
+              >
+                <div class="flex items-start justify-between mb-3">
+                  <div>
+                    <p
+                      class="font-mono text-[10px] tracking-widest text-blue-600 uppercase mb-1"
+                    >
+                      Digital
+                    </p>
+                    <p class="text-sm font-medium text-blue-600">
+                      Mercado Pago
+                    </p>
+                  </div>
+                  <button
+                    class="text-blue-400 hover:text-blue-600 transition-colors text-sm"
+                    aria-label="Opciones"
+                  >
+                    ⋯
+                  </button>
+                </div>
+                <p class="font-display text-2xl font-medium text-blue-600 mb-3">
+                  $4,100
+                </p>
+                <div class="sparkline h-10 mt-auto" aria-hidden="true">
+                  <div class="spark-bar bg-blue-100" style="height: 60%"></div>
+                  <div class="spark-bar bg-blue-100" style="height: 50%"></div>
+                  <div class="spark-bar bg-blue-100" style="height: 70%"></div>
+                  <div class="spark-bar bg-blue-100" style="height: 55%"></div>
+                  <div class="spark-bar bg-blue-100" style="height: 45%"></div>
+                  <div class="spark-bar bg-blue-400" style="height: 60%"></div>
+                  <div class="spark-bar bg-blue-100" style="height: 50%"></div>
+                </div>
+              </article>
             </div>
           </section>
 
-          <!-- Recent transactions per account (3/5) -->
-          <section aria-label="Últimos movimientos por cuenta" class="lg:col-span-3 bg-white border border-stone-100 rounded-xl overflow-hidden">
-            <div class="flex items-center justify-between px-5 py-4 border-b border-stone-100">
-              <h2 class="text-sm font-medium text-stone-800">Últimos movimientos por cuenta</h2>
-              <div class="flex gap-1.5">
-                <button class="bg-teal-50 border border-teal-400 text-teal-800 font-mono text-xs rounded-full px-2.5 py-1">Todos</button>
-                <button class="bg-white border border-stone-100 text-stone-400 font-mono text-xs rounded-full px-2.5 py-1 hover:border-stone-200 transition-colors">Nación</button>
-                <button class="bg-white border border-stone-100 text-stone-400 font-mono text-xs rounded-full px-2.5 py-1 hover:border-stone-200 transition-colors">Visa</button>
+          <!-- ── SECTION: Transfer + recent per account ─────────── -->
+          <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <!-- Transfer panel (2/5) -->
+            <section
+              aria-label="Transferir entre cuentas"
+              class="lg:col-span-2 bg-white border border-stone-100 rounded-xl overflow-hidden"
+            >
+              <div class="px-5 py-4 border-b border-stone-100">
+                <h2 class="text-sm font-medium text-stone-800">
+                  Mover dinero entre cuentas
+                </h2>
               </div>
-            </div>
-            <ul class="divide-y divide-stone-50" role="list">
-
-              <li class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors">
-                <div class="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center text-base flex-shrink-0">🛒</div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-stone-800 truncate">Mercado Libre</p>
-                  <p class="text-xs text-stone-400 mt-0.5">Banco Nación · 14 mar</p>
+              <div class="p-5 flex flex-col gap-4">
+                <!-- Origin → Destination -->
+                <div class="flex items-center gap-3">
+                  <div
+                    class="flex-1 bg-stone-50 border border-stone-100 rounded-xl p-3.5"
+                  >
+                    <p
+                      class="font-mono text-[10px] text-stone-400 uppercase tracking-wider mb-1"
+                    >
+                      Origen
+                    </p>
+                    <p class="text-sm font-medium text-stone-800">
+                      Banco Nación
+                    </p>
+                    <p class="font-mono text-xs text-stone-400 mt-1">
+                      $32,400 disp.
+                    </p>
+                  </div>
+                  <div class="flex flex-col items-center gap-1 flex-shrink-0">
+                    <span
+                      class="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 text-sm"
+                      >→</span
+                    >
+                  </div>
+                  <div
+                    class="flex-1 bg-stone-50 border border-stone-100 rounded-xl p-3.5"
+                  >
+                    <p
+                      class="font-mono text-[10px] text-stone-400 uppercase tracking-wider mb-1"
+                    >
+                      Destino
+                    </p>
+                    <p class="text-sm font-medium text-stone-800">
+                      Galicia Ahorro
+                    </p>
+                    <p class="font-mono text-xs text-stone-400 mt-1">
+                      $18,750 saldo
+                    </p>
+                  </div>
                 </div>
-                <span class="font-mono text-sm text-stone-700 whitespace-nowrap">−$3,200</span>
-              </li>
 
-              <li class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors">
-                <div class="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center text-base flex-shrink-0">💼</div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-stone-800 truncate">Salario empresa</p>
-                  <p class="text-xs text-stone-400 mt-0.5">Banco Nación · 13 mar</p>
+                <!-- Amount -->
+                <div
+                  class="bg-stone-50 border border-stone-100 rounded-xl px-4 py-3 text-center"
+                >
+                  <p
+                    class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-1.5"
+                  >
+                    Monto
+                  </p>
+                  <p class="font-display text-3xl font-medium text-stone-800">
+                    $2,000.00
+                  </p>
                 </div>
-                <span class="font-mono text-sm text-teal-600 whitespace-nowrap">+$8,450</span>
-              </li>
 
-              <li class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors">
-                <div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-base flex-shrink-0">🎬</div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-stone-800 truncate">Netflix + Spotify</p>
-                  <p class="text-xs text-stone-400 mt-0.5">Visa Santander · 13 mar</p>
+                <!-- Note -->
+                <div
+                  class="bg-stone-50 border border-stone-100 rounded-lg px-3 py-2"
+                >
+                  <p
+                    class="font-mono text-[10px] text-stone-400 uppercase tracking-wider mb-1"
+                  >
+                    Nota
+                  </p>
+                  <p class="text-sm text-stone-400">Ahorro mensual…</p>
                 </div>
-                <span class="font-mono text-sm text-stone-700 whitespace-nowrap">−$1,800</span>
-              </li>
 
-              <li class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors">
-                <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-sm font-mono font-medium text-blue-600 flex-shrink-0">⇄</div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-stone-800 truncate">Transfer → Ahorro</p>
-                  <p class="text-xs text-stone-400 mt-0.5">Nación → Galicia · 12 mar</p>
+                <button
+                  class="w-full bg-teal-400 hover:bg-teal-600 text-white font-medium text-sm rounded-xl py-3 transition-colors"
+                >
+                  Confirmar transferencia
+                </button>
+              </div>
+            </section>
+
+            <!-- Recent transactions per account (3/5) -->
+            <section
+              aria-label="Últimos movimientos por cuenta"
+              class="lg:col-span-3 bg-white border border-stone-100 rounded-xl overflow-hidden"
+            >
+              <div
+                class="flex items-center justify-between px-5 py-4 border-b border-stone-100"
+              >
+                <h2 class="text-sm font-medium text-stone-800">
+                  Últimos movimientos por cuenta
+                </h2>
+                <div class="flex gap-1.5">
+                  <button
+                    class="bg-teal-50 border border-teal-400 text-teal-800 font-mono text-xs rounded-full px-2.5 py-1"
+                  >
+                    Todos
+                  </button>
+                  <button
+                    class="bg-white border border-stone-100 text-stone-400 font-mono text-xs rounded-full px-2.5 py-1 hover:border-stone-200 transition-colors"
+                  >
+                    Nación
+                  </button>
+                  <button
+                    class="bg-white border border-stone-100 text-stone-400 font-mono text-xs rounded-full px-2.5 py-1 hover:border-stone-200 transition-colors"
+                  >
+                    Visa
+                  </button>
                 </div>
-                <span class="font-mono text-sm text-blue-600 whitespace-nowrap">⇄ $3,000</span>
-              </li>
+              </div>
+              <ul class="divide-y divide-stone-50" role="list">
+                <li
+                  class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors"
+                >
+                  <div
+                    class="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center text-base flex-shrink-0"
+                  >
+                    🛒
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-stone-800 truncate">
+                      Mercado Libre
+                    </p>
+                    <p class="text-xs text-stone-400 mt-0.5">
+                      Banco Nación · 14 mar
+                    </p>
+                  </div>
+                  <span
+                    class="font-mono text-sm text-stone-700 whitespace-nowrap"
+                    >−$3,200</span
+                  >
+                </li>
 
-              <li class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors">
-                <div class="w-9 h-9 rounded-xl bg-stone-50 flex items-center justify-center text-base flex-shrink-0">🏠</div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-stone-800 truncate">Alquiler marzo</p>
-                  <p class="text-xs text-stone-400 mt-0.5">Banco Nación · 12 mar</p>
-                </div>
-                <span class="font-mono text-sm text-stone-700 whitespace-nowrap">−$28,000</span>
-              </li>
+                <li
+                  class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors"
+                >
+                  <div
+                    class="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center text-base flex-shrink-0"
+                  >
+                    💼
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-stone-800 truncate">
+                      Salario empresa
+                    </p>
+                    <p class="text-xs text-stone-400 mt-0.5">
+                      Banco Nación · 13 mar
+                    </p>
+                  </div>
+                  <span
+                    class="font-mono text-sm text-teal-600 whitespace-nowrap"
+                    >+$8,450</span
+                  >
+                </li>
 
-            </ul>
-          </section>
+                <li
+                  class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors"
+                >
+                  <div
+                    class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-base flex-shrink-0"
+                  >
+                    🎬
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-stone-800 truncate">
+                      Netflix + Spotify
+                    </p>
+                    <p class="text-xs text-stone-400 mt-0.5">
+                      Visa Santander · 13 mar
+                    </p>
+                  </div>
+                  <span
+                    class="font-mono text-sm text-stone-700 whitespace-nowrap"
+                    >−$1,800</span
+                  >
+                </li>
 
-        </div>
+                <li
+                  class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors"
+                >
+                  <div
+                    class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-sm font-mono font-medium text-blue-600 flex-shrink-0"
+                  >
+                    ⇄
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-stone-800 truncate">
+                      Transfer → Ahorro
+                    </p>
+                    <p class="text-xs text-stone-400 mt-0.5">
+                      Nación → Galicia · 12 mar
+                    </p>
+                  </div>
+                  <span
+                    class="font-mono text-sm text-blue-600 whitespace-nowrap"
+                    >⇄ $3,000</span
+                  >
+                </li>
 
-      </main>
+                <li
+                  class="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50 transition-colors"
+                >
+                  <div
+                    class="w-9 h-9 rounded-xl bg-stone-50 flex items-center justify-center text-base flex-shrink-0"
+                  >
+                    🏠
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-stone-800 truncate">
+                      Alquiler marzo
+                    </p>
+                    <p class="text-xs text-stone-400 mt-0.5">
+                      Banco Nación · 12 mar
+                    </p>
+                  </div>
+                  <span
+                    class="font-mono text-sm text-stone-700 whitespace-nowrap"
+                    >−$28,000</span
+                  >
+                </li>
+              </ul>
+            </section>
+          </div>
+        </main>
+      </div>
     </div>
-  </div>
 
-  <!-- Mobile bottom nav -->
-  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-stone-100">
-    <ul class="flex justify-around py-2" role="list">
-      <li><a href="01-dashboard.html" class="flex flex-col items-center gap-1 px-3 py-1">
-        <span class="text-lg leading-none">⊞</span>
-        <span class="font-mono text-[10px] text-stone-400">inicio</span>
-      </a></li>
-      <li><a href="04-movimientos.html" class="flex flex-col items-center gap-1 px-3 py-1">
-        <span class="text-lg leading-none">↕</span>
-        <span class="font-mono text-[10px] text-stone-400">movimientos</span>
-      </a></li>
-      <li><a href="02-nueva-transaccion.html" class="flex flex-col items-center gap-1 px-3 py-1">
-        <span class="text-lg leading-none">＋</span>
-        <span class="font-mono text-[10px] text-stone-400">nueva</span>
-      </a></li>
-      <li><a href="03-cuentas.html" class="flex flex-col items-center gap-1 px-3 py-1">
-        <span class="text-lg leading-none">◈</span>
-        <span class="w-1 h-1 rounded-full bg-teal-400"></span>
-        <span class="font-mono text-[10px] text-teal-600">cuentas</span>
-      </a></li>
-      <li><a href="06-reportes.html" class="flex flex-col items-center gap-1 px-3 py-1">
-        <span class="text-lg leading-none">⌇</span>
-        <span class="font-mono text-[10px] text-stone-400">reportes</span>
-      </a></li>
-    </ul>
-  </nav>
-  <div class="lg:hidden h-16"></div>
-
-</body>
+    <!-- Mobile bottom nav -->
+    <nav
+      class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-stone-100"
+    >
+      <ul class="flex justify-around py-2" role="list">
+        <li>
+          <a
+            href="01-dashboard.html"
+            class="flex flex-col items-center gap-1 px-3 py-1"
+          >
+            <span class="text-lg leading-none">⊞</span>
+            <span class="font-mono text-[10px] text-stone-400">inicio</span>
+          </a>
+        </li>
+        <li>
+          <a
+            href="04-movimientos.html"
+            class="flex flex-col items-center gap-1 px-3 py-1"
+          >
+            <span class="text-lg leading-none">↕</span>
+            <span class="font-mono text-[10px] text-stone-400"
+              >movimientos</span
+            >
+          </a>
+        </li>
+        <li>
+          <a
+            href="07-nueva-transaccion.html"
+            class="flex flex-col items-center gap-1 px-3 py-1"
+          >
+            <span class="text-lg leading-none">＋</span>
+            <span class="font-mono text-[10px] text-stone-400">nueva</span>
+          </a>
+        </li>
+        <li>
+          <a
+            href="03-cuentas.html"
+            class="flex flex-col items-center gap-1 px-3 py-1"
+          >
+            <span class="text-lg leading-none">◈</span>
+            <span class="w-1 h-1 rounded-full bg-teal-400"></span>
+            <span class="font-mono text-[10px] text-teal-600">cuentas</span>
+          </a>
+        </li>
+        <li>
+          <a
+            href="06-reportes.html"
+            class="flex flex-col items-center gap-1 px-3 py-1"
+          >
+            <span class="text-lg leading-none">⌇</span>
+            <span class="font-mono text-[10px] text-stone-400">reportes</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <div class="lg:hidden h-16"></div>
+  </body>
 </html>

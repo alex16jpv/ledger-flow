@@ -1,299 +1,564 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ledger — Nueva transacción</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ledger — Nueva transacción</title>
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
 
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            display: ["Playfair Display", "serif"],
-            sans:    ["DM Sans", "sans-serif"],
-            mono:    ["DM Mono", "monospace"],
-          },
-          colors: {
-            teal:   { 50:"#E1F5EE", 100:"#9FE1CB", 400:"#1D9E75", 600:"#0F6E56", 800:"#085041" },
-            amber:  { 50:"#FAEEDA", 200:"#FAC775", 400:"#BA7517", 600:"#854F0B" },
-            red:    { 50:"#FCEBEB", 400:"#E24B4A", 600:"#A32D2D" },
-            purple: { 50:"#EEEDFE", 200:"#AFA9EC", 400:"#7F77DD", 600:"#534AB7", 800:"#3C3489" },
-            blue:   { 50:"#E6F1FB", 100:"#B5D4F4", 400:"#378ADD", 600:"#185FA5" },
-            stone:  { 50:"#F1EFE8", 100:"#D3D1C7", 200:"#B4B2A9", 400:"#888780", 600:"#5F5E5A", 800:"#444441", 900:"#2C2C2A" },
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              display: ["Playfair Display", "serif"],
+              sans: ["DM Sans", "sans-serif"],
+              mono: ["DM Mono", "monospace"],
+            },
+            colors: {
+              teal: {
+                50: "#E1F5EE",
+                100: "#9FE1CB",
+                400: "#1D9E75",
+                600: "#0F6E56",
+                800: "#085041",
+              },
+              amber: {
+                50: "#FAEEDA",
+                200: "#FAC775",
+                400: "#BA7517",
+                600: "#854F0B",
+              },
+              red: { 50: "#FCEBEB", 400: "#E24B4A", 600: "#A32D2D" },
+              purple: {
+                50: "#EEEDFE",
+                200: "#AFA9EC",
+                400: "#7F77DD",
+                600: "#534AB7",
+                800: "#3C3489",
+              },
+              blue: {
+                50: "#E6F1FB",
+                100: "#B5D4F4",
+                400: "#378ADD",
+                600: "#185FA5",
+              },
+              stone: {
+                50: "#F1EFE8",
+                100: "#D3D1C7",
+                200: "#B4B2A9",
+                400: "#888780",
+                600: "#5F5E5A",
+                800: "#444441",
+                900: "#2C2C2A",
+              },
+            },
           },
         },
-      },
-    };
-  </script>
+      };
+    </script>
 
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: "DM Sans", sans-serif; margin: 0; }
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #D3D1C7; border-radius: 2px; }
-    .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 10px; font-size: 13px; color: #5F5E5A; cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; text-decoration: none; }
-    .nav-link:hover { background: #F1EFE8; color: #444441; }
-    .nav-link.active { background: #E1F5EE; color: #085041; font-weight: 500; }
-    /* Field base style */
-    .field-base { background: #F1EFE8; border: 1px solid #D3D1C7; border-radius: 10px; padding: 10px 14px; }
-    .field-label { font-family: "DM Mono", monospace; font-size: 10px; color: #888780; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
-    .field-value { font-size: 13px; color: #5F5E5A; }
-  </style>
-</head>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "DM Sans", sans-serif;
+        margin: 0;
+      }
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #d3d1c7;
+        border-radius: 2px;
+      }
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 14px;
+        border-radius: 10px;
+        font-size: 13px;
+        color: #5f5e5a;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          color 0.15s;
+        white-space: nowrap;
+        text-decoration: none;
+      }
+      .nav-link:hover {
+        background: #f1efe8;
+        color: #444441;
+      }
+      .nav-link.active {
+        background: #e1f5ee;
+        color: #085041;
+        font-weight: 500;
+      }
+      /* Field base style */
+      .field-base {
+        background: #f1efe8;
+        border: 1px solid #d3d1c7;
+        border-radius: 10px;
+        padding: 10px 14px;
+      }
+      .field-label {
+        font-family: "DM Mono", monospace;
+        font-size: 10px;
+        color: #888780;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 4px;
+      }
+      .field-value {
+        font-size: 13px;
+        color: #5f5e5a;
+      }
+    </style>
+  </head>
 
-<body class="bg-stone-50 min-h-screen">
-
-  <div class="flex min-h-screen">
-
-    <!-- ── SIDEBAR ───────────────────────────────────────────── -->
-    <aside class="hidden lg:flex flex-col w-56 xl:w-60 bg-white border-r border-stone-100 min-h-screen fixed top-0 left-0 z-30">
-      <div class="flex items-center gap-2.5 px-5 py-5 border-b border-stone-100">
-        <span class="w-3 h-3 rounded-full bg-teal-400 flex-shrink-0"></span>
-        <span class="font-display font-semibold text-xl text-stone-900">Ledger</span>
-      </div>
-      <nav class="flex-1 px-3 py-4 flex flex-col gap-1">
-        <a href="01-dashboard.html" class="nav-link">
-          <span class="text-base leading-none">⊞</span><span>Dashboard</span>
-        </a>
-        <a href="02-nueva-transaccion.html" class="nav-link active" aria-current="page">
-          <span class="text-base leading-none">＋</span><span>Nueva transacción</span>
-        </a>
-        <a href="04-movimientos.html" class="nav-link">
-          <span class="text-base leading-none">↕</span><span>Movimientos</span>
-        </a>
-        <a href="03-cuentas.html" class="nav-link">
-          <span class="text-base leading-none">◈</span><span>Cuentas</span>
-        </a>
-        <a href="05-budgets.html" class="nav-link">
-          <span class="text-base leading-none">◎</span><span>Budgets</span>
-        </a>
-        <a href="06-reportes.html" class="nav-link">
-          <span class="text-base leading-none">⌇</span><span>Reportes</span>
-        </a>
-      </nav>
-      <div class="px-4 py-4 border-t border-stone-100 flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full bg-purple-50 border border-purple-200 flex items-center justify-center font-mono text-xs font-medium text-purple-800 flex-shrink-0">MA</div>
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-stone-800 truncate">Miguel A.</p>
-          <p class="font-mono text-[10px] text-stone-400">cuenta personal</p>
+  <body class="bg-stone-50 min-h-screen">
+    <div class="flex min-h-screen">
+      <!-- ── SIDEBAR ───────────────────────────────────────────── -->
+      <aside
+        class="hidden lg:flex flex-col w-56 xl:w-60 bg-white border-r border-stone-100 min-h-screen fixed top-0 left-0 z-30"
+      >
+        <div
+          class="flex items-center gap-2.5 px-5 py-5 border-b border-stone-100"
+        >
+          <span class="w-3 h-3 rounded-full bg-teal-400 flex-shrink-0"></span>
+          <span class="font-display font-semibold text-xl text-stone-900"
+            >Ledger</span
+          >
         </div>
-      </div>
-    </aside>
-
-    <!-- ── MAIN ────────────────────────────────────────────────── -->
-    <div class="flex-1 flex flex-col lg:ml-56 xl:ml-60 min-h-screen">
-
-      <!-- Topbar -->
-      <header class="sticky top-0 z-20 bg-white border-b border-stone-100 px-5 lg:px-8 py-4 flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <button class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-stone-100 bg-stone-50 text-stone-500" aria-label="Menú">☰</button>
-          <h1 class="font-display font-medium text-lg text-stone-900">Nueva transacción</h1>
-        </div>
-        <a href="01-dashboard.html" class="font-mono text-xs text-stone-400 hover:text-stone-600 transition-colors">← volver al dashboard</a>
-      </header>
-
-      <!-- Page content -->
-      <main class="flex-1 px-5 lg:px-8 py-6">
-
-        <!-- Two-column layout on desktop: form left, preview right -->
-        <div class="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
-
-          <!-- ── LEFT: Main form (3/5) ───────────────────────── -->
-          <div class="lg:col-span-3 flex flex-col gap-5">
-
-            <!-- Transaction type selector -->
-            <section aria-label="Tipo de transacción" class="bg-white border border-stone-100 rounded-xl p-5">
-              <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-3">Tipo</p>
-              <div class="flex gap-2" role="group">
-                <button class="flex-1 bg-teal-50 border border-teal-400 text-teal-800 font-mono text-xs rounded-lg py-2.5 transition-colors">Gasto</button>
-                <button class="flex-1 bg-white border border-stone-100 text-stone-400 font-mono text-xs rounded-lg py-2.5 hover:border-stone-200 transition-colors">Ingreso</button>
-                <button class="flex-1 bg-white border border-stone-100 text-stone-400 font-mono text-xs rounded-lg py-2.5 hover:border-stone-200 transition-colors">Transferencia</button>
-              </div>
-            </section>
-
-            <!-- Amount + date row -->
-            <section aria-label="Monto y fecha" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-              <div class="sm:col-span-2 bg-white border border-stone-100 rounded-xl p-5">
-                <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-3">Monto</p>
-                <div class="bg-stone-50 border border-stone-100 rounded-lg px-4 py-3 text-center">
-                  <p class="font-display text-4xl font-medium text-stone-800 tracking-tight">$0.00</p>
-                </div>
-              </div>
-
-              <div class="bg-white border border-stone-100 rounded-xl p-5">
-                <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-3">Fecha</p>
-                <div class="bg-stone-50 border border-stone-100 rounded-lg px-3 py-3 text-center">
-                  <p class="text-sm font-medium text-stone-700">📅 14 mar 2025</p>
-                </div>
-              </div>
-
-            </section>
-
-            <!-- Description + account + category -->
-            <section aria-label="Detalle de la transacción" class="bg-white border border-stone-100 rounded-xl p-5 flex flex-col gap-4">
-
-              <div>
-                <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2">Descripción</p>
-                <div class="bg-stone-50 border border-stone-100 rounded-lg px-3 py-2.5">
-                  <p class="text-sm text-stone-400">Descripción del gasto…</p>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2">Cuenta</p>
-                  <div class="bg-stone-50 border border-stone-100 rounded-lg px-3 py-2.5 flex items-center justify-between">
-                    <p class="text-sm text-stone-600">🏦 Banco Nación</p>
-                    <span class="text-stone-300 text-sm">▾</span>
-                  </div>
-                </div>
-                <div>
-                  <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2">Categoría</p>
-                  <div class="bg-stone-50 border border-stone-100 rounded-lg px-3 py-2.5 flex items-center justify-between">
-                    <p class="text-sm text-stone-500">🏷 Seleccionar</p>
-                    <span class="text-stone-300 text-sm">▾</span>
-                  </div>
-                </div>
-              </div>
-
-            </section>
-
-            <!-- Quick category tags -->
-            <section aria-label="Etiquetas rápidas" class="bg-white border border-stone-100 rounded-xl p-5">
-              <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-3">Etiquetas rápidas</p>
-              <div class="flex flex-wrap gap-2" role="group">
-                <button class="bg-teal-50 border border-teal-400 text-teal-800 font-mono text-xs rounded-full px-3 py-1.5">🍔 Comida</button>
-                <button class="bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors">🚌 Transporte</button>
-                <button class="bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors">🏠 Hogar</button>
-                <button class="bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors">💊 Salud</button>
-                <button class="bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors">🎬 Ocio</button>
-                <button class="bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors">✈️ Viajes</button>
-                <button class="bg-white border border-dashed border-stone-200 text-stone-400 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-300 transition-colors">＋ Nueva</button>
-              </div>
-            </section>
-
-            <!-- Note -->
-            <section aria-label="Nota opcional" class="bg-white border border-stone-100 rounded-xl p-5">
-              <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2">Nota opcional</p>
-              <div class="bg-stone-50 border border-stone-100 rounded-lg px-3 py-2.5 min-h-[72px]">
-                <p class="text-sm text-stone-400">Agrega un comentario…</p>
-              </div>
-            </section>
-
+        <nav class="flex-1 px-3 py-4 flex flex-col gap-1">
+          <a href="01-dashboard.html" class="nav-link">
+            <span class="text-base leading-none">⊞</span><span>Dashboard</span>
+          </a>
+          <a
+            href="07-nueva-transaccion.html"
+            class="nav-link active"
+            aria-current="page"
+          >
+            <span class="text-base leading-none">＋</span
+            ><span>Nueva transacción</span>
+          </a>
+          <a href="04-movimientos.html" class="nav-link">
+            <span class="text-base leading-none">↕</span
+            ><span>Movimientos</span>
+          </a>
+          <a href="03-cuentas.html" class="nav-link">
+            <span class="text-base leading-none">◈</span><span>Cuentas</span>
+          </a>
+          <a href="05-budgets.html" class="nav-link">
+            <span class="text-base leading-none">◎</span><span>Budgets</span>
+          </a>
+          <a href="06-reportes.html" class="nav-link">
+            <span class="text-base leading-none">⌇</span><span>Reportes</span>
+          </a>
+        </nav>
+        <div
+          class="px-4 py-4 border-t border-stone-100 flex items-center gap-3"
+        >
+          <div
+            class="w-8 h-8 rounded-full bg-purple-50 border border-purple-200 flex items-center justify-center font-mono text-xs font-medium text-purple-800 flex-shrink-0"
+          >
+            MA
           </div>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-stone-800 truncate">Miguel A.</p>
+            <p class="font-mono text-[10px] text-stone-400">cuenta personal</p>
+          </div>
+        </div>
+      </aside>
 
-          <!-- ── RIGHT: Summary preview (2/5) ──────────────────── -->
-          <div class="lg:col-span-2 flex flex-col gap-5">
+      <!-- ── MAIN ────────────────────────────────────────────────── -->
+      <div class="flex-1 flex flex-col lg:ml-56 xl:ml-60 min-h-screen">
+        <!-- Topbar -->
+        <header
+          class="sticky top-0 z-20 bg-white border-b border-stone-100 px-5 lg:px-8 py-4 flex items-center justify-between gap-4"
+        >
+          <div class="flex items-center gap-3">
+            <button
+              class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-stone-100 bg-stone-50 text-stone-500"
+              aria-label="Menú"
+            >
+              ☰
+            </button>
+            <h1 class="font-display font-medium text-lg text-stone-900">
+              Nueva transacción
+            </h1>
+          </div>
+          <a
+            href="01-dashboard.html"
+            class="font-mono text-xs text-stone-400 hover:text-stone-600 transition-colors"
+            >← volver al dashboard</a
+          >
+        </header>
 
-            <!-- Live preview card -->
-            <div class="bg-white border border-stone-100 rounded-xl overflow-hidden sticky top-24">
+        <!-- Page content -->
+        <main class="flex-1 px-5 lg:px-8 py-6">
+          <!-- Two-column layout on desktop: form left, preview right -->
+          <div class="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <!-- ── LEFT: Main form (3/5) ───────────────────────── -->
+            <div class="lg:col-span-3 flex flex-col gap-5">
+              <!-- Transaction type selector -->
+              <section
+                aria-label="Tipo de transacción"
+                class="bg-white border border-stone-100 rounded-xl p-5"
+              >
+                <p
+                  class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-3"
+                >
+                  Tipo
+                </p>
+                <div class="flex gap-2" role="group">
+                  <button
+                    class="flex-1 bg-teal-50 border border-teal-400 text-teal-800 font-mono text-xs rounded-lg py-2.5 transition-colors"
+                  >
+                    Gasto
+                  </button>
+                  <button
+                    class="flex-1 bg-white border border-stone-100 text-stone-400 font-mono text-xs rounded-lg py-2.5 hover:border-stone-200 transition-colors"
+                  >
+                    Ingreso
+                  </button>
+                  <button
+                    class="flex-1 bg-white border border-stone-100 text-stone-400 font-mono text-xs rounded-lg py-2.5 hover:border-stone-200 transition-colors"
+                  >
+                    Transferencia
+                  </button>
+                </div>
+              </section>
 
-              <div class="px-5 py-4 border-b border-stone-100">
-                <p class="text-sm font-medium text-stone-800">Vista previa</p>
-              </div>
-
-              <div class="px-5 py-5 flex flex-col gap-4">
-
-                <!-- Preview amount -->
-                <div class="bg-stone-50 rounded-xl p-4 text-center">
-                  <p class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2">Gasto</p>
-                  <p class="font-display text-3xl font-medium text-stone-800">$0.00</p>
+              <!-- Amount + date row -->
+              <section
+                aria-label="Monto y fecha"
+                class="grid grid-cols-1 sm:grid-cols-3 gap-4"
+              >
+                <div
+                  class="sm:col-span-2 bg-white border border-stone-100 rounded-xl p-5"
+                >
+                  <p
+                    class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-3"
+                  >
+                    Monto
+                  </p>
+                  <div
+                    class="bg-stone-50 border border-stone-100 rounded-lg px-4 py-3 text-center"
+                  >
+                    <p
+                      class="font-display text-4xl font-medium text-stone-800 tracking-tight"
+                    >
+                      $0.00
+                    </p>
+                  </div>
                 </div>
 
-                <!-- Preview details -->
-                <div class="flex flex-col gap-2.5">
-
-                  <div class="flex items-center justify-between">
-                    <span class="font-mono text-xs text-stone-400">Cuenta</span>
-                    <span class="text-sm text-stone-600">Banco Nación</span>
+                <div class="bg-white border border-stone-100 rounded-xl p-5">
+                  <p
+                    class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-3"
+                  >
+                    Fecha
+                  </p>
+                  <div
+                    class="bg-stone-50 border border-stone-100 rounded-lg px-3 py-3 text-center"
+                  >
+                    <p class="text-sm font-medium text-stone-700">
+                      📅 14 mar 2025
+                    </p>
                   </div>
-                  <div class="h-px bg-stone-50"></div>
-
-                  <div class="flex items-center justify-between">
-                    <span class="font-mono text-xs text-stone-400">Categoría</span>
-                    <span class="text-sm text-stone-600">🍔 Comida</span>
-                  </div>
-                  <div class="h-px bg-stone-50"></div>
-
-                  <div class="flex items-center justify-between">
-                    <span class="font-mono text-xs text-stone-400">Fecha</span>
-                    <span class="text-sm text-stone-600">14 mar 2025</span>
-                  </div>
-                  <div class="h-px bg-stone-50"></div>
-
-                  <div class="flex items-center justify-between">
-                    <span class="font-mono text-xs text-stone-400">Descripción</span>
-                    <span class="text-sm text-stone-400 italic">Sin descripción</span>
-                  </div>
-
                 </div>
+              </section>
 
-                <!-- Budget impact -->
-                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
-                  <p class="font-mono text-[10px] text-amber-600 uppercase tracking-wider mb-1.5">Impacto en budget</p>
-                  <div class="flex justify-between items-baseline mb-1.5">
-                    <span class="text-xs text-stone-600">Comida</span>
-                    <span class="font-mono text-xs text-amber-600">$4,200 / $5,000</span>
-                  </div>
-                  <div class="h-1.5 rounded-full bg-amber-100 overflow-hidden">
-                    <div class="h-full rounded-full bg-amber-400" style="width: 84%"></div>
+              <!-- Description + account + category -->
+              <section
+                aria-label="Detalle de la transacción"
+                class="bg-white border border-stone-100 rounded-xl p-5 flex flex-col gap-4"
+              >
+                <div>
+                  <p
+                    class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2"
+                  >
+                    Descripción
+                  </p>
+                  <div
+                    class="bg-stone-50 border border-stone-100 rounded-lg px-3 py-2.5"
+                  >
+                    <p class="text-sm text-stone-400">Descripción del gasto…</p>
                   </div>
                 </div>
 
-                <!-- Save button -->
-                <button class="w-full bg-teal-400 hover:bg-teal-600 text-white font-medium text-sm rounded-xl py-3 transition-colors">
-                  Guardar transacción
-                </button>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <p
+                      class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2"
+                    >
+                      Cuenta
+                    </p>
+                    <div
+                      class="bg-stone-50 border border-stone-100 rounded-lg px-3 py-2.5 flex items-center justify-between"
+                    >
+                      <p class="text-sm text-stone-600">🏦 Banco Nación</p>
+                      <span class="text-stone-300 text-sm">▾</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p
+                      class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2"
+                    >
+                      Categoría
+                    </p>
+                    <div
+                      class="bg-stone-50 border border-stone-100 rounded-lg px-3 py-2.5 flex items-center justify-between"
+                    >
+                      <p class="text-sm text-stone-500">🏷 Seleccionar</p>
+                      <span class="text-stone-300 text-sm">▾</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
 
-                <button class="w-full text-stone-400 hover:text-stone-600 font-mono text-xs py-1.5 transition-colors">
-                  Cancelar
-                </button>
+              <!-- Quick category tags -->
+              <section
+                aria-label="Etiquetas rápidas"
+                class="bg-white border border-stone-100 rounded-xl p-5"
+              >
+                <p
+                  class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-3"
+                >
+                  Etiquetas rápidas
+                </p>
+                <div class="flex flex-wrap gap-2" role="group">
+                  <button
+                    class="bg-teal-50 border border-teal-400 text-teal-800 font-mono text-xs rounded-full px-3 py-1.5"
+                  >
+                    🍔 Comida
+                  </button>
+                  <button
+                    class="bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors"
+                  >
+                    🚌 Transporte
+                  </button>
+                  <button
+                    class="bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors"
+                  >
+                    🏠 Hogar
+                  </button>
+                  <button
+                    class="bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors"
+                  >
+                    💊 Salud
+                  </button>
+                  <button
+                    class="bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors"
+                  >
+                    🎬 Ocio
+                  </button>
+                  <button
+                    class="bg-white border border-stone-100 text-stone-500 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-200 transition-colors"
+                  >
+                    ✈️ Viajes
+                  </button>
+                  <button
+                    class="bg-white border border-dashed border-stone-200 text-stone-400 font-mono text-xs rounded-full px-3 py-1.5 hover:border-stone-300 transition-colors"
+                  >
+                    ＋ Nueva
+                  </button>
+                </div>
+              </section>
 
-              </div>
+              <!-- Note -->
+              <section
+                aria-label="Nota opcional"
+                class="bg-white border border-stone-100 rounded-xl p-5"
+              >
+                <p
+                  class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2"
+                >
+                  Nota opcional
+                </p>
+                <div
+                  class="bg-stone-50 border border-stone-100 rounded-lg px-3 py-2.5 min-h-[72px]"
+                >
+                  <p class="text-sm text-stone-400">Agrega un comentario…</p>
+                </div>
+              </section>
             </div>
 
+            <!-- ── RIGHT: Summary preview (2/5) ──────────────────── -->
+            <div class="lg:col-span-2 flex flex-col gap-5">
+              <!-- Live preview card -->
+              <div
+                class="bg-white border border-stone-100 rounded-xl overflow-hidden sticky top-24"
+              >
+                <div class="px-5 py-4 border-b border-stone-100">
+                  <p class="text-sm font-medium text-stone-800">Vista previa</p>
+                </div>
+
+                <div class="px-5 py-5 flex flex-col gap-4">
+                  <!-- Preview amount -->
+                  <div class="bg-stone-50 rounded-xl p-4 text-center">
+                    <p
+                      class="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2"
+                    >
+                      Gasto
+                    </p>
+                    <p class="font-display text-3xl font-medium text-stone-800">
+                      $0.00
+                    </p>
+                  </div>
+
+                  <!-- Preview details -->
+                  <div class="flex flex-col gap-2.5">
+                    <div class="flex items-center justify-between">
+                      <span class="font-mono text-xs text-stone-400"
+                        >Cuenta</span
+                      >
+                      <span class="text-sm text-stone-600">Banco Nación</span>
+                    </div>
+                    <div class="h-px bg-stone-50"></div>
+
+                    <div class="flex items-center justify-between">
+                      <span class="font-mono text-xs text-stone-400"
+                        >Categoría</span
+                      >
+                      <span class="text-sm text-stone-600">🍔 Comida</span>
+                    </div>
+                    <div class="h-px bg-stone-50"></div>
+
+                    <div class="flex items-center justify-between">
+                      <span class="font-mono text-xs text-stone-400"
+                        >Fecha</span
+                      >
+                      <span class="text-sm text-stone-600">14 mar 2025</span>
+                    </div>
+                    <div class="h-px bg-stone-50"></div>
+
+                    <div class="flex items-center justify-between">
+                      <span class="font-mono text-xs text-stone-400"
+                        >Descripción</span
+                      >
+                      <span class="text-sm text-stone-400 italic"
+                        >Sin descripción</span
+                      >
+                    </div>
+                  </div>
+
+                  <!-- Budget impact -->
+                  <div
+                    class="bg-amber-50 border border-amber-200 rounded-xl p-3.5"
+                  >
+                    <p
+                      class="font-mono text-[10px] text-amber-600 uppercase tracking-wider mb-1.5"
+                    >
+                      Impacto en budget
+                    </p>
+                    <div class="flex justify-between items-baseline mb-1.5">
+                      <span class="text-xs text-stone-600">Comida</span>
+                      <span class="font-mono text-xs text-amber-600"
+                        >$4,200 / $5,000</span
+                      >
+                    </div>
+                    <div
+                      class="h-1.5 rounded-full bg-amber-100 overflow-hidden"
+                    >
+                      <div
+                        class="h-full rounded-full bg-amber-400"
+                        style="width: 84%"
+                      ></div>
+                    </div>
+                  </div>
+
+                  <!-- Save button -->
+                  <button
+                    class="w-full bg-teal-400 hover:bg-teal-600 text-white font-medium text-sm rounded-xl py-3 transition-colors"
+                  >
+                    Guardar transacción
+                  </button>
+
+                  <button
+                    class="w-full text-stone-400 hover:text-stone-600 font-mono text-xs py-1.5 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
-  </div>
 
-  <!-- Mobile bottom nav -->
-  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-stone-100">
-    <ul class="flex justify-around py-2" role="list">
-      <li><a href="01-dashboard.html" class="flex flex-col items-center gap-1 px-3 py-1">
-        <span class="text-lg leading-none">⊞</span>
-        <span class="font-mono text-[10px] text-stone-400">inicio</span>
-      </a></li>
-      <li><a href="04-movimientos.html" class="flex flex-col items-center gap-1 px-3 py-1">
-        <span class="text-lg leading-none">↕</span>
-        <span class="font-mono text-[10px] text-stone-400">movimientos</span>
-      </a></li>
-      <li><a href="02-nueva-transaccion.html" class="flex flex-col items-center gap-1 px-3 py-1">
-        <span class="text-lg leading-none">＋</span>
-        <span class="w-1 h-1 rounded-full bg-teal-400"></span>
-        <span class="font-mono text-[10px] text-teal-600">nueva</span>
-      </a></li>
-      <li><a href="03-cuentas.html" class="flex flex-col items-center gap-1 px-3 py-1">
-        <span class="text-lg leading-none">◈</span>
-        <span class="font-mono text-[10px] text-stone-400">cuentas</span>
-      </a></li>
-      <li><a href="06-reportes.html" class="flex flex-col items-center gap-1 px-3 py-1">
-        <span class="text-lg leading-none">⌇</span>
-        <span class="font-mono text-[10px] text-stone-400">reportes</span>
-      </a></li>
-    </ul>
-  </nav>
-  <div class="lg:hidden h-16"></div>
-
-</body>
+    <!-- Mobile bottom nav -->
+    <nav
+      class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-stone-100"
+    >
+      <ul class="flex justify-around py-2" role="list">
+        <li>
+          <a
+            href="01-dashboard.html"
+            class="flex flex-col items-center gap-1 px-3 py-1"
+          >
+            <span class="text-lg leading-none">⊞</span>
+            <span class="font-mono text-[10px] text-stone-400">inicio</span>
+          </a>
+        </li>
+        <li>
+          <a
+            href="04-movimientos.html"
+            class="flex flex-col items-center gap-1 px-3 py-1"
+          >
+            <span class="text-lg leading-none">↕</span>
+            <span class="font-mono text-[10px] text-stone-400"
+              >movimientos</span
+            >
+          </a>
+        </li>
+        <li>
+          <a
+            href="07-nueva-transaccion.html"
+            class="flex flex-col items-center gap-1 px-3 py-1"
+          >
+            <span class="text-lg leading-none">＋</span>
+            <span class="w-1 h-1 rounded-full bg-teal-400"></span>
+            <span class="font-mono text-[10px] text-teal-600">nueva</span>
+          </a>
+        </li>
+        <li>
+          <a
+            href="03-cuentas.html"
+            class="flex flex-col items-center gap-1 px-3 py-1"
+          >
+            <span class="text-lg leading-none">◈</span>
+            <span class="font-mono text-[10px] text-stone-400">cuentas</span>
+          </a>
+        </li>
+        <li>
+          <a
+            href="06-reportes.html"
+            class="flex flex-col items-center gap-1 px-3 py-1"
+          >
+            <span class="text-lg leading-none">⌇</span>
+            <span class="font-mono text-[10px] text-stone-400">reportes</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <div class="lg:hidden h-16"></div>
+  </body>
 </html>
