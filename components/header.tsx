@@ -9,7 +9,10 @@ export default function Header() {
             Dashboard
           </h1>
           <p className="hidden sm:block font-mono text-[11px] text-stone-400 -mt-0.5">
-            March 2025
+            {new Date().toLocaleDateString("en-US", {
+              month: "long",
+              year: "numeric",
+            })}
           </p>
         </div>
       </div>

@@ -18,23 +18,23 @@ export default function Sidebar() {
           <span className="text-base leading-none">⊞</span>
           <span>Dashboard</span>
         </Link>
-        <Link href="/new-transaction" className="nav-link">
+        <Link href="/new-transaction" className="nav-link pointer-events-none">
           <span className="text-base leading-none">＋</span>
           <span>New Transaction</span>
         </Link>
-        <Link href="/transactions" className="nav-link">
+        <Link href="/transactions" className="nav-link pointer-events-none">
           <span className="text-base leading-none">↕</span>
           <span>Transactions</span>
         </Link>
-        <Link href="/accounts" className="nav-link">
+        <Link href="/accounts" className="nav-link pointer-events-none">
           <span className="text-base leading-none">◈</span>
           <span>Accounts</span>
         </Link>
-        <Link href="/budgets" className="nav-link">
+        <Link href="/budgets" className="nav-link pointer-events-none">
           <span className="text-base leading-none">◎</span>
           <span>Budgets</span>
         </Link>
-        <Link href="/reports" className="nav-link">
+        <Link href="/reports" className="nav-link pointer-events-none">
           <span className="text-base leading-none">⌇</span>
           <span>Reports</span>
         </Link>
