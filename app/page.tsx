@@ -1,3 +1,10 @@
+import DashboardLayout from "./dashboard/layout";
+import Dashboard from "./dashboard/page";
+
 export default function Home() {
-  return <h1>Welcome to Ledger Flow</h1>;
+  return (
+    <DashboardLayout>
+      <Dashboard />
+    </DashboardLayout>
+  );
 }
