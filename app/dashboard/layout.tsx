@@ -27,6 +27,7 @@ export default function DashboardLayout({
               text="New Transaction"
               link="/new-transaction"
               color="teal"
+              className="hidden sm:flex"
             />
           </Header>
           {children}
