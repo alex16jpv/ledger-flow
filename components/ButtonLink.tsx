@@ -4,19 +4,26 @@ export default function ButtonLink({
   icon,
   text,
   link,
-  color = "teal",
+  transparent = false,
+  bgColor = "teal",
+  textColor = "text-white",
   className = "",
 }: {
   icon?: string;
   text: string;
   link: string;
-  color?: string;
+  transparent?: boolean;
+  bgColor?: string;
+  textColor?: string;
   className?: string;
 }) {
+  const finalBgColor = transparent
+    ? "transparent"
+    : `bg-${bgColor}-400 hover:bg-${bgColor}-600`;
   return (
     <Link
       href={link}
-      className={`flex items-center gap-1.5 bg-${color}-400 hover:bg-${color}-600 text-white text-sm font-medium rounded-lg px-3.5 py-2 transition-colors ${className}`}
+      className={`flex items-center gap-1.5 ${finalBgColor} ${textColor} text-sm font-medium rounded-lg px-3.5 py-2 transition-colors ${className}`}
     >
       {icon && <span className="text-base leading-none">{icon}</span>}
       {text}

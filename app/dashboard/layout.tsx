@@ -25,8 +25,7 @@ export default function DashboardLayout({
             <ButtonLink
               icon="＋"
               text="New Transaction"
-              link="/new-transaction"
-              color="teal"
+              link="/transactions/new"
               className="hidden sm:flex"
             />
           </Header>
