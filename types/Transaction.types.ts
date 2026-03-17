@@ -1,6 +1,8 @@
+export type TypeTransactionType = "EXPENSE" | "INCOME" | "TRANSFER";
+
 type TransactionBase = {
   id: string;
-  type: "EXPENSE" | "INCOME" | "TRANSFER";
+  type: TypeTransactionType;
   amount: number;
   date: Date;
   category?: string;

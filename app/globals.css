@@ -240,61 +240,6 @@ body {
   color: #9fe1cb;
 }
 
-/* ── Tab button ── */
-.tab-btn {
-  flex: 1;
-  padding: 10px 8px;
-  border-radius: 10px;
-  font-family: "DM Mono", monospace;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1.5px solid #d3d1c7;
-  background: #fff;
-  color: #888780;
-  cursor: pointer;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-.tab-btn:hover {
-  border-color: #888780;
-  color: #444441;
-}
-
-/* Tab active states per type */
-.tab-btn.active-gasto {
-  border-color: #e24b4a;
-  background: #fcebeb;
-  color: #a32d2d;
-}
-.tab-btn.active-ingreso {
-  border-color: #1d9e75;
-  background: #e1f5ee;
-  color: #085041;
-}
-.tab-btn.active-transfer {
-  border-color: #378add;
-  background: #e6f1fb;
-  color: #185fa5;
-}
-
-/* ── Tab content panels ── */
-/* .tab-panel {
-  display: none;
-}
-.tab-panel.active {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-} */
-.tab-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 /* ── Category chip grid ── */
 .cat-chip {
   display: flex;

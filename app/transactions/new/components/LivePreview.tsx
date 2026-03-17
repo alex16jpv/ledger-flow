@@ -1,6 +1,37 @@
+import { TypeTransactionType } from "@/types/Transaction.types";
+import { TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES } from "@/utils/constants";
 import Link from "next/link";
 
-export default function LivePreview() {
+export default function LivePreview({
+  selectedType,
+}: {
+  selectedType: TypeTransactionType;
+}) {
+  const typeColors: { [key in TypeTransactionType]: any } = {
+    EXPENSE: {
+      bgColor: "bg-red-50",
+      textColor: "text-red-600",
+      borderColor: "border-red-100",
+      btnBgColor: "bg-red-400",
+      btnHoverBgColor: "hover:bg-red-600",
+    },
+    INCOME: {
+      bgColor: "bg-teal-50",
+      textColor: "text-teal-600",
+      borderColor: "border-teal-100",
+      btnBgColor: "bg-teal-400",
+      btnHoverBgColor: "hover:bg-teal-600",
+    },
+    TRANSFER: {
+      bgColor: "bg-blue-50",
+      textColor: "text-blue-600",
+      borderColor: "border-blue-100",
+      btnBgColor: "bg-blue-400",
+      btnHoverBgColor: "hover:bg-blue-600",
+    },
+  };
+  const selectedColors = typeColors[selectedType];
+
   return (
     <div className="lg:col-span-2 flex flex-col gap-5">
       <div className="sticky top-24 flex flex-col gap-4">
@@ -14,13 +45,13 @@ export default function LivePreview() {
             {/* Amount preview */}
             <div
               id="preview-amount-wrap"
-              className="bg-red-50 rounded-xl p-4 text-center border border-red-100 transition-all"
+              className={`rounded-xl p-4 text-center border ${selectedColors.borderColor} ${selectedColors.bgColor} transition-all`}
             >
               <p
                 id="preview-type-label"
-                className="font-mono text-[10px] uppercase tracking-widest text-red-600 mb-1"
+                className={`font-mono text-[10px] uppercase tracking-widest ${selectedColors.textColor} mb-1`}
               >
-                Expense
+                {TRANSACTION_TYPE_LABELS[selectedType]}
               </p>
               <p
                 id="preview-amount"
@@ -35,38 +66,40 @@ export default function LivePreview() {
               <div className="preview-row">
                 <span className="font-mono text-xs text-stone-400">Type</span>
                 <span id="preview-tipo" className="text-sm text-stone-700">
-                  Expense
+                  {TRANSACTION_TYPE_LABELS[selectedType]}
                 </span>
               </div>
 
-              <div className="preview-row" id="preview-account-row">
-                <span className="font-mono text-xs text-stone-400">
-                  Account
-                </span>
-                <span id="preview-account" className="text-sm text-stone-700">
-                  Banco Nación
-                </span>
-              </div>
+              {selectedType !== TRANSACTION_TYPES.TRANSFER && (
+                <div className="preview-row" id="preview-account-row">
+                  <span className="font-mono text-xs text-stone-400">
+                    Account
+                  </span>
+                  <span id="preview-account" className="text-sm text-stone-700">
+                    Banco Nación
+                  </span>
+                </div>
+              )}
 
-              <div
-                className="preview-row"
-                id="preview-transfer-row"
-                style={{ display: "none" }}
-              >
-                <span className="font-mono text-xs text-stone-400">
-                  Transfer
-                </span>
-                <span className="text-blue-600 font-mono text-xs">
-                  Nación → Galicia
-                </span>
-              </div>
+              {selectedType === TRANSACTION_TYPES.TRANSFER && (
+                <div className="preview-row" id="preview-transfer-row">
+                  <span className="font-mono text-xs text-stone-400">
+                    Transfer
+                  </span>
+                  <span className="text-blue-600 font-mono text-xs">
+                    Nación → Galicia
+                  </span>
+                </div>
+              )}
 
-              <div className="preview-row" id="preview-cat-row">
-                <span className="font-mono text-xs text-stone-400">
-                  Category
-                </span>
-                <span className="text-sm text-stone-700">🚌 Transport</span>
-              </div>
+              {selectedType === TRANSACTION_TYPES.EXPENSE && (
+                <div className="preview-row" id="preview-cat-row">
+                  <span className="font-mono text-xs text-stone-400">
+                    Category
+                  </span>
+                  <span className="text-sm text-stone-700">🚌 Transport</span>
+                </div>
+              )}
 
               <div className="preview-row">
                 <span className="font-mono text-xs text-stone-400">Date</span>
@@ -102,9 +135,11 @@ export default function LivePreview() {
             <button
               id="save-btn"
               type="submit"
-              className="w-full bg-red-400 hover:bg-red-600 text-white font-medium text-sm rounded-xl py-3 transition-colors"
+              className={`w-full ${selectedColors.btnBgColor} ${selectedColors.btnHoverBgColor} text-white font-medium text-sm rounded-xl py-3 transition-colors`}
             >
-              Save Expense
+              {selectedType === TRANSACTION_TYPES.TRANSFER
+                ? `Confirm Transfer`
+                : `Save ${TRANSACTION_TYPE_LABELS[selectedType]}`}
             </button>
 
             <Link

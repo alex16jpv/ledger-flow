@@ -1,22 +1,19 @@
 import { TransactionType } from "@/types/Transaction.types";
 import { formatAmount, formatDate } from "@/utils/utils";
+import { TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES } from "@/utils/constants";
+
+const { EXPENSE, INCOME, TRANSFER } = TRANSACTION_TYPES;
 
 const TYPE_COLORS = {
-  EXPENSE: "text-red-600",
-  INCOME: "text-green-600",
-  TRANSFER: "text-blue-600",
-} as const;
-
-const TYPE_LABELS = {
-  EXPENSE: "Expense",
-  INCOME: "Income",
-  TRANSFER: "Transfer",
+  [EXPENSE]: "text-red-600",
+  [INCOME]: "text-green-600",
+  [TRANSFER]: "text-blue-600",
 } as const;
 
 const TYPE_PREFIXES = {
-  EXPENSE: "− ",
-  INCOME: "+ ",
-  TRANSFER: "⇄ ",
+  [EXPENSE]: "− ",
+  [INCOME]: "+ ",
+  [TRANSFER]: "⇄ ",
 } as const;
 
 const DATE_OPTIONS: Intl.DateTimeFormatOptions = {
@@ -29,24 +26,18 @@ const TIME_OPTIONS: Intl.DateTimeFormatOptions = {
   // hour12: false,
 };
 
-const TRANSACTION_LABELS: Record<TransactionType["type"], string> = {
-  TRANSFER: "Internal Transfer",
-  INCOME: "Income",
-  EXPENSE: "Expense",
-};
-
 function getSubtitle(transaction: TransactionType): string {
-  const label = TRANSACTION_LABELS[transaction.type];
+  const label = TRANSACTION_TYPE_LABELS[transaction.type];
 
-  if (transaction.type === "TRANSFER") {
+  if (transaction.type === TRANSFER) {
     return `${label} · ${transaction.from_account_id} → ${transaction.to_account_id}`;
   }
 
-  if (transaction.type === "INCOME") {
+  if (transaction.type === INCOME) {
     return `${label} · ${transaction.to_account_id}`;
   }
 
-  if (transaction.type === "EXPENSE") {
+  if (transaction.type === EXPENSE) {
     const category = transaction.category ?? "Uncategorized";
     return `${label} · ${category} · ${transaction.from_account_id}`;
   }
@@ -73,7 +64,7 @@ export default function TransactionItem({
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  const amountAriaLabel = `${TYPE_LABELS[transaction.type]}: ${formattedAmount}`;
+  const amountAriaLabel = `${TRANSACTION_TYPE_LABELS[transaction.type]}: ${formattedAmount}`;
 
   return (
     <li className="flex items-center gap-4 px-6 py-3.5 hover:bg-stone-50 transition-colors">

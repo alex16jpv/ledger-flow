@@ -3,6 +3,7 @@ import InputSelect from "@/components/forms/InputSelect";
 import InputText from "@/components/forms/InputText";
 import InputTextArea from "@/components/forms/InputTextArea";
 import InputTime from "@/components/forms/InputTime";
+import { TypeTransactionType } from "@/types/Transaction.types";
 
 const mockAccountOptions = [
   { value: "nacion", label: "🏦 Banco Nación — $32,400" },
@@ -11,28 +12,36 @@ const mockAccountOptions = [
   { value: "mp", label: "📱 Mercado Pago — $4,100" },
 ];
 
-export default function TransactionForm() {
+export default function TransactionForm({
+  selectedType,
+}: {
+  selectedType: TypeTransactionType;
+}) {
   return (
-    <div className="tab-panel" role="tabpanel" aria-labelledby="tab-expense">
+    <div
+      className="flex flex-col gap-4"
+      role="tabpanel"
+      aria-labelledby={`tab-${selectedType.toLowerCase()}`}
+    >
       {/* <!-- Description + date --> */}
       <section className="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-4">
         <InputText
-          id="expense-desc"
+          id="description"
           label="Description"
           placeholder="E.g.: Lunch, Netflix, gas…"
           autoComplete="off"
         />
 
         <div className="grid grid-cols-2 gap-4">
-          <InputDate id="expense-date" label="Date" />
-          <InputTime id="expense-time" label="Time" />
+          <InputDate id="date" label="Date" />
+          <InputTime id="time" label="Time" />
         </div>
       </section>
 
       {/* <!-- Account + category --> */}
       <section className="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-4">
         <InputSelect
-          id="expense-account"
+          id="account"
           label="Account"
           options={mockAccountOptions}
           firstOption="Select account…"
@@ -124,7 +133,7 @@ export default function TransactionForm() {
 
         {/* Payer for income */}
         <InputText
-          id="income-payer"
+          id="payer"
           label="Payer / Source"
           placeholder="E.g.: Salary, freelance client, gift…"
           autoComplete="off"
@@ -134,13 +143,13 @@ export default function TransactionForm() {
       {/* <!-- Tags + note --> */}
       <section className="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-4">
         <InputText
-          id="expense-tags"
+          id="tags"
           label="Tags (comma separated)"
           placeholder="E.g.: recurring, work, deductible…"
         />
 
         <InputTextArea
-          id="expense-note"
+          id="note"
           label="Note"
           placeholder="Add an optional comment…"
           rows={2}
