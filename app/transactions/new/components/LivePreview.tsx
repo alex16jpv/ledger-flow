@@ -17,7 +17,9 @@ type LivePreviewProps = {
 
 function formatPreviewDate(date: string, time: string): string {
   if (!date) return "—";
-  const d = new Date(`${date}T${time || "00:00"}`);
+  const [year, month, day] = date.split("-").map(Number);
+  const [hours, minutes] = (time || "00:00").split(":").map(Number);
+  const d = new Date(year, month - 1, day, hours, minutes);
   if (isNaN(d.getTime())) return "—";
   return `${formatDate({ date: d, options: { day: "numeric", month: "short", year: "numeric" } })} · ${time || "00:00"}`;
 }
@@ -55,7 +57,14 @@ export default function LivePreview({
 }: LivePreviewProps) {
   const [amount, description, date, time, fromAccount, toAccount] = useWatch({
     control,
-    name: ["amount", "description", "date", "time", "fromAccount", "toAccount"],
+    name: [
+      "amount",
+      "description",
+      "date",
+      "time",
+      "from_account_id",
+      "to_account_id",
+    ],
   });
 
   const selectedColors = TRANSACTION_TYPE_COLORS[selectedType];

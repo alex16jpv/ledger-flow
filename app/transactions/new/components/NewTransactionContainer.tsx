@@ -21,8 +21,8 @@ const DEFAULT_VALUES: Partial<TransactionFormFields> & {
   description: "",
   date: "",
   time: "",
-  fromAccount: "",
-  toAccount: "",
+  from_account_id: "",
+  to_account_id: "",
   payer: "",
   tags: "",
   note: "",
@@ -54,22 +54,24 @@ export default function NewTransactionContainer() {
     setValue("type", type);
     setValue("date", getCurrentDate());
     setValue("time", getCurrentTime());
-    setValue("fromAccount", "");
-    setValue("toAccount", "");
+    setValue("from_account_id", "");
+    setValue("to_account_id", "");
     setValue("payer", "");
     clearErrors();
   };
 
   const onSubmit = (data: TransactionFormFields) => {
-    const { time, date, type, ...rest } = data;
-    const dateWithTime = new Date(`${date}T${time || "00:00"}`);
-    console.log("Transaction data:", { ...rest, type, date: dateWithTime });
+    const { time, date, ...rest } = data;
+    const [year, month, day] = date.split("-").map(Number);
+    const [hours, minutes] = (time || "00:00").split(":").map(Number);
+    const dateWithTime = new Date(year, month - 1, day, hours, minutes);
+    console.log("Transaction data:", { ...rest, date: dateWithTime });
 
     reset({
       ...DEFAULT_VALUES,
       date: getCurrentDate(),
       time: getCurrentTime(),
-      type,
+      type: data.type,
     });
   };
 

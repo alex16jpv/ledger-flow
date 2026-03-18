@@ -63,8 +63,8 @@ export default function TransactionForm({
             label="From Account"
             options={MOCK_ACCOUNT_OPTIONS}
             firstOption="Select account…"
-            registration={register("fromAccount")}
-            error={errors.fromAccount?.message}
+            registration={register("from_account_id")}
+            error={errors.from_account_id?.message}
           />
         )}
 
@@ -84,8 +84,8 @@ export default function TransactionForm({
             label="To Account"
             options={MOCK_ACCOUNT_OPTIONS}
             firstOption="Select account…"
-            registration={register("toAccount")}
-            error={errors.toAccount?.message}
+            registration={register("to_account_id")}
+            error={errors.to_account_id?.message}
           />
         )}
 

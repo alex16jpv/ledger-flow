@@ -4,8 +4,14 @@ const amount = z
   .number({ message: "Amount is required" })
   .positive("Amount must be greater than 0");
 const description = z.string().min(1, "Description is required");
-const date = z.string().min(1, "Date is required");
-const time = z.string();
+const date = z
+  .string()
+  .min(1, "Date is required")
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)");
+const time = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time format (HH:MM)")
+  .or(z.literal(""));
 const account = z.string().min(1, "Account is required");
 const tags = z.string().optional();
 const note = z.string().optional();
@@ -16,7 +22,7 @@ const expenseSchema = z.object({
   description,
   date,
   time,
-  fromAccount: account,
+  from_account_id: account,
   tags,
   note,
 });
@@ -27,7 +33,7 @@ const incomeSchema = z.object({
   description,
   date,
   time,
-  toAccount: account,
+  to_account_id: account,
   payer: z.string().optional(),
   tags,
   note,
@@ -39,8 +45,8 @@ const transferSchema = z.object({
   description,
   date,
   time,
-  fromAccount: account,
-  toAccount: account,
+  from_account_id: account,
+  to_account_id: account,
   tags,
   note,
 });
@@ -61,8 +67,8 @@ export type TransactionFormFields = {
   description: string;
   date: string;
   time: string;
-  fromAccount?: string;
-  toAccount?: string;
+  from_account_id?: string;
+  to_account_id?: string;
   payer?: string;
   tags?: string;
   note?: string;

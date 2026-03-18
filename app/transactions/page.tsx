@@ -1,5 +1,7 @@
-import ButtonLink from "@/components/ButtonLink";
 import Header from "@/components/Header";
+import ButtonLink from "@/components/ButtonLink";
+import TransactionsContent from "./components/TransactionsContent";
+import { MOCK_TRANSACTIONS } from "@/lib/mock/transactions.mock";
 
 export default function TransactionsPage() {
   return (
@@ -7,17 +9,15 @@ export default function TransactionsPage() {
       <Header title="Transactions">
         <ButtonLink
           icon="＋"
-          text="New Transaction"
+          text="New"
           link="/transactions/new"
-          bgColor="teal"
           className="flex"
         />
       </Header>
 
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4">Transactions</h1>
-        <p>This is the transactions page.</p>
-      </div>
+      <main className="flex-1 px-5 lg:px-8 py-6 flex flex-col gap-6">
+        <TransactionsContent transactions={MOCK_TRANSACTIONS} />
+      </main>
     </>
   );
 }
