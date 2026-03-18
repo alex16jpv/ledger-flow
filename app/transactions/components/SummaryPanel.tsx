@@ -2,8 +2,10 @@ import { Transaction } from "@/types/Transaction.types";
 import {
   TRANSACTION_TYPES,
   CATEGORY_STYLES,
+  CATEGORY_NAMES,
   DEFAULT_CATEGORY_STYLE,
 } from "@/utils/constants";
+import type { Category } from "@/utils/constants";
 import { formatAmount } from "@/utils/utils";
 import { getCurrentMonthName } from "@/lib/dates";
 import Link from "next/link";
@@ -73,7 +75,12 @@ function TopCategories({ transactions }: { transactions: Transaction[] }) {
       </p>
       <div className="flex flex-col gap-3">
         {sorted.map(([category, total]) => {
-          const style = CATEGORY_STYLES[category] ?? DEFAULT_CATEGORY_STYLE;
+          const isKnown = (CATEGORY_NAMES as readonly string[]).includes(
+            category,
+          );
+          const style = isKnown
+            ? CATEGORY_STYLES[category as Category]
+            : DEFAULT_CATEGORY_STYLE;
           return (
             <div key={category} className="flex items-center gap-3">
               <span

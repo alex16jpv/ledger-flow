@@ -96,6 +96,16 @@ export function getCurrentTime(): string {
   return formatTime(new Date());
 }
 
+/**
+ * Returns both date (ISO) and time (HH:mm) from a single Date snapshot,
+ * avoiding drift that can occur when calling getCurrentDate/getCurrentTime
+ * separately (e.g. around midnight).
+ */
+export function getCurrentDateTime(): { date: string; time: string } {
+  const now = new Date();
+  return { date: toISODate(now), time: formatTime(now) };
+}
+
 export function getCurrentMonthName(): string {
   return formatDate(new Date(), "monthLong");
 }

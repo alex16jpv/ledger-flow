@@ -11,25 +11,24 @@ import {
   TransactionFormFields,
 } from "@/lib/schemas/transaction.schema";
 import { TransactionKind } from "@/types/Transaction.types";
-import {
-  getCurrentDate,
-  getCurrentTime,
-  parseDateTimeFields,
-} from "@/lib/dates";
+import { getCurrentDateTime, parseDateTimeFields } from "@/lib/dates";
 
-const DEFAULT_VALUES: Partial<TransactionFormFields> & {
+function getDefaultValues(): Partial<TransactionFormFields> & {
   type: TransactionFormFields["type"];
-} = {
-  type: TRANSACTION_TYPES.EXPENSE,
-  description: "",
-  date: getCurrentDate(),
-  time: getCurrentTime(),
-  from_account_id: "",
-  to_account_id: "",
-  payer: "",
-  tags: "",
-  note: "",
-};
+} {
+  const { date, time } = getCurrentDateTime();
+  return {
+    type: TRANSACTION_TYPES.EXPENSE,
+    description: "",
+    date,
+    time,
+    from_account_id: "",
+    to_account_id: "",
+    payer: "",
+    tags: "",
+    note: "",
+  };
+}
 
 export default function NewTransactionContainer() {
   const {
@@ -43,15 +42,16 @@ export default function NewTransactionContainer() {
     formState: { errors },
   } = useForm<TransactionFormFields>({
     resolver: zodResolver(transactionSchema) as Resolver<TransactionFormFields>,
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: getDefaultValues(),
   });
 
   const selectedType = watch("type");
 
   const setSelectedType = (type: TransactionKind) => {
+    const { date, time } = getCurrentDateTime();
     setValue("type", type);
-    setValue("date", getCurrentDate());
-    setValue("time", getCurrentTime());
+    setValue("date", date);
+    setValue("time", time);
     setValue("from_account_id", "");
     setValue("to_account_id", "");
     setValue("payer", "");
@@ -64,9 +64,7 @@ export default function NewTransactionContainer() {
     console.log("Transaction data:", { ...rest, date: dateWithTime });
 
     reset({
-      ...DEFAULT_VALUES,
-      date: getCurrentDate(),
-      time: getCurrentTime(),
+      ...getDefaultValues(),
       type: data.type,
     });
   };

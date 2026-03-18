@@ -28,7 +28,22 @@ export type CategoryStyle = {
   dotColor: string;
 };
 
-export const CATEGORY_STYLES: Record<string, CategoryStyle> = {
+export const CATEGORY_NAMES = [
+  "Food",
+  "Transport",
+  "Entertainment",
+  "Home",
+  "Health",
+  "Salary",
+  "Freelance",
+  "Shopping",
+  "Savings",
+  "Investment",
+] as const;
+
+export type Category = (typeof CATEGORY_NAMES)[number];
+
+export const CATEGORY_STYLES: Record<Category, CategoryStyle> = {
   Food: {
     bgColor: "bg-teal-50",
     textColor: "text-teal-800",
