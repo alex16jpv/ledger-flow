@@ -1,7 +1,7 @@
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 
-export default function TransactionsLayout({
+export default function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -14,7 +14,6 @@ export default function TransactionsLayout({
           {children}
         </div>
       </div>
-
       <BottomNav />
     </>
   );
