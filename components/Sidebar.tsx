@@ -23,14 +23,27 @@ export default function Sidebar() {
       >
         {NAV_ITEMS.map((item) => {
           const isActive = item.href === activeHref;
+
+          if (item.disabled) {
+            return (
+              <span
+                key={item.href}
+                className="nav-link opacity-50 cursor-not-allowed"
+                aria-disabled="true"
+                role="link"
+              >
+                <span className="text-base leading-none">{item.icon}</span>
+                <span>{item.label}</span>
+              </span>
+            );
+          }
+
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`nav-link${isActive ? " active" : ""}${item.disabled ? " pointer-events-none" : ""}`}
-              aria-disabled={item.disabled || undefined}
+              className={`nav-link${isActive ? " active" : ""}`}
               aria-current={isActive ? "page" : undefined}
-              tabIndex={item.disabled ? -1 : undefined}
             >
               <span className="text-base leading-none">{item.icon}</span>
               <span>{item.label}</span>

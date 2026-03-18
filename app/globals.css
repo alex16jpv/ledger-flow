@@ -63,7 +63,7 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d3d1c7;
+  background: var(--color-stone-100);
   border-radius: 2px;
 }
 .scrollbar-hide::-webkit-scrollbar {
@@ -80,7 +80,7 @@ body {
   padding: 9px 14px;
   border-radius: 10px;
   font-size: 13px;
-  color: #5f5e5a;
+  color: var(--color-stone-600);
   cursor: pointer;
   transition:
     background 0.15s,
@@ -88,22 +88,22 @@ body {
   white-space: nowrap;
 }
 .nav-link:hover {
-  background: #f1efe8;
-  color: #444441;
+  background: var(--color-stone-50);
+  color: var(--color-stone-800);
 }
 .nav-link.active {
-  background: #e1f5ee;
-  color: #085041;
+  background: var(--color-teal-50);
+  color: var(--color-teal-800);
   font-weight: 500;
 }
 .nav-link.active .nav-dot {
-  background: #1d9e75;
+  background: var(--color-teal-400);
 }
 .progress-track {
   height: 6px;
   border-radius: 3px;
   overflow: hidden;
-  background: #f1efe8;
+  background: var(--color-stone-50);
 }
 .sparkline {
   display: flex;
@@ -122,7 +122,7 @@ body {
 .field-label {
   font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
-  color: #888780;
+  color: var(--color-stone-400);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 6px;
@@ -132,13 +132,13 @@ body {
 /* ── Shared input base ── */
 .input-base {
   width: 100%;
-  background: #f1efe8;
-  border: 1.5px solid #d3d1c7;
+  background: var(--color-stone-50);
+  border: 1.5px solid var(--color-stone-100);
   border-radius: 10px;
   padding: 10px 14px;
   font-family: var(--font-dm-sans), sans-serif;
   font-size: 14px;
-  color: #444441;
+  color: var(--color-stone-800);
   outline: none;
   transition:
     border-color 0.15s,
@@ -148,15 +148,15 @@ body {
   -webkit-appearance: none;
 }
 .input-base::placeholder {
-  color: #b4b2a9;
+  color: var(--color-stone-200);
 }
 .input-base:focus {
-  border-color: #1d9e75;
+  border-color: var(--color-teal-400);
   box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.12);
   background: #fff;
 }
 .input-base:hover:not(:focus) {
-  border-color: #888780;
+  border-color: var(--color-stone-400);
 }
 
 /* ── Select arrow ── */
@@ -169,7 +169,7 @@ body {
   right: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: #888780;
+  color: var(--color-stone-400);
   font-size: 12px;
   pointer-events: none;
 }
@@ -187,16 +187,16 @@ body {
   font-family: var(--font-playfair-display), serif;
   font-size: clamp(28px, 5vw, 48px);
   font-weight: 500;
-  color: #444441;
+  color: var(--color-stone-800);
   text-align: center;
   padding: 8px 0;
   transition: color 0.15s;
 }
 .input-amount::placeholder {
-  color: #d3d1c7;
+  color: var(--color-stone-100);
 }
 .input-amount:focus {
-  color: #085041;
+  color: var(--color-teal-800);
 }
 /* Remove number input arrows */
 .input-amount::-webkit-outer-spin-button,
@@ -210,8 +210,8 @@ body {
 
 /* ── Amount wrapper ── */
 .amount-wrapper {
-  background: #f1efe8;
-  border: 1.5px solid #d3d1c7;
+  background: var(--color-stone-50);
+  border: 1.5px solid var(--color-stone-100);
   border-radius: 14px;
   padding: 16px 20px;
   display: flex;
@@ -224,7 +224,7 @@ body {
     background 0.15s;
 }
 .amount-wrapper:focus-within {
-  border-color: #1d9e75;
+  border-color: var(--color-teal-400);
   box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.12);
   background: #fff;
 }
@@ -232,12 +232,12 @@ body {
   font-family: var(--font-playfair-display), serif;
   font-size: clamp(20px, 3vw, 32px);
   font-weight: 500;
-  color: #d3d1c7;
+  color: var(--color-stone-100);
   padding-top: 4px;
   transition: color 0.15s;
 }
 .amount-wrapper:focus-within .amount-currency {
-  color: #9fe1cb;
+  color: var(--color-teal-100);
 }
 
 /* ── Category chip grid ── */
@@ -248,7 +248,7 @@ body {
   gap: 4px;
   padding: 10px 6px;
   border-radius: 10px;
-  border: 1.5px solid #d3d1c7;
+  border: 1.5px solid var(--color-stone-100);
   background: #fff;
   cursor: pointer;
   transition:
@@ -257,11 +257,11 @@ body {
   min-width: 0;
 }
 .cat-chip:hover {
-  border-color: #888780;
+  border-color: var(--color-stone-400);
 }
 .cat-chip.selected {
-  border-color: #1d9e75;
-  background: #e1f5ee;
+  border-color: var(--color-teal-400);
+  background: var(--color-teal-50);
 }
 .cat-chip .cat-emoji {
   font-size: 20px;
@@ -270,7 +270,7 @@ body {
 .cat-chip .cat-name {
   font-family: var(--font-dm-mono), monospace;
   font-size: 9px;
-  color: #888780;
+  color: var(--color-stone-400);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -279,7 +279,7 @@ body {
   max-width: 100%;
 }
 .cat-chip.selected .cat-name {
-  color: #0f6e56;
+  color: var(--color-teal-600);
 }
 
 /* ── Transfer arrow connector ── */
@@ -287,12 +287,12 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #f1efe8;
-  border: 1.5px solid #d3d1c7;
+  background: var(--color-stone-50);
+  border: 1.5px solid var(--color-stone-100);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #888780;
+  color: var(--color-stone-400);
   font-size: 14px;
   flex-shrink: 0;
   cursor: pointer;
@@ -301,9 +301,9 @@ body {
     border-color 0.15s;
 }
 .transfer-arrow:hover {
-  background: #e6f1fb;
-  border-color: #378add;
-  color: #185fa5;
+  background: var(--color-blue-50);
+  border-color: var(--color-blue-400);
+  color: var(--color-blue-600);
 }
 
 /* ── Preview card ── */
@@ -312,7 +312,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #f1efe8;
+  border-bottom: 1px solid var(--color-stone-50);
 }
 .preview-row:last-child {
   border-bottom: none;

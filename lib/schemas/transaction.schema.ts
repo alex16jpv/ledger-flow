@@ -13,6 +13,7 @@ const time = z
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time format (HH:MM)")
   .or(z.literal(""));
 const account = z.string().min(1, "Account is required");
+const category = z.string().optional();
 const tags = z.string().optional();
 const note = z.string().optional();
 
@@ -22,6 +23,7 @@ const expenseSchema = z.object({
   description,
   date,
   time,
+  category,
   from_account_id: account,
   tags,
   note,
@@ -72,4 +74,5 @@ export type TransactionFormFields = {
   payer?: string;
   tags?: string;
   note?: string;
+  category?: string;
 };

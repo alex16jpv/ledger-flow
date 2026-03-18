@@ -4,7 +4,7 @@ import InputText from "@/components/forms/InputText";
 import InputTextArea from "@/components/forms/InputTextArea";
 import InputTime from "@/components/forms/InputTime";
 import { TransactionKind } from "@/types/Transaction.types";
-import { TRANSACTION_TYPES } from "@/utils/constants";
+import { TRANSACTION_TYPES, CATEGORY_NAMES } from "@/utils/constants";
 import { UseFormRegister, FieldErrors } from "react-hook-form";
 import { TransactionFormFields } from "@/lib/schemas/transaction.schema";
 import { MOCK_ACCOUNT_OPTIONS } from "@/lib/mock/accounts.mock";
@@ -21,6 +21,11 @@ export default function TransactionForm({
   const isTransfer = selectedType === TRANSACTION_TYPES.TRANSFER;
   const isIncome = selectedType === TRANSACTION_TYPES.INCOME;
   const isExpense = selectedType === TRANSACTION_TYPES.EXPENSE;
+
+  const categoryOptions = CATEGORY_NAMES.map((name) => ({
+    value: name,
+    label: name,
+  }));
 
   return (
     <div
@@ -100,6 +105,20 @@ export default function TransactionForm({
           />
         )}
       </section>
+
+      {/* Category */}
+      {isExpense && (
+        <section className="bg-white border border-stone-100 rounded-xl p-6">
+          <InputSelect
+            id="category"
+            label="Category"
+            options={categoryOptions}
+            firstOption="Select category…"
+            registration={register("category")}
+            error={errors.category?.message}
+          />
+        </section>
+      )}
 
       {/* Tags + note */}
       <section className="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-4">

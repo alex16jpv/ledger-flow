@@ -22,6 +22,7 @@ function getDefaultValues(): Partial<TransactionFormFields> & {
     description: "",
     date,
     time,
+    category: "",
     from_account_id: "",
     to_account_id: "",
     payer: "",
@@ -52,6 +53,7 @@ export default function NewTransactionContainer() {
     setValue("type", type);
     setValue("date", date);
     setValue("time", time);
+    setValue("category", "");
     setValue("from_account_id", "");
     setValue("to_account_id", "");
     setValue("payer", "");
