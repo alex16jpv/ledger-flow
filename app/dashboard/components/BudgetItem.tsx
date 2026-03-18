@@ -1,7 +1,7 @@
-import { BudgetType } from "@/types/Budget.type";
+import { Budget } from "@/types/Budget.type";
 import { formatAmount, percentMinMax } from "@/utils/utils";
 
-export default function BudgetItem({ budget }: { budget: BudgetType }) {
+export default function BudgetItem({ budget }: { budget: Budget }) {
   const progress = percentMinMax((budget.spent / budget.amount) * 100);
   const isOverBudget = budget.spent > budget.amount;
   const progressColor = isOverBudget ? "red-400" : budget.color;

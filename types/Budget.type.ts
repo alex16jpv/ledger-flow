@@ -1,4 +1,4 @@
-export type BudgetType = {
+export type Budget = {
   id: string;
   name: string;
   emoji: string;

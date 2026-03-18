@@ -1,6 +1,6 @@
 "use client";
 import { Control, useWatch } from "react-hook-form";
-import { TypeTransactionType } from "@/types/Transaction.types";
+import { TransactionKind } from "@/types/Transaction.types";
 import {
   TRANSACTION_TYPE_LABELS,
   TRANSACTION_TYPES,
@@ -11,7 +11,7 @@ import { formatDate } from "@/utils/utils";
 import { TransactionFormFields } from "@/lib/schemas/transaction.schema";
 
 type LivePreviewProps = {
-  selectedType: TypeTransactionType;
+  selectedType: TransactionKind;
   control: Control<TransactionFormFields>;
 };
 
@@ -30,7 +30,7 @@ function formatPreviewAmount(amount?: number): string {
 export function SaveButton({
   selectedType,
 }: {
-  selectedType: TypeTransactionType;
+  selectedType: TransactionKind;
 }) {
   const selectedColors = TRANSACTION_TYPE_COLORS[selectedType];
   return (

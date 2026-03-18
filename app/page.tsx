@@ -1,10 +1,6 @@
-import DashboardLayout from "./dashboard/layout";
-import Dashboard from "./dashboard/page";
+import { redirect } from "next/navigation";
 
+// redirect to /dashboard using nextjs correctly way
 export default function Home() {
-  return (
-    <DashboardLayout>
-      <Dashboard />
-    </DashboardLayout>
-  );
+  redirect("/dashboard");
 }

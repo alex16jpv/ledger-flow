@@ -1,9 +1,9 @@
-import { TypeTransactionType } from "@/utils/constants";
-export type { TypeTransactionType };
+import { type TransactionKind } from "@/utils/constants";
+export type { TransactionKind };
 
 type TransactionBase = {
   id: string;
-  type: TypeTransactionType;
+  type: TransactionKind;
   amount: number;
   date: Date;
   category?: string;
@@ -29,7 +29,7 @@ type ExpenseTransaction = TransactionBase & {
   to_account_id?: never;
 };
 
-export type TransactionType =
+export type Transaction =
   | TransferTransaction
   | IncomeTransaction
   | ExpenseTransaction;

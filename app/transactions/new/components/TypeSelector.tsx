@@ -1,4 +1,4 @@
-import { TypeTransactionType } from "@/types/Transaction.types";
+import { TransactionKind } from "@/types/Transaction.types";
 import { TRANSACTION_TYPES, TRANSACTION_TYPE_COLORS } from "@/utils/constants";
 import TypeSelectorButton from "./TypeSelectorButton";
 
@@ -8,14 +8,14 @@ const TYPE_OPTIONS = [
   { type: TRANSACTION_TYPES.TRANSFER, icon: "⇄", label: "Transfer" },
 ] as const;
 
-export default function TrxTypeSelector({
+export default function TransactionTypeSelector({
   selectedType,
   setSelectedType,
 }: {
-  selectedType: TypeTransactionType;
-  setSelectedType: (type: TypeTransactionType) => void;
+  selectedType: TransactionKind;
+  setSelectedType: (type: TransactionKind) => void;
 }) {
-  const handleTypeChange = (type: TypeTransactionType) => {
+  const handleTypeChange = (type: TransactionKind) => {
     if (type === selectedType) return;
 
     setSelectedType(type);

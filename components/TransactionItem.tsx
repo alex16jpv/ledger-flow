@@ -1,4 +1,4 @@
-import { TransactionType } from "@/types/Transaction.types";
+import { Transaction } from "@/types/Transaction.types";
 import { formatAmount, formatDate } from "@/utils/utils";
 import { TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES } from "@/utils/constants";
 
@@ -26,7 +26,7 @@ const TIME_OPTIONS: Intl.DateTimeFormatOptions = {
   // hour12: false,
 };
 
-function getSubtitle(transaction: TransactionType): string {
+function getSubtitle(transaction: Transaction): string {
   const label = TRANSACTION_TYPE_LABELS[transaction.type];
 
   if (transaction.type === TRANSFER) {
@@ -48,7 +48,7 @@ function getSubtitle(transaction: TransactionType): string {
 export default function TransactionItem({
   transaction,
 }: {
-  transaction: TransactionType;
+  transaction: Transaction;
 }) {
   const dateString = formatDate({
     date: transaction.date,
@@ -73,9 +73,8 @@ export default function TransactionItem({
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-stone-800">
-          {transaction?.description
-            ? transaction.description
-            : `${transaction.type.toLowerCase()} Transaction`}
+          {transaction.description ||
+            `${transaction.type.toLowerCase()} Transaction`}
         </p>
         <p className="text-xs text-stone-400 mt-0.5">
           {getSubtitle(transaction)}

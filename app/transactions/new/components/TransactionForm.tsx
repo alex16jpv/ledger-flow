@@ -3,24 +3,18 @@ import InputSelect from "@/components/forms/InputSelect";
 import InputText from "@/components/forms/InputText";
 import InputTextArea from "@/components/forms/InputTextArea";
 import InputTime from "@/components/forms/InputTime";
-import { TypeTransactionType } from "@/types/Transaction.types";
+import { TransactionKind } from "@/types/Transaction.types";
 import { TRANSACTION_TYPES } from "@/utils/constants";
 import { UseFormRegister, FieldErrors } from "react-hook-form";
 import { TransactionFormFields } from "@/lib/schemas/transaction.schema";
-
-const mockAccountOptions = [
-  { value: "nacion", label: "🏦 Banco Nación — $32,400" },
-  { value: "visa", label: "💳 Visa Santander" },
-  { value: "galicia", label: "🏦 Galicia Saving — $18,750" },
-  { value: "mp", label: "📱 Mercado Pago — $4,100" },
-];
+import { MOCK_ACCOUNT_OPTIONS } from "@/lib/mock/accounts.mock";
 
 export default function TransactionForm({
   selectedType,
   register,
   errors,
 }: {
-  selectedType: TypeTransactionType;
+  selectedType: TransactionKind;
   register: UseFormRegister<TransactionFormFields>;
   errors: FieldErrors<TransactionFormFields>;
 }) {
@@ -67,7 +61,7 @@ export default function TransactionForm({
           <InputSelect
             id="from-account"
             label="From Account"
-            options={mockAccountOptions}
+            options={MOCK_ACCOUNT_OPTIONS}
             firstOption="Select account…"
             registration={register("fromAccount")}
             error={errors.fromAccount?.message}
@@ -92,7 +86,7 @@ export default function TransactionForm({
           <InputSelect
             id="to-account"
             label="To Account"
-            options={mockAccountOptions}
+            options={MOCK_ACCOUNT_OPTIONS}
             firstOption="Select account…"
             registration={register("toAccount")}
             error={errors.toAccount?.message}

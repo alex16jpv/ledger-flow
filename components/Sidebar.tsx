@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NAV_ITEMS } from "@/utils/navigation";
 
 export default function Sidebar() {
   return (
@@ -14,30 +15,18 @@ export default function Sidebar() {
         className="flex-1 px-3 py-4 flex flex-col gap-1"
         aria-label="Main navigation"
       >
-        <Link href="/dashboard" className="nav-link active" aria-current="page">
-          <span className="text-base leading-none">⊞</span>
-          <span>Dashboard</span>
-        </Link>
-        <Link href="/transactions/new" className="nav-link">
-          <span className="text-base leading-none">＋</span>
-          <span>New Transaction</span>
-        </Link>
-        <Link href="/transactions" className="nav-link">
-          <span className="text-base leading-none">↕</span>
-          <span>Transactions</span>
-        </Link>
-        <Link href="/accounts" className="nav-link pointer-events-none">
-          <span className="text-base leading-none">◈</span>
-          <span>Accounts</span>
-        </Link>
-        <Link href="/budgets" className="nav-link pointer-events-none">
-          <span className="text-base leading-none">◎</span>
-          <span>Budgets</span>
-        </Link>
-        <Link href="/reports" className="nav-link pointer-events-none">
-          <span className="text-base leading-none">⌇</span>
-          <span>Reports</span>
-        </Link>
+        {NAV_ITEMS.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            // TODO: Add active state based on current route
+            // remove pointer events when all pages are implemented
+            className={`nav-link${item.disabled ? " pointer-events-none" : ""}`}
+          >
+            <span className="text-base leading-none">{item.icon}</span>
+            <span>{item.label}</span>
+          </Link>
+        ))}
       </nav>
 
       {/* <!-- User profile --> */}

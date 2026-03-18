@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Control, useController } from "react-hook-form";
 import FieldError from "@/components/forms/FieldError";
 import { TransactionFormFields } from "@/lib/schemas/transaction.schema";
@@ -58,10 +58,11 @@ export default function AmountInput({
   };
 
   // Sync displayValue when form resets (field.value changes externally)
-  const currentFormatted = formatDisplay(field.value);
-  if (!isFocused && displayValue !== currentFormatted) {
-    setDisplayValue(currentFormatted);
-  }
+  useEffect(() => {
+    if (!isFocused) {
+      setDisplayValue(formatDisplay(field.value));
+    }
+  }, [field.value, isFocused]);
 
   return (
     <div>

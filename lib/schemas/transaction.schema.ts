@@ -53,23 +53,17 @@ export const transactionSchema = z.discriminatedUnion("type", [
 
 export type TransactionFormData = z.infer<typeof transactionSchema>;
 
-// Flat type with all possible fields for react-hook-form
-// Derived from the union of all schema variants
-type ExpenseFields = z.infer<typeof expenseSchema>;
-type IncomeFields = z.infer<typeof incomeSchema>;
-type TransferFields = z.infer<typeof transferSchema>;
-
-type AllKeys = keyof ExpenseFields | keyof IncomeFields | keyof TransferFields;
-type FieldType<K extends string> = K extends "type"
-  ? TransactionFormData["type"]
-  : K extends keyof TransferFields
-    ? TransferFields[K]
-    : K extends keyof IncomeFields
-      ? IncomeFields[K]
-      : K extends keyof ExpenseFields
-        ? ExpenseFields[K]
-        : never;
-
+// Flat type with all possible fields for react-hook-form.
+// Variant-specific fields are optional so the form can hold any state.
 export type TransactionFormFields = {
-  [K in AllKeys]: FieldType<K>;
+  type: TransactionFormData["type"];
+  amount: number;
+  description: string;
+  date: string;
+  time: string;
+  fromAccount?: string;
+  toAccount?: string;
+  payer?: string;
+  tags?: string;
+  note?: string;
 };

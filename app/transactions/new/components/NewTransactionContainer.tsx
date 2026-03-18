@@ -5,13 +5,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import AmountInput from "./AmountInput";
 import LivePreview, { SaveButton } from "./LivePreview";
 import TransactionForm from "./TransactionForm";
-import TrxTypeSelector from "./TypeSelector";
+import TransactionTypeSelector from "./TypeSelector";
 import { TRANSACTION_TYPES } from "@/utils/constants";
 import {
   transactionSchema,
   TransactionFormFields,
 } from "@/lib/schemas/transaction.schema";
-import { TypeTransactionType } from "@/types/Transaction.types";
+import { TransactionKind } from "@/types/Transaction.types";
 import { getCurrentDate, getCurrentTime } from "@/utils/utils";
 
 const DEFAULT_VALUES: TransactionFormFields = {
@@ -38,9 +38,7 @@ export default function NewTransactionContainer() {
     control,
     formState: { errors },
   } = useForm<TransactionFormFields>({
-    resolver: zodResolver(
-      transactionSchema,
-    ) as unknown as Resolver<TransactionFormFields>,
+    resolver: zodResolver(transactionSchema) as Resolver<TransactionFormFields>,
     defaultValues: DEFAULT_VALUES,
   });
 
@@ -51,7 +49,7 @@ export default function NewTransactionContainer() {
 
   const selectedType = watch("type");
 
-  const setSelectedType = (type: TypeTransactionType) => {
+  const setSelectedType = (type: TransactionKind) => {
     setValue("type", type);
     setValue("date", getCurrentDate());
     setValue("time", getCurrentTime());
@@ -78,7 +76,7 @@ export default function NewTransactionContainer() {
     <form onSubmit={handleSubmit(onSubmit)} className="contents">
       <div className="lg:col-span-3 flex flex-col gap-5">
         <section className="bg-white border border-stone-100 rounded-xl p-6">
-          <TrxTypeSelector
+          <TransactionTypeSelector
             selectedType={selectedType}
             setSelectedType={setSelectedType}
           />
