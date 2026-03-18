@@ -1,4 +1,5 @@
-import { Budget, BUDGET_COLOR_CLASSES } from "@/types/Budget.type";
+import { Budget } from "@/types/Budget.type";
+import { BUDGET_COLOR_CLASSES } from "@/utils/constants";
 import { formatAmount, percentMinMax } from "@/utils/utils";
 
 export default function BudgetItem({ budget }: { budget: Budget }) {

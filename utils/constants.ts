@@ -1,3 +1,5 @@
+import { BudgetColor } from "@/types/Budget.type";
+
 export const TRANSACTION_TYPES = {
   EXPENSE: "EXPENSE",
   INCOME: "INCOME",
@@ -127,4 +129,14 @@ export const TRANSACTION_TYPE_COLORS: Record<TransactionKind, TypeColors> = {
     btnHoverBgColor: "hover:bg-blue-600",
     selectedClass: "bg-blue-50 text-blue-600 border-blue-400",
   },
+};
+
+export const BUDGET_COLOR_CLASSES: Record<BudgetColor, string> = {
+  "amber-200": "bg-amber-200",
+  "amber-400": "bg-amber-400",
+  "teal-400": "bg-teal-400",
+  "red-400": "bg-red-400",
+  "blue-400": "bg-blue-400",
+  "purple-400": "bg-purple-400",
+  "stone-400": "bg-stone-400",
 };
