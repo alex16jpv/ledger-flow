@@ -1,10 +1,12 @@
-import { Budget } from "@/types/Budget.type";
+import { Budget, BUDGET_COLOR_CLASSES } from "@/types/Budget.type";
 import { formatAmount, percentMinMax } from "@/utils/utils";
 
 export default function BudgetItem({ budget }: { budget: Budget }) {
   const progress = percentMinMax((budget.spent / budget.amount) * 100);
   const isOverBudget = budget.spent > budget.amount;
-  const progressColor = isOverBudget ? "red-400" : budget.color;
+  const progressColorClass = isOverBudget
+    ? "bg-red-400"
+    : BUDGET_COLOR_CLASSES[budget.color];
   const textColor = isOverBudget ? "text-red-400" : "text-stone-400";
   const formattedSpent = formatAmount({ amount: budget.spent });
   const formattedAmount = formatAmount({ amount: budget.amount });
@@ -21,7 +23,7 @@ export default function BudgetItem({ budget }: { budget: Budget }) {
       </div>
       <div className="progress-track">
         <div
-          className={`h-full rounded-full bg-${progressColor}`}
+          className={`h-full rounded-full ${progressColorClass}`}
           style={{
             width: `${progress}%`,
           }}

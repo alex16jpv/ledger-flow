@@ -1,5 +1,31 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { DM_Sans, DM_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
+
+const dmMono = DM_Mono({
+  weight: ["400", "500"],
+  subsets: ["latin"],
+  variable: "--font-dm-mono",
+  display: "swap",
+});
+
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair-display",
+  display: "swap",
+});
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#1d9e75",
+};
 
 export const metadata: Metadata = {
   title: "Ledger Flow",
@@ -13,8 +39,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="bg-stone-50 min-h-screen">{children}</body>
+    <html
+      lang="en"
+      className={`${dmSans.variable} ${dmMono.variable} ${playfairDisplay.variable}`}
+    >
+      <body className="bg-stone-50 min-h-screen font-sans">{children}</body>
     </html>
   );
 }

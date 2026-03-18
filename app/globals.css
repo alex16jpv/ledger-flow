@@ -2,9 +2,9 @@
 
 @theme {
   /* Font Families */
-  --font-display: "Playfair Display", serif;
-  --font-sans: "DM Sans", sans-serif;
-  --font-mono: "DM Mono", monospace;
+  --font-display: var(--font-playfair-display), serif;
+  --font-sans: var(--font-dm-sans), sans-serif;
+  --font-mono: var(--font-dm-mono), monospace;
 
   /* Teal */
   --color-teal-50: #e1f5ee;
@@ -53,7 +53,7 @@
   box-sizing: border-box;
 }
 body {
-  font-family: "DM Sans", sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   margin: 0;
 }
 ::-webkit-scrollbar {
@@ -120,7 +120,7 @@ body {
 
 /* ── Field label ── */
 .field-label {
-  font-family: "DM Mono", monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   color: #888780;
   text-transform: uppercase;
@@ -136,7 +136,7 @@ body {
   border: 1.5px solid #d3d1c7;
   border-radius: 10px;
   padding: 10px 14px;
-  font-family: "DM Sans", sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 14px;
   color: #444441;
   outline: none;
@@ -184,7 +184,7 @@ body {
   background: transparent;
   border: none;
   outline: none;
-  font-family: "Playfair Display", serif;
+  font-family: var(--font-playfair-display), serif;
   font-size: clamp(28px, 5vw, 48px);
   font-weight: 500;
   color: #444441;
@@ -229,7 +229,7 @@ body {
   background: #fff;
 }
 .amount-currency {
-  font-family: "Playfair Display", serif;
+  font-family: var(--font-playfair-display), serif;
   font-size: clamp(20px, 3vw, 32px);
   font-weight: 500;
   color: #d3d1c7;
@@ -268,7 +268,7 @@ body {
   line-height: 1;
 }
 .cat-chip .cat-name {
-  font-family: "DM Mono", monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 9px;
   color: #888780;
   text-transform: uppercase;
