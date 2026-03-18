@@ -10,7 +10,7 @@ export default function TransactionsPage() {
           text="New Transaction"
           link="/transactions/new"
           bgColor="teal"
-          className="hidden sm:flex"
+          className="flex"
         />
       </Header>
 
