@@ -1,5 +1,6 @@
 import { Transaction } from "@/types/Transaction.types";
-import { formatAmount, formatUTCDateTime } from "@/utils/utils";
+import { formatAmount } from "@/utils/utils";
+import { formatDate } from "@/lib/dates";
 import { TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES } from "@/utils/constants";
 import { getTransactionSubtitle } from "@/utils/transaction.utils";
 
@@ -22,7 +23,7 @@ export default function TransactionItem({
 }: {
   transaction: Transaction;
 }) {
-  const dateTimeString = formatUTCDateTime(transaction.date);
+  const dateTimeString = formatDate(transaction.date, "dayShortMonthTime");
 
   const amountColor = TYPE_COLORS[transaction.type];
   const amountPrefix = TYPE_PREFIXES[transaction.type];

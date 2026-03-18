@@ -7,7 +7,8 @@ import {
   TRANSACTION_TYPE_COLORS,
 } from "@/utils/constants";
 import Link from "next/link";
-import { formatDate, formatAmount } from "@/utils/utils";
+import { formatAmount } from "@/utils/utils";
+import { formatDate, parseDateTimeFields } from "@/lib/dates";
 import { TransactionFormFields } from "@/lib/schemas/transaction.schema";
 
 type LivePreviewProps = {
@@ -17,11 +18,12 @@ type LivePreviewProps = {
 
 function formatPreviewDate(date: string, time: string): string {
   if (!date) return "—";
-  const [year, month, day] = date.split("-").map(Number);
-  const [hours, minutes] = (time || "00:00").split(":").map(Number);
-  const d = new Date(year, month - 1, day, hours, minutes);
-  if (isNaN(d.getTime())) return "—";
-  return `${formatDate({ date: d, options: { day: "numeric", month: "short", year: "numeric" } })} · ${time || "00:00"}`;
+  try {
+    const d = parseDateTimeFields(date, time);
+    return `${formatDate(d, "shortDateYear")} · ${time || "00:00"}`;
+  } catch {
+    return "—";
+  }
 }
 
 function formatPreviewAmount(amount?: number): string {

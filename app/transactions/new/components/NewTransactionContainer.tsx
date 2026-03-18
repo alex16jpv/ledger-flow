@@ -12,15 +12,19 @@ import {
   TransactionFormFields,
 } from "@/lib/schemas/transaction.schema";
 import { TransactionKind } from "@/types/Transaction.types";
-import { getCurrentDate, getCurrentTime } from "@/utils/utils";
+import {
+  getCurrentDate,
+  getCurrentTime,
+  parseDateTimeFields,
+} from "@/lib/dates";
 
 const DEFAULT_VALUES: Partial<TransactionFormFields> & {
   type: TransactionFormFields["type"];
 } = {
   type: TRANSACTION_TYPES.EXPENSE,
   description: "",
-  date: "",
-  time: "",
+  date: getCurrentDate(),
+  time: getCurrentTime(),
   from_account_id: "",
   to_account_id: "",
   payer: "",
@@ -43,11 +47,6 @@ export default function NewTransactionContainer() {
     defaultValues: DEFAULT_VALUES,
   });
 
-  useEffect(() => {
-    setValue("date", getCurrentDate());
-    setValue("time", getCurrentTime());
-  }, [setValue]);
-
   const selectedType = watch("type");
 
   const setSelectedType = (type: TransactionKind) => {
@@ -62,9 +61,7 @@ export default function NewTransactionContainer() {
 
   const onSubmit = (data: TransactionFormFields) => {
     const { time, date, ...rest } = data;
-    const [year, month, day] = date.split("-").map(Number);
-    const [hours, minutes] = (time || "00:00").split(":").map(Number);
-    const dateWithTime = new Date(year, month - 1, day, hours, minutes);
+    const dateWithTime = parseDateTimeFields(date, time);
     console.log("Transaction data:", { ...rest, date: dateWithTime });
 
     reset({

@@ -1,28 +1,6 @@
 import { Transaction } from "@/types/Transaction.types";
-import { formatUTCShortDate } from "@/utils/utils";
+import { getDateGroupLabel, getDateGroupKey } from "@/lib/dates";
 import TransactionItem from "@/components/TransactionItem";
-
-function getDateGroupLabel(date: Date): string {
-  const now = new Date();
-  const todayUTC = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate(),
-  );
-  const dateUTC = Date.UTC(
-    date.getUTCFullYear(),
-    date.getUTCMonth(),
-    date.getUTCDate(),
-  );
-
-  const diffDays = Math.round((todayUTC - dateUTC) / (1000 * 60 * 60 * 24));
-
-  const dateStr = formatUTCShortDate(date);
-
-  if (diffDays === 0) return `Today — ${dateStr}`;
-  if (diffDays === 1) return `Yesterday — ${dateStr}`;
-  return dateStr;
-}
 
 function groupTransactionsByDate(
   transactions: Transaction[],
@@ -33,7 +11,7 @@ function groupTransactionsByDate(
   const groups = new Map<string, Transaction[]>();
 
   for (const t of sorted) {
-    const key = `${t.date.getUTCFullYear()}-${t.date.getUTCMonth()}-${t.date.getUTCDate()}`;
+    const key = getDateGroupKey(t.date);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(t);
   }

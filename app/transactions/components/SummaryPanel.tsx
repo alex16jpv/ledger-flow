@@ -4,7 +4,8 @@ import {
   CATEGORY_STYLES,
   DEFAULT_CATEGORY_STYLE,
 } from "@/utils/constants";
-import { formatAmount, getCurrentMonthName } from "@/utils/utils";
+import { formatAmount } from "@/utils/utils";
+import { getCurrentMonthName } from "@/lib/dates";
 import Link from "next/link";
 
 function MonthlySummary({ transactions }: { transactions: Transaction[] }) {
