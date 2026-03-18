@@ -7,7 +7,7 @@ import {
   TRANSACTION_TYPE_COLORS,
 } from "@/utils/constants";
 import Link from "next/link";
-import { formatDate } from "@/utils/utils";
+import { formatDate, formatAmount } from "@/utils/utils";
 import { TransactionFormFields } from "@/lib/schemas/transaction.schema";
 
 type LivePreviewProps = {
@@ -24,7 +24,11 @@ function formatPreviewDate(date: string, time: string): string {
 
 function formatPreviewAmount(amount?: number): string {
   if (amount === undefined || isNaN(amount)) return "$0.00";
-  return `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)}`;
+  return formatAmount({
+    amount,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export function SaveButton({

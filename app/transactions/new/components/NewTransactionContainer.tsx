@@ -14,9 +14,10 @@ import {
 import { TransactionKind } from "@/types/Transaction.types";
 import { getCurrentDate, getCurrentTime } from "@/utils/utils";
 
-const DEFAULT_VALUES: TransactionFormFields = {
+const DEFAULT_VALUES: Partial<TransactionFormFields> & {
+  type: TransactionFormFields["type"];
+} = {
   type: TRANSACTION_TYPES.EXPENSE,
-  amount: undefined as unknown as number,
   description: "",
   date: "",
   time: "",

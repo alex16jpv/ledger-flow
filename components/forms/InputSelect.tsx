@@ -24,12 +24,7 @@ export default function InputSelect({
         {label}
       </label>
       <div className="select-wrap">
-        <select
-          id={id}
-          className={`input-base ${className}`}
-          defaultValue={""}
-          {...registration}
-        >
+        <select id={id} className={`input-base ${className}`} {...registration}>
           {firstOption && (
             <option value="" disabled>
               {firstOption}

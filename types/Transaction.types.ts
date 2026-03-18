@@ -8,6 +8,7 @@ type TransactionBase = {
   date: Date;
   category?: string;
   description?: string;
+  emoji?: string;
   user_id?: string;
 };
 

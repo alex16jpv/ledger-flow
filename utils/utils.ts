@@ -51,3 +51,39 @@ export const getCurrentTime = (): string => {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 };
+
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+export const formatUTCShortDate = (date: Date): string => {
+  return `${MONTHS_SHORT[date.getUTCMonth()]} ${date.getUTCDate()}`;
+};
+
+export const formatUTCTime = (date: Date): string => {
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
+
+export const formatUTCDateTime = (date: Date): string => {
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = MONTHS_SHORT[date.getUTCMonth()];
+  const time = formatUTCTime(date);
+  return `${day} ${month} · ${time}`;
+};
+
+export const getCurrentMonthName = (): string => {
+  return new Date().toLocaleDateString("en-US", { month: "long" });
+};

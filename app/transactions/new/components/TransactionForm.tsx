@@ -71,11 +71,7 @@ export default function TransactionForm({
         {isTransfer && (
           <div className="flex items-center gap-4">
             <div className="flex-1 h-px bg-stone-100"></div>
-            <div
-              className="transfer-arrow"
-              aria-label="Transfer direction"
-              title="Click to switch accounts"
-            >
+            <div className="transfer-arrow" aria-label="Transfer direction">
               ⇄
             </div>
             <div className="flex-1 h-px bg-stone-100"></div>
