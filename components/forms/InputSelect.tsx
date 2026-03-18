@@ -1,15 +1,22 @@
+import { UseFormRegisterReturn } from "react-hook-form";
+import FieldError from "./FieldError";
+
 export default function InputSelect({
   id,
   label,
-  className,
+  className = "",
   options,
   firstOption,
+  registration,
+  error,
 }: {
   id: string;
   label: string;
   className?: string;
   options?: { value: string; label: string }[];
   firstOption?: string;
+  registration?: UseFormRegisterReturn;
+  error?: string;
 }) {
   return (
     <div>
@@ -17,7 +24,12 @@ export default function InputSelect({
         {label}
       </label>
       <div className="select-wrap">
-        <select id={id} className={`input-base ${className}`} defaultValue={""}>
+        <select
+          id={id}
+          className={`input-base ${className}`}
+          defaultValue={""}
+          {...registration}
+        >
           {firstOption && (
             <option value="" disabled>
               {firstOption}
@@ -30,6 +42,7 @@ export default function InputSelect({
           ))}
         </select>
       </div>
+      <FieldError message={error} />
     </div>
   );
 }

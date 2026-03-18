@@ -1,8 +1,12 @@
 import { TypeTransactionType } from "@/types/Transaction.types";
-import { TRANSACTION_TYPES } from "@/utils/constants";
+import { TRANSACTION_TYPES, TRANSACTION_TYPE_COLORS } from "@/utils/constants";
 import TypeSelectorButton from "./TypeSelectorButton";
 
-const { EXPENSE, INCOME, TRANSFER } = TRANSACTION_TYPES;
+const TYPE_OPTIONS = [
+  { type: TRANSACTION_TYPES.EXPENSE, icon: "↓", label: "Expense" },
+  { type: TRANSACTION_TYPES.INCOME, icon: "↑", label: "Income" },
+  { type: TRANSACTION_TYPES.TRANSFER, icon: "⇄", label: "Transfer" },
+] as const;
 
 export default function TrxTypeSelector({
   selectedType,
@@ -23,41 +27,20 @@ export default function TrxTypeSelector({
       role="tablist"
       aria-label="Transaction type"
     >
-      <TypeSelectorButton
-        isSelected={selectedType === EXPENSE}
-        onClick={() => handleTypeChange(EXPENSE)}
-        className={
-          selectedType === EXPENSE
-            ? "bg-red-50 text-red-600 border-red-400"
-            : undefined
-        }
-      >
-        <span>↓</span> Expense
-      </TypeSelectorButton>
-
-      <TypeSelectorButton
-        isSelected={selectedType === INCOME}
-        onClick={() => handleTypeChange(INCOME)}
-        className={
-          selectedType === INCOME
-            ? "bg-teal-50 text-teal-600 border-teal-400"
-            : undefined
-        }
-      >
-        <span>↑</span> Income
-      </TypeSelectorButton>
-
-      <TypeSelectorButton
-        isSelected={selectedType === TRANSFER}
-        onClick={() => handleTypeChange(TRANSFER)}
-        className={
-          selectedType === TRANSFER
-            ? "bg-blue-50 text-blue-600 border-blue-400"
-            : undefined
-        }
-      >
-        <span>⇄</span> Transfer
-      </TypeSelectorButton>
+      {TYPE_OPTIONS.map(({ type, icon, label }) => (
+        <TypeSelectorButton
+          key={type}
+          isSelected={selectedType === type}
+          onClick={() => handleTypeChange(type)}
+          className={
+            selectedType === type
+              ? TRANSACTION_TYPE_COLORS[type].selectedClass
+              : undefined
+          }
+        >
+          <span>{icon}</span> {label}
+        </TypeSelectorButton>
+      ))}
     </div>
   );
 }

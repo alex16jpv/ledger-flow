@@ -1,15 +1,22 @@
+import { UseFormRegisterReturn } from "react-hook-form";
+import FieldError from "./FieldError";
+
 export default function InputText({
   id,
   label,
   placeholder,
   className = "",
   autoComplete = "off",
+  registration,
+  error,
 }: {
   id: string;
   label: string;
   placeholder?: string;
   className?: string;
   autoComplete?: React.HTMLInputAutoCompleteAttribute;
+  registration?: UseFormRegisterReturn;
+  error?: string;
 }) {
   return (
     <div>
@@ -22,7 +29,9 @@ export default function InputText({
         className={`input-base ${className}`}
         placeholder={placeholder}
         autoComplete={autoComplete}
+        {...registration}
       />
+      <FieldError message={error} />
     </div>
   );
 }

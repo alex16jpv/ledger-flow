@@ -1,4 +1,5 @@
-export type TypeTransactionType = "EXPENSE" | "INCOME" | "TRANSFER";
+import { TypeTransactionType } from "@/utils/constants";
+export type { TypeTransactionType };
 
 type TransactionBase = {
   id: string;

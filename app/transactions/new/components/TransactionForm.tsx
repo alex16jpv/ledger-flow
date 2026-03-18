@@ -4,6 +4,9 @@ import InputText from "@/components/forms/InputText";
 import InputTextArea from "@/components/forms/InputTextArea";
 import InputTime from "@/components/forms/InputTime";
 import { TypeTransactionType } from "@/types/Transaction.types";
+import { TRANSACTION_TYPES } from "@/utils/constants";
+import { UseFormRegister, FieldErrors } from "react-hook-form";
+import { TransactionFormFields } from "@/lib/schemas/transaction.schema";
 
 const mockAccountOptions = [
   { value: "nacion", label: "🏦 Banco Nación — $32,400" },
@@ -14,138 +17,108 @@ const mockAccountOptions = [
 
 export default function TransactionForm({
   selectedType,
+  register,
+  errors,
 }: {
   selectedType: TypeTransactionType;
+  register: UseFormRegister<TransactionFormFields>;
+  errors: FieldErrors<TransactionFormFields>;
 }) {
+  const isTransfer = selectedType === TRANSACTION_TYPES.TRANSFER;
+  const isIncome = selectedType === TRANSACTION_TYPES.INCOME;
+  const isExpense = selectedType === TRANSACTION_TYPES.EXPENSE;
+
   return (
     <div
       className="flex flex-col gap-4"
       role="tabpanel"
       aria-labelledby={`tab-${selectedType.toLowerCase()}`}
     >
-      {/* <!-- Description + date --> */}
+      {/* Description + date */}
       <section className="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-4">
         <InputText
           id="description"
           label="Description"
           placeholder="E.g.: Lunch, Netflix, gas…"
           autoComplete="off"
+          registration={register("description")}
+          error={errors.description?.message}
         />
 
         <div className="grid grid-cols-2 gap-4">
-          <InputDate id="date" label="Date" />
-          <InputTime id="time" label="Time" />
+          <InputDate
+            id="date"
+            label="Date"
+            registration={register("date")}
+            error={errors.date?.message}
+          />
+          <InputTime
+            id="time"
+            label="Time"
+            registration={register("time")}
+            error={errors.time?.message}
+          />
         </div>
       </section>
 
-      {/* <!-- Account + category --> */}
+      {/* Accounts */}
       <section className="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-4">
-        <InputSelect
-          id="account"
-          label="Account"
-          options={mockAccountOptions}
-          firstOption="Select account…"
-        />
+        {(isExpense || isTransfer) && (
+          <InputSelect
+            id="from-account"
+            label="From Account"
+            options={mockAccountOptions}
+            firstOption="Select account…"
+            registration={register("fromAccount")}
+            error={errors.fromAccount?.message}
+          />
+        )}
 
-        {/* Account Swap */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1 h-px bg-stone-100"></div>
-          <div
-            className="transfer-arrow"
-            aria-label="Transfer direction"
-            title="Click to switch accounts"
-          >
-            ⇄
+        {isTransfer && (
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-stone-100"></div>
+            <div
+              className="transfer-arrow"
+              aria-label="Transfer direction"
+              title="Click to switch accounts"
+            >
+              ⇄
+            </div>
+            <div className="flex-1 h-px bg-stone-100"></div>
           </div>
-          <div className="flex-1 h-px bg-stone-100"></div>
-        </div>
+        )}
 
-        <InputSelect
-          id="transfer-account"
-          label="To Account"
-          options={mockAccountOptions}
-          firstOption="Select to account…"
-        />
+        {(isIncome || isTransfer) && (
+          <InputSelect
+            id="to-account"
+            label="To Account"
+            options={mockAccountOptions}
+            firstOption="Select account…"
+            registration={register("toAccount")}
+            error={errors.toAccount?.message}
+          />
+        )}
 
-        {/* <!-- Category chips for expense --> */}
-        {/* <div>
-          <span className="field-label">Category</span>
-          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-            <button
-              type="button"
-              className="cat-chip"
-              // onClick="selectCategory(this)"
-            >
-              <span className="cat-emoji">🍔</span>
-              <span className="cat-name">Food</span>
-            </button>
-            <button
-              type="button"
-              className="cat-chip selected"
-              // onClick="selectCategory(this)"
-              aria-pressed="true"
-            >
-              <span className="cat-emoji">🚌</span>
-              <span className="cat-name">Transport</span>
-            </button>
-            <button
-              type="button"
-              className="cat-chip"
-              // onClick="selectCategory(this)"
-            >
-              <span className="cat-emoji">🏠</span>
-              <span className="cat-name">Home</span>
-            </button>
-            <button
-              type="button"
-              className="cat-chip"
-              // onClick="selectCategory(this)"
-            >
-              <span className="cat-emoji">💊</span>
-              <span className="cat-name">Health</span>
-            </button>
-            <button
-              type="button"
-              className="cat-chip"
-              // onClick="selectCategory(this)"
-            >
-              <span className="cat-emoji">🎬</span>
-              <span className="cat-name">Entertainment</span>
-            </button>
-            <button
-              type="button"
-              className="cat-chip"
-              // onClick="selectCategory(this)"
-            >
-              <span className="cat-emoji">✈️</span>
-              <span className="cat-name">Travel</span>
-            </button>
-            <button
-              type="button"
-              className="cat-chip"
-              // onClick="selectCategory(this)"
-            >
-              <span className="cat-emoji">＋</span>
-              <span className="cat-name">More</span>
-            </button>
-          </div>
-        </div> */}
-
-        {/* Payer for income */}
-        <InputText
-          id="payer"
-          label="Payer / Source"
-          placeholder="E.g.: Salary, freelance client, gift…"
-          autoComplete="off"
-        />
+        {isIncome && (
+          <InputText
+            id="payer"
+            label="Payer / Source"
+            placeholder="E.g.: Salary, freelance client, gift…"
+            autoComplete="off"
+            registration={register("payer")}
+            error={errors.payer?.message}
+          />
+        )}
       </section>
 
-      {/* <!-- Tags + note --> */}
+      {/* Tags + note */}
       <section className="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-4">
         <InputText
           id="tags"
           label="Tags (comma separated)"
           placeholder="E.g.: recurring, work, deductible…"
+          registration={register("tags")}
+          error={errors.tags?.message}
         />
 
         <InputTextArea
@@ -153,6 +126,8 @@ export default function TransactionForm({
           label="Note"
           placeholder="Add an optional comment…"
           rows={2}
+          registration={register("note")}
+          error={errors.note?.message}
         />
       </section>
     </div>
