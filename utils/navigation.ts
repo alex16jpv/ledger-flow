@@ -15,7 +15,7 @@ export const NAV_ITEMS: NavItem[] = [
     hideInBottomNav: true,
   },
   { href: "/transactions", icon: "↕", label: "Transactions" },
-  { href: "/accounts", icon: "◈", label: "Accounts", disabled: true },
+  { href: "/accounts", icon: "◈", label: "Accounts" },
   { href: "/budgets", icon: "◎", label: "Budgets", disabled: true },
   { href: "/reports", icon: "⌇", label: "Reports", disabled: true },
 ];
