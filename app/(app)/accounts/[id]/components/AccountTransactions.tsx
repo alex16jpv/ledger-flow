@@ -5,7 +5,8 @@ import { Transaction, TransactionKind } from "@/types/Transaction.types";
 import { MOCK_TRANSACTIONS } from "@/lib/mock/transactions.mock";
 import { Account } from "@/types/Account.types";
 import TransactionItem from "@/components/TransactionItem";
-import { getDateGroupLabel, getDateGroupKey } from "@/lib/dates";
+import { getDateGroupLabel } from "@/lib/dates";
+import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import FilterChips from "@/app/(app)/transactions/components/FilterChips";
 
 function getAccountTransactions(account: Account): Transaction[] {
@@ -21,16 +22,6 @@ function getAccountTransactions(account: Account): Transaction[] {
   }).sort((a, b) => b.date.getTime() - a.date.getTime());
 }
 
-function groupByDate(transactions: Transaction[]): [string, Transaction[]][] {
-  const groups = new Map<string, Transaction[]>();
-  for (const t of transactions) {
-    const key = getDateGroupKey(t.date);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(t);
-  }
-  return Array.from(groups.entries());
-}
-
 export default function AccountTransactions({ account }: { account: Account }) {
   const [activeFilter, setActiveFilter] = useState<TransactionKind | null>(
     null,
@@ -40,7 +31,7 @@ export default function AccountTransactions({ account }: { account: Account }) {
   const filtered = activeFilter
     ? allTransactions.filter((t) => t.type === activeFilter)
     : allTransactions;
-  const groups = groupByDate(filtered);
+  const groups = groupTransactionsByDate(filtered);
 
   return (
     <div className="lg:col-span-2 flex flex-col gap-4">

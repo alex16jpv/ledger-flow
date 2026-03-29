@@ -12,6 +12,7 @@ export type Budget = {
   name: string;
   emoji: string;
   color: BudgetColor;
+  category: string;
   amount: number;
   spent: number;
 };
