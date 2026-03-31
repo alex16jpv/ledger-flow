@@ -15,12 +15,12 @@ import AccountTransactions from "./AccountTransactions";
 export default function AccountDetailContent({ id }: { id: string }) {
   const router = useRouter();
   const [account, setAccount] = useState<Account | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchAccount = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     const result = await getAccount(id);
     if (result.error) {
@@ -28,7 +28,7 @@ export default function AccountDetailContent({ id }: { id: string }) {
     } else {
       setAccount(result.data);
     }
-    setLoading(false);
+    setIsLoading(false);
   }, [id]);
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function AccountDetailContent({ id }: { id: string }) {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <>
         <Header title="Loading…">

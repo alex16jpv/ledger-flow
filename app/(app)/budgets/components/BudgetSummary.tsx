@@ -2,13 +2,13 @@ import { Budget } from "@/types/Budget.type";
 import { formatAmount } from "@/utils/utils";
 
 export default function BudgetSummary({ budgets }: { budgets: Budget[] }) {
-  const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
-  const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
+  const totalBudget = budgets.reduce((sum, budget) => sum + budget.amount, 0);
+  const totalSpent = budgets.reduce((sum, budget) => sum + budget.spent, 0);
   const available = totalBudget - totalSpent;
   const spentPercent =
     totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
   const categoriesWithBudget = budgets.filter(
-    (b) => b.amount - b.spent > 0,
+    (budget) => budget.amount - budget.spent > 0,
   ).length;
 
   return (

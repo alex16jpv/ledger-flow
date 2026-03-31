@@ -5,36 +5,37 @@ import { getTransactions } from "@/services/transactions.service";
 import { getCategories } from "@/services/categories.service";
 import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import TransactionsContent from "./TransactionsContent";
 import SummaryPanel from "./SummaryPanel";
 
 export default function TransactionsPageContent() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
-    const [txResult, catResult] = await Promise.all([
-      getTransactions({ limit: "100" }),
-      getCategories({ limit: "100" }),
+    const [transactionResult, categoryResult] = await Promise.all([
+      getTransactions({ limit: DEFAULT_LIST_LIMIT }),
+      getCategories({ limit: DEFAULT_LIST_LIMIT }),
     ]);
-    if (txResult.error) {
-      setError(txResult.error);
+    if (transactionResult.error) {
+      setError(transactionResult.error);
     } else {
-      setTransactions(txResult.data?.data ?? []);
+      setTransactions(transactionResult.data?.data ?? []);
     }
-    setCategories(catResult.data?.data ?? []);
-    setLoading(false);
+    setCategories(categoryResult.data?.data ?? []);
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <>
         <div className="lg:col-span-2 flex flex-col gap-4">

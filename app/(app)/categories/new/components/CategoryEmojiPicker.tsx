@@ -1,11 +1,11 @@
-import { CATEGORY_EMOJI_OPTIONS } from "@/lib/schemas/category.schema";
+import { CATEGORY_EMOJI_OPTIONS, type CategoryEmoji } from "@/lib/schemas/category.schema";
 
 export default function CategoryEmojiPicker({
   selectedEmoji,
   onEmojiChange,
 }: {
   selectedEmoji: string;
-  onEmojiChange: (emoji: string) => void;
+  onEmojiChange: (emoji: CategoryEmoji) => void;
 }) {
   return (
     <div className="flex gap-2 flex-wrap">

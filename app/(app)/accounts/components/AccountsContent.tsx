@@ -7,11 +7,11 @@ import AccountList from "./AccountList";
 
 export default function AccountsContent() {
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAccounts = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     const result = await getAccounts();
     if (result.error) {
@@ -19,14 +19,14 @@ export default function AccountsContent() {
     } else {
       setAccounts(result.data?.data ?? []);
     }
-    setLoading(false);
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
     fetchAccounts();
   }, [fetchAccounts]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <section aria-label="Accounts loading">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -1,6 +1,6 @@
 import InputText from "@/components/forms/InputText";
 import { UseFormRegister, FieldErrors } from "react-hook-form";
-import { CreateCategoryFormFields } from "@/lib/schemas/category.schema";
+import { CreateCategoryFormFields, type CategoryEmoji } from "@/lib/schemas/category.schema";
 import CategoryEmojiPicker from "./CategoryEmojiPicker";
 
 export default function CategoryForm({
@@ -12,7 +12,7 @@ export default function CategoryForm({
   register: UseFormRegister<CreateCategoryFormFields>;
   errors: FieldErrors<CreateCategoryFormFields>;
   selectedEmoji: string;
-  onEmojiChange: (emoji: string) => void;
+  onEmojiChange: (emoji: CategoryEmoji) => void;
 }) {
   return (
     <div className="flex flex-col gap-4">

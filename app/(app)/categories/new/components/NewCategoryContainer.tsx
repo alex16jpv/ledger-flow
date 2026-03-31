@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createCategorySchema,
   CreateCategoryFormFields,
+  type CategoryEmoji,
 } from "@/lib/schemas/category.schema";
 import { createCategory } from "@/services/categories.service";
 import CategoryForm from "./CategoryForm";
@@ -28,8 +29,8 @@ export default function NewCategoryContainer() {
 
   const selectedEmoji = watch("emoji") ?? "";
 
-  const onEmojiChange = (emoji: string) => {
-    setValue("emoji", emoji as CreateCategoryFormFields["emoji"], {
+  const onEmojiChange = (emoji: CategoryEmoji) => {
+    setValue("emoji", emoji, {
       shouldValidate: true,
     });
   };

@@ -5,27 +5,28 @@ import { notFound } from "next/navigation";
 import { MOCK_BUDGETS } from "@/lib/mock/budgets.mock";
 import { getCategories } from "@/services/categories.service";
 import { Category } from "@/types/Category.types";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import BudgetHero from "./BudgetHero";
 import BudgetInfo from "./BudgetInfo";
 import BudgetTransactions from "./BudgetTransactions";
 
 export default function BudgetDetailContent({ id }: { id: string }) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const budget = MOCK_BUDGETS.find((b) => b.id === id);
 
   const fetchCategories = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
-    const result = await getCategories({ limit: "100" });
+    const result = await getCategories({ limit: DEFAULT_LIST_LIMIT });
     if (result.error) {
       setError(result.error);
     } else {
       setCategories(result.data?.data ?? []);
     }
-    setLoading(false);
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export default function BudgetDetailContent({ id }: { id: string }) {
   const categoryEmoji = category?.emoji;
   const categoryName = category?.name;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 flex flex-col gap-4">

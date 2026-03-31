@@ -8,13 +8,14 @@ import InputText from "@/components/forms/InputText";
 import {
   updateCategorySchema,
   UpdateCategoryFormFields,
+  type CategoryEmoji,
 } from "@/lib/schemas/category.schema";
 import { getCategory, updateCategory } from "@/services/categories.service";
 import CategoryEmojiPicker from "../../../new/components/CategoryEmojiPicker";
 
 export default function EditCategoryContainer({ id }: { id: string }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -31,14 +32,14 @@ export default function EditCategoryContainer({ id }: { id: string }) {
 
   const selectedEmoji = watch("emoji") ?? "";
 
-  const onEmojiChange = (emoji: string) => {
-    setValue("emoji", emoji as UpdateCategoryFormFields["emoji"], {
+  const onEmojiChange = (emoji: CategoryEmoji) => {
+    setValue("emoji", emoji, {
       shouldValidate: true,
     });
   };
 
   const fetchCategory = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     setFetchError(null);
     const result = await getCategory(id);
     if (result.error || !result.data) {
@@ -46,10 +47,10 @@ export default function EditCategoryContainer({ id }: { id: string }) {
     } else {
       reset({
         name: result.data.name,
-        emoji: result.data.emoji as UpdateCategoryFormFields["emoji"],
+        emoji: result.data.emoji as CategoryEmoji,
       });
     }
-    setLoading(false);
+    setIsLoading(false);
   }, [id, reset]);
 
   useEffect(() => {
@@ -66,7 +67,7 @@ export default function EditCategoryContainer({ id }: { id: string }) {
     router.push("/categories");
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex flex-col gap-4">
         <div className="bg-white border border-stone-100 rounded-xl p-6 animate-pulse">

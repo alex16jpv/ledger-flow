@@ -11,30 +11,31 @@ import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import FilterChips from "@/app/(app)/transactions/components/FilterChips";
 import { getTransactions } from "@/services/transactions.service";
 import { getCategories } from "@/services/categories.service";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function AccountTransactions({ account }: { account: Account }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<TransactionKind | null>(
     null,
   );
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
-    const [txResult, catResult] = await Promise.all([
-      getTransactions({ accountId: account.id, limit: "100" }),
-      getCategories({ limit: "100" }),
+    const [transactionResult, categoryResult] = await Promise.all([
+      getTransactions({ accountId: account.id, limit: DEFAULT_LIST_LIMIT }),
+      getCategories({ limit: DEFAULT_LIST_LIMIT }),
     ]);
-    if (txResult.error) {
-      setError(txResult.error);
+    if (transactionResult.error) {
+      setError(transactionResult.error);
     } else {
-      setTransactions(txResult.data?.data ?? []);
+      setTransactions(transactionResult.data?.data ?? []);
     }
-    setCategories(catResult.data?.data ?? []);
-    setLoading(false);
+    setCategories(categoryResult.data?.data ?? []);
+    setIsLoading(false);
   }, [account.id]);
 
   useEffect(() => {
@@ -47,7 +48,7 @@ export default function AccountTransactions({ account }: { account: Account }) {
     : transactions;
   const groups = groupTransactionsByDate(filtered);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="lg:col-span-2 flex flex-col gap-4">
         <div className="bg-white border border-stone-100 rounded-xl p-6 animate-pulse">

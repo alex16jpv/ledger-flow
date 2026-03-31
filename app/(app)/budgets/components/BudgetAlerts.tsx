@@ -1,5 +1,6 @@
 import { Budget } from "@/types/Budget.type";
 import { formatAmount } from "@/utils/utils";
+import { BUDGET_WARNING_THRESHOLD_PERCENT } from "@/utils/constants";
 import Link from "next/link";
 
 function getAlerts(
@@ -17,22 +18,22 @@ function getAlerts(
     type: "danger" | "warning";
   }[] = [];
 
-  for (const b of budgets) {
-    const percent = Math.round((b.spent / b.amount) * 100);
+  for (const budget of budgets) {
+    const percent = Math.round((budget.spent / budget.amount) * 100);
 
-    if (b.spent > b.amount) {
-      const over = formatAmount({ amount: b.spent - b.amount });
+    if (budget.spent > budget.amount) {
+      const over = formatAmount({ amount: budget.spent - budget.amount });
       alerts.push({
         icon: "⚠",
-        title: `${b.name} exceeded`,
+        title: `${budget.name} exceeded`,
         description: `${over} over the monthly limit.`,
         type: "danger",
       });
-    } else if (percent >= 80) {
-      const remaining = formatAmount({ amount: b.amount - b.spent });
+    } else if (percent >= BUDGET_WARNING_THRESHOLD_PERCENT) {
+      const remaining = formatAmount({ amount: budget.amount - budget.spent });
       alerts.push({
         icon: "✦",
-        title: `${b.name} at ${percent}%`,
+        title: `${budget.name} at ${percent}%`,
         description: `${remaining} remaining.`,
         type: "warning",
       });

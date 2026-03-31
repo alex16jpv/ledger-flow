@@ -9,32 +9,33 @@ import { getDateGroupLabel } from "@/lib/dates";
 import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import { getTransactions } from "@/services/transactions.service";
 import { getCategories } from "@/services/categories.service";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function BudgetTransactions({ budget }: { budget: Budget }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
-    const [txResult, catResult] = await Promise.all([
-      getTransactions({ type: "EXPENSE", limit: "100" }),
-      getCategories({ limit: "100" }),
+    const [transactionResult, categoryResult] = await Promise.all([
+      getTransactions({ type: "EXPENSE", limit: DEFAULT_LIST_LIMIT }),
+      getCategories({ limit: DEFAULT_LIST_LIMIT }),
     ]);
-    if (txResult.error) {
-      setError(txResult.error);
+    if (transactionResult.error) {
+      setError(transactionResult.error);
     } else {
-      const all = txResult.data?.data ?? [];
+      const all = transactionResult.data?.data ?? [];
       setTransactions(
         all
           .filter((t) => t.categoryId === budget.categoryId)
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
       );
     }
-    setCategories(catResult.data?.data ?? []);
-    setLoading(false);
+    setCategories(categoryResult.data?.data ?? []);
+    setIsLoading(false);
   }, [budget.categoryId]);
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
   const categoryMap = new Map(categories.map((c) => [c.id, c]));
   const groups = groupTransactionsByDate(transactions);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="lg:col-span-2 flex flex-col gap-4">
         <div className="h-4 w-40 bg-stone-100 rounded animate-pulse" />

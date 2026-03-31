@@ -134,86 +134,6 @@ type TypeColors = {
   selectedClass: string;
 };
 
-export type CategoryStyle = {
-  bgColor: string;
-  textColor: string;
-  dotColor: string;
-};
-
-export const CATEGORY_NAMES = [
-  "Food",
-  "Transport",
-  "Entertainment",
-  "Home",
-  "Health",
-  "Salary",
-  "Freelance",
-  "Shopping",
-  "Savings",
-  "Investment",
-] as const;
-
-export type Category = (typeof CATEGORY_NAMES)[number];
-
-export const CATEGORY_STYLES: Record<Category, CategoryStyle> = {
-  Food: {
-    bgColor: "bg-teal-50",
-    textColor: "text-teal-800",
-    dotColor: "bg-amber-400",
-  },
-  Transport: {
-    bgColor: "bg-blue-50",
-    textColor: "text-blue-600",
-    dotColor: "bg-blue-400",
-  },
-  Entertainment: {
-    bgColor: "bg-amber-50",
-    textColor: "text-amber-600",
-    dotColor: "bg-purple-400",
-  },
-  Home: {
-    bgColor: "bg-stone-100",
-    textColor: "text-stone-600",
-    dotColor: "bg-stone-400",
-  },
-  Health: {
-    bgColor: "bg-teal-50",
-    textColor: "text-teal-800",
-    dotColor: "bg-teal-400",
-  },
-  Salary: {
-    bgColor: "bg-teal-50",
-    textColor: "text-teal-800",
-    dotColor: "bg-teal-400",
-  },
-  Freelance: {
-    bgColor: "bg-teal-50",
-    textColor: "text-teal-800",
-    dotColor: "bg-teal-400",
-  },
-  Shopping: {
-    bgColor: "bg-purple-50",
-    textColor: "text-purple-600",
-    dotColor: "bg-purple-400",
-  },
-  Savings: {
-    bgColor: "bg-blue-50",
-    textColor: "text-blue-600",
-    dotColor: "bg-blue-400",
-  },
-  Investment: {
-    bgColor: "bg-blue-50",
-    textColor: "text-blue-600",
-    dotColor: "bg-blue-400",
-  },
-};
-
-export const DEFAULT_CATEGORY_STYLE: CategoryStyle = {
-  bgColor: "bg-stone-50",
-  textColor: "text-stone-600",
-  dotColor: "bg-stone-400",
-};
-
 export const TRANSACTION_TYPE_COLORS: Record<TransactionKind, TypeColors> = {
   EXPENSE: {
     bgColor: "bg-red-50",
@@ -250,3 +170,18 @@ export const BUDGET_COLOR_CLASSES: Record<BudgetColor, string> = {
   "purple-400": "bg-purple-400",
   "stone-400": "bg-stone-400",
 };
+
+// ---------------------------------------------------------------------------
+// Shared constants
+// ---------------------------------------------------------------------------
+
+export const BUDGET_WARNING_THRESHOLD_PERCENT = 80;
+
+export const DEFAULT_LIST_LIMIT = "100";
+export const RECENT_ITEMS_LIMIT = "5";
+
+export const APP_LOCALE = "en-US";
+export const APP_CURRENCY = "USD";
+export const APP_CURRENCY_SYMBOL = "$";
+
+export const DEFAULT_TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days

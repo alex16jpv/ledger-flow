@@ -18,6 +18,10 @@ import { getAccounts } from "@/services/accounts.service";
 import { getCategories } from "@/services/categories.service";
 import { createTransaction } from "@/services/transactions.service";
 
+// Cast needed: transactionSchema is a discriminated union, but the form uses a flat type
+// with all variant-specific fields optional.
+const transactionResolver = zodResolver(transactionSchema) as Resolver<TransactionFormFields>;
+
 function getDefaultValues(): Partial<TransactionFormFields> & {
   type: TransactionFormFields["type"];
 } {
@@ -75,7 +79,7 @@ export default function NewTransactionContainer() {
     control,
     formState: { errors, isSubmitting },
   } = useForm<TransactionFormFields>({
-    resolver: zodResolver(transactionSchema) as Resolver<TransactionFormFields>,
+    resolver: transactionResolver,
     defaultValues: getDefaultValues(),
   });
 

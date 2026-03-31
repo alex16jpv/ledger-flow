@@ -19,6 +19,8 @@ export const CATEGORY_EMOJI_OPTIONS = [
   { emoji: "🏋️", label: "Fitness" },
 ] as const;
 
+export type CategoryEmoji = (typeof CATEGORY_EMOJI_OPTIONS)[number]["emoji"];
+
 const VALID_EMOJIS = CATEGORY_EMOJI_OPTIONS.map((o) => o.emoji) as unknown as [
   string,
   ...string[],

@@ -6,22 +6,23 @@ import BudgetItem from "./BudgetItem";
 import { MOCK_BUDGETS } from "@/lib/mock/budgets.mock";
 import { getCategories } from "@/services/categories.service";
 import { Category } from "@/types/Category.types";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function Budgets() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchCategories = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
-    const result = await getCategories({ limit: "100" });
+    const result = await getCategories({ limit: DEFAULT_LIST_LIMIT });
     if (result.error) {
       setError(result.error);
     } else {
       setCategories(result.data?.data ?? []);
     }
-    setLoading(false);
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -30,7 +31,7 @@ export default function Budgets() {
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]));
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="bg-white border border-stone-100 rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">

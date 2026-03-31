@@ -13,6 +13,7 @@ import {
   TransactionFormFields,
 } from "@/lib/schemas/transaction.schema";
 import { TransactionKind } from "@/types/Transaction.types";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import { getCurrentDateTime, parseDateTimeFields, formatDate, formatTime } from "@/lib/dates";
 import { getAccounts } from "@/services/accounts.service";
 import { getCategories } from "@/services/categories.service";
@@ -21,9 +22,13 @@ import {
   updateTransaction,
 } from "@/services/transactions.service";
 
+// Cast needed: transactionSchema is a discriminated union, but the form uses a flat type
+// with all variant-specific fields optional.
+const transactionResolver = zodResolver(transactionSchema) as Resolver<TransactionFormFields>;
+
 export default function EditTransactionContainer({ id }: { id: string }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [accountOptions, setAccountOptions] = useState<
@@ -43,7 +48,7 @@ export default function EditTransactionContainer({ id }: { id: string }) {
     control,
     formState: { errors, isSubmitting },
   } = useForm<TransactionFormFields>({
-    resolver: zodResolver(transactionSchema) as Resolver<TransactionFormFields>,
+    resolver: transactionResolver,
   });
 
   const selectedType = watch("type");
@@ -61,36 +66,36 @@ export default function EditTransactionContainer({ id }: { id: string }) {
   };
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     setFetchError(null);
 
-    const [txResult, accResult, catResult] = await Promise.all([
+    const [transactionResult, accountResult, categoryResult] = await Promise.all([
       getTransaction(id),
       getAccounts(),
-      getCategories({ limit: "100" }),
+      getCategories({ limit: DEFAULT_LIST_LIMIT }),
     ]);
 
-    if (accResult.data?.data) {
+    if (accountResult.data?.data) {
       setAccountOptions(
-        accResult.data.data.map((a) => ({ value: a.id, label: a.name })),
+        accountResult.data.data.map((a) => ({ value: a.id, label: a.name })),
       );
     }
-    if (catResult.data?.data) {
+    if (categoryResult.data?.data) {
       setCategoryOptions(
-        catResult.data.data.map((c) => ({
+        categoryResult.data.data.map((c) => ({
           value: c.id,
           label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
         })),
       );
     }
 
-    if (txResult.error || !txResult.data) {
-      setFetchError(txResult.error ?? "Transaction not found");
-      setLoading(false);
+    if (transactionResult.error || !transactionResult.data) {
+      setFetchError(transactionResult.error ?? "Transaction not found");
+      setIsLoading(false);
       return;
     }
 
-    const tx = txResult.data;
+    const tx = transactionResult.data;
     const txDate = tx.date ? formatDate(tx.date, "iso") : getCurrentDateTime().date;
     const txTime = tx.date ? formatTime(tx.date) : getCurrentDateTime().time;
 
@@ -108,7 +113,7 @@ export default function EditTransactionContainer({ id }: { id: string }) {
       payer: "",
     });
 
-    setLoading(false);
+    setIsLoading(false);
   }, [id, reset]);
 
   useEffect(() => {
@@ -133,7 +138,7 @@ export default function EditTransactionContainer({ id }: { id: string }) {
     router.push("/transactions");
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="lg:col-span-5 flex flex-col gap-4">
         <div className="bg-white border border-stone-100 rounded-xl p-6 animate-pulse">

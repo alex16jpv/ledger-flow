@@ -3,10 +3,12 @@ import { NextResponse } from "next/server";
 import { proxy } from "@/lib/api/proxy";
 import { validateOrigin } from "@/lib/api/csrf";
 import { loginSchema } from "@/lib/schemas/auth.schema";
+import type { User } from "@/types/Auth.types";
+import { DEFAULT_TOKEN_MAX_AGE_SECONDS } from "@/utils/constants";
 
 type LoginResponse = {
   token: string;
-  user: Record<string, unknown>;
+  user: User;
 };
 
 export async function POST(req: Request) {
@@ -46,7 +48,7 @@ export async function POST(req: Request) {
   const { token, user } = result.data;
 
   // Sync cookie maxAge with JWT expiry
-  let maxAge = 60 * 60 * 24 * 7; // fallback: 7 days
+  let maxAge = DEFAULT_TOKEN_MAX_AGE_SECONDS;
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
     if (typeof payload.exp === "number") {

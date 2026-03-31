@@ -1,3 +1,5 @@
+import { APP_LOCALE, APP_CURRENCY } from "@/utils/constants";
+
 export const formatAmount = ({
   amount,
   minimumFractionDigits = 0,
@@ -7,9 +9,9 @@ export const formatAmount = ({
   minimumFractionDigits?: number;
   maximumFractionDigits?: number;
 }): string => {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(APP_LOCALE, {
     style: "currency",
-    currency: "USD",
+    currency: APP_CURRENCY,
     minimumFractionDigits,
     maximumFractionDigits,
   }).format(amount);

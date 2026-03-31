@@ -1,5 +1,5 @@
 import { Budget } from "@/types/Budget.type";
-import { BUDGET_COLOR_CLASSES } from "@/utils/constants";
+import { BUDGET_COLOR_CLASSES, BUDGET_WARNING_THRESHOLD_PERCENT } from "@/utils/constants";
 import { formatAmount, percentMinMax } from "@/utils/utils";
 
 export type BudgetStatusLabel = "Exceeded" | "Almost depleted" | "On track";
@@ -38,7 +38,7 @@ export function getBudgetStatus(budget: Budget): BudgetStatus {
     };
   }
 
-  if (percent >= 80) {
+  if (percent >= BUDGET_WARNING_THRESHOLD_PERCENT) {
     return {
       percent,
       progress,

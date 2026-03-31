@@ -7,11 +7,11 @@ import CategoryCard from "./CategoryCard";
 
 export default function CategoriesContent() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchCategories = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     const result = await getCategories();
     if (result.error) {
@@ -19,7 +19,7 @@ export default function CategoriesContent() {
     } else if (result.data?.data) {
       setCategories(result.data.data);
     }
-    setLoading(false);
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export default function CategoriesContent() {
     setCategories((prev) => prev.filter((c) => c.id !== id));
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex flex-col gap-3">
         {Array.from({ length: 4 }).map((_, i) => (

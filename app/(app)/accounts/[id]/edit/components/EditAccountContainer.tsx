@@ -21,7 +21,7 @@ const ACCOUNT_TYPE_OPTIONS = Object.values(ACCOUNT_TYPES).map((type) => ({
 
 export default function EditAccountContainer({ id }: { id: string }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -35,7 +35,7 @@ export default function EditAccountContainer({ id }: { id: string }) {
   });
 
   const fetchAccount = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     setFetchError(null);
     const result = await getAccount(id);
     if (result.error || !result.data) {
@@ -43,7 +43,7 @@ export default function EditAccountContainer({ id }: { id: string }) {
     } else {
       reset({ name: result.data.name, type: result.data.type });
     }
-    setLoading(false);
+    setIsLoading(false);
   }, [id, reset]);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function EditAccountContainer({ id }: { id: string }) {
     router.push(`/accounts/${id}`);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex flex-col gap-4">
         <div className="bg-white border border-stone-100 rounded-xl p-6 animate-pulse">

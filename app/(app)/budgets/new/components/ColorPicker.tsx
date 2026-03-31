@@ -20,17 +20,17 @@ export default function ColorPicker({
 }) {
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      {COLOR_OPTIONS.map((opt) => {
-        const isSelected = selectedColor === opt.value;
+      {COLOR_OPTIONS.map((option) => {
+        const isSelected = selectedColor === option.value;
         return (
           <button
-            key={opt.value}
+            key={option.value}
             type="button"
-            onClick={() => onColorChange(opt.value)}
-            className={`w-8 h-8 rounded-full ${BUDGET_COLOR_CLASSES[opt.value]} transition-transform hover:scale-110 ${
+            onClick={() => onColorChange(option.value)}
+            className={`w-8 h-8 rounded-full ${BUDGET_COLOR_CLASSES[option.value]} transition-transform hover:scale-110 ${
               isSelected ? "ring-2 ring-stone-800 ring-offset-2" : ""
             }`}
-            aria-label={opt.label}
+            aria-label={option.label}
             aria-pressed={isSelected}
           />
         );

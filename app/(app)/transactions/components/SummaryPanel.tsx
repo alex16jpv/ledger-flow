@@ -7,11 +7,11 @@ import Link from "next/link";
 
 function MonthlySummary({ transactions }: { transactions: Transaction[] }) {
   const totalIncome = transactions
-    .filter((t) => t.type === TRANSACTION_TYPES.INCOME)
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((transaction) => transaction.type === TRANSACTION_TYPES.INCOME)
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
   const totalExpenses = transactions
-    .filter((t) => t.type === TRANSACTION_TYPES.EXPENSE)
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((transaction) => transaction.type === TRANSACTION_TYPES.EXPENSE)
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
   const balance = totalIncome - totalExpenses;
 
   return (
@@ -56,20 +56,20 @@ function TopCategories({
   categories?: Category[];
 }) {
   const expenses = transactions.filter(
-    (t) => t.type === TRANSACTION_TYPES.EXPENSE,
+    (transaction) => transaction.type === TRANSACTION_TYPES.EXPENSE,
   );
 
-  const categoryTotals = expenses.reduce<Record<string, number>>((acc, t) => {
-    const catId = t.categoryId ?? "uncategorized";
-    acc[catId] = (acc[catId] ?? 0) + t.amount;
-    return acc;
+  const categoryTotals = expenses.reduce<Record<string, number>>((totals, transaction) => {
+    const catId = transaction.categoryId ?? "uncategorized";
+    totals[catId] = (totals[catId] ?? 0) + transaction.amount;
+    return totals;
   }, {});
 
   const sorted = Object.entries(categoryTotals)
-    .sort(([, a], [, b]) => b - a)
+    .sort(([, totalA], [, totalB]) => totalB - totalA)
     .slice(0, 5);
 
-  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+  const categoryMap = new Map(categories.map((category) => [category.id, category]));
 
   return (
     <div className="bg-white border border-stone-100 rounded-xl p-5">
@@ -78,9 +78,9 @@ function TopCategories({
       </p>
       <div className="flex flex-col gap-3">
         {sorted.map(([catId, total]) => {
-          const cat = categoryMap.get(catId);
-          const emoji = cat?.emoji ?? "📦";
-          const name = cat?.name ?? "Uncategorized";
+          const category = categoryMap.get(catId);
+          const emoji = category?.emoji ?? "📦";
+          const name = category?.name ?? "Uncategorized";
           return (
             <div key={catId} className="flex items-center gap-3">
               <span className="text-sm shrink-0">{emoji}</span>

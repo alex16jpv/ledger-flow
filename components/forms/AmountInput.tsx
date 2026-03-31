@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Control, FieldValues, useController } from "react-hook-form";
+import { Control, FieldValues, Path, useController } from "react-hook-form";
 import FieldError from "@/components/forms/FieldError";
+import { APP_LOCALE, APP_CURRENCY_SYMBOL } from "@/utils/constants";
 
 function formatDisplay(value: number | undefined): string {
   if (value === undefined || isNaN(value)) return "";
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(APP_LOCALE, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
@@ -22,19 +23,19 @@ export default function AmountInput<T extends FieldValues>({
   control,
   error,
   label = "Amount",
-  name = "amount" as never,
+  name = "amount" as Path<T>,
 }: {
   control: Control<T>;
   error?: string;
   label?: string;
-  name?: string;
+  name?: Path<T>;
 }) {
   const { field } = useController({
-    name: name as never,
+    name,
     control,
   });
 
-  const value = field.value as number | undefined;
+  const value: number | undefined = field.value;
 
   const [displayValue, setDisplayValue] = useState(() => formatDisplay(value));
   const [isFocused, setIsFocused] = useState(false);
@@ -47,22 +48,22 @@ export default function AmountInput<T extends FieldValues>({
 
   const handleFocus = () => {
     setIsFocused(true);
-    const v = field.value as number | undefined;
-    if (v !== undefined && !isNaN(v)) {
-      setDisplayValue(v.toString());
+    const currentValue: number | undefined = field.value;
+    if (currentValue !== undefined && !isNaN(currentValue)) {
+      setDisplayValue(currentValue.toString());
     }
   };
 
   const handleBlur = () => {
     setIsFocused(false);
     field.onBlur();
-    setDisplayValue(formatDisplay(field.value as number | undefined));
+    setDisplayValue(formatDisplay(field.value));
   };
 
   // Sync displayValue when form resets (field.value changes externally)
   useEffect(() => {
     if (!isFocused) {
-      setDisplayValue(formatDisplay(field.value as number | undefined));
+      setDisplayValue(formatDisplay(field.value));
     }
   }, [field.value, isFocused]);
 
@@ -72,7 +73,7 @@ export default function AmountInput<T extends FieldValues>({
         {label}
       </label>
       <div className="amount-wrapper">
-        <span className="amount-currency">$</span>
+        <span className="amount-currency">{APP_CURRENCY_SYMBOL}</span>
         <input
           id="amount"
           type="text"

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Budget } from "@/types/Budget.type";
 import { formatAmount, percentMinMax } from "@/utils/utils";
 import { getBudgetStatus } from "@/utils/budget.utils";
+import { BUDGET_WARNING_THRESHOLD_PERCENT } from "@/utils/constants";
 
 export default function BudgetCard({
   budget,
@@ -46,7 +47,7 @@ export default function BudgetCard({
               {status.remainingText}
             </span>
             <span
-              className={`font-mono text-xs font-medium ${status.isOver ? "text-red-600" : status.percent >= 80 ? "text-amber-600" : "text-teal-600"}`}
+              className={`font-mono text-xs font-medium ${status.isOver ? "text-red-600" : status.percent >= BUDGET_WARNING_THRESHOLD_PERCENT ? "text-amber-600" : "text-teal-600"}`}
             >
               {status.percent}%
             </span>

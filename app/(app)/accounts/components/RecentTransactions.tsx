@@ -7,27 +7,28 @@ import { getCategories } from "@/services/categories.service";
 import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
 import TransactionItem from "@/components/TransactionItem";
+import { DEFAULT_LIST_LIMIT, RECENT_ITEMS_LIMIT } from "@/utils/constants";
 
 export default function RecentTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
-    const [txResult, catResult] = await Promise.all([
-      getTransactions({ limit: "5" }),
-      getCategories({ limit: "100" }),
+    const [transactionResult, categoryResult] = await Promise.all([
+      getTransactions({ limit: RECENT_ITEMS_LIMIT }),
+      getCategories({ limit: DEFAULT_LIST_LIMIT }),
     ]);
-    if (txResult.error) {
-      setError(txResult.error);
+    if (transactionResult.error) {
+      setError(transactionResult.error);
     } else {
-      setTransactions(txResult.data?.data ?? []);
+      setTransactions(transactionResult.data?.data ?? []);
     }
-    setCategories(catResult.data?.data ?? []);
-    setLoading(false);
+    setCategories(categoryResult.data?.data ?? []);
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -36,7 +37,7 @@ export default function RecentTransactions() {
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]));
 
-  if (loading) {
+  if (isLoading) {
     return (
       <section
         aria-label="Recent transactions loading"

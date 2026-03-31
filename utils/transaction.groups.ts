@@ -9,10 +9,11 @@ export function groupTransactionsByDate(
   );
   const groups = new Map<string, Transaction[]>();
 
-  for (const t of sorted) {
-    const key = getDateGroupKey(t.date);
+  for (const transaction of sorted) {
+    const key = getDateGroupKey(transaction.date);
     if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(t);
+    const group = groups.get(key) ?? [];
+    group.push(transaction);
   }
 
   return Array.from(groups.entries());
