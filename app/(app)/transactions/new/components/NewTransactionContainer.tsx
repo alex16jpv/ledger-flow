@@ -14,6 +14,7 @@ import {
 import { TransactionKind } from "@/types/Transaction.types";
 import { getCurrentDateTime, parseDateTimeFields } from "@/lib/dates";
 import { getAccounts } from "@/services/accounts.service";
+import { getCategories } from "@/services/categories.service";
 
 function getDefaultValues(): Partial<TransactionFormFields> & {
   type: TransactionFormFields["type"];
@@ -37,12 +38,25 @@ export default function NewTransactionContainer() {
   const [accountOptions, setAccountOptions] = useState<
     { value: string; label: string }[]
   >([]);
+  const [categoryOptions, setCategoryOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
 
   useEffect(() => {
     getAccounts().then((result) => {
       if (result.data?.data) {
         setAccountOptions(
           result.data.data.map((a) => ({ value: a.id, label: a.name })),
+        );
+      }
+    });
+    getCategories().then((result) => {
+      if (result.data?.data) {
+        setCategoryOptions(
+          result.data.data.map((c) => ({
+            value: c.id,
+            label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
+          })),
         );
       }
     });
@@ -103,6 +117,7 @@ export default function NewTransactionContainer() {
           register={register}
           errors={errors}
           accountOptions={accountOptions}
+          categoryOptions={categoryOptions}
         />
 
         <div className="lg:hidden">

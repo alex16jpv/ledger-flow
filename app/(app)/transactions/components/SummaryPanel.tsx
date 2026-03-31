@@ -1,11 +1,6 @@
 import { Transaction } from "@/types/Transaction.types";
-import {
-  TRANSACTION_TYPES,
-  CATEGORY_STYLES,
-  CATEGORY_NAMES,
-  DEFAULT_CATEGORY_STYLE,
-} from "@/utils/constants";
-import type { Category } from "@/utils/constants";
+import { TRANSACTION_TYPES } from "@/utils/constants";
+import type { Category } from "@/types/Category.types";
 import { formatAmount } from "@/utils/utils";
 import { getCurrentMonthName } from "@/lib/dates";
 import Link from "next/link";
@@ -53,14 +48,20 @@ function MonthlySummary({ transactions }: { transactions: Transaction[] }) {
   );
 }
 
-function TopCategories({ transactions }: { transactions: Transaction[] }) {
+function TopCategories({
+  transactions,
+  categories = [],
+}: {
+  transactions: Transaction[];
+  categories?: Category[];
+}) {
   const expenses = transactions.filter(
     (t) => t.type === TRANSACTION_TYPES.EXPENSE,
   );
 
   const categoryTotals = expenses.reduce<Record<string, number>>((acc, t) => {
-    const cat = t.category ?? "Uncategorized";
-    acc[cat] = (acc[cat] ?? 0) + t.amount;
+    const catId = t.categoryId ?? "uncategorized";
+    acc[catId] = (acc[catId] ?? 0) + t.amount;
     return acc;
   }, {});
 
@@ -68,25 +69,22 @@ function TopCategories({ transactions }: { transactions: Transaction[] }) {
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5);
 
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+
   return (
     <div className="bg-white border border-stone-100 rounded-xl p-5">
       <p className="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-4">
         Top categories
       </p>
       <div className="flex flex-col gap-3">
-        {sorted.map(([category, total]) => {
-          const isKnown = (CATEGORY_NAMES as readonly string[]).includes(
-            category,
-          );
-          const style = isKnown
-            ? CATEGORY_STYLES[category as Category]
-            : DEFAULT_CATEGORY_STYLE;
+        {sorted.map(([catId, total]) => {
+          const cat = categoryMap.get(catId);
+          const emoji = cat?.emoji ?? "📦";
+          const name = cat?.name ?? "Uncategorized";
           return (
-            <div key={category} className="flex items-center gap-3">
-              <span
-                className={`w-2 h-2 rounded-full ${style.dotColor} shrink-0`}
-              ></span>
-              <span className="text-sm text-stone-700 flex-1">{category}</span>
+            <div key={catId} className="flex items-center gap-3">
+              <span className="text-sm shrink-0">{emoji}</span>
+              <span className="text-sm text-stone-700 flex-1">{name}</span>
               <span className="font-mono text-xs text-stone-400">
                 {formatAmount({ amount: total })}
               </span>
@@ -117,13 +115,15 @@ function QuickAddLink() {
 
 export default function SummaryPanel({
   transactions,
+  categories = [],
 }: {
   transactions: Transaction[];
+  categories?: Category[];
 }) {
   return (
     <div className="flex flex-col gap-4">
       <MonthlySummary transactions={transactions} />
-      <TopCategories transactions={transactions} />
+      <TopCategories transactions={transactions} categories={categories} />
       <QuickAddLink />
     </div>
   );

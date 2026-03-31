@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import { Transaction, TransactionKind } from "@/types/Transaction.types";
+import type { Category } from "@/types/Category.types";
 import FilterChips from "./FilterChips";
 import TransactionList from "./TransactionList";
 
 export default function TransactionsContent({
   transactions,
+  categories = [],
 }: {
   transactions: Transaction[];
+  categories?: Category[];
 }) {
   const [activeFilter, setActiveFilter] = useState<TransactionKind | null>(
     null,
@@ -24,7 +27,7 @@ export default function TransactionsContent({
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
       />
-      <TransactionList transactions={filteredTransactions} />
+      <TransactionList transactions={filteredTransactions} categories={categories} />
     </div>
   );
 }

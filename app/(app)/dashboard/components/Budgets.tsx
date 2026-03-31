@@ -1,8 +1,10 @@
 import Link from "next/link";
 import BudgetItem from "./BudgetItem";
 import { MOCK_BUDGETS } from "@/lib/mock/budgets.mock";
+import { MOCK_CATEGORIES } from "@/lib/mock/categories.mock";
 
 export default function Budgets() {
+  const categoryMap = new Map(MOCK_CATEGORIES.map((c) => [c.id, c]));
   return (
     <div className="bg-white border border-stone-100 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
@@ -17,7 +19,11 @@ export default function Budgets() {
 
       <div className="px-5 py-4 flex flex-col gap-4">
         {MOCK_BUDGETS.map((budget) => (
-          <BudgetItem key={budget.id} budget={budget} />
+          <BudgetItem
+            key={budget.id}
+            budget={budget}
+            categoryEmoji={categoryMap.get(budget.categoryId)?.emoji}
+          />
         ))}
       </div>
 

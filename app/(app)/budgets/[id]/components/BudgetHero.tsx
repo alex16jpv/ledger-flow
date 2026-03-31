@@ -2,8 +2,15 @@ import { Budget } from "@/types/Budget.type";
 import { formatAmount } from "@/utils/utils";
 import { getBudgetStatus } from "@/utils/budget.utils";
 
-export default function BudgetHero({ budget }: { budget: Budget }) {
+export default function BudgetHero({
+  budget,
+  categoryEmoji,
+}: {
+  budget: Budget;
+  categoryEmoji?: string;
+}) {
   const status = getBudgetStatus(budget);
+  const emoji = categoryEmoji ?? "📦";
 
   const statusBadge = status.isOver
     ? { bg: "bg-red-50 border-red-200", text: "text-red-600" }
@@ -17,7 +24,7 @@ export default function BudgetHero({ budget }: { budget: Budget }) {
         {/* Header */}
         <div className="flex items-center gap-3 mb-5">
           <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center text-2xl">
-            {budget.emoji}
+            {emoji}
           </div>
           <div>
             <p className="text-base font-medium text-stone-800">

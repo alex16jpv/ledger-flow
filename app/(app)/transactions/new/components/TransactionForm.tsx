@@ -4,7 +4,7 @@ import InputText from "@/components/forms/InputText";
 import InputTextArea from "@/components/forms/InputTextArea";
 import InputTime from "@/components/forms/InputTime";
 import { TransactionKind } from "@/types/Transaction.types";
-import { TRANSACTION_TYPES, CATEGORY_NAMES } from "@/utils/constants";
+import { TRANSACTION_TYPES } from "@/utils/constants";
 import { UseFormRegister, FieldErrors } from "react-hook-form";
 import { TransactionFormFields } from "@/lib/schemas/transaction.schema";
 
@@ -13,20 +13,17 @@ export default function TransactionForm({
   register,
   errors,
   accountOptions = [],
+  categoryOptions = [],
 }: {
   selectedType: TransactionKind;
   register: UseFormRegister<TransactionFormFields>;
   errors: FieldErrors<TransactionFormFields>;
   accountOptions?: { value: string; label: string }[];
+  categoryOptions?: { value: string; label: string }[];
 }) {
   const isTransfer = selectedType === TRANSACTION_TYPES.TRANSFER;
   const isIncome = selectedType === TRANSACTION_TYPES.INCOME;
   const isExpense = selectedType === TRANSACTION_TYPES.EXPENSE;
-
-  const categoryOptions = CATEGORY_NAMES.map((name) => ({
-    value: name,
-    label: name,
-  }));
 
   return (
     <div

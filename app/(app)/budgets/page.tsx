@@ -4,8 +4,11 @@ import BudgetSummary from "./components/BudgetSummary";
 import BudgetCard from "./components/BudgetCard";
 import BudgetAlerts from "./components/BudgetAlerts";
 import { MOCK_BUDGETS } from "@/lib/mock/budgets.mock";
+import { MOCK_CATEGORIES } from "@/lib/mock/categories.mock";
 
 export default function BudgetsPage() {
+  const categoryMap = new Map(MOCK_CATEGORIES.map((c) => [c.id, c]));
+
   return (
     <>
       <Header title="Budgets">
@@ -25,7 +28,11 @@ export default function BudgetsPage() {
           <div className="lg:col-span-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {MOCK_BUDGETS.map((budget) => (
-                <BudgetCard key={budget.id} budget={budget} />
+                <BudgetCard
+                  key={budget.id}
+                  budget={budget}
+                  categoryEmoji={categoryMap.get(budget.categoryId)?.emoji}
+                />
               ))}
             </div>
           </div>

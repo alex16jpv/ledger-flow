@@ -3,10 +3,17 @@ import { Budget } from "@/types/Budget.type";
 import { formatAmount, percentMinMax } from "@/utils/utils";
 import { getBudgetStatus } from "@/utils/budget.utils";
 
-export default function BudgetCard({ budget }: { budget: Budget }) {
+export default function BudgetCard({
+  budget,
+  categoryEmoji,
+}: {
+  budget: Budget;
+  categoryEmoji?: string;
+}) {
   const status = getBudgetStatus(budget);
   const formattedSpent = formatAmount({ amount: budget.spent });
   const formattedLimit = formatAmount({ amount: budget.amount });
+  const emoji = categoryEmoji ?? "📦";
 
   const cardBg = status.isOver
     ? "bg-red-50 border-red-200"
@@ -19,7 +26,7 @@ export default function BudgetCard({ budget }: { budget: Budget }) {
       >
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2.5">
-            <span className="text-2xl">{budget.emoji}</span>
+            <span className="text-2xl">{emoji}</span>
             <div>
               <p className="text-sm font-medium text-stone-800">
                 {budget.name}

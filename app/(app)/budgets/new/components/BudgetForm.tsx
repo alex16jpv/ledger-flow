@@ -5,35 +5,26 @@ import AmountInput from "@/components/forms/AmountInput";
 import { UseFormRegister, FieldErrors, Control } from "react-hook-form";
 import { BudgetFormFields } from "@/lib/schemas/budget.schema";
 import { BudgetColor } from "@/types/Budget.type";
-import { CATEGORY_NAMES } from "@/utils/constants";
-import EmojiPicker from "./EmojiPicker";
 import ColorPicker from "./ColorPicker";
-
-const CATEGORY_OPTIONS = CATEGORY_NAMES.map((name) => ({
-  value: name,
-  label: name,
-}));
 
 export default function BudgetForm({
   register,
   errors,
   control,
-  selectedEmoji,
-  onEmojiChange,
   selectedColor,
   onColorChange,
+  categoryOptions = [],
 }: {
   register: UseFormRegister<BudgetFormFields>;
   errors: FieldErrors<BudgetFormFields>;
   control: Control<BudgetFormFields>;
-  selectedEmoji: string;
-  onEmojiChange: (emoji: string) => void;
   selectedColor: BudgetColor;
   onColorChange: (color: BudgetColor) => void;
+  categoryOptions?: { value: string; label: string }[];
 }) {
   return (
     <div className="flex flex-col gap-4">
-      {/* Name & emoji */}
+      {/* Name */}
       <section className="bg-white border border-stone-100 rounded-xl p-6">
         <h2 className="text-sm font-medium text-stone-700 mb-5">
           Budget Information
@@ -48,14 +39,6 @@ export default function BudgetForm({
             error={errors.name?.message}
           />
         </div>
-
-        <EmojiPicker
-          selectedEmoji={selectedEmoji}
-          onEmojiChange={onEmojiChange}
-        />
-        {errors.emoji?.message && (
-          <p className="text-red-500 text-xs mt-1">{errors.emoji.message}</p>
-        )}
       </section>
 
       {/* Category */}
@@ -66,10 +49,10 @@ export default function BudgetForm({
         <InputSelect
           id="category"
           label="Category"
-          options={CATEGORY_OPTIONS}
+          options={categoryOptions}
           firstOption="Select category…"
-          registration={register("category")}
-          error={errors.category?.message}
+          registration={register("categoryId")}
+          error={errors.categoryId?.message}
         />
       </section>
 

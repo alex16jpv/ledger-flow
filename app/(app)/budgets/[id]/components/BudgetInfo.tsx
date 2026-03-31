@@ -2,15 +2,23 @@ import { Budget } from "@/types/Budget.type";
 import { BUDGET_COLOR_CLASSES } from "@/utils/constants";
 import { formatAmount } from "@/utils/utils";
 
-export default function BudgetInfo({ budget }: { budget: Budget }) {
+export default function BudgetInfo({
+  budget,
+  categoryName,
+  categoryEmoji,
+}: {
+  budget: Budget;
+  categoryName?: string;
+  categoryEmoji?: string;
+}) {
   const colorClass = BUDGET_COLOR_CLASSES[budget.color];
   const remaining = budget.amount - budget.spent;
   const isOver = remaining < 0;
 
   const rows = [
-    { label: "Category", value: budget.category },
+    { label: "Category", value: categoryName ?? "Uncategorized" },
     { label: "Name", value: budget.name },
-    { label: "Emoji", value: budget.emoji },
+    { label: "Icon", value: categoryEmoji ?? "📦" },
     { label: "Limit", value: formatAmount({ amount: budget.amount }) },
     { label: "Spent", value: formatAmount({ amount: budget.spent }) },
     {

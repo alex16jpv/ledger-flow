@@ -12,8 +12,7 @@ export function getTransactionSubtitle(transaction: Transaction): string {
     case INCOME:
       return `${label} · ${transaction.to_account_id}`;
     case EXPENSE: {
-      const category = transaction.category ?? "Uncategorized";
-      return `${label} · ${category} · ${transaction.from_account_id}`;
+      return `${label} · ${transaction.from_account_id}`;
     }
   }
 }

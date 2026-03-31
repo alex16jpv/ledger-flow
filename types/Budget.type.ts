@@ -10,9 +10,8 @@ export type BudgetColor =
 export type Budget = {
   id: string;
   name: string;
-  emoji: string;
   color: BudgetColor;
-  category: string;
+  categoryId: string;
   amount: number;
   spent: number;
 };

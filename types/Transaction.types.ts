@@ -6,9 +6,8 @@ type TransactionBase = {
   type: TransactionKind;
   amount: number;
   date: Date;
-  category?: string;
+  categoryId?: string;
   description?: string;
-  emoji?: string;
   user_id?: string;
 };
 

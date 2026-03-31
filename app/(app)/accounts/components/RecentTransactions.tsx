@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { MOCK_TRANSACTIONS } from "@/lib/mock/transactions.mock";
+import { MOCK_CATEGORIES } from "@/lib/mock/categories.mock";
 import TransactionItem from "@/components/TransactionItem";
 
 export default function RecentTransactions() {
+  const categoryMap = new Map(MOCK_CATEGORIES.map((c) => [c.id, c]));
   const recentTransactions = [...MOCK_TRANSACTIONS]
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .slice(0, 5);
@@ -25,7 +27,11 @@ export default function RecentTransactions() {
       </div>
       <ul className="divide-y divide-stone-50" role="list">
         {recentTransactions.map((transaction) => (
-          <TransactionItem key={transaction.id} transaction={transaction} />
+          <TransactionItem
+            key={transaction.id}
+            transaction={transaction}
+            categoryEmoji={transaction.categoryId ? categoryMap.get(transaction.categoryId)?.emoji : undefined}
+          />
         ))}
       </ul>
     </section>

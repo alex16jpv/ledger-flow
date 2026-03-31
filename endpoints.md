@@ -325,9 +325,10 @@ Create a new category.
 | Field | Type | Required | Constraints |
 |---|---|---|---|
 | `name` | `string` | ✅ | 1–255 chars |
+| `emoji` | `string` | — | Single emoji character, max 8 chars |
 
 ```json
-{ "name": "Food" }
+{ "name": "Food", "emoji": "🍔" }
 ```
 
 - **Response `201`:** [Category](#category-object)
@@ -356,7 +357,8 @@ Update a category. At least one field required.
 
 | Field | Type | Required | Constraints |
 |---|---|---|---|
-| `name` | `string` | ✅ | 1–255 chars |
+| `name` | `string` | — | 1–255 chars |
+| `emoji` | `string` | — | Single emoji character, max 8 chars |
 
 - **Response `200`:** [Category](#category-object)
 - **Errors:** `400` validation, `404` not found
@@ -515,6 +517,7 @@ Delete a transaction. Reverses any balance changes on associated accounts.
 {
   "id": "019576a0-d7b6-7d6d-af6a-2b7545f5ac70",
   "name": "Food",
+  "emoji": "🍔",
   "userId": "019576a0-d7b6-7d6d-af6a-2b7545f5ac70"
 }
 ```

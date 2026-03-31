@@ -8,6 +8,7 @@ import TransactionItem from "@/components/TransactionItem";
 import { getDateGroupLabel } from "@/lib/dates";
 import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import FilterChips from "@/app/(app)/transactions/components/FilterChips";
+import { MOCK_CATEGORIES } from "@/lib/mock/categories.mock";
 
 function getAccountTransactions(account: Account): Transaction[] {
   return MOCK_TRANSACTIONS.filter((t) => {
@@ -23,6 +24,7 @@ function getAccountTransactions(account: Account): Transaction[] {
 }
 
 export default function AccountTransactions({ account }: { account: Account }) {
+  const categoryMap = new Map(MOCK_CATEGORIES.map((c) => [c.id, c]));
   const [activeFilter, setActiveFilter] = useState<TransactionKind | null>(
     null,
   );
@@ -55,7 +57,11 @@ export default function AccountTransactions({ account }: { account: Account }) {
             <div className="bg-white border border-stone-100 rounded-xl overflow-hidden">
               <ul className="divide-y divide-stone-50" role="list">
                 {txns.map((t) => (
-                  <TransactionItem key={t.id} transaction={t} />
+                  <TransactionItem
+                    key={t.id}
+                    transaction={t}
+                    categoryEmoji={t.categoryId ? categoryMap.get(t.categoryId)?.emoji : undefined}
+                  />
                 ))}
               </ul>
             </div>

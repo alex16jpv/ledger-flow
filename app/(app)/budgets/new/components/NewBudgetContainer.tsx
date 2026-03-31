@@ -1,22 +1,43 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { budgetSchema, BudgetFormFields } from "@/lib/schemas/budget.schema";
 import { BudgetColor } from "@/types/Budget.type";
+import type { Category } from "@/types/Category.types";
 import BudgetForm from "./BudgetForm";
 import BudgetPreview, { SaveButton } from "./BudgetPreview";
+import { getCategories } from "@/services/categories.service";
 
 const DEFAULT_VALUES: BudgetFormFields = {
   name: "",
-  emoji: "🍔",
   color: "teal-400",
-  category: "Food",
+  categoryId: "",
   amount: 0,
   note: "",
 };
 
 export default function NewBudgetContainer() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+
+  useEffect(() => {
+    getCategories().then((result) => {
+      if (result.data?.data) {
+        setCategories(result.data.data);
+        setCategoryOptions(
+          result.data.data.map((c) => ({
+            value: c.id,
+            label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
+          })),
+        );
+      }
+    });
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -31,14 +52,11 @@ export default function NewBudgetContainer() {
   });
 
   const name = watch("name");
-  const emoji = watch("emoji");
   const color = watch("color");
-  const category = watch("category");
+  const categoryId = watch("categoryId");
   const amount = watch("amount");
 
-  const onEmojiChange = (newEmoji: string) => {
-    setValue("emoji", newEmoji, { shouldValidate: true });
-  };
+  const selectedCategory = categories.find((c) => c.id === categoryId);
 
   const onColorChange = (newColor: BudgetColor) => {
     setValue("color", newColor, { shouldValidate: true });
@@ -56,10 +74,9 @@ export default function NewBudgetContainer() {
           register={register}
           errors={errors}
           control={control}
-          selectedEmoji={emoji}
-          onEmojiChange={onEmojiChange}
           selectedColor={color}
           onColorChange={onColorChange}
+          categoryOptions={categoryOptions}
         />
 
         <div className="lg:hidden">
@@ -69,9 +86,9 @@ export default function NewBudgetContainer() {
 
       <BudgetPreview
         name={name}
-        emoji={emoji}
+        emoji={selectedCategory?.emoji ?? ""}
         color={color}
-        category={category}
+        category={selectedCategory?.name ?? ""}
         amount={amount}
       />
     </form>

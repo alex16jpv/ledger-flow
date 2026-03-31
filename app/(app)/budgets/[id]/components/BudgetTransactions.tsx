@@ -1,5 +1,6 @@
 import { Budget } from "@/types/Budget.type";
 import { MOCK_TRANSACTIONS } from "@/lib/mock/transactions.mock";
+import { MOCK_CATEGORIES } from "@/lib/mock/categories.mock";
 import TransactionItem from "@/components/TransactionItem";
 import { getDateGroupLabel } from "@/lib/dates";
 import { groupTransactionsByDate } from "@/utils/transaction.groups";
@@ -9,11 +10,12 @@ function getBudgetTransactions(budget: Budget): Transaction[] {
   return MOCK_TRANSACTIONS.filter(
     (t) =>
       t.type === "EXPENSE" &&
-      t.category?.toLowerCase() === budget.category.toLowerCase(),
+      t.categoryId === budget.categoryId,
   ).sort((a, b) => b.date.getTime() - a.date.getTime());
 }
 
 export default function BudgetTransactions({ budget }: { budget: Budget }) {
+  const categoryMap = new Map(MOCK_CATEGORIES.map((c) => [c.id, c]));
   const transactions = getBudgetTransactions(budget);
   const groups = groupTransactionsByDate(transactions);
 
@@ -44,7 +46,11 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
             <div className="bg-white border border-stone-100 rounded-xl overflow-hidden">
               <ul className="divide-y divide-stone-50" role="list">
                 {txns.map((t) => (
-                  <TransactionItem key={t.id} transaction={t} />
+                  <TransactionItem
+                    key={t.id}
+                    transaction={t}
+                    categoryEmoji={t.categoryId ? categoryMap.get(t.categoryId)?.emoji : undefined}
+                  />
                 ))}
               </ul>
             </div>
