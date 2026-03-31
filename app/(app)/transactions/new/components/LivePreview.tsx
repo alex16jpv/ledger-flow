@@ -14,6 +14,7 @@ import { TransactionFormFields } from "@/lib/schemas/transaction.schema";
 type LivePreviewProps = {
   selectedType: TransactionKind;
   control: Control<TransactionFormFields>;
+  isSubmitting?: boolean;
 };
 
 function formatPreviewDate(date: string, time: string): string {
@@ -37,18 +38,23 @@ function formatPreviewAmount(amount?: number): string {
 
 export function SaveButton({
   selectedType,
+  isSubmitting,
 }: {
   selectedType: TransactionKind;
+  isSubmitting?: boolean;
 }) {
   const selectedColors = TRANSACTION_TYPE_COLORS[selectedType];
   return (
     <button
       type="submit"
-      className={`w-full ${selectedColors.btnBgColor} ${selectedColors.btnHoverBgColor} text-white font-medium text-sm rounded-xl py-3 transition-colors`}
+      disabled={isSubmitting}
+      className={`w-full ${selectedColors.btnBgColor} ${selectedColors.btnHoverBgColor} text-white font-medium text-sm rounded-xl py-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
     >
-      {selectedType === TRANSACTION_TYPES.TRANSFER
-        ? "Confirm Transfer"
-        : `Save ${TRANSACTION_TYPE_LABELS[selectedType]}`}
+      {isSubmitting
+        ? "Saving…"
+        : selectedType === TRANSACTION_TYPES.TRANSFER
+          ? "Confirm Transfer"
+          : `Save ${TRANSACTION_TYPE_LABELS[selectedType]}`}
     </button>
   );
 }
@@ -56,6 +62,7 @@ export function SaveButton({
 export default function LivePreview({
   selectedType,
   control,
+  isSubmitting,
 }: LivePreviewProps) {
   const [amount, description, date, time, fromAccount, toAccount] = useWatch({
     control,
@@ -64,8 +71,8 @@ export default function LivePreview({
       "description",
       "date",
       "time",
-      "from_account_id",
-      "to_account_id",
+      "fromAccountId",
+      "toAccountId",
     ],
   });
 
@@ -151,7 +158,7 @@ export default function LivePreview({
               </div>
             </div>
 
-            <SaveButton selectedType={selectedType} />
+            <SaveButton selectedType={selectedType} isSubmitting={isSubmitting} />
 
             <Link
               href="/transactions"

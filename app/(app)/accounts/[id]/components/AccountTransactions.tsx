@@ -1,39 +1,76 @@
 "use client";
 
-import { useState } from "react";
-import { Transaction, TransactionKind } from "@/types/Transaction.types";
-import { MOCK_TRANSACTIONS } from "@/lib/mock/transactions.mock";
+import { useState, useEffect, useCallback } from "react";
+import { TransactionKind } from "@/types/Transaction.types";
+import { Transaction } from "@/types/Transaction.types";
 import { Account } from "@/types/Account.types";
+import { Category } from "@/types/Category.types";
 import TransactionItem from "@/components/TransactionItem";
 import { getDateGroupLabel } from "@/lib/dates";
 import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import FilterChips from "@/app/(app)/transactions/components/FilterChips";
-import { MOCK_CATEGORIES } from "@/lib/mock/categories.mock";
-
-function getAccountTransactions(account: Account): Transaction[] {
-  return MOCK_TRANSACTIONS.filter((t) => {
-    if (t.type === "EXPENSE" && t.from_account_id === account.name) return true;
-    if (t.type === "INCOME" && t.to_account_id === account.name) return true;
-    if (
-      t.type === "TRANSFER" &&
-      (t.from_account_id === account.name || t.to_account_id === account.name)
-    )
-      return true;
-    return false;
-  }).sort((a, b) => b.date.getTime() - a.date.getTime());
-}
+import { getTransactions } from "@/services/transactions.service";
+import { getCategories } from "@/services/categories.service";
 
 export default function AccountTransactions({ account }: { account: Account }) {
-  const categoryMap = new Map(MOCK_CATEGORIES.map((c) => [c.id, c]));
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<TransactionKind | null>(
     null,
   );
 
-  const allTransactions = getAccountTransactions(account);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const [txResult, catResult] = await Promise.all([
+      getTransactions({ accountId: account.id, limit: "100" }),
+      getCategories({ limit: "100" }),
+    ]);
+    if (txResult.error) {
+      setError(txResult.error);
+    } else {
+      setTransactions(txResult.data?.data ?? []);
+    }
+    setCategories(catResult.data?.data ?? []);
+    setLoading(false);
+  }, [account.id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
   const filtered = activeFilter
-    ? allTransactions.filter((t) => t.type === activeFilter)
-    : allTransactions;
+    ? transactions.filter((t) => t.type === activeFilter)
+    : transactions;
   const groups = groupTransactionsByDate(filtered);
+
+  if (loading) {
+    return (
+      <div className="lg:col-span-2 flex flex-col gap-4">
+        <div className="bg-white border border-stone-100 rounded-xl p-6 animate-pulse">
+          <div className="h-3 w-24 bg-stone-100 rounded mb-3" />
+          <div className="h-12 w-full bg-stone-100 rounded" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="lg:col-span-2 bg-red-50 border border-red-100 rounded-xl p-8 text-center">
+        <p className="text-sm text-red-600 mb-3">{error}</p>
+        <button
+          onClick={fetchData}
+          className="text-sm text-red-600 underline hover:text-red-800"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="lg:col-span-2 flex flex-col gap-4">

@@ -8,11 +8,10 @@ export function getTransactionSubtitle(transaction: Transaction): string {
 
   switch (transaction.type) {
     case TRANSFER:
-      return `${label} · ${transaction.from_account_id} → ${transaction.to_account_id}`;
+      return `${label} · ${transaction.fromAccountId ?? "—"} → ${transaction.toAccountId ?? "—"}`;
     case INCOME:
-      return `${label} · ${transaction.to_account_id}`;
-    case EXPENSE: {
-      return `${label} · ${transaction.from_account_id}`;
-    }
+      return `${label} · ${transaction.toAccountId ?? "—"}`;
+    case EXPENSE:
+      return `${label} · ${transaction.fromAccountId ?? "—"}`;
   }
 }

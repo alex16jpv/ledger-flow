@@ -23,8 +23,8 @@ const expenseSchema = z.object({
   description,
   date,
   time,
-  category,
-  from_account_id: account,
+  categoryId: category,
+  fromAccountId: account,
   tags,
   note,
 });
@@ -35,7 +35,7 @@ const incomeSchema = z.object({
   description,
   date,
   time,
-  to_account_id: account,
+  toAccountId: account,
   payer: z.string().optional(),
   tags,
   note,
@@ -47,8 +47,8 @@ const transferSchema = z.object({
   description,
   date,
   time,
-  from_account_id: account,
-  to_account_id: account,
+  fromAccountId: account,
+  toAccountId: account,
   tags,
   note,
 });
@@ -69,10 +69,42 @@ export type TransactionFormFields = {
   description: string;
   date: string;
   time: string;
-  from_account_id?: string;
-  to_account_id?: string;
+  fromAccountId?: string;
+  toAccountId?: string;
   payer?: string;
   tags?: string;
   note?: string;
-  category?: string;
+  categoryId?: string;
 };
+
+// ---------------------------------------------------------------------------
+// API route-handler schemas (server-side validation before proxying)
+// ---------------------------------------------------------------------------
+
+export const createTransactionSchema = z.object({
+  type: z.enum(["INCOME", "EXPENSE", "TRANSFER"]),
+  amount: z.number().positive(),
+  date: z.string(),
+  categoryId: z.string().nullable().optional(),
+  description: z.string().max(255).nullable().optional(),
+  fromAccountId: z.string().nullable().optional(),
+  toAccountId: z.string().nullable().optional(),
+  tags: z.string().max(500).nullable().optional(),
+  note: z.string().max(1000).nullable().optional(),
+});
+
+export type CreateTransactionPayload = z.infer<typeof createTransactionSchema>;
+
+export const updateTransactionSchema = z.object({
+  type: z.enum(["INCOME", "EXPENSE", "TRANSFER"]).optional(),
+  amount: z.number().positive().optional(),
+  date: z.string().optional(),
+  categoryId: z.string().nullable().optional(),
+  description: z.string().max(255).nullable().optional(),
+  fromAccountId: z.string().nullable().optional(),
+  toAccountId: z.string().nullable().optional(),
+  tags: z.string().max(500).nullable().optional(),
+  note: z.string().max(1000).nullable().optional(),
+});
+
+export type UpdateTransactionPayload = z.infer<typeof updateTransactionSchema>;

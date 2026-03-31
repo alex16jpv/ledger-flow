@@ -66,8 +66,8 @@ export default function TransactionForm({
             label="From Account"
             options={accountOptions}
             firstOption="Select account…"
-            registration={register("from_account_id")}
-            error={errors.from_account_id?.message}
+            registration={register("fromAccountId")}
+            error={errors.fromAccountId?.message}
           />
         )}
 
@@ -87,8 +87,8 @@ export default function TransactionForm({
             label="To Account"
             options={accountOptions}
             firstOption="Select account…"
-            registration={register("to_account_id")}
-            error={errors.to_account_id?.message}
+            registration={register("toAccountId")}
+            error={errors.toAccountId?.message}
           />
         )}
 
@@ -112,8 +112,8 @@ export default function TransactionForm({
             label="Category"
             options={categoryOptions}
             firstOption="Select category…"
-            registration={register("category")}
-            error={errors.category?.message}
+            registration={register("categoryId")}
+            error={errors.categoryId?.message}
           />
         </section>
       )}

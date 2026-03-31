@@ -1,35 +1,18 @@
 import { type TransactionKind } from "@/utils/constants";
 export type { TransactionKind };
 
-type TransactionBase = {
+export type Transaction = {
   id: string;
   type: TransactionKind;
   amount: number;
-  date: Date;
-  categoryId?: string;
-  description?: string;
-  user_id?: string;
+  date: string;
+  categoryId?: string | null;
+  description?: string | null;
+  fromAccountId?: string | null;
+  toAccountId?: string | null;
+  userId?: string;
+  tags?: string | null;
+  note?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
-
-type TransferTransaction = TransactionBase & {
-  type: "TRANSFER";
-  from_account_id: string;
-  to_account_id: string;
-};
-
-type IncomeTransaction = TransactionBase & {
-  type: "INCOME";
-  to_account_id: string;
-  from_account_id?: never;
-};
-
-type ExpenseTransaction = TransactionBase & {
-  type: "EXPENSE";
-  from_account_id: string;
-  to_account_id?: never;
-};
-
-export type Transaction =
-  | TransferTransaction
-  | IncomeTransaction
-  | ExpenseTransaction;

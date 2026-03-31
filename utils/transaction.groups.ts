@@ -5,7 +5,7 @@ export function groupTransactionsByDate(
   transactions: Transaction[],
 ): [string, Transaction[]][] {
   const sorted = [...transactions].sort(
-    (a, b) => b.date.getTime() - a.date.getTime(),
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
   const groups = new Map<string, Transaction[]>();
 

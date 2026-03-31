@@ -1,23 +1,73 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
 import { Budget } from "@/types/Budget.type";
-import { MOCK_TRANSACTIONS } from "@/lib/mock/transactions.mock";
-import { MOCK_CATEGORIES } from "@/lib/mock/categories.mock";
+import { Transaction } from "@/types/Transaction.types";
+import { Category } from "@/types/Category.types";
 import TransactionItem from "@/components/TransactionItem";
 import { getDateGroupLabel } from "@/lib/dates";
 import { groupTransactionsByDate } from "@/utils/transaction.groups";
-import { Transaction } from "@/types/Transaction.types";
-
-function getBudgetTransactions(budget: Budget): Transaction[] {
-  return MOCK_TRANSACTIONS.filter(
-    (t) =>
-      t.type === "EXPENSE" &&
-      t.categoryId === budget.categoryId,
-  ).sort((a, b) => b.date.getTime() - a.date.getTime());
-}
+import { getTransactions } from "@/services/transactions.service";
+import { getCategories } from "@/services/categories.service";
 
 export default function BudgetTransactions({ budget }: { budget: Budget }) {
-  const categoryMap = new Map(MOCK_CATEGORIES.map((c) => [c.id, c]));
-  const transactions = getBudgetTransactions(budget);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const [txResult, catResult] = await Promise.all([
+      getTransactions({ type: "EXPENSE", limit: "100" }),
+      getCategories({ limit: "100" }),
+    ]);
+    if (txResult.error) {
+      setError(txResult.error);
+    } else {
+      const all = txResult.data?.data ?? [];
+      setTransactions(
+        all
+          .filter((t) => t.categoryId === budget.categoryId)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+      );
+    }
+    setCategories(catResult.data?.data ?? []);
+    setLoading(false);
+  }, [budget.categoryId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
   const groups = groupTransactionsByDate(transactions);
+
+  if (loading) {
+    return (
+      <div className="lg:col-span-2 flex flex-col gap-4">
+        <div className="h-4 w-40 bg-stone-100 rounded animate-pulse" />
+        <div className="bg-white border border-stone-100 rounded-xl p-6 animate-pulse">
+          <div className="h-12 w-full bg-stone-100 rounded" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="lg:col-span-2 bg-red-50 border border-red-100 rounded-xl p-8 text-center">
+        <p className="text-sm text-red-600 mb-3">{error}</p>
+        <button
+          onClick={fetchData}
+          className="text-sm text-red-600 underline hover:text-red-800"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="lg:col-span-2 flex flex-col gap-4">
