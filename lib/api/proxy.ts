@@ -8,6 +8,19 @@ export type ProxyResponse<T = unknown> = {
   error: string | null;
 };
 
+export type Pagination = {
+  limit: number;
+  offset: number;
+  total: number;
+  hasMore: boolean;
+  nextCursor: string | null;
+};
+
+export type PaginatedResult<T> = {
+  data: T[];
+  pagination: Pagination;
+};
+
 type RequestOptions = {
   method?: string;
   headers?: HeadersInit;

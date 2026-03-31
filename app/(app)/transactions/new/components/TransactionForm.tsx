@@ -7,16 +7,17 @@ import { TransactionKind } from "@/types/Transaction.types";
 import { TRANSACTION_TYPES, CATEGORY_NAMES } from "@/utils/constants";
 import { UseFormRegister, FieldErrors } from "react-hook-form";
 import { TransactionFormFields } from "@/lib/schemas/transaction.schema";
-import { MOCK_ACCOUNT_OPTIONS } from "@/lib/mock/accounts.mock";
 
 export default function TransactionForm({
   selectedType,
   register,
   errors,
+  accountOptions = [],
 }: {
   selectedType: TransactionKind;
   register: UseFormRegister<TransactionFormFields>;
   errors: FieldErrors<TransactionFormFields>;
+  accountOptions?: { value: string; label: string }[];
 }) {
   const isTransfer = selectedType === TRANSACTION_TYPES.TRANSFER;
   const isIncome = selectedType === TRANSACTION_TYPES.INCOME;
@@ -66,7 +67,7 @@ export default function TransactionForm({
           <InputSelect
             id="from-account"
             label="From Account"
-            options={MOCK_ACCOUNT_OPTIONS}
+            options={accountOptions}
             firstOption="Select account…"
             registration={register("from_account_id")}
             error={errors.from_account_id?.message}
@@ -87,7 +88,7 @@ export default function TransactionForm({
           <InputSelect
             id="to-account"
             label="To Account"
-            options={MOCK_ACCOUNT_OPTIONS}
+            options={accountOptions}
             firstOption="Select account…"
             registration={register("to_account_id")}
             error={errors.to_account_id?.message}

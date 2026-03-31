@@ -22,13 +22,15 @@ export default function AmountInput<T extends FieldValues>({
   control,
   error,
   label = "Amount",
+  name = "amount" as never,
 }: {
   control: Control<T>;
   error?: string;
   label?: string;
+  name?: string;
 }) {
   const { field } = useController({
-    name: "amount" as never,
+    name: name as never,
     control,
   });
 

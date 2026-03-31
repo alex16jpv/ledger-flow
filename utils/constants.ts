@@ -10,23 +10,29 @@ export type TransactionKind =
   (typeof TRANSACTION_TYPES)[keyof typeof TRANSACTION_TYPES];
 
 export const ACCOUNT_TYPES = {
-  DEBIT: "DEBIT",
-  SAVINGS: "SAVINGS",
-  CREDIT: "CREDIT",
-  DIGITAL_WALLET: "DIGITAL_WALLET",
-  INVESTMENT: "INVESTMENT",
   CASH: "CASH",
+  ACCOUNT: "ACCOUNT",
+  CARD: "CARD",
+  DEBIT_CARD: "DEBIT_CARD",
+  SAVINGS: "SAVINGS",
+  INVESTMENT: "INVESTMENT",
+  OVERDRAFT: "OVERDRAFT",
+  LOAN: "LOAN",
+  OTHER: "OTHER",
 } as const;
 
 export type AccountKind = (typeof ACCOUNT_TYPES)[keyof typeof ACCOUNT_TYPES];
 
 export const ACCOUNT_TYPE_LABELS: Record<AccountKind, string> = {
-  DEBIT: "Debit",
-  SAVINGS: "Savings",
-  CREDIT: "Credit",
-  DIGITAL_WALLET: "Digital Wallet",
-  INVESTMENT: "Investment",
   CASH: "Cash",
+  ACCOUNT: "Account",
+  CARD: "Card",
+  DEBIT_CARD: "Debit Card",
+  SAVINGS: "Savings",
+  INVESTMENT: "Investment",
+  OVERDRAFT: "Overdraft",
+  LOAN: "Loan",
+  OTHER: "Other",
 };
 
 type AccountTypeColors = {
@@ -39,12 +45,36 @@ type AccountTypeColors = {
 };
 
 export const ACCOUNT_TYPE_COLORS: Record<AccountKind, AccountTypeColors> = {
-  DEBIT: {
+  CASH: {
+    bgColor: "bg-stone-50",
+    borderColor: "border-stone-100",
+    textColor: "text-stone-800",
+    accentColor: "text-stone-600",
+    sparkLight: "bg-stone-100",
+    sparkDark: "bg-stone-400",
+  },
+  ACCOUNT: {
     bgColor: "bg-teal-50",
     borderColor: "border-teal-100",
     textColor: "text-teal-800",
     accentColor: "text-teal-600",
     sparkLight: "bg-teal-100",
+    sparkDark: "bg-teal-400",
+  },
+  CARD: {
+    bgColor: "bg-amber-50",
+    borderColor: "border-amber-200",
+    textColor: "text-amber-600",
+    accentColor: "text-amber-600",
+    sparkLight: "bg-amber-200",
+    sparkDark: "bg-amber-400",
+  },
+  DEBIT_CARD: {
+    bgColor: "bg-teal-50",
+    borderColor: "border-teal-200",
+    textColor: "text-teal-800",
+    accentColor: "text-teal-600",
+    sparkLight: "bg-teal-200",
     sparkDark: "bg-teal-400",
   },
   SAVINGS: {
@@ -55,36 +85,36 @@ export const ACCOUNT_TYPE_COLORS: Record<AccountKind, AccountTypeColors> = {
     sparkLight: "bg-purple-200",
     sparkDark: "bg-purple-400",
   },
-  CREDIT: {
-    bgColor: "bg-amber-50",
-    borderColor: "border-amber-200",
-    textColor: "text-amber-600",
-    accentColor: "text-amber-600",
-    sparkLight: "bg-amber-200",
-    sparkDark: "bg-amber-400",
-  },
-  DIGITAL_WALLET: {
+  INVESTMENT: {
     bgColor: "bg-blue-50",
     borderColor: "border-blue-100",
-    textColor: "text-blue-600",
+    textColor: "text-blue-800",
     accentColor: "text-blue-600",
     sparkLight: "bg-blue-100",
     sparkDark: "bg-blue-400",
   },
-  INVESTMENT: {
-    bgColor: "bg-teal-50",
-    borderColor: "border-teal-100",
-    textColor: "text-teal-800",
-    accentColor: "text-teal-600",
-    sparkLight: "bg-teal-100",
-    sparkDark: "bg-teal-400",
+  OVERDRAFT: {
+    bgColor: "bg-red-50",
+    borderColor: "border-red-200",
+    textColor: "text-red-800",
+    accentColor: "text-red-600",
+    sparkLight: "bg-red-100",
+    sparkDark: "bg-red-400",
   },
-  CASH: {
+  LOAN: {
+    bgColor: "bg-orange-50",
+    borderColor: "border-orange-200",
+    textColor: "text-orange-800",
+    accentColor: "text-orange-600",
+    sparkLight: "bg-orange-100",
+    sparkDark: "bg-orange-400",
+  },
+  OTHER: {
     bgColor: "bg-stone-50",
-    borderColor: "border-stone-100",
-    textColor: "text-stone-800",
-    accentColor: "text-stone-600",
-    sparkLight: "bg-stone-100",
+    borderColor: "border-stone-200",
+    textColor: "text-stone-700",
+    accentColor: "text-stone-500",
+    sparkLight: "bg-stone-200",
     sparkDark: "bg-stone-400",
   },
 };

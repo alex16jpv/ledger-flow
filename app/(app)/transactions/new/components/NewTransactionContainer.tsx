@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import AmountInput from "./AmountInput";
@@ -12,6 +13,7 @@ import {
 } from "@/lib/schemas/transaction.schema";
 import { TransactionKind } from "@/types/Transaction.types";
 import { getCurrentDateTime, parseDateTimeFields } from "@/lib/dates";
+import { getAccounts } from "@/services/accounts.service";
 
 function getDefaultValues(): Partial<TransactionFormFields> & {
   type: TransactionFormFields["type"];
@@ -32,6 +34,20 @@ function getDefaultValues(): Partial<TransactionFormFields> & {
 }
 
 export default function NewTransactionContainer() {
+  const [accountOptions, setAccountOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+
+  useEffect(() => {
+    getAccounts().then((result) => {
+      if (result.data?.data) {
+        setAccountOptions(
+          result.data.data.map((a) => ({ value: a.id, label: a.name })),
+        );
+      }
+    });
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -86,6 +102,7 @@ export default function NewTransactionContainer() {
           selectedType={selectedType}
           register={register}
           errors={errors}
+          accountOptions={accountOptions}
         />
 
         <div className="lg:hidden">

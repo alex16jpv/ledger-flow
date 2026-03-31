@@ -6,8 +6,17 @@ export default function AccountInfo({ account }: { account: Account }) {
   const rows = [
     { label: "Name", value: account.name },
     { label: "Type", value: ACCOUNT_TYPE_LABELS[account.type] },
-    { label: "Created", value: formatDate(account.createdAt, "display") },
-    { label: "Last updated", value: formatDate(account.updatedAt, "display") },
+    ...(account.createdAt
+      ? [{ label: "Created", value: formatDate(account.createdAt, "display") }]
+      : []),
+    ...(account.updatedAt
+      ? [
+          {
+            label: "Last updated",
+            value: formatDate(account.updatedAt, "display"),
+          },
+        ]
+      : []),
   ];
 
   return (

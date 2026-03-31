@@ -6,7 +6,7 @@ export type Account = {
   name: string;
   type: AccountKind;
   balance: number;
-  user_id?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  userId: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
