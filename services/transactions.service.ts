@@ -4,20 +4,35 @@ import type {
   CreateTransactionPayload,
   UpdateTransactionPayload,
 } from "@/lib/schemas/transaction.schema";
+import { getCached, setCache, clearDomainCache, requestSignature } from "@/lib/cache";
+
+const DOMAIN = "transactions" as const;
 
 export async function getTransactions(
   params?: Record<string, string>,
 ): Promise<ProxyResponse<PaginatedResult<Transaction>>> {
+  const sig = requestSignature("/api/transactions", params);
+  const cached = getCached<ProxyResponse<PaginatedResult<Transaction>>>(DOMAIN, sig);
+  if (cached) return cached;
+
   const query = params ? `?${new URLSearchParams(params)}` : "";
   const res = await fetch(`/api/transactions${query}`);
-  return res.json();
+  const data: ProxyResponse<PaginatedResult<Transaction>> = await res.json();
+  if (!data.error) setCache(DOMAIN, sig, data);
+  return data;
 }
 
 export async function getTransaction(
   id: string,
 ): Promise<ProxyResponse<Transaction>> {
+  const sig = requestSignature(`/api/transactions/${id}`);
+  const cached = getCached<ProxyResponse<Transaction>>(DOMAIN, sig);
+  if (cached) return cached;
+
   const res = await fetch(`/api/transactions/${id}`);
-  return res.json();
+  const data: ProxyResponse<Transaction> = await res.json();
+  if (!data.error) setCache(DOMAIN, sig, data);
+  return data;
 }
 
 export async function createTransaction(
@@ -28,7 +43,9 @@ export async function createTransaction(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return res.json();
+  const data: ProxyResponse<Transaction> = await res.json();
+  if (!data.error) clearDomainCache(DOMAIN);
+  return data;
 }
 
 export async function updateTransaction(
@@ -40,7 +57,9 @@ export async function updateTransaction(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return res.json();
+  const data: ProxyResponse<Transaction> = await res.json();
+  if (!data.error) clearDomainCache(DOMAIN);
+  return data;
 }
 
 export async function deleteTransaction(
@@ -49,5 +68,7 @@ export async function deleteTransaction(
   const res = await fetch(`/api/transactions/${id}`, {
     method: "DELETE",
   });
-  return res.json();
+  const data: ProxyResponse<null> = await res.json();
+  if (!data.error) clearDomainCache(DOMAIN);
+  return data;
 }

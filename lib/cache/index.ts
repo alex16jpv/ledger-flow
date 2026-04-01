@@ -5,7 +5,7 @@ type CacheEntry<T = unknown> = {
   timestamp: number;
 };
 
-type CacheDomain = "accounts" | "categories";
+type CacheDomain = "accounts" | "categories" | "transactions";
 
 const STORAGE_PREFIX = "lf_cache_";
 const DISABLED_KEY = "lf_cache_disabled";
@@ -91,6 +91,7 @@ export function clearDomainCache(domain: CacheDomain): void {
 export function clearAllCache(): void {
   clearDomainCache("accounts");
   clearDomainCache("categories");
+  clearDomainCache("transactions");
 }
 
 export function requestSignature(endpoint: string, params?: Record<string, string>): string {
