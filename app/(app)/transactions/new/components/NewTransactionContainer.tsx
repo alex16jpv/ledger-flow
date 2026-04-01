@@ -54,16 +54,16 @@ export default function NewTransactionContainer() {
     getAccounts().then((result) => {
       if (result.data?.data) {
         setAccountOptions(
-          result.data.data.map((a) => ({ value: a.id, label: a.name })),
+          result.data.data.map((account) => ({ value: account.id, label: account.name })),
         );
       }
     });
     getCategories().then((result) => {
       if (result.data?.data) {
         setCategoryOptions(
-          result.data.data.map((c) => ({
-            value: c.id,
-            label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
+          result.data.data.map((category) => ({
+            value: category.id,
+            label: category.emoji ? `${category.emoji} ${category.name}` : category.name,
           })),
         );
       }
@@ -127,7 +127,7 @@ export default function NewTransactionContainer() {
         <section className="bg-white border border-stone-100 rounded-xl p-6">
           <TransactionTypeSelector
             selectedType={selectedType}
-            setSelectedType={setSelectedType}
+            onTypeChange={setSelectedType}
           />
           <AmountInput control={control} error={errors.amount?.message} />
         </section>
@@ -145,7 +145,7 @@ export default function NewTransactionContainer() {
         </div>
       </div>
 
-      <LivePreview selectedType={selectedType} control={control} isSubmitting={isSubmitting} />
+      <LivePreview selectedType={selectedType} control={control} isSubmitting={isSubmitting} accountOptions={accountOptions} />
     </form>
   );
 }

@@ -22,6 +22,19 @@ export async function getAccounts(
   return data;
 }
 
+export async function getAccountsByIds(
+  ids: string[],
+): Promise<ProxyResponse<PaginatedResult<Account>>> {
+  if (ids.length === 0) {
+    return {
+      data: { data: [], pagination: { limit: 0, offset: 0, total: 0, hasMore: false, nextCursor: null } },
+      status: 200,
+      error: null,
+    };
+  }
+  return getAccounts({ ids: ids.join(",") });
+}
+
 export async function getAccount(id: string): Promise<ProxyResponse<Account>> {
   const sig = requestSignature(`/api/accounts/${id}`);
   const cached = getCached<ProxyResponse<Account>>(DOMAIN, sig);

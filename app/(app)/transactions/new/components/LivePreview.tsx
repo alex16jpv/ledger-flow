@@ -15,13 +15,14 @@ type LivePreviewProps = {
   selectedType: TransactionKind;
   control: Control<TransactionFormFields>;
   isSubmitting?: boolean;
+  accountOptions?: { value: string; label: string }[];
 };
 
 function formatPreviewDate(date: string, time: string): string {
   if (!date) return "—";
   try {
-    const d = parseDateTimeFields(date, time);
-    return `${formatDate(d, "shortDateYear")} · ${time || "00:00"}`;
+    const parsedDate = parseDateTimeFields(date, time);
+    return `${formatDate(parsedDate, "shortDateYear")} · ${time || "00:00"}`;
   } catch {
     return "—";
   }
@@ -63,6 +64,7 @@ export default function LivePreview({
   selectedType,
   control,
   isSubmitting,
+  accountOptions = [],
 }: LivePreviewProps) {
   const [amount, description, date, time, fromAccount, toAccount] = useWatch({
     control,
@@ -78,16 +80,19 @@ export default function LivePreview({
 
   const selectedColors = TRANSACTION_TYPE_COLORS[selectedType];
 
+  const resolveAccountName = (id?: string) =>
+    accountOptions.find((option) => option.value === id)?.label ?? id;
+
   const accountLabel =
     selectedType === TRANSACTION_TYPES.EXPENSE
-      ? fromAccount
+      ? resolveAccountName(fromAccount)
       : selectedType === TRANSACTION_TYPES.INCOME
-        ? toAccount
+        ? resolveAccountName(toAccount)
         : null;
 
   const transferLabel =
     selectedType === TRANSACTION_TYPES.TRANSFER
-      ? `${fromAccount || "—"} → ${toAccount || "—"}`
+      ? `${resolveAccountName(fromAccount) || "—"} → ${resolveAccountName(toAccount) || "—"}`
       : null;
 
   return (

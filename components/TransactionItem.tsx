@@ -21,9 +21,11 @@ const TYPE_PREFIXES = {
 export default function TransactionItem({
   transaction,
   categoryEmoji,
+  accountNames,
 }: {
   transaction: Transaction;
   categoryEmoji?: string;
+  accountNames?: Map<string, string>;
 }) {
   const dateTimeString = formatDate(transaction.date, "dayShortMonthTime");
 
@@ -47,7 +49,7 @@ export default function TransactionItem({
             `${transaction.type.toLowerCase()} Transaction`}
         </p>
         <p className="text-xs text-stone-400 mt-0.5">
-          {getTransactionSubtitle(transaction)}
+          {getTransactionSubtitle(transaction, accountNames)}
         </p>
       </div>
       <div className="text-right">

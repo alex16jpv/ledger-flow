@@ -11,11 +11,13 @@ import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import FilterChips from "@/app/(app)/transactions/components/FilterChips";
 import { getTransactions } from "@/services/transactions.service";
 import { getCategoriesByIds } from "@/services/categories.service";
+import { getAccountsByIds } from "@/services/accounts.service";
 import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function AccountTransactions({ account }: { account: Account }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [accountNames, setAccountNames] = useState<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<TransactionKind | null>(
@@ -31,14 +33,21 @@ export default function AccountTransactions({ account }: { account: Account }) {
       setIsLoading(false);
       return;
     }
-    const txns = transactionResult.data?.data ?? [];
-    setTransactions(txns);
+    const fetchedTransactions = transactionResult.data?.data ?? [];
+    setTransactions(fetchedTransactions);
 
     const uniqueCategoryIds = [...new Set(
-      txns.map((t) => t.categoryId).filter((id): id is string => !!id),
+      fetchedTransactions.map((transaction) => transaction.categoryId).filter((id): id is string => !!id),
     )];
-    const categoryResult = await getCategoriesByIds(uniqueCategoryIds);
+    const uniqueAccountIds = [...new Set(
+      fetchedTransactions.flatMap((transaction) => [transaction.fromAccountId, transaction.toAccountId]).filter((id): id is string => !!id),
+    )];
+    const [categoryResult, accountResult] = await Promise.all([
+      getCategoriesByIds(uniqueCategoryIds),
+      getAccountsByIds(uniqueAccountIds),
+    ]);
     setCategories(categoryResult.data?.data ?? []);
+    setAccountNames(new Map((accountResult.data?.data ?? []).map((account) => [account.id, account.name])));
     setIsLoading(false);
   }, [account.id]);
 
@@ -46,11 +55,11 @@ export default function AccountTransactions({ account }: { account: Account }) {
     fetchData();
   }, [fetchData]);
 
-  const categoryMap = new Map(categories.map((c) => [c.id, c]));
-  const filtered = activeFilter
-    ? transactions.filter((t) => t.type === activeFilter)
+  const categoryMap = new Map(categories.map((category) => [category.id, category]));
+  const filteredTransactions = activeFilter
+    ? transactions.filter((transaction) => transaction.type === activeFilter)
     : transactions;
-  const groups = groupTransactionsByDate(filtered);
+  const groups = groupTransactionsByDate(filteredTransactions);
 
   if (isLoading) {
     return (
@@ -84,25 +93,26 @@ export default function AccountTransactions({ account }: { account: Account }) {
         onFilterChange={setActiveFilter}
       />
 
-      {filtered.length === 0 ? (
+      {filteredTransactions.length === 0 ? (
         <div className="bg-white border border-stone-100 rounded-xl p-8 text-center">
           <p className="text-sm text-stone-400">
             No transactions found for this account
           </p>
         </div>
       ) : (
-        groups.map(([dateKey, txns]) => (
+        groups.map(([dateKey, dateTransactions]) => (
           <div key={dateKey}>
             <p className="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2.5">
-              {getDateGroupLabel(txns[0].date)}
+              {getDateGroupLabel(dateTransactions[0].date)}
             </p>
             <div className="bg-white border border-stone-100 rounded-xl overflow-hidden">
               <ul className="divide-y divide-stone-50" role="list">
-                {txns.map((t) => (
+                {dateTransactions.map((transaction) => (
                   <TransactionItem
-                    key={t.id}
-                    transaction={t}
-                    categoryEmoji={t.categoryId ? categoryMap.get(t.categoryId)?.emoji : undefined}
+                    key={transaction.id}
+                    transaction={transaction}
+                    categoryEmoji={transaction.categoryId ? categoryMap.get(transaction.categoryId)?.emoji : undefined}
+                    accountNames={accountNames}
                   />
                 ))}
               </ul>

@@ -10,15 +10,15 @@ const TYPE_OPTIONS = [
 
 export default function TransactionTypeSelector({
   selectedType,
-  setSelectedType,
+  onTypeChange,
 }: {
   selectedType: TransactionKind;
-  setSelectedType: (type: TransactionKind) => void;
+  onTypeChange: (type: TransactionKind) => void;
 }) {
   const handleTypeChange = (type: TransactionKind) => {
     if (type === selectedType) return;
 
-    setSelectedType(type);
+    onTypeChange(type);
   };
 
   return (

@@ -4,14 +4,17 @@ import { useEffect, useState, useCallback } from "react";
 import TransactionItem from "@/components/TransactionItem";
 import { getTransactions } from "@/services/transactions.service";
 import { getCategoriesByIds } from "@/services/categories.service";
+import { getAccountsByIds } from "@/services/accounts.service";
 import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
+import { Account } from "@/types/Account.types";
 import { RECENT_ITEMS_LIMIT } from "@/utils/constants";
 import Link from "next/link";
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,14 +27,21 @@ export default function Transactions() {
       setIsLoading(false);
       return;
     }
-    const txns = transactionResult.data?.data ?? [];
-    setTransactions(txns);
+    const fetchedTransactions = transactionResult.data?.data ?? [];
+    setTransactions(fetchedTransactions);
 
     const uniqueCategoryIds = [...new Set(
-      txns.map((t) => t.categoryId).filter((id): id is string => !!id),
+      fetchedTransactions.map((transaction) => transaction.categoryId).filter((id): id is string => !!id),
     )];
-    const categoryResult = await getCategoriesByIds(uniqueCategoryIds);
+    const uniqueAccountIds = [...new Set(
+      fetchedTransactions.flatMap((transaction) => [transaction.fromAccountId, transaction.toAccountId]).filter((id): id is string => !!id),
+    )];
+    const [categoryResult, accountResult] = await Promise.all([
+      getCategoriesByIds(uniqueCategoryIds),
+      getAccountsByIds(uniqueAccountIds),
+    ]);
     setCategories(categoryResult.data?.data ?? []);
+    setAccounts(accountResult.data?.data ?? []);
     setIsLoading(false);
   }, []);
 
@@ -39,7 +49,8 @@ export default function Transactions() {
     fetchData();
   }, [fetchData]);
 
-  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+  const categoryMap = new Map(categories.map((category) => [category.id, category]));
+  const accountNameMap = new Map(accounts.map((account) => [account.id, account.name]));
 
   if (isLoading) {
     return (
@@ -93,6 +104,7 @@ export default function Transactions() {
               key={transaction.id}
               transaction={transaction}
               categoryEmoji={transaction.categoryId ? categoryMap.get(transaction.categoryId)?.emoji : undefined}
+              accountNames={accountNameMap}
             />
           ))}
         </ul>

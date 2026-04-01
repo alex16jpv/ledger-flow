@@ -9,11 +9,13 @@ import { getDateGroupLabel } from "@/lib/dates";
 import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import { getTransactions } from "@/services/transactions.service";
 import { getCategory } from "@/services/categories.service";
+import { getAccountsByIds } from "@/services/accounts.service";
 import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function BudgetTransactions({ budget }: { budget: Budget }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [category, setCategory] = useState<Category | null>(null);
+  const [accountNames, setAccountNames] = useState<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,12 +29,17 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
     if (transactionResult.error) {
       setError(transactionResult.error);
     } else {
-      const all = transactionResult.data?.data ?? [];
-      setTransactions(
-        all
-          .filter((t) => t.categoryId === budget.categoryId)
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-      );
+      const allTransactions = transactionResult.data?.data ?? [];
+      const filtered = allTransactions
+        .filter((transaction) => transaction.categoryId === budget.categoryId)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setTransactions(filtered);
+
+      const uniqueAccountIds = [...new Set(
+        filtered.flatMap((transaction) => [transaction.fromAccountId, transaction.toAccountId]).filter((id): id is string => !!id),
+      )];
+      const accountResult = await getAccountsByIds(uniqueAccountIds);
+      setAccountNames(new Map((accountResult.data?.data ?? []).map((account) => [account.id, account.name])));
     }
     setCategory(categoryResult.data ?? null);
     setIsLoading(false);
@@ -89,18 +96,19 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
           </p>
         </div>
       ) : (
-        groups.map(([dateKey, txns]) => (
+        groups.map(([dateKey, dateTransactions]) => (
           <div key={dateKey}>
             <p className="font-mono text-[10px] text-stone-400 uppercase tracking-widest mb-2.5">
-              {getDateGroupLabel(txns[0].date)}
+              {getDateGroupLabel(dateTransactions[0].date)}
             </p>
             <div className="bg-white border border-stone-100 rounded-xl overflow-hidden">
               <ul className="divide-y divide-stone-50" role="list">
-                {txns.map((t) => (
+                {dateTransactions.map((transaction) => (
                   <TransactionItem
-                    key={t.id}
-                    transaction={t}
-                    categoryEmoji={t.categoryId === budget.categoryId ? categoryEmoji : undefined}
+                    key={transaction.id}
+                    transaction={transaction}
+                    categoryEmoji={transaction.categoryId === budget.categoryId ? categoryEmoji : undefined}
+                    accountNames={accountNames}
                   />
                 ))}
               </ul>

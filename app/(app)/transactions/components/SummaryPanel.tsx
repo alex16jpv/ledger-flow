@@ -65,7 +65,7 @@ function TopCategories({
     return totals;
   }, {});
 
-  const sorted = Object.entries(categoryTotals)
+  const topCategoryTotals = Object.entries(categoryTotals)
     .sort(([, totalA], [, totalB]) => totalB - totalA)
     .slice(0, 5);
 
@@ -77,7 +77,7 @@ function TopCategories({
         Top categories
       </p>
       <div className="flex flex-col gap-3">
-        {sorted.map(([catId, total]) => {
+        {topCategoryTotals.map(([catId, total]) => {
           const category = categoryMap.get(catId);
           const emoji = category?.emoji ?? "📦";
           const name = category?.name ?? "Uncategorized";

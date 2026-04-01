@@ -77,14 +77,14 @@ export default function EditTransactionContainer({ id }: { id: string }) {
 
     if (accountResult.data?.data) {
       setAccountOptions(
-        accountResult.data.data.map((a) => ({ value: a.id, label: a.name })),
+        accountResult.data.data.map((account) => ({ value: account.id, label: account.name })),
       );
     }
     if (categoryResult.data?.data) {
       setCategoryOptions(
-        categoryResult.data.data.map((c) => ({
-          value: c.id,
-          label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
+        categoryResult.data.data.map((category) => ({
+          value: category.id,
+          label: category.emoji ? `${category.emoji} ${category.name}` : category.name,
         })),
       );
     }
@@ -95,21 +95,21 @@ export default function EditTransactionContainer({ id }: { id: string }) {
       return;
     }
 
-    const tx = transactionResult.data;
-    const txDate = tx.date ? formatDate(tx.date, "iso") : getCurrentDateTime().date;
-    const txTime = tx.date ? formatTime(tx.date) : getCurrentDateTime().time;
+    const existingTransaction = transactionResult.data;
+    const txDate = existingTransaction.date ? formatDate(existingTransaction.date, "iso") : getCurrentDateTime().date;
+    const txTime = existingTransaction.date ? formatTime(existingTransaction.date) : getCurrentDateTime().time;
 
     reset({
-      type: tx.type,
-      amount: tx.amount,
-      description: tx.description ?? "",
+      type: existingTransaction.type,
+      amount: existingTransaction.amount,
+      description: existingTransaction.description ?? "",
       date: txDate,
       time: txTime,
-      categoryId: tx.categoryId ?? "",
-      fromAccountId: tx.fromAccountId ?? "",
-      toAccountId: tx.toAccountId ?? "",
-      tags: tx.tags ?? "",
-      note: tx.note ?? "",
+      categoryId: existingTransaction.categoryId ?? "",
+      fromAccountId: existingTransaction.fromAccountId ?? "",
+      toAccountId: existingTransaction.toAccountId ?? "",
+      tags: existingTransaction.tags ?? "",
+      note: existingTransaction.note ?? "",
       payer: "",
     });
 
@@ -177,7 +177,7 @@ export default function EditTransactionContainer({ id }: { id: string }) {
         <section className="bg-white border border-stone-100 rounded-xl p-6">
           <TransactionTypeSelector
             selectedType={selectedType}
-            setSelectedType={setSelectedType}
+            onTypeChange={setSelectedType}
           />
           <AmountInput control={control} error={errors.amount?.message} />
         </section>
