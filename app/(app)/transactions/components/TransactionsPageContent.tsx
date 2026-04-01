@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getTransactions } from "@/services/transactions.service";
-import { getCategories } from "@/services/categories.service";
+import { getCategoriesByIds } from "@/services/categories.service";
 import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
 import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
@@ -18,15 +18,19 @@ export default function TransactionsPageContent() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const [transactionResult, categoryResult] = await Promise.all([
-      getTransactions({ limit: DEFAULT_LIST_LIMIT }),
-      getCategories({ limit: DEFAULT_LIST_LIMIT }),
-    ]);
+    const transactionResult = await getTransactions({ limit: DEFAULT_LIST_LIMIT });
     if (transactionResult.error) {
       setError(transactionResult.error);
-    } else {
-      setTransactions(transactionResult.data?.data ?? []);
+      setIsLoading(false);
+      return;
     }
+    const txns = transactionResult.data?.data ?? [];
+    setTransactions(txns);
+
+    const uniqueCategoryIds = [...new Set(
+      txns.map((t) => t.categoryId).filter((id): id is string => !!id),
+    )];
+    const categoryResult = await getCategoriesByIds(uniqueCategoryIds);
     setCategories(categoryResult.data?.data ?? []);
     setIsLoading(false);
   }, []);

@@ -13,6 +13,19 @@ export async function getCategories(
   return res.json();
 }
 
+export async function getCategoriesByIds(
+  ids: string[],
+): Promise<ProxyResponse<PaginatedResult<Category>>> {
+  if (ids.length === 0) {
+    return {
+      data: { data: [], pagination: { limit: 0, offset: 0, total: 0, hasMore: false, nextCursor: null } },
+      status: 200,
+      error: null,
+    };
+  }
+  return getCategories({ ids: ids.join(",") });
+}
+
 export async function getCategory(
   id: string,
 ): Promise<ProxyResponse<Category>> {

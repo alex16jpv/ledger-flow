@@ -10,7 +10,7 @@ import { getDateGroupLabel } from "@/lib/dates";
 import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import FilterChips from "@/app/(app)/transactions/components/FilterChips";
 import { getTransactions } from "@/services/transactions.service";
-import { getCategories } from "@/services/categories.service";
+import { getCategoriesByIds } from "@/services/categories.service";
 import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function AccountTransactions({ account }: { account: Account }) {
@@ -25,15 +25,19 @@ export default function AccountTransactions({ account }: { account: Account }) {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const [transactionResult, categoryResult] = await Promise.all([
-      getTransactions({ accountId: account.id, limit: DEFAULT_LIST_LIMIT }),
-      getCategories({ limit: DEFAULT_LIST_LIMIT }),
-    ]);
+    const transactionResult = await getTransactions({ accountId: account.id, limit: DEFAULT_LIST_LIMIT });
     if (transactionResult.error) {
       setError(transactionResult.error);
-    } else {
-      setTransactions(transactionResult.data?.data ?? []);
+      setIsLoading(false);
+      return;
     }
+    const txns = transactionResult.data?.data ?? [];
+    setTransactions(txns);
+
+    const uniqueCategoryIds = [...new Set(
+      txns.map((t) => t.categoryId).filter((id): id is string => !!id),
+    )];
+    const categoryResult = await getCategoriesByIds(uniqueCategoryIds);
     setCategories(categoryResult.data?.data ?? []);
     setIsLoading(false);
   }, [account.id]);

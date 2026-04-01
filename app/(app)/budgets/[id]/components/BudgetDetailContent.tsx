@@ -3,41 +3,40 @@
 import { useEffect, useState, useCallback } from "react";
 import { notFound } from "next/navigation";
 import { MOCK_BUDGETS } from "@/lib/mock/budgets.mock";
-import { getCategories } from "@/services/categories.service";
+import { getCategory } from "@/services/categories.service";
 import { Category } from "@/types/Category.types";
-import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import BudgetHero from "./BudgetHero";
 import BudgetInfo from "./BudgetInfo";
 import BudgetTransactions from "./BudgetTransactions";
 
 export default function BudgetDetailContent({ id }: { id: string }) {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [category, setCategory] = useState<Category | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const budget = MOCK_BUDGETS.find((b) => b.id === id);
 
-  const fetchCategories = useCallback(async () => {
+  const fetchCategory = useCallback(async () => {
+    if (!budget) return;
     setIsLoading(true);
     setError(null);
-    const result = await getCategories({ limit: DEFAULT_LIST_LIMIT });
+    const result = await getCategory(budget.categoryId);
     if (result.error) {
       setError(result.error);
     } else {
-      setCategories(result.data?.data ?? []);
+      setCategory(result.data ?? null);
     }
     setIsLoading(false);
-  }, []);
+  }, [budget]);
 
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    fetchCategory();
+  }, [fetchCategory]);
 
   if (!budget) {
     notFound();
   }
 
-  const category = categories.find((c) => c.id === budget.categoryId);
   const categoryEmoji = category?.emoji;
   const categoryName = category?.name;
 
@@ -65,7 +64,7 @@ export default function BudgetDetailContent({ id }: { id: string }) {
       <div className="bg-red-50 border border-red-100 rounded-xl p-8 text-center">
         <p className="text-sm text-red-600 mb-3">{error}</p>
         <button
-          onClick={fetchCategories}
+          onClick={fetchCategory}
           className="text-sm text-red-600 underline hover:text-red-800"
         >
           Try again

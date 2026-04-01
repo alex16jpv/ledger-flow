@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback } from "react";
 import TransactionItem from "@/components/TransactionItem";
 import { getTransactions } from "@/services/transactions.service";
-import { getCategories } from "@/services/categories.service";
+import { getCategoriesByIds } from "@/services/categories.service";
 import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
-import { DEFAULT_LIST_LIMIT, RECENT_ITEMS_LIMIT } from "@/utils/constants";
+import { RECENT_ITEMS_LIMIT } from "@/utils/constants";
 import Link from "next/link";
 
 export default function Transactions() {
@@ -18,15 +18,19 @@ export default function Transactions() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const [transactionResult, categoryResult] = await Promise.all([
-      getTransactions({ limit: RECENT_ITEMS_LIMIT }),
-      getCategories({ limit: DEFAULT_LIST_LIMIT }),
-    ]);
+    const transactionResult = await getTransactions({ limit: RECENT_ITEMS_LIMIT });
     if (transactionResult.error) {
       setError(transactionResult.error);
-    } else {
-      setTransactions(transactionResult.data?.data ?? []);
+      setIsLoading(false);
+      return;
     }
+    const txns = transactionResult.data?.data ?? [];
+    setTransactions(txns);
+
+    const uniqueCategoryIds = [...new Set(
+      txns.map((t) => t.categoryId).filter((id): id is string => !!id),
+    )];
+    const categoryResult = await getCategoriesByIds(uniqueCategoryIds);
     setCategories(categoryResult.data?.data ?? []);
     setIsLoading(false);
   }, []);

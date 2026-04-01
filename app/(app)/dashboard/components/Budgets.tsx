@@ -4,9 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import BudgetItem from "./BudgetItem";
 import { MOCK_BUDGETS } from "@/lib/mock/budgets.mock";
-import { getCategories } from "@/services/categories.service";
+import { getCategoriesByIds } from "@/services/categories.service";
 import { Category } from "@/types/Category.types";
-import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function Budgets() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -16,7 +15,8 @@ export default function Budgets() {
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const result = await getCategories({ limit: DEFAULT_LIST_LIMIT });
+    const ids = [...new Set(MOCK_BUDGETS.map((b) => b.categoryId))];
+    const result = await getCategoriesByIds(ids);
     if (result.error) {
       setError(result.error);
     } else {

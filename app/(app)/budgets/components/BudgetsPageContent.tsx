@@ -2,9 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { MOCK_BUDGETS } from "@/lib/mock/budgets.mock";
-import { getCategories } from "@/services/categories.service";
+import { getCategoriesByIds } from "@/services/categories.service";
 import { Category } from "@/types/Category.types";
-import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import BudgetSummary from "./BudgetSummary";
 import BudgetCard from "./BudgetCard";
 import BudgetAlerts from "./BudgetAlerts";
@@ -17,7 +16,8 @@ export default function BudgetsPageContent() {
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const result = await getCategories({ limit: DEFAULT_LIST_LIMIT });
+    const ids = [...new Set(MOCK_BUDGETS.map((b) => b.categoryId))];
+    const result = await getCategoriesByIds(ids);
     if (result.error) {
       setError(result.error);
     } else {

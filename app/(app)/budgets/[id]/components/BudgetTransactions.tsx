@@ -8,12 +8,12 @@ import TransactionItem from "@/components/TransactionItem";
 import { getDateGroupLabel } from "@/lib/dates";
 import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import { getTransactions } from "@/services/transactions.service";
-import { getCategories } from "@/services/categories.service";
+import { getCategory } from "@/services/categories.service";
 import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function BudgetTransactions({ budget }: { budget: Budget }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [category, setCategory] = useState<Category | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +22,7 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
     setError(null);
     const [transactionResult, categoryResult] = await Promise.all([
       getTransactions({ type: "EXPENSE", limit: DEFAULT_LIST_LIMIT }),
-      getCategories({ limit: DEFAULT_LIST_LIMIT }),
+      getCategory(budget.categoryId),
     ]);
     if (transactionResult.error) {
       setError(transactionResult.error);
@@ -34,7 +34,7 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
       );
     }
-    setCategories(categoryResult.data?.data ?? []);
+    setCategory(categoryResult.data ?? null);
     setIsLoading(false);
   }, [budget.categoryId]);
 
@@ -42,7 +42,7 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
     fetchData();
   }, [fetchData]);
 
-  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+  const categoryEmoji = category?.emoji;
   const groups = groupTransactionsByDate(transactions);
 
   if (isLoading) {
@@ -100,7 +100,7 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
                   <TransactionItem
                     key={t.id}
                     transaction={t}
-                    categoryEmoji={t.categoryId ? categoryMap.get(t.categoryId)?.emoji : undefined}
+                    categoryEmoji={t.categoryId === budget.categoryId ? categoryEmoji : undefined}
                   />
                 ))}
               </ul>

@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const params: Record<string, string> = {};
 
-  for (const key of ["limit", "offset", "cursor"]) {
+  for (const key of ["limit", "offset", "cursor", "ids"]) {
     const value = searchParams.get(key);
     if (value) params[key] = value;
   }
