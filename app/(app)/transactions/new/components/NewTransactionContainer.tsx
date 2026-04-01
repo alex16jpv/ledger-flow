@@ -74,6 +74,7 @@ export default function NewTransactionContainer() {
     register,
     handleSubmit,
     setValue,
+    getValues,
     watch,
     clearErrors,
     control,
@@ -95,6 +96,13 @@ export default function NewTransactionContainer() {
     setValue("toAccountId", "");
     setValue("payer", "");
     clearErrors();
+  };
+
+  const onSwapAccounts = () => {
+    const from = getValues("fromAccountId");
+    const to = getValues("toAccountId");
+    setValue("fromAccountId", to);
+    setValue("toAccountId", from);
   };
 
   const onSubmit = async (data: TransactionFormFields) => {
@@ -138,6 +146,7 @@ export default function NewTransactionContainer() {
           errors={errors}
           accountOptions={accountOptions}
           categoryOptions={categoryOptions}
+          onSwapAccounts={onSwapAccounts}
         />
 
         <div className="lg:hidden">

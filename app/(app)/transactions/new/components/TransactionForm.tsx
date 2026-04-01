@@ -14,12 +14,14 @@ export default function TransactionForm({
   errors,
   accountOptions = [],
   categoryOptions = [],
+  onSwapAccounts,
 }: {
   selectedType: TransactionKind;
   register: UseFormRegister<TransactionFormFields>;
   errors: FieldErrors<TransactionFormFields>;
   accountOptions?: { value: string; label: string }[];
   categoryOptions?: { value: string; label: string }[];
+  onSwapAccounts?: () => void;
 }) {
   const isTransfer = selectedType === TRANSACTION_TYPES.TRANSFER;
   const isIncome = selectedType === TRANSACTION_TYPES.INCOME;
@@ -74,9 +76,14 @@ export default function TransactionForm({
         {isTransfer && (
           <div className="flex items-center gap-4">
             <div className="flex-1 h-px bg-stone-100"></div>
-            <div className="transfer-arrow" aria-label="Transfer direction">
+            <button
+              type="button"
+              className="transfer-arrow cursor-pointer hover:text-blue-600 transition-colors"
+              aria-label="Swap transfer direction"
+              onClick={onSwapAccounts}
+            >
               ⇄
-            </div>
+            </button>
             <div className="flex-1 h-px bg-stone-100"></div>
           </div>
         )}
