@@ -9,6 +9,7 @@ type CacheDomain = "accounts" | "categories" | "transactions";
 
 const STORAGE_PREFIX = "lf_cache_";
 const DISABLED_KEY = "lf_cache_disabled";
+const USER_ID_KEY = "lf_cache_user_id";
 
 function domainPrefix(domain: CacheDomain): string {
   return `${STORAGE_PREFIX}${domain}:`;
@@ -92,6 +93,22 @@ export function clearAllCache(): void {
   clearDomainCache("accounts");
   clearDomainCache("categories");
   clearDomainCache("transactions");
+}
+
+export function handleUserChange(userId: string | null): void {
+  if (!isStorageAvailable()) return;
+
+  if (!userId) {
+    localStorage.removeItem(USER_ID_KEY);
+    clearAllCache();
+    return;
+  }
+
+  const previousUserId = localStorage.getItem(USER_ID_KEY);
+  if (previousUserId && previousUserId !== userId) {
+    clearAllCache();
+  }
+  localStorage.setItem(USER_ID_KEY, userId);
 }
 
 export function requestSignature(endpoint: string, params?: Record<string, string>): string {

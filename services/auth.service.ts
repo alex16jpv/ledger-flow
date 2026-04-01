@@ -4,6 +4,7 @@ import type {
   RegisterPayload,
   User,
 } from "@/types/Auth.types";
+import { handleUserChange } from "@/lib/cache";
 
 export async function login(
   credentials: LoginCredentials,
@@ -14,7 +15,9 @@ export async function login(
     body: JSON.stringify(credentials),
   });
 
-  return res.json();
+  const result: ProxyResponse<User> = await res.json();
+  if (result.data) handleUserChange(result.data.id);
+  return result;
 }
 
 export async function register(
@@ -34,5 +37,6 @@ export async function logout(): Promise<ProxyResponse<null>> {
     method: "POST",
   });
 
+  handleUserChange(null);
   return res.json();
 }
