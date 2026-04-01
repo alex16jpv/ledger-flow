@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 const DEFAULT_PORT = process.env.PORT ?? "3001";
 
 const ALLOWED_ORIGINS = [
-  process.env.NEXT_PUBLIC_APP_URL,
+  ...(process.env.NEXT_PUBLIC_APP_URL?.split(",").map((o) => o.trim()) ?? []),
   `http://localhost:${DEFAULT_PORT}`,
-].filter(Boolean);
+];
 
 export function validateOrigin(req: Request): NextResponse | null {
   const origin = req.headers.get("origin");
