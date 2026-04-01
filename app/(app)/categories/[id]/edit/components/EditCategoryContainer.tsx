@@ -5,13 +5,21 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import InputText from "@/components/forms/InputText";
+import InputSelect from "@/components/forms/InputSelect";
+import EmojiPicker from "@/components/forms/EmojiPicker";
+import CategoryColorPicker from "@/components/forms/CategoryColorPicker";
 import {
   updateCategorySchema,
   UpdateCategoryFormFields,
-  type CategoryEmoji,
 } from "@/lib/schemas/category.schema";
+import { type CategoryColor } from "@/utils/constants";
 import { getCategory, updateCategory } from "@/services/categories.service";
-import CategoryEmojiPicker from "../../../new/components/CategoryEmojiPicker";
+
+const TYPE_OPTIONS = [
+  { value: "EXPENSE", label: "Expense" },
+  { value: "INCOME", label: "Income" },
+  { value: "TRANSFER", label: "Transfer" },
+];
 
 export default function EditCategoryContainer({ id }: { id: string }) {
   const router = useRouter();
@@ -31,11 +39,14 @@ export default function EditCategoryContainer({ id }: { id: string }) {
   });
 
   const selectedEmoji = watch("emoji") ?? "";
+  const selectedColor = watch("color") ?? "";
 
-  const onEmojiChange = (emoji: CategoryEmoji) => {
-    setValue("emoji", emoji, {
-      shouldValidate: true,
-    });
+  const onEmojiChange = (emoji: string) => {
+    setValue("emoji", emoji, { shouldValidate: true });
+  };
+
+  const onColorChange = (color: CategoryColor) => {
+    setValue("color", color, { shouldValidate: true });
   };
 
   const fetchCategory = useCallback(async () => {
@@ -47,7 +58,9 @@ export default function EditCategoryContainer({ id }: { id: string }) {
     } else {
       reset({
         name: result.data.name,
-        emoji: result.data.emoji as CategoryEmoji,
+        emoji: result.data.emoji,
+        color: result.data.color,
+        type: result.data.type,
       });
     }
     setIsLoading(false);
@@ -113,19 +126,33 @@ export default function EditCategoryContainer({ id }: { id: string }) {
           registration={register("name")}
           error={errors.name?.message}
         />
+
+        <InputSelect
+          id="type"
+          label="Type"
+          options={TYPE_OPTIONS}
+          firstOption="Select type…"
+          registration={register("type")}
+          error={errors.type?.message}
+        />
       </section>
 
-      <section className="bg-white border border-stone-100 rounded-xl p-6">
-        <h2 className="text-sm font-medium text-stone-700 mb-4">
-          Category Icon
+      <section className="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-5">
+        <h2 className="text-sm font-medium text-stone-700 mb-1">
+          Appearance
         </h2>
-        <CategoryEmojiPicker
+
+        <EmojiPicker
           selectedEmoji={selectedEmoji}
           onEmojiChange={onEmojiChange}
+          error={errors.emoji?.message}
         />
-        {errors.emoji?.message && (
-          <p className="text-red-500 text-xs mt-2">{errors.emoji.message}</p>
-        )}
+
+        <CategoryColorPicker
+          selectedColor={selectedColor}
+          onColorChange={onColorChange}
+          error={errors.color?.message}
+        />
       </section>
 
       <button

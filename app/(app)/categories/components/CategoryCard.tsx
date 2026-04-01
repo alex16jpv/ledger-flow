@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Category } from "@/types/Category.types";
+import { CATEGORY_COLOR_STYLES } from "@/utils/constants";
 
 export default function CategoryCard({
   category,
@@ -8,9 +9,13 @@ export default function CategoryCard({
   category: Category;
   onDelete: (id: string) => void;
 }) {
+  const color = category.color && category.color in CATEGORY_COLOR_STYLES
+    ? CATEGORY_COLOR_STYLES[category.color]
+    : CATEGORY_COLOR_STYLES.GRAY;
+
   return (
     <div className="bg-white border border-stone-100 rounded-xl p-5 flex items-center gap-4 hover:border-stone-200 transition-colors">
-      <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-lg shrink-0">
+      <div className={`w-10 h-10 rounded-xl ${color.bg} flex items-center justify-center text-lg shrink-0`}>
         {category.emoji ?? "📦"}
       </div>
 

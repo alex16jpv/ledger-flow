@@ -7,8 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createCategorySchema,
   CreateCategoryFormFields,
-  type CategoryEmoji,
 } from "@/lib/schemas/category.schema";
+import { type CategoryColor } from "@/utils/constants";
 import { createCategory } from "@/services/categories.service";
 import CategoryForm from "./CategoryForm";
 
@@ -24,15 +24,18 @@ export default function NewCategoryContainer() {
     formState: { errors, isSubmitting },
   } = useForm<CreateCategoryFormFields>({
     resolver: zodResolver(createCategorySchema),
-    defaultValues: { name: "", emoji: undefined },
+    defaultValues: { name: "", emoji: undefined, color: undefined, type: undefined as unknown as string },
   });
 
   const selectedEmoji = watch("emoji") ?? "";
+  const selectedColor = watch("color") ?? "";
 
-  const onEmojiChange = (emoji: CategoryEmoji) => {
-    setValue("emoji", emoji, {
-      shouldValidate: true,
-    });
+  const onEmojiChange = (emoji: string) => {
+    setValue("emoji", emoji, { shouldValidate: true });
+  };
+
+  const onColorChange = (color: CategoryColor) => {
+    setValue("color", color, { shouldValidate: true });
   };
 
   const onSubmit = async (data: CreateCategoryFormFields) => {
@@ -61,6 +64,8 @@ export default function NewCategoryContainer() {
         errors={errors}
         selectedEmoji={selectedEmoji}
         onEmojiChange={onEmojiChange}
+        selectedColor={selectedColor}
+        onColorChange={onColorChange}
       />
 
       <button

@@ -17,28 +17,26 @@ import { getCurrentDateTime, parseDateTimeFields } from "@/lib/dates";
 import { getAccounts } from "@/services/accounts.service";
 import { getCategories } from "@/services/categories.service";
 import { createTransaction } from "@/services/transactions.service";
+import { Category } from "@/types/Category.types";
 
 // Cast needed: transactionSchema is a discriminated union, but the form uses a flat type
 // with all variant-specific fields optional.
 const transactionResolver = zodResolver(transactionSchema) as Resolver<TransactionFormFields>;
 
-function getDefaultValues(): Partial<TransactionFormFields> & {
+const DEFAULT_VALUES: Partial<TransactionFormFields> & {
   type: TransactionFormFields["type"];
-} {
-  const { date, time } = getCurrentDateTime();
-  return {
-    type: TRANSACTION_TYPES.EXPENSE,
-    description: "",
-    date,
-    time,
-    categoryId: "",
-    fromAccountId: "",
-    toAccountId: "",
-    payer: "",
-    tags: "",
-    note: "",
-  };
-}
+} = {
+  type: TRANSACTION_TYPES.EXPENSE,
+  description: "",
+  date: "",
+  time: "",
+  categoryId: "",
+  fromAccountId: "",
+  toAccountId: "",
+  payer: "",
+  tags: "",
+  note: "",
+};
 
 export default function NewTransactionContainer() {
   const router = useRouter();
@@ -46,29 +44,7 @@ export default function NewTransactionContainer() {
   const [accountOptions, setAccountOptions] = useState<
     { value: string; label: string }[]
   >([]);
-  const [categoryOptions, setCategoryOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
-
-  useEffect(() => {
-    getAccounts().then((result) => {
-      if (result.data?.data) {
-        setAccountOptions(
-          result.data.data.map((account) => ({ value: account.id, label: account.name })),
-        );
-      }
-    });
-    getCategories().then((result) => {
-      if (result.data?.data) {
-        setCategoryOptions(
-          result.data.data.map((category) => ({
-            value: category.id,
-            label: category.emoji ? `${category.emoji} ${category.name}` : category.name,
-          })),
-        );
-      }
-    });
-  }, []);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const {
     register,
@@ -81,10 +57,42 @@ export default function NewTransactionContainer() {
     formState: { errors, isSubmitting },
   } = useForm<TransactionFormFields>({
     resolver: transactionResolver,
-    defaultValues: getDefaultValues(),
+    defaultValues: DEFAULT_VALUES,
   });
 
   const selectedType = watch("type");
+  const selectedCategoryId = watch("categoryId");
+
+  // Set date/time on mount (client-only) to avoid hydration mismatch
+  useEffect(() => {
+    const { date, time } = getCurrentDateTime();
+    setValue("date", date);
+    setValue("time", time);
+  }, [setValue]);
+
+  useEffect(() => {
+    getAccounts().then((result) => {
+      if (result.data?.data) {
+        setAccountOptions(
+          result.data.data.map((account) => ({ value: account.id, label: account.name })),
+        );
+      }
+    });
+  }, []);
+
+  // Re-fetch categories filtered by transaction type
+  useEffect(() => {
+    if (!selectedType) return;
+    getCategories({ type: selectedType }).then((result) => {
+      if (result.data?.data) {
+        setCategories(result.data.data);
+      }
+    });
+  }, [selectedType]);
+
+  const onCategoryChange = (id: string) => {
+    setValue("categoryId", id, { shouldValidate: true });
+  };
 
   const setSelectedType = (type: TransactionKind) => {
     const { date, time } = getCurrentDateTime();
@@ -145,7 +153,9 @@ export default function NewTransactionContainer() {
           register={register}
           errors={errors}
           accountOptions={accountOptions}
-          categoryOptions={categoryOptions}
+          categories={categories}
+          selectedCategoryId={selectedCategoryId}
+          onCategoryChange={onCategoryChange}
           onSwapAccounts={onSwapAccounts}
         />
 

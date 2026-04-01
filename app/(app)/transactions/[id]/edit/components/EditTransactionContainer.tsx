@@ -21,6 +21,7 @@ import {
   getTransaction,
   updateTransaction,
 } from "@/services/transactions.service";
+import { Category } from "@/types/Category.types";
 
 // Cast needed: transactionSchema is a discriminated union, but the form uses a flat type
 // with all variant-specific fields optional.
@@ -34,9 +35,7 @@ export default function EditTransactionContainer({ id }: { id: string }) {
   const [accountOptions, setAccountOptions] = useState<
     { value: string; label: string }[]
   >([]);
-  const [categoryOptions, setCategoryOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const {
     register,
@@ -52,6 +51,11 @@ export default function EditTransactionContainer({ id }: { id: string }) {
   });
 
   const selectedType = watch("type");
+  const selectedCategoryId = watch("categoryId");
+
+  const onCategoryChange = (id: string) => {
+    setValue("categoryId", id, { shouldValidate: true });
+  };
 
   const setSelectedType = (type: TransactionKind) => {
     const { date, time } = getCurrentDateTime();
@@ -69,10 +73,9 @@ export default function EditTransactionContainer({ id }: { id: string }) {
     setIsLoading(true);
     setFetchError(null);
 
-    const [transactionResult, accountResult, categoryResult] = await Promise.all([
+    const [transactionResult, accountResult] = await Promise.all([
       getTransaction(id),
       getAccounts(),
-      getCategories({ limit: DEFAULT_LIST_LIMIT }),
     ]);
 
     if (accountResult.data?.data) {
@@ -80,14 +83,7 @@ export default function EditTransactionContainer({ id }: { id: string }) {
         accountResult.data.data.map((account) => ({ value: account.id, label: account.name })),
       );
     }
-    if (categoryResult.data?.data) {
-      setCategoryOptions(
-        categoryResult.data.data.map((category) => ({
-          value: category.id,
-          label: category.emoji ? `${category.emoji} ${category.name}` : category.name,
-        })),
-      );
-    }
+    // Categories will be fetched reactively by the selectedType effect below
 
     if (transactionResult.error || !transactionResult.data) {
       setFetchError(transactionResult.error ?? "Transaction not found");
@@ -119,6 +115,16 @@ export default function EditTransactionContainer({ id }: { id: string }) {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Re-fetch categories filtered by transaction type
+  useEffect(() => {
+    if (!selectedType) return;
+    getCategories({ type: selectedType, limit: DEFAULT_LIST_LIMIT }).then((result) => {
+      if (result.data?.data) {
+        setCategories(result.data.data);
+      }
+    });
+  }, [selectedType]);
 
   const onSubmit = async (data: TransactionFormFields) => {
     setServerError(null);
@@ -187,7 +193,9 @@ export default function EditTransactionContainer({ id }: { id: string }) {
           register={register}
           errors={errors}
           accountOptions={accountOptions}
-          categoryOptions={categoryOptions}
+          categories={categories}
+          selectedCategoryId={selectedCategoryId}
+          onCategoryChange={onCategoryChange}
         />
 
         <div className="lg:hidden">

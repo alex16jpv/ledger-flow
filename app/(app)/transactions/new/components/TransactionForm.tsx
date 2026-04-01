@@ -3,7 +3,9 @@ import InputSelect from "@/components/forms/InputSelect";
 import InputText from "@/components/forms/InputText";
 import InputTextArea from "@/components/forms/InputTextArea";
 import InputTime from "@/components/forms/InputTime";
+import CategoryPicker from "@/components/forms/CategoryPicker";
 import { TransactionKind } from "@/types/Transaction.types";
+import { Category } from "@/types/Category.types";
 import { TRANSACTION_TYPES } from "@/utils/constants";
 import { UseFormRegister, FieldErrors } from "react-hook-form";
 import { TransactionFormFields } from "@/lib/schemas/transaction.schema";
@@ -13,14 +15,18 @@ export default function TransactionForm({
   register,
   errors,
   accountOptions = [],
-  categoryOptions = [],
+  categories = [],
+  selectedCategoryId,
+  onCategoryChange,
   onSwapAccounts,
 }: {
   selectedType: TransactionKind;
   register: UseFormRegister<TransactionFormFields>;
   errors: FieldErrors<TransactionFormFields>;
   accountOptions?: { value: string; label: string }[];
-  categoryOptions?: { value: string; label: string }[];
+  categories?: Category[];
+  selectedCategoryId?: string;
+  onCategoryChange?: (id: string) => void;
   onSwapAccounts?: () => void;
 }) {
   const isTransfer = selectedType === TRANSACTION_TYPES.TRANSFER;
@@ -112,18 +118,17 @@ export default function TransactionForm({
       </section>
 
       {/* Category */}
-      {isExpense && (
+      {/* {isExpense && ( */}
         <section className="bg-white border border-stone-100 rounded-xl p-6">
-          <InputSelect
-            id="category"
-            label="Category"
-            options={categoryOptions}
-            firstOption="Select category…"
-            registration={register("categoryId")}
+          <input type="hidden" {...register("categoryId")} />
+          <CategoryPicker
+            categories={categories}
+            selectedId={selectedCategoryId}
+            onChange={onCategoryChange ?? (() => {})}
             error={errors.categoryId?.message}
           />
         </section>
-      )}
+      {/* )} */}
 
       {/* Tags + note */}
       <section className="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-4">
