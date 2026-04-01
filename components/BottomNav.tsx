@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BOTTOM_NAV_ITEMS, getActiveHref } from "@/utils/navigation";
+import CacheMenu from "@/components/CacheMenu";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -36,6 +37,9 @@ export default function BottomNav() {
               </li>
             );
           })}
+          {/* <li>
+            <CacheMenu direction="up" />
+          </li> */}
         </ul>
       </nav>
       <div className="lg:hidden h-16"></div>

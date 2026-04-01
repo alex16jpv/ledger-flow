@@ -4,13 +4,22 @@ import type {
   CreateCategoryFormFields,
   UpdateCategoryFormFields,
 } from "@/lib/schemas/category.schema";
+import { getCached, setCache, clearDomainCache, requestSignature } from "@/lib/cache";
+
+const DOMAIN = "categories" as const;
 
 export async function getCategories(
   params?: Record<string, string>,
 ): Promise<ProxyResponse<PaginatedResult<Category>>> {
+  const sig = requestSignature("/api/categories", params);
+  const cached = getCached<ProxyResponse<PaginatedResult<Category>>>(DOMAIN, sig);
+  if (cached) return cached;
+
   const query = params ? `?${new URLSearchParams(params)}` : "";
   const res = await fetch(`/api/categories${query}`);
-  return res.json();
+  const data: ProxyResponse<PaginatedResult<Category>> = await res.json();
+  if (!data.error) setCache(DOMAIN, sig, data);
+  return data;
 }
 
 export async function getCategoriesByIds(
@@ -29,8 +38,14 @@ export async function getCategoriesByIds(
 export async function getCategory(
   id: string,
 ): Promise<ProxyResponse<Category>> {
+  const sig = requestSignature(`/api/categories/${id}`);
+  const cached = getCached<ProxyResponse<Category>>(DOMAIN, sig);
+  if (cached) return cached;
+
   const res = await fetch(`/api/categories/${id}`);
-  return res.json();
+  const data: ProxyResponse<Category> = await res.json();
+  if (!data.error) setCache(DOMAIN, sig, data);
+  return data;
 }
 
 export async function createCategory(
@@ -41,7 +56,9 @@ export async function createCategory(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return res.json();
+  const data: ProxyResponse<Category> = await res.json();
+  if (!data.error) clearDomainCache(DOMAIN);
+  return data;
 }
 
 export async function updateCategory(
@@ -53,7 +70,9 @@ export async function updateCategory(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return res.json();
+  const data: ProxyResponse<Category> = await res.json();
+  if (!data.error) clearDomainCache(DOMAIN);
+  return data;
 }
 
 export async function deleteCategory(
@@ -62,5 +81,7 @@ export async function deleteCategory(
   const res = await fetch(`/api/categories/${id}`, {
     method: "DELETE",
   });
-  return res.json();
+  const data: ProxyResponse<null> = await res.json();
+  if (!data.error) clearDomainCache(DOMAIN);
+  return data;
 }

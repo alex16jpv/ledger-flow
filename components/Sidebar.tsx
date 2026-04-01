@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { NAV_ITEMS, getActiveHref } from "@/utils/navigation";
 import { logout } from "@/services/auth.service";
+import CacheMenu from "@/components/CacheMenu";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -66,7 +67,8 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="px-3 py-4 border-t border-stone-100">
+      <div className="px-3 py-4 border-t border-stone-100 flex flex-col gap-1">
+        <CacheMenu direction="up" />
         <button
           onClick={handleLogout}
           disabled={isLoggingOut}
