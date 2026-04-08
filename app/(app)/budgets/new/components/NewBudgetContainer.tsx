@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { budgetSchema, BudgetFormFields } from "@/lib/schemas/budget.schema";
 import { BudgetColor } from "@/types/Budget.type";
-import type { Category } from "@/types/Category.types";
+import { Category } from "@/types/Category.types";
+import { getCategories } from "@/services/categories.service";
 import BudgetForm from "./BudgetForm";
 import BudgetPreview, { SaveButton } from "./BudgetPreview";
-import { getCategories } from "@/services/categories.service";
 
 const DEFAULT_VALUES: BudgetFormFields = {
   name: "",
@@ -20,23 +20,20 @@ const DEFAULT_VALUES: BudgetFormFields = {
 
 export default function NewBudgetContainer() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryOptions, setCategoryOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
 
   useEffect(() => {
-    getCategories().then((result) => {
-      if (result.data?.data) {
-        setCategories(result.data.data);
-        setCategoryOptions(
-          result.data.data.map((c) => ({
-            value: c.id,
-            label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
-          })),
-        );
-      }
+    getCategories({ limit: "100" }).then((res) => {
+      setCategories(res.data?.data ?? []);
     });
   }, []);
+
+  const categoryOptions = useMemo(
+    () => categories.map((c) => ({
+      value: c.id,
+      label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
+    })),
+    [categories],
+  );
 
   const {
     register,

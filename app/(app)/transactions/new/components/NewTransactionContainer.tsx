@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,9 +14,9 @@ import {
 } from "@/lib/schemas/transaction.schema";
 import { TransactionKind } from "@/types/Transaction.types";
 import { getCurrentDateTime, parseDateTimeFields } from "@/lib/dates";
-import { getAccounts } from "@/services/accounts.service";
-import { getCategories } from "@/services/categories.service";
 import { createTransaction } from "@/services/transactions.service";
+import { getCategories } from "@/services/categories.service";
+import { getAccounts } from "@/services/accounts.service";
 import { Category } from "@/types/Category.types";
 
 // Cast needed: transactionSchema is a discriminated union, but the form uses a flat type
@@ -41,10 +41,10 @@ const DEFAULT_VALUES: Partial<TransactionFormFields> & {
 export default function NewTransactionContainer() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [accountOptions, setAccountOptions] = useState<
     { value: string; label: string }[]
   >([]);
-  const [categories, setCategories] = useState<Category[]>([]);
 
   const {
     register,
@@ -70,25 +70,23 @@ export default function NewTransactionContainer() {
     setValue("time", time);
   }, [setValue]);
 
+  // Fetch all categories and accounts once (localStorage cache prevents redundant requests)
   useEffect(() => {
-    getAccounts().then((result) => {
-      if (result.data?.data) {
-        setAccountOptions(
-          result.data.data.map((account) => ({ value: account.id, label: account.name })),
-        );
+    getCategories({ limit: "100" }).then((res) => {
+      if (res.data?.data) setAllCategories(res.data.data);
+    });
+    getAccounts({ limit: "100" }).then((res) => {
+      if (res.data?.data) {
+        setAccountOptions(res.data.data.map((a) => ({ value: a.id, label: a.name })));
       }
     });
   }, []);
 
-  // Re-fetch categories filtered by transaction type
-  useEffect(() => {
-    if (!selectedType) return;
-    getCategories({ type: selectedType }).then((result) => {
-      if (result.data?.data) {
-        setCategories(result.data.data);
-      }
-    });
-  }, [selectedType]);
+  // Client-side filtering: derive categories by selected transaction type
+  const categories = useMemo(
+    () => allCategories.filter((c) => c.type === selectedType),
+    [allCategories, selectedType],
+  );
 
   const onCategoryChange = (id: string) => {
     setValue("categoryId", id, { shouldValidate: true });

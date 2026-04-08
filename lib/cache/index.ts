@@ -105,9 +105,9 @@ export function clearDomainCache(domain: CacheDomain): void {
  * that depend on it (e.g. accounts when transactions change).
  */
 export function invalidateDomain(domain: CacheDomain): void {
-  clearDomainCache(domain);
-  for (const related of INVALIDATION_MAP[domain]) {
-    clearDomainCache(related);
+  const affected: CacheDomain[] = [domain, ...INVALIDATION_MAP[domain]];
+  for (const d of affected) {
+    clearDomainCache(d);
   }
 }
 

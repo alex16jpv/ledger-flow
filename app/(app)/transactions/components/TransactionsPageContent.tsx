@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getTransactions } from "@/services/transactions.service";
-import { getCategoriesByIds } from "@/services/categories.service";
-import { getAccountsByIds } from "@/services/accounts.service";
+import { getCategories } from "@/services/categories.service";
+import { getAccounts } from "@/services/accounts.service";
 import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
 import { Account } from "@/types/Account.types";
@@ -21,25 +21,17 @@ export default function TransactionsPageContent() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const transactionResult = await getTransactions({ limit: DEFAULT_LIST_LIMIT });
+    const [transactionResult, categoryResult, accountResult] = await Promise.all([
+      getTransactions({ limit: DEFAULT_LIST_LIMIT }),
+      getCategories({ limit: "100" }),
+      getAccounts({ limit: "100" }),
+    ]);
     if (transactionResult.error) {
       setError(transactionResult.error);
       setIsLoading(false);
       return;
     }
-    const fetchedTransactions = transactionResult.data?.data ?? [];
-    setTransactions(fetchedTransactions);
-
-    const uniqueCategoryIds = [...new Set(
-      fetchedTransactions.map((transaction) => transaction.categoryId).filter((id): id is string => !!id),
-    )];
-    const uniqueAccountIds = [...new Set(
-      fetchedTransactions.flatMap((transaction) => [transaction.fromAccountId, transaction.toAccountId]).filter((id): id is string => !!id),
-    )];
-    const [categoryResult, accountResult] = await Promise.all([
-      getCategoriesByIds(uniqueCategoryIds),
-      getAccountsByIds(uniqueAccountIds),
-    ]);
+    setTransactions(transactionResult.data?.data ?? []);
     setCategories(categoryResult.data?.data ?? []);
     setAccounts(accountResult.data?.data ?? []);
     setIsLoading(false);

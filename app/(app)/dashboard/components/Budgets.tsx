@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import BudgetItem from "./BudgetItem";
 import { MOCK_BUDGETS } from "@/lib/mock/budgets.mock";
-import { getCategoriesByIds } from "@/services/categories.service";
+import { getCategories } from "@/services/categories.service";
 import { Category } from "@/types/Category.types";
 
 export default function Budgets() {
@@ -15,8 +15,7 @@ export default function Budgets() {
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const ids = [...new Set(MOCK_BUDGETS.map((b) => b.categoryId))];
-    const result = await getCategoriesByIds(ids);
+    const result = await getCategories({ limit: "100" });
     if (result.error) {
       setError(result.error);
     } else {

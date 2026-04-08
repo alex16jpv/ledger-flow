@@ -26,7 +26,7 @@ export default function AccountDetailContent({ id }: { id: string }) {
     if (result.error) {
       setError(result.error);
     } else {
-      setAccount(result.data);
+      setAccount(result.data ?? null);
     }
     setIsLoading(false);
   }, [id]);

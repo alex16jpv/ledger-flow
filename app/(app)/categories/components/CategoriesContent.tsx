@@ -19,11 +19,11 @@ export default function CategoriesContent() {
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const result = await getCategories({"limit": "100"});
+    const result = await getCategories({ limit: "100" });
     if (result.error) {
       setError(result.error);
-    } else if (result.data?.data) {
-      setCategories(result.data.data);
+    } else {
+      setCategories(result.data?.data ?? []);
     }
     setIsLoading(false);
   }, []);
@@ -38,7 +38,7 @@ export default function CategoriesContent() {
       setError(result.error);
       return;
     }
-    setCategories((prev) => prev.filter((category) => category.id !== id));
+    setCategories((prev) => prev.filter((c) => c.id !== id));
   };
 
   const toggleGroup = (type: string) => {

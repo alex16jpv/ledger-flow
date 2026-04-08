@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,14 +13,13 @@ import {
   TransactionFormFields,
 } from "@/lib/schemas/transaction.schema";
 import { TransactionKind } from "@/types/Transaction.types";
-import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import { getCurrentDateTime, parseDateTimeFields, formatDate, formatTime } from "@/lib/dates";
-import { getAccounts } from "@/services/accounts.service";
-import { getCategories } from "@/services/categories.service";
 import {
   getTransaction,
   updateTransaction,
 } from "@/services/transactions.service";
+import { getCategories } from "@/services/categories.service";
+import { getAccounts } from "@/services/accounts.service";
 import { Category } from "@/types/Category.types";
 
 // Cast needed: transactionSchema is a discriminated union, but the form uses a flat type
@@ -32,10 +31,10 @@ export default function EditTransactionContainer({ id }: { id: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [accountOptions, setAccountOptions] = useState<
     { value: string; label: string }[]
   >([]);
-  const [categories, setCategories] = useState<Category[]>([]);
 
   const {
     register,
@@ -73,17 +72,16 @@ export default function EditTransactionContainer({ id }: { id: string }) {
     setIsLoading(true);
     setFetchError(null);
 
-    const [transactionResult, accountResult] = await Promise.all([
+    const [transactionResult, categoriesResult, accountsResult] = await Promise.all([
       getTransaction(id),
-      getAccounts(),
+      getCategories({ limit: "100" }),
+      getAccounts({ limit: "100" }),
     ]);
 
-    if (accountResult.data?.data) {
-      setAccountOptions(
-        accountResult.data.data.map((account) => ({ value: account.id, label: account.name })),
-      );
+    if (categoriesResult.data?.data) setAllCategories(categoriesResult.data.data);
+    if (accountsResult.data?.data) {
+      setAccountOptions(accountsResult.data.data.map((a) => ({ value: a.id, label: a.name })));
     }
-    // Categories will be fetched reactively by the selectedType effect below
 
     if (transactionResult.error || !transactionResult.data) {
       setFetchError(transactionResult.error ?? "Transaction not found");
@@ -116,15 +114,11 @@ export default function EditTransactionContainer({ id }: { id: string }) {
     fetchData();
   }, [fetchData]);
 
-  // Re-fetch categories filtered by transaction type
-  useEffect(() => {
-    if (!selectedType) return;
-    getCategories({ type: selectedType, limit: DEFAULT_LIST_LIMIT }).then((result) => {
-      if (result.data?.data) {
-        setCategories(result.data.data);
-      }
-    });
-  }, [selectedType]);
+  // Client-side filtering: derive categories by selected transaction type
+  const categories = useMemo(
+    () => allCategories.filter((c) => c.type === selectedType),
+    [allCategories, selectedType],
+  );
 
   const onSubmit = async (data: TransactionFormFields) => {
     setServerError(null);

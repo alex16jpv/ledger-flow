@@ -10,44 +10,34 @@ import { getDateGroupLabel } from "@/lib/dates";
 import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import FilterChips from "@/app/(app)/transactions/components/FilterChips";
 import { getTransactions } from "@/services/transactions.service";
-import { getCategoriesByIds } from "@/services/categories.service";
-import { getAccountsByIds } from "@/services/accounts.service";
+import { getCategories } from "@/services/categories.service";
+import { getAccounts } from "@/services/accounts.service";
 import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function AccountTransactions({ account }: { account: Account }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [accountNames, setAccountNames] = useState<Map<string, string>>(new Map());
+  const [allAccounts, setAllAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<TransactionKind | null>(
-    null,
-  );
+  const [activeFilter, setActiveFilter] = useState<TransactionKind | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const transactionResult = await getTransactions({ accountId: account.id, limit: DEFAULT_LIST_LIMIT });
+    const [transactionResult, categoryResult, accountResult] = await Promise.all([
+      getTransactions({ accountId: account.id, limit: DEFAULT_LIST_LIMIT }),
+      getCategories({ limit: "100" }),
+      getAccounts({ limit: "100" }),
+    ]);
     if (transactionResult.error) {
       setError(transactionResult.error);
       setIsLoading(false);
       return;
     }
-    const fetchedTransactions = transactionResult.data?.data ?? [];
-    setTransactions(fetchedTransactions);
-
-    const uniqueCategoryIds = [...new Set(
-      fetchedTransactions.map((transaction) => transaction.categoryId).filter((id): id is string => !!id),
-    )];
-    const uniqueAccountIds = [...new Set(
-      fetchedTransactions.flatMap((transaction) => [transaction.fromAccountId, transaction.toAccountId]).filter((id): id is string => !!id),
-    )];
-    const [categoryResult, accountResult] = await Promise.all([
-      getCategoriesByIds(uniqueCategoryIds),
-      getAccountsByIds(uniqueAccountIds),
-    ]);
+    setTransactions(transactionResult.data?.data ?? []);
     setCategories(categoryResult.data?.data ?? []);
-    setAccountNames(new Map((accountResult.data?.data ?? []).map((account) => [account.id, account.name])));
+    setAllAccounts(accountResult.data?.data ?? []);
     setIsLoading(false);
   }, [account.id]);
 
@@ -55,7 +45,8 @@ export default function AccountTransactions({ account }: { account: Account }) {
     fetchData();
   }, [fetchData]);
 
-  const categoryMap = new Map(categories.map((category) => [category.id, category]));
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+  const accountNames = new Map(allAccounts.map((a) => [a.id, a.name]));
   const filteredTransactions = activeFilter
     ? transactions.filter((transaction) => transaction.type === activeFilter)
     : transactions;

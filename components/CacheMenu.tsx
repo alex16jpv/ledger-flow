@@ -3,8 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { clearAllCache, isCacheDisabled, setCacheDisabled } from "@/lib/cache";
-import { getAccounts } from "@/services/accounts.service";
-import { getCategories } from "@/services/categories.service";
 
 type CacheMenuProps = {
   direction?: "up" | "down";
@@ -35,7 +33,6 @@ export default function CacheMenu({ direction = "up" }: CacheMenuProps) {
     setIsSyncing(true);
     try {
       clearAllCache();
-      await Promise.all([getAccounts(), getCategories()]);
       router.refresh();
     } finally {
       setIsSyncing(false);

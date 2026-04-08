@@ -13,7 +13,7 @@ export default function AccountsContent() {
   const fetchAccounts = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const result = await getAccounts();
+    const result = await getAccounts({ limit: "100" });
     if (result.error) {
       setError(result.error);
     } else {

@@ -72,7 +72,7 @@ export default function EditAccountContainer({ id }: { id: string }) {
     );
   }
 
-  if (fetchError) {
+  if (!isLoading && fetchError) {
     return (
       <div className="bg-red-50 border border-red-100 rounded-xl p-8 text-center">
         <p className="text-sm text-red-600 mb-3">{fetchError}</p>
