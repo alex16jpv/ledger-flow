@@ -7,14 +7,18 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const params: Record<string, string> = {};
 
-  for (const key of ["limit", "offset", "cursor", "accountId", "type"]) {
+  for (const key of ["limit", "offset", "cursor", "accountId", "type", "categoryId"]) {
     const value = searchParams.get(key);
     if (value) params[key] = value;
   }
 
   const result = await proxy("/transactions", { params });
 
-  return NextResponse.json(result, { status: result.status });
+  const response = NextResponse.json(result, { status: result.status });
+  if (result.status === 200) {
+    response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=300");
+  }
+  return response;
 }
 
 export async function POST(req: Request) {

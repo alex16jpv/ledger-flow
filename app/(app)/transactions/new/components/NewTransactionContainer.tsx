@@ -71,23 +71,29 @@ export default function NewTransactionContainer() {
   }, [setValue]);
 
   useEffect(() => {
+    let cancelled = false;
     getAccounts().then((result) => {
+      if (cancelled) return;
       if (result.data?.data) {
         setAccountOptions(
           result.data.data.map((account) => ({ value: account.id, label: account.name })),
         );
       }
     });
+    return () => { cancelled = true; };
   }, []);
 
   // Re-fetch categories filtered by transaction type
   useEffect(() => {
     if (!selectedType) return;
+    let cancelled = false;
     getCategories({ type: selectedType }).then((result) => {
+      if (cancelled) return;
       if (result.data?.data) {
         setCategories(result.data.data);
       }
     });
+    return () => { cancelled = true; };
   }, [selectedType]);
 
   const onCategoryChange = (id: string) => {

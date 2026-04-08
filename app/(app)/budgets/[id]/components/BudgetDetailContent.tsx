@@ -75,7 +75,7 @@ export default function BudgetDetailContent({ id }: { id: string }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <BudgetTransactions budget={budget} />
+      <BudgetTransactions budget={budget} category={category} />
 
       <div className="flex flex-col gap-4">
         <BudgetHero budget={budget} categoryEmoji={categoryEmoji} />

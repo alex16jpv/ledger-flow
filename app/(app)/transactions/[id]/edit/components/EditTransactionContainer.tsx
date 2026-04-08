@@ -69,7 +69,7 @@ export default function EditTransactionContainer({ id }: { id: string }) {
     clearErrors();
   };
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal: { cancelled: boolean }) => {
     setIsLoading(true);
     setFetchError(null);
 
@@ -77,6 +77,7 @@ export default function EditTransactionContainer({ id }: { id: string }) {
       getTransaction(id),
       getAccounts(),
     ]);
+    if (signal.cancelled) return;
 
     if (accountResult.data?.data) {
       setAccountOptions(
@@ -113,17 +114,22 @@ export default function EditTransactionContainer({ id }: { id: string }) {
   }, [id, reset]);
 
   useEffect(() => {
-    fetchData();
+    const signal = { cancelled: false };
+    fetchData(signal);
+    return () => { signal.cancelled = true; };
   }, [fetchData]);
 
   // Re-fetch categories filtered by transaction type
   useEffect(() => {
     if (!selectedType) return;
+    let cancelled = false;
     getCategories({ type: selectedType, limit: DEFAULT_LIST_LIMIT }).then((result) => {
+      if (cancelled) return;
       if (result.data?.data) {
         setCategories(result.data.data);
       }
     });
+    return () => { cancelled = true; };
   }, [selectedType]);
 
   const onSubmit = async (data: TransactionFormFields) => {
@@ -162,7 +168,7 @@ export default function EditTransactionContainer({ id }: { id: string }) {
       <div className="lg:col-span-5 bg-red-50 border border-red-100 rounded-xl p-8 text-center">
         <p className="text-sm text-red-600 mb-3">{fetchError}</p>
         <button
-          onClick={fetchData}
+          onClick={() => fetchData({ cancelled: false })}
           className="text-sm text-red-600 underline hover:text-red-800"
         >
           Try again

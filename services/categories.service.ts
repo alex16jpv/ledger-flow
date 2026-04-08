@@ -4,7 +4,15 @@ import type {
   CreateCategoryFormFields,
   UpdateCategoryFormFields,
 } from "@/lib/schemas/category.schema";
-import { getCached, setCache, clearDomainCache, requestSignature } from "@/lib/cache";
+import {
+  getCached,
+  setCache,
+  clearDomainCache,
+  requestSignature,
+  dedupedFetch,
+  findInCachedCollections,
+  findManyInCachedCollections,
+} from "@/lib/cache";
 
 const DOMAIN = "categories" as const;
 
@@ -15,11 +23,13 @@ export async function getCategories(
   const cached = getCached<ProxyResponse<PaginatedResult<Category>>>(DOMAIN, sig);
   if (cached) return cached;
 
-  const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`/api/categories${query}`);
-  const data: ProxyResponse<PaginatedResult<Category>> = await res.json();
-  if (!data.error) setCache(DOMAIN, sig, data);
-  return data;
+  return dedupedFetch(sig, async () => {
+    const query = params ? `?${new URLSearchParams(params)}` : "";
+    const res = await fetch(`/api/categories${query}`);
+    const data: ProxyResponse<PaginatedResult<Category>> = await res.json();
+    if (!data.error) setCache(DOMAIN, sig, data);
+    return data;
+  });
 }
 
 export async function getCategoriesByIds(
@@ -32,6 +42,25 @@ export async function getCategoriesByIds(
       error: null,
     };
   }
+
+  const sig = requestSignature("/api/categories", { ids: ids.join(",") });
+  const cached = getCached<ProxyResponse<PaginatedResult<Category>>>(DOMAIN, sig);
+  if (cached) return cached;
+
+  const fromCollections = findManyInCachedCollections<Category>(DOMAIN, ids);
+  if (fromCollections) {
+    const result: ProxyResponse<PaginatedResult<Category>> = {
+      data: {
+        data: fromCollections,
+        pagination: { limit: ids.length, offset: 0, total: fromCollections.length, hasMore: false, nextCursor: null },
+      },
+      status: 200,
+      error: null,
+    };
+    setCache(DOMAIN, sig, result);
+    return result;
+  }
+
   return getCategories({ ids: ids.join(",") });
 }
 
@@ -42,10 +71,19 @@ export async function getCategory(
   const cached = getCached<ProxyResponse<Category>>(DOMAIN, sig);
   if (cached) return cached;
 
-  const res = await fetch(`/api/categories/${id}`);
-  const data: ProxyResponse<Category> = await res.json();
-  if (!data.error) setCache(DOMAIN, sig, data);
-  return data;
+  const fromCollection = findInCachedCollections<Category>(DOMAIN, id);
+  if (fromCollection) {
+    const result: ProxyResponse<Category> = { data: fromCollection, status: 200, error: null };
+    setCache(DOMAIN, sig, result);
+    return result;
+  }
+
+  return dedupedFetch(sig, async () => {
+    const res = await fetch(`/api/categories/${id}`);
+    const data: ProxyResponse<Category> = await res.json();
+    if (!data.error) setCache(DOMAIN, sig, data);
+    return data;
+  });
 }
 
 export async function createCategory(

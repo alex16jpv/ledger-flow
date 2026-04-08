@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { clearAllCache, isCacheDisabled, setCacheDisabled } from "@/lib/cache";
 import { getAccounts } from "@/services/accounts.service";
 import { getCategories } from "@/services/categories.service";
+import { getTransactions } from "@/services/transactions.service";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 type CacheMenuProps = {
   direction?: "up" | "down";
@@ -35,7 +37,11 @@ export default function CacheMenu({ direction = "up" }: CacheMenuProps) {
     setIsSyncing(true);
     try {
       clearAllCache();
-      await Promise.all([getAccounts(), getCategories()]);
+      await Promise.all([
+        getAccounts(),
+        getCategories(),
+        getTransactions({ limit: DEFAULT_LIST_LIMIT }),
+      ]);
       router.refresh();
     } finally {
       setIsSyncing(false);

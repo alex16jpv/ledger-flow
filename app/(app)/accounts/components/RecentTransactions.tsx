@@ -9,7 +9,7 @@ import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
 import { Account } from "@/types/Account.types";
 import TransactionItem from "@/components/TransactionItem";
-import { RECENT_ITEMS_LIMIT } from "@/utils/constants";
+import { DEFAULT_LIST_LIMIT, RECENT_ITEMS_LIMIT } from "@/utils/constants";
 
 export default function RecentTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -18,16 +18,18 @@ export default function RecentTransactions() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal: { cancelled: boolean }) => {
     setIsLoading(true);
     setError(null);
-    const transactionResult = await getTransactions({ limit: RECENT_ITEMS_LIMIT });
+    const transactionResult = await getTransactions({ limit: DEFAULT_LIST_LIMIT });
+    if (signal.cancelled) return;
     if (transactionResult.error) {
       setError(transactionResult.error);
       setIsLoading(false);
       return;
     }
-    const fetchedTransactions = transactionResult.data?.data ?? [];
+    const allTransactions = transactionResult.data?.data ?? [];
+    const fetchedTransactions = allTransactions.slice(0, Number(RECENT_ITEMS_LIMIT));
     setTransactions(fetchedTransactions);
 
     const uniqueCategoryIds = [...new Set(
@@ -40,13 +42,16 @@ export default function RecentTransactions() {
       getCategoriesByIds(uniqueCategoryIds),
       getAccountsByIds(uniqueAccountIds),
     ]);
+    if (signal.cancelled) return;
     setCategories(categoryResult.data?.data ?? []);
     setAccounts(accountResult.data?.data ?? []);
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    fetchData();
+    const signal = { cancelled: false };
+    fetchData(signal);
+    return () => { signal.cancelled = true; };
   }, [fetchData]);
 
   const categoryMap = new Map(categories.map((category) => [category.id, category]));
@@ -77,7 +82,7 @@ export default function RecentTransactions() {
       <section className="bg-red-50 border border-red-100 rounded-xl p-8 text-center">
         <p className="text-sm text-red-600 mb-3">{error}</p>
         <button
-          onClick={fetchData}
+          onClick={() => fetchData({ cancelled: false })}
           className="text-sm text-red-600 underline hover:text-red-800"
         >
           Try again

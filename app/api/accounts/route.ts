@@ -14,7 +14,11 @@ export async function GET(req: NextRequest) {
 
   const result = await proxy("/accounts", { params });
 
-  return NextResponse.json(result, { status: result.status });
+  const response = NextResponse.json(result, { status: result.status });
+  if (result.status === 200) {
+    response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=300");
+  }
+  return response;
 }
 
 export async function POST(req: Request) {

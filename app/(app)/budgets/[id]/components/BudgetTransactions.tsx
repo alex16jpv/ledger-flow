@@ -8,30 +8,25 @@ import TransactionItem from "@/components/TransactionItem";
 import { getDateGroupLabel } from "@/lib/dates";
 import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import { getTransactions } from "@/services/transactions.service";
-import { getCategory } from "@/services/categories.service";
 import { getAccountsByIds } from "@/services/accounts.service";
 import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
-export default function BudgetTransactions({ budget }: { budget: Budget }) {
+export default function BudgetTransactions({ budget, category }: { budget: Budget; category: Category | null }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [category, setCategory] = useState<Category | null>(null);
   const [accountNames, setAccountNames] = useState<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal: { cancelled: boolean }) => {
     setIsLoading(true);
     setError(null);
-    const [transactionResult, categoryResult] = await Promise.all([
-      getTransactions({ type: "EXPENSE", limit: DEFAULT_LIST_LIMIT }),
-      getCategory(budget.categoryId),
-    ]);
+    const transactionResult = await getTransactions({ type: "EXPENSE", categoryId: budget.categoryId, limit: DEFAULT_LIST_LIMIT });
+    if (signal.cancelled) return;
     if (transactionResult.error) {
       setError(transactionResult.error);
     } else {
       const allTransactions = transactionResult.data?.data ?? [];
       const filtered = allTransactions
-        .filter((transaction) => transaction.categoryId === budget.categoryId)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setTransactions(filtered);
 
@@ -39,14 +34,16 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
         filtered.flatMap((transaction) => [transaction.fromAccountId, transaction.toAccountId]).filter((id): id is string => !!id),
       )];
       const accountResult = await getAccountsByIds(uniqueAccountIds);
+      if (signal.cancelled) return;
       setAccountNames(new Map((accountResult.data?.data ?? []).map((account) => [account.id, account.name])));
     }
-    setCategory(categoryResult.data ?? null);
     setIsLoading(false);
   }, [budget.categoryId]);
 
   useEffect(() => {
-    fetchData();
+    const signal = { cancelled: false };
+    fetchData(signal);
+    return () => { signal.cancelled = true; };
   }, [fetchData]);
 
   const categoryEmoji = category?.emoji;
@@ -68,7 +65,7 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
       <div className="lg:col-span-2 bg-red-50 border border-red-100 rounded-xl p-8 text-center">
         <p className="text-sm text-red-600 mb-3">{error}</p>
         <button
-          onClick={fetchData}
+          onClick={() => fetchData({ cancelled: false })}
           className="text-sm text-red-600 underline hover:text-red-800"
         >
           Try again

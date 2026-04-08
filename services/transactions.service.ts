@@ -4,7 +4,14 @@ import type {
   CreateTransactionPayload,
   UpdateTransactionPayload,
 } from "@/lib/schemas/transaction.schema";
-import { getCached, setCache, clearDomainCache, requestSignature } from "@/lib/cache";
+import {
+  getCached,
+  setCache,
+  clearDomainCache,
+  requestSignature,
+  dedupedFetch,
+  findInCachedCollections,
+} from "@/lib/cache";
 
 const DOMAIN = "transactions" as const;
 
@@ -15,11 +22,13 @@ export async function getTransactions(
   const cached = getCached<ProxyResponse<PaginatedResult<Transaction>>>(DOMAIN, sig);
   if (cached) return cached;
 
-  const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`/api/transactions${query}`);
-  const data: ProxyResponse<PaginatedResult<Transaction>> = await res.json();
-  if (!data.error) setCache(DOMAIN, sig, data);
-  return data;
+  return dedupedFetch(sig, async () => {
+    const query = params ? `?${new URLSearchParams(params)}` : "";
+    const res = await fetch(`/api/transactions${query}`);
+    const data: ProxyResponse<PaginatedResult<Transaction>> = await res.json();
+    if (!data.error) setCache(DOMAIN, sig, data);
+    return data;
+  });
 }
 
 export async function getTransaction(
@@ -29,10 +38,19 @@ export async function getTransaction(
   const cached = getCached<ProxyResponse<Transaction>>(DOMAIN, sig);
   if (cached) return cached;
 
-  const res = await fetch(`/api/transactions/${id}`);
-  const data: ProxyResponse<Transaction> = await res.json();
-  if (!data.error) setCache(DOMAIN, sig, data);
-  return data;
+  const fromCollection = findInCachedCollections<Transaction>(DOMAIN, id);
+  if (fromCollection) {
+    const result: ProxyResponse<Transaction> = { data: fromCollection, status: 200, error: null };
+    setCache(DOMAIN, sig, result);
+    return result;
+  }
+
+  return dedupedFetch(sig, async () => {
+    const res = await fetch(`/api/transactions/${id}`);
+    const data: ProxyResponse<Transaction> = await res.json();
+    if (!data.error) setCache(DOMAIN, sig, data);
+    return data;
+  });
 }
 
 export async function createTransaction(
@@ -44,7 +62,10 @@ export async function createTransaction(
     body: JSON.stringify(payload),
   });
   const data: ProxyResponse<Transaction> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) {
+    clearDomainCache(DOMAIN);
+    clearDomainCache("accounts");
+  }
   return data;
 }
 
@@ -58,7 +79,10 @@ export async function updateTransaction(
     body: JSON.stringify(payload),
   });
   const data: ProxyResponse<Transaction> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) {
+    clearDomainCache(DOMAIN);
+    clearDomainCache("accounts");
+  }
   return data;
 }
 
@@ -69,6 +93,9 @@ export async function deleteTransaction(
     method: "DELETE",
   });
   const data: ProxyResponse<null> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) {
+    clearDomainCache(DOMAIN);
+    clearDomainCache("accounts");
+  }
   return data;
 }

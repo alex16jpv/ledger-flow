@@ -10,7 +10,11 @@ export async function GET(_req: Request, { params }: RouteContext) {
 
   const result = await proxy(`/transactions/${id}`);
 
-  return NextResponse.json(result, { status: result.status });
+  const response = NextResponse.json(result, { status: result.status });
+  if (result.status === 200) {
+    response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=300");
+  }
+  return response;
 }
 
 export async function PUT(req: Request, { params }: RouteContext) {

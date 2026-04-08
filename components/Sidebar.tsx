@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { NAV_ITEMS, getActiveHref } from "@/utils/navigation";
 import { logout } from "@/services/auth.service";
+import { purgeExpiredEntries } from "@/lib/cache";
 import CacheMenu from "@/components/CacheMenu";
 
 export default function Sidebar() {
@@ -12,6 +13,10 @@ export default function Sidebar() {
   const router = useRouter();
   const activeHref = getActiveHref(NAV_ITEMS, pathname);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    purgeExpiredEntries();
+  }, []);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);

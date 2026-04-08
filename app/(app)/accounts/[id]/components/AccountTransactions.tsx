@@ -24,10 +24,11 @@ export default function AccountTransactions({ account }: { account: Account }) {
     null,
   );
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal: { cancelled: boolean }) => {
     setIsLoading(true);
     setError(null);
     const transactionResult = await getTransactions({ accountId: account.id, limit: DEFAULT_LIST_LIMIT });
+    if (signal.cancelled) return;
     if (transactionResult.error) {
       setError(transactionResult.error);
       setIsLoading(false);
@@ -46,13 +47,16 @@ export default function AccountTransactions({ account }: { account: Account }) {
       getCategoriesByIds(uniqueCategoryIds),
       getAccountsByIds(uniqueAccountIds),
     ]);
+    if (signal.cancelled) return;
     setCategories(categoryResult.data?.data ?? []);
     setAccountNames(new Map((accountResult.data?.data ?? []).map((account) => [account.id, account.name])));
     setIsLoading(false);
   }, [account.id]);
 
   useEffect(() => {
-    fetchData();
+    const signal = { cancelled: false };
+    fetchData(signal);
+    return () => { signal.cancelled = true; };
   }, [fetchData]);
 
   const categoryMap = new Map(categories.map((category) => [category.id, category]));
@@ -77,7 +81,7 @@ export default function AccountTransactions({ account }: { account: Account }) {
       <div className="lg:col-span-2 bg-red-50 border border-red-100 rounded-xl p-8 text-center">
         <p className="text-sm text-red-600 mb-3">{error}</p>
         <button
-          onClick={fetchData}
+          onClick={() => fetchData({ cancelled: false })}
           className="text-sm text-red-600 underline hover:text-red-800"
         >
           Try again

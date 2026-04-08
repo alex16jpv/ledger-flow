@@ -4,7 +4,15 @@ import type {
   CreateAccountFormFields,
   UpdateAccountFormFields,
 } from "@/lib/schemas/account.schema";
-import { getCached, setCache, clearDomainCache, requestSignature } from "@/lib/cache";
+import {
+  getCached,
+  setCache,
+  clearDomainCache,
+  requestSignature,
+  dedupedFetch,
+  findInCachedCollections,
+  findManyInCachedCollections,
+} from "@/lib/cache";
 
 const DOMAIN = "accounts" as const;
 
@@ -15,11 +23,13 @@ export async function getAccounts(
   const cached = getCached<ProxyResponse<PaginatedResult<Account>>>(DOMAIN, sig);
   if (cached) return cached;
 
-  const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`/api/accounts${query}`);
-  const data: ProxyResponse<PaginatedResult<Account>> = await res.json();
-  if (!data.error) setCache(DOMAIN, sig, data);
-  return data;
+  return dedupedFetch(sig, async () => {
+    const query = params ? `?${new URLSearchParams(params)}` : "";
+    const res = await fetch(`/api/accounts${query}`);
+    const data: ProxyResponse<PaginatedResult<Account>> = await res.json();
+    if (!data.error) setCache(DOMAIN, sig, data);
+    return data;
+  });
 }
 
 export async function getAccountsByIds(
@@ -32,6 +42,25 @@ export async function getAccountsByIds(
       error: null,
     };
   }
+
+  const sig = requestSignature("/api/accounts", { ids: ids.join(",") });
+  const cached = getCached<ProxyResponse<PaginatedResult<Account>>>(DOMAIN, sig);
+  if (cached) return cached;
+
+  const fromCollections = findManyInCachedCollections<Account>(DOMAIN, ids);
+  if (fromCollections) {
+    const result: ProxyResponse<PaginatedResult<Account>> = {
+      data: {
+        data: fromCollections,
+        pagination: { limit: ids.length, offset: 0, total: fromCollections.length, hasMore: false, nextCursor: null },
+      },
+      status: 200,
+      error: null,
+    };
+    setCache(DOMAIN, sig, result);
+    return result;
+  }
+
   return getAccounts({ ids: ids.join(",") });
 }
 
@@ -40,10 +69,19 @@ export async function getAccount(id: string): Promise<ProxyResponse<Account>> {
   const cached = getCached<ProxyResponse<Account>>(DOMAIN, sig);
   if (cached) return cached;
 
-  const res = await fetch(`/api/accounts/${id}`);
-  const data: ProxyResponse<Account> = await res.json();
-  if (!data.error) setCache(DOMAIN, sig, data);
-  return data;
+  const fromCollection = findInCachedCollections<Account>(DOMAIN, id);
+  if (fromCollection) {
+    const result: ProxyResponse<Account> = { data: fromCollection, status: 200, error: null };
+    setCache(DOMAIN, sig, result);
+    return result;
+  }
+
+  return dedupedFetch(sig, async () => {
+    const res = await fetch(`/api/accounts/${id}`);
+    const data: ProxyResponse<Account> = await res.json();
+    if (!data.error) setCache(DOMAIN, sig, data);
+    return data;
+  });
 }
 
 export async function createAccount(

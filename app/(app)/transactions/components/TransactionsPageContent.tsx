@@ -18,10 +18,11 @@ export default function TransactionsPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal: { cancelled: boolean }) => {
     setIsLoading(true);
     setError(null);
     const transactionResult = await getTransactions({ limit: DEFAULT_LIST_LIMIT });
+    if (signal.cancelled) return;
     if (transactionResult.error) {
       setError(transactionResult.error);
       setIsLoading(false);
@@ -40,13 +41,16 @@ export default function TransactionsPageContent() {
       getCategoriesByIds(uniqueCategoryIds),
       getAccountsByIds(uniqueAccountIds),
     ]);
+    if (signal.cancelled) return;
     setCategories(categoryResult.data?.data ?? []);
     setAccounts(accountResult.data?.data ?? []);
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    fetchData();
+    const signal = { cancelled: false };
+    fetchData(signal);
+    return () => { signal.cancelled = true; };
   }, [fetchData]);
 
   if (isLoading) {
@@ -78,7 +82,7 @@ export default function TransactionsPageContent() {
       <div className="lg:col-span-3 bg-red-50 border border-red-100 rounded-xl p-8 text-center">
         <p className="text-sm text-red-600 mb-3">{error}</p>
         <button
-          onClick={fetchData}
+          onClick={() => fetchData({ cancelled: false })}
           className="text-sm text-red-600 underline hover:text-red-800"
         >
           Try again
