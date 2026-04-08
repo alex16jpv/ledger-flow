@@ -17,7 +17,7 @@ export default function DashboardLayout({
           icon="＋"
           text="New Transaction"
           link="/transactions/new"
-          className="hidden sm:flex"
+          className="flex"
         />
       </Header>
       {children}
