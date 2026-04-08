@@ -11,7 +11,7 @@ export default function AccountsPage() {
           icon="＋"
           text="New Account"
           link="/accounts/new"
-          className="hidden sm:flex"
+          className="flex"
         />
       </Header>
 
