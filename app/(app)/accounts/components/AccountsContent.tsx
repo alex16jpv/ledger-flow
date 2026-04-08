@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { getAccounts } from "@/services/accounts.service";
 import { Account } from "@/types/Account.types";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import AccountList from "./AccountList";
 
 export default function AccountsContent() {
@@ -13,7 +14,7 @@ export default function AccountsContent() {
   const fetchAccounts = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const result = await getAccounts({ limit: "100" });
+    const result = await getAccounts({ limit: DEFAULT_LIST_LIMIT });
     if (result.error) {
       setError(result.error);
     } else {

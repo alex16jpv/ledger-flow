@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { MOCK_BUDGETS } from "@/lib/mock/budgets.mock";
 import { getCategories } from "@/services/categories.service";
 import { Category } from "@/types/Category.types";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import BudgetHero from "./BudgetHero";
 import BudgetInfo from "./BudgetInfo";
 import BudgetTransactions from "./BudgetTransactions";
@@ -17,7 +18,7 @@ export default function BudgetDetailContent({ id }: { id: string }) {
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const result = await getCategories({ limit: "100" });
+    const result = await getCategories({ limit: DEFAULT_LIST_LIMIT });
     if (result.error) {
       setError(result.error);
     } else {
@@ -75,7 +76,11 @@ export default function BudgetDetailContent({ id }: { id: string }) {
 
       <div className="flex flex-col gap-4">
         <BudgetHero budget={budget} categoryEmoji={categoryEmoji} />
-        <BudgetInfo budget={budget} categoryName={categoryName} categoryEmoji={categoryEmoji} />
+        <BudgetInfo
+          budget={budget}
+          categoryName={categoryName}
+          categoryEmoji={categoryEmoji}
+        />
       </div>
     </div>
   );

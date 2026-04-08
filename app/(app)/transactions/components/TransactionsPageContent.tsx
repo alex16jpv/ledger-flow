@@ -21,11 +21,12 @@ export default function TransactionsPageContent() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const [transactionResult, categoryResult, accountResult] = await Promise.all([
-      getTransactions({ limit: DEFAULT_LIST_LIMIT }),
-      getCategories({ limit: "100" }),
-      getAccounts({ limit: "100" }),
-    ]);
+    const [transactionResult, categoryResult, accountResult] =
+      await Promise.all([
+        getTransactions({ limit: DEFAULT_LIST_LIMIT }),
+        getCategories({ limit: DEFAULT_LIST_LIMIT }),
+        getAccounts({ limit: DEFAULT_LIST_LIMIT }),
+      ]);
     if (transactionResult.error) {
       setError(transactionResult.error);
       setIsLoading(false);
@@ -81,7 +82,11 @@ export default function TransactionsPageContent() {
 
   return (
     <>
-      <TransactionsContent transactions={transactions} categories={categories} accounts={accounts} />
+      <TransactionsContent
+        transactions={transactions}
+        categories={categories}
+        accounts={accounts}
+      />
       <SummaryPanel transactions={transactions} categories={categories} />
     </>
   );

@@ -4,9 +4,10 @@ import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { budgetSchema, BudgetFormFields } from "@/lib/schemas/budget.schema";
-import { BudgetColor } from "@/types/Budget.type";
+import { BudgetColor } from "@/types/Budget.types";
 import { Category } from "@/types/Category.types";
 import { getCategories } from "@/services/categories.service";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import BudgetForm from "./BudgetForm";
 import BudgetPreview, { SaveButton } from "./BudgetPreview";
 
@@ -22,16 +23,17 @@ export default function NewBudgetContainer() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    getCategories({ limit: "100" }).then((res) => {
+    getCategories({ limit: DEFAULT_LIST_LIMIT }).then((res) => {
       setCategories(res.data?.data ?? []);
     });
   }, []);
 
   const categoryOptions = useMemo(
-    () => categories.map((c) => ({
-      value: c.id,
-      label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
-    })),
+    () =>
+      categories.map((c) => ({
+        value: c.id,
+        label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
+      })),
     [categories],
   );
 
@@ -59,8 +61,7 @@ export default function NewBudgetContainer() {
     setValue("color", newColor, { shouldValidate: true });
   };
 
-  const onSubmit = (data: BudgetFormFields) => {
-    console.log("Budget data:", data);
+  const onSubmit = (_data: BudgetFormFields) => {
     reset(DEFAULT_VALUES);
   };
 

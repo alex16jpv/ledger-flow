@@ -3,11 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import AmountInput from "./AmountInput";
+import AmountInput from "@/components/forms/AmountInput";
 import LivePreview, { SaveButton } from "./LivePreview";
 import TransactionForm from "./TransactionForm";
 import TransactionTypeSelector from "./TypeSelector";
-import { TRANSACTION_TYPES } from "@/utils/constants";
+import { TRANSACTION_TYPES, DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import {
   transactionSchema,
   TransactionFormFields,
@@ -21,7 +21,9 @@ import { Category } from "@/types/Category.types";
 
 // Cast needed: transactionSchema is a discriminated union, but the form uses a flat type
 // with all variant-specific fields optional.
-const transactionResolver = zodResolver(transactionSchema) as Resolver<TransactionFormFields>;
+const transactionResolver = zodResolver(
+  transactionSchema,
+) as Resolver<TransactionFormFields>;
 
 const DEFAULT_VALUES: Partial<TransactionFormFields> & {
   type: TransactionFormFields["type"];
@@ -72,12 +74,14 @@ export default function NewTransactionContainer() {
 
   // Fetch all categories and accounts once (localStorage cache prevents redundant requests)
   useEffect(() => {
-    getCategories({ limit: "100" }).then((res) => {
+    getCategories({ limit: DEFAULT_LIST_LIMIT }).then((res) => {
       if (res.data?.data) setAllCategories(res.data.data);
     });
-    getAccounts({ limit: "100" }).then((res) => {
+    getAccounts({ limit: DEFAULT_LIST_LIMIT }).then((res) => {
       if (res.data?.data) {
-        setAccountOptions(res.data.data.map((a) => ({ value: a.id, label: a.name })));
+        setAccountOptions(
+          res.data.data.map((a) => ({ value: a.id, label: a.name })),
+        );
       }
     });
   }, []);
@@ -162,7 +166,12 @@ export default function NewTransactionContainer() {
         </div>
       </div>
 
-      <LivePreview selectedType={selectedType} control={control} isSubmitting={isSubmitting} accountOptions={accountOptions} />
+      <LivePreview
+        selectedType={selectedType}
+        control={control}
+        isSubmitting={isSubmitting}
+        accountOptions={accountOptions}
+      />
     </form>
   );
 }

@@ -1,4 +1,4 @@
-import { Budget } from "@/types/Budget.type";
+import { Budget } from "@/types/Budget.types";
 
 export const MOCK_BUDGETS: Budget[] = [
   {

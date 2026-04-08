@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import AmountInput from "../../../new/components/AmountInput";
+import AmountInput from "@/components/forms/AmountInput";
 import LivePreview, { SaveButton } from "../../../new/components/LivePreview";
 import TransactionForm from "../../../new/components/TransactionForm";
 import TransactionTypeSelector from "../../../new/components/TypeSelector";
@@ -13,7 +13,12 @@ import {
   TransactionFormFields,
 } from "@/lib/schemas/transaction.schema";
 import { TransactionKind } from "@/types/Transaction.types";
-import { getCurrentDateTime, parseDateTimeFields, formatDate, formatTime } from "@/lib/dates";
+import {
+  getCurrentDateTime,
+  parseDateTimeFields,
+  formatDate,
+  formatTime,
+} from "@/lib/dates";
 import {
   getTransaction,
   updateTransaction,
@@ -21,10 +26,13 @@ import {
 import { getCategories } from "@/services/categories.service";
 import { getAccounts } from "@/services/accounts.service";
 import { Category } from "@/types/Category.types";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 // Cast needed: transactionSchema is a discriminated union, but the form uses a flat type
 // with all variant-specific fields optional.
-const transactionResolver = zodResolver(transactionSchema) as Resolver<TransactionFormFields>;
+const transactionResolver = zodResolver(
+  transactionSchema,
+) as Resolver<TransactionFormFields>;
 
 export default function EditTransactionContainer({ id }: { id: string }) {
   const router = useRouter();
@@ -72,15 +80,19 @@ export default function EditTransactionContainer({ id }: { id: string }) {
     setIsLoading(true);
     setFetchError(null);
 
-    const [transactionResult, categoriesResult, accountsResult] = await Promise.all([
-      getTransaction(id),
-      getCategories({ limit: "100" }),
-      getAccounts({ limit: "100" }),
-    ]);
+    const [transactionResult, categoriesResult, accountsResult] =
+      await Promise.all([
+        getTransaction(id),
+        getCategories({ limit: DEFAULT_LIST_LIMIT }),
+        getAccounts({ limit: DEFAULT_LIST_LIMIT }),
+      ]);
 
-    if (categoriesResult.data?.data) setAllCategories(categoriesResult.data.data);
+    if (categoriesResult.data?.data)
+      setAllCategories(categoriesResult.data.data);
     if (accountsResult.data?.data) {
-      setAccountOptions(accountsResult.data.data.map((a) => ({ value: a.id, label: a.name })));
+      setAccountOptions(
+        accountsResult.data.data.map((a) => ({ value: a.id, label: a.name })),
+      );
     }
 
     if (transactionResult.error || !transactionResult.data) {
@@ -90,8 +102,12 @@ export default function EditTransactionContainer({ id }: { id: string }) {
     }
 
     const existingTransaction = transactionResult.data;
-    const txDate = existingTransaction.date ? formatDate(existingTransaction.date, "iso") : getCurrentDateTime().date;
-    const txTime = existingTransaction.date ? formatTime(existingTransaction.date) : getCurrentDateTime().time;
+    const txDate = existingTransaction.date
+      ? formatDate(existingTransaction.date, "iso")
+      : getCurrentDateTime().date;
+    const txTime = existingTransaction.date
+      ? formatTime(existingTransaction.date)
+      : getCurrentDateTime().time;
 
     reset({
       type: existingTransaction.type,
@@ -197,7 +213,11 @@ export default function EditTransactionContainer({ id }: { id: string }) {
         </div>
       </div>
 
-      <LivePreview selectedType={selectedType} control={control} isSubmitting={isSubmitting} />
+      <LivePreview
+        selectedType={selectedType}
+        control={control}
+        isSubmitting={isSubmitting}
+      />
     </form>
   );
 }

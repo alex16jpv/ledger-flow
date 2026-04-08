@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BudgetColor } from "@/types/Budget.type";
+import { BudgetColor } from "@/types/Budget.types";
 
 const BUDGET_COLORS: [BudgetColor, ...BudgetColor[]] = [
   "teal-400",

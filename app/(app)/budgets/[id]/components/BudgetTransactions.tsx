@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Budget } from "@/types/Budget.type";
+import { Budget } from "@/types/Budget.types";
 import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
 import { Account } from "@/types/Account.types";
@@ -23,18 +23,21 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const [transactionResult, categoriesResult, accountsResult] = await Promise.all([
-      getTransactions({ type: "EXPENSE", limit: DEFAULT_LIST_LIMIT }),
-      getCategories({ limit: "100" }),
-      getAccounts({ limit: "100" }),
-    ]);
+    const [transactionResult, categoriesResult, accountsResult] =
+      await Promise.all([
+        getTransactions({ type: "EXPENSE", limit: DEFAULT_LIST_LIMIT }),
+        getCategories({ limit: DEFAULT_LIST_LIMIT }),
+        getAccounts({ limit: DEFAULT_LIST_LIMIT }),
+      ]);
     if (transactionResult.error) {
       setError(transactionResult.error);
     } else {
       const allTransactions = transactionResult.data?.data ?? [];
       const filtered = allTransactions
         .filter((transaction) => transaction.categoryId === budget.categoryId)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        );
       setTransactions(filtered);
     }
     setCategories(categoriesResult.data?.data ?? []);
@@ -107,7 +110,11 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
                   <TransactionItem
                     key={transaction.id}
                     transaction={transaction}
-                    categoryEmoji={transaction.categoryId === budget.categoryId ? categoryEmoji : undefined}
+                    categoryEmoji={
+                      transaction.categoryId === budget.categoryId
+                        ? categoryEmoji
+                        : undefined
+                    }
                     accountNames={accountNames}
                   />
                 ))}

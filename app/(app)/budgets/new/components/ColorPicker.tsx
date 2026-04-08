@@ -1,4 +1,4 @@
-import { BudgetColor } from "@/types/Budget.type";
+import { BudgetColor } from "@/types/Budget.types";
 import { BUDGET_COLOR_CLASSES } from "@/utils/constants";
 
 const COLOR_OPTIONS: { value: BudgetColor; label: string }[] = [

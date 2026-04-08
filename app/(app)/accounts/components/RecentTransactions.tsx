@@ -9,7 +9,7 @@ import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
 import { Account } from "@/types/Account.types";
 import TransactionItem from "@/components/TransactionItem";
-import { RECENT_ITEMS_LIMIT } from "@/utils/constants";
+import { RECENT_ITEMS_LIMIT, DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function RecentTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -21,11 +21,12 @@ export default function RecentTransactions() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const [transactionResult, categoryResult, accountResult] = await Promise.all([
-      getTransactions({ limit: RECENT_ITEMS_LIMIT }),
-      getCategories({ limit: "100" }),
-      getAccounts({ limit: "100" }),
-    ]);
+    const [transactionResult, categoryResult, accountResult] =
+      await Promise.all([
+        getTransactions({ limit: RECENT_ITEMS_LIMIT }),
+        getCategories({ limit: DEFAULT_LIST_LIMIT }),
+        getAccounts({ limit: DEFAULT_LIST_LIMIT }),
+      ]);
     if (transactionResult.error) {
       setError(transactionResult.error);
       setIsLoading(false);
@@ -104,7 +105,11 @@ export default function RecentTransactions() {
             <TransactionItem
               key={transaction.id}
               transaction={transaction}
-              categoryEmoji={transaction.categoryId ? categoryMap.get(transaction.categoryId)?.emoji : undefined}
+              categoryEmoji={
+                transaction.categoryId
+                  ? categoryMap.get(transaction.categoryId)?.emoji
+                  : undefined
+              }
               accountNames={accountNameMap}
             />
           ))}

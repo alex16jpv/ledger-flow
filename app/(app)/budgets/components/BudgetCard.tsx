@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Budget } from "@/types/Budget.type";
-import { formatAmount, percentMinMax } from "@/utils/utils";
+import { Budget } from "@/types/Budget.types";
+import { formatAmount } from "@/utils/utils";
 import { getBudgetStatus } from "@/utils/budget.utils";
 import { BUDGET_WARNING_THRESHOLD_PERCENT } from "@/utils/constants";
 

@@ -8,7 +8,7 @@ import { getAccounts } from "@/services/accounts.service";
 import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
 import { Account } from "@/types/Account.types";
-import { RECENT_ITEMS_LIMIT } from "@/utils/constants";
+import { RECENT_ITEMS_LIMIT, DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import Link from "next/link";
 
 export default function Transactions() {
@@ -21,11 +21,12 @@ export default function Transactions() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const [transactionResult, categoryResult, accountResult] = await Promise.all([
-      getTransactions({ limit: RECENT_ITEMS_LIMIT }),
-      getCategories({ limit: "100" }),
-      getAccounts({ limit: "100" }),
-    ]);
+    const [transactionResult, categoryResult, accountResult] =
+      await Promise.all([
+        getTransactions({ limit: RECENT_ITEMS_LIMIT }),
+        getCategories({ limit: DEFAULT_LIST_LIMIT }),
+        getAccounts({ limit: DEFAULT_LIST_LIMIT }),
+      ]);
     if (transactionResult.error) {
       setError(transactionResult.error);
       setIsLoading(false);
@@ -48,7 +49,9 @@ export default function Transactions() {
     return (
       <div className="lg:col-span-2 bg-white border border-stone-100 rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
-          <h2 className="text-sm font-medium text-stone-800">Recent Movements</h2>
+          <h2 className="text-sm font-medium text-stone-800">
+            Recent Movements
+          </h2>
         </div>
         <div className="p-6 animate-pulse flex flex-col gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -95,7 +98,11 @@ export default function Transactions() {
             <TransactionItem
               key={transaction.id}
               transaction={transaction}
-              categoryEmoji={transaction.categoryId ? categoryMap.get(transaction.categoryId)?.emoji : undefined}
+              categoryEmoji={
+                transaction.categoryId
+                  ? categoryMap.get(transaction.categoryId)?.emoji
+                  : undefined
+              }
               accountNames={accountNameMap}
             />
           ))}

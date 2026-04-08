@@ -1,5 +1,8 @@
-import { Budget } from "@/types/Budget.type";
-import { BUDGET_COLOR_CLASSES, BUDGET_WARNING_THRESHOLD_PERCENT } from "@/utils/constants";
+import { Budget } from "@/types/Budget.types";
+import {
+  BUDGET_COLOR_CLASSES,
+  BUDGET_WARNING_THRESHOLD_PERCENT,
+} from "@/utils/constants";
 import { formatAmount, percentMinMax } from "@/utils/utils";
 
 export type BudgetStatusLabel = "Exceeded" | "Almost depleted" | "On track";

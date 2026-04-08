@@ -67,15 +67,17 @@ export default function AmountInput<T extends FieldValues>({
     }
   }, [field.value, isFocused]);
 
+  const inputId = String(name);
+
   return (
     <div>
-      <label htmlFor="amount" className="field-label">
+      <label htmlFor={inputId} className="field-label">
         {label}
       </label>
       <div className="amount-wrapper">
         <span className="amount-currency">{APP_CURRENCY_SYMBOL}</span>
         <input
-          id="amount"
+          id={inputId}
           type="text"
           inputMode="decimal"
           className="input-amount"

@@ -20,16 +20,19 @@ export default function AccountTransactions({ account }: { account: Account }) {
   const [allAccounts, setAllAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<TransactionKind | null>(null);
+  const [activeFilter, setActiveFilter] = useState<TransactionKind | null>(
+    null,
+  );
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const [transactionResult, categoryResult, accountResult] = await Promise.all([
-      getTransactions({ accountId: account.id, limit: DEFAULT_LIST_LIMIT }),
-      getCategories({ limit: "100" }),
-      getAccounts({ limit: "100" }),
-    ]);
+    const [transactionResult, categoryResult, accountResult] =
+      await Promise.all([
+        getTransactions({ accountId: account.id, limit: DEFAULT_LIST_LIMIT }),
+        getCategories({ limit: DEFAULT_LIST_LIMIT }),
+        getAccounts({ limit: DEFAULT_LIST_LIMIT }),
+      ]);
     if (transactionResult.error) {
       setError(transactionResult.error);
       setIsLoading(false);
@@ -102,7 +105,11 @@ export default function AccountTransactions({ account }: { account: Account }) {
                   <TransactionItem
                     key={transaction.id}
                     transaction={transaction}
-                    categoryEmoji={transaction.categoryId ? categoryMap.get(transaction.categoryId)?.emoji : undefined}
+                    categoryEmoji={
+                      transaction.categoryId
+                        ? categoryMap.get(transaction.categoryId)?.emoji
+                        : undefined
+                    }
                     accountNames={accountNames}
                   />
                 ))}
