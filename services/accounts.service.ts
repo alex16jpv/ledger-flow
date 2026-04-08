@@ -4,7 +4,7 @@ import type {
   CreateAccountFormFields,
   UpdateAccountFormFields,
 } from "@/lib/schemas/account.schema";
-import { getCached, setCache, clearDomainCache, requestSignature } from "@/lib/cache";
+import { getCached, setCache, invalidateDomain, requestSignature } from "@/lib/cache";
 
 const DOMAIN = "accounts" as const;
 
@@ -55,7 +55,7 @@ export async function createAccount(
     body: JSON.stringify(payload),
   });
   const data: ProxyResponse<Account> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
 
@@ -69,7 +69,7 @@ export async function updateAccount(
     body: JSON.stringify(payload),
   });
   const data: ProxyResponse<Account> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
 
@@ -78,6 +78,6 @@ export async function deleteAccount(id: string): Promise<ProxyResponse<null>> {
     method: "DELETE",
   });
   const data: ProxyResponse<null> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }

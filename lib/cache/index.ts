@@ -1,11 +1,23 @@
-const CACHE_EXPIRATION_DAYS = 3;
-
 type CacheEntry<T = unknown> = {
   data: T;
   timestamp: number;
 };
 
 type CacheDomain = "accounts" | "categories" | "transactions";
+
+/** Per-domain TTL in milliseconds */
+const DOMAIN_TTL: Record<CacheDomain, number> = {
+  accounts: 30 * 60 * 1000,       // 30 minutes — balances change with transactions
+  transactions: 15 * 60 * 1000,   // 15 minutes — most volatile data
+  categories: 7 * 24 * 60 * 60 * 1000, // 7 days — rarely change
+};
+
+/** Domains that must also be invalidated when a given domain is mutated */
+const INVALIDATION_MAP: Record<CacheDomain, CacheDomain[]> = {
+  transactions: ["accounts"],  // transactions affect account balances
+  accounts: [],
+  categories: [],
+};
 
 const STORAGE_PREFIX = "lf_cache_";
 const DISABLED_KEY = "lf_cache_disabled";
@@ -19,9 +31,8 @@ function buildKey(domain: CacheDomain, signature: string): string {
   return `${domainPrefix(domain)}${signature}`;
 }
 
-function isExpired(timestamp: number): boolean {
-  const maxAge = CACHE_EXPIRATION_DAYS * 24 * 60 * 60 * 1000;
-  return Date.now() - timestamp > maxAge;
+function isExpired(timestamp: number, domain: CacheDomain): boolean {
+  return Date.now() - timestamp > DOMAIN_TTL[domain];
 }
 
 function isStorageAvailable(): boolean {
@@ -56,7 +67,7 @@ export function getCached<T>(domain: CacheDomain, signature: string): T | null {
     const raw = localStorage.getItem(buildKey(domain, signature));
     if (!raw) return null;
     const entry: CacheEntry<T> = JSON.parse(raw);
-    if (isExpired(entry.timestamp)) {
+    if (isExpired(entry.timestamp, domain)) {
       localStorage.removeItem(buildKey(domain, signature));
       return null;
     }
@@ -87,6 +98,17 @@ export function clearDomainCache(domain: CacheDomain): void {
     }
   }
   keysToRemove.forEach((key) => localStorage.removeItem(key));
+}
+
+/**
+ * Clears the given domain cache AND any related domains
+ * that depend on it (e.g. accounts when transactions change).
+ */
+export function invalidateDomain(domain: CacheDomain): void {
+  clearDomainCache(domain);
+  for (const related of INVALIDATION_MAP[domain]) {
+    clearDomainCache(related);
+  }
 }
 
 export function clearAllCache(): void {

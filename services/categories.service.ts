@@ -4,7 +4,7 @@ import type {
   CreateCategoryFormFields,
   UpdateCategoryFormFields,
 } from "@/lib/schemas/category.schema";
-import { getCached, setCache, clearDomainCache, requestSignature } from "@/lib/cache";
+import { getCached, setCache, invalidateDomain, requestSignature } from "@/lib/cache";
 
 const DOMAIN = "categories" as const;
 
@@ -57,7 +57,7 @@ export async function createCategory(
     body: JSON.stringify(payload),
   });
   const data: ProxyResponse<Category> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
 
@@ -71,7 +71,7 @@ export async function updateCategory(
     body: JSON.stringify(payload),
   });
   const data: ProxyResponse<Category> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
 
@@ -82,6 +82,6 @@ export async function deleteCategory(
     method: "DELETE",
   });
   const data: ProxyResponse<null> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }

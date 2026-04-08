@@ -4,7 +4,7 @@ import type {
   CreateTransactionPayload,
   UpdateTransactionPayload,
 } from "@/lib/schemas/transaction.schema";
-import { getCached, setCache, clearDomainCache, requestSignature } from "@/lib/cache";
+import { getCached, setCache, invalidateDomain, requestSignature } from "@/lib/cache";
 
 const DOMAIN = "transactions" as const;
 
@@ -44,7 +44,7 @@ export async function createTransaction(
     body: JSON.stringify(payload),
   });
   const data: ProxyResponse<Transaction> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
 
@@ -58,7 +58,7 @@ export async function updateTransaction(
     body: JSON.stringify(payload),
   });
   const data: ProxyResponse<Transaction> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
 
@@ -69,6 +69,6 @@ export async function deleteTransaction(
     method: "DELETE",
   });
   const data: ProxyResponse<null> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
