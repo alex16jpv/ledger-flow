@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { getTransactions } from "@/services/transactions.service";
 import { getCategories } from "@/services/categories.service";
 import { getAccounts } from "@/services/accounts.service";
 import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
 import { Account } from "@/types/Account.types";
-import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
+import {
+  DEFAULT_LIST_LIMIT,
+  TRANSACTIONS_DEFAULT_LIMIT,
+  TRANSACTIONS_LOAD_MORE_LIMIT,
+} from "@/utils/constants";
 import TransactionsContent from "./TransactionsContent";
 import SummaryPanel from "./SummaryPanel";
 
@@ -16,14 +20,17 @@ export default function TransactionsPageContent() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const offsetRef = useRef(0);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     const [transactionResult, categoryResult, accountResult] =
       await Promise.all([
-        getTransactions({ limit: DEFAULT_LIST_LIMIT }),
+        getTransactions({ limit: TRANSACTIONS_DEFAULT_LIMIT }),
         getCategories({ limit: DEFAULT_LIST_LIMIT }),
         getAccounts({ limit: DEFAULT_LIST_LIMIT }),
       ]);
@@ -32,10 +39,28 @@ export default function TransactionsPageContent() {
       setIsLoading(false);
       return;
     }
-    setTransactions(transactionResult.data?.data ?? []);
+    const newTransactions = transactionResult.data?.data ?? [];
+    setTransactions(newTransactions);
+    setHasMore(transactionResult.data?.pagination?.hasMore ?? false);
+    offsetRef.current = newTransactions.length;
     setCategories(categoryResult.data?.data ?? []);
     setAccounts(accountResult.data?.data ?? []);
     setIsLoading(false);
+  }, []);
+
+  const loadMore = useCallback(async () => {
+    setIsLoadingMore(true);
+    const result = await getTransactions({
+      limit: TRANSACTIONS_LOAD_MORE_LIMIT,
+      offset: String(offsetRef.current),
+    });
+    if (!result.error && result.data) {
+      const moreTransactions = result.data.data ?? [];
+      setTransactions((prev) => [...prev, ...moreTransactions]);
+      setHasMore(result.data.pagination?.hasMore ?? false);
+      offsetRef.current += moreTransactions.length;
+    }
+    setIsLoadingMore(false);
   }, []);
 
   useEffect(() => {
@@ -86,6 +111,9 @@ export default function TransactionsPageContent() {
         transactions={transactions}
         categories={categories}
         accounts={accounts}
+        hasMore={hasMore}
+        isLoadingMore={isLoadingMore}
+        onLoadMore={loadMore}
       />
       <SummaryPanel transactions={transactions} categories={categories} />
     </>

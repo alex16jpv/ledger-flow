@@ -327,6 +327,8 @@ export const CATEGORY_COLOR_OPTIONS: { value: CategoryColor; label: string }[] =
 export const BUDGET_WARNING_THRESHOLD_PERCENT = 80;
 
 export const DEFAULT_LIST_LIMIT = "100";
+export const TRANSACTIONS_DEFAULT_LIMIT = "15";
+export const TRANSACTIONS_LOAD_MORE_LIMIT = "15";
 export const RECENT_ITEMS_LIMIT = "5";
 
 export const APP_LOCALE = "en-US";

@@ -11,10 +11,16 @@ export default function TransactionsContent({
   transactions,
   categories = [],
   accounts = [],
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
 }: {
   transactions: Transaction[];
   categories?: Category[];
   accounts?: Account[];
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }) {
   const [activeFilter, setActiveFilter] = useState<TransactionKind | null>(
     null,
@@ -30,7 +36,22 @@ export default function TransactionsContent({
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
       />
-      <TransactionList transactions={filteredTransactions} categories={categories} accounts={accounts} />
+      <TransactionList
+        transactions={filteredTransactions}
+        categories={categories}
+        accounts={accounts}
+      />
+      {hasMore && (
+        <div className="flex justify-center pt-2 pb-4">
+          <button
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+            className="font-mono text-xs rounded-full px-6 py-2.5 bg-white border border-stone-200 text-stone-600 hover:border-teal-400 hover:text-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoadingMore ? "Loading..." : "Load more"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

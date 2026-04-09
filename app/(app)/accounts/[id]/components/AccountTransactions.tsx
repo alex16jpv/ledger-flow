@@ -12,7 +12,10 @@ import FilterChips from "@/app/(app)/transactions/components/FilterChips";
 import { getTransactions } from "@/services/transactions.service";
 import { getCategories } from "@/services/categories.service";
 import { getAccounts } from "@/services/accounts.service";
-import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
+import {
+  DEFAULT_LIST_LIMIT,
+  TRANSACTIONS_DEFAULT_LIMIT,
+} from "@/utils/constants";
 
 export default function AccountTransactions({ account }: { account: Account }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -29,7 +32,10 @@ export default function AccountTransactions({ account }: { account: Account }) {
     setError(null);
     const [transactionResult, categoryResult, accountResult] =
       await Promise.all([
-        getTransactions({ accountId: account.id, limit: DEFAULT_LIST_LIMIT }),
+        getTransactions({
+          accountId: account.id,
+          limit: TRANSACTIONS_DEFAULT_LIMIT,
+        }),
         getCategories({ limit: DEFAULT_LIST_LIMIT }),
         getAccounts({ limit: DEFAULT_LIST_LIMIT }),
       ]);

@@ -11,7 +11,10 @@ import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import { getTransactions } from "@/services/transactions.service";
 import { getCategories } from "@/services/categories.service";
 import { getAccounts } from "@/services/accounts.service";
-import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
+import {
+  DEFAULT_LIST_LIMIT,
+  TRANSACTIONS_DEFAULT_LIMIT,
+} from "@/utils/constants";
 
 export default function BudgetTransactions({ budget }: { budget: Budget }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -25,7 +28,7 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
     setError(null);
     const [transactionResult, categoriesResult, accountsResult] =
       await Promise.all([
-        getTransactions({ type: "EXPENSE", limit: DEFAULT_LIST_LIMIT }),
+        getTransactions({ type: "EXPENSE", limit: TRANSACTIONS_DEFAULT_LIMIT }),
         getCategories({ limit: DEFAULT_LIST_LIMIT }),
         getAccounts({ limit: DEFAULT_LIST_LIMIT }),
       ]);

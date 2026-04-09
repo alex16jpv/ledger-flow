@@ -8,7 +8,10 @@ import { getAccounts } from "@/services/accounts.service";
 import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
 import { Account } from "@/types/Account.types";
-import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
+import {
+  DEFAULT_LIST_LIMIT,
+  TRANSACTIONS_DEFAULT_LIMIT,
+} from "@/utils/constants";
 import Link from "next/link";
 
 export default function Transactions() {
@@ -23,7 +26,7 @@ export default function Transactions() {
     setError(null);
     const [transactionResult, categoryResult, accountResult] =
       await Promise.all([
-        getTransactions({ limit: DEFAULT_LIST_LIMIT }),
+        getTransactions({ limit: TRANSACTIONS_DEFAULT_LIMIT }),
         getCategories({ limit: DEFAULT_LIST_LIMIT }),
         getAccounts({ limit: DEFAULT_LIST_LIMIT }),
       ]);
