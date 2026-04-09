@@ -1,8 +1,17 @@
 import { format, isValid, parse, parseISO, subDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 
-const APP_TIMEZONE =
-  process.env.NEXT_PUBLIC_APP_TIMEZONE ?? "UTC";
+function getTimezone(): string {
+  if (process.env.NEXT_PUBLIC_APP_TIMEZONE) {
+    return process.env.NEXT_PUBLIC_APP_TIMEZONE;
+  }
+  if (typeof window !== "undefined") {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  }
+  return "UTC";
+}
+
+const APP_TIMEZONE = getTimezone();
 
 export const DATE_FORMATS = {
   iso: "yyyy-MM-dd",
