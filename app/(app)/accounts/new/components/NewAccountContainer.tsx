@@ -22,7 +22,7 @@ export default function NewAccountContainer() {
     formState: { errors, isSubmitting },
   } = useForm<CreateAccountFormFields>({
     resolver: zodResolver(createAccountSchema),
-    defaultValues: { name: "", type: "CASH", balance: 0 },
+    defaultValues: { name: "", type: "CASH", balance: undefined },
   });
 
   const onSubmit = async (data: CreateAccountFormFields) => {
