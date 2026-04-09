@@ -5,6 +5,7 @@ import type {
   UpdateCategoryFormFields,
 } from "@/lib/schemas/category.schema";
 import { getCached, setCache, invalidateDomain, requestSignature } from "@/lib/cache";
+import { safeFetch } from "@/lib/api/safeFetch";
 
 const DOMAIN = "categories" as const;
 
@@ -16,8 +17,7 @@ export async function getCategories(
   if (cached) return cached;
 
   const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`/api/categories${query}`);
-  const data: ProxyResponse<PaginatedResult<Category>> = await res.json();
+  const data = await safeFetch<PaginatedResult<Category>>(`/api/categories${query}`);
   if (!data.error) setCache(DOMAIN, sig, data);
   return data;
 }
@@ -42,21 +42,19 @@ export async function getCategory(
   const cached = getCached<ProxyResponse<Category>>(DOMAIN, sig);
   if (cached) return cached;
 
-  const res = await fetch(`/api/categories/${id}`);
-  const data: ProxyResponse<Category> = await res.json();
-  if (!data.error) setCache(DOMAIN, sig, data);
-  return data;
+  const res = await safeFetch<Category>(`/api/categories/${id}`);
+  if (!res.error) setCache(DOMAIN, sig, res);
+  return res;
 }
 
 export async function createCategory(
   payload: CreateCategoryFormFields,
 ): Promise<ProxyResponse<Category>> {
-  const res = await fetch("/api/categories", {
+  const data = await safeFetch<Category>("/api/categories", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data: ProxyResponse<Category> = await res.json();
   if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
@@ -65,12 +63,11 @@ export async function updateCategory(
   id: string,
   payload: UpdateCategoryFormFields,
 ): Promise<ProxyResponse<Category>> {
-  const res = await fetch(`/api/categories/${id}`, {
+  const data = await safeFetch<Category>(`/api/categories/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data: ProxyResponse<Category> = await res.json();
   if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
@@ -78,10 +75,9 @@ export async function updateCategory(
 export async function deleteCategory(
   id: string,
 ): Promise<ProxyResponse<null>> {
-  const res = await fetch(`/api/categories/${id}`, {
+  const data = await safeFetch<null>(`/api/categories/${id}`, {
     method: "DELETE",
   });
-  const data: ProxyResponse<null> = await res.json();
   if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }

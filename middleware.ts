@@ -16,6 +16,7 @@ function isTokenValid(token: string): boolean {
     if (parts.length !== 3) return false;
 
     const payload = JSON.parse(atob(parts[1]));
+    if (typeof payload !== "object" || payload === null) return false;
     if (typeof payload.exp !== "number") return false;
 
     return payload.exp * 1000 > Date.now();

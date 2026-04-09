@@ -5,6 +5,7 @@ import type {
   UpdateTransactionPayload,
 } from "@/lib/schemas/transaction.schema";
 import { getCached, setCache, invalidateDomain, requestSignature } from "@/lib/cache";
+import { safeFetch } from "@/lib/api/safeFetch";
 
 const DOMAIN = "transactions" as const;
 
@@ -16,8 +17,7 @@ export async function getTransactions(
   if (cached) return cached;
 
   const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`/api/transactions${query}`);
-  const data: ProxyResponse<PaginatedResult<Transaction>> = await res.json();
+  const data = await safeFetch<PaginatedResult<Transaction>>(`/api/transactions${query}`);
   if (!data.error) setCache(DOMAIN, sig, data);
   return data;
 }
@@ -29,8 +29,7 @@ export async function getTransaction(
   const cached = getCached<ProxyResponse<Transaction>>(DOMAIN, sig);
   if (cached) return cached;
 
-  const res = await fetch(`/api/transactions/${id}`);
-  const data: ProxyResponse<Transaction> = await res.json();
+  const data = await safeFetch<Transaction>(`/api/transactions/${id}`);
   if (!data.error) setCache(DOMAIN, sig, data);
   return data;
 }
@@ -38,12 +37,11 @@ export async function getTransaction(
 export async function createTransaction(
   payload: CreateTransactionPayload,
 ): Promise<ProxyResponse<Transaction>> {
-  const res = await fetch("/api/transactions", {
+  const data = await safeFetch<Transaction>("/api/transactions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data: ProxyResponse<Transaction> = await res.json();
   if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
@@ -52,12 +50,11 @@ export async function updateTransaction(
   id: string,
   payload: UpdateTransactionPayload,
 ): Promise<ProxyResponse<Transaction>> {
-  const res = await fetch(`/api/transactions/${id}`, {
+  const data = await safeFetch<Transaction>(`/api/transactions/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data: ProxyResponse<Transaction> = await res.json();
   if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
@@ -65,10 +62,9 @@ export async function updateTransaction(
 export async function deleteTransaction(
   id: string,
 ): Promise<ProxyResponse<null>> {
-  const res = await fetch(`/api/transactions/${id}`, {
+  const data = await safeFetch<null>(`/api/transactions/${id}`, {
     method: "DELETE",
   });
-  const data: ProxyResponse<null> = await res.json();
   if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
