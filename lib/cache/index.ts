@@ -7,14 +7,14 @@ type CacheDomain = "accounts" | "categories" | "transactions";
 
 /** Per-domain TTL in milliseconds */
 const DOMAIN_TTL: Record<CacheDomain, number> = {
-  accounts: 30 * 60 * 1000,       // 30 minutes — balances change with transactions
-  transactions: 15 * 60 * 1000,   // 15 minutes — most volatile data
-  categories: 7 * 24 * 60 * 60 * 1000, // 7 days — rarely change
+  accounts: 7 * 24 * 60 * 60 * 1000, // 7 days — balances change with transactions
+  transactions: 3 * 24 * 60 * 60 * 1000, // 3 days — most volatile data
+  categories: 14 * 24 * 60 * 60 * 1000, // 14 days — rarely change
 };
 
 /** Domains that must also be invalidated when a given domain is mutated */
 const INVALIDATION_MAP: Record<CacheDomain, CacheDomain[]> = {
-  transactions: ["accounts"],  // transactions affect account balances
+  transactions: ["accounts"], // transactions affect account balances
   accounts: [],
   categories: [],
 };
@@ -77,7 +77,11 @@ export function getCached<T>(domain: CacheDomain, signature: string): T | null {
   }
 }
 
-export function setCache<T>(domain: CacheDomain, signature: string, data: T): void {
+export function setCache<T>(
+  domain: CacheDomain,
+  signature: string,
+  data: T,
+): void {
   if (!isStorageAvailable() || isCacheDisabled()) return;
   try {
     const entry: CacheEntry<T> = { data, timestamp: Date.now() };
@@ -133,8 +137,14 @@ export function handleUserChange(userId: string | null): void {
   localStorage.setItem(USER_ID_KEY, userId);
 }
 
-export function requestSignature(endpoint: string, params?: Record<string, string>): string {
+export function requestSignature(
+  endpoint: string,
+  params?: Record<string, string>,
+): string {
   if (!params || Object.keys(params).length === 0) return endpoint;
-  const sorted = Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join("&");
+  const sorted = Object.keys(params)
+    .sort()
+    .map((k) => `${k}=${params[k]}`)
+    .join("&");
   return `${endpoint}?${sorted}`;
 }

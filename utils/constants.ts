@@ -333,4 +333,4 @@ export const APP_LOCALE = "en-US";
 export const APP_CURRENCY = "USD";
 export const APP_CURRENCY_SYMBOL = "$";
 
-export const DEFAULT_TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
+export const DEFAULT_TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24 * 14; // 14 days
