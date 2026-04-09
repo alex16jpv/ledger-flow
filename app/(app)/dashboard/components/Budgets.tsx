@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import BudgetItem from "./BudgetItem";
 import { MOCK_BUDGETS } from "@/lib/mock/budgets.mock";
-import { getCategoriesByIds } from "@/services/categories.service";
+import { getCategories } from "@/services/categories.service";
 import { Category } from "@/types/Category.types";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function Budgets() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -15,8 +16,7 @@ export default function Budgets() {
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const ids = [...new Set(MOCK_BUDGETS.map((b) => b.categoryId))];
-    const result = await getCategoriesByIds(ids);
+    const result = await getCategories({ limit: DEFAULT_LIST_LIMIT });
     if (result.error) {
       setError(result.error);
     } else {
@@ -35,7 +35,9 @@ export default function Budgets() {
     return (
       <div className="bg-white border border-stone-100 rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
-          <h2 className="text-sm font-medium text-stone-800">Monthly Budgets</h2>
+          <h2 className="text-sm font-medium text-stone-800">
+            Monthly Budgets
+          </h2>
         </div>
         <div className="px-5 py-4 animate-pulse flex flex-col gap-4">
           {Array.from({ length: 3 }).map((_, i) => (

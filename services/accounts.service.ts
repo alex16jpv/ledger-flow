@@ -4,7 +4,8 @@ import type {
   CreateAccountFormFields,
   UpdateAccountFormFields,
 } from "@/lib/schemas/account.schema";
-import { getCached, setCache, clearDomainCache, requestSignature } from "@/lib/cache";
+import { getCached, setCache, invalidateDomain, requestSignature } from "@/lib/cache";
+import { safeFetch } from "@/lib/api/safeFetch";
 
 const DOMAIN = "accounts" as const;
 
@@ -16,8 +17,7 @@ export async function getAccounts(
   if (cached) return cached;
 
   const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`/api/accounts${query}`);
-  const data: ProxyResponse<PaginatedResult<Account>> = await res.json();
+  const data = await safeFetch<PaginatedResult<Account>>(`/api/accounts${query}`);
   if (!data.error) setCache(DOMAIN, sig, data);
   return data;
 }
@@ -40,8 +40,7 @@ export async function getAccount(id: string): Promise<ProxyResponse<Account>> {
   const cached = getCached<ProxyResponse<Account>>(DOMAIN, sig);
   if (cached) return cached;
 
-  const res = await fetch(`/api/accounts/${id}`);
-  const data: ProxyResponse<Account> = await res.json();
+  const data = await safeFetch<Account>(`/api/accounts/${id}`);
   if (!data.error) setCache(DOMAIN, sig, data);
   return data;
 }
@@ -49,13 +48,12 @@ export async function getAccount(id: string): Promise<ProxyResponse<Account>> {
 export async function createAccount(
   payload: CreateAccountFormFields,
 ): Promise<ProxyResponse<Account>> {
-  const res = await fetch("/api/accounts", {
+  const data = await safeFetch<Account>("/api/accounts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data: ProxyResponse<Account> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
 
@@ -63,21 +61,19 @@ export async function updateAccount(
   id: string,
   payload: UpdateAccountFormFields,
 ): Promise<ProxyResponse<Account>> {
-  const res = await fetch(`/api/accounts/${id}`, {
+  const data = await safeFetch<Account>(`/api/accounts/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data: ProxyResponse<Account> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }
 
 export async function deleteAccount(id: string): Promise<ProxyResponse<null>> {
-  const res = await fetch(`/api/accounts/${id}`, {
+  const data = await safeFetch<null>(`/api/accounts/${id}`, {
     method: "DELETE",
   });
-  const data: ProxyResponse<null> = await res.json();
-  if (!data.error) clearDomainCache(DOMAIN);
+  if (!data.error) invalidateDomain(DOMAIN);
   return data;
 }

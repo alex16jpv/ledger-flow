@@ -3,40 +3,43 @@
 import { useEffect, useState, useCallback } from "react";
 import { notFound } from "next/navigation";
 import { MOCK_BUDGETS } from "@/lib/mock/budgets.mock";
-import { getCategory } from "@/services/categories.service";
+import { getCategories } from "@/services/categories.service";
 import { Category } from "@/types/Category.types";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import BudgetHero from "./BudgetHero";
 import BudgetInfo from "./BudgetInfo";
 import BudgetTransactions from "./BudgetTransactions";
 
 export default function BudgetDetailContent({ id }: { id: string }) {
-  const [category, setCategory] = useState<Category | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const budget = MOCK_BUDGETS.find((b) => b.id === id);
-
-  const fetchCategory = useCallback(async () => {
-    if (!budget) return;
+  const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const result = await getCategory(budget.categoryId);
+    const result = await getCategories({ limit: DEFAULT_LIST_LIMIT });
     if (result.error) {
       setError(result.error);
     } else {
-      setCategory(result.data ?? null);
+      setCategories(result.data?.data ?? []);
     }
     setIsLoading(false);
-  }, [budget]);
+  }, []);
 
   useEffect(() => {
-    fetchCategory();
-  }, [fetchCategory]);
+    fetchCategories();
+  }, [fetchCategories]);
+
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+
+  const budget = MOCK_BUDGETS.find((b) => b.id === id);
 
   if (!budget) {
     notFound();
   }
 
+  const category = categoryMap.get(budget.categoryId);
   const categoryEmoji = category?.emoji;
   const categoryName = category?.name;
 
@@ -63,12 +66,6 @@ export default function BudgetDetailContent({ id }: { id: string }) {
     return (
       <div className="bg-red-50 border border-red-100 rounded-xl p-8 text-center">
         <p className="text-sm text-red-600 mb-3">{error}</p>
-        <button
-          onClick={fetchCategory}
-          className="text-sm text-red-600 underline hover:text-red-800"
-        >
-          Try again
-        </button>
       </div>
     );
   }
@@ -79,7 +76,11 @@ export default function BudgetDetailContent({ id }: { id: string }) {
 
       <div className="flex flex-col gap-4">
         <BudgetHero budget={budget} categoryEmoji={categoryEmoji} />
-        <BudgetInfo budget={budget} categoryName={categoryName} categoryEmoji={categoryEmoji} />
+        <BudgetInfo
+          budget={budget}
+          categoryName={categoryName}
+          categoryEmoji={categoryEmoji}
+        />
       </div>
     </div>
   );

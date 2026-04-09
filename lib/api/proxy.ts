@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL;
+const API_SECRET = process.env.API_SECRET;
 
 export type ProxyResponse<T = unknown> = {
   data: T | null;
@@ -53,6 +54,10 @@ export async function proxy<T = unknown>(
   const token = cookieStore.get("token")?.value;
 
   const headers = new Headers(extraHeaders);
+
+  if (API_SECRET) {
+    headers.set("x-api-secret", API_SECRET);
+  }
 
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);

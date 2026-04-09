@@ -3,7 +3,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Category } from "@/types/Category.types";
 import { getCategories, deleteCategory } from "@/services/categories.service";
-import { TRANSACTION_TYPE_LABELS, TRANSACTION_TYPE_COLORS } from "@/utils/constants";
+import {
+  TRANSACTION_TYPE_LABELS,
+  TRANSACTION_TYPE_COLORS,
+  DEFAULT_LIST_LIMIT,
+} from "@/utils/constants";
 import type { TransactionKind } from "@/utils/constants";
 import CategoryTile from "./CategoryTile";
 
@@ -14,16 +18,18 @@ export default function CategoriesContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+    new Set(),
+  );
 
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const result = await getCategories({"limit": "100"});
+    const result = await getCategories({ limit: DEFAULT_LIST_LIMIT });
     if (result.error) {
       setError(result.error);
-    } else if (result.data?.data) {
-      setCategories(result.data.data);
+    } else {
+      setCategories(result.data?.data ?? []);
     }
     setIsLoading(false);
   }, []);
@@ -33,12 +39,13 @@ export default function CategoriesContent() {
   }, [fetchCategories]);
 
   const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this category?")) return;
     const result = await deleteCategory(id);
     if (result.error) {
       setError(result.error);
       return;
     }
-    setCategories((prev) => prev.filter((category) => category.id !== id));
+    setCategories((prev) => prev.filter((c) => c.id !== id));
   };
 
   const toggleGroup = (type: string) => {
@@ -53,7 +60,9 @@ export default function CategoriesContent() {
   const filtered = useMemo(() => {
     if (!search.trim()) return categories;
     const q = search.toLowerCase();
-    return categories.filter((category) => category.name.toLowerCase().includes(q));
+    return categories.filter((category) =>
+      category.name.toLowerCase().includes(q),
+    );
   }, [categories, search]);
 
   const grouped = useMemo(() => {
@@ -154,7 +163,9 @@ export default function CategoriesContent() {
               onClick={() => toggleGroup(type)}
               className="flex items-center gap-2 mb-3 group w-full text-left"
             >
-              <div className={`w-2 h-2 rounded-full shrink-0 ${colors.textColor.replace("text-", "bg-")}`} />
+              <div
+                className={`w-2 h-2 rounded-full shrink-0 ${colors.textColor.replace("text-", "bg-")}`}
+              />
               <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wider">
                 {label}
               </h2>
@@ -183,7 +194,9 @@ export default function CategoriesContent() {
 
       {filtered.length === 0 && (
         <div className="bg-white border border-stone-100 rounded-xl p-6 text-center">
-          <p className="text-sm text-stone-500">No categories match "{search}"</p>
+          <p className="text-sm text-stone-500">
+            No categories match &ldquo;{search}&rdquo;
+          </p>
         </div>
       )}
     </div>

@@ -1,4 +1,4 @@
-import Budgets from "./components/Budgets";
+// import Budgets from "./components/Budgets";
 import Transactions from "./components/Transactions";
 
 export default function Dashboard() {

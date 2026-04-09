@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { MOCK_BUDGETS } from "@/lib/mock/budgets.mock";
-import { getCategoriesByIds } from "@/services/categories.service";
+import { getCategories } from "@/services/categories.service";
 import { Category } from "@/types/Category.types";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import BudgetSummary from "./BudgetSummary";
 import BudgetCard from "./BudgetCard";
 import BudgetAlerts from "./BudgetAlerts";
@@ -16,8 +17,7 @@ export default function BudgetsPageContent() {
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const ids = [...new Set(MOCK_BUDGETS.map((b) => b.categoryId))];
-    const result = await getCategoriesByIds(ids);
+    const result = await getCategories({ limit: DEFAULT_LIST_LIMIT });
     if (result.error) {
       setError(result.error);
     } else {
@@ -67,12 +67,6 @@ export default function BudgetsPageContent() {
     return (
       <div className="bg-red-50 border border-red-100 rounded-xl p-8 text-center">
         <p className="text-sm text-red-600 mb-3">{error}</p>
-        <button
-          onClick={fetchCategories}
-          className="text-sm text-red-600 underline hover:text-red-800"
-        >
-          Try again
-        </button>
       </div>
     );
   }

@@ -1,47 +1,47 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Budget } from "@/types/Budget.type";
+import { Budget } from "@/types/Budget.types";
 import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
+import { Account } from "@/types/Account.types";
 import TransactionItem from "@/components/TransactionItem";
 import { getDateGroupLabel } from "@/lib/dates";
 import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import { getTransactions } from "@/services/transactions.service";
-import { getCategory } from "@/services/categories.service";
-import { getAccountsByIds } from "@/services/accounts.service";
+import { getCategories } from "@/services/categories.service";
+import { getAccounts } from "@/services/accounts.service";
 import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function BudgetTransactions({ budget }: { budget: Budget }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [category, setCategory] = useState<Category | null>(null);
-  const [accountNames, setAccountNames] = useState<Map<string, string>>(new Map());
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const [transactionResult, categoryResult] = await Promise.all([
-      getTransactions({ type: "EXPENSE", limit: DEFAULT_LIST_LIMIT }),
-      getCategory(budget.categoryId),
-    ]);
+    const [transactionResult, categoriesResult, accountsResult] =
+      await Promise.all([
+        getTransactions({ type: "EXPENSE", limit: DEFAULT_LIST_LIMIT }),
+        getCategories({ limit: DEFAULT_LIST_LIMIT }),
+        getAccounts({ limit: DEFAULT_LIST_LIMIT }),
+      ]);
     if (transactionResult.error) {
       setError(transactionResult.error);
     } else {
       const allTransactions = transactionResult.data?.data ?? [];
       const filtered = allTransactions
         .filter((transaction) => transaction.categoryId === budget.categoryId)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        );
       setTransactions(filtered);
-
-      const uniqueAccountIds = [...new Set(
-        filtered.flatMap((transaction) => [transaction.fromAccountId, transaction.toAccountId]).filter((id): id is string => !!id),
-      )];
-      const accountResult = await getAccountsByIds(uniqueAccountIds);
-      setAccountNames(new Map((accountResult.data?.data ?? []).map((account) => [account.id, account.name])));
     }
-    setCategory(categoryResult.data ?? null);
+    setCategories(categoriesResult.data?.data ?? []);
+    setAccounts(accountsResult.data?.data ?? []);
     setIsLoading(false);
   }, [budget.categoryId]);
 
@@ -49,7 +49,10 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
     fetchData();
   }, [fetchData]);
 
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+  const category = categoryMap.get(budget.categoryId);
   const categoryEmoji = category?.emoji;
+  const accountNames = new Map(accounts.map((a) => [a.id, a.name]));
   const groups = groupTransactionsByDate(transactions);
 
   if (isLoading) {
@@ -107,7 +110,11 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
                   <TransactionItem
                     key={transaction.id}
                     transaction={transaction}
-                    categoryEmoji={transaction.categoryId === budget.categoryId ? categoryEmoji : undefined}
+                    categoryEmoji={
+                      transaction.categoryId === budget.categoryId
+                        ? categoryEmoji
+                        : undefined
+                    }
                     accountNames={accountNames}
                   />
                 ))}

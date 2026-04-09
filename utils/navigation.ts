@@ -16,9 +16,8 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { href: "/transactions", icon: "↕", label: "Transactions" },
   { href: "/accounts", icon: "◈", label: "Accounts" },
-  { href: "/categories", icon: "▤", label: "Categories", hideInBottomNav: true },
+  { href: "/categories", icon: "▤", label: "Categories" },
   { href: "/budgets", icon: "◎", label: "Budgets", disabled: true },
-  // { href: "/reports", icon: "⌇", label: "Reports", disabled: true },
 ];
 
 export const BOTTOM_NAV_ITEMS = NAV_ITEMS.filter(

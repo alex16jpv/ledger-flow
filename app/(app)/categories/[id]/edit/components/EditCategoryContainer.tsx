@@ -41,14 +41,6 @@ export default function EditCategoryContainer({ id }: { id: string }) {
   const selectedEmoji = watch("emoji") ?? "";
   const selectedColor = watch("color") ?? "";
 
-  const onEmojiChange = (emoji: string) => {
-    setValue("emoji", emoji, { shouldValidate: true });
-  };
-
-  const onColorChange = (color: CategoryColor) => {
-    setValue("color", color, { shouldValidate: true });
-  };
-
   const fetchCategory = useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
@@ -69,6 +61,14 @@ export default function EditCategoryContainer({ id }: { id: string }) {
   useEffect(() => {
     fetchCategory();
   }, [fetchCategory]);
+
+  const onEmojiChange = (emoji: string) => {
+    setValue("emoji", emoji, { shouldValidate: true });
+  };
+
+  const onColorChange = (color: CategoryColor) => {
+    setValue("color", color, { shouldValidate: true });
+  };
 
   const onSubmit = async (data: UpdateCategoryFormFields) => {
     setServerError(null);

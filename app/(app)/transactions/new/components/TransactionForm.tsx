@@ -118,17 +118,15 @@ export default function TransactionForm({
       </section>
 
       {/* Category */}
-      {/* {isExpense && ( */}
-        <section className="bg-white border border-stone-100 rounded-xl p-6">
-          <input type="hidden" {...register("categoryId")} />
-          <CategoryPicker
-            categories={categories}
-            selectedId={selectedCategoryId}
-            onChange={onCategoryChange ?? (() => {})}
-            error={errors.categoryId?.message}
-          />
-        </section>
-      {/* )} */}
+      <section className="bg-white border border-stone-100 rounded-xl p-6">
+        <input type="hidden" {...register("categoryId")} />
+        <CategoryPicker
+          categories={categories}
+          selectedId={selectedCategoryId}
+          onChange={onCategoryChange ?? (() => {})}
+          error={errors.categoryId?.message}
+        />
+      </section>
 
       {/* Tags + note */}
       <section className="bg-white border border-stone-100 rounded-xl p-6 flex flex-col gap-4">

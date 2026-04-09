@@ -1,4 +1,4 @@
-import { Budget } from "@/types/Budget.type";
+import { Budget } from "@/types/Budget.types";
 import { BUDGET_COLOR_CLASSES } from "@/utils/constants";
 import { formatAmount } from "@/utils/utils";
 

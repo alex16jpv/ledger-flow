@@ -1,22 +1,17 @@
-import { Budget } from "@/types/Budget.type";
+import { Budget } from "@/types/Budget.types";
 import { formatAmount } from "@/utils/utils";
 import { BUDGET_WARNING_THRESHOLD_PERCENT } from "@/utils/constants";
 import Link from "next/link";
 
-function getAlerts(
-  budgets: Budget[],
-): {
+type BudgetAlert = {
   icon: string;
   title: string;
   description: string;
   type: "danger" | "warning";
-}[] {
-  const alerts: {
-    icon: string;
-    title: string;
-    description: string;
-    type: "danger" | "warning";
-  }[] = [];
+};
+
+function getAlerts(budgets: Budget[]): BudgetAlert[] {
+  const alerts: BudgetAlert[] = [];
 
   for (const budget of budgets) {
     const percent = Math.round((budget.spent / budget.amount) * 100);

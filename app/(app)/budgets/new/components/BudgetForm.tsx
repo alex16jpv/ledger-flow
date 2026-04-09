@@ -4,7 +4,7 @@ import InputTextArea from "@/components/forms/InputTextArea";
 import AmountInput from "@/components/forms/AmountInput";
 import { UseFormRegister, FieldErrors, Control } from "react-hook-form";
 import { BudgetFormFields } from "@/lib/schemas/budget.schema";
-import { BudgetColor } from "@/types/Budget.type";
+import { BudgetColor } from "@/types/Budget.types";
 import ColorPicker from "./ColorPicker";
 
 export default function BudgetForm({

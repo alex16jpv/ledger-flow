@@ -1,4 +1,4 @@
-import { Budget } from "@/types/Budget.type";
+import { Budget } from "@/types/Budget.types";
 import { formatAmount } from "@/utils/utils";
 
 export default function BudgetSummary({ budgets }: { budgets: Budget[] }) {

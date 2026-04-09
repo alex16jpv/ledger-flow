@@ -3,12 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import TransactionItem from "@/components/TransactionItem";
 import { getTransactions } from "@/services/transactions.service";
-import { getCategoriesByIds } from "@/services/categories.service";
-import { getAccountsByIds } from "@/services/accounts.service";
+import { getCategories } from "@/services/categories.service";
+import { getAccounts } from "@/services/accounts.service";
 import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
 import { Account } from "@/types/Account.types";
-import { RECENT_ITEMS_LIMIT } from "@/utils/constants";
+import { RECENT_ITEMS_LIMIT, DEFAULT_LIST_LIMIT } from "@/utils/constants";
 import Link from "next/link";
 
 export default function Transactions() {
@@ -21,25 +21,18 @@ export default function Transactions() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const transactionResult = await getTransactions({ limit: RECENT_ITEMS_LIMIT });
+    const [transactionResult, categoryResult, accountResult] =
+      await Promise.all([
+        getTransactions({ limit: RECENT_ITEMS_LIMIT }),
+        getCategories({ limit: DEFAULT_LIST_LIMIT }),
+        getAccounts({ limit: DEFAULT_LIST_LIMIT }),
+      ]);
     if (transactionResult.error) {
       setError(transactionResult.error);
       setIsLoading(false);
       return;
     }
-    const fetchedTransactions = transactionResult.data?.data ?? [];
-    setTransactions(fetchedTransactions);
-
-    const uniqueCategoryIds = [...new Set(
-      fetchedTransactions.map((transaction) => transaction.categoryId).filter((id): id is string => !!id),
-    )];
-    const uniqueAccountIds = [...new Set(
-      fetchedTransactions.flatMap((transaction) => [transaction.fromAccountId, transaction.toAccountId]).filter((id): id is string => !!id),
-    )];
-    const [categoryResult, accountResult] = await Promise.all([
-      getCategoriesByIds(uniqueCategoryIds),
-      getAccountsByIds(uniqueAccountIds),
-    ]);
+    setTransactions(transactionResult.data?.data ?? []);
     setCategories(categoryResult.data?.data ?? []);
     setAccounts(accountResult.data?.data ?? []);
     setIsLoading(false);
@@ -49,14 +42,16 @@ export default function Transactions() {
     fetchData();
   }, [fetchData]);
 
-  const categoryMap = new Map(categories.map((category) => [category.id, category]));
-  const accountNameMap = new Map(accounts.map((account) => [account.id, account.name]));
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+  const accountNameMap = new Map(accounts.map((a) => [a.id, a.name]));
 
   if (isLoading) {
     return (
       <div className="lg:col-span-2 bg-white border border-stone-100 rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
-          <h2 className="text-sm font-medium text-stone-800">Recent Movements</h2>
+          <h2 className="text-sm font-medium text-stone-800">
+            Recent Movements
+          </h2>
         </div>
         <div className="p-6 animate-pulse flex flex-col gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -103,7 +98,11 @@ export default function Transactions() {
             <TransactionItem
               key={transaction.id}
               transaction={transaction}
-              categoryEmoji={transaction.categoryId ? categoryMap.get(transaction.categoryId)?.emoji : undefined}
+              categoryEmoji={
+                transaction.categoryId
+                  ? categoryMap.get(transaction.categoryId)?.emoji
+                  : undefined
+              }
               accountNames={accountNameMap}
             />
           ))}

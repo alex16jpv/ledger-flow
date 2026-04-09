@@ -2,7 +2,7 @@ import { format, isValid, parse, parseISO, subDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 
 const APP_TIMEZONE =
-  process.env.NEXT_PUBLIC_APP_TIMEZONE ?? "America/Mexico_City";
+  process.env.NEXT_PUBLIC_APP_TIMEZONE ?? "UTC";
 
 export const DATE_FORMATS = {
   iso: "yyyy-MM-dd",
