@@ -43,6 +43,12 @@ export default function RootLayout({
       lang="en"
       className={`${dmSans.variable} ${dmMono.variable} ${playfairDisplay.variable}`}
     >
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        />
+      </head>
       <body className="bg-stone-50 min-h-screen font-sans">{children}</body>
     </html>
   );
