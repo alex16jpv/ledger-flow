@@ -9,7 +9,7 @@ import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
 import { Account } from "@/types/Account.types";
 import TransactionItem from "@/components/TransactionItem";
-import { RECENT_ITEMS_LIMIT, DEFAULT_LIST_LIMIT } from "@/utils/constants";
+import { DEFAULT_LIST_LIMIT } from "@/utils/constants";
 
 export default function RecentTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -23,7 +23,7 @@ export default function RecentTransactions() {
     setError(null);
     const [transactionResult, categoryResult, accountResult] =
       await Promise.all([
-        getTransactions({ limit: RECENT_ITEMS_LIMIT }),
+        getTransactions({ limit: DEFAULT_LIST_LIMIT }),
         getCategories({ limit: DEFAULT_LIST_LIMIT }),
         getAccounts({ limit: DEFAULT_LIST_LIMIT }),
       ]);
