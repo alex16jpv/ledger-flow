@@ -22,7 +22,7 @@ export const DATE_FORMATS = {
   dayShortMonth: "dd MMM",
   monthLong: "MMMM",
   time: "HH:mm",
-  dayShortMonthTime: "dd MMM · HH:mm",
+  dayShortMonthTime: "dd MMM · h:mm a",
 } as const;
 
 export type DateFormat = keyof typeof DATE_FORMATS;
