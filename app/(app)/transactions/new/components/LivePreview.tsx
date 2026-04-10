@@ -22,7 +22,7 @@ function formatPreviewDate(date: string, time: string): string {
   if (!date) return "—";
   try {
     const parsedDate = parseDateTimeFields(date, time);
-    return `${formatDate(parsedDate, "shortDateYear")} · ${time || "00:00"}`;
+    return formatDate(parsedDate, "dayShortMonthTime");
   } catch {
     return "—";
   }
@@ -163,7 +163,10 @@ export default function LivePreview({
               </div>
             </div>
 
-            <SaveButton selectedType={selectedType} isSubmitting={isSubmitting} />
+            <SaveButton
+              selectedType={selectedType}
+              isSubmitting={isSubmitting}
+            />
 
             <Link
               href="/transactions"
