@@ -9,7 +9,13 @@ import { Transaction } from "@/types/Transaction.types";
 import { Category } from "@/types/Category.types";
 import { Account } from "@/types/Account.types";
 import TransactionItem from "@/components/TransactionItem";
-import { DEFAULT_LIST_LIMIT, TRANSACTIONS_DEFAULT_LIMIT } from "@/utils/constants";
+import SyncButton from "@/components/SyncButton";
+import {
+  DEFAULT_LIST_LIMIT,
+  TRANSACTIONS_DEFAULT_LIMIT,
+} from "@/utils/constants";
+import { groupTransactionsByDate } from "@/utils/transaction.groups";
+import { getDateGroupLabel } from "@/lib/dates";
 
 export default function RecentTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -44,6 +50,7 @@ export default function RecentTransactions() {
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]));
   const accountNameMap = new Map(accounts.map((a) => [a.id, a.name]));
+  const groups = groupTransactionsByDate(transactions);
 
   if (isLoading) {
     return (
@@ -88,32 +95,44 @@ export default function RecentTransactions() {
         <h2 className="text-sm font-medium text-stone-800">
           Recent Transactions
         </h2>
-        <Link
-          href="/transactions"
-          className="font-mono text-xs text-teal-600 hover:text-teal-800 transition-colors"
-        >
-          View all →
-        </Link>
+        <div className="flex items-center gap-1">
+          <SyncButton onSync={fetchData} />
+          <Link
+            href="/transactions"
+            className="font-mono text-xs text-teal-600 hover:text-teal-800 transition-colors"
+          >
+            View all →
+          </Link>
+        </div>
       </div>
       {transactions.length === 0 ? (
         <div className="p-8 text-center">
           <p className="text-sm text-stone-400">No transactions yet</p>
         </div>
       ) : (
-        <ul className="divide-y divide-stone-50" role="list">
-          {transactions.map((transaction) => (
-            <TransactionItem
-              key={transaction.id}
-              transaction={transaction}
-              categoryEmoji={
-                transaction.categoryId
-                  ? categoryMap.get(transaction.categoryId)?.emoji
-                  : undefined
-              }
-              accountNames={accountNameMap}
-            />
+        <div className="flex flex-col">
+          {groups.map(([dateKey, dateTransactions]) => (
+            <div key={dateKey}>
+              <p className="font-mono text-[10px] text-stone-400 uppercase tracking-widest px-5 pt-4 pb-2">
+                {getDateGroupLabel(dateTransactions[0].date)}
+              </p>
+              <ul className="divide-y divide-stone-50" role="list">
+                {dateTransactions.map((transaction) => (
+                  <TransactionItem
+                    key={transaction.id}
+                    transaction={transaction}
+                    categoryEmoji={
+                      transaction.categoryId
+                        ? categoryMap.get(transaction.categoryId)?.emoji
+                        : undefined
+                    }
+                    accountNames={accountNameMap}
+                  />
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </section>
   );

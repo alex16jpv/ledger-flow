@@ -14,6 +14,7 @@ export default function TransactionsContent({
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
+  syncButton,
 }: {
   transactions: Transaction[];
   categories?: Category[];
@@ -21,6 +22,7 @@ export default function TransactionsContent({
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  syncButton?: React.ReactNode;
 }) {
   const [activeFilter, setActiveFilter] = useState<TransactionKind | null>(
     null,
@@ -32,10 +34,15 @@ export default function TransactionsContent({
 
   return (
     <div className="lg:col-span-2 flex flex-col gap-4">
-      <FilterChips
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
-      />
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <FilterChips
+            activeFilter={activeFilter}
+            onFilterChange={setActiveFilter}
+          />
+        </div>
+        {syncButton}
+      </div>
       <TransactionList
         transactions={filteredTransactions}
         categories={categories}

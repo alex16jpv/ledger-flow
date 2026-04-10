@@ -9,6 +9,7 @@ import TransactionItem from "@/components/TransactionItem";
 import { getDateGroupLabel } from "@/lib/dates";
 import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import FilterChips from "@/app/(app)/transactions/components/FilterChips";
+import SyncButton from "@/components/SyncButton";
 import { getTransactions } from "@/services/transactions.service";
 import { getCategories } from "@/services/categories.service";
 import { getAccounts } from "@/services/accounts.service";
@@ -88,10 +89,15 @@ export default function AccountTransactions({ account }: { account: Account }) {
 
   return (
     <div className="lg:col-span-2 flex flex-col gap-4">
-      <FilterChips
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
-      />
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <FilterChips
+            activeFilter={activeFilter}
+            onFilterChange={setActiveFilter}
+          />
+        </div>
+        <SyncButton onSync={fetchData} />
+      </div>
 
       {filteredTransactions.length === 0 ? (
         <div className="bg-white border border-stone-100 rounded-xl p-8 text-center">

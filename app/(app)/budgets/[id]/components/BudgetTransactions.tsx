@@ -11,6 +11,7 @@ import { groupTransactionsByDate } from "@/utils/transaction.groups";
 import { getTransactions } from "@/services/transactions.service";
 import { getCategories } from "@/services/categories.service";
 import { getAccounts } from "@/services/accounts.service";
+import SyncButton from "@/components/SyncButton";
 import {
   DEFAULT_LIST_LIMIT,
   TRANSACTIONS_DEFAULT_LIMIT,
@@ -89,10 +90,13 @@ export default function BudgetTransactions({ budget }: { budget: Budget }) {
         <h2 className="text-sm font-medium text-stone-800">
           Related Transactions
         </h2>
-        <span className="font-mono text-xs text-stone-400">
-          {transactions.length} transaction
-          {transactions.length !== 1 ? "s" : ""}
-        </span>
+        <div className="flex items-center gap-2">
+          <SyncButton onSync={fetchData} />
+          <span className="font-mono text-xs text-stone-400">
+            {transactions.length} transaction
+            {transactions.length !== 1 ? "s" : ""}
+          </span>
+        </div>
       </div>
 
       {transactions.length === 0 ? (

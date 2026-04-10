@@ -14,6 +14,7 @@ import {
 } from "@/utils/constants";
 import TransactionsContent from "./TransactionsContent";
 import SummaryPanel from "./SummaryPanel";
+import SyncButton from "@/components/SyncButton";
 
 export default function TransactionsPageContent() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -114,6 +115,7 @@ export default function TransactionsPageContent() {
         hasMore={hasMore}
         isLoadingMore={isLoadingMore}
         onLoadMore={loadMore}
+        syncButton={<SyncButton onSync={fetchData} />}
       />
       <SummaryPanel transactions={transactions} categories={categories} />
     </>
