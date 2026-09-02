@@ -177,7 +177,8 @@
       "en": "English",
       "es": "Español",
       "esHelp": "Spanish",
-      "note": "Dates and amounts follow your language, your currency ({currency}) and your time zone."
+      "note": "Dates and amounts follow your language, your currency ({currency}) and your time zone.",
+      "default": "Default"
     },
     "currency": {
       "title": "Currency",
@@ -333,7 +334,9 @@
       "color": "Color",
       "type": "Type",
       "bankAccount": "Bank account",
-      "creditCard": "Credit card"
+      "creditCard": "Credit card",
+      "primary": "Primary",
+      "secondary": "Secondary"
     }
   },
   "errors": {

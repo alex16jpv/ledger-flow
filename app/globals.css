@@ -4,6 +4,7 @@
 @import "../tokens/semantic.css";
 @import "../tokens/base.css";
 @import "../tokens/tailwind.theme.css";
+@import "../tokens/samples.css";
 
 @theme inline {
   --text-xs: var(--fs-xs);

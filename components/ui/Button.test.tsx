@@ -8,7 +8,9 @@ describe("Button", () => {
     expect(buttonClasses({ variant: "primary" })).toContain("bg-brand");
     expect(buttonClasses({ variant: "danger" })).toContain("bg-danger-soft");
     expect(buttonClasses({ size: "lg" })).toContain("h-(--control-lg)");
-    expect(buttonClasses({ iconOnly: true, round: true })).toContain("rounded-full");
+    const icon = buttonClasses({ iconOnly: true, round: true });
+    expect(icon).toContain("rounded-full");
+    expect(icon).not.toMatch(/px-\d|rounded-md/);
   });
 
   it("blocks double submit while loading and exposes aria-busy", async () => {

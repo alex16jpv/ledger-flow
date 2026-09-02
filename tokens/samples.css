@@ -1,0 +1,12 @@
+:root {
+  --sample-tinta-brand: oklch(0.46 0.16 278);
+  --sample-tinta-1: oklch(0.6 0.2 25);
+  --sample-tinta-2: oklch(0.64 0.17 150);
+  --sample-tinta-3: oklch(0.6 0.18 250);
+  --sample-tinta-4: oklch(0.74 0.16 75);
+  --sample-brisa-brand: oklch(0.48 0.12 190);
+  --sample-brisa-1: oklch(0.62 0.19 20);
+  --sample-brisa-2: oklch(0.66 0.15 155);
+  --sample-brisa-3: oklch(0.62 0.17 255);
+  --sample-brisa-4: oklch(0.76 0.15 80);
+}

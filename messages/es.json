@@ -177,7 +177,8 @@
       "en": "English",
       "es": "Español",
       "esHelp": "Español",
-      "note": "Las fechas y los importes siguen tu idioma, tu moneda ({currency}) y tu zona horaria."
+      "note": "Las fechas y los importes siguen tu idioma, tu moneda ({currency}) y tu zona horaria.",
+      "default": "Predeterminado"
     },
     "currency": {
       "title": "Moneda",
@@ -333,7 +334,9 @@
       "color": "Color",
       "type": "Tipo",
       "bankAccount": "Cuenta bancaria",
-      "creditCard": "Tarjeta de crédito"
+      "creditCard": "Tarjeta de crédito",
+      "primary": "Primario",
+      "secondary": "Secundario"
     }
   },
   "errors": {

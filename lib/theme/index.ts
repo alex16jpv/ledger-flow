@@ -23,6 +23,7 @@ export {
   MODES,
   type Palette,
   PALETTES,
+  paletteSampleVars,
   type ResolvedMode,
   STORAGE_KEYS,
   type Theme,

@@ -1,0 +1,225 @@
+"use client";
+
+import {
+  ChevronRight,
+  Clock,
+  Coins,
+  Download,
+  Globe,
+  Lock,
+  LogOut,
+  Palette as PaletteIcon,
+  Smartphone,
+  Tags,
+  Upload,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { type ReactNode, useState } from "react";
+
+import { Avatar } from "@/components/shell/Avatar";
+import { PageHeader } from "@/components/shell/PageHeader";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { List, Row, RowBody, RowButton, RowLink, RowMeta, RowTitle } from "@/components/ui/Row";
+import { Tile } from "@/components/ui/Tile";
+import { env } from "@/lib/env";
+import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
+import { Link } from "@/lib/i18n/navigation";
+import { useDates } from "@/lib/i18n/useDates";
+import { iconProps } from "@/lib/icons/sizes";
+import { useSession } from "@/lib/session/SessionProvider";
+import { useTheme } from "@/lib/theme";
+import type { ColorToken } from "@/lib/theme/feature-color";
+
+import { useCategorySummary, useSessionCount } from "../hooks";
+import { LanguageSheet } from "./LanguageSheet";
+
+interface SettingsRowProps {
+  icon: ReactNode;
+  color?: ColorToken;
+  title: ReactNode;
+  meta?: ReactNode;
+  right?: ReactNode;
+  href?: "/settings/appearance";
+  onClick?: () => void;
+}
+
+function SettingsRow({ icon, color, title, meta, right, href, onClick }: SettingsRowProps) {
+  const body = (
+    <>
+      <Tile size="sm" color={color}>
+        {icon}
+      </Tile>
+      <RowBody>
+        <RowTitle>
+          <span>{title}</span>
+        </RowTitle>
+        {meta && <RowMeta items={[meta]} />}
+      </RowBody>
+      <span className="flex items-center gap-2 text-sm text-text-2">
+        {right}
+        {(href ?? onClick) && <ChevronRight {...iconProps("sm")} className="text-text-3" />}
+      </span>
+    </>
+  );
+  if (href) {
+    return (
+      <RowLink href={href} className="min-h-14">
+        {body}
+      </RowLink>
+    );
+  }
+  if (onClick) {
+    return (
+      <RowButton onClick={onClick} className="min-h-14">
+        {body}
+      </RowButton>
+    );
+  }
+  return <Row className="min-h-14">{body}</Row>;
+}
+
+function Section({ title, children }: { title: ReactNode; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-xs font-medium tracking-caps text-text-3 uppercase">{title}</span>
+      <Card flush>
+        <List>{children}</List>
+      </Card>
+    </div>
+  );
+}
+
+export function SettingsHub() {
+  const t = useTranslations();
+  const locale = useLocale();
+  const session = useSession();
+  const theme = useTheme();
+  const dates = useDates();
+  const { currency, timeZone } = useFormatSettings();
+  const categories = useCategorySummary(session.status === "authenticated");
+  const sessions = useSessionCount(session.status === "authenticated");
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const user = session.user;
+
+  return (
+    <>
+      <PageHeader title={t("settings.title")} />
+      <Card className="flex items-center gap-3.5">
+        <Avatar name={user?.name ?? ""} className="size-[52px] text-lg" />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-md font-semibold">{user?.name}</span>
+          <span className="text-sm text-text-2">{user?.email}</span>
+          {user?.lastLoginAt && (
+            <span className="text-xs text-text-3">
+              {t("settings.lastSignIn", { when: dates.formatDay(new Date(user.lastLoginAt)) })}
+            </span>
+          )}
+        </span>
+      </Card>
+
+      <Section title={t("settings.preferences")}>
+        <SettingsRow
+          icon={<Globe {...iconProps("sm")} />}
+          color="TEAL"
+          title={t("settings.language.title")}
+          meta={t("settings.language.subtitle")}
+          right={t(`settings.language.${locale}`)}
+          onClick={() => {
+            setLanguageOpen(true);
+          }}
+        />
+        <SettingsRow
+          icon={<Coins {...iconProps("sm")} />}
+          color="GREEN"
+          title={t("settings.currency.title")}
+          meta={t("settings.currency.locked")}
+          right={<Badge>{currency}</Badge>}
+        />
+        <SettingsRow
+          icon={<Clock {...iconProps("sm")} />}
+          color="BLUE"
+          title={t("settings.timeZone.title")}
+          meta={t("settings.timeZone.subtitle")}
+          right={timeZone.split("/").pop()?.replace(/_/g, " ")}
+        />
+        <SettingsRow
+          icon={<PaletteIcon {...iconProps("sm")} />}
+          color="PURPLE"
+          title={t("settings.appearance.title")}
+          meta={t("settings.appearance.subtitle")}
+          right={`${t(`settings.appearance.palettes.${theme.palette}.name`)} · ${t(`settings.appearance.${theme.mode}`)}`}
+          href="/settings/appearance"
+        />
+        <SettingsRow
+          icon={<Tags {...iconProps("sm")} />}
+          color="ORANGE"
+          title={t("settings.categories.title")}
+          meta={categories.data ? t("settings.categories.subtitle", categories.data) : undefined}
+        />
+      </Section>
+
+      <Section title={t("settings.security")}>
+        <SettingsRow
+          icon={<Lock {...iconProps("sm")} />}
+          color="GRAY"
+          title={t("settings.credentials.title")}
+          meta={t("settings.credentials.subtitle")}
+        />
+        <SettingsRow
+          icon={<Smartphone {...iconProps("sm")} />}
+          color="GRAY"
+          title={t("settings.sessions.title")}
+          meta={t("settings.sessions.subtitle")}
+          right={sessions.data !== undefined && <Badge>{sessions.data}</Badge>}
+        />
+      </Section>
+
+      <Section title={t("settings.data")}>
+        <SettingsRow
+          icon={<Download {...iconProps("sm")} />}
+          title={t("settings.export")}
+          meta={t("common.comingSoon")}
+          right={<Badge tone="outline">{t("common.soon")}</Badge>}
+        />
+        <SettingsRow
+          icon={<Upload {...iconProps("sm")} />}
+          title={t("settings.import")}
+          meta={t("common.comingSoon")}
+          right={<Badge tone="outline">{t("common.soon")}</Badge>}
+        />
+      </Section>
+
+      <div className="flex flex-col gap-2">
+        <Button
+          variant="secondary"
+          block
+          onClick={() => {
+            void session.logout();
+          }}
+        >
+          <LogOut {...iconProps("sm")} />
+          {t("settings.signOut")}
+        </Button>
+        <Button variant="ghost" block className="text-danger" disabled>
+          {t("settings.deleteAccount")}
+        </Button>
+      </div>
+      <p className="text-center text-xs text-text-3">
+        {t("settings.version", { version: env.NEXT_PUBLIC_APP_VERSION })}
+        {" · "}
+        <span className="font-mono">{timeZone}</span>
+      </p>
+      <Link href="/home" className="sr-only">
+        {t("nav.home")}
+      </Link>
+      <LanguageSheet
+        open={languageOpen}
+        onClose={() => {
+          setLanguageOpen(false);
+        }}
+      />
+    </>
+  );
+}

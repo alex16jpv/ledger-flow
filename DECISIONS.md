@@ -362,3 +362,20 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   (the app layer may compose several features); closing invalidates the home queries.
 - **Month window** comes from `useMonthContext` (`[from, to)` in the user's zone, day of month, days
   in month and yesterday's key) so stats and budgets use the same boundaries as the backend.
+
+## 2026-09-01 · Minimal settings (W-15)
+
+- **Language change** does `PUT /users/:id { locale }`, updates the session user, posts a `locale`
+  message to the other tabs and navigates to the same path under the other prefix; the next-intl
+  middleware refreshes the `lf_locale` cookie on that navigation, so the choice survives reloads and
+  follows the user to other devices through `user.locale`.
+- **"Follow device"** has no backend value (`user.locale` is `en|es`), so it is a local mode
+  (`lf.localeMode`) that resolves `navigator.language` to a supported locale and saves that locale
+  exactly like a fixed choice; the row stays checked while the mode is "device".
+- **Palette cards** show five sample dots per palette from `tokens/samples.css` (brand + four seeds):
+  the palette files select on `:root[data-palette]`, so an inactive palette cannot be previewed with
+  the live tokens without duplicating its seeds. Adding a palette means adding its five samples.
+- **Rows without a destination yet** (currency, time zone, categories, credentials, sessions, delete
+  account) render as static rows with their live values (counts from `/categories` and
+  `/auth/sessions`); W-30 and W-25 make them navigable. Export/import stay "soon".
+- **Settings pages** use the narrow 640 px column of DESIGN.md §6 through `AppShell narrow`.

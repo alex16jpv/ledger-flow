@@ -25,15 +25,17 @@ const VARIANT: Record<ButtonVariant, string> = {
 };
 
 const SIZE: Record<ButtonSize, string> = {
-  sm: "h-(--control-sm) px-3 text-sm rounded-sm",
-  md: "h-(--control-md) px-4 text-base rounded-md",
-  lg: "h-(--control-lg) px-5 text-md rounded-lg",
+  sm: "h-(--control-sm) text-sm",
+  md: "h-(--control-md) text-base",
+  lg: "h-(--control-lg) text-md",
 };
 
+const PADDING: Record<ButtonSize, string> = { sm: "px-3", md: "px-4", lg: "px-5" };
+const RADIUS: Record<ButtonSize, string> = { sm: "rounded-sm", md: "rounded-md", lg: "rounded-lg" };
 const ICON_ONLY: Record<ButtonSize, string> = {
-  sm: "w-(--control-sm) px-0",
-  md: "w-(--control-md) px-0",
-  lg: "w-(--control-lg) px-0",
+  sm: "w-(--control-sm)",
+  md: "w-(--control-md)",
+  lg: "w-(--control-lg)",
 };
 
 export function buttonClasses({
@@ -49,8 +51,8 @@ export function buttonClasses({
     "disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
     VARIANT[variant],
     SIZE[size],
-    iconOnly && ICON_ONLY[size],
-    round && "rounded-full",
+    iconOnly ? ICON_ONLY[size] : PADDING[size],
+    round ? "rounded-full" : RADIUS[size],
     block && "w-full",
   );
 }

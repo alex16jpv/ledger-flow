@@ -24,3 +24,8 @@ export function isPalette(value: unknown): value is Palette {
 export function isMode(value: unknown): value is Mode {
   return typeof value === "string" && (MODES as readonly string[]).includes(value);
 }
+
+// Sample dots for the palette cards live in tokens/samples.css (five per palette: brand + four seeds).
+export function paletteSampleVars(palette: Palette): string[] {
+  return ["brand", "1", "2", "3", "4"].map((slot) => `var(--sample-${palette}-${slot})`);
+}

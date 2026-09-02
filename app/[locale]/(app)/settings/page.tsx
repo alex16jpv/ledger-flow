@@ -1,5 +1,13 @@
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
-export default function Page() {
-  notFound();
+import { SettingsHub } from "@/features/settings/components/SettingsHub";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("settings");
+  return { title: t("title") };
+}
+
+export default function SettingsPage() {
+  return <SettingsHub />;
 }
