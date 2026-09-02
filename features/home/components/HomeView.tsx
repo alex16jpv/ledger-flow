@@ -2,6 +2,7 @@
 
 import { Info, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { type ReactNode, useMemo } from "react";
 
 import { Avatar, PageHeader } from "@/components/shell";
 import { Alert } from "@/components/ui/Alert";
@@ -12,11 +13,13 @@ import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
 import { ApiError, NetworkError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
+import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { useSession } from "@/lib/session";
 
-import { useHomeData, useMonthContext } from "../hooks";
+import { dayBars, topBudgets, useHomeData, useMonthContext } from "../hooks";
 import { AccountsSection } from "./AccountsSection";
+import { BudgetsSection } from "./BudgetsSection";
 import { HeroCard } from "./HeroCard";
 import { StatsRow } from "./StatsRow";
 
@@ -24,15 +27,27 @@ interface HomeViewProps {
   reactivated?: boolean;
   onCreateAccount: () => void;
   onCreateBudget: () => void;
+  recent?: ReactNode;
 }
 
-export function HomeView({ reactivated = false, onCreateAccount, onCreateBudget }: HomeViewProps) {
+export function HomeView({
+  reactivated = false,
+  onCreateAccount,
+  onCreateBudget,
+  recent,
+}: HomeViewProps) {
   const t = useTranslations();
   const { user } = useSession();
   const dates = useDates();
+  const money = useMoney();
   const month = useMonthContext();
   const data = useHomeData(month);
   const firstName = user?.name.split(" ")[0] ?? "";
+  const categoriesById = useMemo(
+    () => new Map((data.categories.data ?? []).map((category) => [category.id, category])),
+    [data.categories.data],
+  );
+  const pending = data.pending.data;
 
   const header = (
     <PageHeader
@@ -120,6 +135,15 @@ export function HomeView({ reactivated = false, onCreateAccount, onCreateBudget 
           {t("auth.register.reactivated.body")}
         </Alert>
       )}
+      {pending && pending.count > 0 && (
+        <Link href="/transactions/review" className="block rounded-md">
+          <Alert tone="warning">
+            <b className="font-semibold">{t("home.pendingReview", { count: pending.count })}</b>
+            {pending.total > 0 &&
+              ` ${t("home.pendingTotal", { amount: money.format(pending.total) })}`}
+          </Alert>
+        </Link>
+      )}
       {accounts.length === 0 ? (
         <Card>
           <Empty
@@ -131,12 +155,13 @@ export function HomeView({ reactivated = false, onCreateAccount, onCreateBudget 
         </Card>
       ) : (
         <div className="flex flex-col gap-5 md:grid md:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)] md:items-start md:gap-5">
-          <div className="flex flex-col gap-5">
+          <div className="contents md:flex md:flex-col md:gap-5">
             <HeroCard
               month={month}
               spent={spent}
               yesterdaySpent={data.yesterdaySpent}
               globalBudget={data.globalBudget}
+              bars={dayBars(data.spending.data.buckets, month, dates.timeZone)}
               onCreateBudget={onCreateBudget}
             />
             <StatsRow
@@ -145,8 +170,14 @@ export function HomeView({ reactivated = false, onCreateAccount, onCreateBudget 
               income={data.income.data ?? 0}
               spent={spent}
             />
+            <div className="order-5 md:order-none">{recent}</div>
           </div>
-          <div className="flex flex-col gap-5">
+          <div className="contents md:flex md:flex-col md:gap-5">
+            <BudgetsSection
+              budgets={topBudgets(data.budgets.data ?? [])}
+              categories={categoriesById}
+              now={month.reference}
+            />
             <AccountsSection accounts={accounts} />
           </div>
         </div>

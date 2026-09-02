@@ -6,4 +6,6 @@ export const homeKeys = {
     [...homeKeys.all, "spending", { from, to, type, groupBy: groupBy ?? null }] as const,
   accounts: () => [...homeKeys.all, "accounts"] as const,
   budgets: (reference: string) => [...homeKeys.all, "budgets", { reference }] as const,
+  categories: () => [...homeKeys.all, "categories"] as const,
+  pending: () => [...homeKeys.all, "pending"] as const,
 };

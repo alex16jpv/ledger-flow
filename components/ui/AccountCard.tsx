@@ -54,14 +54,20 @@ export function AccountCard({
 }
 
 export function AccountCardGrid({
+  label,
   className,
   children,
 }: {
+  label: string;
   className?: string;
   children: ReactNode;
 }) {
+  // The horizontal carousel scrolls on small screens; a focusable region keeps it reachable by keyboard.
   return (
     <div
+      role="region"
+      aria-label={label}
+      tabIndex={0}
       className={cn(
         "-mx-4 flex snap-x snap-mandatory [scrollbar-width:none] gap-3 overflow-x-auto px-4 pb-0.5 *:shrink-0 *:basis-[min(72%,260px)] *:snap-start",
         "sm:mx-0 sm:grid sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] sm:overflow-visible sm:px-0 sm:*:basis-auto",

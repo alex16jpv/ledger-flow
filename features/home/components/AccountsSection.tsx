@@ -22,7 +22,7 @@ export function AccountsSection({ accounts }: AccountsSectionProps) {
           {t("common.seeAll")}
         </Link>
       </div>
-      <AccountCardGrid>
+      <AccountCardGrid label={t("home.accounts")}>
         {ordered.map((account) => (
           <AccountCard
             key={account.id}

@@ -573,3 +573,19 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **The amount input takes the focus itself.** `showModal()` moves the focus to the first focusable
   element (the close button) and browsers differ on honouring `autofocus` inside a dialog, so the
   quick-add sheet focuses the amount from an effect on every opening and on every chained reset.
+
+## 2026-09-02 · Home complete (W-22)
+
+- **Bars come from `groupBy=day` and the client only fills the gaps.** The API returns the days with
+  spending; `dayBars` builds one bar per calendar day of the month in the user's zone with 0 where
+  nothing was spent and marks today, as DESIGN.md §8.1 asks. No amounts are added.
+- **Budget phrases derive from the server's `spent` and `amount`.** "left" and "over by" are
+  differences of two server figures shown next to them, the same display-only derivation W-14 allowed
+  for the daily average; the pace marker and the tone reuse `Progress`. The global monthly budget stays
+  in the hero and is excluded from the list, which ranks the rest by share consumed.
+- **Pending alert from one request.** Home has its own `pending` query on the same
+  `includeSummary=true` listing the inbox uses, keyed under `home`, so a mutation invalidates both.
+- **Recent movements are an app-layer slot.** `HomeView` renders `recent` where the design puts it;
+  `RecentTransactions` (app layer) merges the pending rows first and the latest rows after, through
+  `useRecentTransactions`, and reuses `TransactionRow` with the account and category lookups. A feature
+  still never imports another.

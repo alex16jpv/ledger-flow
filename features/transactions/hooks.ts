@@ -17,6 +17,7 @@ import {
   createTransaction,
   deleteTransaction,
   fetchDailyStats,
+  fetchLatestTransactions,
   fetchPendingCount,
   fetchTags,
   fetchTransaction,
@@ -97,6 +98,31 @@ export function useTransactionsInfinite(query: ListQuery, enabled = true) {
       last.pagination.hasMore ? (last.pagination.nextCursor ?? undefined) : undefined,
     enabled,
   });
+}
+
+// Home shows the latest movements with the ones still to review first: two small lists, merged.
+export function useRecentTransactions(limit = 5) {
+  const pending = useQuery({
+    queryKey: transactionKeys.list({ pendingDetails: "true", latest: limit }),
+    queryFn: () => fetchLatestTransactions({ pendingDetails: "true" }, limit),
+  });
+  const latest = useQuery({
+    queryKey: transactionKeys.list({ latest: limit }),
+    queryFn: () => fetchLatestTransactions({}, limit),
+  });
+  const pendingRows = pending.data?.data;
+  const latestRows = latest.data?.data;
+  const rows = useMemo<Transaction[] | undefined>(() => {
+    if (!pendingRows || !latestRows) return undefined;
+    const seen = new Set(pendingRows.map((row) => row.id));
+    return [...pendingRows, ...latestRows.filter((row) => !seen.has(row.id))].slice(0, limit);
+  }, [pendingRows, latestRows, limit]);
+  return {
+    rows,
+    isPending: pending.isPending || latest.isPending,
+    error: pending.error ?? latest.error,
+    refetch: () => Promise.all([pending.refetch(), latest.refetch()]),
+  };
 }
 
 export function useTransactionsCount(query: ListQuery, enabled = true) {

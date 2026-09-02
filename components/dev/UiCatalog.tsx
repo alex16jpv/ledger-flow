@@ -425,7 +425,7 @@ export function UiCatalog() {
         </Section>
 
         <Section title={t("accounts")}>
-          <AccountCardGrid>
+          <AccountCardGrid label={t("accounts")}>
             <AccountCard
               name={t("sample.bank")}
               typeLabel={t("sample.bankAccount")}

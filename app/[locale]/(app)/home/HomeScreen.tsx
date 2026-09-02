@@ -11,6 +11,8 @@ import { GlobalBudgetForm } from "@/features/budgets/components/GlobalBudgetForm
 import { HomeView } from "@/features/home/components/HomeView";
 import { homeKeys } from "@/features/home/keys";
 
+import { RecentTransactions } from "./RecentTransactions";
+
 type OpenSheet = "account" | "budget" | null;
 
 export function HomeScreen() {
@@ -34,6 +36,7 @@ export function HomeScreen() {
         onCreateBudget={() => {
           setOpen("budget");
         }}
+        recent={<RecentTransactions />}
       />
       <Sheet
         open={open === "account"}

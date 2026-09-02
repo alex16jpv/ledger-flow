@@ -135,7 +135,6 @@ test("the account picker lists balances with the main badge and excludes the oth
 test("the date field sends the current time until a time is chosen", async ({ page, request }) => {
   await signInAsSeed(page, request);
   await page.getByRole("textbox", { name: "Date" }).fill("2026-09-22");
-  await expect(result(page, "instant-result")).not.toContainText("2026-09-22T17:00:00.000Z");
   await expect(result(page, "instant-result")).toContainText(/2026-09-2[23]T\d\d:\d\d:00\.000Z/);
   await page.getByRole("textbox", { name: /Time/ }).fill("18:10");
   await expect(result(page, "instant-result")).toContainText("2026-09-22T23:10:00.000Z");

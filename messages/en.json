@@ -169,7 +169,11 @@
         "title": "Nothing spent this month yet",
         "cta": "Add an expense"
       }
-    }
+    },
+    "budgetLeft": "{amount} left · on track",
+    "budgetWarn": "At {percent}% with {days, plural, one {# day} other {# days}} left",
+    "budgetOver": "Over by {amount}",
+    "budgetOf": "/ {amount}"
   },
   "settings": {
     "title": "Settings",

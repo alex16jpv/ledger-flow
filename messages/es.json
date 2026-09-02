@@ -169,7 +169,11 @@
         "title": "Aún no hay gastos este mes",
         "cta": "Registrar un gasto"
       }
-    }
+    },
+    "budgetLeft": "Quedan {amount} · vas bien",
+    "budgetWarn": "Al {percent}% con {days, plural, one {# día} other {# días}} por delante",
+    "budgetOver": "Excedido en {amount}",
+    "budgetOf": "/ {amount}"
   },
   "settings": {
     "title": "Ajustes",

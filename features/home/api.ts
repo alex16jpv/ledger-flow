@@ -1,5 +1,11 @@
 import { api } from "@/lib/api/client";
-import type { AccountList, BudgetList, StatsResponse } from "@/types/api";
+import type {
+  AccountList,
+  BudgetList,
+  CategoryList,
+  StatsResponse,
+  TransactionList,
+} from "@/types/api";
 
 export interface SpendingParams {
   from: string;
@@ -18,4 +24,14 @@ export function fetchHomeAccounts(): Promise<AccountList> {
 
 export function fetchHomeBudgets(reference: string): Promise<BudgetList> {
   return api<BudgetList>("/budgets", { query: { reference, limit: 100 } });
+}
+
+export function fetchHomeCategories(): Promise<CategoryList> {
+  return api<CategoryList>("/categories", { query: { includeArchived: "true", limit: 100 } });
+}
+
+export function fetchHomePending(): Promise<TransactionList> {
+  return api<TransactionList>("/transactions", {
+    query: { pendingDetails: true, limit: 1, includeSummary: true },
+  });
 }

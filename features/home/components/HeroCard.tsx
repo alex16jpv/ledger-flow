@@ -3,22 +3,26 @@
 import { Calendar } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { ADD_HREF } from "@/components/shell/nav";
 import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
+import { Bars } from "@/components/ui/Bars";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Progress } from "@/components/ui/Progress";
+import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import type { Budget } from "@/types/api";
 
-import type { MonthContext } from "../hooks";
+import { type DayBar, type MonthContext } from "../hooks";
 
 interface HeroCardProps {
   month: MonthContext;
   spent: number;
   yesterdaySpent: number | null;
   globalBudget: Budget | null;
+  bars: readonly DayBar[];
   onCreateBudget: () => void;
 }
 
@@ -27,6 +31,7 @@ export function HeroCard({
   spent,
   yesterdaySpent,
   globalBudget,
+  bars,
   onCreateBudget,
 }: HeroCardProps) {
   const t = useTranslations("home");
@@ -50,6 +55,14 @@ export function HeroCard({
         </Badge>
       </div>
       <Amount value={spent} signed={false} size="hero" />
+      {spent === 0 && (
+        <p className="text-sm text-text-3">
+          {t("empty.month.title")}{" "}
+          <Link href={ADD_HREF} className="font-medium text-brand-text">
+            {t("empty.month.cta")}
+          </Link>
+        </p>
+      )}
       <p className="text-sm text-text-2">
         {t("dailyAverage")}{" "}
         <b className="font-medium text-text tabular-nums">
@@ -64,6 +77,7 @@ export function HeroCard({
           </>
         )}
       </p>
+      <Bars bars={bars} label={t("spendingPerDay")} className="mt-1" />
       {globalBudget && percent !== null ? (
         <div className="mt-1 flex items-center gap-3">
           <Progress

@@ -23,6 +23,13 @@ export function fetchTransactionsPage(
   });
 }
 
+export function fetchLatestTransactions(
+  query: Record<string, QueryValue>,
+  limit: number,
+): Promise<TransactionList> {
+  return api<TransactionList>("/transactions", { query: { ...query, limit } });
+}
+
 export function fetchTransactionsCount(
   query: Record<string, QueryValue>,
 ): Promise<TransactionList> {
