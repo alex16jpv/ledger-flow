@@ -515,6 +515,60 @@
       "defaultName": "Monthly budget",
       "amount": "Monthly amount",
       "help": "You can adjust it any month without touching the base amount, and add per-category budgets whenever you like."
+    },
+    "periodTypes": {
+      "WEEKLY": "Weekly",
+      "BIWEEKLY": "Biweekly",
+      "MONTHLY": "Monthly",
+      "QUARTERLY": "Quarterly",
+      "YEARLY": "Yearly",
+      "CUSTOM": "Custom"
+    },
+    "list": {
+      "title": "Budgets",
+      "new": "New budget",
+      "past": "Past budgets",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "all": "All",
+      "globalBadge": "Global",
+      "createGlobal": "Create a total monthly budget",
+      "createGlobalHint": "It counts everything you spend, including what you log without a category.",
+      "of": "of {amount}",
+      "leftFor": "{amount} left for {days, plural, one {# day} other {# days}}",
+      "perDay": "≈ {amount}/day",
+      "adjusted": "Adjusted",
+      "archivedCategory": "Archived category",
+      "endsIn": "ends in {days, plural, one {# day} other {# days}}",
+      "ended": "Ended",
+      "periodRange": "{period} · {range}",
+      "status": {
+        "over": "Over by {amount}",
+        "fast": "{amount} left · fast pace",
+        "untouched": "{amount} left · nothing spent yet",
+        "ended": "{amount} left at the end",
+        "endedOver": "Over by {amount} at the end",
+        "ok": "{amount} left · {days, plural, one {# day left} other {# days left}}",
+        "custom": "{amount} left · ends in {days, plural, one {# day} other {# days}}"
+      },
+      "footnote": "Balance adjustments and transfers never count toward a budget.",
+      "empty": {
+        "title": "Put a ceiling on your small spending",
+        "body": "A total monthly budget shows how much is left before the month ends.",
+        "cta": "Create a monthly budget"
+      },
+      "noneForFilter": "No {period} budgets this month"
+    },
+    "past": {
+      "title": "Past budgets",
+      "ended": "Ended · {count}",
+      "archived": "Archived · {count}",
+      "endedBadge": "Ended",
+      "archivedBadge": "Archived",
+      "createAgain": "Create again",
+      "note": "Recurring budgets never end: to see a past month, change the period in the list.",
+      "emptyEnded": "No budget has ended yet",
+      "emptyArchived": "No archived budgets"
     }
   },
   "categoryTypes": {

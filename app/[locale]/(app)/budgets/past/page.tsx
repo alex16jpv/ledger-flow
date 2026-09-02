@@ -2,17 +2,17 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 
-import { BudgetsScreen } from "./BudgetsScreen";
+import { PastBudgetsScreen } from "../BudgetsScreen";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("budgets.list");
+  const t = await getTranslations("budgets.past");
   return { title: t("title") };
 }
 
-export default function BudgetsPage() {
+export default function PastBudgetsPage() {
   return (
     <Suspense>
-      <BudgetsScreen />
+      <PastBudgetsScreen />
     </Suspense>
   );
 }

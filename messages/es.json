@@ -515,6 +515,60 @@
       "defaultName": "Presupuesto mensual",
       "amount": "Monto mensual",
       "help": "Puedes ajustarlo cualquier mes sin tocar el monto base y añadir presupuestos por categoría cuando quieras."
+    },
+    "periodTypes": {
+      "WEEKLY": "Semanal",
+      "BIWEEKLY": "Quincenal",
+      "MONTHLY": "Mensual",
+      "QUARTERLY": "Trimestral",
+      "YEARLY": "Anual",
+      "CUSTOM": "Personalizado"
+    },
+    "list": {
+      "title": "Presupuestos",
+      "new": "Nuevo presupuesto",
+      "past": "Presupuestos pasados",
+      "previousMonth": "Mes anterior",
+      "nextMonth": "Mes siguiente",
+      "all": "Todos",
+      "globalBadge": "Global",
+      "createGlobal": "Crear presupuesto mensual total",
+      "createGlobalHint": "Cuenta todo lo que gastas, incluido lo que registras sin categoría.",
+      "of": "de {amount}",
+      "leftFor": "Quedan {amount} para {days, plural, one {# día} other {# días}}",
+      "perDay": "≈ {amount}/día",
+      "adjusted": "Ajustado",
+      "archivedCategory": "Categoría archivada",
+      "endsIn": "termina en {days, plural, one {# día} other {# días}}",
+      "ended": "Terminado",
+      "periodRange": "{period} · {range}",
+      "status": {
+        "over": "Excedido por {amount}",
+        "fast": "Quedan {amount} · ritmo alto",
+        "untouched": "Quedan {amount} · aún sin gastos",
+        "ended": "Quedaron {amount} al cierre",
+        "endedOver": "Excedido por {amount} al cierre",
+        "ok": "Quedan {amount} · {days, plural, one {# día} other {# días}}",
+        "custom": "Quedan {amount} · termina en {days, plural, one {# día} other {# días}}"
+      },
+      "footnote": "Los ajustes de saldo y las transferencias nunca cuentan en un presupuesto.",
+      "empty": {
+        "title": "Ponle un techo a tu gasto hormiga",
+        "body": "Un presupuesto mensual total te dice cuánto queda antes de que acabe el mes.",
+        "cta": "Crear presupuesto mensual"
+      },
+      "noneForFilter": "No hay presupuestos {period} este mes"
+    },
+    "past": {
+      "title": "Presupuestos pasados",
+      "ended": "Terminados · {count}",
+      "archived": "Archivados · {count}",
+      "endedBadge": "Terminado",
+      "archivedBadge": "Archivado",
+      "createAgain": "Crear de nuevo",
+      "note": "Los presupuestos recurrentes no terminan: para ver un mes pasado, cambia el período en la lista.",
+      "emptyEnded": "Ningún presupuesto ha terminado todavía",
+      "emptyArchived": "No hay presupuestos archivados"
     }
   },
   "categoryTypes": {

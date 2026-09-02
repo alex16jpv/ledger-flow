@@ -709,3 +709,26 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   name actually changes and shows a second `DUPLICATE` under the field.
 - **Types regenerated** from the local `/api-docs.json`; `restoreAccount`/`restoreCategory` take the
   optional input and the mutations receive `{ id, name? }`.
+
+## 2026-09-02 · Budgets list (W-26)
+
+- **The month is the URL** (`/budgets?reference=YYYY-MM`, omitted for the current month) and the
+  period-type filter too (`?period=WEEKLY`). The request sends the local start of that month as
+  `reference`: any instant inside the month resolves the same period instance, and the local
+  midnight is unambiguous across time zones.
+- **The whole list is fetched following `hasMore`**, never `data.length`: the backend drops expired
+  and pre-floor budgets after paginating, so a page can be short while more remain.
+- **The global monthly budget is the featured card**; other global budgets (weekly, yearly…) list as
+  regular cards. When it is missing the slot shows the dashed CTA, which opens the same
+  `GlobalBudgetForm` the onboarding and the home use, so there is one way to create it.
+- **Status phrases come from `budgetProgress`**: over 100 % → "Over by", ≥ 80 % → "fast pace",
+  nothing spent → "nothing spent yet", CUSTOM → "ends in n days", closed period → "left at the end".
+  Days left and the pace marker are computed against `periodFrom`/`periodTo` from the API; the
+  client never sums transactions.
+- **`/budgets/past` uses one request** with `includeExpired` and `includeArchived` and splits the
+  tabs on the client. "Create again" points to `/budgets/new?from=<id>`, which W-28 implements.
+- **Budget screens are composed in the app layer** (like transactions) because the tiles show the
+  category icon of single-category budgets, which lives in `features/categories`.
+- **Past budgets are not dimmed.** DESIGN §8.8 draws ended/archived cards at 85 % opacity, but that
+  drops the secondary text below the 4.5:1 contrast axe enforces in every smoke, so the cards keep
+  full opacity and rely on the "Ended" / "Archived" badge and their own tab.

@@ -93,7 +93,9 @@ English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`)
 | `/accounts/[id]`                                               | Account detail: hero, make main, archive/restore, its transactions                           |
 | `/categories`                                                  | Categories grid by type (`?type=`), usage counts, archived list, restore defaults            |
 | `/categories/new`, `/categories/[id]/edit`                     | Category form: create (`?type=`) and edit with locked type and archive                       |
-| `/budgets`, `/stats`, `/privacy`                               | Stubs answering "not found" until their backlog item (F4–F5)                                 |
+| `/budgets`                                                     | Budgets list for a month (`?reference=YYYY-MM&period=`), global card featured                |
+| `/budgets/past`                                                | Ended and archived budgets with "Create again"                                               |
+| `/stats`, `/privacy`                                           | Stubs answering "not found" until their backlog item (F4–F5)                                 |
 | `/dev/ui`                                                      | Component catalog (development only)                                                         |
 | `/dev/pickers`                                                 | Category, account and date pickers against the real API (development only)                   |
 | `/dev/frame?w=390&url=…`, `/api/dev/login?email&password&next` | Screenshot helpers (development only)                                                        |

@@ -2,14 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { createBudget, fetchBudgets } from "./api";
+import { type BudgetFilters, createBudget, fetchBudgets } from "./api";
 import { budgetKeys } from "./keys";
 
-export function useBudgetsQuery(reference?: string) {
+export function useBudgetsQuery(filters: BudgetFilters = {}, enabled = true) {
   return useQuery({
-    queryKey: budgetKeys.list(reference),
-    queryFn: () => fetchBudgets({ reference }),
-    select: (list) => list.data,
+    queryKey: budgetKeys.list(filters),
+    queryFn: () => fetchBudgets(filters),
+    enabled,
   });
 }
 
