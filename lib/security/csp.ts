@@ -25,7 +25,7 @@ export function buildCsp({
     `connect-src 'self'`,
     `worker-src 'self'`,
     `manifest-src 'self'`,
-    `frame-ancestors 'none'`,
+    `frame-ancestors ${isDevelopment ? "'self'" : "'none'"}`,
     `base-uri 'self'`,
     `form-action 'self'`,
     `object-src 'none'`,
@@ -48,10 +48,17 @@ export function newNonce(): string {
   return btoa(String.fromCharCode(...bytes));
 }
 
+// Development allows same-origin framing so /dev/frame can show the app at phone width.
+export function staticSecurityHeaders(isDevelopment: boolean): { key: string; value: string }[] {
+  return [
+    { key: "X-Frame-Options", value: isDevelopment ? "SAMEORIGIN" : "DENY" },
+    ...STATIC_SECURITY_HEADERS,
+  ];
+}
+
 export const STATIC_SECURITY_HEADERS: { key: string; value: string }[] = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "X-Frame-Options", value: "DENY" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
   {

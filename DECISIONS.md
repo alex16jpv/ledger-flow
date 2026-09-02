@@ -103,10 +103,13 @@ The specification that these decisions refine lives outside the repo in
 - **Consequence:** the very first paint uses the browser default until hydration; the inline theme
   script still prevents the page itself from flashing.
 
-## 2026-09-01 · Inline theme script through `next/script` `beforeInteractive` (W-02)
+## 2026-09-01 · Theme script through `next/script` `beforeInteractive` (W-02, revised in W-10)
 
-- **Decision:** `THEME_INIT_SCRIPT` is rendered as the children of `<Script strategy="beforeInteractive">`
-  in the root layout.
+- **Decision:** `THEME_INIT_SCRIPT` is served by the route `GET /theme-init.js` (static, cached one
+  hour) and loaded with `<Script src="/theme-init.js" strategy="beforeInteractive" nonce>` in the root
+  layout. It was first inlined as the Script's children, but React re-renders the root layout on the
+  client for the not-found boundary and warns about inline script children; an external blocking
+  script keeps the before-paint guarantee without that warning.
 - **Why:** HANDOFF §3.7 requires the attributes before the first paint and §3.9 forbids
   `dangerouslySetInnerHTML`. `next/script` injects the inline code in `<head>` and will receive the
   CSP nonce from `proxy.ts` in W-07. `<html suppressHydrationWarning>` covers the attributes the
@@ -268,3 +271,33 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   proxied because it only needs the access token.
 - A missing access cookie answers 401 without touching the backend, which is what triggers the
   client's single-flight refresh.
+
+## 2026-09-01 · App shell, routes and base states (W-10)
+
+- **`/home` is the authenticated home.** HANDOFF §3.2 puts Inicio at `(app)/page.tsx` while §3.13
+  reserves `/` for the static landing; both cannot own `/`. The landing keeps `/` (indexable, static)
+  and the app starts at `/home`; guests hitting any app route are redirected to `/login?next=…`.
+- **Shell composition:** `components/shell` is presentational (Sidebar, TabBar with the FAB slot,
+  PageHeader, ConnectionBanner, SessionExpiredSheet, AppShell with skip link). Data enters through
+  `app/[locale]/(app)/AppFrame.tsx`, a client component in the app layer that wires
+  `SessionProvider`, `ToastProvider`, the pending-count hook and the redirects, so `components/shell`
+  never imports a feature.
+- **Connectivity** lives in `lib/network/connectivity.ts`, an external store fed by the
+  `online`/`offline` events (W-19 adds the `/api/health` heartbeat); the banner shows the amber offline
+  strip and a 3 s green "back online" strip, as DESIGN.md §8.12 asks.
+- **Real 404:** `app/[locale]/[...rest]/page.tsx` calls `notFound()` outside the `(app)` streaming
+  boundary, so unknown URLs return HTTP 404 with the localized not-found screen. Detail routes fetch
+  on the client and render their own "not found" empty state (the HTTP status of a client-rendered
+  shell is 200 by design).
+- **Temporary stubs:** the routes the shell links to but that later backlog items build
+  (`/transactions`, `/budgets`, `/accounts`, `/stats`, `/categories`, `/settings`,
+  `/transactions/new`) exist as pages that call `notFound()`, because `typedRoutes` rejects links to
+  unknown routes. They stream inside `(app)`, so they answer 200 with the not-found screen until they
+  are replaced (W-15 replaces `/settings`, F2–F4 the rest).
+- **`GET /api/dev/login`** (development only, `devLogin` flag) logs in with query credentials and
+  redirects, so headless screenshots of authenticated screens are possible without driving a browser.
+  It reuses the login handler and is a 404 outside development.
+- **`/dev/frame?w=390&url=…`** (development only) embeds the app in a fixed-width iframe, because
+  Windows browsers refuse windows narrower than ~480 px and headless screenshots at phone width
+  were being cropped. To allow it, development sends `X-Frame-Options: SAMEORIGIN` and
+  `frame-ancestors 'self'`; production keeps `DENY` / `'none'`.

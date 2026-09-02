@@ -1,4 +1,4 @@
-import { buildCsp, cspHeaderName, newNonce } from "./csp";
+import { buildCsp, cspHeaderName, newNonce, staticSecurityHeaders } from "./csp";
 
 describe("buildCsp", () => {
   it("uses a per-request nonce and locks connect-src to self", () => {
@@ -10,9 +10,15 @@ describe("buildCsp", () => {
     expect(csp).not.toContain("unsafe-eval");
   });
 
-  it("allows eval only in development", () => {
-    expect(buildCsp({ nonce: "n", isDevelopment: true, reportUri: "/r" })).toContain(
-      "'unsafe-eval'",
+  it("allows eval and same-origin framing only in development", () => {
+    const dev = buildCsp({ nonce: "n", isDevelopment: true, reportUri: "/r" });
+    expect(dev).toContain("'unsafe-eval'");
+    expect(dev).toContain("frame-ancestors 'self'");
+    expect(staticSecurityHeaders(true).find((h) => h.key === "X-Frame-Options")?.value).toBe(
+      "SAMEORIGIN",
+    );
+    expect(staticSecurityHeaders(false).find((h) => h.key === "X-Frame-Options")?.value).toBe(
+      "DENY",
     );
   });
 

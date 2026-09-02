@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
 import { geistMono, geistSans } from "@/app/fonts";
 import { FormatSettingsProvider, routing } from "@/lib/i18n";
 import { QueryProvider } from "@/lib/query";
-import { THEME_INIT_SCRIPT, ThemeProvider } from "@/lib/theme";
+import { ThemeProvider } from "@/lib/theme";
 
 interface LocaleLayoutProps {
   children: ReactNode;
@@ -46,9 +46,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       suppressHydrationWarning
     >
       <head>
-        <Script id="theme-init" strategy="beforeInteractive" nonce={nonce}>
-          {THEME_INIT_SCRIPT}
-        </Script>
+        <Script id="theme-init" src="/theme-init.js" strategy="beforeInteractive" nonce={nonce} />
       </head>
       <body>
         <NextIntlClientProvider>

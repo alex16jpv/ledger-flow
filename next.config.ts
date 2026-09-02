@@ -3,7 +3,7 @@ import "./lib/env";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
-import { HSTS_HEADER, STATIC_SECURITY_HEADERS } from "./lib/security/csp";
+import { HSTS_HEADER, staticSecurityHeaders } from "./lib/security/csp";
 
 const withNextIntl = createNextIntlPlugin("./lib/i18n/request.ts");
 const isProduction = process.env.NODE_ENV === "production";
@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
     return Promise.resolve([
       {
         source: "/:path*",
-        headers: [...STATIC_SECURITY_HEADERS, ...(isProduction ? [HSTS_HEADER] : [])],
+        headers: [...staticSecurityHeaders(!isProduction), ...(isProduction ? [HSTS_HEADER] : [])],
       },
     ]);
   },

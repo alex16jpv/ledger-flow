@@ -6,7 +6,8 @@ export type FeatureFlag =
   | "forgotPassword"
   | "emailVerification"
   | "offlineSync"
-  | "componentCatalog";
+  | "componentCatalog"
+  | "devLogin";
 
 type Flags = Readonly<Record<FeatureFlag, boolean>>;
 
@@ -17,10 +18,11 @@ const base: Flags = {
   emailVerification: false,
   offlineSync: false,
   componentCatalog: true,
+  devLogin: false,
 };
 
 const flagsByEnvironment: Readonly<Record<typeof env.NODE_ENV, Flags>> = {
-  development: base,
+  development: { ...base, devLogin: true },
   test: base,
   production: { ...base, componentCatalog: false },
 };
