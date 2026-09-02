@@ -29,6 +29,7 @@ import { categoryType, findActiveCategoryByName } from "@/features/categories/su
 import { ApiError, presentError } from "@/lib/api/errors";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
+import { useBackNavigation } from "@/lib/navigation/history";
 
 const LIST_PATH = "/categories";
 
@@ -41,6 +42,7 @@ function parseType(value: string | null): CategoryType {
 export function NewCategoryScreen() {
   const t = useTranslations();
   const router = useRouter();
+  const back = useBackNavigation();
   const toast = useToast();
   const params = useSearchParams();
   const type = parseType(params.get("type"));
@@ -49,7 +51,7 @@ export function NewCategoryScreen() {
       <PageHeader
         title={t("categories.form.title")}
         onBack={() => {
-          router.back();
+          back({ pathname: LIST_PATH, query: { type } });
         }}
       />
       <CategoryForm
@@ -57,7 +59,7 @@ export function NewCategoryScreen() {
         preview
         onSaved={(category) => {
           toast.show({ message: t("categories.form.created") });
-          router.push({ pathname: LIST_PATH, query: { type: categoryType(category) } });
+          router.replace({ pathname: LIST_PATH, query: { type: categoryType(category) } });
         }}
       />
     </div>
@@ -67,6 +69,7 @@ export function NewCategoryScreen() {
 export function EditCategoryScreen({ id }: { id: string }) {
   const t = useTranslations();
   const router = useRouter();
+  const back = useBackNavigation();
   const toast = useToast();
   const category = useCategoryQuery(id);
   const categories = useCategoriesQuery(undefined, category.isSuccess, true);
@@ -118,7 +121,7 @@ export function EditCategoryScreen({ id }: { id: string }) {
       <PageHeader
         title={t("categories.form.editTitle")}
         onBack={() => {
-          router.back();
+          back(LIST_PATH);
         }}
         actions={
           row && (
@@ -198,7 +201,7 @@ export function EditCategoryScreen({ id }: { id: string }) {
             preview
             onSaved={(saved) => {
               toast.show({ message: t("categories.form.saved") });
-              router.push({ pathname: LIST_PATH, query: { type: categoryType(saved) } });
+              back({ pathname: LIST_PATH, query: { type: categoryType(saved) } });
             }}
             secondaryAction={
               <Button

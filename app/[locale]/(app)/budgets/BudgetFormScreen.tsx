@@ -24,6 +24,7 @@ import { ApiError } from "@/lib/api/errors";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
+import { useBackNavigation } from "@/lib/navigation/history";
 
 const LIST_PATH = "/budgets";
 
@@ -41,6 +42,7 @@ function FormSkeleton({ label }: { label: string }) {
 export function NewBudgetScreen() {
   const t = useTranslations();
   const router = useRouter();
+  const back = useBackNavigation();
   const toast = useToast();
   const params = useSearchParams();
   const { timeZone } = useFormatSettings();
@@ -60,7 +62,7 @@ export function NewBudgetScreen() {
       <PageHeader
         title={t("budgets.form.newTitle")}
         onBack={() => {
-          router.back();
+          back(LIST_PATH);
         }}
       />
       {waiting ? (
@@ -76,7 +78,7 @@ export function NewBudgetScreen() {
           onSubmit={async (values: BudgetFormValues) => {
             const budget = await create.mutateAsync(toCreateInput(values, timeZone));
             toast.show({ message: t("budgets.form.created") });
-            router.push(`/budgets/${budget.id}`);
+            router.replace(`/budgets/${budget.id}`);
           }}
         />
       )}
@@ -86,7 +88,7 @@ export function NewBudgetScreen() {
 
 export function EditBudgetScreen({ id }: { id: string }) {
   const t = useTranslations();
-  const router = useRouter();
+  const back = useBackNavigation();
   const toast = useToast();
   const { timeZone } = useFormatSettings();
   const [now] = useState(() => new Date());
@@ -101,7 +103,7 @@ export function EditBudgetScreen({ id }: { id: string }) {
       <PageHeader
         title={t("budgets.form.editTitle")}
         onBack={() => {
-          router.back();
+          back(`/budgets/${id}`);
         }}
       />
       {budget.isPending || categories.isPending ? (
@@ -150,7 +152,7 @@ export function EditBudgetScreen({ id }: { id: string }) {
           onSubmit={async (values) => {
             await update.mutateAsync(toUpdateInput(values, row, timeZone));
             toast.show({ message: t("budgets.form.saved") });
-            router.push(`/budgets/${id}`);
+            back(`/budgets/${id}`);
           }}
         />
       )}

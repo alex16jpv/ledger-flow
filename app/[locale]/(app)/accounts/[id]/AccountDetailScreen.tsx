@@ -32,6 +32,7 @@ import { useTransactionsInfinite } from "@/features/transactions/hooks";
 import { ApiError, presentError } from "@/lib/api/errors";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
+import { useBackNavigation } from "@/lib/navigation/history";
 
 import { AdjustBalanceSheet } from "./AdjustBalanceSheet";
 
@@ -40,6 +41,7 @@ type OpenSheet = "adjust" | "main" | "archive" | "conflict" | null;
 export function AccountDetailScreen({ id }: { id: string }) {
   const t = useTranslations();
   const router = useRouter();
+  const back = useBackNavigation();
   const toast = useToast();
   const account = useAccountQuery(id);
   const accounts = useAccountsQuery(true);
@@ -145,7 +147,7 @@ export function AccountDetailScreen({ id }: { id: string }) {
       <PageHeader
         title={row?.name ?? t("accounts.detail.title")}
         onBack={() => {
-          router.back();
+          back("/accounts");
         }}
       />
       {account.isPending ? (

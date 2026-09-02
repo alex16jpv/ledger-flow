@@ -23,8 +23,9 @@ import {
 } from "@/features/transactions/hooks";
 import { ERROR_TABLE, type ErrorMessageKey, isErrorCode, presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
-import { Link, useRouter } from "@/lib/i18n/navigation";
+import { Link } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
+import { useBackNavigation } from "@/lib/navigation/history";
 import type { Transaction } from "@/types/api";
 
 import { ReviewCard, type ReviewDraft } from "./ReviewCard";
@@ -42,7 +43,7 @@ function draftOf(transaction: Transaction, drafts: Record<string, ReviewDraft>):
 
 export function ReviewScreen() {
   const t = useTranslations();
-  const router = useRouter();
+  const back = useBackNavigation();
   const toast = useToast();
   const params = useSearchParams();
   const focus = params.get("focus");
@@ -125,7 +126,7 @@ export function ReviewScreen() {
             : t("transactions.review.title")
         }
         onBack={() => {
-          router.back();
+          back("/transactions");
         }}
         actions={
           summary.data && summary.data.total > 0 ? (

@@ -50,6 +50,7 @@ import { Link, useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
+import { useBackNavigation } from "@/lib/navigation/history";
 import type { Budget } from "@/types/api";
 
 type OpenSheet = "override" | "archive" | "conflict" | null;
@@ -62,6 +63,7 @@ function periodLabelFor(budget: Budget, formatMonth: (d: Date) => string, range:
 export function BudgetDetailScreen({ id }: { id: string }) {
   const t = useTranslations();
   const router = useRouter();
+  const back = useBackNavigation();
   const toast = useToast();
   const dates = useDates();
   const params = useSearchParams();
@@ -182,7 +184,7 @@ export function BudgetDetailScreen({ id }: { id: string }) {
       <PageHeader
         title={t("budgets.detail.title")}
         onBack={() => {
-          router.back();
+          back("/budgets");
         }}
       />
       <PeriodNav

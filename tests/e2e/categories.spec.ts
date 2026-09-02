@@ -94,7 +94,9 @@ test("a new user creates, retypes, archives and restores categories, and restore
   await expect(page.getByText("Income · preview")).toBeVisible();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Changes saved")).toBeVisible();
-  await expect(page).toHaveURL(/type=INCOME$/);
+  // P-26: saving returns to the grid we came from; the category now lives in the Income tab.
+  await expect(page).toHaveURL(/\/categories$/);
+  await page.getByRole("button", { name: /^Income · \d+$/ }).click();
   await expect(page.getByRole("link", { name: /^Gym/ })).toBeVisible();
 
   await page.getByRole("link", { name: /^Gym/ }).click();

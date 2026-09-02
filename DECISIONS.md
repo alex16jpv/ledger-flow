@@ -831,3 +831,15 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   and edit (picking a chip replaces the selection).
 - **CUSTOM overlap ignoring dates is a backend fix** (`BACKEND-DESDE-FRONT.md`): two custom windows
   for the same category that never touch are refused today; the front does not work around it.
+
+## 2026-09-02 · Back with an in-app fallback (owner report P-26)
+
+- **"Back" only goes back when the previous entry is ours.** `HistoryTracker` (mounted once in
+  `AppFrame`) records the in-app URLs: a URL change with the same `history.length` is a replace, a
+  `popstate` is a pop, anything else is a push. `useBackNavigation()(fallback)` calls
+  `router.back()` when the stack has a previous entry and `router.replace(fallback)` otherwise, so a
+  deep link or a reload lands on the list (`/accounts`, `/budgets`, `/categories`, `/transactions`)
+  instead of leaving the app.
+- **Saving an edit goes back, creating replaces.** After an edit the screen returns to the detail it
+  came from (`back(detail)`), so the form never stays in the history and "back" from the detail
+  reaches the place before the edit; after a create the blank form is replaced by the new detail.

@@ -13,26 +13,28 @@ import { useAccountQuery } from "@/features/accounts/hooks";
 import { ApiError } from "@/lib/api/errors";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
+import { useBackNavigation } from "@/lib/navigation/history";
 
 const LIST_PATH = "/accounts";
 
 export function NewAccountScreen() {
   const t = useTranslations();
   const router = useRouter();
+  const back = useBackNavigation();
   const toast = useToast();
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-5">
       <PageHeader
         title={t("accounts.form.title")}
         onBack={() => {
-          router.back();
+          back(LIST_PATH);
         }}
       />
       <AccountForm
         submitLabel={t("accounts.form.create")}
         onSaved={(account) => {
           toast.show({ message: t("accounts.form.created") });
-          router.push(`/accounts/${account.id}`);
+          router.replace(`/accounts/${account.id}`);
         }}
       />
     </div>
@@ -41,7 +43,7 @@ export function NewAccountScreen() {
 
 export function EditAccountScreen({ id }: { id: string }) {
   const t = useTranslations();
-  const router = useRouter();
+  const back = useBackNavigation();
   const toast = useToast();
   const account = useAccountQuery(id);
   const notFound = account.error instanceof ApiError && account.error.status === 404;
@@ -51,7 +53,7 @@ export function EditAccountScreen({ id }: { id: string }) {
       <PageHeader
         title={t("accounts.form.editTitle")}
         onBack={() => {
-          router.back();
+          back(`/accounts/${id}`);
         }}
       />
       {account.isPending ? (
@@ -99,7 +101,7 @@ export function EditAccountScreen({ id }: { id: string }) {
           submitLabel={t("common.saveChanges")}
           onSaved={() => {
             toast.show({ message: t("accounts.form.saved") });
-            router.push(`/accounts/${id}`);
+            back(`/accounts/${id}`);
           }}
         />
       )}

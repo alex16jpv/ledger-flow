@@ -225,6 +225,8 @@ test("the form creates a category budget, refuses a second global one, edits it 
   await expect(page.getByText("Changes saved")).toBeVisible();
   await expect(page.getByText("Groceries weekly", { exact: true })).toBeVisible();
   await expect(page.getByText(/^Weekly · /)).toBeVisible();
+  await page.getByRole("button", { name: "Back" }).click();
+  await expect(page).toHaveURL(/\/budgets$/);
 
   const ended = await request.post("/api/budgets", {
     headers: { origin: APP },

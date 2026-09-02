@@ -104,6 +104,10 @@ test("a new user creates, edits, promotes, archives and restores accounts, with 
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Changes saved")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Second savings" })).toBeVisible();
+  // Owner report P-26: after saving, "back" must not reopen the edit form.
+  await page.getByRole("button", { name: "Back" }).click();
+  await expect(page).toHaveURL(/\/accounts$/);
+  await page.goto(`/accounts/${second.id}`);
 
   await page.getByRole("button", { name: "Main account" }).click();
   const confirm = page.getByRole("dialog", { name: "Make Second savings your main account?" });

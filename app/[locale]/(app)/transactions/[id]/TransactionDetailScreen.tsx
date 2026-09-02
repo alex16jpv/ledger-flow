@@ -30,6 +30,7 @@ import { useDates } from "@/lib/i18n/useDates";
 import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
+import { useBackNavigation } from "@/lib/navigation/history";
 import type { Account } from "@/types/api";
 
 function Attribute({ label, children }: { label: string; children: ReactNode }) {
@@ -56,6 +57,7 @@ function AccountValue({ account, fallback }: { account: Account | undefined; fal
 export function TransactionDetailScreen({ id }: { id: string }) {
   const t = useTranslations();
   const router = useRouter();
+  const back = useBackNavigation();
   const toast = useToast();
   const dates = useDates();
   const transaction = useTransactionQuery(id);
@@ -94,7 +96,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
       <PageHeader
         title={t("transactions.detail.title")}
         onBack={() => {
-          router.back();
+          back("/transactions");
         }}
       />
       {transaction.isPending ? (

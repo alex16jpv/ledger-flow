@@ -27,6 +27,7 @@ import { ApiError, presentError } from "@/lib/api/errors";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
+import { useBackNavigation } from "@/lib/navigation/history";
 
 import { TransactionForm } from "./TransactionForm";
 
@@ -35,6 +36,7 @@ const AFTER_SAVE_PATH = "/transactions";
 export function NewTransactionScreen() {
   const t = useTranslations();
   const router = useRouter();
+  const back = useBackNavigation();
   const toast = useToast();
   const params = useSearchParams();
   const { timeZone } = useFormatSettings();
@@ -55,7 +57,7 @@ export function NewTransactionScreen() {
       <PageHeader
         title={t("transactions.form.newTitle")}
         onBack={() => {
-          router.back();
+          back(AFTER_SAVE_PATH);
         }}
       />
       <TransactionForm
@@ -76,6 +78,7 @@ export function NewTransactionScreen() {
 export function EditTransactionScreen({ id }: { id: string }) {
   const t = useTranslations();
   const router = useRouter();
+  const back = useBackNavigation();
   const toast = useToast();
   const { timeZone } = useFormatSettings();
   const transaction = useTransactionQuery(id);
@@ -100,7 +103,7 @@ export function EditTransactionScreen({ id }: { id: string }) {
       <PageHeader
         title={t("transactions.form.editTitle")}
         onBack={() => {
-          router.back();
+          back(`/transactions/${id}`);
         }}
       />
       {transaction.isPending ? (

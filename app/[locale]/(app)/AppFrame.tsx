@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, Suspense, useCallback, useEffect, useState } from "react";
 
 import {
   ADD_HREF,
@@ -15,6 +15,7 @@ import { LOGIN_PATH } from "@/lib/auth/routes";
 import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
+import { HistoryTracker } from "@/lib/navigation/history";
 import { startHeartbeat } from "@/lib/network/heartbeat";
 import { SessionProvider, useSession } from "@/lib/session";
 
@@ -37,6 +38,9 @@ function Frame({ children }: { children: ReactNode }) {
 
   return (
     <FormatSettingsProvider currency={session.user?.currency} timeZone={session.user?.timezone}>
+      <Suspense>
+        <HistoryTracker />
+      </Suspense>
       <AppShell
         userName={session.user?.name ?? ""}
         pendingCount={pendingCount}
