@@ -591,6 +591,22 @@
       "created": "Created {created}",
       "createdEdited": "Created {created} · edited {edited}",
       "dateTime": "{date} · {time}"
+    },
+    "review": {
+      "title": "To review",
+      "titleCount": "To review · {count}",
+      "intro": "Quick expenses already reduced your balance and already count toward your total budget. Here you just name and categorize them.",
+      "when": "{day} {time} · {account}",
+      "other": "Other",
+      "descriptionPlaceholder": "Description (optional)",
+      "openFull": "Open full form",
+      "done": "Done",
+      "saved": "Details saved",
+      "empty": {
+        "title": "All reviewed",
+        "body": "Every quick expense has a category and a description.",
+        "cta": "Go home"
+      }
     }
   },
   "transactionTypes": {

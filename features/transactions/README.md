@@ -27,3 +27,8 @@ W-20 adds the detail screen (`app/[locale]/(app)/transactions/[id]/`): hero with
 and the signed amount, the attribute table, Edit (the W-18 form) and Delete through the shared
 `DeleteTransactionSheet`, and a warning with "Complete" on pending quick expenses that points at the
 W-21 inbox.
+
+W-21 adds the review inbox (`app/[locale]/(app)/transactions/review/`): one card per pending quick
+expense with the recent category chips, "Other" for the full picker, a description field and "Done",
+which `PUT`s `categoryId`, `description` and `pendingDetails: false`; the pending count in the shell
+follows because the mutation invalidates the transactions domain.

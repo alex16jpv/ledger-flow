@@ -1,4 +1,4 @@
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes, Ref } from "react";
 
 import { type ColorToken, featureColorStyle } from "@/lib/theme/feature-color";
 
@@ -7,11 +7,21 @@ import { cn } from "./cn";
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   flush?: boolean;
   tinted?: ColorToken | null;
+  ref?: Ref<HTMLDivElement>;
 }
 
-export function Card({ flush = false, tinted, className, style, children, ...rest }: CardProps) {
+export function Card({
+  flush = false,
+  tinted,
+  className,
+  style,
+  children,
+  ref,
+  ...rest
+}: CardProps) {
   return (
     <div
+      ref={ref}
       className={cn(
         "rounded-lg border shadow-1",
         tinted ? "border-(--f-border) bg-(--f-soft)" : "border-border bg-surface",

@@ -8,7 +8,7 @@ test("registration needs the consent box, then lands on onboarding", async ({ pa
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   const submit = page.getByRole("button", { name: "Create account" });
   await expect(submit).toBeDisabled();
-  await page.getByLabel("Name").fill("Register E2E");
+  await page.getByRole("textbox", { name: "Name" }).fill("Register E2E");
   await page
     .getByLabel("Email", { exact: true })
     .fill(`e2e-register-${Date.now()}@ledgerflow.test`);
@@ -28,7 +28,7 @@ test("a taken email shows the inline error with a sign-in link", async ({ page, 
   });
   await request.post("/api/auth/logout", { headers: { origin: APP } });
   await page.goto("/register");
-  await page.getByLabel("Name").fill("Someone");
+  await page.getByRole("textbox", { name: "Name" }).fill("Someone");
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill("LedgerFlow!2026");
   await page.getByRole("checkbox").check({ force: true });

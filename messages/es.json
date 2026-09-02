@@ -591,6 +591,22 @@
       "created": "Creado {created}",
       "createdEdited": "Creado {created} · editado {edited}",
       "dateTime": "{date} · {time}"
+    },
+    "review": {
+      "title": "Por revisar",
+      "titleCount": "Por revisar · {count}",
+      "intro": "Los gastos rápidos ya descontaron tu saldo y ya cuentan en tu presupuesto total. Aquí solo les pones nombre y categoría.",
+      "when": "{day} {time} · {account}",
+      "other": "Otra",
+      "descriptionPlaceholder": "Descripción (opcional)",
+      "openFull": "Abrir formulario",
+      "done": "Listo",
+      "saved": "Detalles guardados",
+      "empty": {
+        "title": "Todo detallado",
+        "body": "Todos los gastos rápidos tienen categoría y descripción.",
+        "cta": "Ir al inicio"
+      }
     }
   },
   "transactionTypes": {

@@ -536,3 +536,15 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   "Unknown account" instead of failing when a lookup is missing.
 - **"Complete" links to `/transactions/review?focus=<id>`**, the W-21 inbox; until then the route is
   a stub so the link type-checks.
+
+## 2026-09-02 · Review inbox (W-21)
+
+- **Each card owns its draft and its mutation.** `ReviewCard` keeps the chosen category and the
+  description locally and calls `useUpdateTransaction(id)`; after "Done" the list query refetches and
+  the card disappears, and the tab counter drops because the same invalidation covers
+  `usePendingCount`. No optimistic removal: the row leaves only when the server confirmed.
+- **The header shows the count but not the pending total.** The API gives `pagination.total` for
+  `?pendingDetails=true` but no sum, and the client does not add money; the total the design shows is
+  requested from the backend in `BACKEND-DESDE-FRONT.md`.
+- **`?focus=<id>`** marks the card with the brand outline and scrolls it into view, which is how the
+  detail's "Complete" link lands on the right item.
