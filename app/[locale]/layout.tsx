@@ -3,7 +3,6 @@ import "../globals.css";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import Script from "next/script";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
@@ -47,7 +46,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       suppressHydrationWarning
     >
       <head>
-        <Script id="theme-init" src="/theme-init.js" strategy="beforeInteractive" nonce={nonce} />
+        <script async src="/theme-init.js" nonce={nonce} />
       </head>
       <body>
         <NextIntlClientProvider>
