@@ -31,6 +31,11 @@ test("switching the language moves to /es, persists on reload and is stored on t
   request,
 }) => {
   await signedInPage(page, request);
+  const consoleErrors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => consoleErrors.push(error.message));
   await page.goto("/settings");
   await page.getByRole("button", { name: /^Language/ }).click();
   await expect(page.getByRole("option", { name: /Español/ })).toBeEnabled();
@@ -41,6 +46,7 @@ test("switching the language moves to /es, persists on reload and is stored on t
   await expect(page).toHaveURL(/\/es(\/|$)/);
   const me = (await (await request.get("/api/auth/me")).json()) as { user: { locale: string } };
   expect(me.user.locale).toBe("es");
+  expect(consoleErrors).toEqual([]);
 });
 
 test("sign out clears the session and returns to login", async ({ page, request }) => {
