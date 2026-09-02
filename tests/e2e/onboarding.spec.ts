@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const APP = "http://localhost:3001";
+const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
 test("onboarding creates the first account and the global budget, then lands on home", async ({
   page,
@@ -20,6 +20,7 @@ test("onboarding creates the first account and the global budget, then lands on 
   await page.getByRole("button", { name: "Continue" }).click();
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("A ceiling for the month");
+  await page.getByRole("button", { name: "$2,000,000" }).click();
   await page.getByRole("button", { name: "Create budget" }).click();
   await expect(page).toHaveURL(`${APP}/home`);
 

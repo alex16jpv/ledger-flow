@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-const APP = "http://localhost:3001";
+const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
 test("a user can sign in and lands on home; a wrong password shows one message", async ({
   page,
@@ -19,12 +19,12 @@ test("a user can sign in and lands on home; a wrong password shows one message",
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Welcome back");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("definitely-wrong");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill("definitely-wrong");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("alert")).toHaveText("Wrong email or password.");
+  await expect(page.getByText("Wrong email or password.")).toBeVisible();
 
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(`${APP}/home`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hi, Login");

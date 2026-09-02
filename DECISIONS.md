@@ -386,3 +386,15 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   option. `DEFAULT_PALETTE` is `brisa`, the root layout renders `<html data-palette="brisa">` and the
   init script writes the default when nothing valid is stored, because `palette.tinta.css` still owns
   the attribute-less `:root` selector (the token files are copied verbatim from the design).
+
+## 2026-09-01 · Local e2e runs on a dedicated test stack (owner request P-01)
+
+- **Decision:** `npm run test:e2e` starts `tools/e2e-backend.mjs`, which seeds and runs the sibling
+  backend on port 3200 against `mongodb://localhost:27017/lag_money_test` (the Docker replica set of
+  the backend repo, with relaxed rate limits), and serves this app as a production build on port 3002
+  with `API_URL` pointing at it. Specs read the base URL from `E2E_APP_URL`. CI keeps its own backend.
+- **Why:** the owner's local backend points at Mongo Atlas, where they test by hand; e2e users must
+  never land there. Next 16 also allows a single `next dev` per directory, so the e2e front cannot be
+  a second dev server.
+- **Consequence:** specs create `e2e-*@ledgerflow.test` users only in `lag_money_test`; the seed user
+  is available there too. Port 3100 is taken by the backend's Mongoku container, hence 3200.

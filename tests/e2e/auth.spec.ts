@@ -1,15 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-const APP = "http://localhost:3001";
+const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
 test("protected routes redirect guests to the localized login with a next parameter", async ({
   request,
 }) => {
   const en = await request.get("/settings", { maxRedirects: 0 });
   expect(en.status()).toBe(307);
-  expect(en.headers().location).toBe(`${APP}/login?next=%2Fsettings`);
+  expect(new URL(en.headers().location ?? "", APP).href).toBe(`${APP}/login?next=%2Fsettings`);
   const es = await request.get("/es/settings", { maxRedirects: 0 });
-  expect(es.headers().location).toBe(`${APP}/es/login?next=%2Fsettings`);
+  expect(new URL(es.headers().location ?? "", APP).href).toBe(`${APP}/es/login?next=%2Fsettings`);
 });
 
 test("the BFF refuses cross-origin session calls", async ({ request }) => {

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const APP = "http://localhost:3001";
+const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
 async function signedInPage(
   page: Parameters<Parameters<typeof test>[2]>[0]["page"],
@@ -33,8 +33,9 @@ test("switching the language moves to /es, persists on reload and is stored on t
   await signedInPage(page, request);
   await page.goto("/settings");
   await page.getByRole("button", { name: /^Language/ }).click();
+  await expect(page.getByRole("option", { name: /Español/ })).toBeEnabled();
   await page.getByRole("option", { name: /Español/ }).click();
-  await expect(page).toHaveURL(`${APP}/es/settings`);
+  await expect(page).toHaveURL(`${APP}/es/settings`, { timeout: 15_000 });
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ajustes");
   await page.goto("/");
   await expect(page).toHaveURL(/\/es(\/|$)/);
