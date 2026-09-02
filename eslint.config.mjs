@@ -60,7 +60,7 @@ export default defineConfig([
   },
   {
     files: ["tools/**/*.mjs", "scripts/**/*.mjs"],
-    rules: { "no-console": "off" },
+    rules: { "no-console": "off", "no-restricted-globals": "off" },
   },
   {
     files: ["*.config.{mjs,ts}", "plopfile.mjs"],
@@ -170,6 +170,7 @@ export default defineConfig([
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/no-implied-eval": "off",
       "@typescript-eslint/no-unnecessary-condition": "off",
+      "@typescript-eslint/no-unnecessary-type-parameters": "off",
       "@typescript-eslint/no-unsafe-call": "off",
     },
   },

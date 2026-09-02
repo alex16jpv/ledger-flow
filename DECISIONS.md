@@ -186,3 +186,27 @@ The specification that these decisions refine lives outside the repo in
 - **`/dev/ui`** lives under `app/[locale]/dev/ui` behind the `componentCatalog` flag (false in
   production) and uses the `dev` message namespace; it doubles as the manual check for W-02
   (palette and mode switch without reload).
+
+## 2026-09-01 · Generated API types and the HTTP client (W-06)
+
+- **Types:** `types/api.d.ts` comes from `npm run gen:api-types`, which extracts the OpenAPI
+  document embedded in the backend's `swagger-ui-init.js` (there is no public JSON endpoint) and
+  runs `openapi-typescript`. The backend views declare no `required`, so the generator marks every
+  view property required except `User.reactivated`, `Category.seedKey` and `Session.userAgent`
+  (documented in the script; reported to the backend in `TRACKING-R2.md`). CI regenerates the file
+  and fails on a diff.
+- **Enums:** `ColorToken` is the generated `Account.color` type; the runtime `COLOR_TOKENS` list is
+  checked against it with `satisfies`, and `lib/api/contract.test.ts` asserts type equality for
+  colors and the 105 category icon keys, so a backend change breaks the build instead of drifting.
+- **Error codes** are not enumerated by the backend; `lib/api/errors.ts` owns the list and the
+  presentation table (`scope` field/form/toast/screen/session/rateLimit + message key). Unknown
+  codes keep `code: null` and fall back by HTTP status. Messages live under `errors.*`.
+- **Client:** `api<T>(path, init)` always calls the same-origin `/api` proxy, sends `x-request-id`
+  (UUID v7) and `Idempotency-Key`, times out at 15 s (`AbortSignal.timeout` combined with the
+  caller's signal), wraps transport failures in `NetworkError`, retries exactly once with a fresh key
+  on `422 IDEMPOTENCY_PAYLOAD_MISMATCH`, and delegates 401 to a pluggable handler that W-08 wires to
+  the single-flight refresh. Responses are trusted to the generated types; no runtime validation.
+- **Idempotency keys** come from `IdempotencyKeyring.keyFor(payload)`: one key per payload hash, so
+  retrying the same body reuses it and editing the form after a failure rotates it.
+- **Hook adaptation:** the pre-commit lint command passes `--no-warn-ignored` so staging the
+  generated, lint-ignored `types/api.d.ts` does not fail the commit.

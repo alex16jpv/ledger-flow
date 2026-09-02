@@ -6,7 +6,7 @@ pre-commit:
       run: npx prettier --check {staged_files}
     lint:
       glob: "*.{ts,tsx,js,mjs,cjs}"
-      run: npx eslint --max-warnings=0 {staged_files}
+      run: npx eslint --max-warnings=0 --no-warn-ignored {staged_files}
     tokens:
       glob: "*.{ts,tsx,css}"
       run: node tools/check-tokens.mjs {staged_files}

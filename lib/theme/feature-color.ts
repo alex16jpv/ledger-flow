@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+import type { components } from "@/types/api";
+
 export const COLOR_TOKENS = [
   "RED",
   "ORANGE",
@@ -17,9 +19,9 @@ export const COLOR_TOKENS = [
   "GRAY",
   "BROWN",
   "BLACK",
-] as const;
+] as const satisfies readonly ColorToken[];
 
-export type ColorToken = (typeof COLOR_TOKENS)[number];
+export type ColorToken = NonNullable<components["schemas"]["Account"]["color"]>;
 
 export type FeatureColorStyle = CSSProperties &
   Record<"--f" | "--f-soft" | "--f-text" | "--f-border", string>;

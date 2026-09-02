@@ -62,6 +62,7 @@ jobs:
           JWT_SECRET: ci-only-secret
           CORS_ORIGIN: http://localhost:3001
           NODE_ENV: test
+      - run: npm run gen:api-types && git diff --exit-code -- types/api.d.ts
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
         env:
