@@ -41,7 +41,7 @@ describe("RegisterForm", () => {
     renderForm();
     expect(await screen.findByRole("button", { name: /COP · Colombian Peso/ })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Detected from your device.*\// }),
+      screen.getByRole("button", { name: /Detected from your device.*(\/|UTC)/ }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create account" })).toBeDisabled();
     await userEvent.click(screen.getByRole("checkbox"));
