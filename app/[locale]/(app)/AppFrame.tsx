@@ -12,6 +12,7 @@ import {
 import { ToastProvider } from "@/components/ui/Toast";
 import { usePendingCount } from "@/features/transactions/hooks";
 import { LOGIN_PATH } from "@/lib/auth/routes";
+import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
 import { startHeartbeat } from "@/lib/network/heartbeat";
@@ -35,7 +36,7 @@ function Frame({ children }: { children: ReactNode }) {
   }, [router, pathname]);
 
   return (
-    <>
+    <FormatSettingsProvider currency={session.user?.currency} timeZone={session.user?.timezone}>
       <AppShell
         userName={session.user?.name ?? ""}
         pendingCount={pendingCount}
@@ -57,7 +58,7 @@ function Frame({ children }: { children: ReactNode }) {
         }}
       />
       <SessionExpiredSheet open={session.status === "expired"} onSignIn={goToLogin} />
-    </>
+    </FormatSettingsProvider>
   );
 }
 

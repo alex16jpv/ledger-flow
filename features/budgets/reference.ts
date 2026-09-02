@@ -1,4 +1,4 @@
-import { dayKey, monthWindow, shiftMonth } from "@/lib/format/dates";
+import { dayKey, localDateTime, shiftMonth } from "@/lib/format/dates";
 
 const MONTH = /^\d{4}-\d{2}$/;
 
@@ -10,12 +10,13 @@ export function parseMonthKey(value: string | null, now: Date, timeZone: string)
   return value && MONTH.test(value) ? value : currentMonthKey(now, timeZone);
 }
 
-// Any instant inside the month works as `reference`; the local start of the month is unambiguous.
+// Any instant inside the month works as `reference`. Noon on the 15th stays inside it even if the server
+// resolves the period in a different zone than the client; the local midnight of the 1st does not.
 export function monthReference(
   monthKey: string,
   timeZone: string,
 ): { reference: Date; iso: string } {
-  const reference = monthWindow(new Date(`${monthKey}-15T12:00:00Z`), timeZone).from;
+  const reference = localDateTime(`${monthKey}-15`, "12:00", timeZone);
   return { reference, iso: reference.toISOString() };
 }
 

@@ -186,9 +186,9 @@ describe("BudgetDetailScreen", () => {
     expect(await screen.findByText("Adjustment removed")).toBeVisible();
 
     expect(calls.map((call) => [call.method, call.url, call.body])).toEqual([
-      ["PUT", "/api/budgets/b1/amount?reference=2026-09-01T05%3A00%3A00.000Z", { amount: 400_000 }],
-      ["PUT", "/api/budgets/b1/amount?reference=2026-09-01T05%3A00%3A00.000Z", { amount: 0 }],
-      ["DELETE", "/api/budgets/b1/amount?reference=2026-09-01T05%3A00%3A00.000Z", null],
+      ["PUT", "/api/budgets/b1/amount?reference=2026-09-15T17%3A00%3A00.000Z", { amount: 400_000 }],
+      ["PUT", "/api/budgets/b1/amount?reference=2026-09-15T17%3A00%3A00.000Z", { amount: 0 }],
+      ["DELETE", "/api/budgets/b1/amount?reference=2026-09-15T17%3A00%3A00.000Z", null],
     ]);
   });
 

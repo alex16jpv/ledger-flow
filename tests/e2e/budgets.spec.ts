@@ -216,3 +216,40 @@ test("the form creates a category budget, refuses a second global one, edits it 
   await expect(page.getByRole("button", { name: "Custom", pressed: true })).toBeVisible();
   await expect(page.getByLabel("Start")).not.toHaveValue("2026-07-01");
 });
+
+// Owner report P-24: a user west of the server's zone saw an empty list while the create call said "overlap".
+test("a Los Angeles user in USD sees the global budget they just created, formatted in their currency", async ({
+  page,
+  request,
+}) => {
+  const response = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: {
+      name: "Budgets LA",
+      email: `e2e-budgets-la-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@ledgerflow.test`,
+      password: "LedgerFlow!2026",
+      timezone: "America/Los_Angeles",
+      currency: "USD",
+    },
+  });
+  expect(response.ok()).toBe(true);
+  await page.context().addCookies((await request.storageState()).cookies);
+  const created = await request.post("/api/budgets", {
+    headers: { origin: APP },
+    data: {
+      name: "Monthly budget",
+      color: "INDIGO",
+      categoryIds: [],
+      periodType: "MONTHLY",
+      amount: 2000,
+    },
+  });
+  expect(created.status()).toBe(201);
+
+  await page.goto("/budgets");
+  await expect(page.getByText("Global")).toBeVisible();
+  await expect(page.getByText("$2,000.00 left · nothing spent yet")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Put a ceiling on your small spending" }),
+  ).toHaveCount(0);
+});

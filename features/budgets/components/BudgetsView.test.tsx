@@ -136,7 +136,7 @@ describe("BudgetsView", () => {
     expect(screen.getByText("$715,700 left for 9 days")).toBeInTheDocument();
     expect(screen.getByText("≈ $79,522/day")).toBeInTheDocument();
     const url = fetchMock.mock.calls[0]?.[0];
-    expect(url).toContain("reference=2026-09-01T05%3A00%3A00.000Z");
+    expect(url).toContain("reference=2026-09-15T17%3A00%3A00.000Z");
 
     expect(screen.getByText("$188,000 left · 9 days left")).toBeInTheDocument();
     expect(screen.getByText("Over by $56,000")).toBeInTheDocument();

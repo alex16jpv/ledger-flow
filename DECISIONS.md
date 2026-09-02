@@ -787,3 +787,15 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   instead, as DESIGN §8.9 asks.
 - **Adjustments are opt-in** (`type=ADJUSTMENT`) with an explanatory note, matching the backend's
   exclusion by default; Export stays visible but disabled behind the `exportTransactions` flag.
+
+## 2026-09-02 · The app formats with the user's currency and zone (owner report P-24, W-10 revised)
+
+- **`FormatSettingsProvider` was mounted only at the root with its defaults** (COP, America/Bogota):
+  no screen ever received `user.currency` / `user.timezone`, so a Los Angeles user in USD saw Bogota
+  month boundaries and zero-decimal amounts. `AppFrame` now wraps the authenticated shell in a second
+  provider fed from the session, and every `useMoney` / `useDates` consumer inherits it.
+- **The budget month reference is noon on the 15th**, not the local midnight of the 1st. The backend
+  resolves the period in the zone of the token; when the client's zone disagreed (the bug above) the
+  midnight instant fell into the previous month and the list came back empty while the create call
+  answered `BUDGET_PERIOD_OVERLAP`. Any instant inside the month is valid, and the 15th at noon is
+  inside it in every zone.
