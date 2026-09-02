@@ -85,3 +85,62 @@ test("a new user sees the empty state and creates the global budget from it", as
   await expect(page.getByText("Global")).toBeVisible();
   await expect(page.getByText("$2,000,000 left · nothing spent yet")).toBeVisible();
 });
+
+test("the detail adjusts, skips and removes the period amount, then archives the budget", async ({
+  page,
+  request,
+}) => {
+  await signUp(page, request);
+  const created = await request.post("/api/budgets", {
+    headers: { origin: APP },
+    data: {
+      name: "Snacks",
+      color: "AMBER",
+      categoryIds: [],
+      type: "EXPENSE",
+      periodType: "MONTHLY",
+      amount: 250_000,
+    },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+
+  await page.goto(`/budgets/${id}`);
+  await expect(page.getByRole("heading", { level: 1, name: "Budget" })).toBeVisible();
+  await expect(page.getByText("Snacks", { exact: true })).toBeVisible();
+  await expect(page.getByText(/uses the base amount/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "All spending" })).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  await page.getByRole("button", { name: "Change adjustment" }).click();
+  const sheet = page.getByRole("dialog", { name: "Adjust this period" });
+  await sheet.getByRole("textbox", { name: /^Amount for/ }).fill("300000");
+  await sheet.getByRole("button", { name: "Save adjustment" }).click();
+  await expect(page.getByText("Adjustment saved")).toBeVisible();
+  await expect(page.getByText(/is adjusted to \$300,000/)).toBeVisible();
+  await expect(page.getByText("Adjusted", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("base $250,000")).toBeVisible();
+
+  await page.getByRole("button", { name: "Skip this period" }).click();
+  await expect(page.getByText(/doesn’t apply in/)).toBeVisible();
+  await page.getByRole("button", { name: "Remove adjustment" }).click();
+  await expect(page.getByText("Adjustment removed")).toBeVisible();
+  await expect(page.getByText(/uses the base amount/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Previous month" }).click();
+  await expect(page).toHaveURL(/reference=\d{4}-\d{2}/);
+  await page.getByRole("button", { name: "Next month" }).click();
+  await expect(page.getByRole("button", { name: "Next month" })).toBeDisabled();
+
+  await page.getByRole("button", { name: "Archive" }).click();
+  await page
+    .getByRole("dialog", { name: "Archive Snacks?" })
+    .getByRole("button", { name: "Archive" })
+    .click();
+  await expect(page.getByText("Budget archived")).toBeVisible();
+  await expect(page).toHaveURL(/\/budgets$/);
+  const detail = (await (await request.get(`/api/budgets/${id}`)).json()) as {
+    archivedAt: string | null;
+  };
+  expect(detail.archivedAt).not.toBeNull();
+});

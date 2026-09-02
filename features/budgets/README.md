@@ -10,4 +10,8 @@ pre-floor budgets after paginating) and splits the result into the featured glob
 `BudgetCard` per budget with the status phrase from `budgetProgress`. The period-type filter is
 client-side and lives in the URL. `PastBudgetsView` (`/budgets/past`) lists ended CUSTOM budgets and
 archived ones with "Create again". The screens are composed in the app layer because the tiles need
-the category icons. Detail, overrides and the form arrive with W-27 and W-28.
+the category icons. W-27 adds the detail (`/budgets/[id]?reference=`): `BudgetHero` (remaining, pace per elapsed day,
+days left), `PeriodAmountCard` with the override actions (`OverrideSheet` → `PUT …/amount?reference=`,
+skip = amount 0, remove = `DELETE …/amount`), the categories chips with the archived mark, the note,
+the period's transactions (client-side filtered when the budget spans several categories) and
+`ArchiveBudgetSheet` (final, no restore). The form arrives with W-28.

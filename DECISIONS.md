@@ -732,3 +732,19 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **Past budgets are not dimmed.** DESIGN §8.8 draws ended/archived cards at 85 % opacity, but that
   drops the secondary text below the 4.5:1 contrast axe enforces in every smoke, so the cards keep
   full opacity and rely on the "Ended" / "Archived" badge and their own tab.
+
+## 2026-09-02 · Budget detail (W-27)
+
+- **The detail navigates months like the list** (`?reference=YYYY-MM`) for every period type: the
+  backend resolves the instance containing the local start of that month, so a weekly budget shows
+  the week of the 1st. Finer navigation would need a period-aware stepper the design does not draw.
+- **Overrides go to `PUT/DELETE /budgets/:id/amount?reference=`** with the same reference as the
+  view; "Skip this period" is `amount: 0` (the API keeps it distinct from removing the override) and
+  the card phrases the three states (base, adjusted to X, doesn't apply).
+- **The period's transactions come from the list endpoint** with `from`/`to` = `periodFrom`/`periodTo`
+  and `type`; a single-category budget adds `categoryId`, a multi-category one filters the first page
+  on the client because the API takes one category. "See all" opens `/transactions` with a custom
+  period (inclusive dates in the user's zone) and, when possible, the category.
+- **Pace = spent ÷ elapsed days of the period** (at least one), computed from API values only.
+- **Archiving is final** and needs the confirmation sheet with the danger copy; the archived detail
+  keeps the hero and explains, without override or edit actions.
