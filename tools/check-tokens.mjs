@@ -4,6 +4,8 @@ import { join, relative, sep } from "node:path";
 const SCAN_ROOTS = ["app", "components", "features", "lib", "tests"];
 const EXTENSIONS = /\.(tsx?|css)$/;
 const EXEMPT_PREFIXES = ["tokens" + sep, "types" + sep];
+// next/og renders with satori, which cannot read CSS variables: the card carries literal brand colors.
+const EXEMPT_FILES = ["opengraph-image.tsx"];
 
 const TAILWIND_PREFIXES =
   "bg|text|border|ring|fill|stroke|from|to|via|outline|decoration|accent|caret|shadow|divide|placeholder|inset-ring";
@@ -54,6 +56,7 @@ const failures = [];
 for (const file of targets(process.argv.slice(2))) {
   const rel = relative(process.cwd(), file);
   if (EXEMPT_PREFIXES.some((prefix) => rel.startsWith(prefix))) continue;
+  if (EXEMPT_FILES.some((name) => rel.endsWith(sep + name))) continue;
   const lines = readFileSync(file, "utf8").split("\n");
   lines.forEach((line, index) => {
     for (const rule of RULES) {

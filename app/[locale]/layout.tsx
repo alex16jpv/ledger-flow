@@ -8,6 +8,7 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import { geistMono, geistSans } from "@/app/fonts";
+import { env } from "@/lib/env";
 import { routing } from "@/lib/i18n";
 import { DEFAULT_PALETTE } from "@/lib/theme";
 
@@ -27,6 +28,7 @@ export async function generateMetadata({
   if (!hasLocale(routing.locales, locale)) notFound();
   const t = await getTranslations({ locale, namespace: "metadata" });
   return {
+    metadataBase: new URL(env.NEXT_PUBLIC_APP_URL),
     title: { default: t("title"), template: t("template") },
     description: t("description"),
   };

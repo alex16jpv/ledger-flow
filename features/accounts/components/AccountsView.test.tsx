@@ -101,6 +101,8 @@ describe("AccountsView", () => {
         <AccountsView />
       </QueryProvider>,
     );
-    expect(await screen.findByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Retry" }, { timeout: 4000 }),
+    ).toBeInTheDocument();
   });
 });

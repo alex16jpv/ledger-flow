@@ -878,3 +878,17 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   are drafts for the owner to review before F5 closes, as HANDOFF §6 foresees.
 - **404 is a real 404** rendered inside the public frame; `error.tsx` at the locale root covers the
   public pages with the same `Empty` composition.
+
+## 2026-09-02 · Technical SEO (W-32)
+
+- **One helper builds every public page's metadata** (`lib/seo.ts`): canonical, `hreflang` for
+  `en`, `es` and `x-default`, Open Graph and Twitter card, all derived from `NEXT_PUBLIC_APP_URL`
+  (`metadataBase` in the root layout); the domain never appears in code, as HANDOFF §3.17 requires.
+- **`robots.ts` allows only the public surface** and disallows the BFF, the app routes and the dev
+  screens in both locales; `sitemap.ts` lists the five public paths with their language alternates.
+  The proxy adds `X-Robots-Tag: noindex, nofollow` to app and dev routes, on the redirect to login too.
+- **The Open Graph image is rendered by `next/og`** from the landing copy of the requested locale.
+  Satori cannot resolve CSS variables, so that file carries literal brand colors and is the one
+  exemption in `check-tokens`.
+- **JSON-LD only on the landing**: `Organization`, `WebSite` and `SoftwareApplication`
+  (`FinanceApplication`, price 0), serialized by us and carried under the CSP nonce.

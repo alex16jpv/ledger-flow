@@ -31,11 +31,14 @@ export default function proxy(request: NextRequest) {
   const path = stripLocale(pathname, routing.locales);
   const hasSession = request.cookies.has(SESSION_COOKIE);
 
+  const noindex = isProtectedPath(path) || path.startsWith("/dev/");
   if (!hasSession && isProtectedPath(path)) {
     const url = request.nextUrl.clone();
     url.pathname = `${prefix}${LOGIN_PATH}`;
     url.search = `?next=${encodeURIComponent(`${path}${search}`)}`;
-    return NextResponse.redirect(url);
+    const redirect = NextResponse.redirect(url);
+    redirect.headers.set("x-robots-tag", "noindex, nofollow");
+    return redirect;
   }
   if (hasSession && isGuestOnlyPath(path)) {
     const url = request.nextUrl.clone();
@@ -57,6 +60,7 @@ export default function proxy(request: NextRequest) {
 
   const response = intl(request);
   response.headers.set(headerName, csp);
+  if (noindex) response.headers.set("x-robots-tag", "noindex, nofollow");
   return response;
 }
 

@@ -4,10 +4,19 @@ import { getTranslations } from "next-intl/server";
 import { LegalPage } from "@/components/public/LegalPage";
 import { PublicFrame } from "@/components/public/PublicFrame";
 import { env } from "@/lib/env";
+import { isAppLocale } from "@/lib/i18n/routing";
+import { publicMetadata } from "@/lib/seo";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("public.privacy");
-  return { title: t("metaTitle"), description: t("metaDescription") };
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/privacy">): Promise<Metadata> {
+  const { locale: raw } = await params;
+  const locale = isAppLocale(raw) ? raw : "en";
+  const t = await getTranslations({ locale, namespace: "public.privacy" });
+  return publicMetadata("/privacy", locale, {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  });
 }
 
 export default async function PrivacyPage() {

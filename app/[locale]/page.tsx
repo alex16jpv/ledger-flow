@@ -1,7 +1,8 @@
 import { ChartPie, Sparkles, WifiOff, Zap } from "lucide-react";
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
+import { JsonLd } from "@/components/public/JsonLd";
 import { PhoneMock } from "@/components/public/PhoneMock";
 import { PublicFrame } from "@/components/public/PublicFrame";
 import { Badge } from "@/components/ui/Badge";
@@ -9,15 +10,24 @@ import { buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Tile } from "@/components/ui/Tile";
 import { Link } from "@/lib/i18n/navigation";
+import { isAppLocale } from "@/lib/i18n/routing";
 import { iconProps } from "@/lib/icons/sizes";
+import { publicMetadata } from "@/lib/seo";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("public.landing");
-  return { title: { absolute: t("metaTitle") }, description: t("metaDescription") };
+export async function generateMetadata({ params }: PageProps<"/[locale]">): Promise<Metadata> {
+  const { locale: raw } = await params;
+  const locale = isAppLocale(raw) ? raw : "en";
+  const t = await getTranslations({ locale, namespace: "public.landing" });
+  return publicMetadata("/", locale, {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+    absoluteTitle: true,
+  });
 }
 
 export default async function LandingPage() {
   const t = await getTranslations("public.landing");
+  const locale = await getLocale();
   const why = [
     { icon: Zap, color: "AMBER" as const, title: t("why1Title"), body: t("why1Body") },
     { icon: ChartPie, color: "INDIGO" as const, title: t("why2Title"), body: t("why2Body") },
@@ -30,6 +40,11 @@ export default async function LandingPage() {
   ];
   return (
     <PublicFrame>
+      <JsonLd
+        locale={locale}
+        name={t("metaTitle").split(" · ")[0] ?? ""}
+        description={t("metaDescription")}
+      />
       <section
         aria-labelledby="hero-title"
         className="mx-auto grid w-full max-w-(--content-max) gap-10 px-4 py-10 sm:px-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] md:items-center md:px-8 md:py-16"
