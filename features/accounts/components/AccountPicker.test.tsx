@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { QueryProvider } from "@/lib/query/QueryProvider";
@@ -7,8 +7,8 @@ import type { Account } from "@/types/api";
 
 import { AccountPicker } from "./AccountPicker";
 
-const json = (body: unknown) =>
-  new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } });
+const json = (body: unknown, init: ResponseInit = {}) =>
+  new Response(JSON.stringify(body), { headers: { "content-type": "application/json" }, ...init });
 const fetchMock = vi.fn<typeof fetch>();
 
 function account(id: string, name: string, extra: Partial<Account> = {}): Account {
@@ -70,6 +70,7 @@ describe("AccountPicker", () => {
       "−$1,245,900",
     );
 
+    expect(main).toHaveFocus();
     await userEvent.click(within(listbox).getByRole("option", { name: /Visa Gold/ }));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: "visa" }));
     expect(
@@ -87,5 +88,29 @@ describe("AccountPicker", () => {
     const names = screen.getAllByRole("option").map((option) => option.textContent);
     expect(names.some((name) => name?.includes("Bancolombia"))).toBe(false);
     expect(names).toHaveLength(2);
+    expect(screen.getByRole("option", { name: /Cash/ })).toHaveFocus();
+  });
+
+  it("creates an account inline and selects it", async () => {
+    const onChange = vi.fn();
+    renderWithProviders(
+      <QueryProvider>
+        <AccountPicker value={null} onChange={onChange} />
+      </QueryProvider>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /Choose an account/ }));
+    await userEvent.click(screen.getByRole("button", { name: /New account/ }));
+    expect(screen.getByRole("heading", { name: "New account" })).toBeVisible();
+    fetchMock.mockResolvedValueOnce(
+      json(account("nu", "Nu", { type: "SAVINGS", balance: 0 }), { status: 201 }),
+    );
+    await userEvent.type(screen.getByLabelText("Name"), "Nu");
+    await userEvent.click(screen.getByRole("button", { name: "Savings", pressed: false }));
+    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    await waitFor(() => {
+      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: "nu" }));
+    });
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(JSON.parse(post?.[1]?.body as string)).toMatchObject({ name: "Nu", type: "SAVINGS" });
   });
 });

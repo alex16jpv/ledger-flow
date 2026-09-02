@@ -414,8 +414,16 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   success, so the transaction form underneath is never unmounted. The type is inherited from the
   picker and not editable there.
 - **Date and time are native inputs** (`DateTimeField`), the only exception HANDOFF §3.5 allows.
-  The value is a pair `{ date, time | null }`; `dateTimeInstant()` sends local noon when no time was
-  chosen (`FUTURE_DATE` mapping and `max` are the form's job in W-18).
+  The value is a pair `{ date, time | null }`; `dateTimeInstant()` combines the chosen day with the
+  **current local time** when no time was typed (owner decision of 2026-09-01, replacing the
+  design's local noon), so a movement logged for today lands at the moment it was captured.
+  `FUTURE_DATE` mapping and `max` are the form's job in W-18.
+- **Both pickers can create in place.** The account sheet mirrors the category sheet: a "New account"
+  row swaps the body for the existing `AccountForm` and selects the created account (owner request).
+- **The account sheet moves focus to a row.** `showModal()` focuses the first focusable element,
+  which in a sheet is the close button, so Enter right after opening dismissed the account picker.
+  An effect focuses the selected option (or the first one) as soon as the rows exist, even when the
+  accounts arrive after the sheet opened; the category sheet keeps focus on its search field.
 - **`/dev/pickers`** is a development-only screen under `(app)` (session, shell and React Query
   available) so the pickers can be exercised and tested end to end against the real API before any
   form uses them; it disappears with the `componentCatalog` flag in production.

@@ -1,4 +1,10 @@
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+import type {
+  AnchorHTMLAttributes,
+  ButtonHTMLAttributes,
+  HTMLAttributes,
+  ReactNode,
+  Ref,
+} from "react";
 
 import { cn } from "./cn";
 
@@ -13,17 +19,24 @@ interface RowBaseProps {
   children: ReactNode;
 }
 
-export type RowButtonProps = RowBaseProps & ButtonHTMLAttributes<HTMLButtonElement>;
+export type RowButtonProps = RowBaseProps &
+  ButtonHTMLAttributes<HTMLButtonElement> & { ref?: Ref<HTMLButtonElement> };
 
 export function RowButton({
   pending = false,
   className,
   children,
   type = "button",
+  ref,
   ...rest
 }: RowButtonProps) {
   return (
-    <button type={type} className={cn(ROW, INTERACTIVE, pending && PENDING, className)} {...rest}>
+    <button
+      ref={ref}
+      type={type}
+      className={cn(ROW, INTERACTIVE, pending && PENDING, className)}
+      {...rest}
+    >
       {children}
     </button>
   );

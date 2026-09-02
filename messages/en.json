@@ -412,14 +412,18 @@
       "type": "Type",
       "balance": "Current balance",
       "balanceHelp": "Saved as the opening balance so you can reconcile the account later.",
-      "color": "Color"
+      "color": "Color",
+      "title": "New account",
+      "create": "Create account"
     },
     "picker": {
       "title": "Account",
       "label": "Account",
       "placeholder": "Choose an account",
       "note": "Archived accounts are not listed. Balances update as you save.",
-      "empty": "No accounts yet"
+      "empty": "No accounts yet",
+      "new": "New account",
+      "newHint": "Create it without leaving this form"
     }
   },
   "budgets": {

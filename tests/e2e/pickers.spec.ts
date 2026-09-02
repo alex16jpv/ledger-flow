@@ -120,7 +120,7 @@ test("the account picker lists balances with the main badge and excludes the oth
   await expect(main).toContainText("Main");
   await expect(main).toContainText("$3,420,500");
   await expectAccessibleDialog(page);
-  await page.keyboard.press("Tab");
+  await expect(main).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(dialog).toBeHidden();
   await expect(from).toContainText("Bancolombia · $3,420,500");
@@ -131,10 +131,33 @@ test("the account picker lists balances with the main badge and excludes the oth
   await expect(dialog.getByRole("option", { name: /Cash/ })).toBeVisible();
 });
 
-test("the date field sends local noon until a time is chosen", async ({ page, request }) => {
+test("the date field sends the current time until a time is chosen", async ({ page, request }) => {
   await signInAsSeed(page, request);
   await page.getByRole("textbox", { name: "Date" }).fill("2026-09-22");
-  await expect(result(page, "instant-result")).toContainText("2026-09-22T17:00:00.000Z");
+  await expect(result(page, "instant-result")).not.toContainText("2026-09-22T17:00:00.000Z");
+  await expect(result(page, "instant-result")).toContainText(/2026-09-2[23]T\d\d:\d\d:00\.000Z/);
   await page.getByRole("textbox", { name: /Time/ }).fill("18:10");
   await expect(result(page, "instant-result")).toContainText("2026-09-22T23:10:00.000Z");
+});
+
+test("a new account can be created inline from the picker", async ({ page, request }) => {
+  await signInAsSeed(page, request);
+  const name = `E2E Nu ${Date.now()}`;
+  await page.getByRole("button", { name: /^From/ }).click();
+  await page
+    .getByRole("dialog", { name: "Account" })
+    .getByRole("button", { name: /New account/ })
+    .click();
+  const form = page.getByRole("dialog", { name: "New account" });
+  await form.getByLabel("Name").fill(name);
+  await form.getByRole("button", { name: "Savings" }).click();
+  await form.getByRole("button", { name: "Create account" }).click();
+  await expect(form).toBeHidden();
+  await expect(result(page, "account-result")).toHaveText(`Selected: ${name}`);
+  const list = (await (await request.get("/api/accounts?limit=100")).json()) as {
+    data: { id: string; name: string }[];
+  };
+  const created = list.data.find((account) => account.name === name);
+  expect(created).toBeDefined();
+  await request.delete(`/api/accounts/${created?.id}`, { headers: { origin: APP } });
 });

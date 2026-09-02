@@ -57,9 +57,10 @@ describe("local instants", () => {
     );
   });
 
-  it("falls back to local noon when no time was chosen and round-trips the parts", () => {
-    expect(dateTimeInstant({ date: "2026-09-22", time: null }, BOGOTA).toISOString()).toBe(
-      "2026-09-22T17:00:00.000Z",
+  it("uses the current local time when no time was chosen and round-trips the parts", () => {
+    const now = new Date("2026-09-23T04:05:00Z");
+    expect(dateTimeInstant({ date: "2026-09-22", time: null }, BOGOTA, now).toISOString()).toBe(
+      "2026-09-23T04:05:00.000Z",
     );
     const instant = dateTimeInstant({ date: "2026-09-22", time: "18:10" }, BOGOTA);
     expect(instant.toISOString()).toBe("2026-09-22T23:10:00.000Z");

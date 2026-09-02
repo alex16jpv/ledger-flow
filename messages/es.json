@@ -412,14 +412,18 @@
       "type": "Tipo",
       "balance": "Saldo actual",
       "balanceHelp": "Se guarda como saldo inicial para que puedas conciliar la cuenta después.",
-      "color": "Color"
+      "color": "Color",
+      "title": "Nueva cuenta",
+      "create": "Crear cuenta"
     },
     "picker": {
       "title": "Cuenta",
       "label": "Cuenta",
       "placeholder": "Elige una cuenta",
       "note": "Las cuentas archivadas no aparecen. Los saldos se actualizan al guardar.",
-      "empty": "Aún no hay cuentas"
+      "empty": "Aún no hay cuentas",
+      "new": "Nueva cuenta",
+      "newHint": "Créala sin salir de este formulario"
     }
   },
   "budgets": {

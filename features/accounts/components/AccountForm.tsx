@@ -24,9 +24,10 @@ import { ACCOUNT_TYPES, accountFormSchema, type AccountFormValues } from "../sch
 interface AccountFormProps {
   onCreated: (account: Account) => void;
   submitLabel: string;
+  onCancel?: () => void;
 }
 
-export function AccountForm({ onCreated, submitLabel }: AccountFormProps) {
+export function AccountForm({ onCreated, submitLabel, onCancel }: AccountFormProps) {
   const t = useTranslations();
   const createAccount = useCreateAccount();
   const form = useForm<AccountFormValues>({
@@ -143,9 +144,16 @@ export function AccountForm({ onCreated, submitLabel }: AccountFormProps) {
           )}
         />
       </div>
-      <Button type="submit" size="lg" block loading={createAccount.isPending}>
-        {submitLabel}
-      </Button>
+      <div className="flex flex-col gap-2">
+        <Button type="submit" size="lg" block loading={createAccount.isPending}>
+          {submitLabel}
+        </Button>
+        {onCancel && (
+          <Button type="button" variant="ghost" size="lg" block onClick={onCancel}>
+            {t("common.backToList")}
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

@@ -41,11 +41,16 @@ export interface DateTimeParts {
   time: string | null;
 }
 
-export function dateTimeInstant({ date, time }: DateTimeParts, timeZone: string): Date {
-  return time ? localDateTime(date, time, timeZone) : localNoon(date, timeZone);
+// Owner decision (2026-09-01): an empty time means "now", not local noon.
+export function dateTimeInstant(
+  { date, time }: DateTimeParts,
+  timeZone: string,
+  now: Date = new Date(),
+): Date {
+  return localDateTime(date, time ?? dateTimeParts(now, timeZone).time, timeZone);
 }
 
-export function dateTimeParts(instant: Date, timeZone: string): DateTimeParts {
+export function dateTimeParts(instant: Date, timeZone: string): { date: string; time: string } {
   const local = toZonedTime(instant, timeZone);
   return {
     date: dayKey(instant, timeZone),
