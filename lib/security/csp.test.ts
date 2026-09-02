@@ -2,7 +2,12 @@ import { buildCsp, cspHeaderName, newNonce, staticSecurityHeaders } from "./csp"
 
 describe("buildCsp", () => {
   it("uses a per-request nonce and locks connect-src to self", () => {
-    const csp = buildCsp({ nonce: "abc", isDevelopment: false, reportUri: "/api/csp-report" });
+    const csp = buildCsp({
+      nonce: "abc",
+      isDevelopment: false,
+      reportOnly: false,
+      reportUri: "/api/csp-report",
+    });
     expect(csp).toContain("script-src 'self' 'nonce-abc' 'strict-dynamic'");
     expect(csp).toContain("connect-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
@@ -11,7 +16,7 @@ describe("buildCsp", () => {
   });
 
   it("allows eval and same-origin framing only in development", () => {
-    const dev = buildCsp({ nonce: "n", isDevelopment: true, reportUri: "/r" });
+    const dev = buildCsp({ nonce: "n", isDevelopment: true, reportOnly: false, reportUri: "/r" });
     expect(dev).toContain("'unsafe-eval'");
     expect(dev).toContain("frame-ancestors 'self'");
     expect(staticSecurityHeaders(true).find((h) => h.key === "X-Frame-Options")?.value).toBe(
@@ -20,6 +25,12 @@ describe("buildCsp", () => {
     expect(staticSecurityHeaders(false).find((h) => h.key === "X-Frame-Options")?.value).toBe(
       "DENY",
     );
+  });
+
+  it("omits upgrade-insecure-requests while report-only, where browsers ignore it", () => {
+    expect(
+      buildCsp({ nonce: "n", isDevelopment: false, reportOnly: true, reportUri: "/r" }),
+    ).not.toContain("upgrade-insecure-requests");
   });
 
   it("names the report-only header during the rollout", () => {

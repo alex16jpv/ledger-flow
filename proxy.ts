@@ -48,6 +48,7 @@ export default function proxy(request: NextRequest) {
   const csp = buildCsp({
     nonce,
     isDevelopment: process.env.NODE_ENV === "development",
+    reportOnly: CSP_REPORT_ONLY,
     reportUri: "/api/csp-report",
   });
   const headerName = cspHeaderName(CSP_REPORT_ONLY);

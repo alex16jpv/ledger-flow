@@ -8,8 +8,9 @@ export interface SecurityHeaderOptions {
 export function buildCsp({
   nonce,
   isDevelopment,
+  reportOnly,
   reportUri,
-}: Omit<SecurityHeaderOptions, "reportOnly">): string {
+}: SecurityHeaderOptions): string {
   const scriptSrc = [
     `'self'`,
     `'nonce-${nonce}'`,
@@ -30,7 +31,7 @@ export function buildCsp({
     `form-action 'self'`,
     `object-src 'none'`,
     `report-uri ${reportUri}`,
-    ...(isDevelopment ? [] : [`upgrade-insecure-requests`]),
+    ...(isDevelopment || reportOnly ? [] : [`upgrade-insecure-requests`]),
   ];
   return directives.join("; ");
 }
