@@ -2168,6 +2168,82 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/transactions/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Complete several quick-adds in one request
+         * @description Saves the detail of up to 100 transactions at once — the review inbox
+         *     clearing its cards. Only detail fields are accepted (`categoryId`,
+         *     `description`, `pendingDetails`), so nothing here can move a balance.
+         *
+         *     **Items are independent.** Each is validated and saved on its own, and
+         *     a failure leaves only that item unsaved: the response returns the ones
+         *     that were saved in `updated` and the rest in `failed`, each with the
+         *     machine-readable `code` of why. The status is **200** even when some
+         *     items failed — read `failed`, not the status.
+         *
+         *     Accepts `Idempotency-Key` (validated, 400 `IDEMPOTENCY_KEY_INVALID` if
+         *     malformed). Nothing is stored against it: the request sets fields to
+         *     given values, so retrying it lands on the same state.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optional; 1-200 characters of [A-Za-z0-9_-] */
+                    "Idempotency-Key"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchUpdateTransactionsInput"];
+                };
+            };
+            responses: {
+                /** @description Per-item outcome; some items may have failed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchUpdateResult"];
+                    };
+                };
+                /** @description Validation error — empty list, over 100 items, a repeated id, an item that changes nothing, or a malformed Idempotency-Key */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/transactions/{id}": {
         parameters: {
             query?: never;
@@ -2628,6 +2704,16 @@ export type components = {
             /** Format: uuid */
             toAccountId?: string;
         };
+        BatchUpdateTransactionsInput: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                categoryId?: string | null;
+                description?: string | null;
+                pendingDetails?: boolean;
+            }[];
+        };
         CreateBudgetInput: {
             name: string;
             /** @enum {string} */
@@ -2675,7 +2761,7 @@ export type components = {
              * @description Stable machine-readable code. Branch on this, never on message.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             details?: {
                 field?: string;
                 message?: string;
@@ -2850,6 +2936,18 @@ export type components = {
             /** Format: date-time */
             updatedAt: string;
         };
+        BatchUpdateFailure: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            message: string;
+        };
+        /** @description Per-item outcome. The status is 200 even when some items failed: read `failed`. */
+        BatchUpdateResult: {
+            updated: components["schemas"]["Transaction"][];
+            failed: components["schemas"]["BatchUpdateFailure"][];
+        };
         StatsBucket: {
             /** @description Category id, day (YYYY-MM-DD) or tag; 'uncategorized'/'untagged' for the catch-all buckets. */
             key: string;
@@ -2911,6 +3009,7 @@ export type UpdateCategoryInput = components['schemas']['UpdateCategoryInput'];
 export type CreateTransactionInput = components['schemas']['CreateTransactionInput'];
 export type UpdateTransactionInput = components['schemas']['UpdateTransactionInput'];
 export type QuickAddTransactionInput = components['schemas']['QuickAddTransactionInput'];
+export type BatchUpdateTransactionsInput = components['schemas']['BatchUpdateTransactionsInput'];
 export type CreateBudgetInput = components['schemas']['CreateBudgetInput'];
 export type UpdateBudgetInput = components['schemas']['UpdateBudgetInput'];
 export type BudgetAmountOverrideInput = components['schemas']['BudgetAmountOverrideInput'];
@@ -2924,6 +3023,8 @@ export type Account = components['schemas']['Account'];
 export type Category = components['schemas']['Category'];
 export type Transaction = components['schemas']['Transaction'];
 export type Budget = components['schemas']['Budget'];
+export type BatchUpdateFailure = components['schemas']['BatchUpdateFailure'];
+export type BatchUpdateResult = components['schemas']['BatchUpdateResult'];
 export type StatsBucket = components['schemas']['StatsBucket'];
 export type StatsResponse = components['schemas']['StatsResponse'];
 export type AccountList = components['schemas']['AccountList'];

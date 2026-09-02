@@ -32,3 +32,9 @@ W-21 adds the review inbox (`app/[locale]/(app)/transactions/review/`): one card
 expense with the recent category chips, "Other" for the full picker, a description field and "Done",
 which `PUT`s `categoryId`, `description` and `pendingDetails: false`; the pending count in the shell
 follows because the mutation invalidates the transactions domain.
+
+F-07 adds "Save all" to the inbox: the card drafts live in the screen, a sticky button counts the
+cards that already have a category, a sheet confirms how many save and how many stay pending, and
+`useBatchComplete` sends one `PATCH /transactions/batch` with an `Idempotency-Key`. The response is
+per item: saved cards leave the list, failed ones stay with their error, and the individual "Done"
+keeps working.

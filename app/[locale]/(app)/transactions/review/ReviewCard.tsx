@@ -4,6 +4,7 @@ import { Hash, PencilLine } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
+import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
@@ -16,28 +17,42 @@ import { useToast } from "@/components/ui/Toast";
 import { CategoryPickerSheet } from "@/features/categories/components/CategoryPickerSheet";
 import type { TransactionLookups } from "@/features/transactions/components/TransactionRow";
 import { useUpdateTransaction } from "@/features/transactions/hooks";
-import { presentError } from "@/lib/api/errors";
+import { type ErrorMessageKey, presentError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
 import type { Category, Transaction } from "@/types/api";
 
+export interface ReviewDraft {
+  categoryId: string | null;
+  description: string;
+}
+
 interface ReviewCardProps {
   transaction: Transaction;
+  draft: ReviewDraft;
+  onDraftChange: (draft: ReviewDraft) => void;
   lookups: TransactionLookups;
   recent: readonly Category[];
   focused: boolean;
+  errorKey: ErrorMessageKey | null;
 }
 
-export function ReviewCard({ transaction, lookups, recent, focused }: ReviewCardProps) {
+export function ReviewCard({
+  transaction,
+  draft,
+  onDraftChange,
+  lookups,
+  recent,
+  focused,
+  errorKey,
+}: ReviewCardProps) {
   const t = useTranslations();
   const tc = useTranslations("common");
   const dates = useDates();
   const toast = useToast();
   const update = useUpdateTransaction(transaction.id);
-  const [categoryId, setCategoryId] = useState<string | null>(transaction.categoryId);
-  const [description, setDescription] = useState(transaction.description ?? "");
   const [pickerOpen, setPickerOpen] = useState(false);
   const card = useRef<HTMLDivElement>(null);
 
@@ -46,7 +61,7 @@ export function ReviewCard({ transaction, lookups, recent, focused }: ReviewCard
   }, [focused]);
 
   const account = lookups.accounts.get(transaction.fromAccountId ?? "");
-  const selected = lookups.categories.get(categoryId ?? "");
+  const selected = lookups.categories.get(draft.categoryId ?? "");
   const chips =
     selected && !recent.some((category) => category.id === selected.id)
       ? [selected, ...recent]
@@ -64,8 +79,8 @@ export function ReviewCard({ transaction, lookups, recent, focused }: ReviewCard
   async function done() {
     try {
       await update.mutateAsync({
-        categoryId,
-        description: description.trim() || null,
+        categoryId: draft.categoryId,
+        description: draft.description.trim() || null,
         pendingDetails: false,
       });
       toast.show({ message: t("transactions.review.saved") });
@@ -80,6 +95,7 @@ export function ReviewCard({ transaction, lookups, recent, focused }: ReviewCard
       className={cn(
         "flex flex-col gap-3",
         focused && "border-brand shadow-[0_0_0_3px_var(--focus-ring)]",
+        errorKey && "border-danger-solid",
       )}
       data-transaction-id={transaction.id}
     >
@@ -99,15 +115,19 @@ export function ReviewCard({ transaction, lookups, recent, focused }: ReviewCard
         </span>
         <Badge tone="warning">{t("transactions.list.toReview")}</Badge>
       </div>
+      {errorKey && <Alert tone="danger">{t(errorKey)}</Alert>}
       <ChipRow role="group" aria-label={t("transactions.form.category")}>
         {chips.map((category) => (
           <CategoryChip
             key={category.id}
             color={category.color}
-            selected={category.id === categoryId}
+            selected={category.id === draft.categoryId}
             icon={<CategoryIcon icon={category.icon} size="sm" />}
             onClick={() => {
-              setCategoryId(category.id === categoryId ? null : category.id);
+              onDraftChange({
+                ...draft,
+                categoryId: category.id === draft.categoryId ? null : category.id,
+              });
             }}
           >
             {category.name}
@@ -123,9 +143,9 @@ export function ReviewCard({ transaction, lookups, recent, focused }: ReviewCard
         </Chip>
       </ChipRow>
       <Input
-        value={description}
+        value={draft.description}
         onChange={(event) => {
-          setDescription(event.target.value);
+          onDraftChange({ ...draft, description: event.target.value });
         }}
         placeholder={t("transactions.review.descriptionPlaceholder")}
         aria-label={t("transactions.form.description")}
@@ -157,9 +177,9 @@ export function ReviewCard({ transaction, lookups, recent, focused }: ReviewCard
           setPickerOpen(false);
         }}
         type="EXPENSE"
-        value={categoryId}
+        value={draft.categoryId}
         onSelect={(category) => {
-          setCategoryId(category.id);
+          onDraftChange({ ...draft, categoryId: category.id });
         }}
       />
     </Card>

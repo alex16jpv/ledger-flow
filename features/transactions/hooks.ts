@@ -5,6 +5,7 @@ import { useMemo } from "react";
 
 import { invalidateMoneyMovement } from "@/lib/query/domains";
 import type {
+  BatchUpdateTransactionsInput,
   CreateTransactionInput,
   QuickAddTransactionInput,
   Transaction,
@@ -12,6 +13,7 @@ import type {
 } from "@/types/api";
 
 import {
+  batchUpdateTransactions,
   createTransaction,
   deleteTransaction,
   fetchDailyStats,
@@ -169,6 +171,20 @@ export function useUpdateTransaction(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: UpdateTransactionInput) => updateTransaction(id, input),
+    onSuccess: () => invalidateMoneyMovement(queryClient),
+  });
+}
+
+export function useBatchComplete() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      input,
+      idempotencyKey,
+    }: {
+      input: BatchUpdateTransactionsInput;
+      idempotencyKey: string;
+    }) => batchUpdateTransactions(input, idempotencyKey),
     onSuccess: () => invalidateMoneyMovement(queryClient),
   });
 }

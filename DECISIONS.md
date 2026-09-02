@@ -549,3 +549,16 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   both the shell counter and the inbox header, so the client still adds no money.
 - **`?focus=<id>`** marks the card with the brand outline and scrolls it into view, which is how the
   detail's "Complete" link lands on the right item.
+
+## 2026-09-02 · Save all in the review inbox (F-07, owner decision)
+
+- **One request, per-item results.** `PATCH /transactions/batch` (backend `6b2cedc`) takes up to 100
+  items, each with its own category and description, and answers `200 { updated, failed }` even when
+  some items failed. The front sends exactly one request with an `Idempotency-Key`, removes the
+  saved cards, keeps the failed ones with the error of their `code`, and shows "n saved · m with
+  errors". N parallel PUTs were rejected by the owner as not being a batch at all.
+- **Only cards with a category are included.** The confirmation sheet says how many save and how
+  many stay pending for lacking a category; nothing is copied between cards.
+- **Drafts moved from the card to the screen** (`Record<id, ReviewDraft>`) so the button can count
+  and send them; a card without a draft shows the transaction's own values. The individual "Done"
+  stays as it was.

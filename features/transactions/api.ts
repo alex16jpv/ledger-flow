@@ -1,6 +1,8 @@
 import { api } from "@/lib/api/client";
 import type { QueryValue } from "@/lib/api/query";
 import type {
+  BatchUpdateResult,
+  BatchUpdateTransactionsInput,
   CreateTransactionInput,
   QuickAddTransactionInput,
   StatsResponse,
@@ -67,6 +69,17 @@ export function quickAddTransaction(
 
 export function updateTransaction(id: string, input: UpdateTransactionInput): Promise<Transaction> {
   return api<Transaction>(`/transactions/${id}`, { method: "PUT", body: input });
+}
+
+export function batchUpdateTransactions(
+  input: BatchUpdateTransactionsInput,
+  idempotencyKey: string,
+): Promise<BatchUpdateResult> {
+  return api<BatchUpdateResult>("/transactions/batch", {
+    method: "PATCH",
+    body: input,
+    idempotencyKey,
+  });
 }
 
 export function deleteTransaction(id: string): Promise<unknown> {

@@ -55,3 +55,41 @@ test("the Complete link on a pending detail lands on its card", async ({ page, r
   await expect(page.locator(`[data-transaction-id="${created.id}"]`)).toBeVisible();
   await request.delete(`/api/transactions/${created.id}`, { headers: { origin: APP } });
 });
+
+test("Save all completes the categorized cards in one request", async ({ page, request }) => {
+  await signIn(page, request);
+  const amounts = [0, 1].map(() => 100_000 + Math.floor(Math.random() * 899_999));
+  const ids: string[] = [];
+  for (const amount of amounts) {
+    const created = (await (
+      await request.post("/api/transactions/quick", { headers: { origin: APP }, data: { amount } })
+    ).json()) as { id: string };
+    ids.push(created.id);
+  }
+  await page.goto("/transactions/review");
+  const cards = ids.map((id) => page.locator(`[data-transaction-id="${id}"]`));
+  await expect(cards[0]!).toBeVisible();
+  await cards[0]!.getByRole("button", { name: "Coffee" }).click();
+  await cards[1]!.getByRole("button", { name: "Food" }).click();
+  await cards[1]!.getByRole("textbox", { name: "Description" }).fill("E2E batch");
+
+  const patches: string[] = [];
+  page.on("request", (sent) => {
+    if (sent.method() === "PATCH") patches.push(sent.url());
+  });
+  await page.getByRole("button", { name: /^Save all · \d+$/ }).click();
+  const dialog = page.getByRole("dialog", { name: /^Save \d+ expenses?\?$/ });
+  await dialog.getByRole("button", { name: /^Save \d+$/ }).click();
+  await expect(page.getByText(/expenses? saved$/)).toBeVisible();
+  await expect(cards[0]!).toHaveCount(0);
+  await expect(cards[1]!).toHaveCount(0);
+  expect(patches.filter((url) => url.endsWith("/api/transactions/batch"))).toHaveLength(1);
+
+  for (const id of ids) {
+    const row = (await (await request.get(`/api/transactions/${id}`)).json()) as {
+      pendingDetails: boolean;
+    };
+    expect(row.pendingDetails).toBe(false);
+    await request.delete(`/api/transactions/${id}`, { headers: { origin: APP } });
+  }
+});

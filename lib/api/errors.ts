@@ -6,6 +6,7 @@ export type ErrorMessageKey = `errors.${keyof typeof en.errors}`;
 export const ERROR_CODES = [
   "VALIDATION",
   "INVALID_ID",
+  "NOT_FOUND",
   "DUPLICATE",
   "EMAIL_TAKEN",
   "NO_DEFAULT_ACCOUNT",
@@ -51,6 +52,7 @@ export interface ErrorPresentation {
 export const ERROR_TABLE: Readonly<Record<ErrorCode, ErrorPresentation>> = {
   VALIDATION: { scope: "form", messageKey: "errors.VALIDATION" },
   INVALID_ID: { scope: "screen", messageKey: "errors.INVALID_ID" },
+  NOT_FOUND: { scope: "screen", messageKey: "errors.NOT_FOUND" },
   DUPLICATE: { scope: "field", field: "name", messageKey: "errors.DUPLICATE" },
   EMAIL_TAKEN: { scope: "field", field: "email", messageKey: "errors.EMAIL_TAKEN" },
   NO_DEFAULT_ACCOUNT: {

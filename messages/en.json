@@ -606,7 +606,14 @@
         "title": "All reviewed",
         "body": "Every quick expense has a category and a description.",
         "cta": "Go home"
-      }
+      },
+      "saveAll": "Save all · {count}",
+      "confirmTitle": "Save {count, plural, one {# expense} other {# expenses}}?",
+      "confirmBody": "Each one keeps the category and description it has right now.",
+      "confirmSkipped": "{count, plural, one {# stays pending because it has no category yet.} other {# stay pending because they have no category yet.}}",
+      "confirmCta": "Save {count}",
+      "batchSaved": "{count, plural, one {# expense saved} other {# expenses saved}}",
+      "batchPartial": "{saved} saved · {failed} with errors"
     }
   },
   "transactionTypes": {

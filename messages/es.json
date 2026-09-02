@@ -606,7 +606,14 @@
         "title": "Todo detallado",
         "body": "Todos los gastos rápidos tienen categoría y descripción.",
         "cta": "Ir al inicio"
-      }
+      },
+      "saveAll": "Guardar todo · {count}",
+      "confirmTitle": "¿Guardar {count, plural, one {# gasto} other {# gastos}}?",
+      "confirmBody": "Cada uno conserva la categoría y la descripción que tiene ahora.",
+      "confirmSkipped": "{count, plural, one {# queda pendiente porque aún no tiene categoría.} other {# quedan pendientes porque aún no tienen categoría.}}",
+      "confirmCta": "Guardar {count}",
+      "batchSaved": "{count, plural, one {# gasto guardado} other {# gastos guardados}}",
+      "batchPartial": "{saved} guardados · {failed} con error"
     }
   },
   "transactionTypes": {
