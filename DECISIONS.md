@@ -2,8 +2,8 @@
 
 Lightweight ADR log. One entry per non-obvious choice: date, decision, alternatives, consequence.
 The specification that these decisions refine lives outside the repo in
-`../auditoria/diseno/HANDOFF.md`, `../auditoria/diseno/DESIGN.md` and
-`../auditoria/FASE-2-CONTRATO-FRONTEND.md`.
+`../auditoria/front/diseno/HANDOFF.md`, `../auditoria/front/diseno/DESIGN.md` and
+`../auditoria/front/FASE-2-CONTRATO-FRONTEND.md`.
 
 ## 2026-09-01 · Rebuild from scratch on `redesign/fase-2` (W-01)
 
@@ -27,7 +27,7 @@ The specification that these decisions refine lives outside the repo in
 
 ## 2026-09-01 · Token files copied without their Spanish comments (W-01)
 
-- **Decision:** `tokens/*.css` carry the exact values of `auditoria/diseno/tokens` (verified by a
+- **Decision:** `tokens/*.css` carry the exact values of `auditoria/front/diseno/tokens` (verified by a
   whitespace-and-comment-insensitive diff) but the explanatory Spanish comments were dropped.
 - **Why:** HANDOFF §3.0 forbids comments and non-English text in the repo; §0 of DESIGN.md protects
   the values, not the prose. `tokens/` is excluded from Prettier so the files stay diffable
@@ -117,7 +117,7 @@ The specification that these decisions refine lives outside the repo in
 
 ## 2026-09-01 · Geist through `next/font/local`, mapped onto the font tokens (W-03)
 
-- **Decision:** the two variable fonts from `auditoria/diseno/preview/assets/fonts` live in
+- **Decision:** the two variable fonts from `auditoria/front/diseno/preview/assets/fonts` live in
   `app/fonts/` and are declared with `next/font/local` (`--font-geist-sans`, `--font-geist-mono`).
   `app/globals.css` re-points the token stacks `--font-sans`/`--font-mono` at those variables.
 - **Why:** `next/font` self-hosts, preloads and adds size-adjusted fallbacks (CLS ≈ 0) but names the
@@ -196,7 +196,7 @@ The specification that these decisions refine lives outside the repo in
   document embedded in the backend's `swagger-ui-init.js` (there is no public JSON endpoint) and
   runs `openapi-typescript`. The backend views declare no `required`, so the generator marks every
   view property required except `User.reactivated`, `Category.seedKey` and `Session.userAgent`
-  (documented in the script; reported to the backend in `auditoria/BACKEND-DESDE-FRONT.md`). CI regenerates the file
+  (documented in the script; reported to the backend in `auditoria/front/BACKEND-DESDE-FRONT.md`). CI regenerates the file
   and fails on a diff.
 - **Enums:** `ColorToken` is the generated `Account.color` type; the runtime `COLOR_TOKENS` list is
   checked against it with `satisfies`, and `lib/api/contract.test.ts` asserts type equality for

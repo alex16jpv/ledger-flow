@@ -63,7 +63,7 @@ lib/theme            palette and mode
 lib/icons            curated Lucide map and CategoryIcon
 lib/format           money and date windows in the user's timezone
 messages/            en.json, es.json (the only place with user-visible text)
-tokens/              design tokens, copied from auditoria/diseno/tokens
+tokens/              design tokens, copied from auditoria/front/diseno/tokens
 types/api.d.ts       generated from the backend OpenAPI
 tests/e2e            Playwright; unit tests sit next to the code (*.test.ts)
 tools/               check-tokens, contrast-check, size-limit, gen-api-types

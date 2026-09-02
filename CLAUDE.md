@@ -4,9 +4,9 @@ Ledger Flow web client. Next.js (App Router) + React + TypeScript + Tailwind v4.
 multi-user product: never assume a single user, little data or a trusted client.
 
 This file overrides any default habit. The full specification lives outside the repo in
-`../auditoria/diseno/HANDOFF.md` (how and what), `DESIGN.md` (UI/UX) and
-`../auditoria/FASE-2-CONTRATO-FRONTEND.md` (API contract). Progress of the backlog and of the
-owner's requests is tracked in `../auditoria/PROGRESO.md`; update it when you close an item. Read
+`../auditoria/front/diseno/HANDOFF.md` (how and what), `DESIGN.md` (UI/UX) and
+`../auditoria/front/FASE-2-CONTRATO-FRONTEND.md` (API contract). Progress of the backlog and of the
+owner's requests is tracked in `../auditoria/front/PROGRESO.md`; update it when you close an item. Read
 them before changing anything.
 
 ---
@@ -22,7 +22,7 @@ A change is not done until all of these hold. If one does not apply, say so and 
 3. **Verified against the real API** (backend running locally), not only against mocks.
    Mocks are a fallback for cases the backend cannot produce on demand.
 4. **Checked against the design**: the screen matches its capture in
-   `../auditoria/diseno/preview/capturas/` in mobile and desktop, light and dark, and renders
+   `../auditoria/front/diseno/preview/capturas/` in mobile and desktop, light and dark, and renders
    its four states (data, empty, loading, error).
 5. **Docs updated** (§4). `DECISIONS.md` has an entry for every non-obvious choice.
 6. **One commit per backlog item** (`W-nn`), in English, describing only what was actually done.
@@ -75,14 +75,14 @@ features/b`; shared code moves up.
 
 ## 4. Documentation you must update
 
-| You changed                        | Update                                                                                 |
-| ---------------------------------- | -------------------------------------------------------------------------------------- |
-| A route, layout or navigation item | `README.md` route map                                                                  |
-| A feature's behaviour              | `features/<x>/README.md` (one paragraph, what and why)                                 |
-| An architectural or library choice | `DECISIONS.md` (date, decision, alternatives, consequence)                             |
-| Environment variables              | `lib/env.ts`, `.env.example`, `README.md`                                              |
-| A message key                      | Both `messages/en.json` and `messages/es.json`                                         |
-| Something the backend must change  | `../auditoria/BACKEND-DESDE-FRONT.md` (report it; do not change the backend from here) |
+| You changed                        | Update                                                                                       |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- |
+| A route, layout or navigation item | `README.md` route map                                                                        |
+| A feature's behaviour              | `features/<x>/README.md` (one paragraph, what and why)                                       |
+| An architectural or library choice | `DECISIONS.md` (date, decision, alternatives, consequence)                                   |
+| Environment variables              | `lib/env.ts`, `.env.example`, `README.md`                                                    |
+| A message key                      | Both `messages/en.json` and `messages/es.json`                                               |
+| Something the backend must change  | `../auditoria/front/BACKEND-DESDE-FRONT.md` (report it; do not change the backend from here) |
 
 ---
 
