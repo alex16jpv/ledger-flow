@@ -27,7 +27,7 @@ export function GlobalBudgetForm({ onDone, submitLabel, skipLabel }: GlobalBudge
   const money = useMoney();
   const createBudget = useCreateBudget();
   const suggestions = monthlyBudgetSuggestions(money.fractionDigits);
-  const [amount, setAmount] = useState<number | null>(suggestions[1] ?? null);
+  const [amount, setAmount] = useState<number | null>(null);
   const [inputKey, setInputKey] = useState(0);
   const [validation, setValidation] = useState<string | null>(null);
   const failure = createBudget.error ? presentError(createBudget.error) : null;

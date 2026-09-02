@@ -26,7 +26,7 @@ export const accountFormSchema = z.object({
     .min(1, { error: "validation.required" })
     .max(ACCOUNT_NAME_MAX, { error: "validation.nameMax" }),
   type: z.enum(ACCOUNT_TYPES, { error: "validation.required" }),
-  balance: z.number().nullable(),
+  balance: z.number({ error: "validation.amountInvalid" }).nullable(),
   color: z.enum(COLOR_TOKENS, { error: "validation.required" }),
 });
 

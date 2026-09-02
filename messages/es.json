@@ -383,12 +383,13 @@
     "currency": "Elige una moneda.",
     "timeZone": "Elige una zona horaria.",
     "amountPositive": "Escribe un importe mayor que cero.",
-    "amountDecimals": "Tu moneda no admite esos decimales."
+    "amountDecimals": "Tu moneda no admite esos decimales.",
+    "amountInvalid": "Escribe un importe válido."
   },
   "accounts": {
     "form": {
       "name": "Nombre",
-      "namePlaceholder": "Bancolombia",
+      "namePlaceholder": "Mi cuenta",
       "type": "Tipo",
       "balance": "Saldo actual",
       "balanceHelp": "Se guarda como saldo inicial para que puedas conciliar la cuenta después.",

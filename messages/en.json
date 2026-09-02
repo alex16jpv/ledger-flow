@@ -383,12 +383,13 @@
     "currency": "Choose a currency.",
     "timeZone": "Choose a time zone.",
     "amountPositive": "Enter an amount greater than zero.",
-    "amountDecimals": "Your currency doesn’t allow those decimals."
+    "amountDecimals": "Your currency doesn’t allow those decimals.",
+    "amountInvalid": "Enter a valid amount."
   },
   "accounts": {
     "form": {
       "name": "Name",
-      "namePlaceholder": "Bancolombia",
+      "namePlaceholder": "My account",
       "type": "Type",
       "balance": "Current balance",
       "balanceHelp": "Saved as the opening balance so you can reconcile the account later.",

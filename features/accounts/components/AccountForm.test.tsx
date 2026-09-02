@@ -74,9 +74,20 @@ describe("AccountForm", () => {
     expect(await screen.findByText("That name is already in use.")).toBeInTheDocument();
   });
 
-  it("opens the full type list from More", async () => {
+  it("offers all nine account types as chips", () => {
     renderForm();
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
-    expect(screen.getByRole("option", { name: /Loan/ })).toBeInTheDocument();
+    for (const label of [
+      "Cash",
+      "Bank account",
+      "Credit card",
+      "Debit card",
+      "Savings",
+      "Investment",
+      "Overdraft",
+      "Loan",
+      "Other",
+    ]) {
+      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+    }
   });
 });
