@@ -1,0 +1,256 @@
+{
+  "metadata": {
+    "title": "Ledger Flow",
+    "template": "%s · Ledger Flow",
+    "description": "Catch your small daily spending in three seconds and see where the month goes."
+  },
+  "common": {
+    "appName": "Ledger Flow",
+    "back": "Back",
+    "close": "Close",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "save": "Save",
+    "saveChanges": "Save changes",
+    "retry": "Retry",
+    "undo": "Undo",
+    "seeAll": "See all",
+    "more": "More",
+    "optional": "optional",
+    "soon": "soon",
+    "comingSoon": "Coming soon",
+    "loading": "Loading",
+    "skipToContent": "Skip to content",
+    "main": "Main",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "notNow": "Not now",
+    "default": "Default"
+  },
+  "nav": {
+    "label": "Navigation",
+    "home": "Home",
+    "transactions": "Transactions",
+    "add": "Add",
+    "addExpense": "Add expense",
+    "budgets": "Budgets",
+    "accounts": "Accounts",
+    "stats": "Stats",
+    "categories": "Categories",
+    "settings": "Settings",
+    "search": "Search",
+    "pendingCount": "{count, plural, one {# to review} other {# to review}}"
+  },
+  "colors": {
+    "RED": "Red",
+    "ORANGE": "Orange",
+    "AMBER": "Amber",
+    "YELLOW": "Yellow",
+    "LIME": "Lime",
+    "GREEN": "Green",
+    "TEAL": "Teal",
+    "CYAN": "Cyan",
+    "BLUE": "Blue",
+    "INDIGO": "Indigo",
+    "PURPLE": "Purple",
+    "PINK": "Pink",
+    "ROSE": "Rose",
+    "GRAY": "Gray",
+    "BROWN": "Brown",
+    "BLACK": "Black"
+  },
+  "accountTypes": {
+    "CASH": "Cash",
+    "ACCOUNT": "Bank account",
+    "CARD": "Credit card",
+    "DEBIT_CARD": "Debit card",
+    "SAVINGS": "Savings",
+    "INVESTMENT": "Investment",
+    "OVERDRAFT": "Overdraft",
+    "LOAN": "Loan",
+    "OTHER": "Other"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to keep tracking your spending.",
+      "forgotPassword": "Forgot your password?",
+      "submit": "Sign in",
+      "newHere": "New here?",
+      "createAccount": "Create account",
+      "invalidCredentials": "Wrong email or password.",
+      "tooManyAttempts": "Too many attempts.",
+      "retryIn": "You can try again in {time}."
+    },
+    "register": {
+      "title": "Create account",
+      "subtitle": "Under a minute. No card needed.",
+      "name": "Name",
+      "passwordHelp": "Between 8 and 128 characters.",
+      "passwordPlaceholder": "At least 8 characters",
+      "currency": "Currency",
+      "currencyDetected": "Detected from your region",
+      "currencyHelp": "Used for all your accounts. It locks once you create your first account.",
+      "timeZone": "Time zone",
+      "timeZoneDetected": "Detected from your device",
+      "consent": "I agree to the <privacy>Privacy policy</privacy> and to the processing of my personal data (Ley 1581).",
+      "submit": "Create account",
+      "alreadyHaveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "emailTaken": "This email already has an account.",
+      "maybeCreated": "Your account may already exist: try signing in before registering again.",
+      "reactivated": {
+        "title": "Welcome back.",
+        "body": "We restored your previous account with its full history; the currency is kept."
+      }
+    }
+  },
+  "onboarding": {
+    "step": "Step {current} of {total}",
+    "account": {
+      "title": "Your first account",
+      "subtitle": "Quick expenses will come out of it. It becomes your main account; you can change that later.",
+      "name": "Name",
+      "namePlaceholder": "Bancolombia",
+      "type": "Type",
+      "balance": "Current balance",
+      "balanceHelp": "Saved as the opening balance so you can reconcile the account later.",
+      "color": "Color",
+      "submit": "Continue"
+    },
+    "budget": {
+      "title": "A ceiling for the month",
+      "subtitle": "A total monthly budget: it counts everything you spend, including what you log without a category.",
+      "help": "You can adjust it any month without touching the base amount, and add per-category budgets whenever you like.",
+      "amount": "Monthly amount",
+      "submit": "Create budget",
+      "skip": "Not now"
+    }
+  },
+  "home": {
+    "greeting": "Hi, {name}",
+    "pendingReview": "{count, plural, one {# quick expense to review} other {# quick expenses to review}}",
+    "pendingTotal": "· {amount} in total",
+    "spending": "{month} spending",
+    "dayOf": "Day {day} of {total}",
+    "dailyAverage": "Daily average",
+    "yesterdaySpent": "Yesterday you spent {amount}",
+    "spendingPerDay": "Spending per day",
+    "budgetProgress": "{percent}% of monthly budget",
+    "createMonthlyBudget": "Create a monthly budget",
+    "totalBalance": "Total balance",
+    "accountsCount": "{count, plural, one {# account} other {# accounts}}",
+    "incomeThisMonth": "Income this month",
+    "estimatedSavings": "Estimated savings",
+    "incomeMinusSpending": "Income − spending",
+    "budgets": "Budgets",
+    "accounts": "Accounts",
+    "recent": "Recent transactions",
+    "quickExpense": "Quick expense",
+    "toReview": "To review",
+    "main": "Main",
+    "empty": {
+      "accounts": {
+        "title": "Create your first account",
+        "body": "Quick expenses need a main account to come out of.",
+        "cta": "Create account"
+      },
+      "month": {
+        "title": "Nothing spent this month yet",
+        "cta": "Add an expense"
+      }
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile & security",
+    "lastSignIn": "Last sign-in {when}",
+    "preferences": "Preferences",
+    "language": {
+      "title": "Language",
+      "subtitle": "App language",
+      "followDevice": "Follow device",
+      "followDeviceHelp": "Uses your phone or browser language",
+      "en": "English",
+      "es": "Español",
+      "esHelp": "Spanish",
+      "note": "Dates and amounts follow your language, your currency ({currency}) and your time zone."
+    },
+    "currency": {
+      "title": "Currency",
+      "locked": "Locked: you already have accounts",
+      "unlocked": "You can change it until you create your first account"
+    },
+    "timeZone": {
+      "title": "Time zone",
+      "subtitle": "Defines your days and periods"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "subtitle": "Palette and mode",
+      "mode": "Mode",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "palette": "Palette",
+      "palettes": {
+        "tinta": { "name": "Tinta", "description": "Warm grays · indigo" },
+        "brisa": { "name": "Brisa", "description": "Cool grays · teal" }
+      },
+      "note": "Your account, category and budget colors adapt to the palette: a “red” always looks red.",
+      "preview": "Preview"
+    },
+    "categories": {
+      "title": "Categories",
+      "subtitle": "{active, plural, one {# active} other {# active}} · {archived, plural, one {# archived} other {# archived}}"
+    },
+    "security": "Security",
+    "credentials": {
+      "title": "Password & email",
+      "subtitle": "Requires your current password"
+    },
+    "sessions": {
+      "title": "Active sessions",
+      "subtitle": "Sign out devices you don’t recognize"
+    },
+    "data": "Data",
+    "export": "Export transactions",
+    "import": "Import from your bank",
+    "about": "About",
+    "version": "Ledger Flow · {version}",
+    "signOut": "Sign out",
+    "deleteAccount": "Delete my account"
+  },
+  "states": {
+    "loading": "Loading…",
+    "error": {
+      "title": "We couldn’t load this",
+      "body": "The server didn’t respond. Your data is safe; try again in a few seconds.",
+      "reference": "Reference: {requestId}"
+    },
+    "offline": {
+      "title": "You’re offline.",
+      "body": "Changes are saved on this device and will sync when you’re back online.",
+      "waiting": "{count, plural, one {# change waiting} other {# changes waiting}}"
+    },
+    "backOnline": {
+      "title": "Back online.",
+      "synced": "{count, plural, one {# change synced} other {# changes synced}}"
+    },
+    "sessionExpired": {
+      "eyebrow": "Session",
+      "title": "Your session ended",
+      "body": "It was signed out from another device, or it’s been more than 30 days. Sign in again to continue.",
+      "cta": "Sign in"
+    },
+    "notFound": {
+      "title": "Page not found",
+      "body": "Your money is where you left it.",
+      "cta": "Go home"
+    }
+  }
+}

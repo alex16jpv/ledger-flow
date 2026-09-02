@@ -130,3 +130,37 @@ The specification that these decisions refine lives outside the repo in
   empty keys render `hash`.
 - **Consequence:** W-06 adds a contract test asserting that the generated `CategoryIcon` enum in
   `types/api.d.ts` equals `CATEGORY_ICON_KEYS`, so the two lists cannot drift.
+
+## 2026-09-01 · Locale routing and formatting (W-04)
+
+- **Routing:** `next-intl` with `localePrefix: "as-needed"` (`/` English, `/es/...` Spanish) through
+  `proxy.ts`. Detection order is the library's: URL → cookie `lf_locale` (SameSite=Lax, set by the
+  BFF from `user.locale` and by Settings) → `Accept-Language` → `en`. The `[locale]` layout is the
+  root layout and renders `<html lang>` on the server.
+- **Fallback:** a key missing in `es.json` renders the English text and logs a warning only in
+  development (`getMessageFallback` walks `en.json`). `lib/i18n/messages.test.ts` fails the build
+  when the two dictionaries differ in keys or ICU arguments, so the fallback is a safety net, not a
+  workflow.
+- **Format locale:** `formatLocaleFor(locale, navigator.language)` maps `es → es-CO`, `en → en-US`
+  unless the device shares the language and adds a region. It is read through
+  `useSyncExternalStore` with a `null` server snapshot, so SSR always formats with the default
+  region and the client corrects it after hydration.
+- **Money and dates:** `lib/format` holds the pure functions (`Intl.NumberFormat`, `date-fns-tz`
+  `fromZonedTime` for `[from, to)` windows); `useMoney()`/`useDates()` in `lib/i18n` bind them to the
+  `FormatSettingsProvider` (currency and time zone, defaulting to the backend defaults COP and
+  America/Bogota until the session provider feeds the user's values in W-08).
+- **Messages scope:** `en.json`/`es.json` carry the F1 screens (access, onboarding, home, settings,
+  system states) plus shared enums. Each later backlog item adds its own subtree in both files; the
+  parity test keeps them aligned. `es.json` complete is a gate F5 criterion.
+- **Server time zone:** `getRequestConfig` uses `America/Bogota` for server-rendered dates until the
+  user's zone is known per request.
+
+## 2026-09-01 · `next/root-params` instead of `setRequestLocale` (W-04)
+
+- **Decision:** `lib/i18n/request.ts` reads the locale with `rootParams.locale()` (stable in Next
+  16.3) and falls back to the explicit `locale` override that `getTranslations({ locale })` passes.
+  Pages and layouts no longer call `setRequestLocale`, which next-intl 4.14 marks as deprecated.
+- **Consequence:** the generated `.next/types/root-params.d.ts` must exist before `tsc`, so the
+  `typecheck` script runs `next typegen` first and `lefthook.yml` calls `npm run typecheck`
+  (the only adaptation to the copied guardrail). Route Handlers and Server Actions cannot read root
+  params: BFF handlers that need copy must pass `{ locale }` explicitly.

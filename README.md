@@ -90,8 +90,13 @@ shared code moves up to `lib` or `components/ui`. ESLint enforces it.
 - **Use an icon:** interface icons are imported by name from `lucide-react` with `iconProps(size)`
   from `lib/icons`; category icons go through `<CategoryIcon icon={category.icon} />`, account
   types through `accountTypeIcon(type)`. Never add an icon key outside `CATEGORY_ICONS`.
-- **Add a language:** add `messages/<locale>.json`, register the locale in `lib/i18n`, map it to a
-  format locale, and add the row in Settings › Language.
+- **Add a language:** add `messages/<locale>.json` with every key of `en.json` (the parity test
+  enforces it), append the code to `LOCALES` in `lib/i18n/routing.ts`, add its default region in
+  `lib/i18n/format-locale.ts`, and add the row in Settings › Language. The backend enum
+  `user.locale` must accept it too.
+- **Add copy:** every user-visible string is a key in `messages/en.json` and `messages/es.json`,
+  nested by feature (`transactions.list.empty.title`). Use ICU plurals and rich tags; never
+  concatenate fragments.
 
 ## Working rules
 

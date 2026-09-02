@@ -1,0 +1,256 @@
+{
+  "metadata": {
+    "title": "Ledger Flow",
+    "template": "%s · Ledger Flow",
+    "description": "Registra tu gasto hormiga en tres segundos y mira a dónde se va el mes."
+  },
+  "common": {
+    "appName": "Ledger Flow",
+    "back": "Volver",
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "continue": "Continuar",
+    "save": "Guardar",
+    "saveChanges": "Guardar cambios",
+    "retry": "Reintentar",
+    "undo": "Deshacer",
+    "seeAll": "Ver todo",
+    "more": "Más",
+    "optional": "opcional",
+    "soon": "pronto",
+    "comingSoon": "Próximamente",
+    "loading": "Cargando",
+    "skipToContent": "Ir al contenido",
+    "main": "Principal",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "notNow": "Ahora no",
+    "default": "Predeterminado"
+  },
+  "nav": {
+    "label": "Navegación",
+    "home": "Inicio",
+    "transactions": "Movimientos",
+    "add": "Registrar",
+    "addExpense": "Registrar gasto",
+    "budgets": "Presupuestos",
+    "accounts": "Cuentas",
+    "stats": "Estadísticas",
+    "categories": "Categorías",
+    "settings": "Ajustes",
+    "search": "Buscar",
+    "pendingCount": "{count, plural, one {# por revisar} other {# por revisar}}"
+  },
+  "colors": {
+    "RED": "Rojo",
+    "ORANGE": "Naranja",
+    "AMBER": "Ámbar",
+    "YELLOW": "Amarillo",
+    "LIME": "Lima",
+    "GREEN": "Verde",
+    "TEAL": "Verde azulado",
+    "CYAN": "Cian",
+    "BLUE": "Azul",
+    "INDIGO": "Índigo",
+    "PURPLE": "Morado",
+    "PINK": "Rosa",
+    "ROSE": "Rosado",
+    "GRAY": "Gris",
+    "BROWN": "Marrón",
+    "BLACK": "Negro"
+  },
+  "accountTypes": {
+    "CASH": "Efectivo",
+    "ACCOUNT": "Cuenta bancaria",
+    "CARD": "Tarjeta de crédito",
+    "DEBIT_CARD": "Tarjeta débito",
+    "SAVINGS": "Ahorros",
+    "INVESTMENT": "Inversión",
+    "OVERDRAFT": "Sobregiro",
+    "LOAN": "Préstamo",
+    "OTHER": "Otra"
+  },
+  "auth": {
+    "email": "Correo",
+    "password": "Contraseña",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "login": {
+      "title": "Hola de nuevo",
+      "subtitle": "Entra para seguir registrando tus gastos.",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "submit": "Entrar",
+      "newHere": "¿Eres nuevo?",
+      "createAccount": "Crear cuenta",
+      "invalidCredentials": "Correo o contraseña incorrectos.",
+      "tooManyAttempts": "Demasiados intentos.",
+      "retryIn": "Puedes intentarlo de nuevo en {time}."
+    },
+    "register": {
+      "title": "Crear cuenta",
+      "subtitle": "Menos de un minuto. Sin tarjeta.",
+      "name": "Nombre",
+      "passwordHelp": "Entre 8 y 128 caracteres.",
+      "passwordPlaceholder": "Mínimo 8 caracteres",
+      "currency": "Moneda",
+      "currencyDetected": "Detectada por tu región",
+      "currencyHelp": "Se usa en todas tus cuentas. Se bloquea al crear la primera.",
+      "timeZone": "Zona horaria",
+      "timeZoneDetected": "Detectada en tu dispositivo",
+      "consent": "Acepto la <privacy>Política de privacidad</privacy> y el tratamiento de mis datos personales (Ley 1581).",
+      "submit": "Crear cuenta",
+      "alreadyHaveAccount": "¿Ya tienes cuenta?",
+      "signIn": "Entrar",
+      "emailTaken": "Este correo ya tiene una cuenta.",
+      "maybeCreated": "Puede que tu cuenta ya se haya creado: intenta entrar antes de registrarte otra vez.",
+      "reactivated": {
+        "title": "Bienvenido de vuelta.",
+        "body": "Restauramos tu cuenta anterior con todo su historial; la moneda se conserva."
+      }
+    }
+  },
+  "onboarding": {
+    "step": "Paso {current} de {total}",
+    "account": {
+      "title": "Tu primera cuenta",
+      "subtitle": "Los gastos rápidos saldrán de ella. Será tu cuenta principal; puedes cambiarlo después.",
+      "name": "Nombre",
+      "namePlaceholder": "Bancolombia",
+      "type": "Tipo",
+      "balance": "Saldo actual",
+      "balanceHelp": "Se guarda como saldo inicial para que puedas conciliar la cuenta después.",
+      "color": "Color",
+      "submit": "Continuar"
+    },
+    "budget": {
+      "title": "Un techo para el mes",
+      "subtitle": "Un presupuesto mensual total: cuenta todo lo que gastas, incluido lo que registras sin categoría.",
+      "help": "Puedes ajustarlo cualquier mes sin tocar el monto base y añadir presupuestos por categoría cuando quieras.",
+      "amount": "Monto mensual",
+      "submit": "Crear presupuesto",
+      "skip": "Ahora no"
+    }
+  },
+  "home": {
+    "greeting": "Hola, {name}",
+    "pendingReview": "{count, plural, one {# gasto rápido por revisar} other {# gastos rápidos por revisar}}",
+    "pendingTotal": "· {amount} en total",
+    "spending": "Gasto de {month}",
+    "dayOf": "Día {day} de {total}",
+    "dailyAverage": "Promedio diario",
+    "yesterdaySpent": "Ayer gastaste {amount}",
+    "spendingPerDay": "Gasto por día",
+    "budgetProgress": "{percent}% del presupuesto mensual",
+    "createMonthlyBudget": "Crear presupuesto mensual",
+    "totalBalance": "Balance total",
+    "accountsCount": "{count, plural, one {# cuenta} other {# cuentas}}",
+    "incomeThisMonth": "Ingresos del mes",
+    "estimatedSavings": "Ahorro estimado",
+    "incomeMinusSpending": "Ingresos − gasto",
+    "budgets": "Presupuestos",
+    "accounts": "Cuentas",
+    "recent": "Movimientos recientes",
+    "quickExpense": "Gasto rápido",
+    "toReview": "Por revisar",
+    "main": "Principal",
+    "empty": {
+      "accounts": {
+        "title": "Crea tu primera cuenta",
+        "body": "Los gastos rápidos necesitan una cuenta principal de la que salir.",
+        "cta": "Crear cuenta"
+      },
+      "month": {
+        "title": "Aún no hay gastos este mes",
+        "cta": "Registrar un gasto"
+      }
+    }
+  },
+  "settings": {
+    "title": "Ajustes",
+    "profile": "Perfil y seguridad",
+    "lastSignIn": "Último acceso {when}",
+    "preferences": "Preferencias",
+    "language": {
+      "title": "Idioma",
+      "subtitle": "Idioma de la app",
+      "followDevice": "Seguir el dispositivo",
+      "followDeviceHelp": "Usa el idioma de tu teléfono o navegador",
+      "en": "English",
+      "es": "Español",
+      "esHelp": "Español",
+      "note": "Las fechas y los importes siguen tu idioma, tu moneda ({currency}) y tu zona horaria."
+    },
+    "currency": {
+      "title": "Moneda",
+      "locked": "Bloqueada: ya tienes cuentas",
+      "unlocked": "Puedes cambiarla hasta crear tu primera cuenta"
+    },
+    "timeZone": {
+      "title": "Zona horaria",
+      "subtitle": "Define tus días y períodos"
+    },
+    "appearance": {
+      "title": "Apariencia",
+      "subtitle": "Paleta y modo",
+      "mode": "Modo",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema",
+      "palette": "Paleta",
+      "palettes": {
+        "tinta": { "name": "Tinta", "description": "Grises cálidos · índigo" },
+        "brisa": { "name": "Brisa", "description": "Grises fríos · verde azulado" }
+      },
+      "note": "Los colores de tus cuentas, categorías y presupuestos se adaptan a la paleta: un «rojo» siempre se ve rojo.",
+      "preview": "Vista previa"
+    },
+    "categories": {
+      "title": "Categorías",
+      "subtitle": "{active, plural, one {# activa} other {# activas}} · {archived, plural, one {# archivada} other {# archivadas}}"
+    },
+    "security": "Seguridad",
+    "credentials": {
+      "title": "Contraseña y correo",
+      "subtitle": "Requiere tu contraseña actual"
+    },
+    "sessions": {
+      "title": "Sesiones activas",
+      "subtitle": "Cierra los dispositivos que no reconozcas"
+    },
+    "data": "Datos",
+    "export": "Exportar movimientos",
+    "import": "Importar desde tu banco",
+    "about": "Acerca de",
+    "version": "Ledger Flow · {version}",
+    "signOut": "Cerrar sesión",
+    "deleteAccount": "Eliminar mi cuenta"
+  },
+  "states": {
+    "loading": "Cargando…",
+    "error": {
+      "title": "No pudimos cargar esto",
+      "body": "El servidor no respondió. Tus datos están a salvo; inténtalo de nuevo en unos segundos.",
+      "reference": "Referencia: {requestId}"
+    },
+    "offline": {
+      "title": "Sin conexión.",
+      "body": "Los cambios se guardan en este dispositivo y se sincronizarán cuando vuelvas a estar en línea.",
+      "waiting": "{count, plural, one {# cambio pendiente} other {# cambios pendientes}}"
+    },
+    "backOnline": {
+      "title": "De vuelta en línea.",
+      "synced": "{count, plural, one {# cambio sincronizado} other {# cambios sincronizados}}"
+    },
+    "sessionExpired": {
+      "eyebrow": "Sesión",
+      "title": "Tu sesión terminó",
+      "body": "Se cerró desde otro dispositivo o pasaron más de 30 días. Entra de nuevo para continuar.",
+      "cta": "Entrar"
+    },
+    "notFound": {
+      "title": "Página no encontrada",
+      "body": "Tu dinero está donde lo dejaste.",
+      "cta": "Ir a Inicio"
+    }
+  }
+}

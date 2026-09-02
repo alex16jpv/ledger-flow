@@ -11,7 +11,7 @@ pre-commit:
       glob: "*.{ts,tsx,css}"
       run: node tools/check-tokens.mjs {staged_files}
     typecheck:
-      run: npx tsc --noEmit
+      run: npm run typecheck
     tests:
       glob: "*.{ts,tsx}"
       run: npx vitest related --run {staged_files}
