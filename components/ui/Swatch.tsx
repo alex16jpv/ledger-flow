@@ -25,8 +25,8 @@ export function Swatch({ color, selected, onSelect, label }: SwatchProps) {
       style={featureColorStyle(color)}
       className={cn(
         "relative size-7 rounded-full bg-(--f) shadow-[inset_0_0_0_1px_var(--border)]",
-        "after:absolute after:-inset-[5px] after:rounded-full after:border-2 after:border-transparent",
-        selected && "after:border-text",
+        "after:absolute after:-inset-[5px] after:rounded-full after:border-2",
+        selected ? "after:border-text" : "after:border-transparent",
       )}
     />
   );

@@ -3,11 +3,11 @@
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
+import { AuthHeading } from "@/components/shell/AuthFrame";
 import { ONBOARDING_PATH, safeNextPath } from "@/lib/auth/routes";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
 
-import { AuthHeading } from "./AuthFrame";
 import { RegisterForm } from "./RegisterForm";
 
 export function RegisterView() {

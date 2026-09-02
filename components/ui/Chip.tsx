@@ -1,4 +1,4 @@
-import { type ButtonHTMLAttributes, type ReactNode } from "react";
+import { type ButtonHTMLAttributes, type HTMLAttributes, type ReactNode } from "react";
 
 import { type ColorToken, featureColorStyle } from "@/lib/theme/feature-color";
 
@@ -82,13 +82,14 @@ export function CategoryChip({
   );
 }
 
-export function ChipRow({ className, children }: { className?: string; children: ReactNode }) {
+export function ChipRow({ className, children, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
         "flex max-w-full min-w-0 [scrollbar-width:none] gap-2 overflow-x-auto pb-0.5",
         className,
       )}
+      {...rest}
     >
       {children}
     </div>

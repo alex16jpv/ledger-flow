@@ -333,3 +333,17 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   as the "Welcome back" info alert.
 - **Route placeholders:** `/onboarding` (W-13) and `/privacy` (W-31) exist as `notFound()` stubs
   because the register flow links to them and `typedRoutes` requires known routes.
+
+## 2026-09-01 · Onboarding is composed in the app layer (W-13)
+
+- **No `features/onboarding`.** The two steps are an `AccountForm` owned by `features/accounts`
+  (reused by W-23) and a `GlobalBudgetForm` owned by `features/budgets`; the step flow and the
+  redirects live in `app/[locale]/(auth)/onboarding/OnboardingFlow.tsx`, because a feature must not
+  import another feature (HANDOFF §3.1). `AuthFrame`/`AuthHeading` moved to `components/shell` and
+  `StepDots` to `components/ui` for the same reason.
+- **Global budget name:** the backend requires a name, so the onboarding budget is created as the
+  localized "Monthly budget" (`budgets.global.defaultName`) with the brand-like INDIGO color.
+- **Suggestions** scale with the currency's minor unit (zero-decimal currencies suggest
+  1.5M/2M/3M, others 1,500/2,000/3,000); the owner can refine the heuristic at the gate.
+- **Idempotency:** accounts and budgets creation do not send `Idempotency-Key` because the backend
+  only honours it on transactions; duplicates are caught by the backend's 409/400 rules.

@@ -121,19 +121,11 @@
     "account": {
       "title": "Tu primera cuenta",
       "subtitle": "Los gastos rápidos saldrán de ella. Será tu cuenta principal; puedes cambiarlo después.",
-      "name": "Nombre",
-      "namePlaceholder": "Bancolombia",
-      "type": "Tipo",
-      "balance": "Saldo actual",
-      "balanceHelp": "Se guarda como saldo inicial para que puedas conciliar la cuenta después.",
-      "color": "Color",
       "submit": "Continuar"
     },
     "budget": {
       "title": "Un techo para el mes",
       "subtitle": "Un presupuesto mensual total: cuenta todo lo que gastas, incluido lo que registras sin categoría.",
-      "help": "Puedes ajustarlo cualquier mes sin tocar el monto base y añadir presupuestos por categoría cuando quieras.",
-      "amount": "Monto mensual",
       "submit": "Crear presupuesto",
       "skip": "Ahora no"
     }
@@ -389,5 +381,22 @@
     "timeZone": "Elige una zona horaria.",
     "amountPositive": "Escribe un importe mayor que cero.",
     "amountDecimals": "Tu moneda no admite esos decimales."
+  },
+  "accounts": {
+    "form": {
+      "name": "Nombre",
+      "namePlaceholder": "Bancolombia",
+      "type": "Tipo",
+      "balance": "Saldo actual",
+      "balanceHelp": "Se guarda como saldo inicial para que puedas conciliar la cuenta después.",
+      "color": "Color"
+    }
+  },
+  "budgets": {
+    "global": {
+      "defaultName": "Presupuesto mensual",
+      "amount": "Monto mensual",
+      "help": "Puedes ajustarlo cualquier mes sin tocar el monto base y añadir presupuestos por categoría cuando quieras."
+    }
   }
 }
