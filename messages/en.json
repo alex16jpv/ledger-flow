@@ -1104,5 +1104,9 @@
       "body": "The page could not load. Your data is safe; try again in a moment.",
       "retry": "Try again"
     }
+  },
+  "pwa": {
+    "updateAvailable": "New version available",
+    "reload": "Reload"
   }
 }

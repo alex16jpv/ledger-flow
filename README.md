@@ -38,7 +38,7 @@ the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no envir
 | Script                    | What it does                                                                                    |
 | ------------------------- | ----------------------------------------------------------------------------------------------- |
 | `npm run dev`             | Next dev server on port 3001                                                                    |
-| `npm run build` / `start` | Production build / server                                                                       |
+| `npm run build` / `start` | Production build (`next build` + `serwist build` → `public/sw.js`, git-ignored) / server        |
 | `npm run ci`              | Full gate: typecheck, lint, format:check, check-tokens, contrast-check, test, build, size-limit |
 | `npm run typecheck`       | `tsc --noEmit`                                                                                  |
 | `npm run lint`            | ESLint with zero warnings allowed                                                               |

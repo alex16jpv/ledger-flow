@@ -1104,5 +1104,9 @@
       "body": "La página no pudo cargar. Tus datos están a salvo; inténtalo en un momento.",
       "retry": "Reintentar"
     }
+  },
+  "pwa": {
+    "updateAvailable": "Hay una versión nueva",
+    "reload": "Recargar"
   }
 }

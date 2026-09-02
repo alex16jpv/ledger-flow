@@ -28,6 +28,7 @@ export default defineConfig([
     "test-results/**",
     "next-env.d.ts",
     "types/api.d.ts",
+    "public/**",
   ]),
   ...nextVitals,
   ...nextTs,

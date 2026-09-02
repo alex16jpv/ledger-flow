@@ -1,6 +1,6 @@
 import "../globals.css";
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
@@ -33,6 +33,13 @@ export async function generateMetadata({
     description: t("description"),
   };
 }
+
+// Standalone PWA: draw under the notch and let the theme script set theme-color from the live --bg token.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale } = await params;

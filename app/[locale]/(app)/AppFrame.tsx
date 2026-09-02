@@ -20,6 +20,7 @@ import { startHeartbeat } from "@/lib/network/heartbeat";
 import { SessionProvider, useSession } from "@/lib/session";
 
 import { QuickAddSheet } from "./QuickAddSheet";
+import { ServiceWorkerUpdates } from "./ServiceWorkerUpdates";
 
 function Frame({ children }: { children: ReactNode }) {
   const session = useSession();
@@ -41,6 +42,7 @@ function Frame({ children }: { children: ReactNode }) {
       <Suspense>
         <HistoryTracker />
       </Suspense>
+      <ServiceWorkerUpdates />
       <AppShell
         userName={session.user?.name ?? ""}
         pendingCount={pendingCount}

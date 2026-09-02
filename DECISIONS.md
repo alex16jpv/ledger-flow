@@ -892,3 +892,23 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   exemption in `check-tokens`.
 - **JSON-LD only on the landing**: `Organization`, `WebSite` and `SoftwareApplication`
   (`FinanceApplication`, price 0), serialized by us and carried under the CSP nonce.
+
+## 2026-09-02 · PWA (W-33)
+
+- **Serwist builds the worker after `next build`, our code registers it.** Next 16 builds with
+  Turbopack, which the `@serwist/next` webpack plugin cannot hook into, so `npm run build` runs
+  `serwist build serwist.config.mjs` (the CLI bundles `app/sw.ts` with esbuild into `public/sw.js`,
+  git-ignored) using `@serwist/next/config` to precache the Next output. The worker treats `/api/*`
+  as network-only, since data lives in React Query's cache. No inline registration script (it could
+  not carry the CSP nonce): `ServiceWorkerUpdates`, inside the authenticated frame and only in
+  production, registers `/sw.js`, watches for a waiting worker and shows the "New version available ·
+  Reload" toast, which activates it and reloads.
+- **Icons are generated, not drawn by hand.** `lib/pwa/brand-icon.tsx` renders the mark with `next/og`
+  for the favicon, the Apple touch icon and the 192/512 manifest icons; `?maskable=1` pads the mark
+  into the safe zone. The manifest and the icon renderer carry literal brand colors (manifests and
+  satori cannot read CSS variables) and join the `check-tokens` exemptions.
+- **`theme-color` stays dynamic**: the theme script mirrors the live `--bg`, so no static meta is
+  added; the manifest's `theme_color`/`background_color` are the Brisa light values. `viewport-fit:
+cover` is set once in the root layout for the standalone display.
+- **The install row shipped with W-30** (`beforeinstallprompt`); the manifest shortcut "Add expense"
+  opens the transaction form.

@@ -7,3 +7,4 @@ package-lock.json
 types/api.d.ts
 tokens/
 plop-templates/
+public/

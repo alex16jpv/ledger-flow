@@ -12,3 +12,6 @@ next-env.d.ts
 .DS_Store
 npm-debug.log*
 .size-limit-report.json
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
