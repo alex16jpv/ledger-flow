@@ -327,7 +327,7 @@ export function BudgetDetailScreen({ id }: { id: string }) {
               )}
             </div>
             {transactions.isPending ? (
-              <Card flush aria-busy="true" aria-label={t("common.loading")}>
+              <Card flush role="status" aria-busy="true" aria-label={t("common.loading")}>
                 <SkeletonRow />
                 <SkeletonRow />
               </Card>

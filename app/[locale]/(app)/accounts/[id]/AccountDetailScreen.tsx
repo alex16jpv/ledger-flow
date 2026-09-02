@@ -255,7 +255,7 @@ export function AccountDetailScreen({ id }: { id: string }) {
               </Link>
             </div>
             {transactions.isPending ? (
-              <Card flush aria-busy="true" aria-label={t("common.loading")}>
+              <Card flush role="status" aria-busy="true" aria-label={t("common.loading")}>
                 <SkeletonRow />
                 <SkeletonRow />
                 <SkeletonRow />

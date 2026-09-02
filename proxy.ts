@@ -5,7 +5,7 @@ import { SESSION_COOKIE } from "@/lib/auth/cookies";
 import {
   APP_HOME_PATH,
   isGuestOnlyPath,
-  isPublicPath,
+  isProtectedPath,
   LOGIN_PATH,
   safeNextPath,
   stripLocale,
@@ -31,7 +31,7 @@ export default function proxy(request: NextRequest) {
   const path = stripLocale(pathname, routing.locales);
   const hasSession = request.cookies.has(SESSION_COOKIE);
 
-  if (!hasSession && !isPublicPath(path)) {
+  if (!hasSession && isProtectedPath(path)) {
     const url = request.nextUrl.clone();
     url.pathname = `${prefix}${LOGIN_PATH}`;
     url.search = `?next=${encodeURIComponent(`${path}${search}`)}`;

@@ -344,7 +344,7 @@ export function StatsScreen() {
                     />
                   </div>
                   {highestRows.isPending ? (
-                    <Card flush aria-busy="true" aria-label={t("common.loading")}>
+                    <Card flush role="status" aria-busy="true" aria-label={t("common.loading")}>
                       <SkeletonRow />
                       <SkeletonRow />
                     </Card>

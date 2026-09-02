@@ -8,9 +8,8 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import { geistMono, geistSans } from "@/app/fonts";
-import { FormatSettingsProvider, routing } from "@/lib/i18n";
-import { QueryProvider } from "@/lib/query";
-import { DEFAULT_PALETTE, ThemeProvider } from "@/lib/theme";
+import { routing } from "@/lib/i18n";
+import { DEFAULT_PALETTE } from "@/lib/theme";
 
 interface LocaleLayoutProps {
   children: ReactNode;
@@ -49,13 +48,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
         <script async src="/theme-init.js" nonce={nonce} />
       </head>
       <body>
-        <NextIntlClientProvider>
-          <QueryProvider>
-            <ThemeProvider>
-              <FormatSettingsProvider>{children}</FormatSettingsProvider>
-            </ThemeProvider>
-          </QueryProvider>
-        </NextIntlClientProvider>
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>
   );

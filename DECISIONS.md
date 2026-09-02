@@ -862,3 +862,19 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   lands on `/login?deleted=1`, which explains that registering again with the same email reactivates it.
 - **Policy version is a constant (v1)** shown with the sign-up date: the backend records no acceptance
   (owner decision in HANDOFF §3.18); it will become a field the day a new version needs re-acceptance.
+
+## 2026-09-02 · Public surface (W-31)
+
+- **The app providers left the root layout.** `QueryProvider`, `ThemeProvider` and
+  `FormatSettingsProvider` now live in `AppProviders`, mounted by the `(app)`, `(auth)` and `dev`
+  layouts; the landing, the legal pages and the 404 render as server components inside `PublicFrame`
+  with no React Query or shell code, which is what keeps the landing under its 60 kB budget and
+  readable without JavaScript. The theme still applies through the inline init script and CSS.
+- **The phone in the hero is HTML, not an image** (`PhoneMock`): the home composition with fixed
+  sample figures formatted by `Intl` for the page locale; labels come from `public.mock` messages so
+  the Spanish landing shows a Spanish phone.
+- **Privacy doubles as the Ley 1581 data-processing policy** (section anchored as
+  `#data-processing`, linked from every footer), and `/terms` shares the `LegalPage` template. Both
+  are drafts for the owner to review before F5 closes, as HANDOFF §6 foresees.
+- **404 is a real 404** rendered inside the public frame; `error.tsx` at the locale root covers the
+  public pages with the same `Empty` composition.

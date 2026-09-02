@@ -41,7 +41,7 @@ export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<voi
     <div className="flex flex-col gap-4">
       <Alert tone="neutral">{t("settings.sessions.intro")}</Alert>
       {sessions.isPending ? (
-        <Card flush aria-busy="true" aria-label={t("common.loading")}>
+        <Card flush role="status" aria-busy="true" aria-label={t("common.loading")}>
           <SkeletonRow />
           <SkeletonRow />
         </Card>

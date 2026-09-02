@@ -6,35 +6,26 @@ import { PublicFrame } from "@/components/public/PublicFrame";
 import { env } from "@/lib/env";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("public.privacy");
+  const t = await getTranslations("public.terms");
   return { title: t("metaTitle"), description: t("metaDescription") };
 }
 
-export default async function PrivacyPage() {
-  const t = await getTranslations("public.privacy");
+export default async function TermsPage() {
+  const t = await getTranslations("public.terms");
+  const plain = (
+    key: "serviceBody" | "accountBody" | "useBody" | "availabilityBody" | "changesBody",
+  ) => <p>{t(key)}</p>;
   return (
     <PublicFrame>
       <LegalPage
         title={t("title")}
         intro={t("intro")}
         sections={[
-          {
-            title: t("storeTitle"),
-            body: (
-              <ul className="list-disc space-y-1 pl-5">
-                <li>{t("store1")}</li>
-                <li>{t("store2")}</li>
-                <li>{t("store3")}</li>
-              </ul>
-            ),
-          },
-          { title: t("whyTitle"), body: <p>{t("whyBody")}</p> },
-          { title: t("rightsTitle"), body: <p>{t("rightsBody")}</p> },
-          {
-            id: "data-processing",
-            title: t("processingTitle"),
-            body: <p>{t("processingBody")}</p>,
-          },
+          { title: t("serviceTitle"), body: plain("serviceBody") },
+          { title: t("accountTitle"), body: plain("accountBody") },
+          { title: t("useTitle"), body: plain("useBody") },
+          { title: t("availabilityTitle"), body: plain("availabilityBody") },
+          { title: t("changesTitle"), body: plain("changesBody") },
           {
             title: t("contactTitle"),
             body: (

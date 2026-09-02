@@ -986,5 +986,123 @@
       "body": "Try another month or another type of movement."
     },
     "adjustmentsNote": "Adjustments reconcile balances; they’re never counted as spending or income."
+  },
+  "public": {
+    "nav": {
+      "features": "Features",
+      "how": "How it works",
+      "privacy": "Privacy",
+      "signIn": "Sign in",
+      "getStarted": "Get started",
+      "language": "Language"
+    },
+    "footer": {
+      "copyright": "© {year} Ledger Flow",
+      "privacy": "Privacy policy",
+      "terms": "Terms",
+      "dataProcessing": "Data processing (Ley 1581)",
+      "contact": "Contact",
+      "english": "English",
+      "spanish": "Español"
+    },
+    "landing": {
+      "metaTitle": "Ledger Flow · See where your money actually goes",
+      "metaDescription": "Log an expense in three seconds, put a ceiling on the month and catch the small daily spending before it adds up. Free, bilingual, works offline.",
+      "badge": "Free · no card needed",
+      "title": "See where your money actually goes.",
+      "lede": "Log an expense in three seconds, put a ceiling on the month and catch the small daily spending that adds up before it does.",
+      "ctaPrimary": "Create your free account",
+      "ctaSecondary": "Sign in",
+      "trust": "Works offline · English & Español · Your data stays yours",
+      "whyEyebrow": "Why Ledger Flow",
+      "whyTitle": "Built for the small stuff",
+      "why1Title": "Three-second capture",
+      "why1Body": "Tap, type the amount, done. Add the category later from your review inbox: the expense already counts.",
+      "why2Title": "Budgets that talk back",
+      "why2Body": "A ceiling for the month plus per-category limits, with pace and days left in plain language, not just a bar.",
+      "why3Title": "Works without signal",
+      "why3Body": "Log on the bus or abroad. Everything syncs when you are back online, and nothing gets duplicated.",
+      "howEyebrow": "How it works",
+      "howTitle": "Up and running in a minute",
+      "step1Title": "Create your account",
+      "step1Body": "Pick your currency once. Email and password, nothing else.",
+      "step2Title": "Add your first account",
+      "step2Body": "Cash, bank or card, with today’s balance.",
+      "step3Title": "Set a monthly ceiling",
+      "step3Body": "Then log expenses as they happen. That is the whole habit.",
+      "ctaFinal": "Start now — it’s free",
+      "phoneLabel": "Preview of the home screen"
+    },
+    "mock": {
+      "date": "Tuesday, September 22",
+      "greeting": "Hi, Andrés",
+      "initials": "AV",
+      "pending": "3 quick expenses to review · {amount} in total",
+      "spending": "September spending",
+      "dayOf": "Day 22 of 30",
+      "average": "Daily average {amount} · Yesterday you spent {yesterday}",
+      "progress": "64% of monthly budget",
+      "totalBalance": "Total balance",
+      "accounts": "4 accounts",
+      "income": "Income this month",
+      "sameAs": "Same as August",
+      "budgets": "Budgets",
+      "seeAll": "See all",
+      "food": "Food",
+      "transport": "Transport",
+      "foodStatus": "{amount} left · on track",
+      "transportStatus": "At 93% with 8 days left"
+    },
+    "legal": {
+      "eyebrow": "Legal · updated {date}",
+      "updated": "2026-09-01"
+    },
+    "privacy": {
+      "metaTitle": "Privacy policy",
+      "metaDescription": "What Ledger Flow stores, why, and how you control it. Also our data processing policy under Colombia’s Ley 1581 de 2012.",
+      "title": "Privacy policy",
+      "intro": "Ledger Flow stores the financial records you enter so you can see them on any device. This page explains what we keep, why, and how you control it. It also serves as our data processing policy under Colombia’s Ley 1581 de 2012.",
+      "storeTitle": "What we store",
+      "store1": "Your name, email, language, time zone and currency.",
+      "store2": "Accounts, categories, transactions and budgets you create, including notes and tags.",
+      "store3": "Device sessions (browser type, time of sign-in) so you can review and revoke them.",
+      "whyTitle": "Why",
+      "whyBody": "Only to run the service: showing your data back to you, keeping balances right and securing your account. We do not sell data and we do not use it for advertising.",
+      "rightsTitle": "Your rights",
+      "rightsBody": "You can read, correct and delete your data from Settings at any time, and withdraw your authorization by deleting your account. Deleting it keeps the records so you can reactivate later; ask us for permanent removal and we will do it within 15 business days.",
+      "processingTitle": "Data processing (Ley 1581 de 2012)",
+      "processingBody": "Ledger Flow is the controller of the data you enter. The purpose is exclusively to provide the service described above. You can exercise your rights of access, update, correction, deletion and revocation through Settings or by writing to the contact below; we answer within 15 business days.",
+      "contactTitle": "Contact",
+      "contactBody": "Write to <email>{address}</email> for any question about your data."
+    },
+    "terms": {
+      "metaTitle": "Terms of service",
+      "metaDescription": "The terms under which Ledger Flow is offered: a free personal finance tool, your account, acceptable use and availability.",
+      "title": "Terms of service",
+      "intro": "Ledger Flow is a free personal finance tool. By creating an account you agree to these terms.",
+      "serviceTitle": "The service",
+      "serviceBody": "Ledger Flow lets you record accounts, movements, categories and budgets and see summaries of them. It is not financial advice and it does not connect to your bank.",
+      "accountTitle": "Your account",
+      "accountBody": "You are responsible for keeping your password private and for what is recorded under your account. You can delete it at any time from Settings; the records are kept for a while so you can come back, and removed permanently on request.",
+      "useTitle": "Acceptable use",
+      "useBody": "Use the service for your own personal records. Do not try to access other people’s data, disrupt the service or automate abusive traffic.",
+      "availabilityTitle": "Availability",
+      "availabilityBody": "The service is offered free of charge and as is, without guarantee of uninterrupted availability. We may change or discontinue features; we will announce material changes in the app.",
+      "changesTitle": "Changes to these terms",
+      "changesBody": "We may update these terms. The date at the top tells you when. Continuing to use the service after a change means you accept it.",
+      "contactTitle": "Contact",
+      "contactBody": "Questions about these terms: <email>{address}</email>."
+    },
+    "notFound": {
+      "title": "Page not found",
+      "body": "The address may be wrong or the page may have moved. Your money is where you left it.",
+      "home": "Go to Home",
+      "back": "Back"
+    },
+    "error": {
+      "title": "Something went wrong",
+      "body": "The page could not load. Your data is safe; try again in a moment.",
+      "retry": "Try again"
+    }
   }
 }

@@ -986,5 +986,123 @@
       "body": "Prueba otro mes u otro tipo de movimiento."
     },
     "adjustmentsNote": "Los ajustes concilian saldos; nunca cuentan como gasto ni ingreso."
+  },
+  "public": {
+    "nav": {
+      "features": "Funciones",
+      "how": "Cómo funciona",
+      "privacy": "Privacidad",
+      "signIn": "Iniciar sesión",
+      "getStarted": "Empezar",
+      "language": "Idioma"
+    },
+    "footer": {
+      "copyright": "© {year} Ledger Flow",
+      "privacy": "Política de privacidad",
+      "terms": "Términos",
+      "dataProcessing": "Tratamiento de datos (Ley 1581)",
+      "contact": "Contacto",
+      "english": "English",
+      "spanish": "Español"
+    },
+    "landing": {
+      "metaTitle": "Ledger Flow · Mira a dónde se va tu dinero",
+      "metaDescription": "Registra un gasto en tres segundos, ponle un techo al mes y atrapa el gasto hormiga antes de que sume. Gratis, bilingüe, funciona sin conexión.",
+      "badge": "Gratis · sin tarjeta",
+      "title": "Mira a dónde se va tu dinero de verdad.",
+      "lede": "Registra un gasto en tres segundos, ponle un techo al mes y atrapa el gasto hormiga antes de que sume.",
+      "ctaPrimary": "Crea tu cuenta gratis",
+      "ctaSecondary": "Iniciar sesión",
+      "trust": "Funciona sin conexión · English & Español · Tus datos son tuyos",
+      "whyEyebrow": "Por qué Ledger Flow",
+      "whyTitle": "Hecho para lo pequeño",
+      "why1Title": "Captura en tres segundos",
+      "why1Body": "Toca, escribe el importe, listo. Añade la categoría después desde la bandeja de revisión: el gasto ya cuenta.",
+      "why2Title": "Presupuestos que te hablan",
+      "why2Body": "Un techo para el mes y límites por categoría, con ritmo y días restantes en palabras, no solo una barra.",
+      "why3Title": "Funciona sin señal",
+      "why3Body": "Registra en el bus o de viaje. Todo se sincroniza al volver la conexión, sin duplicados.",
+      "howEyebrow": "Cómo funciona",
+      "howTitle": "Listo en un minuto",
+      "step1Title": "Crea tu cuenta",
+      "step1Body": "Elige tu moneda una vez. Correo y contraseña, nada más.",
+      "step2Title": "Añade tu primera cuenta",
+      "step2Body": "Efectivo, banco o tarjeta, con el saldo de hoy.",
+      "step3Title": "Ponle un techo al mes",
+      "step3Body": "Luego registra los gastos según ocurren. Ese es todo el hábito.",
+      "ctaFinal": "Empieza ahora, es gratis",
+      "phoneLabel": "Vista previa de la pantalla de inicio"
+    },
+    "mock": {
+      "date": "Martes, 22 de septiembre",
+      "greeting": "Hola, Andrés",
+      "initials": "AV",
+      "pending": "3 gastos rápidos por revisar · {amount} en total",
+      "spending": "Gasto de septiembre",
+      "dayOf": "Día 22 de 30",
+      "average": "Promedio diario {amount} · Ayer gastaste {yesterday}",
+      "progress": "64 % del presupuesto mensual",
+      "totalBalance": "Balance total",
+      "accounts": "4 cuentas",
+      "income": "Ingresos del mes",
+      "sameAs": "Igual que en agosto",
+      "budgets": "Presupuestos",
+      "seeAll": "Ver todos",
+      "food": "Comida",
+      "transport": "Transporte",
+      "foodStatus": "Quedan {amount} · vas bien",
+      "transportStatus": "Al 93 % con 8 días por delante"
+    },
+    "legal": {
+      "eyebrow": "Legal · actualizado el {date}",
+      "updated": "2026-09-01"
+    },
+    "privacy": {
+      "metaTitle": "Política de privacidad",
+      "metaDescription": "Qué guarda Ledger Flow, por qué y cómo lo controlas. También es nuestra política de tratamiento de datos según la Ley 1581 de 2012.",
+      "title": "Política de privacidad",
+      "intro": "Ledger Flow guarda los registros financieros que introduces para que los veas en cualquier dispositivo. Esta página explica qué guardamos, por qué y cómo lo controlas. También es nuestra política de tratamiento de datos según la Ley 1581 de 2012 de Colombia.",
+      "storeTitle": "Qué guardamos",
+      "store1": "Tu nombre, correo, idioma, zona horaria y moneda.",
+      "store2": "Las cuentas, categorías, movimientos y presupuestos que creas, incluidas notas y etiquetas.",
+      "store3": "Las sesiones por dispositivo (tipo de navegador, hora de inicio de sesión) para que puedas revisarlas y cerrarlas.",
+      "whyTitle": "Por qué",
+      "whyBody": "Solo para prestar el servicio: mostrarte tus datos, mantener los saldos correctos y proteger tu cuenta. No vendemos datos ni los usamos para publicidad.",
+      "rightsTitle": "Tus derechos",
+      "rightsBody": "Puedes leer, corregir y suprimir tus datos desde Ajustes en cualquier momento, y revocar tu autorización eliminando tu cuenta. Al eliminarla se conservan los registros para que puedas reactivarla; pídenos la eliminación definitiva y la haremos en 15 días hábiles.",
+      "processingTitle": "Tratamiento de datos (Ley 1581 de 2012)",
+      "processingBody": "Ledger Flow es el responsable del tratamiento de los datos que introduces. La finalidad es exclusivamente prestar el servicio descrito arriba. Puedes ejercer tus derechos de acceso, actualización, rectificación, supresión y revocatoria desde Ajustes o escribiendo al contacto de abajo; respondemos en 15 días hábiles.",
+      "contactTitle": "Contacto",
+      "contactBody": "Escribe a <email>{address}</email> para cualquier pregunta sobre tus datos."
+    },
+    "terms": {
+      "metaTitle": "Términos del servicio",
+      "metaDescription": "Las condiciones en que se ofrece Ledger Flow: una herramienta gratuita de finanzas personales, tu cuenta, uso aceptable y disponibilidad.",
+      "title": "Términos del servicio",
+      "intro": "Ledger Flow es una herramienta gratuita de finanzas personales. Al crear una cuenta aceptas estos términos.",
+      "serviceTitle": "El servicio",
+      "serviceBody": "Ledger Flow te permite registrar cuentas, movimientos, categorías y presupuestos y ver resúmenes. No es asesoría financiera y no se conecta con tu banco.",
+      "accountTitle": "Tu cuenta",
+      "accountBody": "Eres responsable de mantener tu contraseña en privado y de lo que se registre en tu cuenta. Puedes eliminarla en cualquier momento desde Ajustes; los registros se conservan un tiempo para que puedas volver y se eliminan definitivamente si lo pides.",
+      "useTitle": "Uso aceptable",
+      "useBody": "Usa el servicio para tus propios registros. No intentes acceder a datos de otras personas, interrumpir el servicio ni automatizar tráfico abusivo.",
+      "availabilityTitle": "Disponibilidad",
+      "availabilityBody": "El servicio se ofrece gratis y tal cual, sin garantía de disponibilidad ininterrumpida. Podemos cambiar o retirar funciones; los cambios importantes se anuncian en la app.",
+      "changesTitle": "Cambios en estos términos",
+      "changesBody": "Podemos actualizar estos términos. La fecha de arriba indica cuándo. Seguir usando el servicio tras un cambio implica aceptarlo.",
+      "contactTitle": "Contacto",
+      "contactBody": "Preguntas sobre estos términos: <email>{address}</email>."
+    },
+    "notFound": {
+      "title": "Página no encontrada",
+      "body": "La dirección puede estar mal o la página se movió. Tu dinero está donde lo dejaste.",
+      "home": "Ir al inicio",
+      "back": "Atrás"
+    },
+    "error": {
+      "title": "Algo salió mal",
+      "body": "La página no pudo cargar. Tus datos están a salvo; inténtalo en un momento.",
+      "retry": "Reintentar"
+    }
   }
 }

@@ -7,6 +7,17 @@ export const ONBOARDING_PATH = "/onboarding";
 const PUBLIC_EXACT = new Set(["/", "/login", "/register", "/privacy", "/terms", "/contact"]);
 const PUBLIC_PREFIXES = ["/dev/"];
 const GUEST_ONLY = new Set(["/login", "/register"]);
+// Only these need a session; anything else unknown must reach the real 404, not the login.
+const APP_PREFIXES = [
+  "/home",
+  "/onboarding",
+  "/transactions",
+  "/accounts",
+  "/categories",
+  "/budgets",
+  "/stats",
+  "/settings",
+];
 
 export function stripLocale(pathname: string, locales: readonly string[]): string {
   for (const locale of locales) {
@@ -20,6 +31,10 @@ export function isPublicPath(pathname: string): boolean {
   return (
     PUBLIC_EXACT.has(pathname) || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
   );
+}
+
+export function isProtectedPath(pathname: string): boolean {
+  return APP_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 export function isGuestOnlyPath(pathname: string): boolean {
