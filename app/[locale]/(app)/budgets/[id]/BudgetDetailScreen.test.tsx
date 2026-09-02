@@ -113,6 +113,9 @@ function routeFetch(budget: Budget, onMutation?: (url: string, init: RequestInit
   });
 }
 
+// Fake timers keep advancing: the reference is "now", so its exact instant is not asserted.
+const anonymizeReference = (url: string) => url.replace(/reference=[^&]+/, "reference=<now>");
+
 function renderScreen() {
   renderWithProviders(
     <QueryProvider>
@@ -185,10 +188,10 @@ describe("BudgetDetailScreen", () => {
     await userEvent.click(screen.getByRole("button", { name: "Remove adjustment" }));
     expect(await screen.findByText("Adjustment removed")).toBeVisible();
 
-    expect(calls.map((call) => [call.method, call.url, call.body])).toEqual([
-      ["PUT", "/api/budgets/b1/amount?reference=2026-09-15T17%3A00%3A00.000Z", { amount: 400_000 }],
-      ["PUT", "/api/budgets/b1/amount?reference=2026-09-15T17%3A00%3A00.000Z", { amount: 0 }],
-      ["DELETE", "/api/budgets/b1/amount?reference=2026-09-15T17%3A00%3A00.000Z", null],
+    expect(calls.map((call) => [call.method, anonymizeReference(call.url), call.body])).toEqual([
+      ["PUT", "/api/budgets/b1/amount?reference=<now>", { amount: 400_000 }],
+      ["PUT", "/api/budgets/b1/amount?reference=<now>", { amount: 0 }],
+      ["DELETE", "/api/budgets/b1/amount?reference=<now>", null],
     ]);
   });
 
@@ -224,7 +227,7 @@ describe("BudgetDetailScreen", () => {
     expect(screen.queryByRole("link", { name: "Edit" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Restore" }));
     expect(await screen.findByText("Budget restored")).toBeVisible();
-    expect(calls).toEqual(["POST /api/budgets/b1/restore?reference=2026-09-15T17%3A00%3A00.000Z"]);
+    expect(calls.map(anonymizeReference)).toEqual(["POST /api/budgets/b1/restore?reference=<now>"]);
   });
 
   it("refuses an overlapping restore and names the budget in the way", async () => {

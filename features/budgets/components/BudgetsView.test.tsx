@@ -80,6 +80,15 @@ const budgets = [
     baseAmount: 80_000,
     spent: 38_000,
   }),
+  budget("trip", "Old trip", {
+    categoryIds: ["trip"],
+    periodType: "CUSTOM",
+    periodFrom: "2026-11-02T05:00:00.000Z",
+    periodTo: "2026-11-04T05:00:00.000Z",
+    amount: 100_000,
+    baseAmount: 100_000,
+    spent: 0,
+  }),
   budget("vacation", "Vacation", {
     categoryIds: ["vacation"],
     archivedCategoryIds: ["vacation"],
@@ -136,7 +145,7 @@ describe("BudgetsView", () => {
     expect(screen.getByText("$715,700 left for 9 days")).toBeInTheDocument();
     expect(screen.getByText("≈ $79,522/day")).toBeInTheDocument();
     const url = fetchMock.mock.calls[0]?.[0];
-    expect(url).toContain("reference=2026-09-15T17%3A00%3A00.000Z");
+    expect(url).toContain("reference=2026-09-22T15%3A00%3A00.000Z");
 
     expect(screen.getByText("$188,000 left · 9 days left")).toBeInTheDocument();
     expect(screen.getByText("Over by $56,000")).toBeInTheDocument();
@@ -144,6 +153,7 @@ describe("BudgetsView", () => {
     expect(screen.getByText("Archived category")).toBeInTheDocument();
     expect(screen.getByText("ends in 24 days")).toBeInTheDocument();
     expect(screen.getByText("$650,000 left · ends in 24 days")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Old trip" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Food" })).toHaveAttribute(
       "href",
       "/budgets/food?reference=2026-09",

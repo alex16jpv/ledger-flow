@@ -12,6 +12,7 @@ import { cn } from "@/components/ui/cn";
 import { Empty } from "@/components/ui/Empty";
 import { PeriodNav } from "@/components/ui/PeriodNav";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { monthWindow } from "@/lib/format/dates";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
@@ -20,7 +21,7 @@ import type { Budget, Category } from "@/types/api";
 
 import { useBudgetsQuery } from "../hooks";
 import { BUDGET_PERIOD_TYPES, type BudgetPeriodType, isGlobalBudget } from "../progress";
-import { currentMonthKey, monthReference, shiftMonthKey } from "../reference";
+import { currentMonthKey, monthReference, overlapsMonth, shiftMonthKey } from "../reference";
 import { BudgetCard } from "./BudgetCard";
 import { GlobalBudgetCard } from "./GlobalBudgetCard";
 
@@ -54,10 +55,11 @@ export function BudgetsView({
 }: BudgetsViewProps) {
   const t = useTranslations();
   const dates = useDates();
-  const { reference, iso } = monthReference(monthKey, dates.timeZone);
+  const { reference, iso } = monthReference(monthKey, dates.timeZone, now);
   const budgets = useBudgetsQuery({ reference: iso });
   const isCurrent = monthKey >= currentMonthKey(now, dates.timeZone);
-  const all = budgets.data ?? [];
+  const window = monthWindow(reference, dates.timeZone);
+  const all = (budgets.data ?? []).filter((budget) => overlapsMonth(budget, window));
   const global = all.find((budget) => isGlobalBudget(budget) && budget.periodType === "MONTHLY");
   const rest = all
     .filter((budget) => budget !== global)

@@ -811,3 +811,13 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   it a different budget, so `RestoreBudgetConflictSheet` names the active budget in the way
   (`findOverlapping`, the same rule mirrored on the client over the loaded list) and offers
   "Create again" or opening the other one.
+
+## 2026-09-02 · Custom budgets belong to the months they touch (owner report P-27)
+
+- **The current month is referenced with "now"**, past months with noon on the 15th. The API marks a
+  CUSTOM budget `expired` as soon as `reference` passes its end, so a two-day window opened today was
+  already "ended" when the list asked about the 15th; with "now" it stays in the month until it ends.
+- **A CUSTOM budget is shown only in the months its window overlaps** (`overlapsMonth`, client-side).
+  The API lists a one-shot window for every reference before its end, which put a September–October
+  budget in June and July; recurring budgets are unaffected because the server already drops them
+  before their lifetime floor.

@@ -73,7 +73,7 @@ export function StatsScreen() {
   const monthKey = parseMonthKey(params.get("reference"), now, dates.timeZone);
   const type = parseType(params.get("type"));
   const groupBy = parseGroup(params.get("groupBy"));
-  const { reference } = monthReference(monthKey, dates.timeZone);
+  const { reference } = monthReference(monthKey, dates.timeZone, now);
   const window = useMemo(() => monthWindow(reference, dates.timeZone), [reference, dates.timeZone]);
   const iso = toIsoWindow(window);
   const stats = useStatsQuery({ type, groupBy, ...iso });

@@ -67,7 +67,7 @@ export function BudgetDetailScreen({ id }: { id: string }) {
   const params = useSearchParams();
   const [now] = useState(() => new Date());
   const monthKey = parseMonthKey(params.get("reference"), now, dates.timeZone);
-  const { reference, iso } = monthReference(monthKey, dates.timeZone);
+  const { reference, iso } = monthReference(monthKey, dates.timeZone, now);
   const budget = useBudgetQuery(id, iso);
   const categories = useCategoriesQuery(undefined, true, true);
   const accounts = useAccountsQuery(true);

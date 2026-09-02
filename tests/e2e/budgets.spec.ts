@@ -282,3 +282,30 @@ test("a Los Angeles user in USD sees the global budget they just created, format
     page.getByRole("heading", { name: "Put a ceiling on your small spending" }),
   ).toHaveCount(0);
 });
+
+// Owner report P-27: a short custom window opened today must show this month and nowhere else.
+test("a custom budget for today shows in the current month only", async ({ page, request }) => {
+  await signUp(page, request);
+  const start = new Date();
+  start.setUTCHours(12, 0, 0, 0);
+  const end = new Date(start.getTime() + 2 * 86_400_000);
+  const created = await request.post("/api/budgets", {
+    headers: { origin: APP },
+    data: {
+      name: "Two days",
+      color: "CYAN",
+      categoryIds: [],
+      periodType: "CUSTOM",
+      amount: 100_000,
+      periodStartDate: start.toISOString(),
+      periodEndDate: end.toISOString(),
+    },
+  });
+  expect(created.status()).toBe(201);
+
+  await page.goto("/budgets");
+  await expect(page.getByRole("link", { name: "Two days" })).toBeVisible();
+  await page.getByRole("button", { name: "Previous month" }).click();
+  await expect(page).toHaveURL(/reference=\d{4}-\d{2}/);
+  await expect(page.getByRole("link", { name: "Two days" })).toHaveCount(0);
+});

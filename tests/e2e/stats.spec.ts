@@ -42,7 +42,9 @@ test("stats show the seed month by category, by day and by tag, and drill into t
   await expect(page.getByText("Total income")).toBeVisible();
 
   await page.getByRole("button", { name: "Categories" }).click();
+  await expect(page).not.toHaveURL(/groupBy=/);
   await page.getByRole("button", { name: "Expenses" }).click();
+  await expect(page).not.toHaveURL(/type=/);
   await page.getByRole("button", { name: /^Food/ }).click();
   await expect(page).toHaveURL(
     /\/transactions\?period=custom&from=2026-08-01&to=2026-08-31&type=EXPENSE&category=/,
