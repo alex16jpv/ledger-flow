@@ -1,0 +1,68 @@
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-text-disabled: var(--text-disabled);
+  --color-ink: var(--ink);
+  --color-on-ink: var(--on-ink);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-on-brand: var(--on-brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-text: var(--brand-text);
+  --color-income: var(--income);
+  --color-income-soft: var(--income-soft);
+  --color-expense: var(--expense);
+  --color-transfer: var(--transfer);
+  --color-transfer-soft: var(--transfer-soft);
+  --color-adjustment: var(--adjustment);
+  --color-danger: var(--danger);
+  --color-danger-solid: var(--danger-solid);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-solid: var(--warning-solid);
+  --color-warning-soft: var(--warning-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --radius-2xl: var(--r-2xl);
+  --shadow-1: var(--shadow-1);
+  --shadow-2: var(--shadow-2);
+  --shadow-3: var(--shadow-3);
+  --breakpoint-sm: 600px;
+  --breakpoint-md: 900px;
+  --breakpoint-lg: 1200px;
+}
+
+@theme inline {
+  --color-c-red: var(--c-red); --color-c-red-soft: var(--c-red-soft); --color-c-red-text: var(--c-red-text); --color-c-red-border: var(--c-red-border);
+  --color-c-orange: var(--c-orange); --color-c-orange-soft: var(--c-orange-soft); --color-c-orange-text: var(--c-orange-text); --color-c-orange-border: var(--c-orange-border);
+  --color-c-amber: var(--c-amber); --color-c-amber-soft: var(--c-amber-soft); --color-c-amber-text: var(--c-amber-text); --color-c-amber-border: var(--c-amber-border);
+  --color-c-yellow: var(--c-yellow); --color-c-yellow-soft: var(--c-yellow-soft); --color-c-yellow-text: var(--c-yellow-text); --color-c-yellow-border: var(--c-yellow-border);
+  --color-c-lime: var(--c-lime); --color-c-lime-soft: var(--c-lime-soft); --color-c-lime-text: var(--c-lime-text); --color-c-lime-border: var(--c-lime-border);
+  --color-c-green: var(--c-green); --color-c-green-soft: var(--c-green-soft); --color-c-green-text: var(--c-green-text); --color-c-green-border: var(--c-green-border);
+  --color-c-teal: var(--c-teal); --color-c-teal-soft: var(--c-teal-soft); --color-c-teal-text: var(--c-teal-text); --color-c-teal-border: var(--c-teal-border);
+  --color-c-cyan: var(--c-cyan); --color-c-cyan-soft: var(--c-cyan-soft); --color-c-cyan-text: var(--c-cyan-text); --color-c-cyan-border: var(--c-cyan-border);
+  --color-c-blue: var(--c-blue); --color-c-blue-soft: var(--c-blue-soft); --color-c-blue-text: var(--c-blue-text); --color-c-blue-border: var(--c-blue-border);
+  --color-c-indigo: var(--c-indigo); --color-c-indigo-soft: var(--c-indigo-soft); --color-c-indigo-text: var(--c-indigo-text); --color-c-indigo-border: var(--c-indigo-border);
+  --color-c-purple: var(--c-purple); --color-c-purple-soft: var(--c-purple-soft); --color-c-purple-text: var(--c-purple-text); --color-c-purple-border: var(--c-purple-border);
+  --color-c-pink: var(--c-pink); --color-c-pink-soft: var(--c-pink-soft); --color-c-pink-text: var(--c-pink-text); --color-c-pink-border: var(--c-pink-border);
+  --color-c-rose: var(--c-rose); --color-c-rose-soft: var(--c-rose-soft); --color-c-rose-text: var(--c-rose-text); --color-c-rose-border: var(--c-rose-border);
+  --color-c-gray: var(--c-gray); --color-c-gray-soft: var(--c-gray-soft); --color-c-gray-text: var(--c-gray-text); --color-c-gray-border: var(--c-gray-border);
+  --color-c-brown: var(--c-brown); --color-c-brown-soft: var(--c-brown-soft); --color-c-brown-text: var(--c-brown-text); --color-c-brown-border: var(--c-brown-border);
+  --color-c-black: var(--c-black); --color-c-black-soft: var(--c-black-soft); --color-c-black-text: var(--c-black-text); --color-c-black-border: var(--c-black-border);
+}

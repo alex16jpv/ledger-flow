@@ -1,0 +1,68 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main, redesign/fase-2]
+env:
+  API_URL: http://localhost:3000
+  NEXT_PUBLIC_APP_URL: http://localhost:3001
+  NEXT_PUBLIC_CONTACT_EMAIL: ledgerflow@alexpiral.com
+  NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ci
+      - run: npm audit --omit=dev --audit-level=high
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: google/osv-scanner-action/osv-scanner-action@v2
+        with:
+          scan-args: |-
+            --lockfile=package-lock.json
+  e2e:
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: alex16jpv/lag-money-manager
+          path: backend
+          token: ${{ secrets.BACKEND_REPO_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      # The backend needs a replica set for multi-document transactions; service containers cannot pass --replSet.
+      - run: |
+          docker run -d --name mongo -p 27017:27017 mongo:8 --replSet rs0 --bind_ip_all
+          for i in $(seq 1 30); do
+            docker exec mongo mongosh --quiet --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]})" && break
+            sleep 2
+          done
+      - run: npm ci --ignore-scripts
+      - run: npm ci && npm run build && (npm run start &) && npm run seed:test
+        working-directory: backend
+        env:
+          MONGO_URI: mongodb://localhost:27017/ledgerflow?replicaSet=rs0&directConnection=true
+          JWT_SECRET: ci-only-secret
+          CORS_ORIGIN: http://localhost:3001
+          NODE_ENV: test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          CI: true

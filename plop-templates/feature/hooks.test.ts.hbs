@@ -1,0 +1,9 @@
+import { describe, expect, it } from "vitest";
+
+import { {{camelCase name}}Keys } from "./keys";
+
+describe("{{camelCase name}}Keys", () => {
+  it("nests every key under the feature root", () => {
+    expect({{camelCase name}}Keys.list()[0]).toBe("{{kebabCase name}}");
+  });
+});

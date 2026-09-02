@@ -1,0 +1,116 @@
+:root { color-scheme: light dark; }
+:root[data-mode="light"] { color-scheme: light; }
+:root[data-mode="dark"]  { color-scheme: dark; }
+
+:root {
+  --bg:            light-dark(oklch(from var(--seed-neutral) 0.975 c h), oklch(from var(--seed-neutral) 0.135 c h));
+  --surface:       light-dark(oklch(from var(--seed-neutral) 0.998 calc(c * 0.4) h), oklch(from var(--seed-neutral) 0.180 c h));
+  --surface-2:     light-dark(oklch(from var(--seed-neutral) 0.955 c h), oklch(from var(--seed-neutral) 0.215 c h));
+  --surface-3:     light-dark(oklch(from var(--seed-neutral) 0.930 c h), oklch(from var(--seed-neutral) 0.250 c h));
+  --border:        light-dark(oklch(from var(--seed-neutral) 0.905 c h), oklch(from var(--seed-neutral) 0.270 c h));
+  --border-strong: light-dark(oklch(from var(--seed-neutral) 0.800 c h), oklch(from var(--seed-neutral) 0.360 c h));
+  --text:          light-dark(oklch(from var(--seed-neutral) 0.210 c h), oklch(from var(--seed-neutral) 0.950 calc(c * 0.5) h));
+  --text-2:        light-dark(oklch(from var(--seed-neutral) 0.450 c h), oklch(from var(--seed-neutral) 0.740 c h));
+  --text-3:        light-dark(oklch(from var(--seed-neutral) 0.490 c h), oklch(from var(--seed-neutral) 0.620 c h));
+  --text-disabled: light-dark(oklch(from var(--seed-neutral) 0.720 c h), oklch(from var(--seed-neutral) 0.450 c h));
+  --ink:           light-dark(oklch(from var(--seed-neutral) 0.180 c h), oklch(from var(--seed-neutral) 0.960 calc(c * 0.5) h));
+  --on-ink:        light-dark(oklch(from var(--seed-neutral) 0.985 c h), oklch(from var(--seed-neutral) 0.160 c h));
+  --overlay:       light-dark(oklch(0.2 0 0 / 0.40), oklch(0 0 0 / 0.60));
+
+  --brand:         light-dark(oklch(from var(--seed-brand) l c h), oklch(from var(--seed-brand) 0.70 c h));
+  --brand-hover:   light-dark(oklch(from var(--seed-brand) calc(l - 0.05) c h), oklch(from var(--seed-brand) 0.75 c h));
+  --on-brand:      light-dark(#fff, oklch(from var(--seed-brand) 0.16 calc(c * 0.3) h));
+  --brand-soft:    light-dark(oklch(from var(--seed-brand) 0.94 calc(c * 0.35) h), oklch(from var(--seed-brand) 0.26 calc(c * 0.40) h));
+  --brand-text:    light-dark(oklch(from var(--seed-brand) 0.40 c h), oklch(from var(--seed-brand) 0.84 calc(c * 0.7) h));
+  --focus-ring:    oklch(from var(--brand) l c h / 0.45);
+
+  --income:        light-dark(oklch(from var(--seed-positive) 0.42 calc(c * 0.9) h), oklch(from var(--seed-positive) 0.82 calc(c * 0.7) h));
+  --income-soft:   light-dark(oklch(from var(--seed-positive) 0.95 calc(c * 0.3) h), oklch(from var(--seed-positive) 0.26 calc(c * 0.35) h));
+  --expense:       var(--text);
+  --expense-soft:  var(--surface-2);
+  --transfer:      light-dark(oklch(from var(--seed-info) 0.42 calc(c * 0.9) h), oklch(from var(--seed-info) 0.82 calc(c * 0.7) h));
+  --transfer-soft: light-dark(oklch(from var(--seed-info) 0.95 calc(c * 0.3) h), oklch(from var(--seed-info) 0.26 calc(c * 0.35) h));
+  --adjustment:    var(--text-2);
+  --adjustment-soft: var(--surface-3);
+
+  --danger:        light-dark(oklch(from var(--seed-negative) 0.42 calc(c * 0.9) h), oklch(from var(--seed-negative) 0.82 calc(c * 0.7) h));
+  --danger-solid:  light-dark(oklch(from var(--seed-negative) l c h), oklch(from var(--seed-negative) calc(l + 0.08) c h));
+  --danger-soft:   light-dark(oklch(from var(--seed-negative) 0.95 calc(c * 0.3) h), oklch(from var(--seed-negative) 0.26 calc(c * 0.35) h));
+  --warning:       light-dark(oklch(from var(--seed-warning) 0.42 calc(c * 0.9) h), oklch(from var(--seed-warning) 0.82 calc(c * 0.7) h));
+  --warning-solid: light-dark(oklch(from var(--seed-warning) l c h), oklch(from var(--seed-warning) calc(l + 0.08) c h));
+  --warning-soft:  light-dark(oklch(from var(--seed-warning) 0.95 calc(c * 0.3) h), oklch(from var(--seed-warning) 0.26 calc(c * 0.35) h));
+  --success:       var(--income);
+  --success-soft:  var(--income-soft);
+  --info:          var(--transfer);
+  --info-soft:     var(--transfer-soft);
+
+  --shadow-1: light-dark(0 1px 2px oklch(0 0 0 / 0.06), none);
+  --shadow-2: light-dark(0 4px 12px -2px oklch(0 0 0 / 0.10), none);
+  --shadow-3: light-dark(0 16px 40px -8px oklch(0 0 0 / 0.18), 0 16px 40px -8px oklch(0 0 0 / 0.6));
+
+  
+  --c-red:        light-dark(oklch(from var(--seed-red) l c h), oklch(from var(--seed-red) max(calc(l + 0.08), 0.52) c h));
+  --c-red-soft:   light-dark(oklch(from var(--seed-red) 0.95 calc(c * 0.30) h), oklch(from var(--seed-red) 0.26 calc(c * 0.35) h));
+  --c-red-text:   light-dark(oklch(from var(--seed-red) 0.42 calc(c * 0.90) h), oklch(from var(--seed-red) 0.82 calc(c * 0.70) h));
+  --c-red-border: light-dark(oklch(from var(--seed-red) 0.85 calc(c * 0.50) h), oklch(from var(--seed-red) 0.38 calc(c * 0.50) h));
+  --c-orange:        light-dark(oklch(from var(--seed-orange) l c h), oklch(from var(--seed-orange) max(calc(l + 0.08), 0.52) c h));
+  --c-orange-soft:   light-dark(oklch(from var(--seed-orange) 0.95 calc(c * 0.30) h), oklch(from var(--seed-orange) 0.26 calc(c * 0.35) h));
+  --c-orange-text:   light-dark(oklch(from var(--seed-orange) 0.42 calc(c * 0.90) h), oklch(from var(--seed-orange) 0.82 calc(c * 0.70) h));
+  --c-orange-border: light-dark(oklch(from var(--seed-orange) 0.85 calc(c * 0.50) h), oklch(from var(--seed-orange) 0.38 calc(c * 0.50) h));
+  --c-amber:        light-dark(oklch(from var(--seed-amber) l c h), oklch(from var(--seed-amber) max(calc(l + 0.08), 0.52) c h));
+  --c-amber-soft:   light-dark(oklch(from var(--seed-amber) 0.95 calc(c * 0.30) h), oklch(from var(--seed-amber) 0.26 calc(c * 0.35) h));
+  --c-amber-text:   light-dark(oklch(from var(--seed-amber) 0.42 calc(c * 0.90) h), oklch(from var(--seed-amber) 0.82 calc(c * 0.70) h));
+  --c-amber-border: light-dark(oklch(from var(--seed-amber) 0.85 calc(c * 0.50) h), oklch(from var(--seed-amber) 0.38 calc(c * 0.50) h));
+  --c-yellow:        light-dark(oklch(from var(--seed-yellow) l c h), oklch(from var(--seed-yellow) max(calc(l + 0.08), 0.52) c h));
+  --c-yellow-soft:   light-dark(oklch(from var(--seed-yellow) 0.95 calc(c * 0.30) h), oklch(from var(--seed-yellow) 0.26 calc(c * 0.35) h));
+  --c-yellow-text:   light-dark(oklch(from var(--seed-yellow) 0.42 calc(c * 0.90) h), oklch(from var(--seed-yellow) 0.82 calc(c * 0.70) h));
+  --c-yellow-border: light-dark(oklch(from var(--seed-yellow) 0.85 calc(c * 0.50) h), oklch(from var(--seed-yellow) 0.38 calc(c * 0.50) h));
+  --c-lime:        light-dark(oklch(from var(--seed-lime) l c h), oklch(from var(--seed-lime) max(calc(l + 0.08), 0.52) c h));
+  --c-lime-soft:   light-dark(oklch(from var(--seed-lime) 0.95 calc(c * 0.30) h), oklch(from var(--seed-lime) 0.26 calc(c * 0.35) h));
+  --c-lime-text:   light-dark(oklch(from var(--seed-lime) 0.42 calc(c * 0.90) h), oklch(from var(--seed-lime) 0.82 calc(c * 0.70) h));
+  --c-lime-border: light-dark(oklch(from var(--seed-lime) 0.85 calc(c * 0.50) h), oklch(from var(--seed-lime) 0.38 calc(c * 0.50) h));
+  --c-green:        light-dark(oklch(from var(--seed-green) l c h), oklch(from var(--seed-green) max(calc(l + 0.08), 0.52) c h));
+  --c-green-soft:   light-dark(oklch(from var(--seed-green) 0.95 calc(c * 0.30) h), oklch(from var(--seed-green) 0.26 calc(c * 0.35) h));
+  --c-green-text:   light-dark(oklch(from var(--seed-green) 0.42 calc(c * 0.90) h), oklch(from var(--seed-green) 0.82 calc(c * 0.70) h));
+  --c-green-border: light-dark(oklch(from var(--seed-green) 0.85 calc(c * 0.50) h), oklch(from var(--seed-green) 0.38 calc(c * 0.50) h));
+  --c-teal:        light-dark(oklch(from var(--seed-teal) l c h), oklch(from var(--seed-teal) max(calc(l + 0.08), 0.52) c h));
+  --c-teal-soft:   light-dark(oklch(from var(--seed-teal) 0.95 calc(c * 0.30) h), oklch(from var(--seed-teal) 0.26 calc(c * 0.35) h));
+  --c-teal-text:   light-dark(oklch(from var(--seed-teal) 0.42 calc(c * 0.90) h), oklch(from var(--seed-teal) 0.82 calc(c * 0.70) h));
+  --c-teal-border: light-dark(oklch(from var(--seed-teal) 0.85 calc(c * 0.50) h), oklch(from var(--seed-teal) 0.38 calc(c * 0.50) h));
+  --c-cyan:        light-dark(oklch(from var(--seed-cyan) l c h), oklch(from var(--seed-cyan) max(calc(l + 0.08), 0.52) c h));
+  --c-cyan-soft:   light-dark(oklch(from var(--seed-cyan) 0.95 calc(c * 0.30) h), oklch(from var(--seed-cyan) 0.26 calc(c * 0.35) h));
+  --c-cyan-text:   light-dark(oklch(from var(--seed-cyan) 0.42 calc(c * 0.90) h), oklch(from var(--seed-cyan) 0.82 calc(c * 0.70) h));
+  --c-cyan-border: light-dark(oklch(from var(--seed-cyan) 0.85 calc(c * 0.50) h), oklch(from var(--seed-cyan) 0.38 calc(c * 0.50) h));
+  --c-blue:        light-dark(oklch(from var(--seed-blue) l c h), oklch(from var(--seed-blue) max(calc(l + 0.08), 0.52) c h));
+  --c-blue-soft:   light-dark(oklch(from var(--seed-blue) 0.95 calc(c * 0.30) h), oklch(from var(--seed-blue) 0.26 calc(c * 0.35) h));
+  --c-blue-text:   light-dark(oklch(from var(--seed-blue) 0.42 calc(c * 0.90) h), oklch(from var(--seed-blue) 0.82 calc(c * 0.70) h));
+  --c-blue-border: light-dark(oklch(from var(--seed-blue) 0.85 calc(c * 0.50) h), oklch(from var(--seed-blue) 0.38 calc(c * 0.50) h));
+  --c-indigo:        light-dark(oklch(from var(--seed-indigo) l c h), oklch(from var(--seed-indigo) max(calc(l + 0.08), 0.52) c h));
+  --c-indigo-soft:   light-dark(oklch(from var(--seed-indigo) 0.95 calc(c * 0.30) h), oklch(from var(--seed-indigo) 0.26 calc(c * 0.35) h));
+  --c-indigo-text:   light-dark(oklch(from var(--seed-indigo) 0.42 calc(c * 0.90) h), oklch(from var(--seed-indigo) 0.82 calc(c * 0.70) h));
+  --c-indigo-border: light-dark(oklch(from var(--seed-indigo) 0.85 calc(c * 0.50) h), oklch(from var(--seed-indigo) 0.38 calc(c * 0.50) h));
+  --c-purple:        light-dark(oklch(from var(--seed-purple) l c h), oklch(from var(--seed-purple) max(calc(l + 0.08), 0.52) c h));
+  --c-purple-soft:   light-dark(oklch(from var(--seed-purple) 0.95 calc(c * 0.30) h), oklch(from var(--seed-purple) 0.26 calc(c * 0.35) h));
+  --c-purple-text:   light-dark(oklch(from var(--seed-purple) 0.42 calc(c * 0.90) h), oklch(from var(--seed-purple) 0.82 calc(c * 0.70) h));
+  --c-purple-border: light-dark(oklch(from var(--seed-purple) 0.85 calc(c * 0.50) h), oklch(from var(--seed-purple) 0.38 calc(c * 0.50) h));
+  --c-pink:        light-dark(oklch(from var(--seed-pink) l c h), oklch(from var(--seed-pink) max(calc(l + 0.08), 0.52) c h));
+  --c-pink-soft:   light-dark(oklch(from var(--seed-pink) 0.95 calc(c * 0.30) h), oklch(from var(--seed-pink) 0.26 calc(c * 0.35) h));
+  --c-pink-text:   light-dark(oklch(from var(--seed-pink) 0.42 calc(c * 0.90) h), oklch(from var(--seed-pink) 0.82 calc(c * 0.70) h));
+  --c-pink-border: light-dark(oklch(from var(--seed-pink) 0.85 calc(c * 0.50) h), oklch(from var(--seed-pink) 0.38 calc(c * 0.50) h));
+  --c-rose:        light-dark(oklch(from var(--seed-rose) l c h), oklch(from var(--seed-rose) max(calc(l + 0.08), 0.52) c h));
+  --c-rose-soft:   light-dark(oklch(from var(--seed-rose) 0.95 calc(c * 0.30) h), oklch(from var(--seed-rose) 0.26 calc(c * 0.35) h));
+  --c-rose-text:   light-dark(oklch(from var(--seed-rose) 0.42 calc(c * 0.90) h), oklch(from var(--seed-rose) 0.82 calc(c * 0.70) h));
+  --c-rose-border: light-dark(oklch(from var(--seed-rose) 0.85 calc(c * 0.50) h), oklch(from var(--seed-rose) 0.38 calc(c * 0.50) h));
+  --c-gray:        light-dark(oklch(from var(--seed-gray) l c h), oklch(from var(--seed-gray) max(calc(l + 0.08), 0.52) c h));
+  --c-gray-soft:   light-dark(oklch(from var(--seed-gray) 0.95 calc(c * 0.30) h), oklch(from var(--seed-gray) 0.26 calc(c * 0.35) h));
+  --c-gray-text:   light-dark(oklch(from var(--seed-gray) 0.42 calc(c * 0.90) h), oklch(from var(--seed-gray) 0.82 calc(c * 0.70) h));
+  --c-gray-border: light-dark(oklch(from var(--seed-gray) 0.85 calc(c * 0.50) h), oklch(from var(--seed-gray) 0.38 calc(c * 0.50) h));
+  --c-brown:        light-dark(oklch(from var(--seed-brown) l c h), oklch(from var(--seed-brown) max(calc(l + 0.08), 0.52) c h));
+  --c-brown-soft:   light-dark(oklch(from var(--seed-brown) 0.95 calc(c * 0.30) h), oklch(from var(--seed-brown) 0.26 calc(c * 0.35) h));
+  --c-brown-text:   light-dark(oklch(from var(--seed-brown) 0.42 calc(c * 0.90) h), oklch(from var(--seed-brown) 0.82 calc(c * 0.70) h));
+  --c-brown-border: light-dark(oklch(from var(--seed-brown) 0.85 calc(c * 0.50) h), oklch(from var(--seed-brown) 0.38 calc(c * 0.50) h));
+  --c-black:        light-dark(oklch(from var(--seed-black) l c h), oklch(from var(--seed-black) max(calc(l + 0.08), 0.52) c h));
+  --c-black-soft:   light-dark(oklch(from var(--seed-black) 0.95 calc(c * 0.30) h), oklch(from var(--seed-black) 0.26 calc(c * 0.35) h));
+  --c-black-text:   light-dark(oklch(from var(--seed-black) 0.42 calc(c * 0.90) h), oklch(from var(--seed-black) 0.82 calc(c * 0.70) h));
+  --c-black-border: light-dark(oklch(from var(--seed-black) 0.85 calc(c * 0.50) h), oklch(from var(--seed-black) 0.38 calc(c * 0.50) h));
+}
