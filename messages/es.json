@@ -25,7 +25,10 @@
     "today": "Hoy",
     "yesterday": "Ayer",
     "notNow": "Ahora no",
-    "default": "Predeterminado"
+    "default": "Predeterminado",
+    "search": "Buscar",
+    "noResults": "Sin resultados",
+    "selected": "Seleccionado"
   },
   "nav": {
     "label": "Navegación",
@@ -106,7 +109,11 @@
       "reactivated": {
         "title": "Bienvenido de vuelta.",
         "body": "Restauramos tu cuenta anterior con todo su historial; la moneda se conserva."
-      }
+      },
+      "currencyPicker": "Elige tu moneda",
+      "timeZonePicker": "Elige tu zona horaria",
+      "signInLink": "Entrar",
+      "consentRequired": "Debes aceptar la política de privacidad para continuar."
     }
   },
   "onboarding": {

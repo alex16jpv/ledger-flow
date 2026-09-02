@@ -316,3 +316,20 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   until the backend has email delivery (TRACKING-R2 future tasks).
 - **Element boundaries** now match full paths (`partialMatch: false`): the previous tail matching
   classified `features/*/components/*` as `components/ui`.
+
+## 2026-09-01 · Registration (W-12)
+
+- **Consent is front-end only** (owner decision, HANDOFF §3.18): the checkbox is required by the Zod
+  schema and the button stays disabled until it is checked, but the flag is never sent to the backend.
+- **Detected defaults:** currency comes from the device language's region through a small
+  region→currency table (`lib/format/currency.ts`, fallback COP); the time zone from
+  `Intl.DateTimeFormat().resolvedOptions().timeZone`. Detection runs through `useSyncExternalStore`
+  with a `null` server snapshot, so the server renders empty pickers and the client fills them
+  without a hydration mismatch. Both pickers are searchable sheets over `Intl.supportedValuesOf`
+  with names from `Intl.DisplayNames`, never native selects.
+- **Email enumeration** (409 shown inline with a sign-in link) is the accepted risk recorded in
+  TRACKING-R2 (R2-44); the 500 case suggests signing in first, as the contract §A asks.
+- **`reactivated: true`** skips onboarding and lands on home with `?reactivated=1`, which W-14 renders
+  as the "Welcome back" info alert.
+- **Route placeholders:** `/onboarding` (W-13) and `/privacy` (W-31) exist as `notFound()` stubs
+  because the register flow links to them and `typedRoutes` requires known routes.

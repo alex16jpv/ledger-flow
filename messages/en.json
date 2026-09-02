@@ -25,7 +25,10 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "notNow": "Not now",
-    "default": "Default"
+    "default": "Default",
+    "search": "Search",
+    "noResults": "No results",
+    "selected": "Selected"
   },
   "nav": {
     "label": "Navigation",
@@ -106,7 +109,11 @@
       "reactivated": {
         "title": "Welcome back.",
         "body": "We restored your previous account with its full history; the currency is kept."
-      }
+      },
+      "currencyPicker": "Choose your currency",
+      "timeZonePicker": "Choose your time zone",
+      "signInLink": "Sign in",
+      "consentRequired": "You need to accept the privacy policy to continue."
     }
   },
   "onboarding": {
