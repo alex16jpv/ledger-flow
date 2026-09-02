@@ -44,9 +44,13 @@ export function AmountInput({
   );
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    const next = event.target.value;
+    const next = event.target.value.replace(/[^\d.,\s\u00a0-]/g, "");
     setText(next);
-    onChange(next.trim() === "" ? null : money.parse(next));
+    if (next.trim() === "") {
+      onChange(null);
+      return;
+    }
+    onChange(money.parse(next) ?? Number.NaN);
   }
 
   return (

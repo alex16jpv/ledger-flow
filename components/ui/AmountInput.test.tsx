@@ -23,7 +23,7 @@ describe("AmountInput", () => {
     expect(onChange).toHaveBeenLastCalledWith(1284.5);
   });
 
-  it("reports null when cleared and on garbage", async () => {
+  it("reports null when cleared, NaN on unparsable text and strips letters", async () => {
     const onChange = vi.fn();
     renderWithProviders(<AmountInput defaultValue={42} onChange={onChange} label="Amount" />);
     const input = screen.getByRole("textbox", { name: "Amount" });
@@ -31,6 +31,10 @@ describe("AmountInput", () => {
     await userEvent.clear(input);
     expect(onChange).toHaveBeenLastCalledWith(null);
     await userEvent.type(input, "1..2");
-    expect(onChange).toHaveBeenLastCalledWith(null);
+    expect(onChange).toHaveBeenLastCalledWith(Number.NaN);
+    await userEvent.clear(input);
+    await userEvent.type(input, "12abc");
+    expect(input).toHaveValue("12");
+    expect(onChange).toHaveBeenLastCalledWith(12);
   });
 });

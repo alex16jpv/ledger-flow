@@ -40,7 +40,7 @@ describe("Empty and Skeleton", () => {
         action={<button>Add</button>}
       />,
     );
-    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("No transactions yet");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("No transactions yet");
     expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
   });
 

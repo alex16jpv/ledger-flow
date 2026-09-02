@@ -28,7 +28,7 @@ export function Empty({ icon, title, body, action, tone = "neutral", className }
       >
         {icon}
       </Tile>
-      <h3 className="text-md font-semibold text-text">{title}</h3>
+      <h2 className="text-md font-semibold text-text">{title}</h2>
       {body && <p className="max-w-[36ch] text-sm">{body}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>

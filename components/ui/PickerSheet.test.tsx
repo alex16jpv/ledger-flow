@@ -45,6 +45,6 @@ describe("PickerSheet", () => {
       />,
     );
     await userEvent.type(screen.getByRole("searchbox"), "zzz");
-    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("No results");
+    expect(screen.getByRole("heading", { name: "No results" })).toBeInTheDocument();
   });
 });
