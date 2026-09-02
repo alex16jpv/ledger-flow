@@ -371,7 +371,12 @@
     "NOT_FOUND": "Ese elemento no existe.",
     "TIMEOUT": "La solicitud tardó demasiado. Revisa tu conexión e inténtalo de nuevo.",
     "NETWORK": "Parece que estás sin conexión. Inténtalo cuando vuelvas a estar en línea.",
-    "UNKNOWN": "Ocurrió algo inesperado. Inténtalo de nuevo."
+    "UNKNOWN": "Ocurrió algo inesperado. Inténtalo de nuevo.",
+    "BAD_REQUEST": "Esa solicitud no era válida.",
+    "MALFORMED_JSON": "La solicitud llegó dañada. Inténtalo de nuevo.",
+    "PAYLOAD_TOO_LARGE": "Son demasiados datos para una sola solicitud.",
+    "REQUEST_ABORTED": "La solicitud se interrumpió. Inténtalo de nuevo.",
+    "UNSUPPORTED_ENCODING": "La solicitud usó un formato no admitido."
   },
   "validation": {
     "required": "Este campo es obligatorio.",

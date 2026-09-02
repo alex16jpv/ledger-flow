@@ -371,7 +371,12 @@
     "NOT_FOUND": "That item doesn’t exist.",
     "TIMEOUT": "The request took too long. Check your connection and try again.",
     "NETWORK": "You seem to be offline. Try again when you’re connected.",
-    "UNKNOWN": "Something unexpected happened. Try again."
+    "UNKNOWN": "Something unexpected happened. Try again.",
+    "BAD_REQUEST": "That request wasn’t valid.",
+    "MALFORMED_JSON": "The request was corrupted on the way. Try again.",
+    "PAYLOAD_TOO_LARGE": "That’s too much data for one request.",
+    "REQUEST_ABORTED": "The request was interrupted. Try again.",
+    "UNSUPPORTED_ENCODING": "The request used an unsupported format."
   },
   "validation": {
     "required": "This field is required.",

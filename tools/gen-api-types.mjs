@@ -4,54 +4,22 @@ import openapiTS, { astToString } from "openapi-typescript";
 
 const apiUrl = (process.env.API_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
-// The backend serves its OpenAPI document only embedded in swagger-ui's init script.
 async function fetchSpec() {
-  const response = await fetch(`${apiUrl}/api-docs/swagger-ui-init.js`);
-  if (!response.ok) throw new Error(`Cannot reach ${apiUrl}/api-docs (${response.status})`);
-  const source = await response.text();
-  const start = source.indexOf('"swaggerDoc":');
-  if (start === -1) throw new Error("swaggerDoc not found in swagger-ui-init.js");
-  const objectStart = source.indexOf("{", start);
-  let depth = 0;
-  for (let index = objectStart; index < source.length; index += 1) {
-    const char = source[index];
-    if (char === "{") depth += 1;
-    if (char === "}") depth -= 1;
-    if (depth === 0) return JSON.parse(source.slice(objectStart, index + 1));
-  }
-  throw new Error("Unbalanced swaggerDoc object");
+  const response = await fetch(`${apiUrl}/api-docs.json`);
+  if (!response.ok) throw new Error(`Cannot reach ${apiUrl}/api-docs.json (${response.status})`);
+  return response.json();
 }
 
-// Response views declare no `required` array; the backend always sends every field except these.
-const OPTIONAL_VIEW_FIELDS = {
-  User: ["reactivated"],
-  AuthTokens: [],
-  Account: [],
-  Category: ["seedKey"],
-  Transaction: [],
-  Budget: [],
-  Session: ["userAgent"],
-  Pagination: [],
-  StatsBucket: [],
-  StatsResponse: [],
-  AccountList: [],
-  CategoryList: [],
-  TransactionList: [],
-  BudgetList: [],
-  Message: [],
-};
-
-function markViewFieldsRequired(spec) {
-  for (const [name, optional] of Object.entries(OPTIONAL_VIEW_FIELDS)) {
-    const schema = spec.components?.schemas?.[name];
-    if (!schema?.properties)
-      throw new Error(`Schema ${name} disappeared from the OpenAPI document`);
-    schema.required = Object.keys(schema.properties).filter((key) => !optional.includes(key));
+// List envelopes still declare no `required`; the backend always sends both fields.
+function markListEnvelopesRequired(spec) {
+  for (const [name, schema] of Object.entries(spec.components?.schemas ?? {})) {
+    if (name.endsWith("List") && schema.properties)
+      schema.required = Object.keys(schema.properties);
   }
   return spec;
 }
 
-const spec = markViewFieldsRequired(await fetchSpec());
+const spec = markListEnvelopesRequired(await fetchSpec());
 const ast = await openapiTS(spec, {
   exportType: true,
   rootTypes: true,

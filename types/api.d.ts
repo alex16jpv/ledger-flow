@@ -2675,8 +2675,11 @@ export type components = {
             /** @example NotFoundError */
             error: string;
             message: string;
-            /** @description Stable machine-readable code (e.g. RESOURCE_ARCHIVED, CURRENCY_MISMATCH). Branch on this, never on message. */
-            code?: string;
+            /**
+             * @description Stable machine-readable code. Branch on this, never on message.
+             * @enum {string}
+             */
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             details?: {
                 field?: string;
                 message?: string;
@@ -2720,7 +2723,7 @@ export type components = {
         AuthTokens: {
             accessToken: string;
             refreshToken: string;
-            user: components["schemas"]["User"];
+            user?: components["schemas"]["User"];
         };
         /** @description One logged-in device (refresh-token rotation family). */
         Session: {
@@ -2761,10 +2764,11 @@ export type components = {
             id: string;
             name: string;
             /**
-             * @description Lucide icon key from the curated CATEGORY_ICONS set
+             * @description Lucide icon key from the curated set
              * @example utensils
+             * @enum {string|null}
              */
-            icon: string | null;
+            icon: "apple" | "arrow-left-right" | "baby" | "banknote" | "bath" | "battery" | "bed" | "beer" | "bike" | "book-open" | "briefcase" | "building-2" | "bus" | "cake" | "calculator" | "camera" | "car" | "carrot" | "cat" | "church" | "circle-plus" | "coffee" | "coins" | "cookie" | "credit-card" | "croissant" | "crown" | "dog" | "droplets" | "dumbbell" | "film" | "flame" | "footprints" | "fuel" | "gamepad-2" | "gem" | "gift" | "glasses" | "graduation-cap" | "hammer" | "hand-coins" | "hash" | "headphones" | "heart" | "house" | "ice-cream-cone" | "key" | "landmark" | "laptop" | "layers" | "leaf" | "lightbulb" | "martini" | "medal" | "mountain" | "music" | "package" | "paint-bucket" | "paintbrush" | "percent" | "phone" | "piggy-bank" | "pill" | "pizza" | "plane" | "plug" | "popcorn" | "radio" | "receipt" | "repeat" | "sandwich" | "scale" | "scissors" | "shield" | "ship" | "shirt" | "shopping-bag" | "shopping-basket" | "shopping-cart" | "sofa" | "speaker" | "sprout" | "star" | "stethoscope" | "store" | "tag" | "target" | "tent" | "ticket" | "train-front" | "trees" | "trending-down" | "trending-up" | "trophy" | "truck" | "tv" | "umbrella" | "utensils" | "wallet" | "washing-machine" | "watch" | "wifi" | "wine" | "wrench" | "zap" | null;
             /** @enum {string|null} */
             color: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
             /** @enum {string|null} */

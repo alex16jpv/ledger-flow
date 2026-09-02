@@ -31,6 +31,11 @@ export const ERROR_CODES = [
   "RATE_LIMITED",
   "DB_UNAVAILABLE",
   "INTERNAL",
+  "BAD_REQUEST",
+  "MALFORMED_JSON",
+  "PAYLOAD_TOO_LARGE",
+  "REQUEST_ABORTED",
+  "UNSUPPORTED_ENCODING",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -104,6 +109,11 @@ export const ERROR_TABLE: Readonly<Record<ErrorCode, ErrorPresentation>> = {
   RATE_LIMITED: { scope: "rateLimit", messageKey: "errors.RATE_LIMITED" },
   DB_UNAVAILABLE: { scope: "screen", messageKey: "errors.DB_UNAVAILABLE" },
   INTERNAL: { scope: "screen", messageKey: "errors.INTERNAL" },
+  BAD_REQUEST: { scope: "form", messageKey: "errors.BAD_REQUEST" },
+  MALFORMED_JSON: { scope: "toast", messageKey: "errors.MALFORMED_JSON" },
+  PAYLOAD_TOO_LARGE: { scope: "form", messageKey: "errors.PAYLOAD_TOO_LARGE" },
+  REQUEST_ABORTED: { scope: "toast", messageKey: "errors.REQUEST_ABORTED" },
+  UNSUPPORTED_ENCODING: { scope: "toast", messageKey: "errors.UNSUPPORTED_ENCODING" },
 };
 
 export function isErrorCode(value: unknown): value is ErrorCode {
