@@ -201,7 +201,7 @@ describe("BudgetDetailScreen", () => {
     renderScreen();
     await userEvent.click(await screen.findByRole("button", { name: "Archive" }));
     const dialog = screen.getByRole("dialog", { name: "Archive Lifestyle?" });
-    expect(dialog).toHaveTextContent(/Archiving is final/);
+    expect(dialog).toHaveTextContent(/restore it later from Past budgets/);
     await userEvent.click(within(dialog).getByRole("button", { name: "Archive" }));
     await waitFor(() => {
       expect(push).toHaveBeenCalledWith("/budgets");
@@ -209,11 +209,48 @@ describe("BudgetDetailScreen", () => {
     expect(calls).toEqual(["DELETE /api/budgets/b1"]);
   });
 
-  it("explains an archived budget and hides the actions", async () => {
-    routeFetch({ ...lifestyle, archivedAt: "2026-09-10T00:00:00Z", hasOverride: false });
+  it("explains an archived budget, hides the actions and restores it", async () => {
+    const calls: string[] = [];
+    routeFetch(
+      { ...lifestyle, archivedAt: "2026-09-10T00:00:00Z", hasOverride: false },
+      (url, init) => {
+        calls.push(`${init.method ?? "GET"} ${url}`);
+        return json(lifestyle);
+      },
+    );
     renderScreen();
     expect(await screen.findByText(/This budget is archived/)).toBeVisible();
     expect(screen.queryByRole("button", { name: "Change adjustment" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Edit" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Restore" }));
+    expect(await screen.findByText("Budget restored")).toBeVisible();
+    expect(calls).toEqual(["POST /api/budgets/b1/restore?reference=2026-09-15T17%3A00%3A00.000Z"]);
+  });
+
+  it("refuses an overlapping restore and names the budget in the way", async () => {
+    const other = { ...lifestyle, id: "b2", name: "Treats", archivedAt: null };
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (init?.method === "POST")
+        return Promise.resolve(
+          json({ code: "BUDGET_PERIOD_OVERLAP", message: "overlap" }, { status: 400 }),
+        );
+      if (url.startsWith("/api/budgets?")) return Promise.resolve(empty([other]));
+      if (url.startsWith("/api/budgets/"))
+        return Promise.resolve(json({ ...lifestyle, archivedAt: "2026-09-10T00:00:00Z" }));
+      return Promise.resolve(empty());
+    });
+    renderScreen();
+    await userEvent.click(await screen.findByRole("button", { name: "Restore" }));
+    const dialog = await screen.findByRole("dialog", { name: "Another budget is in the way" });
+    expect(dialog).toHaveTextContent("“Treats” is active for the same monthly period");
+    expect(within(dialog).getByRole("link", { name: "Create again" })).toHaveAttribute(
+      "href",
+      "/budgets/new?from=b1",
+    );
+    expect(within(dialog).getByRole("link", { name: "Open Treats" })).toHaveAttribute(
+      "href",
+      "/budgets/b2",
+    );
   });
 });

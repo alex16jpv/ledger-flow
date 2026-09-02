@@ -16,6 +16,7 @@ import {
   fetchBudgets,
   fetchSpendingTotal,
   removeBudgetOverride,
+  restoreBudget,
   setBudgetOverride,
   updateBudget,
 } from "./api";
@@ -62,6 +63,15 @@ export function useUpdateBudget(id: string) {
 export function useArchiveBudget() {
   const invalidate = useBudgetInvalidation();
   return useMutation({ mutationFn: archiveBudget, onSuccess: invalidate });
+}
+
+export function useRestoreBudget() {
+  const invalidate = useBudgetInvalidation();
+  return useMutation({
+    mutationFn: ({ id, reference }: { id: string; reference?: string }) =>
+      restoreBudget(id, reference),
+    onSuccess: invalidate,
+  });
 }
 
 export function useSetBudgetOverride(id: string) {

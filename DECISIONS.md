@@ -799,3 +799,15 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   midnight instant fell into the previous month and the list came back empty while the create call
   answered `BUDGET_PERIOD_OVERLAP`. Any instant inside the month is valid, and the 15th at noon is
   inside it in every zone.
+
+## 2026-09-02 · Budgets can be restored (owner decision P-25, W-26/W-27 revised)
+
+- **Archiving a budget is no longer final.** Past › Archived lists them, so the owner asked for
+  restore like accounts and categories; the backend added `POST /budgets/:id/restore` (`1b1683f`).
+  The archived detail and the Archived tab show **Restore**, the archive toast offers **Undo**, and
+  the copy stops calling it final.
+- **A restore that overlaps is refused, never adjusted.** The API applies the creation overlap rule
+  on the way out (`BUDGET_PERIOD_OVERLAP`); per the owner, changing categories or period would make
+  it a different budget, so `RestoreBudgetConflictSheet` names the active budget in the way
+  (`findOverlapping`, the same rule mirrored on the client over the loaded list) and offers
+  "Create again" or opening the other one.

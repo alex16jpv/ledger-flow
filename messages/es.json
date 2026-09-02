@@ -570,7 +570,8 @@
       "createAgain": "Crear de nuevo",
       "note": "Los presupuestos recurrentes no terminan: para ver un mes pasado, cambia el período en la lista.",
       "emptyEnded": "Ningún presupuesto ha terminado todavía",
-      "emptyArchived": "No hay presupuestos archivados"
+      "emptyArchived": "No hay presupuestos archivados",
+      "restore": "Restaurar"
     },
     "detail": {
       "title": "Presupuesto",
@@ -607,12 +608,14 @@
       "edit": "Editar",
       "archive": "Archivar",
       "archiveTitle": "¿Archivar {name}?",
-      "archiveBody": "Archivar es definitivo: el presupuesto desaparece de todos los períodos y no se puede restaurar. Para recuperarlo, crea uno nuevo.",
+      "archiveBody": "El presupuesto sale de todos los períodos y deja de seguir el gasto. Puedes restaurarlo después desde Presupuestos pasados.",
       "archived": "Presupuesto archivado",
-      "archiveNote": "Archivar es definitivo: para recuperarlo, crea uno nuevo.",
+      "archiveNote": "Puedes restaurarlo después desde Presupuestos pasados.",
       "notFound": "Este presupuesto no existe.",
-      "archivedInfo": "Este presupuesto está archivado y ya no sigue el gasto. Crea uno nuevo si lo necesitas.",
-      "endedInfo": "Este presupuesto personalizado terminó el {date}."
+      "archivedInfo": "Este presupuesto está archivado y ya no sigue el gasto. Restáuralo para recuperarlo tal como estaba.",
+      "endedInfo": "Este presupuesto personalizado terminó el {date}.",
+      "restore": "Restaurar",
+      "restored": "Presupuesto restaurado"
     },
     "form": {
       "newTitle": "Nuevo presupuesto",
@@ -645,6 +648,12 @@
       "saved": "Cambios guardados",
       "overlap": "Otro presupuesto {period} ya cubre alguna de estas categorías.",
       "overlapGlobal": "Ya tienes un presupuesto global {period}."
+    },
+    "restoreConflict": {
+      "title": "Otro presupuesto lo impide",
+      "body": "«{name}» está activo para el mismo período {period} y cubre el mismo gasto, así que este no puede volver tal como estaba. Crea uno nuevo.",
+      "bodyUnknown": "Ya hay un presupuesto {period} activo que cubre el mismo gasto, así que este no puede volver tal como estaba. Crea uno nuevo.",
+      "open": "Abrir {name}"
     }
   },
   "categoryTypes": {

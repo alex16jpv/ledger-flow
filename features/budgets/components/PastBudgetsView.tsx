@@ -1,7 +1,8 @@
 "use client";
 
-import { Archive, ChartPie, Copy } from "lucide-react";
+import { Archive, ArchiveRestore, ChartPie, Copy } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -10,12 +11,16 @@ import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
 import { Segment } from "@/components/ui/Segment";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useToast } from "@/components/ui/Toast";
+import { ApiError, presentError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
-import type { Category } from "@/types/api";
+import type { Budget, Category } from "@/types/api";
 
-import { useBudgetsQuery } from "../hooks";
+import { useBudgetsQuery, useRestoreBudget } from "../hooks";
+import { findOverlapping } from "../progress";
 import { BudgetCard } from "./BudgetCard";
+import { RestoreBudgetConflictSheet } from "./BudgetSheets";
 import { budgetIcon } from "./BudgetsView";
 
 export type PastTab = "ended" | "archived";
@@ -37,8 +42,21 @@ export function PastBudgetsView({
 }: PastBudgetsViewProps) {
   const t = useTranslations("budgets.past");
   const tc = useTranslations();
+  const toast = useToast();
   const budgets = useBudgetsQuery({ includeExpired: true, includeArchived: true });
+  const restore = useRestoreBudget();
+  const [conflict, setConflict] = useState<Budget | null>(null);
   const all = budgets.data ?? [];
+
+  async function restoreOne(budget: Budget) {
+    try {
+      await restore.mutateAsync({ id: budget.id });
+      toast.show({ message: tc("budgets.detail.restored") });
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "BUDGET_PERIOD_OVERLAP") setConflict(budget);
+      else toast.show({ message: tc(presentError(error).messageKey), tone: "danger" });
+    }
+  }
   const archived = all.filter((budget) => budget.archivedAt);
   const ended = all.filter((budget) => !budget.archivedAt && budget.expired);
   const visible = tab === "ended" ? ended : archived;
@@ -99,7 +117,20 @@ export function PastBudgetsView({
                   </Badge>
                 }
                 footer={
-                  <span className="relative z-10 self-end">
+                  <span className="relative z-10 flex justify-end gap-2">
+                    {tab === "archived" && (
+                      <Button
+                        size="sm"
+                        aria-label={`${t("restore")} ${budget.name}`}
+                        loading={restore.isPending && restore.variables.id === budget.id}
+                        onClick={() => {
+                          void restoreOne(budget);
+                        }}
+                      >
+                        <ArchiveRestore {...iconProps("sm")} />
+                        {t("restore")}
+                      </Button>
+                    )}
                     <Link
                       href={`/budgets/new?from=${budget.id}`}
                       className={buttonClasses({ variant: "secondary", size: "sm" })}
@@ -115,6 +146,16 @@ export function PastBudgetsView({
         </div>
       )}
       <p className="text-center text-xs text-text-3">{t("note")}</p>
+      {conflict && (
+        <RestoreBudgetConflictSheet
+          budget={conflict}
+          conflict={findOverlapping(conflict, all)}
+          open
+          onClose={() => {
+            setConflict(null);
+          }}
+        />
+      )}
     </div>
   );
 }

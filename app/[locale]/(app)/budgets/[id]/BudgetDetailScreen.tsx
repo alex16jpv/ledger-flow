@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ChartPie, CircleAlert, Inbox, Pencil } from "lucide-react";
+import { Archive, ArchiveRestore, ChartPie, CircleAlert, Inbox, Pencil } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
@@ -18,16 +18,22 @@ import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { BudgetHero } from "@/features/budgets/components/BudgetHero";
-import { ArchiveBudgetSheet, OverrideSheet } from "@/features/budgets/components/BudgetSheets";
+import {
+  ArchiveBudgetSheet,
+  OverrideSheet,
+  RestoreBudgetConflictSheet,
+} from "@/features/budgets/components/BudgetSheets";
 import { budgetIcon } from "@/features/budgets/components/BudgetsView";
 import { PeriodAmountCard } from "@/features/budgets/components/PeriodAmountCard";
 import {
   useArchiveBudget,
   useBudgetQuery,
+  useBudgetsQuery,
   useRemoveBudgetOverride,
+  useRestoreBudget,
   useSetBudgetOverride,
 } from "@/features/budgets/hooks";
-import { isGlobalBudget } from "@/features/budgets/progress";
+import { findOverlapping, isGlobalBudget } from "@/features/budgets/progress";
 import {
   currentMonthKey,
   monthReference,
@@ -46,7 +52,7 @@ import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
 import type { Budget } from "@/types/api";
 
-type OpenSheet = "override" | "archive" | null;
+type OpenSheet = "override" | "archive" | "conflict" | null;
 const PREVIEW_ROWS = 5;
 
 function periodLabelFor(budget: Budget, formatMonth: (d: Date) => string, range: string) {
@@ -68,6 +74,8 @@ export function BudgetDetailScreen({ id }: { id: string }) {
   const setOverride = useSetBudgetOverride(id);
   const removeOverride = useRemoveBudgetOverride(id);
   const archive = useArchiveBudget();
+  const restore = useRestoreBudget();
+  const activeBudgets = useBudgetsQuery({ reference: iso }, Boolean(budget.data?.archivedAt));
   const [sheet, setSheet] = useState<OpenSheet>(null);
   const row = budget.data;
   const notFound = budget.error instanceof ApiError && budget.error.status === 404;
@@ -122,10 +130,28 @@ export function BudgetDetailScreen({ id }: { id: string }) {
     }
   }
 
+  async function restoreBudget() {
+    try {
+      await restore.mutateAsync({ id, reference: iso });
+      toast.show({ message: t("budgets.detail.restored") });
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "BUDGET_PERIOD_OVERLAP") setSheet("conflict");
+      else fail(error);
+    }
+  }
+
   async function confirmArchive() {
     try {
       await archive.mutateAsync(id);
-      toast.show({ message: t("budgets.detail.archived") });
+      toast.show({
+        message: t("budgets.detail.archived"),
+        action: {
+          label: t("common.undo"),
+          onClick: () => {
+            void restoreBudget();
+          },
+        },
+      });
       router.push("/budgets");
     } catch (error) {
       setSheet(null);
@@ -202,7 +228,32 @@ export function BudgetDetailScreen({ id }: { id: string }) {
       ) : (
         <>
           <BudgetHero budget={row} icon={budgetIcon(row, categoryMap)} now={now} />
-          {row.archivedAt && <Alert tone="neutral">{t("budgets.detail.archivedInfo")}</Alert>}
+          {row.archivedAt && (
+            <>
+              <Alert tone="neutral">{t("budgets.detail.archivedInfo")}</Alert>
+              <Button
+                size="lg"
+                block
+                loading={restore.isPending}
+                onClick={() => {
+                  void restoreBudget();
+                }}
+              >
+                <ArchiveRestore {...iconProps("sm")} />
+                {t("budgets.detail.restore")}
+              </Button>
+              {sheet === "conflict" && (
+                <RestoreBudgetConflictSheet
+                  budget={row}
+                  conflict={findOverlapping(row, activeBudgets.data ?? [])}
+                  open
+                  onClose={() => {
+                    setSheet(null);
+                  }}
+                />
+              )}
+            </>
+          )}
           {!row.archivedAt && row.expired && (
             <Alert tone="neutral">
               {t("budgets.detail.endedInfo", {

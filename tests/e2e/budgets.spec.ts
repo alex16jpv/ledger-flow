@@ -143,6 +143,35 @@ test("the detail adjusts, skips and removes the period amount, then archives the
     archivedAt: string | null;
   };
   expect(detail.archivedAt).not.toBeNull();
+
+  await page.goto("/budgets/past?tab=archived");
+  await page.getByRole("button", { name: "Restore Snacks" }).click();
+  await expect(page.getByText("Budget restored")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Restore Snacks" })).toHaveCount(0);
+  await page.goto("/budgets");
+  await expect(page.getByText("Snacks", { exact: true })).toBeVisible();
+
+  const archived = await request.delete(`/api/budgets/${id}`, { headers: { origin: APP } });
+  expect(archived.ok()).toBe(true);
+  const blocker = await request.post("/api/budgets", {
+    headers: { origin: APP },
+    data: {
+      name: "Everything",
+      color: "INDIGO",
+      categoryIds: [],
+      periodType: "MONTHLY",
+      amount: 1,
+    },
+  });
+  expect(blocker.status()).toBe(201);
+  await page.goto(`/budgets/${id}`);
+  await page.getByRole("button", { name: "Restore" }).click();
+  const conflict = page.getByRole("dialog", { name: "Another budget is in the way" });
+  await expect(conflict).toContainText("“Everything” is active for the same monthly period");
+  await expect(conflict.getByRole("link", { name: "Create again" })).toHaveAttribute(
+    "href",
+    new RegExp(`/budgets/new\\?from=${id}$`),
+  );
 });
 
 test("the form creates a category budget, refuses a second global one, edits it and copies a past one", async ({

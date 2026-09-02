@@ -570,7 +570,8 @@
       "createAgain": "Create again",
       "note": "Recurring budgets never end: to see a past month, change the period in the list.",
       "emptyEnded": "No budget has ended yet",
-      "emptyArchived": "No archived budgets"
+      "emptyArchived": "No archived budgets",
+      "restore": "Restore"
     },
     "detail": {
       "title": "Budget",
@@ -607,12 +608,14 @@
       "edit": "Edit",
       "archive": "Archive",
       "archiveTitle": "Archive {name}?",
-      "archiveBody": "Archiving is final: the budget disappears from every period and can’t be restored. To get it back, create a new one.",
+      "archiveBody": "The budget leaves every period and stops tracking spending. You can restore it later from Past budgets.",
       "archived": "Budget archived",
-      "archiveNote": "Archiving is final: to get it back, create a new one.",
+      "archiveNote": "You can restore it later from Past budgets.",
       "notFound": "This budget doesn’t exist.",
-      "archivedInfo": "This budget is archived and no longer tracks spending. Create a new one if you need it again.",
-      "endedInfo": "This custom budget ended on {date}."
+      "archivedInfo": "This budget is archived and no longer tracks spending. Restore it to bring it back exactly as it was.",
+      "endedInfo": "This custom budget ended on {date}.",
+      "restore": "Restore",
+      "restored": "Budget restored"
     },
     "form": {
       "newTitle": "New budget",
@@ -645,6 +648,12 @@
       "saved": "Changes saved",
       "overlap": "Another {period} budget already covers one of these categories.",
       "overlapGlobal": "You already have a global {period} budget."
+    },
+    "restoreConflict": {
+      "title": "Another budget is in the way",
+      "body": "“{name}” is active for the same {period} period and covers the same spending, so this one can’t come back as it was. Create a new budget instead.",
+      "bodyUnknown": "An active {period} budget already covers the same spending, so this one can’t come back as it was. Create a new budget instead.",
+      "open": "Open {name}"
     }
   },
   "categoryTypes": {

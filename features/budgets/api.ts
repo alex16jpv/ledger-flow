@@ -60,6 +60,10 @@ export function archiveBudget(id: string): Promise<unknown> {
   return api<unknown>(`/budgets/${id}`, { method: "DELETE" });
 }
 
+export function restoreBudget(id: string, reference?: string): Promise<Budget> {
+  return api<Budget>(`/budgets/${id}/restore`, { method: "POST", query: { reference } });
+}
+
 export function setBudgetOverride(id: string, reference: string, amount: number): Promise<Budget> {
   return api<Budget>(`/budgets/${id}/amount`, {
     method: "PUT",

@@ -1218,6 +1218,94 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/budgets/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore an archived budget
+         * @description Brings an archived budget back exactly as it was: its overrides,
+         *     `effectiveFrom`, note, colour and `categoryIds` are untouched, archived
+         *     categories included, and a finished CUSTOM one returns with
+         *     `expired: true`.
+         *
+         *     Idempotent — restoring an active budget returns it unchanged. It takes
+         *     no body: if another active budget of the same type and period already
+         *     covers one of its categories the restore is refused with **400
+         *     `BUDGET_PERIOD_OVERLAP`**, because changing its categories or period
+         *     would make it a different budget; create a new one instead.
+         */
+        post: {
+            parameters: {
+                query?: {
+                    /** @description Any instant inside the period to resolve (default: now) */
+                    reference?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description Budget ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Budget restored (view resolved for the reference period) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Budget"];
+                    };
+                };
+                /** @description Another active budget already covers these categories for this period (code BUDGET_PERIOD_OVERLAP) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Budget not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A concurrent restore won the race against the unique index (code DUPLICATE) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/budgets/{id}/amount": {
         parameters: {
             query?: never;
