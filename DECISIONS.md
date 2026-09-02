@@ -111,3 +111,22 @@ The specification that these decisions refine lives outside the repo in
   `dangerouslySetInnerHTML`. `next/script` injects the inline code in `<head>` and will receive the
   CSP nonce from `proxy.ts` in W-07. `<html suppressHydrationWarning>` covers the attributes the
   script adds before React hydrates.
+
+## 2026-09-01 · Geist through `next/font/local`, mapped onto the font tokens (W-03)
+
+- **Decision:** the two variable fonts from `auditoria/diseno/preview/assets/fonts` live in
+  `app/fonts/` and are declared with `next/font/local` (`--font-geist-sans`, `--font-geist-mono`).
+  `app/globals.css` re-points the token stacks `--font-sans`/`--font-mono` at those variables.
+- **Why:** `next/font` self-hosts, preloads and adds size-adjusted fallbacks (CLS ≈ 0) but names the
+  family itself, so the token stack must reference its variable instead of the literal "Geist".
+  `tokens/base.css` stays byte-identical to the design source.
+- **Note:** the files are used as delivered (≈70 kB each, already close to a Latin subset); no
+  subsetting tool is available on the build machine and the gain would be marginal.
+
+## 2026-09-01 · Category icon keys are typed locally until the OpenAPI types exist (W-03)
+
+- **Decision:** `lib/icons/category-icons.ts` maps the 105 keys of DESIGN.md §4.3 to Lucide
+  components by name (tree-shakeable) and derives `CategoryIconKey` from that object. Unknown or
+  empty keys render `hash`.
+- **Consequence:** W-06 adds a contract test asserting that the generated `CategoryIcon` enum in
+  `types/api.d.ts` equals `CATEGORY_ICON_KEYS`, so the two lists cannot drift.

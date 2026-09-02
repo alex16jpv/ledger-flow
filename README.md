@@ -87,6 +87,9 @@ shared code moves up to `lib` or `components/ui`. ESLint enforces it.
   `:root[data-palette="<name>"]` and the 18 seeds, run `npm run contrast-check`, import it in
   `app/globals.css` and add the name to `PALETTES` in `lib/theme/palettes.ts`. The user's choice
   lives in `localStorage` (`lf.palette`, `lf.mode`) and is applied by an inline script before paint.
+- **Use an icon:** interface icons are imported by name from `lucide-react` with `iconProps(size)`
+  from `lib/icons`; category icons go through `<CategoryIcon icon={category.icon} />`, account
+  types through `accountTypeIcon(type)`. Never add an icon key outside `CATEGORY_ICONS`.
 - **Add a language:** add `messages/<locale>.json`, register the locale in `lib/i18n`, map it to a
   format locale, and add the row in Settings › Language.
 
