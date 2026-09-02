@@ -425,7 +425,14 @@
       "balanceHelp": "Saved as the opening balance so you can reconcile the account later.",
       "color": "Color",
       "title": "New account",
-      "create": "Create account"
+      "create": "Create account",
+      "editTitle": "Edit account",
+      "duplicate": "You already have an active account named “{name}”. Names are case-insensitive.",
+      "preview": "preview",
+      "previewName": "Account name",
+      "saved": "Changes saved",
+      "created": "Account created",
+      "balanceLocked": "The balance only changes through transactions or “Adjust balance”."
     },
     "picker": {
       "title": "Account",
@@ -435,6 +442,55 @@
       "empty": "No accounts yet",
       "new": "New account",
       "newHint": "Create it without leaving this form"
+    },
+    "list": {
+      "title": "Accounts",
+      "new": "New account",
+      "totalBalance": "Total balance",
+      "counts": "{active, plural, one {# active account} other {# active accounts}} · {archived, plural, one {# archived} other {# archived}}",
+      "cardDebt": "Card debt",
+      "archived": "Archived",
+      "archivedBadge": "Archived",
+      "showArchived": "Archived · {count}",
+      "empty": {
+        "title": "Create your first account",
+        "body": "Quick expenses need a main account to come out of.",
+        "cta": "Create account"
+      }
+    },
+    "detail": {
+      "title": "Account",
+      "openingLine": "Opening balance {amount} · created {date} · {currency}",
+      "edit": "Edit",
+      "makeMain": "Main account",
+      "archive": "Archive",
+      "restore": "Restore",
+      "mainBlocked": "To archive this account, make another one your main account first: quick expenses need a destination.",
+      "archivedInfo": "This account is archived: it’s hidden from pickers and left out of totals. Its history is kept. Restore it to use it again.",
+      "transactions": "Transactions",
+      "openFiltered": "Open with filters",
+      "noTransactions": "No transactions in this account yet",
+      "notFound": "This account doesn’t exist."
+    },
+    "main": {
+      "title": "Make {name} your main account?",
+      "body": "Quick expenses will come out of {name} from now on.",
+      "previous": "{previous} stops being the main account.",
+      "confirm": "Make main",
+      "done": "{name} is now your main account",
+      "undone": "{name} is your main account again"
+    },
+    "archive": {
+      "title": "Archive {name}?",
+      "body": "Its transactions stay in your history and its balance is kept, but it leaves pickers and totals, and its name becomes free. You can restore it anytime.",
+      "confirm": "Archive",
+      "done": "Account archived",
+      "restored": "Account restored"
+    },
+    "restoreConflict": {
+      "title": "That name is taken",
+      "body": "An active account is already named “{name}”. Rename it first, then restore this one.",
+      "open": "Open {name}"
     }
   },
   "budgets": {

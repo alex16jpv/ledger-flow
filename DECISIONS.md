@@ -627,3 +627,31 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   `showModal()` lands on the close button and `autofocus` inside a dialog is not honoured
   consistently. The category sheet keeps its `autofocus` for now: its recent chips are the first
   target on touch screens, so the keyboard should not pop there by default.
+
+## 2026-09-02 · Accounts (W-23)
+
+- **One request for the whole list.** `/accounts` asks `includeArchived=true` once (a user is
+  capped at 100 accounts, which is one page) and `summarizeAccounts` splits active and archived,
+  puts the main account first and derives the summary card. The design fetched the archived ones
+  on opening the section, but the count in the "Archived · n" header needs them anyway, and a
+  second query only added traffic.
+- **The summary card adds balances the server already computed.** Total balance and card debt
+  (negative balances of `CARD`, `OVERDRAFT` and `LOAN`) are display aggregations of `Account.balance`,
+  the same way the home screen sums its total; no money is derived from transactions in the client.
+- **Restoring into a taken name cannot be fixed by renaming the archived account**: the backend
+  rejects `PUT` on archived accounts (`RESOURCE_ARCHIVED`) and `POST /restore` takes no body. On
+  `409 DUPLICATE` the detail opens `RestoreConflictSheet`, which names the active account holding
+  the name (case-insensitive match over the loaded list) and links to its edit form; a one-step
+  "restore with a new name" is requested in `BACKEND-DESDE-FRONT.md`.
+- **Make main and archive are undoable from the toast** (DESIGN §8.12): undo promotes the previous
+  main again, or restores the account just archived. Archiving stays on the detail, which turns into
+  its archived state (Restore as the primary action, Edit hidden because the backend refuses it).
+- **The account's transactions reuse the list feature.** The detail composes
+  `useTransactionsInfinite({ accountId })` and `TransactionDayList` in the app layer, without day
+  totals: the account list is not windowed by period, so there is no `[from, to)` to ask
+  `/stats/spending` for. "Open with filters" hands the same filter to `/transactions?account=&period=all`.
+- **The account mutations invalidate `accounts` and `home`** only: nothing moves money, and every
+  screen resolves account names through the accounts list.
+- **`AccountForm` gained an edit mode** (`account` prop): the balance field disappears (it is the
+  immutable `openingBalance`), the payload becomes `PUT { name, type, color }`, and the preview card
+  shows the account's real balance. The onboarding and the pickers keep using the create mode.

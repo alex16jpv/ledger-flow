@@ -91,7 +91,7 @@ export function AccountPicker({
         <Sheet open={open} onClose={close} title={t("accounts.form.title")}>
           <AccountForm
             submitLabel={t("accounts.form.create")}
-            onCreated={choose}
+            onSaved={choose}
             onCancel={() => {
               setCreating(false);
             }}

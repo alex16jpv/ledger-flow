@@ -64,7 +64,7 @@ export function OnboardingFlow() {
       {current === 1 ? (
         <AccountForm
           submitLabel={t("account.submit")}
-          onCreated={() => {
+          onSaved={() => {
             setStep(2);
           }}
         />

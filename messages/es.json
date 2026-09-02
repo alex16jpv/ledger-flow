@@ -425,7 +425,14 @@
       "balanceHelp": "Se guarda como saldo inicial para que puedas conciliar la cuenta después.",
       "color": "Color",
       "title": "Nueva cuenta",
-      "create": "Crear cuenta"
+      "create": "Crear cuenta",
+      "editTitle": "Editar cuenta",
+      "duplicate": "Ya tienes una cuenta activa llamada «{name}». Los nombres no distinguen mayúsculas.",
+      "preview": "vista previa",
+      "previewName": "Nombre de la cuenta",
+      "saved": "Cambios guardados",
+      "created": "Cuenta creada",
+      "balanceLocked": "El saldo solo cambia con movimientos o con «Ajustar saldo»."
     },
     "picker": {
       "title": "Cuenta",
@@ -435,6 +442,55 @@
       "empty": "Aún no hay cuentas",
       "new": "Nueva cuenta",
       "newHint": "Créala sin salir de este formulario"
+    },
+    "list": {
+      "title": "Cuentas",
+      "new": "Nueva cuenta",
+      "totalBalance": "Balance total",
+      "counts": "{active, plural, one {# cuenta activa} other {# cuentas activas}} · {archived, plural, one {# archivada} other {# archivadas}}",
+      "cardDebt": "Deuda en tarjetas",
+      "archived": "Archivadas",
+      "archivedBadge": "Archivada",
+      "showArchived": "Archivadas · {count}",
+      "empty": {
+        "title": "Crea tu primera cuenta",
+        "body": "Los gastos rápidos necesitan una cuenta principal de la que salir.",
+        "cta": "Crear cuenta"
+      }
+    },
+    "detail": {
+      "title": "Cuenta",
+      "openingLine": "Saldo inicial {amount} · creada el {date} · {currency}",
+      "edit": "Editar",
+      "makeMain": "Cuenta principal",
+      "archive": "Archivar",
+      "restore": "Restaurar",
+      "mainBlocked": "Para archivar esta cuenta, primero haz principal otra: los gastos rápidos necesitan un destino.",
+      "archivedInfo": "Esta cuenta está archivada: no aparece en los selectores ni cuenta en los totales. Su historial se conserva. Restáurala para volver a usarla.",
+      "transactions": "Movimientos",
+      "openFiltered": "Abrir con filtros",
+      "noTransactions": "Aún no hay movimientos en esta cuenta",
+      "notFound": "Esta cuenta no existe."
+    },
+    "main": {
+      "title": "¿Hacer {name} tu cuenta principal?",
+      "body": "Desde ahora los gastos rápidos saldrán de {name}.",
+      "previous": "{previous} deja de ser la principal.",
+      "confirm": "Hacer principal",
+      "done": "{name} ya es tu cuenta principal",
+      "undone": "{name} vuelve a ser tu cuenta principal"
+    },
+    "archive": {
+      "title": "¿Archivar {name}?",
+      "body": "Sus movimientos siguen en tu historial y su saldo se conserva, pero sale de los selectores y de los totales, y su nombre queda libre. Puedes restaurarla cuando quieras.",
+      "confirm": "Archivar",
+      "done": "Cuenta archivada",
+      "restored": "Cuenta restaurada"
+    },
+    "restoreConflict": {
+      "title": "Ese nombre ya está en uso",
+      "body": "Ya hay una cuenta activa llamada «{name}». Cámbiale el nombre primero y luego restaura esta.",
+      "open": "Abrir {name}"
     }
   },
   "budgets": {

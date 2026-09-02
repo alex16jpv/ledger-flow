@@ -88,7 +88,10 @@ English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`)
 | `/transactions/new`, `/transactions/[id]/edit`                 | Transaction form: create (optional quick-add draft in the query string) and edit with delete |
 | `/transactions/[id]`                                           | Transaction detail with edit and delete                                                      |
 | `/transactions/review`                                         | Inbox of quick expenses to complete (`?focus=<id>` scrolls to one)                           |
-| `/accounts`, `/budgets`, `/stats`, `/categories`, `/privacy`   | Stubs answering "not found" until their backlog item (F2–F5)                                 |
+| `/accounts`                                                    | Accounts list: summary, active grid, folded archived section                                 |
+| `/accounts/new`, `/accounts/[id]/edit`                         | Account form: create (with opening balance) and edit                                         |
+| `/accounts/[id]`                                               | Account detail: hero, make main, archive/restore, its transactions                           |
+| `/budgets`, `/stats`, `/categories`, `/privacy`                | Stubs answering "not found" until their backlog item (F3–F5)                                 |
 | `/dev/ui`                                                      | Component catalog (development only)                                                         |
 | `/dev/pickers`                                                 | Category, account and date pickers against the real API (development only)                   |
 | `/dev/frame?w=390&url=…`, `/api/dev/login?email&password&next` | Screenshot helpers (development only)                                                        |

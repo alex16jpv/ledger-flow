@@ -19,13 +19,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderForm(onCreated = vi.fn()) {
+function renderForm(onSaved = vi.fn()) {
   renderWithProviders(
     <QueryProvider>
-      <AccountForm submitLabel="Continue" onCreated={onCreated} />
+      <AccountForm submitLabel="Continue" onSaved={onSaved} />
     </QueryProvider>,
   );
-  return onCreated;
+  return onSaved;
 }
 
 describe("AccountForm", () => {
@@ -33,13 +33,13 @@ describe("AccountForm", () => {
     fetchMock.mockResolvedValue(
       json({ id: "a1", name: "Bancolombia", isDefault: true }, { status: 201 }),
     );
-    const onCreated = renderForm();
+    const onSaved = renderForm();
     await userEvent.type(screen.getByLabelText("Name"), "Bancolombia");
     await userEvent.click(screen.getByRole("button", { name: "Cash", pressed: false }));
     await userEvent.click(screen.getByRole("button", { name: "Teal" }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => {
-      expect(onCreated).toHaveBeenCalledWith(expect.objectContaining({ id: "a1" }));
+      expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: "a1" }));
     });
     const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as Record<
       string,
@@ -71,7 +71,57 @@ describe("AccountForm", () => {
     renderForm();
     await userEvent.type(screen.getByLabelText("Name"), "Cash");
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(await screen.findByText("That name is already in use.")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "You already have an active account named “Cash”. Names are case-insensitive.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("edits name, type and color without a balance field and previews the account", async () => {
+    fetchMock.mockResolvedValue(json({ id: "a1", name: "Nu Bank" }));
+    const onSaved = vi.fn();
+    renderWithProviders(
+      <QueryProvider>
+        <AccountForm
+          account={{
+            id: "a1",
+            name: "Nu",
+            type: "SAVINGS",
+            balance: 250_000,
+            openingBalance: 0,
+            color: "PURPLE",
+            userId: "u1",
+            isDefault: true,
+            currency: "COP",
+            archivedAt: null,
+            createdAt: "",
+            updatedAt: "",
+          }}
+          submitLabel="Save changes"
+          onSaved={onSaved}
+        />
+      </QueryProvider>,
+    );
+    expect(screen.queryByRole("textbox", { name: "Current balance" })).not.toBeInTheDocument();
+    expect(screen.getByText("250,000")).toBeInTheDocument();
+    expect(screen.getByText("Main")).toBeInTheDocument();
+    const name = screen.getByLabelText("Name");
+    await userEvent.clear(name);
+    await userEvent.type(name, "Nu Bank");
+    expect(screen.getByText("Savings · preview")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: "a1" }));
+    });
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("/api/accounts/a1");
+    expect(init?.method).toBe("PUT");
+    expect(JSON.parse(init?.body as string)).toEqual({
+      name: "Nu Bank",
+      type: "SAVINGS",
+      color: "PURPLE",
+    });
   });
 
   it("offers all nine account types as chips", () => {

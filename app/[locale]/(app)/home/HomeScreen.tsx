@@ -45,7 +45,7 @@ export function HomeScreen() {
         }}
         title={t("onboarding.account.title")}
       >
-        <AccountForm submitLabel={t("home.empty.accounts.cta")} onCreated={close} />
+        <AccountForm submitLabel={t("home.empty.accounts.cta")} onSaved={close} />
       </Sheet>
       <Sheet
         open={open === "budget"}
