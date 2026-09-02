@@ -93,6 +93,10 @@ test("a chosen category and a note complete the details, and More details carrie
 
   await addButton(page).click();
   await sheet.getByRole("textbox", { name: "Amount" }).fill("4500");
+  await sheet.getByRole("button", { name: /From your main account/ }).click();
+  await page.getByRole("dialog", { name: "Account" }).getByRole("option", { name: /Cash/ }).click();
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole("button", { name: /^Account.*Cash/ })).toBeVisible();
   await sheet.getByRole("textbox", { name: "Quick note (optional)" }).fill("Bus");
   await sheet.getByRole("button", { name: "More details" }).click();
   await expect(page).toHaveURL(/\/transactions\/new\?amount=4500&accountId=[^&]+&description=Bus$/);

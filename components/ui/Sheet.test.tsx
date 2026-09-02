@@ -30,6 +30,23 @@ describe("Sheet", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it("keeps an outer sheet open when a nested sheet closes or cancels", () => {
+    const onOuterClose = vi.fn();
+    const onInnerClose = vi.fn();
+    renderWithProviders(
+      <Sheet open onClose={onOuterClose} title="Add expense">
+        <Sheet open onClose={onInnerClose} title="Account">
+          <p>options</p>
+        </Sheet>
+      </Sheet>,
+    );
+    const inner = screen.getByRole("dialog", { name: "Account" });
+    fireEvent(inner, new Event("cancel", { cancelable: true }));
+    fireEvent(inner, new Event("close"));
+    expect(onInnerClose).toHaveBeenCalledTimes(2);
+    expect(onOuterClose).not.toHaveBeenCalled();
+  });
+
   it("stays closed when open is false", () => {
     renderWithProviders(
       <Sheet open={false} onClose={vi.fn()} title="Hidden">

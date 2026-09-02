@@ -46,9 +46,16 @@ export function Sheet({
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
+  // React re-dispatches the non-bubbling dialog events up the tree: ignore those of a nested sheet.
   function handleCancel(event: SyntheticEvent<HTMLDialogElement>) {
+    if (event.target !== event.currentTarget) return;
     event.preventDefault();
     if (dismissible) onClose();
+  }
+
+  function handleClose(event: SyntheticEvent<HTMLDialogElement>) {
+    if (event.target !== event.currentTarget) return;
+    if (open) onClose();
   }
 
   function handleScrimClick(event: MouseEvent<HTMLDialogElement>) {
@@ -60,9 +67,7 @@ export function Sheet({
       ref={ref}
       aria-labelledby={titleId}
       onCancel={handleCancel}
-      onClose={() => {
-        if (open) onClose();
-      }}
+      onClose={handleClose}
       onClick={handleScrimClick}
       className={cn(
         "backdrop:bg-overlay m-0 max-h-none max-w-none bg-transparent p-0",

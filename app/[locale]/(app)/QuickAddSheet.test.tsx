@@ -149,6 +149,18 @@ describe("QuickAddSheet", () => {
     expect(await screen.findByText("Transaction removed")).toBeVisible();
   });
 
+  it("keeps the sheet open after picking another account from the nested picker", async () => {
+    routeFetch();
+    const { onClose } = renderSheet();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /From your main account.*Bancolombia/ }),
+    );
+    await userEvent.click(screen.getByRole("option", { name: /Cash/ }));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Add expense" })).toHaveAttribute("open");
+    expect(screen.getByRole("button", { name: /^Account.*Cash/ })).toBeVisible();
+  });
+
   it("refuses an empty or zero amount before calling the API", async () => {
     routeFetch();
     renderSheet();
