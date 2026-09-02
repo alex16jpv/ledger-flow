@@ -46,7 +46,7 @@ export function AccountPicker({
   const [creating, setCreating] = useState(false);
   const initialFocus = useRef<HTMLButtonElement>(null);
   const focused = useRef(false);
-  const accounts = useAccountsQuery();
+  const accounts = useAccountsQuery(false, open || value !== null);
   const selected = accounts.data?.find((account) => account.id === value) ?? null;
   const options = (accounts.data ?? []).filter((account) => account.id !== exclude);
   const focusedId = options.some((account) => account.id === value) ? value : options[0]?.id;

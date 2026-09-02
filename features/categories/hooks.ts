@@ -19,10 +19,14 @@ import { categoryKeys } from "./keys";
 export const RECENT_DAYS = 90;
 export const RECENT_LIMIT = 3;
 
-export function useCategoriesQuery(type?: CategoryType) {
+export const REFERENCE_STALE_TIME_MS = 5 * 60 * 1000;
+
+export function useCategoriesQuery(type?: CategoryType, enabled = true) {
   return useQuery({
     queryKey: categoryKeys.list({ type }),
     queryFn: () => fetchCategories({ type }),
+    staleTime: REFERENCE_STALE_TIME_MS,
+    enabled,
   });
 }
 
@@ -56,6 +60,7 @@ export function useRecentCategories(
   type: CategoryType | undefined,
   categories: readonly Category[] | undefined,
   limit = RECENT_LIMIT,
+  enabled = true,
 ): Category[] {
   const { timeZone } = useFormatSettings();
   const today = dayKey(new Date(), timeZone);
@@ -68,7 +73,8 @@ export function useRecentCategories(
   const usage = useQuery({
     queryKey: categoryKeys.usage(params),
     queryFn: () => fetchCategoryUsage(params),
-    enabled: statsType !== null,
+    staleTime: REFERENCE_STALE_TIME_MS,
+    enabled: enabled && statsType !== null,
   });
   const buckets = usage.data?.buckets;
   return useMemo(

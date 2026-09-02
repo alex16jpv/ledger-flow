@@ -36,9 +36,9 @@ interface QuickAddSheetProps {
 export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddSheetProps) {
   const t = useTranslations();
   const toast = useToast();
-  const accounts = useAccountsQuery();
-  const categories = useCategoriesQuery("EXPENSE");
-  const recent = useRecentCategories("EXPENSE", categories.data, QUICK_RECENT_LIMIT);
+  const accounts = useAccountsQuery(false, open);
+  const categories = useCategoriesQuery("EXPENSE", open);
+  const recent = useRecentCategories("EXPENSE", categories.data, QUICK_RECENT_LIMIT, open);
   const quickAdd = useQuickAdd();
   const remove = useDeleteTransaction();
 

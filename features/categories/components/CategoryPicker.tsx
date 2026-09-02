@@ -35,7 +35,7 @@ export function CategoryPicker({
 }: CategoryPickerProps) {
   const t = useTranslations("categories.picker");
   const [open, setOpen] = useState(false);
-  const categories = useCategoriesQuery(type);
+  const categories = useCategoriesQuery(type, open || value !== null);
   const selected = categories.data?.find((category) => category.id === value) ?? null;
 
   return (

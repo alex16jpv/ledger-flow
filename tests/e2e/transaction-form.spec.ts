@@ -91,7 +91,7 @@ test("a transfer refuses the same account on both sides and swaps them", async (
   await page.getByRole("button", { name: /^To/ }).click();
   const toOptions = page.getByRole("dialog", { name: "Account" }).getByRole("option");
   await expect(toOptions.filter({ hasText: "Bancolombia" })).toHaveCount(0);
-  await toOptions.filter({ hasText: "Savings" }).click();
+  await toOptions.filter({ hasText: /^Savings/ }).click();
   await page.getByRole("button", { name: "Swap accounts" }).click();
   await expect(page.getByRole("button", { name: /^From.*Savings/ })).toBeVisible();
   await page.getByRole("button", { name: "Save transaction" }).click();

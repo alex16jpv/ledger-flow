@@ -510,3 +510,17 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **The list screen is composed in the app layer** like the other F2 screens: it needs account and
   category lookups and the pickers of two features; `features/transactions` owns the row, day list,
   summary, filters model and hooks.
+
+## 2026-09-02 · Request budget (owner report P-16)
+
+- **Closed sheets do not query.** The quick-add sheet, the category and account pickers and the
+  filters sheet used to fetch accounts, categories and the recent-category stats as soon as they
+  mounted, on every page; they now pass `enabled` from their `open` state (a picker with a value
+  still loads its list to show the name), and the filters sheet mounts only while open. In the
+  owner's local log 60 of 96 backend calls were `/stats/spending` from those idle sheets.
+- **Reference data is fresh for five minutes.** Accounts, categories, recent categories and tags
+  change only through our own mutations, which invalidate them, so a 30-second `staleTime` plus
+  refetch-on-focus only produced traffic. Lists, totals and details keep the 30-second default.
+- **Why it matters:** the backend limits 200 requests per 15 minutes per IP and every request
+  arrives from the BFF, so the budget is shared; the fix on that side is tracked in
+  `BACKEND-DESDE-FRONT.md`, and the local backend runs with `RATE_LIMIT_MAX=5000` meanwhile.

@@ -17,7 +17,7 @@ import { iconProps } from "@/lib/icons/sizes";
 import type { Category } from "@/types/api";
 
 import type { CategoryType } from "../api";
-import { useCategoriesQuery, useRecentCategories } from "../hooks";
+import { RECENT_LIMIT, useCategoriesQuery, useRecentCategories } from "../hooks";
 import { CategoryQuickForm } from "./CategoryQuickForm";
 
 export interface CategoryPickerSheetProps {
@@ -44,8 +44,8 @@ export function CategoryPickerSheet({
   const t = useTranslations();
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
-  const categories = useCategoriesQuery(type);
-  const recent = useRecentCategories(type, categories.data);
+  const categories = useCategoriesQuery(type, open);
+  const recent = useRecentCategories(type, categories.data, RECENT_LIMIT, open);
   const needle = normalize(query.trim());
   const filtered = useMemo(
     () =>

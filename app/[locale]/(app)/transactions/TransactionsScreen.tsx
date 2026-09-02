@@ -322,18 +322,19 @@ export function TransactionsScreen() {
           )}
         </>
       )}
-      <FiltersSheet
-        key={filtersOpen ? "open" : "closed"}
-        open={filtersOpen}
-        filters={filters}
-        onClose={() => {
-          setFiltersOpen(false);
-        }}
-        onApply={(next) => {
-          setFiltersOpen(false);
-          apply(next);
-        }}
-      />
+      {filtersOpen && (
+        <FiltersSheet
+          open
+          filters={filters}
+          onClose={() => {
+            setFiltersOpen(false);
+          }}
+          onApply={(next) => {
+            setFiltersOpen(false);
+            apply(next);
+          }}
+        />
+      )}
     </div>
   );
 }
