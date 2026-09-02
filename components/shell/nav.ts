@@ -25,6 +25,10 @@ export const TAB_ITEMS: readonly NavKey[] = ["home", "transactions", "budgets", 
 
 export const ADD_HREF = "/transactions/new";
 
+export interface AddOptions {
+  chain: boolean;
+}
+
 export function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }

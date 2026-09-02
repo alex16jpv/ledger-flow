@@ -5,12 +5,14 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/components/ui/cn";
 
+import type { AddOptions } from "./nav";
 import { Sidebar } from "./Sidebar";
 import { TabBar } from "./TabBar";
 
 interface AppShellProps {
   userName: string;
   pendingCount: number;
+  onAdd: (options: AddOptions) => void;
   banner?: ReactNode;
   narrow?: boolean;
   children: ReactNode;
@@ -21,6 +23,7 @@ export const MAIN_ID = "main";
 export function AppShell({
   userName,
   pendingCount,
+  onAdd,
   banner,
   narrow = false,
   children,
@@ -34,7 +37,7 @@ export function AppShell({
       >
         {t("skipToContent")}
       </a>
-      <Sidebar userName={userName} pendingCount={pendingCount} />
+      <Sidebar userName={userName} pendingCount={pendingCount} onAdd={onAdd} />
       <main
         id={MAIN_ID}
         tabIndex={-1}
@@ -50,7 +53,7 @@ export function AppShell({
           {children}
         </div>
       </main>
-      <TabBar pendingCount={pendingCount} />
+      <TabBar pendingCount={pendingCount} onAdd={onAdd} />
     </div>
   );
 }

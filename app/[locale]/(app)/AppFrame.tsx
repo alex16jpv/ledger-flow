@@ -1,8 +1,14 @@
 "use client";
 
-import { type ReactNode, useCallback } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 
-import { AppShell, ConnectionBanner, SessionExpiredSheet } from "@/components/shell";
+import {
+  ADD_HREF,
+  type AddOptions,
+  AppShell,
+  ConnectionBanner,
+  SessionExpiredSheet,
+} from "@/components/shell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { usePendingCount } from "@/features/transactions/hooks";
 import { LOGIN_PATH } from "@/lib/auth/routes";
@@ -10,11 +16,17 @@ import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
 import { SessionProvider, useSession } from "@/lib/session";
 
+import { QuickAddSheet } from "./QuickAddSheet";
+
 function Frame({ children }: { children: ReactNode }) {
   const session = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const pendingCount = usePendingCount(session.status === "authenticated");
+  const [quickAdd, setQuickAdd] = useState<AddOptions & { open: boolean }>({
+    open: false,
+    chain: false,
+  });
 
   const goToLogin = useCallback(() => {
     router.replace(`${LOGIN_PATH}?next=${encodeURIComponent(pathname)}`);
@@ -25,10 +37,23 @@ function Frame({ children }: { children: ReactNode }) {
       <AppShell
         userName={session.user?.name ?? ""}
         pendingCount={pendingCount}
+        onAdd={({ chain }) => {
+          setQuickAdd({ open: true, chain });
+        }}
         banner={<ConnectionBanner />}
       >
         {children}
       </AppShell>
+      <QuickAddSheet
+        open={quickAdd.open}
+        chain={quickAdd.chain}
+        onClose={() => {
+          setQuickAdd((state) => ({ ...state, open: false }));
+        }}
+        onMoreDetails={(params) => {
+          router.push({ pathname: ADD_HREF, query: Object.fromEntries(params) });
+        }}
+      />
       <SessionExpiredSheet open={session.status === "expired"} onSignIn={goToLogin} />
     </>
   );

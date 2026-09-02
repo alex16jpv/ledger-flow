@@ -2,20 +2,48 @@
 
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useRef } from "react";
 
 import { cn } from "@/components/ui/cn";
 import { Link, usePathname } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 
-import { ADD_HREF, isActive, NAV_ITEMS, TAB_ITEMS } from "./nav";
+import { type AddOptions, isActive, NAV_ITEMS, TAB_ITEMS } from "./nav";
+
+export const HOLD_TO_CHAIN_MS = 500;
 
 interface TabBarProps {
   pendingCount: number;
+  onAdd: (options: AddOptions) => void;
 }
 
-export function TabBar({ pendingCount }: TabBarProps) {
+export function TabBar({ pendingCount, onAdd }: TabBarProps) {
   const t = useTranslations("nav");
   const pathname = usePathname();
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const held = useRef(false);
+
+  function startHold() {
+    held.current = false;
+    holdTimer.current = setTimeout(() => {
+      held.current = true;
+      onAdd({ chain: true });
+    }, HOLD_TO_CHAIN_MS);
+  }
+
+  function cancelHold() {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    holdTimer.current = null;
+  }
+
+  function handleClick() {
+    if (held.current) {
+      held.current = false;
+      return;
+    }
+    onAdd({ chain: false });
+  }
+
   const items = TAB_ITEMS.map((key) => NAV_ITEMS.find((item) => item.key === key)).filter(
     (item): item is (typeof NAV_ITEMS)[number] => item !== undefined,
   );
@@ -51,13 +79,22 @@ export function TabBar({ pendingCount }: TabBarProps) {
           </Link>
         ) : (
           <div key={index} className="flex h-(--tabbar-h) items-center justify-center">
-            <Link
-              href={ADD_HREF}
+            <button
+              type="button"
               aria-label={t("addExpense")}
-              className="grid size-[52px] -translate-y-2.5 place-items-center rounded-full bg-brand text-on-brand shadow-[var(--shadow-2),0_0_0_4px_var(--bg)] transition-[transform,background] duration-(--dur-1) ease-(--ease) hover:bg-brand-hover active:scale-95"
+              aria-haspopup="dialog"
+              onPointerDown={startHold}
+              onPointerUp={cancelHold}
+              onPointerLeave={cancelHold}
+              onPointerCancel={cancelHold}
+              onContextMenu={(event) => {
+                event.preventDefault();
+              }}
+              onClick={handleClick}
+              className="grid size-[52px] -translate-y-2.5 touch-none place-items-center rounded-full bg-brand text-on-brand shadow-[var(--shadow-2),0_0_0_4px_var(--bg)] transition-[transform,background] duration-(--dur-1) ease-(--ease) select-none hover:bg-brand-hover focus-visible:shadow-[var(--shadow-2),0_0_0_4px_var(--bg),0_0_0_7px_var(--focus-ring)] focus-visible:outline-none active:scale-95"
             >
               <Plus size={26} strokeWidth={2.25} aria-hidden="true" />
-            </Link>
+            </button>
           </div>
         ),
       )}

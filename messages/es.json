@@ -458,5 +458,22 @@
       "color": "Color",
       "create": "Crear categoría"
     }
+  },
+  "transactions": {
+    "quick": {
+      "title": "Añadir gasto",
+      "amount": "Importe",
+      "category": "Categoría",
+      "categoryHint": "opcional · puedes añadirla después",
+      "fromMain": "Desde tu cuenta principal",
+      "account": "Cuenta",
+      "note": "Nota rápida (opcional)",
+      "moreDetails": "Más detalles",
+      "save": "Guardar",
+      "saved": "Movimiento guardado",
+      "savedWithoutNote": "Guardado, pero no se pudo añadir la nota",
+      "undone": "Movimiento eliminado",
+      "undoFailed": "No se pudo eliminar. Inténtalo desde la lista."
+    }
   }
 }

@@ -3,6 +3,7 @@ export { Avatar, initialsOf } from "./Avatar";
 export { ConnectionBanner } from "./ConnectionBanner";
 export {
   ADD_HREF,
+  type AddOptions,
   isActive,
   NAV_ITEMS,
   type NavItem,

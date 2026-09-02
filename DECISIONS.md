@@ -437,3 +437,27 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   e2e spec tabs into the field when the browser did not focus it.
 - **`IconGrid` searches by key.** The 105 keys are English words (`shopping-cart`), so the search
   matches on them; localized synonyms would need a copy table and are deferred until W-25.
+
+## 2026-09-01 · Quick capture (W-17)
+
+- **The sheet is composed in the app layer** (`app/[locale]/(app)/QuickAddSheet.tsx`), like the
+  onboarding: it needs the category picker, the account picker and the transactions hooks, and a
+  feature must not import another. `features/transactions` owns the mutation, the schema and the
+  draft-to-URL helper; the app file only wires them together.
+- **The FAB is a button, not a link.** `AppShell` takes `onAdd({ chain })`; the tab bar fires it on
+  click and, after holding the button for 500 ms, with `chain: true`, which keeps the sheet open and
+  clears the amount after each save (DESIGN.md §8.2 "registro en cadena"). The sidebar button always
+  opens a single capture. `/transactions/new` stays the destination of "More details", which carries
+  the typed amount, category, account and note as query parameters for W-18.
+- **Note through a follow-up PUT.** `POST /transactions/quick` has no description field, so the note
+  is written with `PUT /transactions/:id` right after; when a category was chosen as well the same
+  call sets `pendingDetails: false`, as the design allows. A failing PUT does not undo the capture:
+  the toast turns red and says the note was not added, and the row stays in the review inbox.
+- **One `Idempotency-Key` per sheet opening**, rotated by payload through `IdempotencyKeyring`, so a
+  retry after a network error reuses it and an edited amount gets a fresh one.
+- **Query domains are shared.** `lib/query/domains.ts` lists the root key of every feature and
+  `invalidateMoneyMovement()` refreshes transactions, accounts, budgets, stats and home after any
+  money movement; each `features/*/keys.ts` derives its `all` from that table so the roots cannot
+  drift apart.
+- **Undo deletes.** The toast action calls `DELETE /transactions/:id` (the backend has no restore),
+  then invalidates the same domains; a failed undo shows its own red toast.

@@ -9,11 +9,12 @@ import { Link, usePathname } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 
 import { Avatar } from "./Avatar";
-import { ADD_HREF, isActive, NAV_ITEMS, type NavItem, SETTINGS_ITEM } from "./nav";
+import { type AddOptions, isActive, NAV_ITEMS, type NavItem, SETTINGS_ITEM } from "./nav";
 
 interface SidebarProps {
   userName: string;
   pendingCount: number;
+  onAdd: (options: AddOptions) => void;
 }
 
 function SidebarLink({ item, active, count }: { item: NavItem; active: boolean; count?: number }) {
@@ -40,7 +41,7 @@ function SidebarLink({ item, active, count }: { item: NavItem; active: boolean; 
   );
 }
 
-export function Sidebar({ userName, pendingCount }: SidebarProps) {
+export function Sidebar({ userName, pendingCount, onAdd }: SidebarProps) {
   const t = useTranslations("nav");
   const tc = useTranslations("common");
   const pathname = usePathname();
@@ -55,10 +56,17 @@ export function Sidebar({ userName, pendingCount }: SidebarProps) {
         </span>
         {tc("appName")}
       </div>
-      <Link href={ADD_HREF} className={cn(buttonClasses({ block: true }), "mt-2 mb-3")}>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        onClick={() => {
+          onAdd({ chain: false });
+        }}
+        className={cn(buttonClasses({ block: true }), "mt-2 mb-3")}
+      >
         <Plus {...iconProps("sm")} />
         {t("add")}
-      </Link>
+      </button>
       <nav aria-label={t("label")} className="flex flex-col gap-1">
         {NAV_ITEMS.map((item) => (
           <SidebarLink

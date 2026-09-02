@@ -55,6 +55,7 @@ function spendingType(type: CategoryType | undefined): SpendingType | null {
 export function useRecentCategories(
   type: CategoryType | undefined,
   categories: readonly Category[] | undefined,
+  limit = RECENT_LIMIT,
 ): Category[] {
   const { timeZone } = useFormatSettings();
   const today = dayKey(new Date(), timeZone);
@@ -71,7 +72,8 @@ export function useRecentCategories(
   });
   const buckets = usage.data?.buckets;
   return useMemo(
-    () => (statsType && buckets && categories ? rankRecentCategories(buckets, categories) : []),
-    [statsType, buckets, categories],
+    () =>
+      statsType && buckets && categories ? rankRecentCategories(buckets, categories, limit) : [],
+    [statsType, buckets, categories, limit],
   );
 }

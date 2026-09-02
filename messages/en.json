@@ -458,5 +458,22 @@
       "color": "Color",
       "create": "Create category"
     }
+  },
+  "transactions": {
+    "quick": {
+      "title": "Add expense",
+      "amount": "Amount",
+      "category": "Category",
+      "categoryHint": "optional · you can add it later",
+      "fromMain": "From your main account",
+      "account": "Account",
+      "note": "Quick note (optional)",
+      "moreDetails": "More details",
+      "save": "Save",
+      "saved": "Transaction saved",
+      "savedWithoutNote": "Saved, but the note couldn’t be added",
+      "undone": "Transaction removed",
+      "undoFailed": "We couldn’t remove it. Try again from the list."
+    }
   }
 }
