@@ -20,15 +20,7 @@ export function StatsRow({ totalBalance, accountCount, income, spent }: StatsRow
       <Card>
         <Stat
           label={t("totalBalance")}
-          value={
-            <Amount
-              value={totalBalance}
-              kind={totalBalance < 0 ? "expense" : "transfer"}
-              signed={false}
-              size="lg"
-              className="text-text"
-            />
-          }
+          value={<Amount value={totalBalance} signed={false} size="lg" />}
           delta={{ direction: "flat", label: t("accountsCount", { count: accountCount }) }}
         />
       </Card>
