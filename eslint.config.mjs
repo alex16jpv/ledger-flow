@@ -167,6 +167,8 @@ export default defineConfig([
       "i18next/no-literal-string": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-non-null-assertion": "off",
+      "@typescript-eslint/no-implied-eval": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
     },
   },
   prettier,

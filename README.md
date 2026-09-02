@@ -85,7 +85,8 @@ shared code moves up to `lib` or `components/ui`. ESLint enforces it.
   the view components. Add its message subtree to both `messages/*.json`.
 - **Add a palette:** copy `tokens/palette.tinta.css`, change the selector to
   `:root[data-palette="<name>"]` and the 18 seeds, run `npm run contrast-check`, import it in
-  `app/globals.css` and register it in `lib/theme/palettes.ts`.
+  `app/globals.css` and add the name to `PALETTES` in `lib/theme/palettes.ts`. The user's choice
+  lives in `localStorage` (`lf.palette`, `lf.mode`) and is applied by an inline script before paint.
 - **Add a language:** add `messages/<locale>.json`, register the locale in `lib/i18n`, map it to a
   format locale, and add the row in Settings › Language.
 

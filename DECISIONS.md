@@ -92,3 +92,22 @@ The specification that these decisions refine lives outside the repo in
 - **Why:** the copied rule `subject-case: lower-case` rejected every subject that ends with the
   mandatory `(W-01)` reference because of the capital `W`. The intent (no capitalised subjects) is
   preserved; the reference format from `CLAUDE.md §5` stays valid.
+
+## 2026-09-01 · Theme-color follows the live `--bg` token (W-02)
+
+- **Decision:** `<meta name="theme-color">` is written at runtime from the computed value of `--bg`
+  after the palette or mode changes, instead of a static `media`-split pair.
+- **Why:** a static meta needs literal colors, which HANDOFF §3.0 forbids outside `tokens/`, and a
+  per-palette hex table would duplicate the OKLCH seeds. The computed value already reflects the
+  palette, the explicit mode and `light-dark()`.
+- **Consequence:** the very first paint uses the browser default until hydration; the inline theme
+  script still prevents the page itself from flashing.
+
+## 2026-09-01 · Inline theme script through `next/script` `beforeInteractive` (W-02)
+
+- **Decision:** `THEME_INIT_SCRIPT` is rendered as the children of `<Script strategy="beforeInteractive">`
+  in the root layout.
+- **Why:** HANDOFF §3.7 requires the attributes before the first paint and §3.9 forbids
+  `dangerouslySetInnerHTML`. `next/script` injects the inline code in `<head>` and will receive the
+  CSP nonce from `proxy.ts` in W-07. `<html suppressHydrationWarning>` covers the attributes the
+  script adds before React hydrates.

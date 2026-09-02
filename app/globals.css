@@ -1,1 +1,41 @@
 @import "tailwindcss";
+@import "../tokens/palette.tinta.css";
+@import "../tokens/palette.brisa.css";
+@import "../tokens/semantic.css";
+@import "../tokens/base.css";
+@import "../tokens/tailwind.theme.css";
+
+@layer base {
+  :root {
+    --f: var(--text-3);
+    --f-soft: var(--surface-2);
+    --f-text: var(--text-2);
+    --f-border: var(--border);
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--fs-base);
+    line-height: var(--lh-normal);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+  }
+
+  ::selection {
+    background: var(--brand-soft);
+  }
+}
