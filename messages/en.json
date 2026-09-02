@@ -470,7 +470,8 @@
       "transactions": "Transactions",
       "openFiltered": "Open with filters",
       "noTransactions": "No transactions in this account yet",
-      "notFound": "This account doesn’t exist."
+      "notFound": "This account doesn’t exist.",
+      "adjust": "Adjust balance"
     },
     "main": {
       "title": "Make {name} your main account?",
@@ -491,6 +492,20 @@
       "title": "That name is taken",
       "body": "An active account is already named “{name}”. Rename it first, then restore this one.",
       "open": "Open {name}"
+    },
+    "adjust": {
+      "title": "Adjust balance",
+      "actual": "Actual balance in {name}",
+      "sign": "Sign of the balance",
+      "positive": "Positive",
+      "negative": "Negative (debt)",
+      "recorded": "Recorded balance: {amount}",
+      "delta": "<b>An adjustment of {amount}</b> will be created to reconcile the account. It does not count as spending or in budgets.",
+      "noChange": "The recorded balance already matches. Nothing to adjust.",
+      "note": "Note",
+      "notePlaceholder": "August bank fee",
+      "save": "Save adjustment",
+      "saved": "Adjustment saved"
     }
   },
   "budgets": {

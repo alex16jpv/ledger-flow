@@ -470,7 +470,8 @@
       "transactions": "Movimientos",
       "openFiltered": "Abrir con filtros",
       "noTransactions": "Aún no hay movimientos en esta cuenta",
-      "notFound": "Esta cuenta no existe."
+      "notFound": "Esta cuenta no existe.",
+      "adjust": "Ajustar saldo"
     },
     "main": {
       "title": "¿Hacer {name} tu cuenta principal?",
@@ -491,6 +492,20 @@
       "title": "Ese nombre ya está en uso",
       "body": "Ya hay una cuenta activa llamada «{name}». Cámbiale el nombre primero y luego restaura esta.",
       "open": "Abrir {name}"
+    },
+    "adjust": {
+      "title": "Ajustar saldo",
+      "actual": "Saldo real en {name}",
+      "sign": "Signo del saldo",
+      "positive": "Positivo",
+      "negative": "Negativo (deuda)",
+      "recorded": "Saldo registrado: {amount}",
+      "delta": "<b>Se creará un ajuste de {amount}</b> para conciliar la cuenta. No cuenta como gasto ni en los presupuestos.",
+      "noChange": "El saldo registrado ya coincide. No hay nada que ajustar.",
+      "note": "Nota",
+      "notePlaceholder": "Comisión bancaria de agosto",
+      "save": "Registrar ajuste",
+      "saved": "Ajuste registrado"
     }
   },
   "budgets": {

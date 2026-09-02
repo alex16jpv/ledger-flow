@@ -655,3 +655,19 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **`AccountForm` gained an edit mode** (`account` prop): the balance field disappears (it is the
   immutable `openingBalance`), the payload becomes `PUT { name, type, color }`, and the preview card
   shows the account's real balance. The onboarding and the pickers keep using the create mode.
+
+## 2026-09-02 · Adjust balance (W-24)
+
+- **The delta is the one subtraction the client makes**, because the design shows it before saving:
+  `adjustmentInput` computes `actual − recorded`, rounds it to the currency and books a decrease as
+  `fromAccountId` or an increase as `toAccountId`; the server applies it to the balance. A zero delta
+  disables the button instead of sending an empty adjustment.
+- **The sign is a segmented control next to the amount.** `AmountInput` only edits digits, and debt
+  accounts (cards, overdrafts, loans) live below zero, so "Positive / Negative (debt)" sets the sign
+  and starts from the sign of the recorded balance. Adding a minus sign to `AmountInput` would have
+  touched every form for one screen.
+- **The sheet lives in the app layer** (`accounts/[id]/AdjustBalanceSheet.tsx`): it takes an account
+  and posts a transaction, so it belongs to neither feature; it reuses `useCreateTransaction` with an
+  `IdempotencyKeyring` like the full form. The adjustment is dated at the moment of saving.
+- **Nothing is invalidated by hand**: the transaction mutation already refreshes accounts, home,
+  transactions, budgets and stats, so the hero balance and the account's rows update on their own.

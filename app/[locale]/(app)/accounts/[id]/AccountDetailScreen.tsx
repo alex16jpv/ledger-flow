@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArchiveRestore, CircleAlert, Inbox, Pencil, Star } from "lucide-react";
+import { Archive, ArchiveRestore, CircleAlert, Inbox, Pencil, Scale, Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -33,7 +33,9 @@ import { ApiError, presentError } from "@/lib/api/errors";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 
-type OpenSheet = "main" | "archive" | "conflict" | null;
+import { AdjustBalanceSheet } from "./AdjustBalanceSheet";
+
+type OpenSheet = "adjust" | "main" | "archive" | "conflict" | null;
 
 export function AccountDetailScreen({ id }: { id: string }) {
   const t = useTranslations();
@@ -173,6 +175,18 @@ export function AccountDetailScreen({ id }: { id: string }) {
         <>
           <AccountHero account={row} />
           <div className="grid grid-cols-2 gap-3">
+            {!row.archivedAt && (
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => {
+                  setSheet("adjust");
+                }}
+              >
+                <Scale {...iconProps("sm")} />
+                {t("accounts.detail.adjust")}
+              </Button>
+            )}
             {row.archivedAt ? (
               <Button
                 size="lg"
@@ -285,6 +299,15 @@ export function AccountDetailScreen({ id }: { id: string }) {
               </>
             )}
           </section>
+          {sheet === "adjust" && (
+            <AdjustBalanceSheet
+              account={row}
+              open
+              onClose={() => {
+                setSheet(null);
+              }}
+            />
+          )}
           <MakeMainSheet
             account={row}
             previous={previousMain}
