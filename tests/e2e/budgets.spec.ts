@@ -182,8 +182,9 @@ test("the form creates a category budget, refuses a second global one, edits it 
   await page.goto("/budgets/new");
   await expect(page.getByRole("heading", { level: 1, name: "New budget" })).toBeVisible();
   await page.getByRole("textbox", { name: "Name" }).fill("Groceries");
-  await page.getByRole("button", { name: "Food" }).click();
   await page.getByRole("button", { name: "Housing" }).click();
+  await page.getByRole("button", { name: "Food" }).click();
+  await expect(page.getByRole("button", { name: "Housing", pressed: false })).toBeVisible();
   await page.getByRole("textbox", { name: "Amount" }).fill("650000");
   await page.getByRole("button", { name: "Teal" }).click();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -192,7 +193,7 @@ test("the form creates a category budget, refuses a second global one, edits it 
   await expect(page).toHaveURL(/\/budgets\/[0-9a-f-]{36}$/);
   await expect(page.getByText("Groceries", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Food/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Housing/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Housing/ })).toHaveCount(0);
 
   await request.post("/api/budgets", {
     headers: { origin: APP },

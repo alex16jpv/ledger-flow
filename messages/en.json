@@ -627,8 +627,7 @@
       "byCategory": "By category",
       "scopeHelp": "“All spending” creates a global budget: it includes anything logged without a category. Only one per period type.",
       "categories": "Categories",
-      "categoriesLimit": "up to {count}",
-      "categoriesHelp": "Expense categories only. Transfer categories can’t have a budget.",
+      "categoriesHelp": "One expense category per budget. Transfer categories can’t have a budget.",
       "categoriesSearch": "Search categories",
       "noCategories": "No expense categories yet",
       "period": "Period",
@@ -646,8 +645,9 @@
       "create": "Create budget",
       "created": "Budget created",
       "saved": "Changes saved",
-      "overlap": "Another {period} budget already covers one of these categories.",
-      "overlapGlobal": "You already have a global {period} budget."
+      "overlap": "Another {period} budget already covers this category.",
+      "overlapGlobal": "You already have a global {period} budget.",
+      "category": "Category"
     },
     "restoreConflict": {
       "title": "Another budget is in the way",

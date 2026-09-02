@@ -627,8 +627,7 @@
       "byCategory": "Por categorías",
       "scopeHelp": "«Todo el gasto» crea un presupuesto global: incluye lo que registras sin categoría. Solo uno por tipo de período.",
       "categories": "Categorías",
-      "categoriesLimit": "hasta {count}",
-      "categoriesHelp": "Solo categorías de gasto. Las de transferencia no pueden tener presupuesto.",
+      "categoriesHelp": "Una categoría de gasto por presupuesto. Las de transferencia no pueden tener presupuesto.",
       "categoriesSearch": "Buscar categorías",
       "noCategories": "Aún no hay categorías de gasto",
       "period": "Período",
@@ -646,8 +645,9 @@
       "create": "Crear presupuesto",
       "created": "Presupuesto creado",
       "saved": "Cambios guardados",
-      "overlap": "Otro presupuesto {period} ya cubre alguna de estas categorías.",
-      "overlapGlobal": "Ya tienes un presupuesto global {period}."
+      "overlap": "Otro presupuesto {period} ya cubre esta categoría.",
+      "overlapGlobal": "Ya tienes un presupuesto global {period}.",
+      "category": "Categoría"
     },
     "restoreConflict": {
       "title": "Otro presupuesto lo impide",

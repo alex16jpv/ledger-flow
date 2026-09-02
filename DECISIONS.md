@@ -821,3 +821,13 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   The API lists a one-shot window for every reference before its end, which put a September–October
   budget in June and July; recurring budgets are unaffected because the server already drops them
   before their lifetime floor.
+
+## 2026-09-02 · One category per budget (owner decision P-28, W-28 revised)
+
+- **The form selects a single category** (`BUDGET_CATEGORIES_MAX = 1`, chips behave like radios)
+  even though the API accepts up to 20. A category can only sit in one budget per period type, so
+  budgets with several categories collided with single-category ones in ways the overlap message
+  could not explain; the owner chose the simplest rule. Existing multi-category budgets still render
+  and edit (picking a chip replaces the selection).
+- **CUSTOM overlap ignoring dates is a backend fix** (`BACKEND-DESDE-FRONT.md`): two custom windows
+  for the same category that never touch are refused today; the front does not work around it.

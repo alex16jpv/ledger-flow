@@ -23,7 +23,6 @@ import { iconProps } from "@/lib/icons/sizes";
 import type { Budget, Category } from "@/types/api";
 
 import {
-  BUDGET_CATEGORIES_MAX,
   BUDGET_NOTE_MAX,
   budgetFormSchema,
   type BudgetFormValues,
@@ -157,14 +156,7 @@ export function BudgetForm({
             name="categoryIds"
             render={({ field }) => (
               <Field
-                label={
-                  <>
-                    {t("budgets.form.categories")}
-                    <span className="ml-2 font-normal text-text-3">
-                      {t("budgets.form.categoriesLimit", { count: BUDGET_CATEGORIES_MAX })}
-                    </span>
-                  </>
-                }
+                label={t("budgets.form.category")}
                 help={t("budgets.form.categoriesHelp")}
                 error={categoryError ?? validationMessage(t, errors.categoryIds?.message)}
               >
@@ -188,26 +180,20 @@ export function BudgetForm({
                   ) : (
                     <ChipRow
                       role="group"
-                      aria-label={t("budgets.form.categories")}
+                      aria-label={t("budgets.form.category")}
                       className="flex-wrap overflow-visible"
                     >
                       {visible.map((category) => {
                         const selected = field.value.includes(category.id);
-                        const full = !selected && field.value.length >= BUDGET_CATEGORIES_MAX;
                         return (
                           <CategoryChip
                             key={category.id}
                             color={category.color}
                             selected={selected}
-                            disabled={full}
                             icon={<CategoryIcon icon={category.icon} size="sm" />}
                             className={cn(category.archivedAt && "opacity-70")}
                             onClick={() => {
-                              field.onChange(
-                                selected
-                                  ? field.value.filter((id) => id !== category.id)
-                                  : [...field.value, category.id],
-                              );
+                              field.onChange(selected ? [] : [category.id]);
                             }}
                           >
                             {category.name}

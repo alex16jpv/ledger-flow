@@ -56,13 +56,15 @@ function renderForm(props: Partial<Parameters<typeof BudgetForm>[0]> = {}) {
 }
 
 describe("BudgetForm", () => {
-  it("offers only active expense categories, toggles them and submits a category budget", async () => {
+  it("offers only active expense categories, keeps one selected and submits a category budget", async () => {
     const onSubmit = renderForm();
     await userEvent.type(screen.getByLabelText("Name"), "Food & groceries");
     expect(screen.queryByRole("button", { name: "Salary" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Old" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Food" }));
     await userEvent.click(screen.getByRole("button", { name: "Coffee" }));
+    expect(screen.getByRole("button", { name: "Food" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Coffee" })).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(screen.getByRole("button", { name: "Weekly" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "650000");
     await userEvent.click(screen.getByRole("button", { name: "Create budget" }));
@@ -73,7 +75,7 @@ describe("BudgetForm", () => {
     expect(toCreateInput(values, timeZone)).toEqual({
       name: "Food & groceries",
       color: "TEAL",
-      categoryIds: ["food", "coffee"],
+      categoryIds: ["coffee"],
       type: "EXPENSE",
       amount: 650_000,
       periodType: "WEEKLY",
