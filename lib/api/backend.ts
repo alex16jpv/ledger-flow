@@ -16,6 +16,8 @@ export interface BackendRequest {
 }
 
 export const BACKEND_TIMEOUT_MS = 15_000;
+// The backend's gateway check: with API_SECRET set it rejects every request lacking this header.
+export const API_SECRET_HEADER = "x-api-secret";
 
 // The only place that knows the backend URL; every route handler goes through it.
 export async function backendFetch(path: string, request: BackendRequest = {}): Promise<Response> {
@@ -36,6 +38,7 @@ export async function backendFetch(path: string, request: BackendRequest = {}): 
       signal: signal ?? AbortSignal.timeout(BACKEND_TIMEOUT_MS),
       headers: {
         accept: "application/json",
+        ...(env.API_SECRET ? { [API_SECRET_HEADER]: env.API_SECRET } : {}),
         ...(body !== undefined ? { "content-type": "application/json" } : {}),
         ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
         ...(requestId ? { [REQUEST_ID_HEADER]: requestId } : {}),

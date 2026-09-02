@@ -4,6 +4,7 @@ import { z } from "zod";
 export const env = createEnv({
   server: {
     API_URL: z.url(),
+    API_SECRET: z.string().min(1).optional(),
     SENTRY_DSN: z.url().optional(),
   },
   client: {
@@ -17,6 +18,7 @@ export const env = createEnv({
   },
   runtimeEnv: {
     API_URL: process.env.API_URL,
+    API_SECRET: process.env.API_SECRET,
     SENTRY_DSN: process.env.SENTRY_DSN,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_CONTACT_EMAIL: process.env.NEXT_PUBLIC_CONTACT_EMAIL,

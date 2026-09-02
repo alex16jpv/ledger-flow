@@ -23,14 +23,15 @@ npm run dev          # http://localhost:3001
 Validated at build time by `lib/env.ts` (`@t3-oss/env-nextjs` + Zod); a missing variable fails
 the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no environment.
 
-| Variable                    | Scope  | Purpose                                                                                        |
-| --------------------------- | ------ | ---------------------------------------------------------------------------------------------- |
-| `API_URL`                   | server | Backend base URL. Only the BFF knows it.                                                       |
-| `NEXT_PUBLIC_APP_URL`       | public | Base URL of this deployment (metadata, sitemap, manifest).                                     |
-| `NEXT_PUBLIC_CONTACT_EMAIL` | public | Contact, support and privacy mailbox.                                                          |
-| `NEXT_PUBLIC_APP_VERSION`   | public | Tag or commit SHA shown in Settings › About.                                                   |
-| `NEXT_PUBLIC_APP_ENV`       | public | Optional feature-flag environment when it differs from `NODE_ENV` (the e2e build uses `test`). |
-| `SENTRY_DSN`                | server | Optional error tracking DSN.                                                                   |
+| Variable                    | Scope  | Purpose                                                                                            |
+| --------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| `API_URL`                   | server | Backend base URL. Only the BFF knows it.                                                           |
+| `API_SECRET`                | server | Shared secret sent as `x-api-secret` on every backend call; the backend requires it in production. |
+| `NEXT_PUBLIC_APP_URL`       | public | Base URL of this deployment (metadata, sitemap, manifest).                                         |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | public | Contact, support and privacy mailbox.                                                              |
+| `NEXT_PUBLIC_APP_VERSION`   | public | Tag or commit SHA shown in Settings › About.                                                       |
+| `NEXT_PUBLIC_APP_ENV`       | public | Optional feature-flag environment when it differs from `NODE_ENV` (the e2e build uses `test`).     |
+| `SENTRY_DSN`                | server | Optional error tracking DSN.                                                                       |
 
 ## Scripts
 

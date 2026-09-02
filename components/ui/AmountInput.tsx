@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, useId, useState } from "react";
+import { type ChangeEvent, type Ref, useId, useState } from "react";
 
 import { useMoney } from "@/lib/i18n/useMoney";
 
@@ -11,6 +11,7 @@ export interface AmountInputProps {
   onChange: (value: number | null) => void;
   label: string;
   autoFocus?: boolean;
+  ref?: Ref<HTMLInputElement>;
   invalid?: boolean;
   describedBy?: string;
   className?: string;
@@ -33,6 +34,7 @@ export function AmountInput({
   onChange,
   label,
   autoFocus,
+  ref,
   invalid,
   describedBy,
   className,
@@ -60,6 +62,7 @@ export function AmountInput({
     >
       <span className="text-xl font-medium text-text-3">{money.parts(0).symbol}</span>
       <input
+        ref={ref}
         id={id}
         type="text"
         inputMode={money.fractionDigits === 0 ? "numeric" : "decimal"}

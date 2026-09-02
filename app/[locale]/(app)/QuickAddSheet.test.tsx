@@ -116,6 +116,7 @@ describe("QuickAddSheet", () => {
     routeFetch();
     const { onClose } = renderSheet();
     await screen.findByRole("button", { name: /From your main account.*Bancolombia/ });
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveFocus();
     await userEvent.click(
       within(screen.getByRole("group", { name: "Category" })).getByRole("button", {
         name: "Coffee",

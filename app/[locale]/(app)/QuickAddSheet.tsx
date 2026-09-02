@@ -2,7 +2,7 @@
 
 import { MoreHorizontal, PencilLine } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { AmountInput } from "@/components/ui/AmountInput";
@@ -50,6 +50,12 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
   const [pickerOpen, setPickerOpen] = useState(false);
   const [issues, setIssues] = useState<Record<string, string>>({});
   const keyring = useRef(new IdempotencyKeyring());
+  const amountInput = useRef<HTMLInputElement>(null);
+
+  // showModal() lands on the close button; the amount must own the focus on every (re)opening.
+  useEffect(() => {
+    if (open) amountInput.current?.focus();
+  }, [open, amountKey]);
 
   const defaultAccount = accounts.data?.find((account) => account.isDefault) ?? null;
   const effectiveAccountId = accountId ?? defaultAccount?.id ?? null;
@@ -182,9 +188,9 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
           <div className="flex flex-col gap-1">
             <AmountInput
               key={amountKey}
+              ref={amountInput}
               label={t("transactions.quick.amount")}
               onChange={setAmount}
-              autoFocus
               invalid={Boolean(amountError) || (amount !== null && Number.isNaN(amount))}
               className="py-3"
             />

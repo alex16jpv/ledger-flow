@@ -562,3 +562,14 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **Drafts moved from the card to the screen** (`Record<id, ReviewDraft>`) so the button can count
   and send them; a card without a draft shows the transaction's own values. The individual "Done"
   stays as it was.
+
+## 2026-09-02 · Gateway secret and quick-add focus (owner reports P-18, P-19)
+
+- **`API_SECRET` travels only server-side.** The backend's `gatewaySecretMiddleware` rejects every
+  request without `x-api-secret` once the secret is configured, and fails closed in production
+  without it. `backendFetch`, the single place that knows the backend URL, now adds the header from
+  the optional `API_SECRET` server variable; the browser never sees it, in line with HANDOFF §3.15.
+  Locally the variable stays unset because the local backend runs without a secret.
+- **The amount input takes the focus itself.** `showModal()` moves the focus to the first focusable
+  element (the close button) and browsers differ on honouring `autofocus` inside a dialog, so the
+  quick-add sheet focuses the amount from an effect on every opening and on every chained reset.
