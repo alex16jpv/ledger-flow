@@ -6,6 +6,7 @@ export interface MoneyFormat {
 export interface MoneyParts {
   symbol: string;
   integer: string;
+  decimal: string;
   fraction: string;
   formatted: string;
 }
@@ -49,6 +50,7 @@ export function moneyParts(amount: number, { currency, locale }: MoneyFormat): M
   return {
     symbol: pick("currency"),
     integer,
+    decimal: pick("decimal"),
     fraction: pick("fraction"),
     formatted: formatter(locale, currency).format(amount),
   };

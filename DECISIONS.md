@@ -164,3 +164,25 @@ The specification that these decisions refine lives outside the repo in
   `typecheck` script runs `next typegen` first and `lefthook.yml` calls `npm run typecheck`
   (the only adaptation to the copied guardrail). Route Handlers and Server Actions cannot read root
   params: BFF handlers that need copy must pass `{ locale }` explicitly.
+
+## 2026-09-01 · UI component conventions (W-05)
+
+- **Feature color** is applied with inline custom properties (`featureColorStyle(token)` sets
+  `--f`, `--f-soft`, `--f-text`, `--f-border`) instead of 16 `.color-<TOKEN>` classes: no extra
+  CSS, the token stays typed, and children keep using `bg-(--f-soft)` exactly as `ui.css` does.
+- **Variants over booleans:** `variant`, `size`, `tone` unions; `className` only for outer layout.
+  Lists compose `Row` + `RowBody` + `RowTitle` + `RowMeta` + `RowRight` rather than one component
+  with a dozen props.
+- **`AmountInput` is uncontrolled** (`defaultValue` + `onChange`): the typed text must survive
+  intermediate states such as `1.284,` that do not parse yet. A parent resets it by changing `key`.
+  It decides `inputmode` from the currency's minor unit and parses with the format locale, so
+  `1.284.300,50` works in Spanish.
+- **Sheet** wraps the native `<dialog>` (`showModal`, Escape via `cancel`, scrim click). jsdom
+  lacks the dialog API, so `vitest.setup.ts` polyfills `showModal`/`close` for tests.
+- **Toast** is a single-slot provider (`useToast().show`) with `aria-live="polite"`, one action and
+  a 5 s timer, as DESIGN.md §7.13 specifies; a queue was not needed.
+- **Type scale** is bridged into Tailwind (`text-sm` → `--fs-sm`) from `app/globals.css`, so the
+  `tokens/` files stay untouched while components use the standard utilities.
+- **`/dev/ui`** lives under `app/[locale]/dev/ui` behind the `componentCatalog` flag (false in
+  production) and uses the `dev` message namespace; it doubles as the manual check for W-02
+  (palette and mode switch without reload).

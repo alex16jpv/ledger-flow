@@ -31,6 +31,8 @@ export const themeStore = {
   },
   getServerSnapshot: (): Theme => DEFAULT_THEME,
   set: (theme: Theme, { persist = true }: { persist?: boolean } = {}): void => {
+    const current = themeStore.getSnapshot();
+    if (current.palette === theme.palette && current.mode === theme.mode) return;
     snapshot = theme;
     if (persist) writeStoredTheme(storage(), theme);
     emit();

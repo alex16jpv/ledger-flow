@@ -18,6 +18,7 @@ export function useMoney() {
     const options = { currency, locale: formatLocale };
     return {
       currency,
+      locale: formatLocale,
       fractionDigits: fractionDigits(currency),
       format: (amount: number) => formatMoney(amount, options),
       parts: (amount: number) => moneyParts(amount, options),

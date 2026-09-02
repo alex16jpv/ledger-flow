@@ -5,6 +5,13 @@ export {
   syncThemeColor,
   writeStoredTheme,
 } from "./apply";
+export {
+  COLOR_TOKENS,
+  type ColorToken,
+  type FeatureColorStyle,
+  featureColorStyle,
+  isColorToken,
+} from "./feature-color";
 export { THEME_INIT_SCRIPT } from "./init-script";
 export {
   DEFAULT_MODE,

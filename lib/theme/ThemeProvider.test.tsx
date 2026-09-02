@@ -68,6 +68,15 @@ describe("ThemeProvider", () => {
     expect(window.localStorage.getItem(STORAGE_KEYS.mode)).toBe("dark");
   });
 
+  it("does not notify listeners when the theme is unchanged", () => {
+    const listener = vi.fn();
+    themeStore.subscribe(listener);
+    themeStore.set({ ...themeStore.getSnapshot() });
+    expect(listener).not.toHaveBeenCalled();
+    themeStore.set({ palette: "brisa", mode: "dark" });
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
   it("follows external store updates (other tabs)", () => {
     render(
       <ThemeProvider>

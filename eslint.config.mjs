@@ -102,6 +102,7 @@ export default defineConfig([
         "error",
         {
           mode: "jsx-only",
+          callees: { exclude: ["cn", "buttonClasses"] },
           "jsx-attributes": {
             include: [
               "aria-label",
@@ -168,6 +169,7 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/no-implied-eval": "off",
+      "@typescript-eslint/no-unnecessary-condition": "off",
       "@typescript-eslint/no-unsafe-call": "off",
     },
   },

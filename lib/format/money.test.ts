@@ -28,6 +28,7 @@ describe("moneyParts", () => {
     const parts = moneyParts(-1284.5, { currency: "USD", locale: "en-US" });
     expect(parts.symbol).toBe("$");
     expect(parts.integer).toBe("1,284");
+    expect(parts.decimal).toBe(".");
     expect(parts.fraction).toBe("50");
     expect(parts.formatted).toBe("-$1,284.50");
   });

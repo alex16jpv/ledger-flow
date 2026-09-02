@@ -5,6 +5,21 @@
 @import "../tokens/base.css";
 @import "../tokens/tailwind.theme.css";
 
+@theme inline {
+  --text-xs: var(--fs-xs);
+  --text-sm: var(--fs-sm);
+  --text-base: var(--fs-base);
+  --text-md: var(--fs-md);
+  --text-lg: var(--fs-lg);
+  --text-xl: var(--fs-xl);
+  --text-2xl: var(--fs-2xl);
+  --text-3xl: var(--fs-3xl);
+  --text-4xl: var(--fs-4xl);
+  --tracking-tight: var(--tracking-tight);
+  --tracking-caps: var(--tracking-caps);
+  --ease-standard: var(--ease);
+}
+
 @layer base {
   :root {
     --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
@@ -40,5 +55,11 @@
 
   ::selection {
     background: var(--brand-soft);
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
   }
 }
