@@ -210,3 +210,29 @@ The specification that these decisions refine lives outside the repo in
   retrying the same body reuses it and editing the form after a failure rotates it.
 - **Hook adaptation:** the pre-commit lint command passes `--no-warn-ignored` so staging the
   generated, lint-ignored `types/api.d.ts` does not fail the commit.
+
+## 2026-09-01 · Session BFF, cookies and headers (W-07)
+
+- **Cookie names:** `__Host-access` (15 min, `Path=/`, Strict) and `__Host-session` (30 days, `Path=/`,
+  Lax, value `1`) follow HANDOFF §3.9. The refresh cookie is **`__Secure-refresh`** instead of
+  `__Host-refresh`: the `__Host-` prefix requires `Path=/` (RFC 6265bis), and the handoff's own rule
+  that the refresh token must never leave `/api/auth` matters more than the prefix. `__Secure-` still
+  forbids non-HTTPS delivery and any `Domain` override.
+- **`Secure` always on:** cookie prefixes require it, so the BFF sets it in development too. Browsers
+  treat `http://localhost` as a secure context, which is why the app must be developed on localhost
+  (or behind HTTPS), never on a LAN IP.
+- **`GET /api/auth/me`:** the BFF decodes the access token payload (issued by our backend, verified
+  there) to learn `userId` and proxies `GET /users/:id`. The client never receives tokens; a page
+  reload gets the user from this endpoint.
+- **Origin check:** every session handler compares `Origin` (or the `Referer` origin) with
+  `NEXT_PUBLIC_APP_URL` and the request's own host; anything else is 403 before touching the backend.
+- **Backend failures:** transport errors and the 15 s timeout become `503`/`504` JSON with
+  `code: DB_UNAVAILABLE`, so the client shows the maintenance state instead of a raw 500.
+- **CSP** is emitted in report-only mode from `proxy.ts` with a per-request nonce (also passed to the
+  theme script through the `x-nonce` request header); reports go to `/api/csp-report`, which only
+  logs them for now (Sentry takes over in W-35). `unsafe-eval` is added only in development for
+  Turbopack HMR. Static headers (nosniff, Referrer-Policy, Permissions-Policy, COOP, CORP,
+  X-Frame-Options) come from `next.config.ts`; HSTS with preload only in production builds.
+- **Route protection** lives in `proxy.ts` and reads only the `__Host-session` marker; the public
+  surface is listed in `lib/auth/routes.ts`, guests are redirected to the localized login with a
+  same-origin `next`, and signed-in users are bounced away from `/login` and `/register`.

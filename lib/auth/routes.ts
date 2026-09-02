@@ -1,0 +1,32 @@
+export const LOGIN_PATH = "/login";
+export const REGISTER_PATH = "/register";
+export const HOME_PATH = "/";
+export const APP_HOME_PATH = "/home";
+export const ONBOARDING_PATH = "/onboarding";
+
+const PUBLIC_EXACT = new Set(["/", "/login", "/register", "/privacy", "/terms", "/contact"]);
+const PUBLIC_PREFIXES = ["/dev/"];
+const GUEST_ONLY = new Set(["/login", "/register"]);
+
+export function stripLocale(pathname: string, locales: readonly string[]): string {
+  for (const locale of locales) {
+    if (pathname === `/${locale}`) return "/";
+    if (pathname.startsWith(`/${locale}/`)) return pathname.slice(locale.length + 1);
+  }
+  return pathname;
+}
+
+export function isPublicPath(pathname: string): boolean {
+  return (
+    PUBLIC_EXACT.has(pathname) || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  );
+}
+
+export function isGuestOnlyPath(pathname: string): boolean {
+  return GUEST_ONLY.has(pathname);
+}
+
+export function safeNextPath(value: string | null, fallback = APP_HOME_PATH): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return fallback;
+  return value;
+}

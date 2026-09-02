@@ -10,6 +10,11 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    env: {
+      API_URL: "http://backend.test",
+      NEXT_PUBLIC_APP_URL: "http://localhost:3001",
+      NEXT_PUBLIC_CONTACT_EMAIL: "ledgerflow@alexpiral.com",
+    },
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.test.{ts,tsx}"],
