@@ -570,6 +570,27 @@
       "showCounting": "Show transactions",
       "from": "From",
       "to": "To"
+    },
+    "detail": {
+      "title": "Transaction",
+      "category": "Category",
+      "account": "Account",
+      "from": "From",
+      "to": "To",
+      "source": "Source",
+      "currency": "Currency",
+      "sources": {
+        "MANUAL": "Manual",
+        "QUICK": "Quick add",
+        "IMPORT": "Import"
+      },
+      "edit": "Edit",
+      "pendingBody": "This quick expense still needs a category and a description.",
+      "complete": "Complete",
+      "unknownAccount": "Unknown account",
+      "created": "Created {created}",
+      "createdEdited": "Created {created} · edited {edited}",
+      "dateTime": "{date} · {time}"
     }
   },
   "transactionTypes": {

@@ -570,6 +570,27 @@
       "showCounting": "Mostrar movimientos",
       "from": "Desde",
       "to": "Hasta"
+    },
+    "detail": {
+      "title": "Movimiento",
+      "category": "Categoría",
+      "account": "Cuenta",
+      "from": "Desde",
+      "to": "Hacia",
+      "source": "Origen",
+      "currency": "Moneda",
+      "sources": {
+        "MANUAL": "Manual",
+        "QUICK": "Captura rápida",
+        "IMPORT": "Importado"
+      },
+      "edit": "Editar",
+      "pendingBody": "Este gasto rápido aún necesita categoría y descripción.",
+      "complete": "Completar",
+      "unknownAccount": "Cuenta desconocida",
+      "created": "Creado {created}",
+      "createdEdited": "Creado {created} · editado {edited}",
+      "dateTime": "{date} · {time}"
     }
   },
   "transactionTypes": {

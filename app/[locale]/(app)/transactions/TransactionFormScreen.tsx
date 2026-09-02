@@ -6,12 +6,11 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
-import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Empty } from "@/components/ui/Empty";
-import { Sheet } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
+import { DeleteTransactionSheet } from "@/features/transactions/components/DeleteTransactionSheet";
 import {
   defaultFormValues,
   draftFromSearchParams,
@@ -156,40 +155,16 @@ export function EditTransactionScreen({ id }: { id: string }) {
           }
         />
       )}
-      <Sheet
+      <DeleteTransactionSheet
         open={confirming}
+        pending={remove.isPending}
+        onConfirm={() => {
+          void confirmDelete();
+        }}
         onClose={() => {
           setConfirming(false);
         }}
-        title={t("transactions.form.deleteTitle")}
-        footer={
-          <>
-            <Button
-              variant="dangerSolid"
-              size="lg"
-              block
-              loading={remove.isPending}
-              onClick={() => {
-                void confirmDelete();
-              }}
-            >
-              {t("common.delete")}
-            </Button>
-            <Button
-              variant="ghost"
-              size="lg"
-              block
-              onClick={() => {
-                setConfirming(false);
-              }}
-            >
-              {t("common.cancel")}
-            </Button>
-          </>
-        }
-      >
-        <Alert tone="danger">{t("transactions.form.deleteBody")}</Alert>
-      </Sheet>
+      />
     </div>
   );
 }

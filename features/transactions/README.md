@@ -22,3 +22,8 @@ account, category, tag, pending, quick-only, search) and maps them to the API qu
 `useTransactionsInfinite` pages by cursor, `usePeriodTotals` turns the server's day buckets into
 the summary and the day headers, `groups.ts` only cuts the sorted rows where the local day changes.
 The screen and the filters sheet live in `app/[locale]/(app)/transactions/`.
+
+W-20 adds the detail screen (`app/[locale]/(app)/transactions/[id]/`): hero with the category tile
+and the signed amount, the attribute table, Edit (the W-18 form) and Delete through the shared
+`DeleteTransactionSheet`, and a warning with "Complete" on pending quick expenses that points at the
+W-21 inbox.

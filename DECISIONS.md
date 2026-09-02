@@ -524,3 +524,15 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **Why it matters:** the backend limits 200 requests per 15 minutes per IP and every request
   arrives from the BFF, so the budget is shared; the fix on that side is tracked in
   `BACKEND-DESDE-FRONT.md`, and the local backend runs with `RATE_LIMIT_MAX=5000` meanwhile.
+
+## 2026-09-02 · Transaction detail (W-20)
+
+- **The detail reuses the list's vocabulary.** `transactionTitle` names the row and the hero the
+  same way (description, then transfer route, then category, then "Quick expense"), and the delete
+  confirmation is one `DeleteTransactionSheet` shared with the edit form, so both paths show the
+  same warning and the same toast without Undo (the backend has no restore).
+- **Lookups are queried, not embedded.** The API returns ids for category and accounts; the screen
+  loads the (long-lived) accounts and categories lists, including archived ones, and falls back to
+  "Unknown account" instead of failing when a lookup is missing.
+- **"Complete" links to `/transactions/review?focus=<id>`**, the W-21 inbox; until then the route is
+  a stub so the link type-checks.

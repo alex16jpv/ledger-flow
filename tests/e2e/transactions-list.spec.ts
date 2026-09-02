@@ -78,3 +78,46 @@ test("without network the cached list stays visible under the offline banner", a
   await expect(page.getByText("Back online.")).toBeVisible();
   await expect(firstRow).toBeVisible();
 });
+
+test("a row opens its detail, which edits and deletes the transaction", async ({
+  page,
+  request,
+}) => {
+  await signIn(page, request);
+  const amount = 100_000 + Math.floor(Math.random() * 899_999);
+  const created = (await (
+    await request.post("/api/transactions/quick", {
+      headers: { origin: APP },
+      data: { amount },
+    })
+  ).json()) as { id: string };
+
+  await page.goto("/transactions");
+  await page
+    .getByRole("button", { name: /Quick expense/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}$`));
+  await expect(page.getByRole("heading", { level: 1, name: "Transaction" })).toBeVisible();
+  await expect(
+    page.getByText("This quick expense still needs a category and a description."),
+  ).toBeVisible();
+  await expect(page.getByText("Quick add")).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  await page.getByRole("link", { name: "Edit" }).click();
+  await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}/edit$`));
+  await page.getByRole("textbox", { name: /^Description/ }).fill("E2E detailed");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page).toHaveURL(/\/transactions$/);
+
+  await page.goto(`/transactions/${created.id}`);
+  await expect(page.getByRole("heading", { level: 2, name: "E2E detailed" })).toBeVisible();
+  await page.getByRole("button", { name: "Delete" }).click();
+  await page
+    .getByRole("dialog", { name: "Delete this transaction?" })
+    .getByRole("button", { name: "Delete" })
+    .click();
+  await expect(page.getByText("Transaction deleted")).toBeVisible();
+  expect((await request.get(`/api/transactions/${created.id}`)).status()).toBe(404);
+});
