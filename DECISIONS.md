@@ -617,3 +617,13 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   `amount`. `fieldErrors` removes the `body.` / `query.` / `params.` prefix.
 - **A server detail never shows raw.** `validationMessage` translates our keys and maps anything else to
   the generic `validation.invalid`, per HANDOFF §3.8.
+
+## 2026-09-02 · Focus on entry (owner reports P-22, P-23)
+
+- **The transaction form focuses the amount on mount and on every type switch.** The segment only
+  reconfigures the account section, so after choosing Income or Transfer the next thing to type is
+  still the amount; an effect keyed on the type moves the focus there.
+- **`PickerSheet` focuses its search box from an effect**, like the account sheet does with its rows:
+  `showModal()` lands on the close button and `autofocus` inside a dialog is not honoured
+  consistently. The category sheet keeps its `autofocus` for now: its recent chips are the first
+  target on touch screens, so the keyboard should not pop there by default.

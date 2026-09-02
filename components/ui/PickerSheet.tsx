@@ -2,7 +2,7 @@
 
 import { Check, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { iconProps } from "@/lib/icons/sizes";
 
@@ -49,6 +49,12 @@ export function PickerSheet<T extends string>({
 }: PickerSheetProps<T>) {
   const t = useTranslations("common");
   const [query, setQuery] = useState("");
+  const search = useRef<HTMLInputElement>(null);
+
+  // showModal() lands on the close button; the search box must own the focus when the sheet opens.
+  useEffect(() => {
+    if (open && searchable) search.current?.focus();
+  }, [open, searchable]);
   const needle = normalize(query.trim());
   const filtered = useMemo(
     () =>
@@ -67,6 +73,7 @@ export function PickerSheet<T extends string>({
       <div className="flex flex-col gap-3">
         {searchable && (
           <Input
+            ref={search}
             type="search"
             value={query}
             onChange={(event) => {

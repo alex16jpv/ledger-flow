@@ -26,6 +26,7 @@ describe("PickerSheet", () => {
       />,
     );
     expect(screen.getByRole("option", { name: /COP/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus();
     await userEvent.type(screen.getByRole("searchbox", { name: "Search" }), "éuro");
     expect(screen.getAllByRole("option")).toHaveLength(1);
     await userEvent.click(screen.getByRole("option", { name: /EUR/ }));

@@ -81,7 +81,9 @@ test("a transfer refuses the same account on both sides and swaps them", async (
   await signIn(page, request);
   const amount = uniqueAmount();
   await page.goto("/transactions/new");
+  await expect(page.getByRole("textbox", { name: "Amount" })).toBeFocused();
   await page.getByRole("button", { name: "Transfer" }).click();
+  await expect(page.getByRole("textbox", { name: "Amount" })).toBeFocused();
   await page.getByRole("textbox", { name: "Amount" }).fill(String(amount));
   await page.getByRole("button", { name: /^From/ }).click();
   await page

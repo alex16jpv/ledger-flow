@@ -41,3 +41,13 @@ test("a taken email shows the inline error with a sign-in link", async ({ page, 
       .getByRole("link", { name: "Sign in" }),
   ).toBeVisible();
 });
+
+test("the currency picker opens with the search box focused", async ({ page }) => {
+  await page.goto("/register");
+  await page.getByRole("button", { name: /[A-Z]{3} · / }).click();
+  const dialog = page.getByRole("dialog", { name: "Choose your currency" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("searchbox", { name: "Search" })).toBeFocused();
+  await page.keyboard.type("euro");
+  await expect(dialog.getByRole("option", { name: /EUR/ })).toBeVisible();
+});

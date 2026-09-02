@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowUpDown, PencilLine } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { Alert } from "@/components/ui/Alert";
@@ -62,12 +62,18 @@ export function TransactionForm({
   const { timeZone } = useFormatSettings();
   const tags = useTagsQuery();
   const keyring = useRef(new IdempotencyKeyring());
+  const amountInput = useRef<HTMLInputElement>(null);
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
     defaultValues,
   });
   const { errors } = form.formState;
   const type = useWatch({ control: form.control, name: "type" });
+
+  // The amount is the first thing to type on entering the form and after every type switch (owner request P-22).
+  useEffect(() => {
+    amountInput.current?.focus();
+  }, [type]);
   const fromAccountId = useWatch({ control: form.control, name: "fromAccountId" });
   const toAccountId = useWatch({ control: form.control, name: "toAccountId" });
   const serverFields = fieldErrors(error);
@@ -126,6 +132,7 @@ export function TransactionForm({
         render={({ field }) => (
           <div className="flex flex-col gap-1">
             <AmountInput
+              ref={amountInput}
               label={t("transactions.form.amount")}
               defaultValue={Number.isFinite(field.value) ? field.value : null}
               onChange={(value) => {

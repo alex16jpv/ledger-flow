@@ -133,8 +133,10 @@ describe("NewTransactionScreen", () => {
   it("keeps the amount when switching to a transfer and refuses the same account twice", async () => {
     render(<NewTransactionScreen />);
     await screen.findByRole("group", { name: "Type" });
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveFocus();
     await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "900");
     await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveFocus();
     expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("900");
     expect(screen.queryByRole("button", { name: /Category/ })).not.toBeInTheDocument();
 
