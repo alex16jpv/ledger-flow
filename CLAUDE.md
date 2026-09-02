@@ -5,7 +5,9 @@ multi-user product: never assume a single user, little data or a trusted client.
 
 This file overrides any default habit. The full specification lives outside the repo in
 `../auditoria/diseno/HANDOFF.md` (how and what), `DESIGN.md` (UI/UX) and
-`../auditoria/FASE-2-CONTRATO-FRONTEND.md` (API contract). Read them before changing anything.
+`../auditoria/FASE-2-CONTRATO-FRONTEND.md` (API contract). Progress of the backlog and of the
+owner's requests is tracked in `../auditoria/PROGRESO.md`; update it when you close an item. Read
+them before changing anything.
 
 ---
 
