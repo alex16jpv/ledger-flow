@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import {
   ADD_HREF,
@@ -14,6 +14,7 @@ import { usePendingCount } from "@/features/transactions/hooks";
 import { LOGIN_PATH } from "@/lib/auth/routes";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
+import { startHeartbeat } from "@/lib/network/heartbeat";
 import { SessionProvider, useSession } from "@/lib/session";
 
 import { QuickAddSheet } from "./QuickAddSheet";
@@ -27,6 +28,7 @@ function Frame({ children }: { children: ReactNode }) {
     open: false,
     chain: false,
   });
+  useEffect(() => startHeartbeat(), []);
 
   const goToLogin = useCallback(() => {
     router.replace(`${LOGIN_PATH}?next=${encodeURIComponent(pathname)}`);

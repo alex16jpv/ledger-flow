@@ -507,6 +507,69 @@
       "deleteBody": "The account balances go back to what they were. This can’t be undone.",
       "deleted": "Transaction deleted",
       "notFound": "This transaction doesn’t exist or was deleted."
+    },
+    "list": {
+      "title": "Transactions",
+      "search": "Search description, note or tag",
+      "filters": "Filters",
+      "activeFilters": "{count} active filters",
+      "export": "Export",
+      "spentIn": "Spent in {period}",
+      "income": "Income",
+      "count": "Transactions",
+      "quickExpense": "Quick expense",
+      "toReview": "To review",
+      "toReviewCount": "To review · {count}",
+      "uncategorized": "Uncategorized",
+      "balanceAdjustment": "Balance adjustment",
+      "loadMore": "Load more",
+      "refreshed": "List refreshed",
+      "empty": {
+        "title": "Nothing recorded yet",
+        "body": "Your movements will show up here, grouped by day.",
+        "cta": "Add an expense"
+      },
+      "noMatch": {
+        "title": "No movements match",
+        "body": "Try another period or clear the filters.",
+        "cta": "Clear filters"
+      },
+      "offline": {
+        "title": "You’re offline",
+        "body": "The list will load when you’re back online."
+      },
+      "periods": {
+        "week": "This week",
+        "month": "This month",
+        "lastMonth": "Last month",
+        "year": "This year",
+        "custom": "Custom…",
+        "all": "All time"
+      },
+      "types": {
+        "ALL": "All",
+        "EXPENSE": "Expenses",
+        "INCOME": "Income",
+        "TRANSFER": "Transfers",
+        "ADJUSTMENT": "Adjustments"
+      },
+      "tagChip": "#{tag}"
+    },
+    "filters": {
+      "title": "Filters",
+      "period": "Period",
+      "type": "Type",
+      "account": "Account",
+      "category": "Category",
+      "tag": "Tag",
+      "tagPlaceholder": "#latte, #groceries…",
+      "pendingOnly": "Only quick expenses to review",
+      "quickOnly": "Only quick entries",
+      "clear": "Clear",
+      "show": "Show {count, plural, one {# transaction} other {# transactions}}",
+      "showCounting": "Show transactions",
+      "from": "From",
+      "to": "To"
     }
   },
   "transactionTypes": {

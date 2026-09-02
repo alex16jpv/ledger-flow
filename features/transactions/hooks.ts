@@ -1,6 +1,7 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import { invalidateMoneyMovement } from "@/lib/query/domains";
 import type {
@@ -13,12 +14,16 @@ import type {
 import {
   createTransaction,
   deleteTransaction,
+  fetchDailyStats,
   fetchPendingCount,
   fetchTags,
   fetchTransaction,
+  fetchTransactionsCount,
+  fetchTransactionsPage,
   quickAddTransaction,
   updateTransaction,
 } from "./api";
+import type { ListQuery } from "./filters";
 import { transactionKeys } from "./keys";
 
 export function usePendingCount(enabled = true): number {
@@ -67,6 +72,58 @@ export function useQuickAdd() {
     mutationFn: quickAddWithDetails,
     onSuccess: () => invalidateMoneyMovement(queryClient),
   });
+}
+
+export function useTransactionsInfinite(query: ListQuery, enabled = true) {
+  return useInfiniteQuery({
+    queryKey: transactionKeys.list(query),
+    queryFn: ({ pageParam }) => fetchTransactionsPage(query, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) =>
+      last.pagination.hasMore ? (last.pagination.nextCursor ?? undefined) : undefined,
+    enabled,
+  });
+}
+
+export function useTransactionsCount(query: ListQuery, enabled = true) {
+  return useQuery({
+    queryKey: transactionKeys.count(query),
+    queryFn: () => fetchTransactionsCount(query),
+    select: (list) => list.pagination.total,
+    enabled,
+  });
+}
+
+export interface PeriodTotals {
+  spent: number;
+  income: number;
+  byDay: ReadonlyMap<string, number>;
+}
+
+// Day headers and the summary come from the server's day buckets; the client only pairs them up.
+export function usePeriodTotals(window: { from: string; to: string } | null) {
+  const from = window?.from ?? "";
+  const to = window?.to ?? "";
+  const expenses = useQuery({
+    queryKey: transactionKeys.daily({ type: "EXPENSE", from, to }),
+    queryFn: () => fetchDailyStats({ type: "EXPENSE", from, to }),
+    enabled: window !== null,
+  });
+  const income = useQuery({
+    queryKey: transactionKeys.daily({ type: "INCOME", from, to }),
+    queryFn: () => fetchDailyStats({ type: "INCOME", from, to }),
+    enabled: window !== null,
+  });
+  const expenseData = expenses.data;
+  const incomeData = income.data;
+  return useMemo<PeriodTotals | null>(() => {
+    if (!expenseData || !incomeData) return null;
+    const byDay = new Map<string, number>();
+    for (const bucket of incomeData.buckets) byDay.set(bucket.key, bucket.total);
+    for (const bucket of expenseData.buckets)
+      byDay.set(bucket.key, (byDay.get(bucket.key) ?? 0) - bucket.total);
+    return { spent: expenseData.total, income: incomeData.total, byDay };
+  }, [expenseData, incomeData]);
 }
 
 export function useTransactionQuery(id: string) {

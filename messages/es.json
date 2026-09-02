@@ -507,6 +507,69 @@
       "deleteBody": "Los saldos de las cuentas vuelven a lo que eran. No se puede deshacer.",
       "deleted": "Movimiento eliminado",
       "notFound": "Este movimiento no existe o fue eliminado."
+    },
+    "list": {
+      "title": "Movimientos",
+      "search": "Buscar por descripción, nota o etiqueta",
+      "filters": "Filtros",
+      "activeFilters": "{count} filtros activos",
+      "export": "Exportar",
+      "spentIn": "Gastado en {period}",
+      "income": "Ingresos",
+      "count": "Movimientos",
+      "quickExpense": "Gasto rápido",
+      "toReview": "Por revisar",
+      "toReviewCount": "Por revisar · {count}",
+      "uncategorized": "Sin categoría",
+      "balanceAdjustment": "Ajuste de saldo",
+      "loadMore": "Cargar más",
+      "refreshed": "Lista actualizada",
+      "empty": {
+        "title": "Aún no hay movimientos",
+        "body": "Tus movimientos aparecerán aquí, agrupados por día.",
+        "cta": "Añadir un gasto"
+      },
+      "noMatch": {
+        "title": "Ningún movimiento coincide",
+        "body": "Prueba otro período o limpia los filtros.",
+        "cta": "Limpiar filtros"
+      },
+      "offline": {
+        "title": "Estás sin conexión",
+        "body": "La lista se cargará cuando vuelvas a tener conexión."
+      },
+      "periods": {
+        "week": "Esta semana",
+        "month": "Este mes",
+        "lastMonth": "Mes pasado",
+        "year": "Este año",
+        "custom": "Personalizado…",
+        "all": "Todo"
+      },
+      "types": {
+        "ALL": "Todos",
+        "EXPENSE": "Gastos",
+        "INCOME": "Ingresos",
+        "TRANSFER": "Transferencias",
+        "ADJUSTMENT": "Ajustes"
+      },
+      "tagChip": "#{tag}"
+    },
+    "filters": {
+      "title": "Filtros",
+      "period": "Período",
+      "type": "Tipo",
+      "account": "Cuenta",
+      "category": "Categoría",
+      "tag": "Etiqueta",
+      "tagPlaceholder": "#latte, #mercado…",
+      "pendingOnly": "Solo gastos rápidos por revisar",
+      "quickOnly": "Solo capturas rápidas",
+      "clear": "Limpiar",
+      "show": "Mostrar {count, plural, one {# movimiento} other {# movimientos}}",
+      "showCounting": "Mostrar movimientos",
+      "from": "Desde",
+      "to": "Hasta"
     }
   },
   "transactionTypes": {

@@ -1,4 +1,12 @@
-import { addDays, addMonths, startOfDay, startOfMonth } from "date-fns";
+import {
+  addDays,
+  addMonths,
+  addYears,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+  startOfYear,
+} from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 
 export interface DateWindow {
@@ -12,6 +20,30 @@ export function monthWindow(reference: Date, timeZone: string): DateWindow {
   return {
     from: fromZonedTime(localStart, timeZone),
     to: fromZonedTime(addMonths(localStart, 1), timeZone),
+  };
+}
+
+export function weekWindow(reference: Date, timeZone: string): DateWindow {
+  const localStart = startOfWeek(toZonedTime(reference, timeZone), { weekStartsOn: 1 });
+  return {
+    from: fromZonedTime(localStart, timeZone),
+    to: fromZonedTime(addDays(localStart, 7), timeZone),
+  };
+}
+
+export function yearWindow(reference: Date, timeZone: string): DateWindow {
+  const localStart = startOfYear(toZonedTime(reference, timeZone));
+  return {
+    from: fromZonedTime(localStart, timeZone),
+    to: fromZonedTime(addYears(localStart, 1), timeZone),
+  };
+}
+
+// Inclusive calendar days from a date form: [from 00:00, to 00:00 + 1 day).
+export function daysWindow(fromDate: string, toDate: string, timeZone: string): DateWindow {
+  return {
+    from: fromZonedTime(`${fromDate}T00:00:00`, timeZone),
+    to: addDays(fromZonedTime(`${toDate}T00:00:00`, timeZone), 1),
   };
 }
 

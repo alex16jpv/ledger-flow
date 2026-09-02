@@ -1,3 +1,4 @@
+import { reportNetworkFailure } from "@/lib/network/connectivity";
 import type { ErrorResponse } from "@/types/api";
 
 import { ApiError, isErrorCode, NetworkError } from "./errors";
@@ -91,6 +92,7 @@ async function send(path: string, request: ApiRequest, requestId: string): Promi
     const timedOut = cause instanceof DOMException && cause.name === "TimeoutError";
     if (cause instanceof DOMException && cause.name === "AbortError" && signal?.aborted)
       throw cause;
+    reportNetworkFailure();
     throw new NetworkError(requestId, timedOut, cause);
   }
 }

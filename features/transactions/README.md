@@ -16,3 +16,9 @@ rules live in `superRefine`), `toTransactionInput` maps the form to the API payl
 nulls so PUT can clear a side), `fromTransaction` prefills the edit form and `draftFromSearchParams`
 reads the quick-add hand-off. `useCreateTransaction`, `useUpdateTransaction`, `useTransactionQuery`
 and `useTagsQuery` back the screens in `app/[locale]/(app)/transactions/`.
+
+W-19 adds the list: `filters.ts` parses and serializes the URL filters (period presets, type,
+account, category, tag, pending, quick-only, search) and maps them to the API query;
+`useTransactionsInfinite` pages by cursor, `usePeriodTotals` turns the server's day buckets into
+the summary and the day headers, `groups.ts` only cuts the sorted rows where the local day changes.
+The screen and the filters sheet live in `app/[locale]/(app)/transactions/`.

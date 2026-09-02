@@ -17,6 +17,10 @@ export function useDates() {
         dateTime({ weekday: "long", month: "long", day: "numeric" }).format(date),
       formatMonth: (date: Date) => dateTime({ month: "long", year: "numeric" }).format(date),
       formatDay: (date: Date) => dateTime({ month: "short", day: "numeric" }).format(date),
+      formatWeekdayDay: (date: Date) =>
+        `${dateTime({ weekday: "long" }).format(date)} ${dateTime({ day: "numeric" }).format(date)}`,
+      formatRange: (from: Date, to: Date) =>
+        dateTime({ month: "short", day: "numeric" }).formatRange(from, to),
       formatTime: (date: Date) => dateTime({ hour: "numeric", minute: "2-digit" }).format(date),
       monthWindow: (reference: Date) => monthWindow(reference, timeZone),
       dayWindow: (reference: Date) => dayWindow(reference, timeZone),

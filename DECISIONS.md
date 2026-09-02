@@ -486,3 +486,27 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   the `/transactions` stub renders the root not-found page, which unmounts the app frame and its
   toast; W-19 switches the destination to the list. Delete confirms in a sheet and shows a toast
   without Undo because the backend has no restore.
+
+## 2026-09-02 · Transactions list (W-19)
+
+- **Filters are the URL** (`?period&from&to&type&account&category&uncategorized&tag&pending&source&q`);
+  `parseFilters`/`serializeFilters` are the single translation and defaults are omitted so a plain
+  `/transactions` is the current month. The search box debounces into `q`, so even the text survives
+  a reload and can be shared.
+- **Day totals and the summary come from `GET /stats/spending?groupBy=day`** (one call for
+  expenses, one for income) instead of summing the loaded rows: the client never adds money, and the
+  header of a day stays right even when its rows are still on a later page. Transfers and
+  adjustments are not part of those totals, as in the backend.
+- **Search is client-side over the loaded pages** and `#tag` narrows to tags, as DESIGN.md §8.5
+  describes; a server search would need an endpoint the API does not have.
+- **`INVALID_CURSOR` resets the infinite query** and shows "List refreshed" instead of silently
+  serving page one again.
+- **Connectivity is decided by a heartbeat, not by `navigator.onLine`.** Every failed request
+  reports a suspicion; the heartbeat then probes `GET /api/health` (an unauthenticated BFF route that
+  asks the backend's `/health/db`) and marks the app offline only when the probe fails. While
+  offline it re-probes every 30 s and on focus, and feeds React Query's `onlineManager`, so queries
+  pause but keep showing cached data under the banner. Changing a filter while offline still needs
+  the route's RSC payload, so it fails until F6 adds the service worker and the persisted cache.
+- **The list screen is composed in the app layer** like the other F2 screens: it needs account and
+  category lookups and the pickers of two features; `features/transactions` owns the row, day list,
+  summary, filters model and hooks.

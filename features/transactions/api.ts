@@ -1,12 +1,41 @@
 import { api } from "@/lib/api/client";
+import type { QueryValue } from "@/lib/api/query";
 import type {
   CreateTransactionInput,
   QuickAddTransactionInput,
+  StatsResponse,
   TagList,
   Transaction,
   TransactionList,
   UpdateTransactionInput,
 } from "@/types/api";
+
+export const LIST_PAGE_SIZE = 30;
+
+export function fetchTransactionsPage(
+  query: Record<string, QueryValue>,
+  cursor?: string,
+): Promise<TransactionList> {
+  return api<TransactionList>("/transactions", {
+    query: { ...query, limit: LIST_PAGE_SIZE, cursor },
+  });
+}
+
+export function fetchTransactionsCount(
+  query: Record<string, QueryValue>,
+): Promise<TransactionList> {
+  return api<TransactionList>("/transactions", { query: { ...query, limit: 1 } });
+}
+
+export interface DailyStatsParams {
+  type: "EXPENSE" | "INCOME";
+  from: string;
+  to: string;
+}
+
+export function fetchDailyStats({ type, from, to }: DailyStatsParams): Promise<StatsResponse> {
+  return api<StatsResponse>("/stats/spending", { query: { groupBy: "day", type, from, to } });
+}
 
 export function fetchPendingCount(): Promise<TransactionList> {
   return api<TransactionList>("/transactions", { query: { pendingDetails: true, limit: 1 } });

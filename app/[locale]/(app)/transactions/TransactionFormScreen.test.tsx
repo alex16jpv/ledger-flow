@@ -113,7 +113,7 @@ describe("NewTransactionScreen", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
 
     await waitFor(() => {
-      expect(push).toHaveBeenCalledWith("/home");
+      expect(push).toHaveBeenCalledWith("/transactions");
     });
     const [post] = calls("POST");
     expect(JSON.parse(post?.[1]?.body as string)).toMatchObject({
@@ -207,7 +207,7 @@ describe("EditTransactionScreen", () => {
       fromAccountId: "a1",
       toAccountId: null,
     });
-    expect(push).toHaveBeenCalledWith("/home");
+    expect(push).toHaveBeenCalledWith("/transactions");
 
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     const dialog = screen.getByRole("dialog", { name: "Delete this transaction?" });

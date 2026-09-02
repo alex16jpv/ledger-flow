@@ -31,8 +31,7 @@ import { iconProps } from "@/lib/icons/sizes";
 
 import { TransactionForm } from "./TransactionForm";
 
-// Until W-19 ships the list, saving returns home: the /transactions stub renders the root not-found and drops the toast.
-const AFTER_SAVE_PATH = "/home";
+const AFTER_SAVE_PATH = "/transactions";
 
 export function NewTransactionScreen() {
   const t = useTranslations();

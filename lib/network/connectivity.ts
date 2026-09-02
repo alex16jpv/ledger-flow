@@ -5,6 +5,7 @@ export const BACK_ONLINE_VISIBLE_MS = 3000;
 type Listener = () => void;
 
 const listeners = new Set<Listener>();
+const suspectListeners = new Set<Listener>();
 let phase: ConnectivityPhase = "online";
 let timer: ReturnType<typeof setTimeout> | null = null;
 let started = false;
@@ -38,6 +39,18 @@ export function reportOnline(online: boolean): void {
     return;
   }
   setPhase("online");
+}
+
+// A failed request is only a hint: the heartbeat decides whether the app is really offline.
+export function reportNetworkFailure(): void {
+  for (const listener of suspectListeners) listener();
+}
+
+export function onNetworkFailure(listener: Listener): () => void {
+  suspectListeners.add(listener);
+  return () => {
+    suspectListeners.delete(listener);
+  };
 }
 
 function start(): void {

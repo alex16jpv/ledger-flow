@@ -77,19 +77,20 @@ shared code moves up to `lib` or `components/ui`. ESLint enforces it.
 
 English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`).
 
-| Route                                                                         | Screen                                                                                       |
-| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `/`                                                                           | Public landing (static)                                                                      |
-| `/login`, `/register`, `/onboarding`                                          | Access and first-run flow                                                                    |
-| `/home`                                                                       | Authenticated home                                                                           |
-| `/settings`, `/settings/appearance`                                           | Settings hub and appearance                                                                  |
-| `/transactions/new`, `/transactions/[id]/edit`                                | Transaction form: create (optional quick-add draft in the query string) and edit with delete |
-| `/transactions`, `/accounts`, `/budgets`, `/stats`, `/categories`, `/privacy` | Stubs answering "not found" until their backlog item (F2–F5)                                 |
-| `/dev/ui`                                                                     | Component catalog (development only)                                                         |
-| `/dev/pickers`                                                                | Category, account and date pickers against the real API (development only)                   |
-| `/dev/frame?w=390&url=…`, `/api/dev/login?email&password&next`                | Screenshot helpers (development only)                                                        |
-| `/api/auth/*`                                                                 | Session BFF (httpOnly cookies)                                                               |
-| `/api/[...path]`                                                              | Generic proxy to the backend                                                                 |
+| Route                                                                              | Screen                                                                                       |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `/`                                                                                | Public landing (static)                                                                      |
+| `/login`, `/register`, `/onboarding`                                               | Access and first-run flow                                                                    |
+| `/home`                                                                            | Authenticated home                                                                           |
+| `/settings`, `/settings/appearance`                                                | Settings hub and appearance                                                                  |
+| `/transactions`                                                                    | Transactions list: filters in the URL, day groups, infinite scroll                           |
+| `/transactions/new`, `/transactions/[id]/edit`                                     | Transaction form: create (optional quick-add draft in the query string) and edit with delete |
+| `/transactions/[id]`, `/accounts`, `/budgets`, `/stats`, `/categories`, `/privacy` | Stubs answering "not found" until their backlog item (F2–F5)                                 |
+| `/dev/ui`                                                                          | Component catalog (development only)                                                         |
+| `/dev/pickers`                                                                     | Category, account and date pickers against the real API (development only)                   |
+| `/dev/frame?w=390&url=…`, `/api/dev/login?email&password&next`                     | Screenshot helpers (development only)                                                        |
+| `/api/auth/*`                                                                      | Session BFF (httpOnly cookies)                                                               |
+| `/api/[...path]`                                                                   | Generic proxy to the backend                                                                 |
 
 ## How to
 
