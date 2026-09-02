@@ -490,8 +490,10 @@
     },
     "restoreConflict": {
       "title": "That name is taken",
-      "body": "An active account is already named “{name}”. Rename it first, then restore this one.",
-      "open": "Open {name}"
+      "body": "An active account is already named “{name}”. Choose another name to restore this one.",
+      "name": "New name",
+      "confirm": "Restore as “{name}”",
+      "confirmEmpty": "Restore"
     },
     "adjust": {
       "title": "Adjust balance",
@@ -581,8 +583,10 @@
     },
     "restoreConflict": {
       "title": "That name is taken",
-      "body": "An active category is already named “{name}”. Rename it first, then restore this one.",
-      "open": "Open {name}"
+      "body": "An active category is already named “{name}”. Choose another name to restore this one.",
+      "name": "New name",
+      "confirm": "Restore as “{name}”",
+      "confirmEmpty": "Restore"
     }
   },
   "transactions": {

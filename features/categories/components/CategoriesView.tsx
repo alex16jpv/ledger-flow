@@ -75,9 +75,10 @@ export function CategoriesView() {
     toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
   }
 
-  async function restoreOne(category: Category) {
+  async function restoreOne(category: Category, name?: string) {
     try {
-      await restore.mutateAsync(category.id);
+      await restore.mutateAsync({ id: category.id, name });
+      setConflict(null);
       toast.show({ message: t("categories.archive.restored") });
     } catch (error) {
       if (error instanceof ApiError && error.code === "DUPLICATE") {
@@ -86,6 +87,13 @@ export function CategoriesView() {
       } else fail(error);
     }
   }
+  const conflictError =
+    conflict &&
+    restore.error instanceof ApiError &&
+    restore.error.code === "DUPLICATE" &&
+    restore.variables?.name
+      ? t("categories.form.duplicate", { name: restore.variables.name })
+      : undefined;
 
   async function recreateDefaults() {
     try {
@@ -259,7 +267,7 @@ export function CategoriesView() {
                         variant="secondary"
                         size="sm"
                         aria-label={`${t("categories.list.restore")} ${category.name}`}
-                        loading={restore.isPending && restore.variables === category.id}
+                        loading={restore.isPending && restore.variables.id === category.id}
                         onClick={() => {
                           void restoreOne(category);
                         }}
@@ -295,6 +303,11 @@ export function CategoriesView() {
               category={conflict}
               conflict={findActiveCategoryByName(categories.data, conflict.name)}
               open
+              pending={restore.isPending}
+              error={conflictError}
+              onConfirm={(name) => {
+                void restoreOne(conflict, name);
+              }}
               onClose={() => {
                 setConflict(null);
               }}

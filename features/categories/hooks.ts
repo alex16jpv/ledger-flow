@@ -6,7 +6,7 @@ import { useMemo } from "react";
 import { dayKey, toIsoWindow, trailingDaysWindow } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { QUERY_DOMAINS } from "@/lib/query/domains";
-import type { Category, StatsBucket, UpdateCategoryInput } from "@/types/api";
+import type { Category, RestoreInput, StatsBucket, UpdateCategoryInput } from "@/types/api";
 
 import {
   archiveCategory,
@@ -70,9 +70,16 @@ export function useArchiveCategory() {
   return useMutation({ mutationFn: archiveCategory, onSuccess: invalidate });
 }
 
+export interface RestoreVariables extends RestoreInput {
+  id: string;
+}
+
 export function useRestoreCategory() {
   const invalidate = useCategoryInvalidation();
-  return useMutation({ mutationFn: restoreCategory, onSuccess: invalidate });
+  return useMutation({
+    mutationFn: ({ id, name }: RestoreVariables) => restoreCategory(id, name ? { name } : {}),
+    onSuccess: invalidate,
+  });
 }
 
 export function useRestoreDefaultCategories() {

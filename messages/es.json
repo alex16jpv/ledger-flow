@@ -490,8 +490,10 @@
     },
     "restoreConflict": {
       "title": "Ese nombre ya está en uso",
-      "body": "Ya hay una cuenta activa llamada «{name}». Cámbiale el nombre primero y luego restaura esta.",
-      "open": "Abrir {name}"
+      "body": "Ya hay una cuenta activa llamada «{name}». Elige otro nombre para restaurar esta.",
+      "name": "Nuevo nombre",
+      "confirm": "Restaurar como «{name}»",
+      "confirmEmpty": "Restaurar"
     },
     "adjust": {
       "title": "Ajustar saldo",
@@ -581,8 +583,10 @@
     },
     "restoreConflict": {
       "title": "Ese nombre ya está en uso",
-      "body": "Ya hay una categoría activa llamada «{name}». Cámbiale el nombre primero y luego restaura esta.",
-      "open": "Abrir {name}"
+      "body": "Ya hay una categoría activa llamada «{name}». Elige otro nombre para restaurar esta.",
+      "name": "Nuevo nombre",
+      "confirm": "Restaurar como «{name}»",
+      "confirmEmpty": "Restaurar"
     }
   },
   "transactions": {

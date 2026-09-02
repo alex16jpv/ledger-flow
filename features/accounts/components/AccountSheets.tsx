@@ -3,10 +3,12 @@
 import { useTranslations } from "next-intl";
 
 import { Alert } from "@/components/ui/Alert";
-import { Button, buttonClasses } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
+import { RenameRestoreSheet } from "@/components/ui/RenameRestoreSheet";
 import { Sheet } from "@/components/ui/Sheet";
-import { Link } from "@/lib/i18n/navigation";
 import type { Account } from "@/types/api";
+
+import { ACCOUNT_NAME_MAX } from "../schemas";
 
 interface ConfirmSheetProps {
   open: boolean;
@@ -83,37 +85,33 @@ export function RestoreConflictSheet({
   account,
   conflict,
   open,
+  pending,
+  error,
+  onConfirm,
   onClose,
 }: {
   account: Account;
   conflict: Account | undefined;
   open: boolean;
+  pending: boolean;
+  error?: string;
+  onConfirm: (name: string) => void;
   onClose: () => void;
 }) {
   const t = useTranslations("accounts.restoreConflict");
-  const tc = useTranslations("common");
   return (
-    <Sheet
+    <RenameRestoreSheet
       open={open}
-      onClose={onClose}
       title={t("title")}
-      footer={
-        <>
-          {conflict && (
-            <Link
-              href={`/accounts/${conflict.id}/edit`}
-              className={buttonClasses({ size: "lg", block: true })}
-            >
-              {t("open", { name: conflict.name })}
-            </Link>
-          )}
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {tc("close")}
-          </Button>
-        </>
-      }
-    >
-      <Alert tone="danger">{t("body", { name: conflict?.name ?? account.name })}</Alert>
-    </Sheet>
+      body={t("body", { name: conflict?.name ?? account.name })}
+      nameLabel={t("name")}
+      confirmLabel={(name) => (name ? t("confirm", { name }) : t("confirmEmpty"))}
+      currentName={account.name}
+      maxLength={ACCOUNT_NAME_MAX}
+      pending={pending}
+      error={error}
+      onConfirm={onConfirm}
+      onClose={onClose}
+    />
   );
 }

@@ -113,20 +113,15 @@ test("a new user creates, retypes, archives and restores categories, and restore
     data: { name: "GYM", type: "EXPENSE" },
   });
   expect(taken.status()).toBe(201);
-  const takenId = ((await taken.json()) as { id: string }).id;
   await page.getByRole("button", { name: "Restore Gym" }).click();
   const conflict = page.getByRole("dialog", { name: "That name is taken" });
   await expect(conflict).toContainText("An active category is already named “GYM”.");
-  await conflict.getByRole("link", { name: "Open GYM" }).click();
-  await expect(page).toHaveURL(new RegExp(`/categories/${takenId}/edit$`));
-  await page.getByRole("textbox", { name: "Name" }).fill("Fitness");
-  await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("Changes saved")).toBeVisible();
-
-  await page.getByRole("button", { name: /^Archived/ }).click();
-  await page.getByRole("button", { name: "Restore Gym" }).click();
+  await conflict.getByRole("textbox", { name: "New name" }).fill("Fitness");
+  await conflict.getByRole("button", { name: "Restore as “Fitness”" }).click();
   await expect(page.getByText("Category restored")).toBeVisible();
   await expect(page.getByRole("button", { name: /^Archived/ })).toHaveCount(0);
+  await page.getByRole("button", { name: /^Income · \d+$/ }).click();
+  await expect(page.getByRole("link", { name: /^Fitness/ })).toBeVisible();
 
   await page.getByRole("button", { name: "Restore", exact: true }).click();
   await expect(page.getByText("Nothing was missing")).toBeVisible();

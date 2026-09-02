@@ -172,12 +172,20 @@ describe("AccountDetailScreen", () => {
     });
   });
 
-  it("restores an archived account and, on a 409, points at the account holding the name", async () => {
+  it("restores an archived account and, on a 409, restores it under a new name", async () => {
     const taken = account("nequi2", "nequi", { color: "PINK" });
+    const posts: unknown[] = [];
     fetchMock.mockImplementation((input, init) => {
       const url = urlOf(input);
-      if (init?.method === "POST")
-        return Promise.resolve(json({ code: "DUPLICATE", message: "taken" }, { status: 409 }));
+      if (init?.method === "POST") {
+        const body = JSON.parse((init.body as string) || "{}") as { name?: string };
+        posts.push(body);
+        return Promise.resolve(
+          body.name
+            ? json({ ...nequi, name: body.name, archivedAt: null })
+            : json({ code: "DUPLICATE", message: "taken" }, { status: 409 }),
+        );
+      }
       if (url.startsWith("/api/accounts?")) return Promise.resolve(empty([banco, taken, nequi]));
       if (url.startsWith("/api/accounts/")) return Promise.resolve(json(nequi));
       return Promise.resolve(empty());
@@ -189,10 +197,14 @@ describe("AccountDetailScreen", () => {
     await userEvent.click(screen.getByRole("button", { name: "Restore" }));
     const dialog = await screen.findByRole("dialog", { name: "That name is taken" });
     expect(dialog).toHaveTextContent("An active account is already named “nequi”.");
-    expect(screen.getByRole("link", { name: "Open nequi" })).toHaveAttribute(
-      "href",
-      "/accounts/nequi2/edit",
-    );
+    const field = within(dialog).getByLabelText("New name");
+    expect(field).toHaveValue("Nequi");
+    expect(within(dialog).getByRole("button", { name: /^Restore/ })).toBeDisabled();
+    await userEvent.clear(field);
+    await userEvent.type(field, "Nequi old");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Restore as “Nequi old”" }));
+    expect(await screen.findByText("Account restored")).toBeVisible();
+    expect(posts).toEqual([{}, { name: "Nequi old" }]);
   });
 
   it("shows the not-found state for an unknown id", async () => {

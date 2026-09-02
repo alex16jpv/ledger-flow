@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { QUERY_DOMAINS } from "@/lib/query/domains";
-import type { UpdateAccountInput } from "@/types/api";
+import type { RestoreInput, UpdateAccountInput } from "@/types/api";
 
 import {
   archiveAccount,
@@ -61,9 +61,16 @@ export function useArchiveAccount() {
   return useMutation({ mutationFn: archiveAccount, onSuccess: invalidate });
 }
 
+export interface RestoreVariables extends RestoreInput {
+  id: string;
+}
+
 export function useRestoreAccount() {
   const invalidate = useAccountInvalidation();
-  return useMutation({ mutationFn: restoreAccount, onSuccess: invalidate });
+  return useMutation({
+    mutationFn: ({ id, name }: RestoreVariables) => restoreAccount(id, name ? { name } : {}),
+    onSuccess: invalidate,
+  });
 }
 
 export function useSetDefaultAccount() {

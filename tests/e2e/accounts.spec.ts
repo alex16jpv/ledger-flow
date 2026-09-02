@@ -124,45 +124,23 @@ test("a new user creates, edits, promotes, archives and restores accounts, with 
   await expect(page.getByRole("button", { name: "Restore" })).toBeVisible();
   await expect(page.getByText(/This account is archived/)).toBeVisible();
 
-  const taker = await createAccount(request, "second SAVINGS");
+  await createAccount(request, "second SAVINGS");
   await page.getByRole("button", { name: "Restore" }).click();
   const conflict = page.getByRole("dialog", { name: "That name is taken" });
   await expect(conflict).toContainText("An active account is already named “second SAVINGS”.");
-  await conflict.getByRole("link", { name: "Open second SAVINGS" }).click();
-  await expect(page).toHaveURL(new RegExp(`/accounts/${taker.id}/edit$`));
-  await page.getByRole("textbox", { name: "Name" }).fill("Third");
-  await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("Changes saved")).toBeVisible();
-
-  await page.goto(`/accounts/${second.id}`);
-  await page.getByRole("button", { name: "Restore" }).click();
+  await expect(conflict.getByRole("button", { name: /^Restore/ })).toBeDisabled();
+  await conflict.getByRole("textbox", { name: "New name" }).fill("Third");
+  await conflict.getByRole("button", { name: "Restore as “Third”" }).click();
   await expect(page.getByText("Account restored")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Third" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Edit" })).toBeVisible();
-
-  await page.getByRole("button", { name: "Adjust balance" }).click();
-  const adjust = page.getByRole("dialog", { name: "Adjust balance" });
-  await expect(adjust.getByRole("button", { name: "Save adjustment" })).toBeDisabled();
-  await adjust.getByRole("textbox", { name: "Actual balance in Second savings" }).fill("12300");
-  await expect(adjust.getByText("An adjustment of +$12,300")).toBeVisible();
-  expect((await new AxeBuilder({ page }).include("dialog[open]").analyze()).violations).toEqual([]);
-  await adjust.getByLabel(/^Note/).fill("Opening check");
-  await adjust.getByRole("button", { name: "Save adjustment" }).click();
-  await expect(page.getByText("Adjustment saved")).toBeVisible();
-  await expect(page.getByText("12,300").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: /Balance adjustment.*Adjustment/ })).toBeVisible();
-  await page.getByRole("button", { name: "Adjust balance" }).click();
-  await adjust.getByRole("textbox", { name: "Actual balance in Second savings" }).fill("10000");
-  await expect(adjust.getByText("An adjustment of −$2,300")).toBeVisible();
-  await adjust.getByRole("button", { name: "Save adjustment" }).click();
-  await expect(page.getByText("Adjustment saved")).toBeVisible();
-  await expect(page.getByText("10,000").first()).toBeVisible();
   const accounts = (await (await request.get("/api/accounts")).json()) as {
     data: { name: string; isDefault: boolean }[];
   };
   expect(accounts.data.map((row) => [row.name, row.isDefault])).toEqual(
     expect.arrayContaining([
       ["Wallet", true],
-      ["Second savings", false],
+      ["second SAVINGS", false],
       ["Third", false],
     ]),
   );

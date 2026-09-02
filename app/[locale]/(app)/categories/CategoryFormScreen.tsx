@@ -93,9 +93,10 @@ export function EditCategoryScreen({ id }: { id: string }) {
     }
   }
 
-  async function restoreCategory() {
+  async function restoreCategory(name?: string) {
     try {
-      await restore.mutateAsync(id);
+      await restore.mutateAsync({ id, name });
+      setSheet(null);
       toast.show({ message: t("categories.archive.restored") });
     } catch (error) {
       if (error instanceof ApiError && error.code === "DUPLICATE") {
@@ -104,6 +105,13 @@ export function EditCategoryScreen({ id }: { id: string }) {
       } else fail(error);
     }
   }
+  const conflictError =
+    sheet === "conflict" &&
+    restore.error instanceof ApiError &&
+    restore.error.code === "DUPLICATE" &&
+    restore.variables?.name
+      ? t("categories.form.duplicate", { name: restore.variables.name })
+      : undefined;
 
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-5">
@@ -166,14 +174,21 @@ export function EditCategoryScreen({ id }: { id: string }) {
             <ArchiveRestore {...iconProps("sm")} />
             {t("categories.list.restore")}
           </Button>
-          <RestoreCategoryConflictSheet
-            category={row}
-            conflict={findActiveCategoryByName(categories.data ?? [], row.name)}
-            open={sheet === "conflict"}
-            onClose={() => {
-              setSheet(null);
-            }}
-          />
+          {sheet === "conflict" && (
+            <RestoreCategoryConflictSheet
+              category={row}
+              conflict={findActiveCategoryByName(categories.data ?? [], row.name)}
+              open
+              pending={restore.isPending}
+              error={conflictError}
+              onConfirm={(name) => {
+                void restoreCategory(name);
+              }}
+              onClose={() => {
+                setSheet(null);
+              }}
+            />
+          )}
         </>
       ) : (
         <>

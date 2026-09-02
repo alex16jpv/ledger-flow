@@ -318,7 +318,7 @@ export type paths = {
         get?: never;
         put?: never;
         /**
-         * Restore an archived account
+         * Restore an archived account, optionally under a new name
          * @description Idempotent - restoring an already-active account returns it unchanged.
          */
         post: {
@@ -331,7 +331,11 @@ export type paths = {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["RestoreInput"];
+                };
+            };
             responses: {
                 /** @description Account restored (or already active) */
                 200: {
@@ -1715,7 +1719,7 @@ export type paths = {
         get?: never;
         put?: never;
         /**
-         * Restore an archived category
+         * Restore an archived category, optionally under a new name
          * @description Idempotent — restoring an already-active category returns it unchanged. Fails with 409 when another active category took its name meanwhile.
          */
         post: {
@@ -1728,7 +1732,11 @@ export type paths = {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["RestoreInput"];
+                };
+            };
             responses: {
                 /** @description Category restored (or already active) */
                 200: {
@@ -2714,6 +2722,10 @@ export type components = {
                 pendingDetails?: boolean;
             }[];
         };
+        /** @default {} */
+        RestoreInput: {
+            name?: string;
+        };
         CreateBudgetInput: {
             name: string;
             /** @enum {string} */
@@ -3010,6 +3022,7 @@ export type CreateTransactionInput = components['schemas']['CreateTransactionInp
 export type UpdateTransactionInput = components['schemas']['UpdateTransactionInput'];
 export type QuickAddTransactionInput = components['schemas']['QuickAddTransactionInput'];
 export type BatchUpdateTransactionsInput = components['schemas']['BatchUpdateTransactionsInput'];
+export type RestoreInput = components['schemas']['RestoreInput'];
 export type CreateBudgetInput = components['schemas']['CreateBudgetInput'];
 export type UpdateBudgetInput = components['schemas']['UpdateBudgetInput'];
 export type BudgetAmountOverrideInput = components['schemas']['BudgetAmountOverrideInput'];

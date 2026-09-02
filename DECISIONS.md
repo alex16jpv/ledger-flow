@@ -698,3 +698,14 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   label above a 28–40 px control.
 - **Settings › Categories now links to `/categories`**; the remaining settings rows stay static
   until W-30.
+
+## 2026-09-02 · Restore under a new name (W-23, W-25 revised)
+
+- **The 409 sheet now renames and restores in one request.** The backend (`c027663`) made
+  `POST /accounts/:id/restore` and `POST /categories/:id/restore` accept `RestoreInput { name? }`,
+  renaming in the same write that clears `archivedAt`, so the earlier detour ("open the account that
+  holds the name and rename it") is gone. `RenameRestoreSheet` (`components/ui`) is shared by both
+  features: it names the active holder, prefills the archived name, disables the button until the
+  name actually changes and shows a second `DUPLICATE` under the field.
+- **Types regenerated** from the local `/api-docs.json`; `restoreAccount`/`restoreCategory` take the
+  optional input and the mutations receive `{ id, name? }`.

@@ -1,5 +1,11 @@
 import { api } from "@/lib/api/client";
-import type { Account, AccountList, CreateAccountInput, UpdateAccountInput } from "@/types/api";
+import type {
+  Account,
+  AccountList,
+  CreateAccountInput,
+  RestoreInput,
+  UpdateAccountInput,
+} from "@/types/api";
 
 export function fetchAccounts(
   params: { includeArchived?: boolean; limit?: number } = {},
@@ -28,8 +34,8 @@ export function archiveAccount(id: string): Promise<unknown> {
   return api<unknown>(`/accounts/${id}`, { method: "DELETE" });
 }
 
-export function restoreAccount(id: string): Promise<Account> {
-  return api<Account>(`/accounts/${id}/restore`, { method: "POST" });
+export function restoreAccount(id: string, input: RestoreInput = {}): Promise<Account> {
+  return api<Account>(`/accounts/${id}/restore`, { method: "POST", body: input });
 }
 
 export function setDefaultAccount(id: string): Promise<Account> {

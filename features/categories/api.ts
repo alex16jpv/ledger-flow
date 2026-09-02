@@ -4,6 +4,7 @@ import type {
   CategoryList,
   CreateCategoryInput,
   RestoreDefaultsResponse,
+  RestoreInput,
   StatsResponse,
   UpdateCategoryInput,
 } from "@/types/api";
@@ -50,8 +51,8 @@ export function archiveCategory(id: string): Promise<unknown> {
   return api<unknown>(`/categories/${id}`, { method: "DELETE" });
 }
 
-export function restoreCategory(id: string): Promise<Category> {
-  return api<Category>(`/categories/${id}/restore`, { method: "POST" });
+export function restoreCategory(id: string, input: RestoreInput = {}): Promise<Category> {
+  return api<Category>(`/categories/${id}/restore`, { method: "POST", body: input });
 }
 
 export function restoreDefaultCategories(): Promise<RestoreDefaultsResponse> {

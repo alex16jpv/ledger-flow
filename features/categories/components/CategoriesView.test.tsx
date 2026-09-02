@@ -142,20 +142,40 @@ describe("CategoriesView", () => {
     expect(screen.getByRole("button", { name: "Restore Old" })).toBeVisible();
   });
 
-  it("restores an archived category and, on a 409, names the active one holding the name", async () => {
-    routeFetch(
-      () => json({ code: "DUPLICATE", message: "taken" }, { status: 409 }),
-      [...categories, category("old2", "old", { color: "PINK" })],
-    );
+  it("restores an archived category and, on a 409, restores it under a new name", async () => {
+    const posts: unknown[] = [];
+    const withHolder = [...categories, category("old2", "old", { color: "PINK" })];
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (init?.method === "POST") {
+        const body = JSON.parse((init.body as string) || "{}") as { name?: string };
+        posts.push(body);
+        return Promise.resolve(
+          body.name
+            ? json({ ...categories[3], name: body.name, archivedAt: null })
+            : json({ code: "DUPLICATE", message: "taken" }, { status: 409 }),
+        );
+      }
+      if (url.startsWith("/api/stats/spending"))
+        return Promise.resolve(json({ groupBy: "category", total: 0, buckets: [] }));
+      return Promise.resolve(
+        json({
+          data: withHolder,
+          pagination: { limit: 100, offset: 0, total: 5, hasMore: false, nextCursor: null },
+        }),
+      );
+    });
     renderView();
     await userEvent.click(await screen.findByRole("button", { name: /Archived/ }));
     await userEvent.click(screen.getByRole("button", { name: "Restore Old" }));
     const dialog = await screen.findByRole("dialog", { name: "That name is taken" });
     expect(dialog).toHaveTextContent("An active category is already named “old”.");
-    expect(within(dialog).getByRole("link", { name: "Open old" })).toHaveAttribute(
-      "href",
-      "/categories/old2/edit",
-    );
+    const field = within(dialog).getByLabelText("New name");
+    await userEvent.clear(field);
+    await userEvent.type(field, "Old trips");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Restore as “Old trips”" }));
+    expect(await screen.findByText("Category restored")).toBeVisible();
+    expect(posts).toEqual([{}, { name: "Old trips" }]);
   });
 
   it("recreates the default categories and reports how many were missing", async () => {

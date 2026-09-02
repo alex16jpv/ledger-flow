@@ -105,7 +105,7 @@ export function AccountDetailScreen({ id }: { id: string }) {
           label: t("common.undo"),
           onClick: () => {
             restore
-              .mutateAsync(id)
+              .mutateAsync({ id })
               .then(() => {
                 toast.show({ message: t("accounts.archive.restored") });
               })
@@ -119,9 +119,10 @@ export function AccountDetailScreen({ id }: { id: string }) {
     }
   }
 
-  async function restoreAccount() {
+  async function restoreAccount(name?: string) {
     try {
-      await restore.mutateAsync(id);
+      await restore.mutateAsync({ id, name });
+      setSheet(null);
       toast.show({ message: t("accounts.archive.restored") });
     } catch (error) {
       if (error instanceof ApiError && error.code === "DUPLICATE") {
@@ -131,6 +132,13 @@ export function AccountDetailScreen({ id }: { id: string }) {
       } else fail(error);
     }
   }
+  const conflictError =
+    sheet === "conflict" &&
+    restore.error instanceof ApiError &&
+    restore.error.code === "DUPLICATE" &&
+    restore.variables?.name
+      ? t("accounts.form.duplicate", { name: restore.variables.name })
+      : undefined;
 
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
@@ -331,14 +339,21 @@ export function AccountDetailScreen({ id }: { id: string }) {
               setSheet(null);
             }}
           />
-          <RestoreConflictSheet
-            account={row}
-            conflict={conflict}
-            open={sheet === "conflict"}
-            onClose={() => {
-              setSheet(null);
-            }}
-          />
+          {sheet === "conflict" && (
+            <RestoreConflictSheet
+              account={row}
+              conflict={conflict}
+              open
+              pending={restore.isPending}
+              error={conflictError}
+              onConfirm={(name) => {
+                void restoreAccount(name);
+              }}
+              onClose={() => {
+                setSheet(null);
+              }}
+            />
+          )}
         </>
       )}
     </div>
