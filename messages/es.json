@@ -32,7 +32,10 @@
     "date": "Fecha",
     "time": "Hora",
     "recent": "Recientes",
-    "backToList": "Volver a la lista"
+    "backToList": "Volver a la lista",
+    "removeTag": "Quitar etiqueta {tag}",
+    "suggestions": "Sugerencias",
+    "delete": "Eliminar"
   },
   "nav": {
     "label": "Navegación",
@@ -403,7 +406,9 @@
     "timeZone": "Elige una zona horaria.",
     "amountPositive": "Escribe un importe mayor que cero.",
     "amountDecimals": "Tu moneda no admite esos decimales.",
-    "amountInvalid": "Escribe un importe válido."
+    "amountInvalid": "Escribe un importe válido.",
+    "sameAccount": "Elige dos cuentas distintas.",
+    "futureDate": "Esa fecha está a más de un día de distancia."
   },
   "accounts": {
     "form": {
@@ -474,6 +479,40 @@
       "savedWithoutNote": "Guardado, pero no se pudo añadir la nota",
       "undone": "Movimiento eliminado",
       "undoFailed": "No se pudo eliminar. Inténtalo desde la lista."
+    },
+    "form": {
+      "newTitle": "Nuevo movimiento",
+      "editTitle": "Editar movimiento",
+      "type": "Tipo",
+      "amount": "Importe",
+      "category": "Categoría",
+      "account": "Cuenta",
+      "from": "Desde",
+      "to": "Hacia",
+      "swap": "Intercambiar cuentas",
+      "direction": "Dirección",
+      "increase": "Aumentar saldo",
+      "decrease": "Disminuir saldo",
+      "adjustmentHint": "Los ajustes corrigen un saldo. No cuentan como gasto ni ingreso.",
+      "description": "Descripción",
+      "descriptionPlaceholder": "¿Qué fue?",
+      "tags": "Etiquetas",
+      "tagsPlaceholder": "Añadir…",
+      "note": "Nota",
+      "notePlaceholder": "Lo que quieras recordar de este movimiento",
+      "save": "Guardar movimiento",
+      "saved": "Movimiento guardado",
+      "updated": "Cambios guardados",
+      "deleteTitle": "¿Eliminar este movimiento?",
+      "deleteBody": "Los saldos de las cuentas vuelven a lo que eran. No se puede deshacer.",
+      "deleted": "Movimiento eliminado",
+      "notFound": "Este movimiento no existe o fue eliminado."
     }
+  },
+  "transactionTypes": {
+    "EXPENSE": "Gasto",
+    "INCOME": "Ingreso",
+    "TRANSFER": "Transferencia",
+    "ADJUSTMENT": "Ajuste"
   }
 }

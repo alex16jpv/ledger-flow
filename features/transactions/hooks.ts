@@ -3,11 +3,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { invalidateMoneyMovement } from "@/lib/query/domains";
-import type { QuickAddTransactionInput, Transaction } from "@/types/api";
+import type {
+  CreateTransactionInput,
+  QuickAddTransactionInput,
+  Transaction,
+  UpdateTransactionInput,
+} from "@/types/api";
 
 import {
+  createTransaction,
   deleteTransaction,
   fetchPendingCount,
+  fetchTags,
+  fetchTransaction,
   quickAddTransaction,
   updateTransaction,
 } from "./api";
@@ -57,6 +65,41 @@ export function useQuickAdd() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: quickAddWithDetails,
+    onSuccess: () => invalidateMoneyMovement(queryClient),
+  });
+}
+
+export function useTransactionQuery(id: string) {
+  return useQuery({ queryKey: transactionKeys.detail(id), queryFn: () => fetchTransaction(id) });
+}
+
+export function useTagsQuery() {
+  return useQuery({
+    queryKey: transactionKeys.tags(),
+    queryFn: fetchTags,
+    select: (list) => list.data,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCreateTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      input,
+      idempotencyKey,
+    }: {
+      input: CreateTransactionInput;
+      idempotencyKey: string;
+    }) => createTransaction(input, idempotencyKey),
+    onSuccess: () => invalidateMoneyMovement(queryClient),
+  });
+}
+
+export function useUpdateTransaction(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateTransactionInput) => updateTransaction(id, input),
     onSuccess: () => invalidateMoneyMovement(queryClient),
   });
 }

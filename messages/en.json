@@ -32,7 +32,10 @@
     "date": "Date",
     "time": "Time",
     "recent": "Recent",
-    "backToList": "Back to the list"
+    "backToList": "Back to the list",
+    "removeTag": "Remove tag {tag}",
+    "suggestions": "Suggestions",
+    "delete": "Delete"
   },
   "nav": {
     "label": "Navigation",
@@ -403,7 +406,9 @@
     "timeZone": "Choose a time zone.",
     "amountPositive": "Enter an amount greater than zero.",
     "amountDecimals": "Your currency doesn’t allow those decimals.",
-    "amountInvalid": "Enter a valid amount."
+    "amountInvalid": "Enter a valid amount.",
+    "sameAccount": "Choose two different accounts.",
+    "futureDate": "That date is more than a day ahead."
   },
   "accounts": {
     "form": {
@@ -474,6 +479,40 @@
       "savedWithoutNote": "Saved, but the note couldn’t be added",
       "undone": "Transaction removed",
       "undoFailed": "We couldn’t remove it. Try again from the list."
+    },
+    "form": {
+      "newTitle": "New transaction",
+      "editTitle": "Edit transaction",
+      "type": "Type",
+      "amount": "Amount",
+      "category": "Category",
+      "account": "Account",
+      "from": "From",
+      "to": "To",
+      "swap": "Swap accounts",
+      "direction": "Direction",
+      "increase": "Increase balance",
+      "decrease": "Decrease balance",
+      "adjustmentHint": "Adjustments fix a balance. They don’t count as spending or income.",
+      "description": "Description",
+      "descriptionPlaceholder": "What was it?",
+      "tags": "Tags",
+      "tagsPlaceholder": "Add…",
+      "note": "Note",
+      "notePlaceholder": "Anything you want to remember about this one",
+      "save": "Save transaction",
+      "saved": "Transaction saved",
+      "updated": "Changes saved",
+      "deleteTitle": "Delete this transaction?",
+      "deleteBody": "The account balances go back to what they were. This can’t be undone.",
+      "deleted": "Transaction deleted",
+      "notFound": "This transaction doesn’t exist or was deleted."
     }
+  },
+  "transactionTypes": {
+    "EXPENSE": "Expense",
+    "INCOME": "Income",
+    "TRANSFER": "Transfer",
+    "ADJUSTMENT": "Adjustment"
   }
 }

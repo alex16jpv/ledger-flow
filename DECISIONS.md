@@ -461,3 +461,28 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   drift apart.
 - **Undo deletes.** The toast action calls `DELETE /transactions/:id` (the backend has no restore),
   then invalidates the same domains; a failed undo shows its own red toast.
+
+## 2026-09-01 · Transaction form (W-18)
+
+- **One form for the four types, composed in the app layer** (`TransactionForm.tsx`, like the
+  quick-add sheet): the type segment only swaps the account section (source / destination / from-to
+  with swap / one account plus increase-decrease) and hides the category for transfers and
+  adjustments; amount, date, description, tags and note survive the switch. Switching type clears
+  the category because the API rejects a category of another type.
+- **Form values keep the user's mental model, `toTransactionInput` speaks the API's.** The form
+  stores `accountId` for single-account types and `fromAccountId`/`toAccountId` only for transfers;
+  the mapper derives the sides (an adjustment "decrease" is `fromAccountId`, "increase" is
+  `toAccountId`) and sends explicit nulls for the unused side and category so the same payload
+  works for `POST` and for the merging `PUT`.
+- **Future dates are refused in the client too.** `isTooFarAhead` mirrors the backend's 24-hour
+  rule (`FUTURE_DATE`) so the error appears inline before the request; the server code still maps
+  to the date field if clocks disagree.
+- **Tags are a `components/ui/TagsInput`.** Enter, comma or blur add a tag (trimmed, lowercased,
+  without leading `#`, ≤ 50 chars, ≤ 30 tags, deduplicated) and Backspace on an empty field removes
+  the last one; suggestions come from `GET /transactions/tags` through the form, never from the
+  component.
+- **Routes:** `/transactions/new` (optional draft in the query string, written by the quick-add
+  sheet) and `/transactions/[id]/edit`. After saving or deleting they return to `/home` for now:
+  the `/transactions` stub renders the root not-found page, which unmounts the app frame and its
+  toast; W-19 switches the destination to the list. Delete confirms in a sheet and shows a toast
+  without Undo because the backend has no restore.

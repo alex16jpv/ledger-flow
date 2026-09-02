@@ -1,6 +1,8 @@
 import { api } from "@/lib/api/client";
 import type {
+  CreateTransactionInput,
   QuickAddTransactionInput,
+  TagList,
   Transaction,
   TransactionList,
   UpdateTransactionInput,
@@ -8,6 +10,21 @@ import type {
 
 export function fetchPendingCount(): Promise<TransactionList> {
   return api<TransactionList>("/transactions", { query: { pendingDetails: true, limit: 1 } });
+}
+
+export function fetchTransaction(id: string): Promise<Transaction> {
+  return api<Transaction>(`/transactions/${id}`);
+}
+
+export function fetchTags(): Promise<TagList> {
+  return api<TagList>("/transactions/tags");
+}
+
+export function createTransaction(
+  input: CreateTransactionInput,
+  idempotencyKey: string,
+): Promise<Transaction> {
+  return api<Transaction>("/transactions", { method: "POST", body: input, idempotencyKey });
 }
 
 export function quickAddTransaction(

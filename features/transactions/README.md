@@ -10,3 +10,9 @@ backs the toast's Undo. The sheet itself is composed in the app layer
 (`app/[locale]/(app)/QuickAddSheet.tsx`) because it needs the category and account pickers of other
 features; `draftToSearchParams` carries what was typed to the full form when the user asks for
 "More details".
+
+W-18 adds the full form model in `form.ts`: one Zod schema for the four types (the account side
+rules live in `superRefine`), `toTransactionInput` maps the form to the API payload (explicit
+nulls so PUT can clear a side), `fromTransaction` prefills the edit form and `draftFromSearchParams`
+reads the quick-add hand-off. `useCreateTransaction`, `useUpdateTransaction`, `useTransactionQuery`
+and `useTagsQuery` back the screens in `app/[locale]/(app)/transactions/`.

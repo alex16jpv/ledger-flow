@@ -41,5 +41,6 @@ export { Skeleton, SkeletonRow } from "./Skeleton";
 export { Stat } from "./Stat";
 export { Swatch, SwatchGrid } from "./Swatch";
 export { Tag } from "./Tag";
+export { normalizeTag, TAG_MAX_LENGTH, TAGS_MAX, TagsInput } from "./TagsInput";
 export { Dot, Tile } from "./Tile";
 export { Toast, ToastProvider, useToast } from "./Toast";
