@@ -843,3 +843,22 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **Saving an edit goes back, creating replaces.** After an edit the screen returns to the detail it
   came from (`back(detail)`), so the form never stays in the history and "back" from the detail
   reaches the place before the edit; after a create the blank form is replaced by the new detail.
+
+## 2026-09-02 · Settings complete (W-30)
+
+- **A credential change signs this device in again.** `PUT /users/:id` with `email` or `password`
+  bumps the token version and revokes every refresh token, ours included; instead of letting the next
+  refresh fail into the session-expired sheet, `useUpdateProfile` calls `/api/auth/login` with the new
+  pair right after the update and the toast says the other devices were signed out.
+- **Changing the time zone refreshes the access token immediately** (`refreshSession()`), because the
+  backend resolves budget periods and stats days with the zone claim, and then invalidates every query.
+- **"This device" is not marked in the sessions list yet**: neither token carries the session family
+  id, so the client cannot tell its own row apart; requested from the backend
+  (`BACKEND-DESDE-FRONT.md`). Every row offers "Sign out"; "Sign out all other sessions" uses
+  `logout-all` and warns that this device signs out too.
+- **The currency and time-zone pickers moved to `components/ui`** so the settings feature can reuse
+  them without importing from `features/auth`.
+- **Deleting the account** requires typing the localized word, calls `DELETE /users/:id`, signs out and
+  lands on `/login?deleted=1`, which explains that registering again with the same email reactivates it.
+- **Policy version is a constant (v1)** shown with the sign-up date: the backend records no acceptance
+  (owner decision in HANDOFF §3.18); it will become a field the day a new version needs re-acceptance.

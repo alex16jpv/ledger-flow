@@ -57,3 +57,68 @@ test("sign out clears the session and returns to login", async ({ page, request 
   const home = await page.goto("/home");
   expect(home?.url()).toContain("/login");
 });
+
+// W-30: profile, currency, time zone, sessions and account deletion on a throwaway user.
+test("a new user edits the profile, changes currency and time zone, reviews sessions and deletes the account", async ({
+  page,
+  request,
+}) => {
+  const email = `e2e-settings-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@ledgerflow.test`;
+  const password = "LedgerFlow!2026";
+  const registered = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: { name: "Settings E2E", email, password },
+  });
+  expect(registered.ok()).toBe(true);
+  await page.context().addCookies((await request.storageState()).cookies);
+
+  await page.goto("/settings");
+  await expect(page.getByText("Your data", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Privacy policy" })).toHaveAttribute(
+    "href",
+    /\/privacy$/,
+  );
+  await page.getByRole("button", { name: /^Currency/ }).click();
+  const currency = page.getByRole("dialog", { name: "Currency" });
+  await currency.getByRole("button", { name: /[A-Z]{3} · / }).click();
+  await page.getByRole("searchbox", { name: "Search" }).fill("USD");
+  await page.getByRole("option", { name: /USD/ }).click();
+  await currency.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Currency updated")).toBeVisible();
+  await expect(page.getByText("USD", { exact: true }).first()).toBeVisible();
+
+  await page.getByRole("button", { name: /^Time zone/ }).click();
+  const zone = page.getByRole("dialog", { name: "Time zone" });
+  await zone.getByRole("button", { name: /America|Europe|Asia|UTC/ }).click();
+  await page.getByRole("searchbox", { name: "Search" }).fill("Madrid");
+  await page.getByRole("option", { name: /Madrid/ }).click();
+  await zone.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Time zone updated")).toBeVisible();
+  await expect(page.getByText("Madrid").first()).toBeVisible();
+
+  await page.getByRole("link", { name: /Password & email/ }).click();
+  await expect(page).toHaveURL(/\/settings\/profile$/);
+  await page.getByRole("textbox", { name: "Name" }).fill("Settings Renamed");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Profile updated", { exact: true })).toBeVisible();
+  await page.getByLabel(/^New password/).fill("Another!2026");
+  await page.getByLabel("Current password").fill(password);
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText(/Your other devices were signed out/)).toBeVisible();
+  await page.getByRole("button", { name: "Back" }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByText("Settings Renamed").locator("visible=true").first()).toBeVisible();
+
+  await page.getByRole("link", { name: /Active sessions/ }).click();
+  await expect(page).toHaveURL(/\/settings\/sessions$/);
+  await expect(page.getByRole("button", { name: /^Sign out .+/ }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Back" }).click();
+
+  await page.getByRole("button", { name: "Delete my account" }).click();
+  const remove = page.getByRole("dialog", { name: "Delete my account" });
+  await expect(remove.getByRole("button", { name: "Delete account" })).toBeDisabled();
+  await remove.getByRole("textbox").fill("DELETE");
+  await remove.getByRole("button", { name: "Delete account" }).click();
+  await expect(page).toHaveURL(/\/login\?deleted=1$/);
+  await expect(page.getByText(/Your account was deleted/)).toBeVisible();
+});

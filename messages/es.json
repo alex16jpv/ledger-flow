@@ -94,7 +94,8 @@
       "createAccount": "Crear cuenta",
       "invalidCredentials": "Correo o contraseña incorrectos.",
       "tooManyAttempts": "Demasiados intentos.",
-      "retryIn": "Puedes intentarlo de nuevo en {time}."
+      "retryIn": "Puedes intentarlo de nuevo en {time}.",
+      "deleted": "Tu cuenta fue eliminada. Regístrate de nuevo con el mismo correo cuando quieras volver."
     },
     "register": {
       "title": "Crear cuenta",
@@ -194,11 +195,18 @@
     "currency": {
       "title": "Moneda",
       "locked": "Bloqueada: ya tienes cuentas",
-      "unlocked": "Puedes cambiarla hasta crear tu primera cuenta"
+      "unlocked": "Puedes cambiarla hasta crear tu primera cuenta",
+      "sheetTitle": "Moneda",
+      "lockedBody": "Tu moneda es {currency}. Está bloqueada porque ya tienes cuentas: todos los saldos y movimientos están guardados en ella.",
+      "pickerHint": "Los importes y saldos usarán esta moneda.",
+      "saved": "Moneda actualizada"
     },
     "timeZone": {
       "title": "Zona horaria",
-      "subtitle": "Define tus días y períodos"
+      "subtitle": "Define tus días y períodos",
+      "sheetTitle": "Zona horaria",
+      "pickerHint": "Los días, meses y períodos de presupuesto empiezan a tu medianoche local.",
+      "saved": "Zona horaria actualizada"
     },
     "appearance": {
       "title": "Apariencia",
@@ -228,11 +236,36 @@
     "security": "Seguridad",
     "credentials": {
       "title": "Contraseña y correo",
-      "subtitle": "Requiere tu contraseña actual"
+      "subtitle": "Requiere tu contraseña actual",
+      "pageTitle": "Perfil y seguridad",
+      "name": "Nombre",
+      "email": "Correo",
+      "emailHelp": "Cambiarlo cierra la sesión en tus otros dispositivos.",
+      "newPassword": "Nueva contraseña",
+      "newPasswordHelp": "Mínimo 8 caracteres. Déjala vacía para conservar la actual.",
+      "currentPassword": "Contraseña actual",
+      "reauthNote": "Para cambiar tu correo o tu contraseña, confirma tu contraseña actual. Por seguridad, tus otros dispositivos tendrán que iniciar sesión de nuevo.",
+      "saved": "Perfil actualizado",
+      "savedReauth": "Perfil actualizado. Se cerró la sesión en tus otros dispositivos."
     },
     "sessions": {
       "title": "Sesiones activas",
-      "subtitle": "Cierra los dispositivos que no reconozcas"
+      "subtitle": "Cierra los dispositivos que no reconozcas",
+      "intro": "Cada dispositivo sigue con sesión 30 días sin actividad. Cierra los que no reconozcas.",
+      "thisDevice": "Este dispositivo",
+      "activeNow": "Activo ahora",
+      "lastActive": "{when}",
+      "since": "desde {date}",
+      "expires": "vence {date}",
+      "signOut": "Cerrar",
+      "signOutDevice": "Cerrar sesión en {device}",
+      "signedOut": "Sesión cerrada",
+      "signOutOthers": "Cerrar todas las demás sesiones",
+      "signOutOthersTitle": "¿Cerrar sesión en todos los dispositivos?",
+      "signOutOthersBody": "También cierra este dispositivo: tendrás que iniciar sesión de nuevo aquí.",
+      "signOutOthersConfirm": "Cerrar en todos",
+      "unknownDevice": "Dispositivo desconocido",
+      "empty": "No hay otras sesiones"
     },
     "data": "Datos",
     "export": "Exportar movimientos",
@@ -240,7 +273,27 @@
     "about": "Acerca de",
     "version": "Ledger Flow · {version}",
     "signOut": "Cerrar sesión",
-    "deleteAccount": "Eliminar mi cuenta"
+    "deleteAccount": "Eliminar mi cuenta",
+    "yourData": {
+      "title": "Tus datos",
+      "rights": "Puedes acceder, corregir y suprimir tus datos, y revocar tu autorización en cualquier momento (Ley 1581 de 2012).",
+      "contact": "Escribe a {email}",
+      "policy": "Política de privacidad",
+      "policyVersion": "Política aceptada al registrarte ({date}) · v{version}"
+    },
+    "install": {
+      "title": "Instalar app",
+      "subtitle": "Añade Ledger Flow a tu pantalla de inicio",
+      "installed": "Instalada"
+    },
+    "delete": {
+      "title": "Eliminar mi cuenta",
+      "body": "Tu cuenta y tu historial financiero se conservan un tiempo para que puedas volver: registrarte de nuevo con el mismo correo lo reactiva todo. Se cerrará tu sesión ahora.",
+      "confirmLabel": "Escribe {word} para confirmar",
+      "word": "ELIMINAR",
+      "confirm": "Eliminar cuenta",
+      "done": "Cuenta eliminada. Regístrate de nuevo con el mismo correo para volver."
+    }
   },
   "states": {
     "loading": "Cargando…",
@@ -416,7 +469,8 @@
     "invalid": "Revisa este valor.",
     "amountMax": "Ese monto supera el límite que admite la app (10 billones).",
     "tooMany": "Has seleccionado demasiados elementos.",
-    "dateOrder": "El fin debe ser posterior al inicio."
+    "dateOrder": "El fin debe ser posterior al inicio.",
+    "confirmWord": "Escribe la palabra exacta para confirmar."
   },
   "accounts": {
     "form": {

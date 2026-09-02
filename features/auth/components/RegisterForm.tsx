@@ -9,7 +9,9 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { CurrencyPicker } from "@/components/ui/CurrencyPicker";
 import { Field, Input } from "@/components/ui/Field";
+import { TimeZonePicker } from "@/components/ui/TimeZonePicker";
 import { ApiError, presentError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
 import { type AppLocale } from "@/lib/i18n/routing";
@@ -20,10 +22,8 @@ import type { SessionUser } from "@/lib/session/api";
 
 import { retryAfterOf, useRegister } from "../hooks";
 import { registerSchema, type RegisterValues } from "../schemas";
-import { CurrencyPicker } from "./CurrencyPicker";
 import { PasswordInput } from "./PasswordInput";
 import { RateLimitAlert } from "./RateLimitAlert";
-import { TimeZonePicker } from "./TimeZonePicker";
 
 interface RegisterFormProps {
   locale: AppLocale;

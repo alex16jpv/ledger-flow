@@ -94,7 +94,8 @@
       "createAccount": "Create account",
       "invalidCredentials": "Wrong email or password.",
       "tooManyAttempts": "Too many attempts.",
-      "retryIn": "You can try again in {time}."
+      "retryIn": "You can try again in {time}.",
+      "deleted": "Your account was deleted. Sign up again with the same email whenever you want to come back."
     },
     "register": {
       "title": "Create account",
@@ -194,11 +195,18 @@
     "currency": {
       "title": "Currency",
       "locked": "Locked: you already have accounts",
-      "unlocked": "You can change it until you create your first account"
+      "unlocked": "You can change it until you create your first account",
+      "sheetTitle": "Currency",
+      "lockedBody": "Your currency is {currency}. It’s locked because you already have accounts: every balance and movement is stored in it.",
+      "pickerHint": "Amounts and balances will use this currency.",
+      "saved": "Currency updated"
     },
     "timeZone": {
       "title": "Time zone",
-      "subtitle": "Defines your days and periods"
+      "subtitle": "Defines your days and periods",
+      "sheetTitle": "Time zone",
+      "pickerHint": "Days, months and budget periods start at your local midnight.",
+      "saved": "Time zone updated"
     },
     "appearance": {
       "title": "Appearance",
@@ -228,11 +236,36 @@
     "security": "Security",
     "credentials": {
       "title": "Password & email",
-      "subtitle": "Requires your current password"
+      "subtitle": "Requires your current password",
+      "pageTitle": "Profile & security",
+      "name": "Name",
+      "email": "Email",
+      "emailHelp": "Changing it signs out your other devices.",
+      "newPassword": "New password",
+      "newPasswordHelp": "At least 8 characters. Leave it empty to keep the current one.",
+      "currentPassword": "Current password",
+      "reauthNote": "To change your email or password, confirm your current password. For safety, your other devices will need to sign in again.",
+      "saved": "Profile updated",
+      "savedReauth": "Profile updated. Your other devices were signed out."
     },
     "sessions": {
       "title": "Active sessions",
-      "subtitle": "Sign out devices you don’t recognize"
+      "subtitle": "Sign out devices you don’t recognize",
+      "intro": "Each device stays signed in for 30 days without activity. Sign out the ones you don’t recognize.",
+      "thisDevice": "This device",
+      "activeNow": "Active now",
+      "lastActive": "{when}",
+      "since": "since {date}",
+      "expires": "expires {date}",
+      "signOut": "Sign out",
+      "signOutDevice": "Sign out {device}",
+      "signedOut": "Device signed out",
+      "signOutOthers": "Sign out all other sessions",
+      "signOutOthersTitle": "Sign out every device?",
+      "signOutOthersBody": "This also signs out this device: you’ll need to sign in again here.",
+      "signOutOthersConfirm": "Sign out everywhere",
+      "unknownDevice": "Unknown device",
+      "empty": "No other sessions"
     },
     "data": "Data",
     "export": "Export transactions",
@@ -240,7 +273,27 @@
     "about": "About",
     "version": "Ledger Flow · {version}",
     "signOut": "Sign out",
-    "deleteAccount": "Delete my account"
+    "deleteAccount": "Delete my account",
+    "yourData": {
+      "title": "Your data",
+      "rights": "You can access, correct and delete your data, and withdraw your authorization at any time (Law 1581 of 2012).",
+      "contact": "Write to {email}",
+      "policy": "Privacy policy",
+      "policyVersion": "Policy accepted on sign-up ({date}) · v{version}"
+    },
+    "install": {
+      "title": "Install app",
+      "subtitle": "Add Ledger Flow to your home screen",
+      "installed": "Installed"
+    },
+    "delete": {
+      "title": "Delete my account",
+      "body": "Your account and your financial history are kept for a while so you can come back: signing up again with the same email reactivates everything. You’ll be signed out now.",
+      "confirmLabel": "Type {word} to confirm",
+      "word": "DELETE",
+      "confirm": "Delete account",
+      "done": "Account deleted. Sign up again with the same email to come back."
+    }
   },
   "states": {
     "loading": "Loading…",
@@ -416,7 +469,8 @@
     "invalid": "Check this value.",
     "amountMax": "That amount is above the limit the app supports (10 trillion).",
     "tooMany": "Too many items selected.",
-    "dateOrder": "The end must be after the start."
+    "dateOrder": "The end must be after the start.",
+    "confirmWord": "Type the word exactly to confirm."
   },
   "accounts": {
     "form": {

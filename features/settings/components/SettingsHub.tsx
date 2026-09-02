@@ -5,10 +5,14 @@ import {
   Clock,
   Coins,
   Download,
+  FileText,
   Globe,
+  Info,
   Lock,
   LogOut,
+  MonitorSmartphone,
   Palette as PaletteIcon,
+  ShieldCheck,
   Smartphone,
   Tags,
   Upload,
@@ -23,17 +27,29 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { List, Row, RowBody, RowButton, RowLink, RowMeta, RowTitle } from "@/components/ui/Row";
 import { Tile } from "@/components/ui/Tile";
+import { useToast } from "@/components/ui/Toast";
+import { LOGIN_PATH } from "@/lib/auth/routes";
 import { env } from "@/lib/env";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { Link } from "@/lib/i18n/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
+import { useInstallPrompt } from "@/lib/pwa/install";
 import { useSession } from "@/lib/session/SessionProvider";
 import { useTheme } from "@/lib/theme";
 import type { ColorToken } from "@/lib/theme/feature-color";
 
-import { useCategorySummary, useSessionCount } from "../hooks";
+import {
+  useCategorySummary,
+  useDeleteAccount,
+  useHasAccounts,
+  useSessionCount,
+  useUpdateCurrency,
+  useUpdateTimeZone,
+} from "../hooks";
 import { LanguageSheet } from "./LanguageSheet";
+import { CurrencySheet, DeleteAccountSheet, TimeZoneSheet } from "./SettingsSheets";
 
 interface SettingsRowProps {
   icon: ReactNode;
@@ -41,7 +57,12 @@ interface SettingsRowProps {
   title: ReactNode;
   meta?: ReactNode;
   right?: ReactNode;
-  href?: "/settings/appearance" | "/categories";
+  href?:
+    | "/settings/appearance"
+    | "/categories"
+    | "/settings/profile"
+    | "/settings/sessions"
+    | "/privacy";
   onClick?: () => void;
 }
 
@@ -100,8 +121,16 @@ export function SettingsHub() {
   const { currency, timeZone } = useFormatSettings();
   const categories = useCategorySummary(session.status === "authenticated");
   const sessions = useSessionCount(session.status === "authenticated");
-  const [languageOpen, setLanguageOpen] = useState(false);
+  const hasAccounts = useHasAccounts(session.status === "authenticated");
+  const updateCurrency = useUpdateCurrency();
+  const updateTimeZone = useUpdateTimeZone();
+  const deleteAccount = useDeleteAccount();
+  const install = useInstallPrompt();
+  const router = useRouter();
+  const toast = useToast();
+  const [sheet, setSheet] = useState<"language" | "currency" | "timeZone" | "delete" | null>(null);
   const user = session.user;
+  const currencyLocked = hasAccounts.data !== false;
 
   return (
     <>
@@ -127,15 +156,18 @@ export function SettingsHub() {
           meta={t("settings.language.subtitle")}
           right={t(`settings.language.${locale}`)}
           onClick={() => {
-            setLanguageOpen(true);
+            setSheet("language");
           }}
         />
         <SettingsRow
           icon={<Coins {...iconProps("sm")} />}
           color="GREEN"
           title={t("settings.currency.title")}
-          meta={t("settings.currency.locked")}
+          meta={currencyLocked ? t("settings.currency.locked") : t("settings.currency.unlocked")}
           right={<Badge>{currency}</Badge>}
+          onClick={() => {
+            setSheet("currency");
+          }}
         />
         <SettingsRow
           icon={<Clock {...iconProps("sm")} />}
@@ -143,6 +175,9 @@ export function SettingsHub() {
           title={t("settings.timeZone.title")}
           meta={t("settings.timeZone.subtitle")}
           right={timeZone.split("/").pop()?.replace(/_/g, " ")}
+          onClick={() => {
+            setSheet("timeZone");
+          }}
         />
         <SettingsRow
           icon={<PaletteIcon {...iconProps("sm")} />}
@@ -167,13 +202,50 @@ export function SettingsHub() {
           color="GRAY"
           title={t("settings.credentials.title")}
           meta={t("settings.credentials.subtitle")}
+          href="/settings/profile"
         />
         <SettingsRow
           icon={<Smartphone {...iconProps("sm")} />}
           color="GRAY"
           title={t("settings.sessions.title")}
           meta={t("settings.sessions.subtitle")}
-          right={sessions.data !== undefined && <Badge>{sessions.data}</Badge>}
+          right={sessions !== undefined && <Badge>{sessions}</Badge>}
+          href="/settings/sessions"
+        />
+      </Section>
+
+      <Section title={t("settings.yourData.title")}>
+        <Row className="min-h-14">
+          <Tile size="sm" color="TEAL">
+            <ShieldCheck {...iconProps("sm")} />
+          </Tile>
+          <RowBody>
+            <p className="text-sm text-text-2">{t("settings.yourData.rights")}</p>
+            <p className="text-sm text-text-2">
+              <a
+                href={`mailto:${env.NEXT_PUBLIC_CONTACT_EMAIL}`}
+                className="font-medium text-brand-text"
+              >
+                {t("settings.yourData.contact", { email: env.NEXT_PUBLIC_CONTACT_EMAIL })}
+              </a>
+            </p>
+            {user && (
+              <RowMeta
+                items={[
+                  t("settings.yourData.policyVersion", {
+                    version: "1",
+                    date: dates.formatDay(new Date(user.createdAt)),
+                  }),
+                ]}
+              />
+            )}
+          </RowBody>
+        </Row>
+        <SettingsRow
+          icon={<FileText {...iconProps("sm")} />}
+          color="GRAY"
+          title={t("settings.yourData.policy")}
+          href="/privacy"
         />
       </Section>
 
@@ -192,6 +264,34 @@ export function SettingsHub() {
         />
       </Section>
 
+      <Section title={t("settings.about")}>
+        {install.state !== "unavailable" && (
+          <SettingsRow
+            icon={<MonitorSmartphone {...iconProps("sm")} />}
+            color="INDIGO"
+            title={t("settings.install.title")}
+            meta={
+              install.state === "installed"
+                ? t("settings.install.installed")
+                : t("settings.install.subtitle")
+            }
+            onClick={
+              install.state === "available"
+                ? () => {
+                    void install.install();
+                  }
+                : undefined
+            }
+          />
+        )}
+        <SettingsRow
+          icon={<Info {...iconProps("sm")} />}
+          color="GRAY"
+          title={t("settings.about")}
+          meta={t("settings.version", { version: env.NEXT_PUBLIC_APP_VERSION })}
+        />
+      </Section>
+
       <div className="flex flex-col gap-2">
         <Button
           variant="secondary"
@@ -203,7 +303,14 @@ export function SettingsHub() {
           <LogOut {...iconProps("sm")} />
           {t("settings.signOut")}
         </Button>
-        <Button variant="ghost" block className="text-danger" disabled>
+        <Button
+          variant="ghost"
+          block
+          className="text-danger"
+          onClick={() => {
+            setSheet("delete");
+          }}
+        >
           {t("settings.deleteAccount")}
         </Button>
       </div>
@@ -215,10 +322,66 @@ export function SettingsHub() {
       <Link href="/home" className="sr-only">
         {t("nav.home")}
       </Link>
-      <LanguageSheet
-        open={languageOpen}
+      <CurrencySheet
+        key={`currency-${sheet === "currency" ? "open" : "closed"}`}
+        open={sheet === "currency"}
+        currency={currency}
+        locked={currencyLocked}
+        pending={updateCurrency.isPending}
+        error={updateCurrency.error}
+        onSave={(next) => {
+          updateCurrency
+            .mutateAsync(next)
+            .then(() => {
+              setSheet(null);
+              toast.show({ message: t("settings.currency.saved") });
+            })
+            .catch(() => undefined);
+        }}
         onClose={() => {
-          setLanguageOpen(false);
+          setSheet(null);
+        }}
+      />
+      <TimeZoneSheet
+        key={`timezone-${sheet === "timeZone" ? "open" : "closed"}`}
+        open={sheet === "timeZone"}
+        timeZone={timeZone}
+        pending={updateTimeZone.isPending}
+        error={updateTimeZone.error}
+        onSave={(next) => {
+          updateTimeZone
+            .mutateAsync(next)
+            .then(() => {
+              setSheet(null);
+              toast.show({ message: t("settings.timeZone.saved") });
+            })
+            .catch(() => undefined);
+        }}
+        onClose={() => {
+          setSheet(null);
+        }}
+      />
+      <DeleteAccountSheet
+        open={sheet === "delete"}
+        pending={deleteAccount.isPending}
+        error={deleteAccount.error}
+        onConfirm={() => {
+          deleteAccount
+            .mutateAsync()
+            .then(async () => {
+              await session.logout();
+              router.replace({ pathname: LOGIN_PATH, query: { deleted: "1" } });
+            })
+            .catch(() => undefined);
+        }}
+        onClose={() => {
+          setSheet(null);
+        }}
+      />
+      <LanguageSheet
+        open={sheet === "language"}
+        onClose={() => {
+          setSheet(null);
         }}
       />
     </>

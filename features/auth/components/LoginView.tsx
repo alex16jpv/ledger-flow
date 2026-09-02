@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { AuthHeading } from "@/components/shell/AuthFrame";
+import { Alert } from "@/components/ui/Alert";
 import { safeNextPath } from "@/lib/auth/routes";
 import { isEnabled } from "@/lib/flags";
 import { Link, useRouter } from "@/lib/i18n/navigation";
@@ -19,6 +20,7 @@ export function LoginView() {
   return (
     <div className="flex flex-col gap-5">
       <AuthHeading title={t("title")} subtitle={t("subtitle")} />
+      {params.get("deleted") === "1" && <Alert tone="info">{t("deleted")}</Alert>}
       <LoginForm
         forgotPasswordEnabled={isEnabled("forgotPassword")}
         onSuccess={() => {
