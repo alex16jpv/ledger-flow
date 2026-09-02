@@ -255,3 +255,16 @@ The specification that these decisions refine lives outside the repo in
   blocking session sheet.
 - **QueryClient defaults:** `staleTime` 30 s, `retry` once only on 5xx/429/network errors with
   exponential backoff plus jitter (cap 8 s), mutations never retry, refetch on focus.
+
+## 2026-09-01 · Generic API proxy (W-09)
+
+- `app/api/[...path]/route.ts` replaces per-endpoint handlers: it forwards method, query string,
+  raw body, `Idempotency-Key`, `x-request-id` and `User-Agent`, attaches the Bearer token from the
+  `__Host-access` cookie and streams the backend response back unchanged with `X-Robots-Tag:
+noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `Origin`; bodies are
+  capped at 64 kB (the backend caps at 10 kB anyway).
+- The session endpoints (`auth/login|register|refresh|logout|logout-all|me`) are blocked in the proxy
+  (their dedicated handlers win in routing, the block is defence in depth); `auth/sessions` is
+  proxied because it only needs the access token.
+- A missing access cookie answers 401 without touching the backend, which is what triggers the
+  client's single-flight refresh.

@@ -7,6 +7,7 @@ import { REQUEST_ID_HEADER } from "./request-id";
 export interface BackendRequest {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
+  rawBody?: string;
   accessToken?: string | null;
   requestId?: string | null;
   userAgent?: string | null;
@@ -18,7 +19,16 @@ export const BACKEND_TIMEOUT_MS = 15_000;
 
 // The only place that knows the backend URL; every route handler goes through it.
 export async function backendFetch(path: string, request: BackendRequest = {}): Promise<Response> {
-  const { method = "GET", body, accessToken, requestId, userAgent, headers = {}, signal } = request;
+  const {
+    method = "GET",
+    body,
+    rawBody,
+    accessToken,
+    requestId,
+    userAgent,
+    headers = {},
+    signal,
+  } = request;
   try {
     return await fetch(`${env.API_URL}${path}`, {
       method,
@@ -32,7 +42,11 @@ export async function backendFetch(path: string, request: BackendRequest = {}): 
         ...(userAgent ? { "user-agent": userAgent } : {}),
         ...headers,
       },
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(rawBody !== undefined
+        ? { body: rawBody }
+        : body !== undefined
+          ? { body: JSON.stringify(body) }
+          : {}),
     });
   } catch (cause) {
     throw toBackendUnavailable(cause);
