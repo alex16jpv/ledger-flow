@@ -53,7 +53,7 @@ export function BudgetsSection({ budgets, categories, now }: BudgetsSectionProps
                 </Tile>
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{budget.name}</span>
                 <span className="text-sm text-text-2 tabular-nums">
-                  <Amount value={budget.spent} signed={false} size="sm" />
+                  <Amount value={budget.spent} signed={false} size="sm" />{" "}
                   <span className="text-text-3">
                     {t("budgetOf", { amount: money.format(budget.amount) })}
                   </span>
