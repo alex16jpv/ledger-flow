@@ -73,14 +73,14 @@ features/b`; shared code moves up.
 
 ## 4. Documentation you must update
 
-| You changed                        | Update                                                                                          |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------- |
-| A route, layout or navigation item | `README.md` route map                                                                           |
-| A feature's behaviour              | `features/<x>/README.md` (one paragraph, what and why)                                          |
-| An architectural or library choice | `DECISIONS.md` (date, decision, alternatives, consequence)                                      |
-| Environment variables              | `lib/env.ts`, `.env.example`, `README.md`                                                       |
-| A message key                      | Both `messages/en.json` and `messages/es.json`                                                  |
-| Something the backend must change  | `../auditoria/TRACKING-R2.md › Tareas futuras` (report it; do not change the backend from here) |
+| You changed                        | Update                                                                                 |
+| ---------------------------------- | -------------------------------------------------------------------------------------- |
+| A route, layout or navigation item | `README.md` route map                                                                  |
+| A feature's behaviour              | `features/<x>/README.md` (one paragraph, what and why)                                 |
+| An architectural or library choice | `DECISIONS.md` (date, decision, alternatives, consequence)                             |
+| Environment variables              | `lib/env.ts`, `.env.example`, `README.md`                                              |
+| A message key                      | Both `messages/en.json` and `messages/es.json`                                         |
+| Something the backend must change  | `../auditoria/BACKEND-DESDE-FRONT.md` (report it; do not change the backend from here) |
 
 ---
 

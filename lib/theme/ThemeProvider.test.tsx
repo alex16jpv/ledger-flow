@@ -12,10 +12,10 @@ function Probe() {
       <output data-testid="state">{`${palette}/${mode}/${resolvedMode}`}</output>
       <button
         onClick={() => {
-          setPalette("brisa");
+          setPalette("tinta");
         }}
       >
-        brisa
+        tinta
       </button>
       <button
         onClick={() => {
@@ -42,14 +42,14 @@ beforeEach(() => {
 
 describe("ThemeProvider", () => {
   it("applies the stored theme on mount", () => {
-    window.localStorage.setItem(STORAGE_KEYS.palette, "brisa");
+    window.localStorage.setItem(STORAGE_KEYS.palette, "tinta");
     render(
       <ThemeProvider>
         <Probe />
       </ThemeProvider>,
     );
-    expect(screen.getByTestId("state")).toHaveTextContent("brisa/system/light");
-    expect(document.documentElement.dataset.palette).toBe("brisa");
+    expect(screen.getByTestId("state")).toHaveTextContent("tinta/system/light");
+    expect(document.documentElement.dataset.palette).toBe("tinta");
   });
 
   it("changes palette and mode without a reload and persists them", async () => {
@@ -59,12 +59,12 @@ describe("ThemeProvider", () => {
         <Probe />
       </ThemeProvider>,
     );
-    await user.click(screen.getByRole("button", { name: "brisa" }));
+    await user.click(screen.getByRole("button", { name: "tinta" }));
     await user.click(screen.getByRole("button", { name: "dark" }));
-    expect(screen.getByTestId("state")).toHaveTextContent("brisa/dark/dark");
-    expect(document.documentElement.dataset.palette).toBe("brisa");
+    expect(screen.getByTestId("state")).toHaveTextContent("tinta/dark/dark");
+    expect(document.documentElement.dataset.palette).toBe("tinta");
     expect(document.documentElement.dataset.mode).toBe("dark");
-    expect(window.localStorage.getItem(STORAGE_KEYS.palette)).toBe("brisa");
+    expect(window.localStorage.getItem(STORAGE_KEYS.palette)).toBe("tinta");
     expect(window.localStorage.getItem(STORAGE_KEYS.mode)).toBe("dark");
   });
 
@@ -73,7 +73,7 @@ describe("ThemeProvider", () => {
     themeStore.subscribe(listener);
     themeStore.set({ ...themeStore.getSnapshot() });
     expect(listener).not.toHaveBeenCalled();
-    themeStore.set({ palette: "brisa", mode: "dark" });
+    themeStore.set({ palette: "tinta", mode: "dark" });
     expect(listener).toHaveBeenCalledOnce();
   });
 
@@ -84,9 +84,9 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
     act(() => {
-      themeStore.set({ palette: "brisa", mode: "light" }, { persist: false });
+      themeStore.set({ palette: "tinta", mode: "light" }, { persist: false });
     });
-    expect(screen.getByTestId("state")).toHaveTextContent("brisa/light/light");
+    expect(screen.getByTestId("state")).toHaveTextContent("tinta/light/light");
     expect(window.localStorage.getItem(STORAGE_KEYS.palette)).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
-export const PALETTES = ["tinta", "brisa"] as const;
+export const PALETTES = ["brisa", "tinta"] as const;
 export type Palette = (typeof PALETTES)[number];
-export const DEFAULT_PALETTE: Palette = "tinta";
+export const DEFAULT_PALETTE: Palette = "brisa";
 
 export const MODES = ["light", "dark", "system"] as const;
 export type Mode = (typeof MODES)[number];

@@ -27,8 +27,8 @@ describe("readStoredTheme", () => {
   });
 
   it("reads a valid theme", () => {
-    const storage = memoryStorage({ [STORAGE_KEYS.palette]: "brisa", [STORAGE_KEYS.mode]: "dark" });
-    expect(readStoredTheme(storage)).toEqual({ palette: "brisa", mode: "dark" });
+    const storage = memoryStorage({ [STORAGE_KEYS.palette]: "tinta", [STORAGE_KEYS.mode]: "dark" });
+    expect(readStoredTheme(storage)).toEqual({ palette: "tinta", mode: "dark" });
   });
 
   it("survives a throwing storage", () => {
@@ -46,8 +46,8 @@ describe("readStoredTheme", () => {
 describe("writeStoredTheme", () => {
   it("round-trips through storage", () => {
     const storage = memoryStorage();
-    writeStoredTheme(storage, { palette: "brisa", mode: "light" });
-    expect(readStoredTheme(storage)).toEqual({ palette: "brisa", mode: "light" });
+    writeStoredTheme(storage, { palette: "tinta", mode: "light" });
+    expect(readStoredTheme(storage)).toEqual({ palette: "tinta", mode: "light" });
   });
 });
 
@@ -63,8 +63,8 @@ describe("resolveMode", () => {
 describe("applyTheme", () => {
   it("sets the palette and an explicit mode", () => {
     const root = document.createElement("html");
-    applyTheme(root, { palette: "brisa", mode: "dark" });
-    expect(root.dataset.palette).toBe("brisa");
+    applyTheme(root, { palette: "tinta", mode: "dark" });
+    expect(root.dataset.palette).toBe("tinta");
     expect(root.dataset.mode).toBe("dark");
   });
 

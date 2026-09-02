@@ -13,18 +13,18 @@ describe("THEME_INIT_SCRIPT", () => {
   });
 
   it("applies the stored palette and mode before paint", () => {
-    window.localStorage.setItem(STORAGE_KEYS.palette, "brisa");
+    window.localStorage.setItem(STORAGE_KEYS.palette, "tinta");
     window.localStorage.setItem(STORAGE_KEYS.mode, "dark");
     run();
-    expect(document.documentElement.dataset.palette).toBe("brisa");
+    expect(document.documentElement.dataset.palette).toBe("tinta");
     expect(document.documentElement.dataset.mode).toBe("dark");
   });
 
-  it("leaves the defaults when nothing or garbage is stored", () => {
+  it("falls back to the default palette when nothing or garbage is stored", () => {
     window.localStorage.setItem(STORAGE_KEYS.palette, "neon");
     window.localStorage.setItem(STORAGE_KEYS.mode, "system");
     run();
-    expect(document.documentElement.dataset.palette).toBeUndefined();
+    expect(document.documentElement.dataset.palette).toBe("brisa");
     expect(document.documentElement.dataset.mode).toBeUndefined();
   });
 });

@@ -196,7 +196,7 @@ The specification that these decisions refine lives outside the repo in
   document embedded in the backend's `swagger-ui-init.js` (there is no public JSON endpoint) and
   runs `openapi-typescript`. The backend views declare no `required`, so the generator marks every
   view property required except `User.reactivated`, `Category.seedKey` and `Session.userAgent`
-  (documented in the script; reported to the backend in `TRACKING-R2.md`). CI regenerates the file
+  (documented in the script; reported to the backend in `auditoria/BACKEND-DESDE-FRONT.md`). CI regenerates the file
   and fails on a diff.
 - **Enums:** `ColorToken` is the generated `Account.color` type; the runtime `COLOR_TOKENS` list is
   checked against it with `satisfies`, and `lib/api/contract.test.ts` asserts type equality for
@@ -328,7 +328,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   without a hydration mismatch. Both pickers are searchable sheets over `Intl.supportedValuesOf`
   with names from `Intl.DisplayNames`, never native selects.
 - **Email enumeration** (409 shown inline with a sign-in link) is the accepted risk recorded in
-  TRACKING-R2 (R2-44); the 500 case suggests signing in first, as the contract §A asks.
+  TRACKING-R2 decision R2-44; the 500 case suggests signing in first, as the contract §A asks.
 - **`reactivated: true`** skips onboarding and lands on home with `?reactivated=1`, which W-14 renders
   as the "Welcome back" info alert.
 - **Route placeholders:** `/onboarding` (W-13) and `/privacy` (W-31) exist as `notFound()` stubs
@@ -379,3 +379,10 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   account) render as static rows with their live values (counts from `/categories` and
   `/auth/sessions`); W-30 and W-25 make them navigable. Export/import stay "soon".
 - **Settings pages** use the narrow 640 px column of DESIGN.md §6 through `AppShell narrow`.
+
+## 2026-09-01 · Brisa is the default palette (owner decision, W-02 revised)
+
+- The owner chose **Brisa** as the default palette after gate F1; Tinta stays available as the second
+  option. `DEFAULT_PALETTE` is `brisa`, the root layout renders `<html data-palette="brisa">` and the
+  init script writes the default when nothing valid is stored, because `palette.tinta.css` still owns
+  the attribute-less `:root` selector (the token files are copied verbatim from the design).
