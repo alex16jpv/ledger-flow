@@ -806,9 +806,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            data?: components["schemas"]["Session"][];
-                        };
+                        "application/json": components["schemas"]["SessionList"];
                     };
                 };
                 /** @description Missing, invalid or expired access token */
@@ -1499,9 +1497,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            data?: components["schemas"]["Category"][];
-                        };
+                        "application/json": components["schemas"]["RestoreDefaultsResponse"];
                     };
                 };
                 /** @description Unauthorized */
@@ -2150,9 +2146,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            data?: string[];
-                        };
+                        "application/json": components["schemas"]["TagList"];
                     };
                 };
                 /** @description Unauthorized */
@@ -2884,6 +2878,15 @@ export type components = {
             data: components["schemas"]["Budget"][];
             pagination: components["schemas"]["Pagination"];
         };
+        SessionList: {
+            data: components["schemas"]["Session"][];
+        };
+        TagList: {
+            data: string[];
+        };
+        RestoreDefaultsResponse: {
+            data: components["schemas"]["Category"][];
+        };
     };
     responses: never;
     parameters: never;
@@ -2921,5 +2924,8 @@ export type AccountList = components['schemas']['AccountList'];
 export type CategoryList = components['schemas']['CategoryList'];
 export type TransactionList = components['schemas']['TransactionList'];
 export type BudgetList = components['schemas']['BudgetList'];
+export type SessionList = components['schemas']['SessionList'];
+export type TagList = components['schemas']['TagList'];
+export type RestoreDefaultsResponse = components['schemas']['RestoreDefaultsResponse'];
 export type $defs = Record<string, never>;
 export type operations = Record<string, never>;

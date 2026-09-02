@@ -10,16 +10,7 @@ async function fetchSpec() {
   return response.json();
 }
 
-// List envelopes still declare no `required`; the backend always sends both fields.
-function markListEnvelopesRequired(spec) {
-  for (const [name, schema] of Object.entries(spec.components?.schemas ?? {})) {
-    if (name.endsWith("List") && schema.properties)
-      schema.required = Object.keys(schema.properties);
-  }
-  return spec;
-}
-
-const spec = markListEnvelopesRequired(await fetchSpec());
+const spec = await fetchSpec();
 const ast = await openapiTS(spec, {
   exportType: true,
   rootTypes: true,
