@@ -449,9 +449,10 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   clears the amount after each save (DESIGN.md §8.2 "registro en cadena"). The sidebar button always
   opens a single capture. `/transactions/new` stays the destination of "More details", which carries
   the typed amount, category, account and note as query parameters for W-18.
-- **Note through a follow-up PUT.** `POST /transactions/quick` has no description field, so the note
-  is written with `PUT /transactions/:id` right after; when a category was chosen as well the same
-  call sets `pendingDetails: false`, as the design allows. A failing PUT does not undo the capture:
+- **Details through a follow-up PUT.** `POST /transactions/quick` has no description field and
+  always flags `pendingDetails`, so a `PUT /transactions/:id` right after writes the description and,
+  whenever a category was chosen (with or without a description), clears the flag: the owner decided
+  on 2026-09-02 (P-17) that a categorized quick expense is complete, not pending. A failing PUT does not undo the capture:
   the toast turns red and says the note was not added, and the row stays in the review inbox.
 - **One `Idempotency-Key` per sheet opening**, rotated by payload through `IdempotencyKeyring`, so a
   retry after a network error reuses it and an edited amount gets a fresh one.
@@ -543,8 +544,8 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   description locally and calls `useUpdateTransaction(id)`; after "Done" the list query refetches and
   the card disappears, and the tab counter drops because the same invalidation covers
   `usePendingCount`. No optimistic removal: the row leaves only when the server confirmed.
-- **The header shows the count but not the pending total.** The API gives `pagination.total` for
-  `?pendingDetails=true` but no sum, and the client does not add money; the total the design shows is
-  requested from the backend in `BACKEND-DESDE-FRONT.md`.
+- **Count and total come from one request.** `GET /transactions?pendingDetails=true&limit=1&includeSummary=true`
+  (backend `11c0a67`) returns `pagination.total` and `summary.totalAmount`; `usePendingSummary` feeds
+  both the shell counter and the inbox header, so the client still adds no money.
 - **`?focus=<id>`** marks the card with the brand outline and scrolls it into view, which is how the
   detail's "Complete" link lands on the right item.

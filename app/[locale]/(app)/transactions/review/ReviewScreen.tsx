@@ -7,13 +7,14 @@ import { useMemo } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Alert } from "@/components/ui/Alert";
+import { Amount } from "@/components/ui/Amount";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Empty } from "@/components/ui/Empty";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery, useRecentCategories } from "@/features/categories/hooks";
 import type { TransactionLookups } from "@/features/transactions/components/TransactionRow";
-import { useTransactionsInfinite } from "@/features/transactions/hooks";
+import { usePendingSummary, useTransactionsInfinite } from "@/features/transactions/hooks";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 
@@ -27,6 +28,7 @@ export function ReviewScreen() {
   const params = useSearchParams();
   const focus = params.get("focus");
   const list = useTransactionsInfinite(PENDING_QUERY);
+  const summary = usePendingSummary();
   const accounts = useAccountsQuery(true);
   const categories = useCategoriesQuery("EXPENSE");
   const allCategories = useCategoriesQuery(undefined);
@@ -39,7 +41,7 @@ export function ReviewScreen() {
     [accounts.data, allCategories.data],
   );
   const rows = list.data?.pages.flatMap((page) => page.data) ?? [];
-  const total = list.data?.pages[0]?.pagination.total ?? 0;
+  const total = summary.data?.count ?? list.data?.pages[0]?.pagination.total ?? 0;
 
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
@@ -52,6 +54,11 @@ export function ReviewScreen() {
         onBack={() => {
           router.back();
         }}
+        actions={
+          summary.data && summary.data.total > 0 ? (
+            <Amount value={summary.data.total} signed={false} size="sm" className="text-text-3" />
+          ) : undefined
+        }
       />
       {list.isPending ? (
         <div className="flex flex-col gap-3" aria-busy="true" aria-label={t("common.loading")}>

@@ -1898,6 +1898,8 @@ export type paths = {
                     from?: string;
                     /** @description End of the date range, exclusive (half-open range [from, to)) */
                     to?: string;
+                    /** @description Adds summary.totalAmount, the sum over the whole filtered set (one extra aggregation, so opt-in) */
+                    includeSummary?: "true" | "false";
                     /** @description Only transactions carrying this tag (tags are stored trimmed and lowercased) */
                     tag?: string;
                     /** @description Filter transactions by type */
@@ -2873,6 +2875,10 @@ export type components = {
         TransactionList: {
             data: components["schemas"]["Transaction"][];
             pagination: components["schemas"]["Pagination"];
+            /** @description Only when includeSummary=true. Sums the whole filtered set, not the page. */
+            summary?: {
+                totalAmount: number;
+            };
         };
         BudgetList: {
             data: components["schemas"]["Budget"][];

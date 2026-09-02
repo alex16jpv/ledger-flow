@@ -38,7 +38,9 @@ export function fetchDailyStats({ type, from, to }: DailyStatsParams): Promise<S
 }
 
 export function fetchPendingCount(): Promise<TransactionList> {
-  return api<TransactionList>("/transactions", { query: { pendingDetails: true, limit: 1 } });
+  return api<TransactionList>("/transactions", {
+    query: { pendingDetails: true, limit: 1, includeSummary: true },
+  });
 }
 
 export function fetchTransaction(id: string): Promise<Transaction> {

@@ -91,6 +91,23 @@ test("a chosen category and a note complete the details, and More details carrie
   expect(created?.categoryId).toBeTruthy();
   await request.delete(`/api/transactions/${created?.id}`, { headers: { origin: APP } });
 
+  const onlyCategory = uniqueAmount();
+  await addButton(page).click();
+  await sheet.getByRole("textbox", { name: "Amount" }).fill(String(onlyCategory));
+  await sheet
+    .getByRole("group", { name: "Category" })
+    .getByRole("button", { name: "Food" })
+    .click();
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await expect(sheet).toBeHidden();
+  // The previous toast may still be on screen: wait for the follow-up PUT through the API instead.
+  await expect
+    .poll(async () => (await quickRow(request, onlyCategory))?.pendingDetails, { timeout: 10_000 })
+    .toBe(false);
+  const categorized = await quickRow(request, onlyCategory);
+  expect(categorized).toMatchObject({ pendingDetails: false, description: null });
+  await request.delete(`/api/transactions/${categorized?.id}`, { headers: { origin: APP } });
+
   await addButton(page).click();
   await sheet.getByRole("textbox", { name: "Amount" }).fill("4500");
   await sheet.getByRole("button", { name: /From your main account/ }).click();

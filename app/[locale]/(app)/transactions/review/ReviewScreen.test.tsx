@@ -109,7 +109,11 @@ beforeEach(() => {
     }
     if (url.includes("/api/transactions?"))
       return Promise.resolve(
-        json({ data: pending, pagination: { ...pagination, total: pending.length } }),
+        json({
+          data: pending,
+          pagination: { ...pagination, total: pending.length },
+          summary: { totalAmount: pending.reduce((sum, row) => sum + row.amount, 0) },
+        }),
       );
     return Promise.resolve(json({ code: "NOT_FOUND", message: url }, { status: 404 }));
   });
@@ -133,6 +137,7 @@ describe("ReviewScreen", () => {
   it("lists the pending quick expenses with recent chips and completes one in place", async () => {
     render();
     expect(await screen.findByRole("heading", { level: 1, name: "To review · 2" })).toBeVisible();
+    expect(await screen.findByText("27,900")).toBeVisible();
     const cards = await screen.findAllByRole("group", { name: "Category" });
     expect(cards).toHaveLength(2);
     const first = document.querySelector<HTMLElement>('[data-transaction-id="q1"]');

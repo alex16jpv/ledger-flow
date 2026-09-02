@@ -93,9 +93,9 @@ test("a row opens its detail, which edits and deletes the transaction", async ({
   ).json()) as { id: string };
 
   await page.goto("/transactions");
+  // The mobile and desktop projects each create a quick row: pick this one by its unique amount.
   await page
-    .getByRole("button", { name: /Quick expense/ })
-    .first()
+    .getByRole("button", { name: new RegExp(`Quick expense.*${amount.toLocaleString("en-US")}`) })
     .click();
   await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}$`));
   await expect(page.getByRole("heading", { level: 1, name: "Transaction" })).toBeVisible();

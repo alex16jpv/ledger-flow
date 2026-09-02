@@ -81,6 +81,27 @@ describe("transactions", () => {
     });
   });
 
+  it("clears pendingDetails with a category alone and leaves it when only a note came", async () => {
+    const { quickAddWithDetails } = await import("./hooks");
+    fetchMock
+      .mockResolvedValueOnce(json({ id: "t4", pendingDetails: true }, { status: 201 }))
+      .mockResolvedValueOnce(json({ id: "t4", pendingDetails: false }));
+    await quickAddWithDetails({
+      input: { amount: 100, categoryId: "c1" },
+      description: null,
+      idempotencyKey: "k4",
+    });
+    expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toEqual({
+      pendingDetails: false,
+    });
+
+    fetchMock
+      .mockResolvedValueOnce(json({ id: "t5", pendingDetails: true }, { status: 201 }))
+      .mockResolvedValueOnce(json({ id: "t5", pendingDetails: true, description: "x" }));
+    await quickAddWithDetails({ input: { amount: 100 }, description: "x", idempotencyKey: "k5" });
+    expect(JSON.parse(fetchMock.mock.calls[3]?.[1]?.body as string)).toEqual({ description: "x" });
+  });
+
   it("keeps the transaction and reports the failed note instead of throwing", async () => {
     const { quickAddWithDetails } = await import("./hooks");
     fetchMock

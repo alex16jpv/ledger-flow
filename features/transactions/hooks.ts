@@ -26,14 +26,25 @@ import {
 import type { ListQuery } from "./filters";
 import { transactionKeys } from "./keys";
 
-export function usePendingCount(enabled = true): number {
-  const query = useQuery({
+export interface PendingSummary {
+  count: number;
+  total: number;
+}
+
+export function usePendingSummary(enabled = true) {
+  return useQuery({
     queryKey: transactionKeys.pendingCount(),
     queryFn: fetchPendingCount,
     enabled,
-    select: (list) => list.pagination.total,
+    select: (list): PendingSummary => ({
+      count: list.pagination.total,
+      total: list.summary?.totalAmount ?? 0,
+    }),
   });
-  return query.data ?? 0;
+}
+
+export function usePendingCount(enabled = true): number {
+  return usePendingSummary(enabled).data?.count ?? 0;
 }
 
 export interface QuickAddVariables {
@@ -47,17 +58,18 @@ export interface QuickAddResult {
   detailsSaved: boolean;
 }
 
-// The quick endpoint takes no description: it is added with a follow-up PUT, which also clears pendingDetails when a category came along.
+// The quick endpoint always flags pendingDetails and takes no description: a follow-up PUT adds the
+// description and, when a category was chosen, clears the flag (owner decision P-17: a category is enough).
 export async function quickAddWithDetails({
   input,
   description,
   idempotencyKey,
 }: QuickAddVariables): Promise<QuickAddResult> {
   const transaction = await quickAddTransaction(input, idempotencyKey);
-  if (!description) return { transaction, detailsSaved: true };
+  if (!description && !input.categoryId) return { transaction, detailsSaved: true };
   try {
     const detailed = await updateTransaction(transaction.id, {
-      description,
+      ...(description ? { description } : {}),
       ...(input.categoryId ? { pendingDetails: false } : {}),
     });
     return { transaction: detailed, detailsSaved: true };
