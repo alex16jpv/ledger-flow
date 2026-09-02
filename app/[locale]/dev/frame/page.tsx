@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { DevFrame } from "@/components/dev/DevFrame";
 import { isEnabled } from "@/lib/flags";
 
 interface FramePageProps {
@@ -13,17 +14,15 @@ export default async function DevFramePage({ searchParams }: FramePageProps) {
   if (!isEnabled("componentCatalog")) notFound();
   const params = await searchParams;
   const url = first(params.url) ?? "/home";
-  const width = Number(first(params.w) ?? 390);
-  const height = Number(first(params.h) ?? 844);
   const src = url.startsWith("/") && !url.startsWith("//") ? url : "/home";
   return (
     <main className="grid min-h-dvh place-items-start bg-surface-3 p-4">
-      <iframe
-        title={src}
+      <DevFrame
         src={src}
-        width={width}
-        height={height}
-        className="border border-border-strong bg-bg"
+        width={Number(first(params.w) ?? 390)}
+        height={Number(first(params.h) ?? 844)}
+        mode={first(params.mode)}
+        palette={first(params.palette)}
       />
     </main>
   );

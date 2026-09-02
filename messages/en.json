@@ -370,5 +370,17 @@
     "TIMEOUT": "The request took too long. Check your connection and try again.",
     "NETWORK": "You seem to be offline. Try again when you’re connected.",
     "UNKNOWN": "Something unexpected happened. Try again."
+  },
+  "validation": {
+    "required": "This field is required.",
+    "email": "Enter a valid email address.",
+    "passwordMin": "At least 8 characters.",
+    "passwordMax": "At most 128 characters.",
+    "nameMax": "At most 255 characters.",
+    "consent": "You need to accept the privacy policy to continue.",
+    "currency": "Choose a currency.",
+    "timeZone": "Choose a time zone.",
+    "amountPositive": "Enter an amount greater than zero.",
+    "amountDecimals": "Your currency doesn’t allow those decimals."
   }
 }

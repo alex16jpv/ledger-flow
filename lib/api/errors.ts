@@ -1,4 +1,7 @@
+import type en from "@/messages/en.json";
 import type { ErrorResponse } from "@/types/api";
+
+export type ErrorMessageKey = `errors.${keyof typeof en.errors}`;
 
 export const ERROR_CODES = [
   "VALIDATION",
@@ -37,7 +40,7 @@ export type ErrorScope = "field" | "form" | "toast" | "screen" | "session" | "ra
 export interface ErrorPresentation {
   scope: ErrorScope;
   field?: string;
-  messageKey: `errors.${string}`;
+  messageKey: ErrorMessageKey;
 }
 
 export const ERROR_TABLE: Readonly<Record<ErrorCode, ErrorPresentation>> = {

@@ -124,13 +124,13 @@ export default defineConfig([
     settings: {
       "import/resolver-next": [createTypeScriptImportResolver({ project: "./tsconfig.json" })],
       "boundaries/elements": [
-        { type: "app", pattern: "app/**" },
-        { type: "features", pattern: "features/*", capture: ["feature"] },
-        { type: "ui", pattern: "components/**" },
-        { type: "lib", pattern: "lib/**" },
-        { type: "messages", pattern: "messages/**" },
-        { type: "tokens", pattern: "tokens/**" },
-        { type: "types", pattern: "types/**" },
+        { type: "app", pattern: "app/**", partialMatch: false },
+        { type: "features", pattern: "features/*", capture: ["feature"], partialMatch: false },
+        { type: "ui", pattern: "components/**", partialMatch: false },
+        { type: "lib", pattern: "lib/**", partialMatch: false },
+        { type: "messages", pattern: "messages/**", partialMatch: false },
+        { type: "tokens", pattern: "tokens/**", partialMatch: false },
+        { type: "types", pattern: "types/**", partialMatch: false },
       ],
     },
     rules: {

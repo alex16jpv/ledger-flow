@@ -301,3 +301,18 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   Windows browsers refuse windows narrower than ~480 px and headless screenshots at phone width
   were being cropped. To allow it, development sends `X-Frame-Options: SAMEORIGIN` and
   `frame-ancestors 'self'`; production keeps `DENY` / `'none'`.
+
+## 2026-09-01 · Login (W-11)
+
+- **Validation messages are message keys.** Zod schemas emit keys such as `validation.email`; the
+  form translates them with `validationMessage(t, error.message)` (`lib/i18n/validation.ts`), so the
+  schema stays free of copy and both languages come from `messages/`.
+- **429 in the UI** shows the countdown from `Retry-After` (falling back to the 15-minute window) and
+  disables the button until it reaches zero. The Playwright suite covers success and the uniform
+  401 message only: reproducing the limit needs ten failed logins, which would also exhaust the
+  per-IP budget of the CI backend for every later test, so the countdown is covered by a Testing
+  Library test with a mocked 429 (the mocks-as-fallback rule of HANDOFF §3.12).
+- **"Forgot your password?"** is rendered inactive with "(soon)" behind the `forgotPassword` flag
+  until the backend has email delivery (TRACKING-R2 future tasks).
+- **Element boundaries** now match full paths (`partialMatch: false`): the previous tail matching
+  classified `features/*/components/*` as `components/ui`.

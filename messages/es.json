@@ -370,5 +370,17 @@
     "TIMEOUT": "La solicitud tardó demasiado. Revisa tu conexión e inténtalo de nuevo.",
     "NETWORK": "Parece que estás sin conexión. Inténtalo cuando vuelvas a estar en línea.",
     "UNKNOWN": "Ocurrió algo inesperado. Inténtalo de nuevo."
+  },
+  "validation": {
+    "required": "Este campo es obligatorio.",
+    "email": "Escribe un correo válido.",
+    "passwordMin": "Mínimo 8 caracteres.",
+    "passwordMax": "Máximo 128 caracteres.",
+    "nameMax": "Máximo 255 caracteres.",
+    "consent": "Debes aceptar la política de privacidad para continuar.",
+    "currency": "Elige una moneda.",
+    "timeZone": "Elige una zona horaria.",
+    "amountPositive": "Escribe un importe mayor que cero.",
+    "amountDecimals": "Tu moneda no admite esos decimales."
   }
 }
