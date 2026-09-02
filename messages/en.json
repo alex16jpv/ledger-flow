@@ -414,7 +414,9 @@
     "sameAccount": "Choose two different accounts.",
     "futureDate": "That date is more than a day ahead.",
     "invalid": "Check this value.",
-    "amountMax": "That amount is above the limit the app supports (10 trillion)."
+    "amountMax": "That amount is above the limit the app supports (10 trillion).",
+    "tooMany": "Too many items selected.",
+    "dateOrder": "The end must be after the start."
   },
   "accounts": {
     "form": {
@@ -611,6 +613,38 @@
       "notFound": "This budget doesn’t exist.",
       "archivedInfo": "This budget is archived and no longer tracks spending. Create a new one if you need it again.",
       "endedInfo": "This custom budget ended on {date}."
+    },
+    "form": {
+      "newTitle": "New budget",
+      "editTitle": "Edit budget",
+      "name": "Name",
+      "namePlaceholder": "Food & groceries",
+      "scope": "Scope",
+      "global": "All spending",
+      "byCategory": "By category",
+      "scopeHelp": "“All spending” creates a global budget: it includes anything logged without a category. Only one per period type.",
+      "categories": "Categories",
+      "categoriesLimit": "up to {count}",
+      "categoriesHelp": "Expense categories only. Transfer categories can’t have a budget.",
+      "categoriesSearch": "Search categories",
+      "noCategories": "No expense categories yet",
+      "period": "Period",
+      "startDate": "Start",
+      "endDate": "End",
+      "periodChangeWarning": "Changing the period clears every per-period adjustment of this budget.",
+      "amount": "Amount",
+      "suggestionsFromSpending": "Based on last month’s spending",
+      "color": "Color",
+      "advanced": "Advanced options",
+      "effectiveFrom": "Effective from",
+      "effectiveFromHelp": "The budget won’t show up when browsing months before this date.",
+      "note": "Note",
+      "notePlaceholder": "What this budget is for",
+      "create": "Create budget",
+      "created": "Budget created",
+      "saved": "Changes saved",
+      "overlap": "Another {period} budget already covers one of these categories.",
+      "overlapGlobal": "You already have a global {period} budget."
     }
   },
   "categoryTypes": {

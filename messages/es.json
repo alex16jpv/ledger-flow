@@ -414,7 +414,9 @@
     "sameAccount": "Elige dos cuentas distintas.",
     "futureDate": "Esa fecha está a más de un día de distancia.",
     "invalid": "Revisa este valor.",
-    "amountMax": "Ese monto supera el límite que admite la app (10 billones)."
+    "amountMax": "Ese monto supera el límite que admite la app (10 billones).",
+    "tooMany": "Has seleccionado demasiados elementos.",
+    "dateOrder": "El fin debe ser posterior al inicio."
   },
   "accounts": {
     "form": {
@@ -611,6 +613,38 @@
       "notFound": "Este presupuesto no existe.",
       "archivedInfo": "Este presupuesto está archivado y ya no sigue el gasto. Crea uno nuevo si lo necesitas.",
       "endedInfo": "Este presupuesto personalizado terminó el {date}."
+    },
+    "form": {
+      "newTitle": "Nuevo presupuesto",
+      "editTitle": "Editar presupuesto",
+      "name": "Nombre",
+      "namePlaceholder": "Mercado y comida",
+      "scope": "Alcance",
+      "global": "Todo el gasto",
+      "byCategory": "Por categorías",
+      "scopeHelp": "«Todo el gasto» crea un presupuesto global: incluye lo que registras sin categoría. Solo uno por tipo de período.",
+      "categories": "Categorías",
+      "categoriesLimit": "hasta {count}",
+      "categoriesHelp": "Solo categorías de gasto. Las de transferencia no pueden tener presupuesto.",
+      "categoriesSearch": "Buscar categorías",
+      "noCategories": "Aún no hay categorías de gasto",
+      "period": "Período",
+      "startDate": "Inicio",
+      "endDate": "Fin",
+      "periodChangeWarning": "Cambiar el período borra todos los ajustes por período de este presupuesto.",
+      "amount": "Monto",
+      "suggestionsFromSpending": "Según el gasto del mes pasado",
+      "color": "Color",
+      "advanced": "Opciones avanzadas",
+      "effectiveFrom": "Vigente desde",
+      "effectiveFromHelp": "El presupuesto no aparecerá al navegar meses anteriores a esta fecha.",
+      "note": "Nota",
+      "notePlaceholder": "Para qué es este presupuesto",
+      "create": "Crear presupuesto",
+      "created": "Presupuesto creado",
+      "saved": "Cambios guardados",
+      "overlap": "Otro presupuesto {period} ya cubre alguna de estas categorías.",
+      "overlapGlobal": "Ya tienes un presupuesto global {period}."
     }
   },
   "categoryTypes": {

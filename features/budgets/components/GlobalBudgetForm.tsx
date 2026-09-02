@@ -13,8 +13,10 @@ import { presentError } from "@/lib/api/errors";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 
+import { budgetSuggestions } from "../form";
 import { useCreateBudget } from "../hooks";
-import { budgetAmountSchema, monthlyBudgetSuggestions } from "../schemas";
+import { useLastMonthSpending } from "../hooks";
+import { budgetAmountSchema } from "../schemas";
 
 interface GlobalBudgetFormProps {
   onDone: () => void;
@@ -26,7 +28,12 @@ export function GlobalBudgetForm({ onDone, submitLabel, skipLabel }: GlobalBudge
   const t = useTranslations();
   const money = useMoney();
   const createBudget = useCreateBudget();
-  const suggestions = monthlyBudgetSuggestions(money.fractionDigits);
+  const lastMonth = useLastMonthSpending();
+  const suggestions = budgetSuggestions(
+    money.currency,
+    money.fractionDigits,
+    lastMonth.data ?? null,
+  );
   const [amount, setAmount] = useState<number | null>(null);
   const [inputKey, setInputKey] = useState(0);
   const [validation, setValidation] = useState<string | null>(null);
@@ -72,6 +79,11 @@ export function GlobalBudgetForm({ onDone, submitLabel, skipLabel }: GlobalBudge
             {validation}
           </span>
         )}
+        {lastMonth.data ? (
+          <span className="text-center text-xs text-text-3">
+            {t("budgets.form.suggestionsFromSpending")}
+          </span>
+        ) : null}
         <ChipRow className="justify-center">
           {suggestions.map((suggestion) => (
             <Chip

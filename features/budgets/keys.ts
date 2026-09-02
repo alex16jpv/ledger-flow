@@ -14,6 +14,7 @@ export const budgetKeys = {
         includeArchived: filters.includeArchived ?? false,
       },
     ] as const,
+  lastMonthSpending: (from: string) => [...budgetKeys.all, "last-month-spending", from] as const,
   detail: (id: string, reference?: string) =>
     [...budgetKeys.all, "detail", id, { reference: reference ?? null }] as const,
 };

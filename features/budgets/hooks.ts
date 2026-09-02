@@ -1,7 +1,10 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 
+import { monthWindow, shiftMonth, toIsoWindow } from "@/lib/format/dates";
+import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { QUERY_DOMAINS } from "@/lib/query/domains";
 import type { UpdateBudgetInput } from "@/types/api";
 
@@ -11,6 +14,7 @@ import {
   createBudget,
   fetchBudget,
   fetchBudgets,
+  fetchSpendingTotal,
   removeBudgetOverride,
   setBudgetOverride,
   updateBudget,
@@ -74,5 +78,20 @@ export function useRemoveBudgetOverride(id: string) {
   return useMutation({
     mutationFn: ({ reference }: { reference: string }) => removeBudgetOverride(id, reference),
     onSuccess: invalidate,
+  });
+}
+
+// Owner request F-01: budget suggestions follow what the user actually spent last month.
+export function useLastMonthSpending() {
+  const { timeZone } = useFormatSettings();
+  const window = useMemo(
+    () => toIsoWindow(monthWindow(shiftMonth(new Date(), -1, timeZone), timeZone)),
+    [timeZone],
+  );
+  return useQuery({
+    queryKey: budgetKeys.lastMonthSpending(window.from),
+    queryFn: () => fetchSpendingTotal(window.from, window.to),
+    select: (stats) => stats.total,
+    staleTime: 5 * 60 * 1000,
   });
 }

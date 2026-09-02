@@ -95,6 +95,7 @@ English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`)
 | `/categories/new`, `/categories/[id]/edit`                     | Category form: create (`?type=`) and edit with locked type and archive                       |
 | `/budgets`                                                     | Budgets list for a month (`?reference=YYYY-MM&period=`), global card featured                |
 | `/budgets/[id]`                                                | Budget detail per month: hero, period override, categories, transactions, archive            |
+| `/budgets/new`, `/budgets/[id]/edit`                           | Budget form: scope, categories, six period types, amount, color, advanced options            |
 | `/budgets/past`                                                | Ended and archived budgets with "Create again"                                               |
 | `/stats`, `/privacy`                                           | Stubs answering "not found" until their backlog item (F4–F5)                                 |
 | `/dev/ui`                                                      | Component catalog (development only)                                                         |

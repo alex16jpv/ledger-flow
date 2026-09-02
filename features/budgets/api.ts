@@ -4,6 +4,7 @@ import type {
   BudgetAmountOverrideInput,
   BudgetList,
   CreateBudgetInput,
+  StatsResponse,
   UpdateBudgetInput,
 } from "@/types/api";
 
@@ -69,4 +70,8 @@ export function setBudgetOverride(id: string, reference: string, amount: number)
 
 export function removeBudgetOverride(id: string, reference: string): Promise<Budget> {
   return api<Budget>(`/budgets/${id}/amount`, { method: "DELETE", query: { reference } });
+}
+
+export function fetchSpendingTotal(from: string, to: string): Promise<StatsResponse> {
+  return api<StatsResponse>("/stats/spending", { query: { type: "EXPENSE", from, to } });
 }

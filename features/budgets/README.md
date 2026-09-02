@@ -14,4 +14,8 @@ the category icons. W-27 adds the detail (`/budgets/[id]?reference=`): `BudgetHe
 days left), `PeriodAmountCard` with the override actions (`OverrideSheet` → `PUT …/amount?reference=`,
 skip = amount 0, remove = `DELETE …/amount`), the categories chips with the archived mark, the note,
 the period's transactions (client-side filtered when the budget spans several categories) and
-`ArchiveBudgetSheet` (final, no restore). The form arrives with W-28.
+`ArchiveBudgetSheet` (final, no restore). W-28 adds `BudgetForm` (`/budgets/new?from=`, `/budgets/[id]/edit`): scope segment (global or by
+category), expense-category chips (archived ones kept on edit), the six period types with native date
+inputs for CUSTOM (inclusive end → half-open API window), amount, color and the advanced options
+(effective from, note). `budgetSuggestions` (owner request F-01) scales the global-budget chips by
+currency or by last month's spending.

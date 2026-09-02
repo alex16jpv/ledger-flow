@@ -748,3 +748,24 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **Pace = spent ÷ elapsed days of the period** (at least one), computed from API values only.
 - **Archiving is final** and needs the confirmation sheet with the danger copy; the archived detail
   keeps the hero and explains, without override or edit actions.
+
+## 2026-09-02 · Budget form (W-28) and suggestions by currency (F-01)
+
+- **The inclusive end date becomes the API's exclusive `periodEndDate`**: the user picks "Oct 1 –
+  Oct 15" and the form sends the local midnight of Oct 16, because `resolvePeriod` treats the CUSTOM
+  window as `[start, end)` like every other period; `effectiveFrom` is the local midnight of the date.
+- **Native `<input type="date">` for the custom window and "Effective from"**: dates are the one
+  control HANDOFF §3.5 lets stay native (as `DateTimeField` already does).
+- **`PUT` only carries the period when it changed**, because the backend clears every override
+  whenever `periodType` (or the CUSTOM dates) is written; the form warns before that happens.
+- **"Create again" reuses the form with `?from=<id>`**: name, scope, categories, amount, color and
+  note are copied; a CUSTOM window is re-based on today with the same length, and `effectiveFrom` is
+  left empty so the new budget starts now.
+- **Overlap errors are phrased by scope**: `BUDGET_PERIOD_OVERLAP` becomes "You already have a
+  global {period} budget" or "Another {period} budget already covers one of these categories";
+  `CATEGORY_ARCHIVED` / `CATEGORY_TYPE_MISMATCH` land under the categories field.
+- **Suggestions follow the currency's scale or the user's spending (F-01).** `budgetSuggestions`
+  looks up a per-currency table (COP, MXN, CLP, JPY, IDR…) instead of the decimal count, and when
+  the user spent something last month it offers 80 %, 100 % and 120 % of that, rounded to a
+  friendly figure (`roundToNice`). The global-budget form shows "Based on last month's spending" in
+  that case; the onboarding keeps the currency table since a new user has no history.
