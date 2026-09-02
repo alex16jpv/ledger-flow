@@ -18,7 +18,7 @@ import type { Category } from "@/types/api";
 
 import type { CategoryType } from "../api";
 import { RECENT_LIMIT, useCategoriesQuery, useRecentCategories } from "../hooks";
-import { CategoryQuickForm } from "./CategoryQuickForm";
+import { CategoryForm } from "./CategoryForm";
 
 export interface CategoryPickerSheetProps {
   open: boolean;
@@ -69,10 +69,11 @@ export function CategoryPickerSheet({
   if (creating) {
     return (
       <Sheet open={open} onClose={close} title={t("categories.form.title")}>
-        <CategoryQuickForm
+        <CategoryForm
           type={type}
+          typeEditable={false}
           initialName={query.trim()}
-          onCreated={choose}
+          onSaved={choose}
           onCancel={() => {
             setCreating(false);
           }}

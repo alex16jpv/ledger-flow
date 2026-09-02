@@ -538,7 +538,51 @@
       "icon": "Icon",
       "iconSearch": "Search icons",
       "color": "Color",
-      "create": "Create category"
+      "create": "Create category",
+      "editTitle": "Edit category",
+      "type": "Type",
+      "preview": "preview",
+      "previewName": "Category name",
+      "saved": "Changes saved",
+      "created": "Category created",
+      "duplicate": "You already have an active category named “{name}”. Names are case-insensitive.",
+      "typeLocked": "<b>The type can’t be changed:</b> this category already has {count, plural, one {# transaction} other {# transactions}} and changing it would rewrite your stats. If you need another type, <link>create a new category</link>.",
+      "viewTransactions": "See its transactions",
+      "notFound": "This category doesn’t exist.",
+      "archivedInfo": "This category is archived: it can’t be picked for new movements or budgets. Its history is kept. Restore it to use it again."
+    },
+    "list": {
+      "title": "Categories",
+      "new": "New category",
+      "typeCount": "{label} · {count}",
+      "txns": "{count, plural, one {# transaction} other {# transactions}}",
+      "unused": "unused",
+      "archived": "Archived",
+      "archivedBadge": "Archived",
+      "restore": "Restore",
+      "empty": {
+        "title": "No categories of this type yet",
+        "body": "Create one to classify your movements."
+      },
+      "restoreDefaults": {
+        "body": "Missing one of the default categories? Recreate them without duplicating the ones you renamed.",
+        "cta": "Restore",
+        "created": "{count, plural, one {# category created} other {# categories created}}",
+        "none": "Nothing was missing"
+      }
+    },
+    "archive": {
+      "action": "Archive category",
+      "title": "Archive {name}?",
+      "body": "Its movements and budgets keep pointing at it; it just leaves the pickers and its name becomes free. You can restore it anytime.",
+      "confirm": "Archive",
+      "done": "Category archived",
+      "restored": "Category restored"
+    },
+    "restoreConflict": {
+      "title": "That name is taken",
+      "body": "An active category is already named “{name}”. Rename it first, then restore this one.",
+      "open": "Open {name}"
     }
   },
   "transactions": {

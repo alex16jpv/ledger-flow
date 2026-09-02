@@ -11,6 +11,7 @@ import { type ColorToken, featureColorStyle } from "@/lib/theme/feature-color";
 
 import { cn } from "./cn";
 import { Input } from "./Field";
+import { Tooltip } from "./Tooltip";
 
 export interface IconGridProps {
   value: CategoryIconKey | null;
@@ -55,27 +56,28 @@ export function IconGrid({ value, onChange, label, searchLabel, color, className
           {keys.map((key) => {
             const selected = key === value;
             return (
-              <button
-                key={key}
-                type="button"
-                ref={(element) => {
-                  if (selected) element?.scrollIntoView({ block: "nearest" });
-                }}
-                aria-label={key}
-                aria-pressed={selected}
-                style={featureColorStyle(color)}
-                onClick={() => {
-                  onChange(key);
-                }}
-                className={cn(
-                  "grid size-10 place-items-center rounded-[12px] transition-[background,color,outline-color] duration-(--dur-1) ease-(--ease) focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] focus-visible:outline-none",
-                  selected
-                    ? "bg-(--f-soft) text-(--f-text) outline-2 outline-offset-2 outline-(--f)"
-                    : "bg-surface-2 text-text-2 hover:bg-surface-3",
-                )}
-              >
-                <CategoryIcon icon={key} />
-              </button>
+              <Tooltip key={key} label={key}>
+                <button
+                  type="button"
+                  ref={(element) => {
+                    if (selected) element?.scrollIntoView({ block: "nearest" });
+                  }}
+                  aria-label={key}
+                  aria-pressed={selected}
+                  style={featureColorStyle(color)}
+                  onClick={() => {
+                    onChange(key);
+                  }}
+                  className={cn(
+                    "grid size-10 place-items-center rounded-[12px] transition-[background,color,outline-color] duration-(--dur-1) ease-(--ease) focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] focus-visible:outline-none",
+                    selected
+                      ? "bg-(--f-soft) text-(--f-text) outline-2 outline-offset-2 outline-(--f)"
+                      : "bg-surface-2 text-text-2 hover:bg-surface-3",
+                  )}
+                >
+                  <CategoryIcon icon={key} />
+                </button>
+              </Tooltip>
             );
           })}
         </div>

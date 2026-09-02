@@ -1,5 +1,12 @@
 import { api } from "@/lib/api/client";
-import type { Category, CategoryList, CreateCategoryInput, StatsResponse } from "@/types/api";
+import type {
+  Category,
+  CategoryList,
+  CreateCategoryInput,
+  RestoreDefaultsResponse,
+  StatsResponse,
+  UpdateCategoryInput,
+} from "@/types/api";
 
 export type CategoryType = NonNullable<Category["type"]>;
 export type SpendingType = Extract<CategoryType, "EXPENSE" | "INCOME">;
@@ -27,8 +34,28 @@ export async function fetchCategories(filters: CategoryFilters = {}): Promise<Ca
   return data;
 }
 
+export function fetchCategory(id: string): Promise<Category> {
+  return api<Category>(`/categories/${id}`);
+}
+
 export function createCategory(input: CreateCategoryInput): Promise<Category> {
   return api<Category>("/categories", { method: "POST", body: input });
+}
+
+export function updateCategory(id: string, input: UpdateCategoryInput): Promise<Category> {
+  return api<Category>(`/categories/${id}`, { method: "PUT", body: input });
+}
+
+export function archiveCategory(id: string): Promise<unknown> {
+  return api<unknown>(`/categories/${id}`, { method: "DELETE" });
+}
+
+export function restoreCategory(id: string): Promise<Category> {
+  return api<Category>(`/categories/${id}/restore`, { method: "POST" });
+}
+
+export function restoreDefaultCategories(): Promise<RestoreDefaultsResponse> {
+  return api<RestoreDefaultsResponse>("/categories/restore-defaults", { method: "POST" });
 }
 
 export interface CategoryUsageParams {
@@ -43,4 +70,9 @@ export function fetchCategoryUsage({
   to,
 }: CategoryUsageParams): Promise<StatsResponse> {
   return api<StatsResponse>("/stats/spending", { query: { groupBy: "category", type, from, to } });
+}
+
+// No bounds: the whole history, which is what "n transactions" on a category tile means.
+export function fetchCategoryCounts(type: CategoryType): Promise<StatsResponse> {
+  return api<StatsResponse>("/stats/spending", { query: { groupBy: "category", type } });
 }

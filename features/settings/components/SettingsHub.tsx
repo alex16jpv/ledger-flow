@@ -41,7 +41,7 @@ interface SettingsRowProps {
   title: ReactNode;
   meta?: ReactNode;
   right?: ReactNode;
-  href?: "/settings/appearance";
+  href?: "/settings/appearance" | "/categories";
   onClick?: () => void;
 }
 
@@ -157,6 +157,7 @@ export function SettingsHub() {
           color="ORANGE"
           title={t("settings.categories.title")}
           meta={categories.data ? t("settings.categories.subtitle", categories.data) : undefined}
+          href="/categories"
         />
       </Section>
 

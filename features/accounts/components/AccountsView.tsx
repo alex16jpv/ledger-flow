@@ -56,20 +56,21 @@ export function AccountsView() {
         title={t("accounts.list.title")}
         actions={
           <>
-            <Link
-              href={NEW_HREF}
-              aria-label={t("accounts.list.new")}
-              className={cn(
-                buttonClasses({ variant: "secondary", iconOnly: true, round: true }),
-                "md:hidden",
-              )}
-            >
-              <Plus {...iconProps("md")} />
-            </Link>
-            <Link href={NEW_HREF} className={cn(buttonClasses({}), "hidden md:inline-flex")}>
-              <Plus {...iconProps("sm")} />
-              {t("accounts.list.new")}
-            </Link>
+            <span className="md:hidden">
+              <Link
+                href={NEW_HREF}
+                aria-label={t("accounts.list.new")}
+                className={buttonClasses({ variant: "secondary", iconOnly: true, round: true })}
+              >
+                <Plus {...iconProps("md")} />
+              </Link>
+            </span>
+            <span className="hidden md:inline-flex">
+              <Link href={NEW_HREF} className={buttonClasses({})}>
+                <Plus {...iconProps("sm")} />
+                {t("accounts.list.new")}
+              </Link>
+            </span>
           </>
         }
       />

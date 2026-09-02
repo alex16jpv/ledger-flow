@@ -1,42 +1,101 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { dayKey, toIsoWindow, trailingDaysWindow } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
-import type { Category, StatsBucket } from "@/types/api";
+import { QUERY_DOMAINS } from "@/lib/query/domains";
+import type { Category, StatsBucket, UpdateCategoryInput } from "@/types/api";
 
 import {
+  archiveCategory,
   type CategoryType,
   createCategory,
   fetchCategories,
+  fetchCategory,
+  fetchCategoryCounts,
   fetchCategoryUsage,
+  restoreCategory,
+  restoreDefaultCategories,
   type SpendingType,
+  updateCategory,
 } from "./api";
 import { categoryKeys } from "./keys";
+import { CATEGORY_TYPES } from "./schemas";
 
 export const RECENT_DAYS = 90;
 export const RECENT_LIMIT = 3;
 
 export const REFERENCE_STALE_TIME_MS = 5 * 60 * 1000;
 
-export function useCategoriesQuery(type?: CategoryType, enabled = true) {
+export function useCategoriesQuery(type?: CategoryType, enabled = true, includeArchived = false) {
   return useQuery({
-    queryKey: categoryKeys.list({ type }),
-    queryFn: () => fetchCategories({ type }),
+    queryKey: categoryKeys.list({ type, includeArchived }),
+    queryFn: () => fetchCategories({ type, includeArchived }),
     staleTime: REFERENCE_STALE_TIME_MS,
     enabled,
   });
 }
 
-export function useCreateCategory() {
+export function useCategoryQuery(id: string) {
+  return useQuery({ queryKey: categoryKeys.detail(id), queryFn: () => fetchCategory(id) });
+}
+
+function useCategoryInvalidation() {
   const queryClient = useQueryClient();
+  return async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: categoryKeys.all }),
+      queryClient.invalidateQueries({ queryKey: QUERY_DOMAINS.home }),
+    ]);
+  };
+}
+
+export function useCreateCategory() {
+  const invalidate = useCategoryInvalidation();
+  return useMutation({ mutationFn: createCategory, onSuccess: invalidate });
+}
+
+export function useUpdateCategory(id: string) {
+  const invalidate = useCategoryInvalidation();
   return useMutation({
-    mutationFn: createCategory,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: categoryKeys.all });
-    },
+    mutationFn: (input: UpdateCategoryInput) => updateCategory(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useArchiveCategory() {
+  const invalidate = useCategoryInvalidation();
+  return useMutation({ mutationFn: archiveCategory, onSuccess: invalidate });
+}
+
+export function useRestoreCategory() {
+  const invalidate = useCategoryInvalidation();
+  return useMutation({ mutationFn: restoreCategory, onSuccess: invalidate });
+}
+
+export function useRestoreDefaultCategories() {
+  const invalidate = useCategoryInvalidation();
+  return useMutation({ mutationFn: restoreDefaultCategories, onSuccess: invalidate });
+}
+
+// All-time transaction counts per category id, one stats call per type (transfers included).
+export function useCategoryCounts(enabled = true) {
+  return useQueries({
+    queries: CATEGORY_TYPES.map((type) => ({
+      queryKey: categoryKeys.counts(type),
+      queryFn: () => fetchCategoryCounts(type),
+      enabled,
+    })),
+    combine: (results) => ({
+      isPending: results.some((result) => result.isPending),
+      counts: new Map(
+        results.flatMap((result) =>
+          (result.data?.buckets ?? []).map((bucket) => [bucket.key, bucket.count] as const),
+        ),
+      ),
+    }),
   });
 }
 

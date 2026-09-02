@@ -671,3 +671,30 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   `IdempotencyKeyring` like the full form. The adjustment is dated at the moment of saving.
 - **Nothing is invalidated by hand**: the transaction mutation already refreshes accounts, home,
   transactions, budgets and stats, so the hero balance and the account's rows update on their own.
+
+## 2026-09-02 · Categories (W-25) and tooltips (F-04)
+
+- **One form for the picker and the pages.** `CategoryQuickForm` became `CategoryForm`: the picker
+  passes a fixed type (`typeEditable={false}`) and no preview; `/categories/new` and
+  `/categories/[id]/edit` add the live preview and the type segment. One component, one set of
+  error mappings (`DUPLICATE` under the name, `CATEGORY_TYPE_LOCKED` under the type).
+- **Usage counts come from three unbounded stats calls**, `GET /stats/spending?groupBy=category&type=…`
+  for `EXPENSE`, `INCOME` and `TRANSFER` (omitting `from`/`to` aggregates the whole history). They
+  feed "n transactions / unused" on the tiles and the type lock of the edit form: a category with
+  history disables the segment before the API has to refuse, and the payload omits `type` so an
+  unchanged type never trips `CATEGORY_TYPE_LOCKED`. The server error is still mapped in case the
+  counts are stale.
+- **The type tab lives in the URL** (`/categories?type=INCOME`), as every list filter does
+  (HANDOFF §3.4); "New category" carries the current type into the form and saving returns to the
+  tab of the saved category.
+- **Archived categories are one folded list for all types**, not one per tab: a user who archives
+  a category and switches tabs should still find it. Restore on a taken name opens the same kind of
+  conflict sheet as accounts (the API refuses `PUT` on archived categories too).
+- **Restore defaults reports the count from the response** (`data.length`): "n categories created"
+  or "Nothing was missing"; archived defaults count as present on purpose, as the backend documents.
+- **`Tooltip` is CSS-only and hidden from assistive technology** (owner request F-04): the swatches
+  and the icon grid already expose their name through `aria-label`, so the bubble repeats it only
+  visually on hover and keyboard focus (`group-focus-within`). No positioning library for a static
+  label above a 28–40 px control.
+- **Settings › Categories now links to `/categories`**; the remaining settings rows stay static
+  until W-30.

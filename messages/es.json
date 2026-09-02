@@ -538,7 +538,51 @@
       "icon": "Icono",
       "iconSearch": "Buscar iconos",
       "color": "Color",
-      "create": "Crear categoría"
+      "create": "Crear categoría",
+      "editTitle": "Editar categoría",
+      "type": "Tipo",
+      "preview": "vista previa",
+      "previewName": "Nombre de la categoría",
+      "saved": "Cambios guardados",
+      "created": "Categoría creada",
+      "duplicate": "Ya tienes una categoría activa llamada «{name}». Los nombres no distinguen mayúsculas.",
+      "typeLocked": "<b>El tipo no se puede cambiar:</b> esta categoría ya tiene {count, plural, one {# movimiento} other {# movimientos}} y cambiarlo reescribiría tus estadísticas. Si necesitas otro tipo, <link>crea una categoría nueva</link>.",
+      "viewTransactions": "Ver sus movimientos",
+      "notFound": "Esta categoría no existe.",
+      "archivedInfo": "Esta categoría está archivada: no se puede elegir en movimientos ni presupuestos nuevos. Su historial se conserva. Restáurala para volver a usarla."
+    },
+    "list": {
+      "title": "Categorías",
+      "new": "Nueva categoría",
+      "typeCount": "{label} · {count}",
+      "txns": "{count, plural, one {# movimiento} other {# movimientos}}",
+      "unused": "sin uso",
+      "archived": "Archivadas",
+      "archivedBadge": "Archivada",
+      "restore": "Restaurar",
+      "empty": {
+        "title": "Aún no hay categorías de este tipo",
+        "body": "Crea una para clasificar tus movimientos."
+      },
+      "restoreDefaults": {
+        "body": "¿Te falta alguna categoría predeterminada? Vuelve a crearlas sin duplicar las que renombraste.",
+        "cta": "Restaurar",
+        "created": "{count, plural, one {Se creó # categoría} other {Se crearon # categorías}}",
+        "none": "No faltaba ninguna"
+      }
+    },
+    "archive": {
+      "action": "Archivar categoría",
+      "title": "¿Archivar {name}?",
+      "body": "Sus movimientos y presupuestos la siguen usando; solo sale de los selectores y su nombre queda libre. Puedes restaurarla cuando quieras.",
+      "confirm": "Archivar",
+      "done": "Categoría archivada",
+      "restored": "Categoría restaurada"
+    },
+    "restoreConflict": {
+      "title": "Ese nombre ya está en uso",
+      "body": "Ya hay una categoría activa llamada «{name}». Cámbiale el nombre primero y luego restaura esta.",
+      "open": "Abrir {name}"
     }
   },
   "transactions": {
