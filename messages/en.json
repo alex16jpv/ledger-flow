@@ -28,7 +28,11 @@
     "default": "Default",
     "search": "Search",
     "noResults": "No results",
-    "selected": "Selected"
+    "selected": "Selected",
+    "date": "Date",
+    "time": "Time",
+    "recent": "Recent",
+    "backToList": "Back to the list"
   },
   "nav": {
     "label": "Navigation",
@@ -337,6 +341,16 @@
       "creditCard": "Credit card",
       "primary": "Primary",
       "secondary": "Secondary"
+    },
+    "pickersPlayground": {
+      "title": "Pickers",
+      "subtitle": "Category, account and date pickers wired to the real API. Development only.",
+      "type": "Movement type",
+      "from": "From",
+      "to": "To",
+      "selected": "Selected: {value}",
+      "nothing": "Nothing selected yet",
+      "instant": "Instant sent to the API: {value}"
     }
   },
   "errors": {
@@ -399,6 +413,13 @@
       "balance": "Current balance",
       "balanceHelp": "Saved as the opening balance so you can reconcile the account later.",
       "color": "Color"
+    },
+    "picker": {
+      "title": "Account",
+      "label": "Account",
+      "placeholder": "Choose an account",
+      "note": "Archived accounts are not listed. Balances update as you save.",
+      "empty": "No accounts yet"
     }
   },
   "budgets": {
@@ -406,6 +427,32 @@
       "defaultName": "Monthly budget",
       "amount": "Monthly amount",
       "help": "You can adjust it any month without touching the base amount, and add per-category budgets whenever you like."
+    }
+  },
+  "categoryTypes": {
+    "EXPENSE": "Expense",
+    "INCOME": "Income",
+    "TRANSFER": "Transfer"
+  },
+  "categories": {
+    "picker": {
+      "title": "Category",
+      "label": "Category",
+      "placeholder": "Choose a category",
+      "search": "Search categories",
+      "new": "New category",
+      "newHint": "Create it without leaving this form",
+      "empty": "No categories for this type yet",
+      "noMatch": "No categories match “{query}”"
+    },
+    "form": {
+      "title": "New category",
+      "name": "Name",
+      "namePlaceholder": "Category name",
+      "icon": "Icon",
+      "iconSearch": "Search icons",
+      "color": "Color",
+      "create": "Create category"
     }
   }
 }

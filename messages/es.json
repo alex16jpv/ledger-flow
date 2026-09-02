@@ -28,7 +28,11 @@
     "default": "Predeterminado",
     "search": "Buscar",
     "noResults": "Sin resultados",
-    "selected": "Seleccionado"
+    "selected": "Seleccionado",
+    "date": "Fecha",
+    "time": "Hora",
+    "recent": "Recientes",
+    "backToList": "Volver a la lista"
   },
   "nav": {
     "label": "Navegación",
@@ -337,6 +341,16 @@
       "creditCard": "Tarjeta de crédito",
       "primary": "Primario",
       "secondary": "Secundario"
+    },
+    "pickersPlayground": {
+      "title": "Selectores",
+      "subtitle": "Selectores de categoría, cuenta y fecha conectados al API real. Solo en desarrollo.",
+      "type": "Tipo de movimiento",
+      "from": "Desde",
+      "to": "Hacia",
+      "selected": "Seleccionado: {value}",
+      "nothing": "Nada seleccionado todavía",
+      "instant": "Instante que se envía al API: {value}"
     }
   },
   "errors": {
@@ -399,6 +413,13 @@
       "balance": "Saldo actual",
       "balanceHelp": "Se guarda como saldo inicial para que puedas conciliar la cuenta después.",
       "color": "Color"
+    },
+    "picker": {
+      "title": "Cuenta",
+      "label": "Cuenta",
+      "placeholder": "Elige una cuenta",
+      "note": "Las cuentas archivadas no aparecen. Los saldos se actualizan al guardar.",
+      "empty": "Aún no hay cuentas"
     }
   },
   "budgets": {
@@ -406,6 +427,32 @@
       "defaultName": "Presupuesto mensual",
       "amount": "Monto mensual",
       "help": "Puedes ajustarlo cualquier mes sin tocar el monto base y añadir presupuestos por categoría cuando quieras."
+    }
+  },
+  "categoryTypes": {
+    "EXPENSE": "Gasto",
+    "INCOME": "Ingreso",
+    "TRANSFER": "Transferencia"
+  },
+  "categories": {
+    "picker": {
+      "title": "Categoría",
+      "label": "Categoría",
+      "placeholder": "Elige una categoría",
+      "search": "Buscar categorías",
+      "new": "Nueva categoría",
+      "newHint": "Créala sin salir de este formulario",
+      "empty": "Aún no hay categorías de este tipo",
+      "noMatch": "Ninguna categoría coincide con «{query}»"
+    },
+    "form": {
+      "title": "Nueva categoría",
+      "name": "Nombre",
+      "namePlaceholder": "Nombre de la categoría",
+      "icon": "Icono",
+      "iconSearch": "Buscar iconos",
+      "color": "Color",
+      "create": "Crear categoría"
     }
   }
 }

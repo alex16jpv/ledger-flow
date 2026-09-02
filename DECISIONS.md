@@ -398,3 +398,34 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   a second dev server.
 - **Consequence:** specs create `e2e-*@ledgerflow.test` users only in `lag_money_test`; the seed user
   is available there too. Port 3100 is taken by the backend's Mongoku container, hence 3200.
+
+## 2026-09-01 · Pickers (W-16)
+
+- **Recent categories come from stats, not from a local history.** `useRecentCategories` asks
+  `GET /stats/spending?groupBy=category` for the trailing 90 days in the user's zone and ranks the
+  buckets by `count` (ties by `total`), keeping the three that exist in the picker's list. The
+  server stays the source of truth and the strip works on any device; `TRANSFER` has no stats
+  endpoint, so transfer pickers show no strip.
+- **The category list is filtered server-side by the movement type** (`?type=`) and paged through
+  `nextCursor` until `hasMore` is false (the backend caps a user at 200 categories, above the
+  100-item page).
+- **"New category" lives inside the sheet.** The sheet swaps its body for `CategoryQuickForm`
+  (name prefilled with the search text, icon grid, color) and selects the created category on
+  success, so the transaction form underneath is never unmounted. The type is inherited from the
+  picker and not editable there.
+- **Date and time are native inputs** (`DateTimeField`), the only exception HANDOFF §3.5 allows.
+  The value is a pair `{ date, time | null }`; `dateTimeInstant()` sends local noon when no time was
+  chosen (`FUTURE_DATE` mapping and `max` are the form's job in W-18).
+- **`/dev/pickers`** is a development-only screen under `(app)` (session, shell and React Query
+  available) so the pickers can be exercised and tested end to end against the real API before any
+  form uses them; it disappears with the `componentCatalog` flag in production.
+- **`NEXT_PUBLIC_APP_ENV` selects the feature-flag environment.** The e2e front is a production
+  build (`NODE_ENV=production`), which switched `componentCatalog` off and made `/dev/*` a 404 in
+  the suite. The optional variable (default: `NODE_ENV`) lets `playwright.config.ts` build with
+  `test` flags; production deployments never set it.
+- **The category search carries `autofocus` and nothing more.** Desktop browsers honour it, so a
+  keyboard user types straight away; mobile browsers ignore it on purpose, keeping the virtual
+  keyboard closed so the Recent strip and the list stay visible until the user taps the field. The
+  e2e spec tabs into the field when the browser did not focus it.
+- **`IconGrid` searches by key.** The 105 keys are English words (`shopping-cart`), so the search
+  matches on them; localized synonyms would need a copy table and are deferred until W-25.

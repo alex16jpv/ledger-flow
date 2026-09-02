@@ -1,4 +1,6 @@
 import {
+  dateTimeInstant,
+  dateTimeParts,
   dayKey,
   dayWindow,
   isSameLocalDay,
@@ -7,6 +9,7 @@ import {
   monthWindow,
   shiftMonth,
   toIsoWindow,
+  trailingDaysWindow,
 } from "./dates";
 
 const BOGOTA = "America/Bogota";
@@ -52,6 +55,27 @@ describe("local instants", () => {
     expect(localDateTime("2026-09-22", "08:42", BOGOTA).toISOString()).toBe(
       "2026-09-22T13:42:00.000Z",
     );
+  });
+
+  it("falls back to local noon when no time was chosen and round-trips the parts", () => {
+    expect(dateTimeInstant({ date: "2026-09-22", time: null }, BOGOTA).toISOString()).toBe(
+      "2026-09-22T17:00:00.000Z",
+    );
+    const instant = dateTimeInstant({ date: "2026-09-22", time: "18:10" }, BOGOTA);
+    expect(instant.toISOString()).toBe("2026-09-22T23:10:00.000Z");
+    expect(dateTimeParts(instant, BOGOTA)).toEqual({ date: "2026-09-22", time: "18:10" });
+    expect(dateTimeParts(new Date("2026-09-23T04:05:00Z"), BOGOTA)).toEqual({
+      date: "2026-09-22",
+      time: "23:05",
+    });
+  });
+
+  it("builds a trailing window that ends after today's local midnight", () => {
+    const window = trailingDaysWindow(new Date("2026-09-22T15:00:00Z"), 90, BOGOTA);
+    expect(toIsoWindow(window)).toEqual({
+      from: "2026-06-25T05:00:00.000Z",
+      to: "2026-09-23T05:00:00.000Z",
+    });
   });
 
   it("shifts months in the user's zone", () => {

@@ -36,11 +36,38 @@ export function localDateTime(isoDate: string, time: string, timeZone: string): 
   return fromZonedTime(`${isoDate}T${time}:00`, timeZone);
 }
 
+export interface DateTimeParts {
+  date: string;
+  time: string | null;
+}
+
+export function dateTimeInstant({ date, time }: DateTimeParts, timeZone: string): Date {
+  return time ? localDateTime(date, time, timeZone) : localNoon(date, timeZone);
+}
+
+export function dateTimeParts(instant: Date, timeZone: string): DateTimeParts {
+  const local = toZonedTime(instant, timeZone);
+  return {
+    date: dayKey(instant, timeZone),
+    time: `${pad(local.getHours())}:${pad(local.getMinutes())}`,
+  };
+}
+
+export function trailingDaysWindow(reference: Date, days: number, timeZone: string): DateWindow {
+  const localEnd = addDays(startOfDay(toZonedTime(reference, timeZone)), 1);
+  return {
+    from: fromZonedTime(addDays(localEnd, -days), timeZone),
+    to: fromZonedTime(localEnd, timeZone),
+  };
+}
+
 export function dayKey(instant: Date, timeZone: string): string {
   const local = toZonedTime(instant, timeZone);
-  const month = String(local.getMonth() + 1).padStart(2, "0");
-  const day = String(local.getDate()).padStart(2, "0");
-  return `${local.getFullYear()}-${month}-${day}`;
+  return `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}`;
+}
+
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
 }
 
 export function isSameLocalDay(a: Date, b: Date, timeZone: string): boolean {

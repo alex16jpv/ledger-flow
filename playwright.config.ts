@@ -12,6 +12,7 @@ const frontEnv = {
   API_URL: apiUrl,
   NEXT_PUBLIC_APP_URL: baseURL,
   NEXT_PUBLIC_CONTACT_EMAIL: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "ledgerflow@alexpiral.com",
+  NEXT_PUBLIC_APP_ENV: "test",
   E2E_APP_URL: baseURL,
 };
 

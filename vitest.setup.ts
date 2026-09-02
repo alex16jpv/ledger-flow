@@ -1,5 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 
+// jsdom does not implement scrollIntoView; IconGrid uses it to reveal the selected icon.
+if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView(this: Element) {
+    this.setAttribute("data-scrolled-into-view", "");
+  };
+}
+
 // jsdom has no <dialog> methods yet; Sheet relies on showModal()/close().
 if (typeof HTMLDialogElement !== "undefined" && !HTMLDialogElement.prototype.showModal) {
   HTMLDialogElement.prototype.showModal = function showModal() {

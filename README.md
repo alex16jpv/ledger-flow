@@ -23,13 +23,14 @@ npm run dev          # http://localhost:3001
 Validated at build time by `lib/env.ts` (`@t3-oss/env-nextjs` + Zod); a missing variable fails
 the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no environment.
 
-| Variable                    | Scope  | Purpose                                                    |
-| --------------------------- | ------ | ---------------------------------------------------------- |
-| `API_URL`                   | server | Backend base URL. Only the BFF knows it.                   |
-| `NEXT_PUBLIC_APP_URL`       | public | Base URL of this deployment (metadata, sitemap, manifest). |
-| `NEXT_PUBLIC_CONTACT_EMAIL` | public | Contact, support and privacy mailbox.                      |
-| `NEXT_PUBLIC_APP_VERSION`   | public | Tag or commit SHA shown in Settings › About.               |
-| `SENTRY_DSN`                | server | Optional error tracking DSN.                               |
+| Variable                    | Scope  | Purpose                                                                                        |
+| --------------------------- | ------ | ---------------------------------------------------------------------------------------------- |
+| `API_URL`                   | server | Backend base URL. Only the BFF knows it.                                                       |
+| `NEXT_PUBLIC_APP_URL`       | public | Base URL of this deployment (metadata, sitemap, manifest).                                     |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | public | Contact, support and privacy mailbox.                                                          |
+| `NEXT_PUBLIC_APP_VERSION`   | public | Tag or commit SHA shown in Settings › About.                                                   |
+| `NEXT_PUBLIC_APP_ENV`       | public | Optional feature-flag environment when it differs from `NODE_ENV` (the e2e build uses `test`). |
+| `SENTRY_DSN`                | server | Optional error tracking DSN.                                                                   |
 
 ## Scripts
 
@@ -74,9 +75,20 @@ shared code moves up to `lib` or `components/ui`. ESLint enforces it.
 
 ## Routes
 
-| Route | Screen                                           |
-| ----- | ------------------------------------------------ |
-| `/`   | placeholder until W-04 introduces locale routing |
+English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`).
+
+| Route                                                                         | Screen                                                                     |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `/`                                                                           | Public landing (static)                                                    |
+| `/login`, `/register`, `/onboarding`                                          | Access and first-run flow                                                  |
+| `/home`                                                                       | Authenticated home                                                         |
+| `/settings`, `/settings/appearance`                                           | Settings hub and appearance                                                |
+| `/transactions`, `/accounts`, `/budgets`, `/stats`, `/categories`, `/privacy` | Stubs answering "not found" until their backlog item (F2–F5)               |
+| `/dev/ui`                                                                     | Component catalog (development only)                                       |
+| `/dev/pickers`                                                                | Category, account and date pickers against the real API (development only) |
+| `/dev/frame?w=390&url=…`, `/api/dev/login?email&password&next`                | Screenshot helpers (development only)                                      |
+| `/api/auth/*`                                                                 | Session BFF (httpOnly cookies)                                             |
+| `/api/[...path]`                                                              | Generic proxy to the backend                                               |
 
 ## How to
 

@@ -21,13 +21,18 @@ const base: Flags = {
   devLogin: false,
 };
 
-const flagsByEnvironment: Readonly<Record<typeof env.NODE_ENV, Flags>> = {
+export type AppEnvironment = typeof env.NODE_ENV;
+
+const flagsByEnvironment: Readonly<Record<AppEnvironment, Flags>> = {
   development: { ...base, devLogin: true },
   test: base,
   production: { ...base, componentCatalog: false },
 };
 
-export const flags: Flags = flagsByEnvironment[env.NODE_ENV];
+// The e2e suite runs a production build: NEXT_PUBLIC_APP_ENV=test keeps the dev-only screens reachable there.
+export const appEnvironment: AppEnvironment = env.NEXT_PUBLIC_APP_ENV ?? env.NODE_ENV;
+
+export const flags: Flags = flagsByEnvironment[appEnvironment];
 
 export function isEnabled(flag: FeatureFlag): boolean {
   return flags[flag];
