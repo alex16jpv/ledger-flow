@@ -769,3 +769,21 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   the user spent something last month it offers 80 %, 100 % and 120 % of that, rounded to a
   friendly figure (`roundToNice`). The global-budget form shows "Based on last month's spending" in
   that case; the onboarding keeps the currency table since a new user has no history.
+
+## 2026-09-02 · Stats (W-29)
+
+- **Everything is the URL** (`/stats?reference=YYYY-MM&type=&groupBy=`, defaults omitted), like the
+  transactions filters and the budget month, so a view can be shared and survives a reload.
+- **The summary card always uses the category grouping** for the transaction count (`Σ count`),
+  even on the Days and Tags tabs: day buckets share the same total but tag buckets double count.
+  When the tab is Categories it is the same cached query, so nothing extra is fetched.
+- **Shares and averages are the only client arithmetic**: percentages divide each bucket by the API
+  `total`, the daily average divides the total by the elapsed days of the month (the whole month for
+  a past one). No transaction is summed in the client.
+- **Days are filled with zeros in the user's zone** (`daySeries`), today is highlighted, and the bars
+  are buttons that open the list for that day; the biggest day lists its transactions through the
+  list endpoint with the day window and the flow type.
+- **Tags exclude the `untagged` bucket from the rows** and surface it in the double-counting note
+  instead, as DESIGN §8.9 asks.
+- **Adjustments are opt-in** (`type=ADJUSTMENT`) with an explanatory note, matching the backend's
+  exclusion by default; Export stays visible but disabled behind the `exportTransactions` flag.

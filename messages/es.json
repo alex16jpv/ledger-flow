@@ -876,5 +876,52 @@
     "INCOME": "Ingreso",
     "TRANSFER": "Transferencia",
     "ADJUSTMENT": "Ajuste"
+  },
+  "stats": {
+    "title": "Estadísticas",
+    "export": "Exportar",
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "types": {
+      "EXPENSE": "Gastos",
+      "INCOME": "Ingresos",
+      "TRANSFER": "Transferencias",
+      "ADJUSTMENT": "Ajustes"
+    },
+    "groups": {
+      "category": "Categorías",
+      "day": "Días",
+      "tag": "Etiquetas"
+    },
+    "totals": {
+      "EXPENSE": "Gasto total",
+      "INCOME": "Ingresos totales",
+      "TRANSFER": "Total transferido",
+      "ADJUSTMENT": "Total ajustado"
+    },
+    "summary": "{count, plural, one {# movimiento} other {# movimientos}} · promedio {average}",
+    "share": "{percent} %",
+    "txns": "{count, plural, one {# mov.} other {# mov.}}",
+    "uncategorized": "Sin categoría",
+    "archived": "archivada",
+    "unknownCategory": "Categoría desconocida",
+    "breakdown": "Reparto por categoría",
+    "perDay": "Por día",
+    "priciestDay": "Día más caro",
+    "biggestDay": "Día más alto",
+    "dailyAverage": "Promedio diario",
+    "noSpendDays": "Días sin gasto",
+    "quietDays": "Días sin movimientos",
+    "highest": "{day} · el más alto",
+    "dayBar": "{day}: {amount}",
+    "tagsNote": "Un movimiento con varias etiquetas cuenta en cada una, así que los totales por etiqueta pueden sumar más que el total.",
+    "untagged": "{amount} no tiene etiquetas.",
+    "tagRow": "#{tag}",
+    "transactionsCount": "{count, plural, one {# movimiento} other {# movimientos}}",
+    "empty": {
+      "title": "Sin movimientos en este período",
+      "body": "Prueba otro mes u otro tipo de movimiento."
+    },
+    "adjustmentsNote": "Los ajustes concilian saldos; nunca cuentan como gasto ni ingreso."
   }
 }

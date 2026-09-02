@@ -54,7 +54,7 @@ describe("Stat and Bars", () => {
       </div>,
     );
     expect(screen.getByText("4 accounts").className).toContain("text-income");
-    expect(screen.getByRole("img", { name: "Spending per day" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Spending per day" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Sep 3" }));
     expect(onSelect).toHaveBeenCalledWith(2);
   });

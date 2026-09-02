@@ -18,7 +18,8 @@ export function Bars({ bars, label, height = 56, onSelect, className }: BarsProp
   const max = Math.max(0, ...bars.map((bar) => bar.value));
   return (
     <div
-      role="img"
+      // Buttons inside an image role are nested interactives for axe: a selectable chart is a group.
+      role={onSelect ? "group" : "img"}
       aria-label={label}
       className={cn("flex items-end gap-1", className)}
       style={{ height }}

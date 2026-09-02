@@ -876,5 +876,52 @@
     "INCOME": "Income",
     "TRANSFER": "Transfer",
     "ADJUSTMENT": "Adjustment"
+  },
+  "stats": {
+    "title": "Stats",
+    "export": "Export",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "types": {
+      "EXPENSE": "Expenses",
+      "INCOME": "Income",
+      "TRANSFER": "Transfers",
+      "ADJUSTMENT": "Adjustments"
+    },
+    "groups": {
+      "category": "Categories",
+      "day": "Days",
+      "tag": "Tags"
+    },
+    "totals": {
+      "EXPENSE": "Total spent",
+      "INCOME": "Total income",
+      "TRANSFER": "Total transferred",
+      "ADJUSTMENT": "Total adjusted"
+    },
+    "summary": "{count, plural, one {# transaction} other {# transactions}} · average {average}",
+    "share": "{percent} %",
+    "txns": "{count, plural, one {# txn} other {# txns}}",
+    "uncategorized": "Uncategorized",
+    "archived": "archived",
+    "unknownCategory": "Unknown category",
+    "breakdown": "Share by category",
+    "perDay": "Per day",
+    "priciestDay": "Priciest day",
+    "biggestDay": "Biggest day",
+    "dailyAverage": "Daily average",
+    "noSpendDays": "No-spend days",
+    "quietDays": "Quiet days",
+    "highest": "{day} · highest",
+    "dayBar": "{day}: {amount}",
+    "tagsNote": "A transaction with several tags counts in each of them, so tag totals can add up to more than the total.",
+    "untagged": "{amount} has no tags.",
+    "tagRow": "#{tag}",
+    "transactionsCount": "{count, plural, one {# transaction} other {# transactions}}",
+    "empty": {
+      "title": "Nothing recorded in this period",
+      "body": "Try another month or another type of movement."
+    },
+    "adjustmentsNote": "Adjustments reconcile balances; they’re never counted as spending or income."
   }
 }
