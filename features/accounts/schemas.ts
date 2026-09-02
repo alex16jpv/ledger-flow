@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { MAX_AMOUNT } from "@/lib/format/money";
 import { COLOR_TOKENS } from "@/lib/theme/feature-color";
 import type { components } from "@/types/api";
 
@@ -26,7 +27,11 @@ export const accountFormSchema = z.object({
     .min(1, { error: "validation.required" })
     .max(ACCOUNT_NAME_MAX, { error: "validation.nameMax" }),
   type: z.enum(ACCOUNT_TYPES, { error: "validation.required" }),
-  balance: z.number({ error: "validation.amountInvalid" }).nullable(),
+  balance: z
+    .number({ error: "validation.amountInvalid" })
+    .min(-MAX_AMOUNT, { error: "validation.amountMax" })
+    .max(MAX_AMOUNT, { error: "validation.amountMax" })
+    .nullable(),
   color: z.enum(COLOR_TOKENS, { error: "validation.required" }),
 });
 

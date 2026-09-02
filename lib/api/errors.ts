@@ -185,8 +185,9 @@ export function fieldErrors(error: unknown): Record<string, string> {
   if (!(error instanceof ApiError)) return {};
   const fields: Record<string, string> = {};
   for (const detail of error.details) {
-    if (detail.field && detail.message && !(detail.field in fields))
-      fields[detail.field] = detail.message;
+    // Zod details arrive as "body.amount" / "query.limit": the form only knows the bare field name.
+    const field = detail.field?.replace(/^(body|query|params)\./, "");
+    if (field && detail.message && !(field in fields)) fields[field] = detail.message;
   }
   return fields;
 }

@@ -10,6 +10,10 @@ describe("formatEditableAmount", () => {
     expect(formatEditableAmount("", "en-US", 2)).toEqual({ text: "", value: null });
   });
 
+  it("stops at the integer digits the shared ceiling allows", () => {
+    expect(formatEditableAmount("1".repeat(20), "en-US", 0).text).toBe("11,111,111,111,111");
+  });
+
   it("strips letters, grouping characters and leading zeros", () => {
     expect(formatEditableAmount("12abc", "en-US", 0).text).toBe("12");
     expect(formatEditableAmount("1,234,5", "en-US", 0)).toEqual({ text: "12,345", value: 12345 });

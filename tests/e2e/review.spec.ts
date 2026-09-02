@@ -57,39 +57,55 @@ test("the Complete link on a pending detail lands on its card", async ({ page, r
 });
 
 test("Save all completes the categorized cards in one request", async ({ page, request }) => {
-  await signIn(page, request);
-  const amounts = [0, 1].map(() => 100_000 + Math.floor(Math.random() * 899_999));
+  // A fresh user: the batch sweeps every categorized card of the inbox, so sharing the seed inbox
+  // with the other specs would let it swallow their rows mid-flight.
+  const email = `e2e-saveall-${Date.now()}-${Math.random().toString(16).slice(2)}@ledgerflow.test`;
+  await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: { name: "Save All E2E", email, password: "LedgerFlow!2026" },
+  });
+  await request.post("/api/accounts", {
+    headers: { origin: APP },
+    data: { name: "Wallet", type: "CASH", color: "GRAY", balance: 100_000 },
+  });
   const ids: string[] = [];
-  for (const amount of amounts) {
+  for (const amount of [12_500, 15_400]) {
     const created = (await (
       await request.post("/api/transactions/quick", { headers: { origin: APP }, data: { amount } })
     ).json()) as { id: string };
     ids.push(created.id);
   }
+  await page.context().addCookies((await request.storageState()).cookies);
+
   await page.goto("/transactions/review");
   const cards = ids.map((id) => page.locator(`[data-transaction-id="${id}"]`));
   await expect(cards[0]!).toBeVisible();
-  await cards[0]!.getByRole("button", { name: "Coffee" }).click();
-  await cards[1]!.getByRole("button", { name: "Food" }).click();
+  await expect(page.getByRole("button", { name: /^Save all/ })).toHaveCount(0);
+  for (const [index, name] of [
+    [0, "Food"],
+    [1, "Transportation"],
+  ] as const) {
+    await cards[index]!.getByRole("button", { name: "Other" }).click();
+    await page.getByRole("dialog", { name: "Category" }).getByRole("option", { name }).click();
+  }
   await cards[1]!.getByRole("textbox", { name: "Description" }).fill("E2E batch");
 
   const patches: string[] = [];
   page.on("request", (sent) => {
     if (sent.method() === "PATCH") patches.push(sent.url());
   });
-  await page.getByRole("button", { name: /^Save all · \d+$/ }).click();
-  const dialog = page.getByRole("dialog", { name: /^Save \d+ expenses?\?$/ });
-  await dialog.getByRole("button", { name: /^Save \d+$/ }).click();
-  await expect(page.getByText(/expenses? saved$/)).toBeVisible();
-  await expect(cards[0]!).toHaveCount(0);
-  await expect(cards[1]!).toHaveCount(0);
+  await page.getByRole("button", { name: "Save all · 2" }).click();
+  const dialog = page.getByRole("dialog", { name: "Save 2 expenses?" });
+  await dialog.getByRole("button", { name: "Save 2" }).click();
+  await expect(page.getByText("2 expenses saved")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "All reviewed" })).toBeVisible();
   expect(patches.filter((url) => url.endsWith("/api/transactions/batch"))).toHaveLength(1);
 
   for (const id of ids) {
     const row = (await (await request.get(`/api/transactions/${id}`)).json()) as {
       pendingDetails: boolean;
+      description: string | null;
     };
     expect(row.pendingDetails).toBe(false);
-    await request.delete(`/api/transactions/${id}`, { headers: { origin: APP } });
   }
 });

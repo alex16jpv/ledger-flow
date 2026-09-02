@@ -11,6 +11,9 @@ export interface MoneyParts {
   formatted: string;
 }
 
+// Ceiling agreed with the backend: amounts are stored as integer cents and must stay a safe integer.
+export const MAX_AMOUNT = 10_000_000_000_000;
+
 const formatters = new Map<string, Intl.NumberFormat>();
 
 function formatter(locale: string, currency: string, options: Intl.NumberFormatOptions = {}) {

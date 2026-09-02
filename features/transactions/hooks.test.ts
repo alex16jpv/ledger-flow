@@ -30,6 +30,14 @@ describe("transactions", () => {
     ).toBe("validation.amountInvalid");
     expect(
       quickAddSchema.safeParse({
+        amount: 10_000_000_000_001,
+        categoryId: null,
+        accountId: null,
+        description: "",
+      }).error?.issues[0]?.message,
+    ).toBe("validation.amountMax");
+    expect(
+      quickAddSchema.safeParse({
         amount: 12500,
         categoryId: "c1",
         accountId: "a1",

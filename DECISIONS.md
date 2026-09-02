@@ -604,3 +604,16 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   reappear at once and the key would feel dead.
 - **Still uncontrolled from the parent's point of view** (`defaultValue` + `key` to reset), as decided
   in W-05: the component owns the text; the parent owns the number.
+
+## 2026-09-02 · Amount ceiling and server field details (P-21)
+
+- **One ceiling, `MAX_AMOUNT = 1e13`, shared by the Amount editor and every Zod schema.** Amounts are
+  stored as integer cents on the backend, so the largest exact value is bounded by
+  `Number.MAX_SAFE_INTEGER / 100 ≈ 9e13`; 1e13 (ten trillion) keeps a margin and still covers houses in
+  COP, IRR, VND or IDR. The editor stops at 14 integer digits and the schemas answer
+  `validation.amountMax` before the request. The backend's own limit (1e9 today) is asked to move to the
+  same figure in `BACKEND-DESDE-FRONT.md`; until then its `VALIDATION` lands on the field too.
+- **Zod locations are stripped from `details[].field`.** The API reports `body.amount`; forms know
+  `amount`. `fieldErrors` removes the `body.` / `query.` / `params.` prefix.
+- **A server detail never shows raw.** `validationMessage` translates our keys and maps anything else to
+  the generic `validation.invalid`, per HANDOFF §3.8.

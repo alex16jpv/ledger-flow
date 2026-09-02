@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { dateTimeInstant, dateTimeParts } from "@/lib/format/dates";
+import { MAX_AMOUNT } from "@/lib/format/money";
 import type {
   components,
   CreateTransactionInput,
@@ -26,7 +27,8 @@ export const transactionFormSchema = z
     type: z.enum(TRANSACTION_TYPES),
     amount: z
       .number({ error: "validation.amountInvalid" })
-      .positive({ error: "validation.amountPositive" }),
+      .positive({ error: "validation.amountPositive" })
+      .max(MAX_AMOUNT, { error: "validation.amountMax" }),
     categoryId: z.string().nullable(),
     accountId: z.string().nullable(),
     fromAccountId: z.string().nullable(),

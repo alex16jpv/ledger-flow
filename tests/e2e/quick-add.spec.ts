@@ -84,6 +84,7 @@ test("a chosen category and a note complete the details, and More details carrie
     .click();
   await sheet.getByRole("textbox", { name: "Quick note (optional)" }).fill("E2E latte");
   await sheet.getByRole("button", { name: "Save" }).click();
+  await expect(sheet).toBeHidden({ timeout: 15_000 });
   await expect(page.getByText("Transaction saved")).toBeVisible();
 
   const created = await quickRow(request, amount);

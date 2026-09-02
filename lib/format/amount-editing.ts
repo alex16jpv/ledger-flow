@@ -1,11 +1,11 @@
-import { decimalSeparators } from "./money";
+import { decimalSeparators, MAX_AMOUNT } from "./money";
 
 export interface EditableAmount {
   text: string;
   value: number | null;
 }
 
-const MAX_INTEGER_DIGITS = 15;
+const MAX_INTEGER_DIGITS = String(MAX_AMOUNT).length;
 
 // Turns whatever the user typed into the locale's grouped text and the clean number the API gets.
 export function formatEditableAmount(

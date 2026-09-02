@@ -8,10 +8,11 @@ export function isValidationKey(value: unknown): value is ValidationKey {
   return typeof value === "string" && value.startsWith(PREFIX);
 }
 
+// A server detail that is not one of our keys is never shown raw (HANDOFF §3.8): it becomes the generic message.
 export function validationMessage(
   translate: (key: ValidationKey) => string,
   message: string | undefined,
 ): string | undefined {
   if (!message) return undefined;
-  return isValidationKey(message) ? translate(message) : message;
+  return translate(isValidationKey(message) ? message : "validation.invalid");
 }

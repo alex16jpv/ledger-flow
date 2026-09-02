@@ -71,4 +71,23 @@ describe("fieldErrors", () => {
     expect(fieldErrors(error)).toEqual({ email: "Invalid email", password: "Too short" });
     expect(fieldErrors(new Error("x"))).toEqual({});
   });
+
+  it("strips the Zod location prefix from field details", () => {
+    const error = new ApiError({
+      status: 400,
+      code: "VALIDATION",
+      message: "Invalid request data",
+      details: [
+        { field: "body.amount", message: "Amount must be at most 1000000000" },
+        { field: "query.limit", message: "too big" },
+        { field: "name", message: "plain" },
+      ],
+      requestId: "r1",
+    });
+    expect(fieldErrors(error)).toEqual({
+      amount: "Amount must be at most 1000000000",
+      limit: "too big",
+      name: "plain",
+    });
+  });
 });

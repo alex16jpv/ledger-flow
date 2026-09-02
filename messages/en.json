@@ -412,7 +412,9 @@
     "amountDecimals": "Your currency doesn’t allow those decimals.",
     "amountInvalid": "Enter a valid amount.",
     "sameAccount": "Choose two different accounts.",
-    "futureDate": "That date is more than a day ahead."
+    "futureDate": "That date is more than a day ahead.",
+    "invalid": "Check this value.",
+    "amountMax": "That amount is above the limit the app supports (10 trillion)."
   },
   "accounts": {
     "form": {
