@@ -11,11 +11,15 @@ export function useDates() {
   return useMemo(() => {
     const dateTime = (options: Intl.DateTimeFormatOptions) =>
       new Intl.DateTimeFormat(formatLocale, { timeZone, ...options });
+    // Spanish month names are lowercase; as a standalone heading ("agosto de 2026") they read better capitalized.
+    const capitalize = (text: string) =>
+      text.charAt(0).toLocaleUpperCase(formatLocale) + text.slice(1);
     return {
       timeZone,
       formatLong: (date: Date) =>
         dateTime({ weekday: "long", month: "long", day: "numeric" }).format(date),
-      formatMonth: (date: Date) => dateTime({ month: "long", year: "numeric" }).format(date),
+      formatMonth: (date: Date) =>
+        capitalize(dateTime({ month: "long", year: "numeric" }).format(date)),
       formatDay: (date: Date) => dateTime({ month: "short", day: "numeric" }).format(date),
       formatWeekdayDay: (date: Date) =>
         `${dateTime({ weekday: "long" }).format(date)} ${dateTime({ day: "numeric" }).format(date)}`,

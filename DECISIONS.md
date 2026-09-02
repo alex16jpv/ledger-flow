@@ -912,3 +912,15 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 cover` is set once in the root layout for the standalone display.
 - **The install row shipped with W-30** (`beforeinstallprompt`); the manifest shortcut "Add expense"
   opens the transaction form.
+
+## 2026-09-02 · Spanish complete and copy review (W-34)
+
+- **`es.json` is at parity with `en.json` (908 keys)** and the existing parity test keeps it there.
+  The values that are identical in both files are formats (`{date} · {time}`), proper names (Brisa,
+  Bancolombia) and words spelled the same in Spanish (Color, Manual, Global); nothing is left in
+  English by omission.
+- **Month headings are capitalized** in `formatMonth`: `Intl` yields lowercase Spanish month names,
+  correct in running text but weak as a standalone title ("agosto de 2026" → "Agosto de 2026").
+  Eyebrows already render uppercase and day names inside sentences stay as `Intl` gives them.
+- **SEO titles and descriptions exist in both languages** since W-32; the legal drafts are the copy
+  still awaiting the owner's review before the F5 gate.
