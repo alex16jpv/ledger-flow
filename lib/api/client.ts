@@ -19,7 +19,15 @@ export interface ApiRequest {
   headers?: Record<string, string>;
 }
 
-export type UnauthorizedHandler = (error: ApiError) => Promise<boolean>;
+export interface UnauthorizedContext {
+  startedAt: number;
+  path: string;
+}
+
+export type UnauthorizedHandler = (
+  error: ApiError,
+  context: UnauthorizedContext,
+) => Promise<boolean>;
 
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 
@@ -89,11 +97,13 @@ async function send(path: string, request: ApiRequest, requestId: string): Promi
 
 export async function api<T>(path: string, request: ApiRequest = {}): Promise<T> {
   const requestId = newRequestId();
+  const startedAt = Date.now();
   let response = await send(path, request, requestId);
 
-  if (response.status === 401 && unauthorizedHandler) {
+  if (response.status === 401 && unauthorizedHandler && !path.startsWith("/auth/")) {
     const error = toApiError(response, await readJson(response.clone()), requestId);
-    if (await unauthorizedHandler(error)) response = await send(path, request, requestId);
+    if (await unauthorizedHandler(error, { startedAt, path }))
+      response = await send(path, request, requestId);
   }
 
   if (response.status === 422 && request.idempotencyKey) {

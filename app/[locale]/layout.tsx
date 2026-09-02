@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 
 import { geistMono, geistSans } from "@/app/fonts";
 import { FormatSettingsProvider, routing } from "@/lib/i18n";
+import { QueryProvider } from "@/lib/query";
 import { THEME_INIT_SCRIPT, ThemeProvider } from "@/lib/theme";
 
 interface LocaleLayoutProps {
@@ -51,9 +52,11 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       </head>
       <body>
         <NextIntlClientProvider>
-          <ThemeProvider>
-            <FormatSettingsProvider>{children}</FormatSettingsProvider>
-          </ThemeProvider>
+          <QueryProvider>
+            <ThemeProvider>
+              <FormatSettingsProvider>{children}</FormatSettingsProvider>
+            </ThemeProvider>
+          </QueryProvider>
         </NextIntlClientProvider>
       </body>
     </html>

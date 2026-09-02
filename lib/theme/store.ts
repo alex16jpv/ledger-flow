@@ -1,3 +1,5 @@
+import { tabChannel } from "@/lib/session/channel";
+
 import { readStoredTheme, writeStoredTheme } from "./apply";
 import { DEFAULT_THEME, type Theme } from "./palettes";
 
@@ -34,7 +36,10 @@ export const themeStore = {
     const current = themeStore.getSnapshot();
     if (current.palette === theme.palette && current.mode === theme.mode) return;
     snapshot = theme;
-    if (persist) writeStoredTheme(storage(), theme);
+    if (persist) {
+      writeStoredTheme(storage(), theme);
+      tabChannel.post({ type: "theme", palette: theme.palette, mode: theme.mode });
+    }
     emit();
   },
   reset: (): void => {

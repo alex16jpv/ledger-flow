@@ -236,3 +236,22 @@ The specification that these decisions refine lives outside the repo in
 - **Route protection** lives in `proxy.ts` and reads only the `__Host-session` marker; the public
   surface is listed in `lib/auth/routes.ts`, guests are redirected to the localized login with a
   same-origin `next`, and signed-in users are bounced away from `/login` and `/register`.
+
+## 2026-09-01 · Single-flight refresh and multi-tab session (W-08)
+
+- **One refresh per tab, one per device:** `refreshSession()` shares a module-level promise and runs
+  inside `navigator.locks.request("lf-refresh")` when the API exists (falls back to the promise
+  alone). A 401 whose request started before the last successful refresh is retried without a new
+  refresh (`since` check), and `session:refreshed` messages from other tabs update that timestamp,
+  so two expired tabs never rotate the same token. `/auth/*` calls are exempt from the handler.
+- **`BroadcastChannel("lf")`** (`lib/session/channel.ts`) carries `session:expired`,
+  `session:logout`, `session:refreshed`, `theme` and `locale`. The theme store posts on every
+  persisted change and applies remote changes without persisting them again; `SessionProvider`
+  consumes the rest.
+- **Session state** lives in React Query (`["session","me"]` → `GET /api/auth/me`) under
+  `lib/session/SessionProvider`, per HANDOFF §3.4 (small contexts in `lib`, no global store). Logout
+  and logout-all clear the QueryClient, delete every `lf-cache-*` IndexedDB database (the future
+  per-user persisted cache) and notify the other tabs. `status: "expired"` is what W-10 renders as the
+  blocking session sheet.
+- **QueryClient defaults:** `staleTime` 30 s, `retry` once only on 5xx/429/network errors with
+  exponential backoff plus jitter (cap 8 s), mutations never retry, refetch on focus.
