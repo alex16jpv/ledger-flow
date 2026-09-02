@@ -107,7 +107,7 @@ describe("NewTransactionScreen", () => {
     search = "amount=4500&accountId=a1&description=Bus";
     render(<NewTransactionScreen />);
     expect(await screen.findByRole("button", { name: /Account.*Bancolombia/ })).toBeVisible();
-    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("4500");
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("4,500");
     expect(screen.getByRole("textbox", { name: /^Description/ })).toHaveValue("Bus");
     await userEvent.type(screen.getByRole("textbox", { name: /^Tags/ }), "Travel{Enter}");
     await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
@@ -190,7 +190,7 @@ describe("EditTransactionScreen", () => {
     expect(await screen.findByRole("textbox", { name: /^Description/ })).toHaveValue(
       "Uber to work",
     );
-    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("18400");
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("18,400");
     expect(screen.getByRole("button", { name: "Remove tag work" })).toBeVisible();
     expect(await screen.findByRole("button", { name: /Category.*Food/ })).toBeVisible();
     expect(await screen.findByRole("button", { name: /Account.*Bancolombia/ })).toBeVisible();

@@ -589,3 +589,18 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   `RecentTransactions` (app layer) merges the pending rows first and the latest rows after, through
   `useRecentTransactions`, and reuses `TransactionRow` with the account and category lookups. A feature
   still never imports another.
+
+## 2026-09-02 · Live grouping in `AmountInput` (owner decision P-20, W-05 revised)
+
+- **The text is formatted while typing, the value stays clean.** `formatEditableAmount` rebuilds the
+  field on every change from the digits the user owns: locale grouping for the integer part, the
+  locale's decimal separator (kept visible while the fraction is still empty), fraction capped to the
+  currency's digits, letters and foreign separators dropped, leading zeros removed. The parent keeps
+  receiving a plain number or `null`; nothing formatted ever reaches the API.
+- **The caret follows the digits, not the characters.** Before formatting, the caret position is
+  translated into "units" (digits and the decimal separator before it) and placed after the same units
+  in the new text, so inserting or deleting in the middle of `1,234,567` never jumps. Backspace or
+  Delete on a grouping separator removes the neighbouring digit as well, otherwise the separator would
+  reappear at once and the key would feel dead.
+- **Still uncontrolled from the parent's point of view** (`defaultValue` + `key` to reset), as decided
+  in W-05: the component owns the text; the parent owns the number.
