@@ -347,3 +347,18 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   1.5M/2M/3M, others 1,500/2,000/3,000); the owner can refine the heuristic at the gate.
 - **Idempotency:** accounts and budgets creation do not send `Idempotency-Key` because the backend
   only honours it on transactions; duplicates are caught by the backend's 409/400 rules.
+
+## 2026-09-01 · Home skeleton with real data (W-14)
+
+- **`features/home` owns its queries** (`home.*` keys over `/stats/spending`, `/accounts`,
+  `/budgets`) instead of importing the accounts and budgets features: HANDOFF §3.3 already lists
+  `home` as its own invalidation domain, and a feature must not import another.
+- **Derived display values:** the server stays the source of money truth (`spent`, `total`, balances,
+  `amount`), but the screen shows two figures the API does not expose: the daily average
+  (`total / dayOfMonth`) and the total balance (sum of active account balances), both mandated by
+  DESIGN.md §8.1. They are computed only for display and never sent back.
+- **CTAs open the real forms:** "Create your first account" and "Create a monthly budget" open
+  `AccountForm` and `GlobalBudgetForm` in sheets composed by `app/[locale]/(app)/home/HomeScreen.tsx`
+  (the app layer may compose several features); closing invalidates the home queries.
+- **Month window** comes from `useMonthContext` (`[from, to)` in the user's zone, day of month, days
+  in month and yesterday's key) so stats and budgets use the same boundaries as the backend.
