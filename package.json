@@ -1,6 +1,6 @@
 {
   "name": "ledger-flow",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -23,6 +23,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "size-limit": "node tools/size-limit.mjs",
+    "lighthouse": "lhci autorun",
     "gen:api-types": "node tools/gen-api-types.mjs",
     "gen:feature": "plop feature",
     "ci": "npm run typecheck && npm run lint && npm run format:check && npm run check-tokens && npm run contrast-check && npm run test && npm run build && npm run size-limit",
@@ -54,6 +55,7 @@
     "@axe-core/playwright": "^4.13.0",
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.62.1",
     "@serwist/cli": "^9.5.12",
     "@tailwindcss/postcss": "^4.3.3",

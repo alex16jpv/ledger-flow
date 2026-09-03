@@ -50,8 +50,42 @@ the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no envir
 | `npm run test`            | Vitest + Testing Library (`test:watch`, `test:coverage`)                                        |
 | `npm run test:e2e`        | Playwright smoke tests against the local backend                                                |
 | `npm run size-limit`      | Route JS budgets over the production build                                                      |
+| `npm run lighthouse`      | Lighthouse CI against a production build with the thresholds in `lighthouserc.json`             |
 | `npm run gen:api-types`   | Regenerates `types/api.d.ts` from the backend OpenAPI                                           |
 | `npm run gen:feature`     | Scaffolds `features/<name>/{api,keys,hooks,schemas,components}`                                 |
+
+## Deploy
+
+Three environments: `development` (local backend), `preview` (one per PR) and `production`, all on
+Vercel from this repo (Node from `.nvmrc`, `npm run build` runs `next build` and the Serwist step).
+`main` is protected (PR + green CI) and deploys production; `redesign/fase-2` gets previews until
+the F5 gate. Production is cut from a tag: bump `version` in `package.json`, move the `Unreleased`
+notes in `CHANGELOG.md` under the version, `git tag -a vX.Y.Z` and push the tag.
+
+Variables per environment (Vercel › Settings › Environment Variables):
+
+| Variable                                            | Production                          | Preview                               |
+| --------------------------------------------------- | ----------------------------------- | ------------------------------------- |
+| `API_URL`                                           | deployed backend URL                | staging backend URL                   |
+| `API_SECRET`                                        | backend shared secret               | staging secret                        |
+| `NEXT_PUBLIC_APP_URL`                               | `https://ledgerflow.alexpiral.com`  | unset: falls back to the branch alias |
+| `NEXT_PUBLIC_CONTACT_EMAIL`                         | `ledgerflow@alexpiral.com`          | same                                  |
+| `NEXT_PUBLIC_APP_VERSION`                           | unset: falls back to the commit SHA | same                                  |
+| `NEXT_PUBLIC_SENTRY_DSN`                            | Sentry project DSN                  | same DSN (events land as `preview`)   |
+| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | source-map upload                   | same                                  |
+
+Vercel exposes `NEXT_PUBLIC_VERCEL_ENV`, `NEXT_PUBLIC_VERCEL_BRANCH_URL` and
+`NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA` when "Automatically expose System Environment Variables" is on.
+Previews send `x-robots-tag: noindex` on every response and a `robots.txt` that disallows all.
+Production adds `Strict-Transport-Security` (2 years, `includeSubDomains`, `preload`); submit the
+domain at hstspreload.org once it has served HTTPS for a while. Changing the domain means a new
+`NEXT_PUBLIC_APP_URL` plus permanent redirects from the old one in Vercel.
+
+CI (`.github/workflows/ci.yml`): `quality` (typecheck, lint, format, tokens, contrast, tests,
+build, size budgets, `npm audit`), `security` (gitleaks, osv-scanner), `e2e` (Playwright against
+the backend repo on an ephemeral Mongo replica set; needs the `BACKEND_REPO_TOKEN` secret) and
+`lighthouse` (`lighthouserc.json`: performance ≥ 90, accessibility ≥ 95, best practices ≥ 90,
+SEO ≥ 95 on the public pages; the report is uploaded as an artifact).
 
 ## Structure
 

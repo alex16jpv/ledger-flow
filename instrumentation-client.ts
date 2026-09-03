@@ -16,3 +16,6 @@ if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
     });
   });
 }
+
+// Navigation tracing is off (tracesSampleRate 0); the export only keeps the SDK from warning at build time.
+export const onRouterTransitionStart = (): void => undefined;

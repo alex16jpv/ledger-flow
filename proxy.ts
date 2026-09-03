@@ -31,7 +31,11 @@ export default function proxy(request: NextRequest) {
   const path = stripLocale(pathname, routing.locales);
   const hasSession = request.cookies.has(SESSION_COOKIE);
 
-  const noindex = isProtectedPath(path) || path.startsWith("/dev/");
+  // Previews must never be indexed, whatever the path (Vercel only adds the header on *.vercel.app).
+  const noindex =
+    isProtectedPath(path) ||
+    path.startsWith("/dev/") ||
+    process.env.NEXT_PUBLIC_VERCEL_ENV === "preview";
   if (!hasSession && isProtectedPath(path)) {
     const url = request.nextUrl.clone();
     url.pathname = `${prefix}${LOGIN_PATH}`;

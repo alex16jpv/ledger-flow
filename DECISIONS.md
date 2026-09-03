@@ -953,3 +953,23 @@ cover` is set once in the root layout for the standalone display.
 - **Not done:** the `disableLogger` tree-shaking flag is not supported under Turbopack, so the
   SDK's debug logger ships (a few kB inside the lazy chunk). Source maps upload only in the deploy
   pipeline with `SENTRY_ORG`, `SENTRY_PROJECT` and `SENTRY_AUTH_TOKEN` (W-36).
+
+## 2026-09-02 · Deploy to preview and production (W-36)
+
+- **Vercel stays the host and nothing about it lives in code.** `NEXT_PUBLIC_APP_URL` now falls
+  back to `NEXT_PUBLIC_VERCEL_BRANCH_URL` and `NEXT_PUBLIC_APP_VERSION` to the short commit SHA, so
+  previews need no per-branch variables; production sets the real domain and, later, the tag.
+  Previews answer `x-robots-tag: noindex` on every response and a `robots.txt` that disallows all,
+  because Vercel only adds its own header on `*.vercel.app` hosts.
+- **Lighthouse CI is the fourth CI job**, running `lhci autorun` against a production build of the
+  public pages (`/`, `/es`, `/login`, `/privacy`) with the HANDOFF thresholds as assertions and the
+  reports kept as an artifact. The build for that job uses the audited origin as
+  `NEXT_PUBLIC_APP_URL`: a canonical pointing elsewhere costs eight SEO points. The Spanish CTA
+  changed from "Empezar" to "Crear cuenta gratis" because Lighthouse counts the former as generic
+  link text, and the longer copy says where the link goes.
+- **Releases are tags.** `CHANGELOG.md` (Keep a Changelog) starts at `0.1.0`, `package.json` carries
+  the same version, and production deploys only from `vX.Y.Z`. The tag itself is not created here:
+  it must point at the commit the owner merges after the F5 gate (owner's rule: no push, no deploy).
+- **Not automated:** GitHub branch protection, the Vercel environment variables, the Sentry
+  project and the `BACKEND_REPO_TOKEN`/`SENTRY_AUTH_TOKEN` secrets are console settings for the
+  owner; the checklist lives in `auditoria/front/puertas/F5/README.md`.

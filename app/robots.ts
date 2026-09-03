@@ -4,6 +4,8 @@ import { env } from "@/lib/env";
 
 // Only the public surface is indexable; the app, the BFF and the dev screens never are.
 export default function robots(): MetadataRoute.Robots {
+  if (env.NEXT_PUBLIC_VERCEL_ENV === "preview")
+    return { rules: [{ userAgent: "*", disallow: "/" }] };
   return {
     rules: [
       {

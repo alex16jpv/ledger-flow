@@ -15,3 +15,6 @@ npm-debug.log*
 public/sw.js
 public/sw.js.map
 public/swe-worker-*.js
+
+# Lighthouse CI reports
+.lighthouseci/
