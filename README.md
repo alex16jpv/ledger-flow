@@ -23,15 +23,17 @@ npm run dev          # http://localhost:3001
 Validated at build time by `lib/env.ts` (`@t3-oss/env-nextjs` + Zod); a missing variable fails
 the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no environment.
 
-| Variable                    | Scope  | Purpose                                                                                            |
-| --------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
-| `API_URL`                   | server | Backend base URL. Only the BFF knows it.                                                           |
-| `API_SECRET`                | server | Shared secret sent as `x-api-secret` on every backend call; the backend requires it in production. |
-| `NEXT_PUBLIC_APP_URL`       | public | Base URL of this deployment (metadata, sitemap, manifest).                                         |
-| `NEXT_PUBLIC_CONTACT_EMAIL` | public | Contact, support and privacy mailbox.                                                              |
-| `NEXT_PUBLIC_APP_VERSION`   | public | Tag or commit SHA shown in Settings › About.                                                       |
-| `NEXT_PUBLIC_APP_ENV`       | public | Optional feature-flag environment when it differs from `NODE_ENV` (the e2e build uses `test`).     |
-| `SENTRY_DSN`                | server | Optional error tracking DSN.                                                                       |
+| Variable                                            | Scope  | Purpose                                                                                            |
+| --------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| `API_URL`                                           | server | Backend base URL. Only the BFF knows it.                                                           |
+| `API_SECRET`                                        | server | Shared secret sent as `x-api-secret` on every backend call; the backend requires it in production. |
+| `NEXT_PUBLIC_APP_URL`                               | public | Base URL of this deployment (metadata, sitemap, manifest).                                         |
+| `NEXT_PUBLIC_CONTACT_EMAIL`                         | public | Contact, support and privacy mailbox.                                                              |
+| `NEXT_PUBLIC_APP_VERSION`                           | public | Tag or commit SHA shown in Settings › About.                                                       |
+| `NEXT_PUBLIC_APP_ENV`                               | public | Optional feature-flag environment when it differs from `NODE_ENV` (the e2e build uses `test`).     |
+| `NEXT_PUBLIC_SENTRY_DSN`                            | public | Optional. Enables Sentry error tracking (client, server and edge); unset keeps the SDK disabled.   |
+| `NEXT_PUBLIC_VERCEL_ENV`                            | public | Set by Vercel (`production`, `preview`, `development`); used as the Sentry environment.            |
+| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | build  | Deploy pipeline only: source-map upload during `next build`. Absent locally, the build skips it.   |
 
 ## Scripts
 
@@ -99,12 +101,13 @@ English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`)
 | `/budgets/new`, `/budgets/[id]/edit`                           | Budget form: scope, categories, six period types, amount, color, advanced options              |
 | `/budgets/past`                                                | Ended and archived budgets with "Create again"                                                 |
 | `/stats`                                                       | Monthly stats by category, day or tag (`?reference&type&groupBy`) with drill-down              |
-| `/privacy`                                                     | Stub answering "not found" until W-31                                                          |
+| `/privacy`, `/terms`                                           | Privacy policy and terms of service (static, legal drafts pending the owner's review)          |
 | `/dev/ui`                                                      | Component catalog (development only)                                                           |
 | `/dev/pickers`                                                 | Category, account and date pickers against the real API (development only)                     |
 | `/dev/frame?w=390&url=…`, `/api/dev/login?email&password&next` | Screenshot helpers (development only)                                                          |
 | `/api/auth/*`                                                  | Session BFF (httpOnly cookies)                                                                 |
-| `/api/[...path]`                                               | Generic proxy to the backend                                                                   |
+| `/api/[...path]`                                               | Generic proxy to the backend; logs one JSON line per call with the `requestId`                 |
+| `/monitoring`                                                  | Sentry tunnel (rewrite to the ingest host) so CSP keeps `connect-src 'self'`                   |
 
 ## How to
 
@@ -122,6 +125,10 @@ English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`)
   enforces it), append the code to `LOCALES` in `lib/i18n/routing.ts`, add its default region in
   `lib/i18n/format-locale.ts`, and add the row in Settings › Language. The backend enum
   `user.locale` must accept it too.
+- **Follow an error:** every API call carries an `x-request-id` (UUID v7) that the backend echoes
+  and logs; failed screens print it as "Reference: …" and the BFF logs it as JSON. Search that id in
+  the backend logs and in Sentry (tag `request_id`). Sentry events pass through
+  `lib/observability/scrub.ts`: no user, bodies, query strings, cookies or long numbers ever leave.
 - **Add copy:** every user-visible string is a key in `messages/en.json` and `messages/es.json`,
   nested by feature (`transactions.list.empty.title`). Use ICU plurals and rich tags; never
   concatenate fragments.

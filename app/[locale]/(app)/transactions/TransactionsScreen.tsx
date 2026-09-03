@@ -13,6 +13,7 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import { Chip, ChipRow } from "@/components/ui/Chip";
 import { Empty } from "@/components/ui/Empty";
 import { Input } from "@/components/ui/Field";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
@@ -256,7 +257,7 @@ export function TransactionsScreen() {
           tone="danger"
           icon={<WifiOff {...iconProps("lg")} />}
           title={t("states.error.title")}
-          body={t("states.error.body")}
+          body={<LoadErrorBody error={list.error} />}
           action={
             <Button
               onClick={() => {

@@ -924,3 +924,32 @@ cover` is set once in the root layout for the standalone display.
   Eyebrows already render uppercase and day names inside sentences stay as `Intl` gives them.
 - **SEO titles and descriptions exist in both languages** since W-32; the legal drafts are the copy
   still awaiting the owner's review before the F5 gate.
+
+## 2026-09-02 · Observability (W-35)
+
+- **Sentry behind `lib/observability`, never imported by the app.** `reporter.ts` is a tiny registry:
+  `client.ts` reports 5xx and online network failures, the error boundaries report render errors, and
+  `instrumentation-client.ts` registers the SDK as the reporter. The SDK loads with a dynamic import
+  and only when `NEXT_PUBLIC_SENTRY_DSN` is set, so the e2e build never downloads it and the runtime
+  chunk grew from 127 kB to 131 kB gz instead of the 216 kB a static import cost. Errors thrown before
+  the SDK arrives are lost; accepted.
+- **Nothing financial leaves the app.** `scrub.ts` runs as `beforeSend`/`beforeBreadcrumb` on every
+  runtime: user, extras, headers, cookies and bodies are dropped, URLs keep only the path (search
+  filters live in query strings), console breadcrumbs are discarded and numbers of four or more
+  characters are redacted from messages. `sendDefaultPii` is off and tracing is off (0 %): Web Vitals
+  go to Vercel Speed Insights, page views to Vercel Analytics (cookie-less, production only, paths
+  only), both behind `lib/analytics`, as decided in HANDOFF §6.
+- **Events tunnel through `/monitoring`** (`withSentryConfig`, a rewrite to the ingest host) so CSP
+  keeps `connect-src 'self'`; the middleware matcher skips that path so next-intl does not swallow it.
+- **`lib/env` stays out of the client instrumentation path.** `instrumentation-client.ts`,
+  `sentry-options.ts` and `Analytics.tsx` read `process.env` directly: importing `env.ts` there pulled
+  Zod into every page (the landing went from 30 kB to 120 kB gz). The variables are still validated by
+  `env.ts` at build time through `next.config.ts`.
+- **Every failed screen prints the `requestId`.** `LoadErrorBody` replaces the 18 inline
+  `states.error.body` renders and adds "Reference: …" from `ApiError`/`NetworkError`; the BFF proxy
+  logs one JSON line per call (`requestId`, method, path without query, status, duration, no body).
+  The backend already echoes and logs the same id, so one search follows an error end to end (e2e
+  `observability.spec.ts`).
+- **Not done:** the `disableLogger` tree-shaking flag is not supported under Turbopack, so the
+  SDK's debug logger ships (a few kB inside the lazy chunk). Source maps upload only in the deploy
+  pipeline with `SENTRY_ORG`, `SENTRY_PROJECT` and `SENTRY_AUTH_TOKEN` (W-36).

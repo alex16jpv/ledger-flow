@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/Card";
 import { CategoryChip, ChipRow } from "@/components/ui/Chip";
 import { cn } from "@/components/ui/cn";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { PeriodNav } from "@/components/ui/PeriodNav";
 import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
@@ -210,7 +211,7 @@ export function BudgetDetailScreen({ id }: { id: string }) {
           tone={notFound ? "neutral" : "danger"}
           icon={<CircleAlert {...iconProps("lg")} />}
           title={notFound ? t("budgets.detail.notFound") : t("states.error.title")}
-          body={notFound ? undefined : t("states.error.body")}
+          body={notFound ? undefined : <LoadErrorBody error={budget.error} />}
           action={
             notFound ? (
               <Link href="/budgets" className={buttonClasses({ variant: "secondary" })}>

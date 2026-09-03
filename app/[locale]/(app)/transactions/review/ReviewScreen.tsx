@@ -10,6 +10,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Sheet } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
@@ -145,7 +146,7 @@ export function ReviewScreen() {
           tone="danger"
           icon={<CircleAlert {...iconProps("lg")} />}
           title={t("states.error.title")}
-          body={t("states.error.body")}
+          body={<LoadErrorBody error={list.error} />}
           action={
             <Button
               onClick={() => {

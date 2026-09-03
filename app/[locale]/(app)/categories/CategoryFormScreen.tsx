@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import type { CategoryType } from "@/features/categories/api";
@@ -146,7 +147,7 @@ export function EditCategoryScreen({ id }: { id: string }) {
           tone={notFound ? "neutral" : "danger"}
           icon={<CircleAlert {...iconProps("lg")} />}
           title={notFound ? t("categories.form.notFound") : t("states.error.title")}
-          body={notFound ? undefined : t("states.error.body")}
+          body={notFound ? undefined : <LoadErrorBody error={category.error} />}
           action={
             notFound ? (
               <Link href={LIST_PATH} className={buttonClasses({ variant: "secondary" })}>

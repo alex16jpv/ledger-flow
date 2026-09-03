@@ -8,6 +8,7 @@ import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/components/ui/cn";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Picker } from "@/components/ui/Picker";
 import { List, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Sheet } from "@/components/ui/Sheet";
@@ -115,7 +116,7 @@ export function AccountPicker({
                 tone="danger"
                 icon={<Wallet {...iconProps("lg")} />}
                 title={t("states.error.title")}
-                body={t("states.error.body")}
+                body={<LoadErrorBody error={accounts.error} />}
               />
             ) : options.length === 0 ? (
               <Empty icon={<Wallet {...iconProps("lg")} />} title={t("accounts.picker.empty")} />

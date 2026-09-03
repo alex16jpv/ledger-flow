@@ -4,6 +4,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { ACCESS_COOKIE } from "@/lib/auth/cookies";
 import { unavailableResponse, untrustedOriginResponse } from "@/lib/auth/handlers";
+import { logRequest } from "@/lib/observability/log";
 
 import { backendFetch, BackendUnavailableError } from "./backend";
 import { IDEMPOTENCY_HEADER } from "./idempotency";
@@ -60,6 +61,16 @@ export async function proxyToBackend(
   if (body.length > 0)
     headers["content-type"] = request.headers.get("content-type") ?? "application/json";
 
+  const startedAt = Date.now();
+  const log = (status: number) => {
+    logRequest({
+      requestId: request.headers.get(REQUEST_ID_HEADER),
+      method: request.method,
+      path,
+      status,
+      durationMs: Date.now() - startedAt,
+    });
+  };
   try {
     const upstream = await backendFetch(`/${path}${request.nextUrl.search}`, {
       method: request.method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
@@ -77,11 +88,13 @@ export async function proxyToBackend(
       const value = upstream.headers.get(name);
       if (value) response.headers.set(name, value);
     }
+    log(upstream.status);
     return response;
   } catch (error) {
     if (error instanceof BackendUnavailableError) {
       const response = unavailableResponse(error);
       for (const [name, value] of Object.entries(robots())) response.headers.set(name, value);
+      log(response.status);
       return response;
     }
     throw error;

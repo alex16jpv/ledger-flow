@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { Chip, ChipRow } from "@/components/ui/Chip";
 import { cn } from "@/components/ui/cn";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { PeriodNav } from "@/components/ui/PeriodNav";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { monthWindow } from "@/lib/format/dates";
@@ -152,7 +153,7 @@ export function BudgetsView({
           tone="danger"
           icon={<ChartPie {...iconProps("lg")} />}
           title={t("states.error.title")}
-          body={t("states.error.body")}
+          body={<LoadErrorBody error={budgets.error} />}
           action={
             <Button
               onClick={() => {

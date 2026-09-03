@@ -9,8 +9,8 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
-import { ApiError, NetworkError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
@@ -62,10 +62,6 @@ export function HomeView({
   );
 
   if (data.error) {
-    const requestId =
-      data.error instanceof ApiError || data.error instanceof NetworkError
-        ? data.error.requestId
-        : null;
     return (
       <>
         {header}
@@ -74,16 +70,7 @@ export function HomeView({
             tone="danger"
             icon={<Info {...iconProps("lg")} />}
             title={t("states.error.title")}
-            body={
-              <>
-                {t("states.error.body")}
-                {requestId && (
-                  <span className="mt-1 block font-mono text-xs text-text-3">
-                    {t("states.error.reference", { requestId })}
-                  </span>
-                )}
-              </>
-            }
+            body={<LoadErrorBody error={data.error} />}
             action={
               <Button variant="secondary" onClick={() => void data.refetch()}>
                 {t("common.retry")}

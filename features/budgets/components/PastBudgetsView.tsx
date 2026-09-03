@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Segment } from "@/components/ui/Segment";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
@@ -86,7 +87,7 @@ export function PastBudgetsView({
           tone="danger"
           icon={<ChartPie {...iconProps("lg")} />}
           title={tc("states.error.title")}
-          body={tc("states.error.body")}
+          body={<LoadErrorBody error={budgets.error} />}
           action={
             <Button
               onClick={() => {

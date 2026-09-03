@@ -12,6 +12,7 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/cn";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { List, Row, RowBody, RowMeta, RowTitle } from "@/components/ui/Row";
 import { Segment } from "@/components/ui/Segment";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -167,7 +168,7 @@ export function CategoriesView() {
           tone="danger"
           icon={<Tags {...iconProps("lg")} />}
           title={t("states.error.title")}
-          body={t("states.error.body")}
+          body={<LoadErrorBody error={categories.error} />}
           action={
             <Button
               onClick={() => {

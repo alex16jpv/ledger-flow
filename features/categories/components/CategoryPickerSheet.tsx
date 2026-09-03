@@ -8,6 +8,7 @@ import { CategoryChip, ChipRow } from "@/components/ui/Chip";
 import { cn } from "@/components/ui/cn";
 import { Empty } from "@/components/ui/Empty";
 import { Input } from "@/components/ui/Field";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { List, RowBody, RowButton, RowMeta, RowTitle } from "@/components/ui/Row";
 import { Sheet } from "@/components/ui/Sheet";
 import { SkeletonRow } from "@/components/ui/Skeleton";
@@ -131,7 +132,7 @@ export function CategoryPickerSheet({
               tone="danger"
               icon={<Search {...iconProps("lg")} />}
               title={t("states.error.title")}
-              body={t("states.error.body")}
+              body={<LoadErrorBody error={categories.error} />}
             />
           ) : filtered.length === 0 ? (
             <Empty

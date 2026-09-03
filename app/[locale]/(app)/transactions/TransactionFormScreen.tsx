@@ -8,6 +8,7 @@ import { useState } from "react";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { DeleteTransactionSheet } from "@/features/transactions/components/DeleteTransactionSheet";
@@ -118,7 +119,7 @@ export function EditTransactionScreen({ id }: { id: string }) {
           tone={notFound ? "neutral" : "danger"}
           icon={<CircleAlert {...iconProps("lg")} />}
           title={notFound ? t("transactions.form.notFound") : t("states.error.title")}
-          body={notFound ? undefined : t("states.error.body")}
+          body={notFound ? undefined : <LoadErrorBody error={transaction.error} />}
           action={
             notFound ? undefined : (
               <Button

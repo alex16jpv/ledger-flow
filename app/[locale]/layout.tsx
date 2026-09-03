@@ -8,6 +8,7 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import { geistMono, geistSans } from "@/app/fonts";
+import { Analytics } from "@/lib/analytics/Analytics";
 import { env } from "@/lib/env";
 import { routing } from "@/lib/i18n";
 import { DEFAULT_PALETTE } from "@/lib/theme";
@@ -58,6 +59,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       </head>
       <body>
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <Analytics />
       </body>
     </html>
   );

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip, ChipRow } from "@/components/ui/Chip";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { PeriodNav } from "@/components/ui/PeriodNav";
 import { Segment } from "@/components/ui/Segment";
 import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
@@ -220,7 +221,7 @@ export function StatsScreen() {
           tone="danger"
           icon={<ChartPie {...iconProps("lg")} />}
           title={t("states.error.title")}
-          body={t("states.error.body")}
+          body={<LoadErrorBody error={stats.error ?? byCategory.error} />}
           action={
             <Button
               onClick={() => {

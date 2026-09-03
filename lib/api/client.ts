@@ -1,4 +1,5 @@
 import { reportNetworkFailure } from "@/lib/network/connectivity";
+import { isReportable, reportError } from "@/lib/observability/reporter";
 import type { ErrorResponse } from "@/types/api";
 
 import { ApiError, isErrorCode, NetworkError } from "./errors";
@@ -93,7 +94,9 @@ async function send(path: string, request: ApiRequest, requestId: string): Promi
     if (cause instanceof DOMException && cause.name === "AbortError" && signal?.aborted)
       throw cause;
     reportNetworkFailure();
-    throw new NetworkError(requestId, timedOut, cause);
+    const error = new NetworkError(requestId, timedOut, cause);
+    if (isReportable(error)) reportError(error, "network");
+    throw error;
   }
 }
 
@@ -117,6 +120,10 @@ export async function api<T>(path: string, request: ApiRequest = {}): Promise<T>
   }
 
   const payload = await readJson(response);
-  if (!response.ok) throw toApiError(response, payload, requestId);
+  if (!response.ok) {
+    const error = toApiError(response, payload, requestId);
+    if (isReportable(error)) reportError(error, "api");
+    throw error;
+  }
   return payload as T;
 }

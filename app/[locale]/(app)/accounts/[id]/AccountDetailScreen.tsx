@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { AccountHero } from "@/features/accounts/components/AccountHero";
@@ -164,7 +165,7 @@ export function AccountDetailScreen({ id }: { id: string }) {
           tone={notFound ? "neutral" : "danger"}
           icon={<CircleAlert {...iconProps("lg")} />}
           title={notFound ? t("accounts.detail.notFound") : t("states.error.title")}
-          body={notFound ? undefined : t("states.error.body")}
+          body={notFound ? undefined : <LoadErrorBody error={account.error} />}
           action={
             notFound ? (
               <Link href="/accounts" className={buttonClasses({ variant: "secondary" })}>

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tag } from "@/components/ui/Tag";
 import { Tile } from "@/components/ui/Tile";
@@ -109,7 +110,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
           tone={notFound ? "neutral" : "danger"}
           icon={<CircleAlert {...iconProps("lg")} />}
           title={notFound ? t("transactions.form.notFound") : t("states.error.title")}
-          body={notFound ? undefined : t("states.error.body")}
+          body={notFound ? undefined : <LoadErrorBody error={transaction.error} />}
           action={
             notFound ? (
               <Link href="/transactions" className={buttonClasses({ variant: "secondary" })}>

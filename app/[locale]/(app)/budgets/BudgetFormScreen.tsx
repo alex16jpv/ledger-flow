@@ -8,6 +8,7 @@ import { useState } from "react";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { BudgetForm } from "@/features/budgets/components/BudgetForm";
@@ -113,7 +114,7 @@ export function EditBudgetScreen({ id }: { id: string }) {
           tone={notFound ? "neutral" : "danger"}
           icon={<CircleAlert {...iconProps("lg")} />}
           title={notFound ? t("budgets.detail.notFound") : t("states.error.title")}
-          body={notFound ? undefined : t("states.error.body")}
+          body={notFound ? undefined : <LoadErrorBody error={budget.error} />}
           action={
             notFound ? (
               <Link href={LIST_PATH} className={buttonClasses({ variant: "secondary" })}>

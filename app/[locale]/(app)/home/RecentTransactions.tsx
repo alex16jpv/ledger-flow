@@ -8,6 +8,7 @@ import { ADD_HREF } from "@/components/shell";
 import { buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
+import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { List } from "@/components/ui/Row";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { useAccountsQuery } from "@/features/accounts/hooks";
@@ -56,7 +57,7 @@ export function RecentTransactions() {
             tone="danger"
             icon={<Inbox {...iconProps("lg")} />}
             title={t("states.error.title")}
-            body={t("states.error.body")}
+            body={<LoadErrorBody error={recent.error} />}
           />
         ) : recent.rows.length === 0 ? (
           <Empty
