@@ -39,13 +39,13 @@ describe("LoginForm", () => {
   });
 
   it("signs in and hands the session to the caller", async () => {
-    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "Andrés" } }));
+    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "John" } }));
     const onSuccess = renderForm();
     await userEvent.type(screen.getByLabelText("Email"), "a@b.co");
     await userEvent.type(screen.getByLabelText("Password"), "LedgerFlow!2026");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     await waitFor(() => {
-      expect(onSuccess).toHaveBeenCalledWith({ user: { id: "u1", name: "Andrés" } });
+      expect(onSuccess).toHaveBeenCalledWith({ user: { id: "u1", name: "John" } });
     });
     const init = fetchMock.mock.calls[0]?.[1];
     expect(init?.body).toBe(JSON.stringify({ email: "a@b.co", password: "LedgerFlow!2026" }));

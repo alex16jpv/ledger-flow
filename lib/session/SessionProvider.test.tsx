@@ -47,12 +47,12 @@ function renderSession(onSignedOut = vi.fn()) {
 
 describe("SessionProvider", () => {
   it("loads the current user from the BFF", async () => {
-    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "Andrés" } }));
+    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "John" } }));
     renderSession();
     await waitFor(() => {
       expect(screen.getByTestId("status")).toHaveTextContent("authenticated");
     });
-    expect(screen.getByTestId("name")).toHaveTextContent("Andrés");
+    expect(screen.getByTestId("name")).toHaveTextContent("John");
     expect(urlOf(fetchMock.mock.calls[0]?.[0] ?? "")).toBe("/api/auth/me");
   });
 

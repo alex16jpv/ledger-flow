@@ -31,8 +31,8 @@ function renderForm(onSuccess = vi.fn()) {
 }
 
 async function fillValid() {
-  await userEvent.type(screen.getByLabelText("Name"), "Andrés Valencia");
-  await userEvent.type(screen.getByLabelText("Email"), "andres@example.com");
+  await userEvent.type(screen.getByLabelText("Name"), "John Doe");
+  await userEvent.type(screen.getByLabelText("Email"), "john.doe@example.com");
   await userEvent.type(screen.getByLabelText("Password"), "LedgerFlow!2026");
 }
 
@@ -50,7 +50,7 @@ describe("RegisterForm", () => {
 
   it("sends the detected settings and the UI locale", async () => {
     fetchMock.mockResolvedValue(
-      json({ user: { id: "u1", name: "Andrés", reactivated: false } }, { status: 201 }),
+      json({ user: { id: "u1", name: "John", reactivated: false } }, { status: 201 }),
     );
     const onSuccess = renderForm();
     await screen.findByRole("button", { name: /COP · / });
@@ -65,8 +65,8 @@ describe("RegisterForm", () => {
       unknown
     >;
     expect(body).toMatchObject({
-      name: "Andrés Valencia",
-      email: "andres@example.com",
+      name: "John Doe",
+      email: "john.doe@example.com",
       currency: "COP",
       locale: "en",
     });

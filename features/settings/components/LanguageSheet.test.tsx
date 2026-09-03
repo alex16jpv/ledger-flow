@@ -34,10 +34,10 @@ describe("LanguageSheet", () => {
     fetchMock.mockImplementation((input, init) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url === "/api/auth/me") {
-        return Promise.resolve(json({ user: { id: "u1", name: "Andrés", locale: "en" } }));
+        return Promise.resolve(json({ user: { id: "u1", name: "John", locale: "en" } }));
       }
       if (url === "/api/users/u1" && init?.method === "PUT") {
-        return Promise.resolve(json({ id: "u1", name: "Andrés", locale: "es" }));
+        return Promise.resolve(json({ id: "u1", name: "John", locale: "es" }));
       }
       return Promise.resolve(json({ error: "x", message: "unexpected" }, { status: 500 }));
     });
@@ -65,7 +65,7 @@ describe("LanguageSheet", () => {
   });
 
   it("stores the device mode without calling the API when the device already matches", async () => {
-    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "Andrés", locale: "en" } }));
+    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "John", locale: "en" } }));
     vi.spyOn(navigator, "language", "get").mockReturnValue("en-US");
     const onClose = vi.fn();
     renderWithProviders(
