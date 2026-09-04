@@ -39,6 +39,7 @@ describe("query client defaults", () => {
     const client = createQueryClient();
     expect(client.getQueryDefaults(QUERY_DOMAINS.accounts).networkMode).toBe("offlineFirst");
     expect(client.getQueryDefaults(QUERY_DOMAINS.categories).networkMode).toBe("offlineFirst");
-    expect(client.getQueryDefaults(QUERY_DOMAINS.transactions).networkMode).toBeUndefined();
+    expect(client.getQueryDefaults(QUERY_DOMAINS.transactions).networkMode).toBe("offlineFirst");
+    expect(client.getQueryDefaults(QUERY_DOMAINS.budgets).networkMode).toBeUndefined();
   });
 });

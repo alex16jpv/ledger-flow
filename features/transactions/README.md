@@ -38,3 +38,12 @@ cards that already have a category, a sheet confirms how many save and how many 
 `useBatchComplete` sends one `PATCH /transactions/batch` with an `Idempotency-Key`. The response is
 per item: saved cards leave the list, failed ones stay with their error, and the individual "Done"
 keeps working.
+
+Reads go through `lib/local/repository` (O-F2a): the paged list, the detail, the counts, the pending
+tray and the tag list answer from the server while there is network and from the offline mirror when
+there is none, with the same shape either way. The mirror resolves the cursor as a keyset over
+`(date, id)` — the same one the API uses — so infinite scroll and every filter work without network;
+a filter the mirror does not know how to apply makes it decline and the read goes to the server.
+`fetchDailyStats` is deliberately still a server call: the day buckets and the period summary are
+money derived over a time zone, which is O-F3, so offline they have no figures rather than made-up
+ones. Writes are still plain API calls until the outbox lands (O-F4).

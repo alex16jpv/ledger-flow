@@ -6,3 +6,9 @@ export {
   readCategory,
 } from "./categories";
 export { currentVault, mirrorPage, type MirrorReader, read, setCurrentVault } from "./read";
+export {
+  readTransaction,
+  readTransactions,
+  readTransactionTags,
+  type TransactionQuery,
+} from "./transactions";

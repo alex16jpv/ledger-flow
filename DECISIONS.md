@@ -1090,3 +1090,48 @@ cover` is set once in the root layout for the standalone display.
   a day per device even when nothing changes — worse than the traffic local-first exists to remove.
 - **Consequence:** freshness is bounded by user activity, which is the intended trade. Pulling right
   after each push arrives with the outbox (O-F4).
+
+## 2026-09-03 · The transaction cursor is resolved locally as a keyset, not as an offset (O-F2a)
+
+- **Decision:** `repository/transactions.ts` walks the `dateCursor` index (`["liveDate", "id"]`)
+  backwards and treats the cursor the way the API does: the id of the last row served, whose own date
+  is read back from the row it names to bracket the next page at `(date, id) <` that pivot.
+- **Alternatives:** remembering how many rows were already served and skipping that many. Rejected:
+  a pull between two pages inserts rows above the one the reader is on, and an offset then silently
+  skips exactly as many rows as arrived — the bug infinite scroll is famous for. Materialising the
+  filtered set once and finding the cursor's position in it was rejected for a subtler version of the
+  same thing: a row edited out of the filter between two pages would no longer be in the list, and
+  the page would restart. The server does not have that problem because it only ever reads the
+  pivot's date, so the mirror does the same.
+- **Consequence:** the local list survives a pull mid-scroll, and a tombstone can never be served:
+  a deleted row has no `liveDate`, and IndexedDB skips a record when part of a compound key path is
+  missing. It still works as a pivot, which is what keeps deleting the last row of a page from
+  restarting the list.
+
+## 2026-09-03 · Filters the index does not cover are applied while walking, not given an index (O-F2a)
+
+- **Decision:** only the period brackets the index walk. Type, account, category, "uncategorized",
+  tag, pending and quick-only are evaluated per row as the walk goes, and a query carrying any
+  parameter the mirror does not implement is declined so the read goes to the server.
+- **Alternatives:** an index per filter, or a composite index per combination. Rejected: the screen
+  offers eight filters that combine freely, IndexedDB picks one index per query anyway, and every
+  index that only half-answers a combination is a way for the local list to disagree with the API.
+  Ignoring an unknown parameter was rejected outright — it answers a different question than the one
+  asked, which is worse than not answering.
+- **Consequence:** a filtered page costs a walk of the period's rows rather than a lookup. That is
+  the same order of work the list already does to produce `total`, which the API counts over the
+  whole filtered set on every page.
+
+## 2026-09-03 · The list's own `summary` is summed locally; `/stats/spending` is not (O-F2a)
+
+- **Decision:** `includeSummary=true` is answered from the mirror, adding the amounts as integer
+  minor units (`Math.round(amount * 100)`, summed, divided at the end) exactly as the server stores
+  and `$sum`s them. `fetchDailyStats` stays a server call.
+- **Alternatives:** declining the summary and letting the pending tray fall through to the server.
+  Rejected: it is the only field that read needs beyond the count, so the whole tray would stop
+  working offline. Summing in floats was rejected by the fixtures' own example: `0.10 + 0.20` is not
+  `0.30` in binary floating point.
+- **Consequence:** the pending tray works offline. This is a plain sum over the same filtered set,
+  not a derivation — day buckets, balances and `spent` need a time zone and a period and belong to
+  `lib/local/derive` (O-F3), which is checked against `auditoria/offline-fixtures/`. When O-F3 lands,
+  the pending summary moves there with the rest and gets the same fixture check.

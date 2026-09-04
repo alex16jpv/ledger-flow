@@ -3,8 +3,9 @@
 One IndexedDB database per user, `lf-vault-<userId>`. Two users on a device never cross; signing back
 in with the same `userId` finds the same vault **and the same outbox**.
 
-Delivered by O-F1 (the store and its migrations) and O-F2a (filling it, and reading accounts and
-categories from it while offline). Deriving money locally is O-F3; the outbox is O-F4.
+Delivered by O-F1 (the store and its migrations) and O-F2a (filling it, and reading accounts,
+categories and transactions from it while offline). Deriving money locally is O-F3; the outbox is
+O-F4.
 
 ## The hard line: disposable mirror, sacred outbox
 
@@ -96,6 +97,21 @@ the last `id` because the API sorts these lists by `_id` ascending, which is Ind
 order. React Query pauses fetches while offline, so `lib/query/client.ts` gives the mirror-backed
 domains `networkMode: "offlineFirst"`: a paused query never reaches its `queryFn` and the mirror
 would never be asked.
+
+Transactions are the one list the API does not sort by `_id`, so `repository/transactions.ts` builds
+its own envelope:
+
+- it walks the `dateCursor` index backwards, which is the API's `date DESC, _id DESC` and, because a
+  tombstone has no `liveDate`, cannot reach a deleted row at all;
+- `from`/`to` bracket that walk (`[from]` inclusive to `[to]` exclusive — an array key `[d, id]`
+  sorts after `[d]`, so the open upper bound is the server's `$lt`). Every other filter is applied
+  while walking, because inventing an index for each combination is how a local list starts
+  disagreeing with the API;
+- the cursor is the id of the last row served, exactly as the API hands it back. The pivot's date is
+  read from the row it names — a tombstone still carries one — so the keyset survives rows arriving
+  above the page already served, and deleting the last row of a page does not restart the list;
+- a query carrying a parameter the mirror does not apply is declined rather than answered, which is
+  the same `undefined` contract as an id it never saw.
 
 ## Persistence
 
