@@ -13,6 +13,8 @@ export interface StatsParams {
   to: string;
 }
 
+// Stats is /stats/spending and nothing else: every bucket is money derived over a time zone, so it
+// stays on the server until O-F3 and QUERY_DOMAINS.stats keeps pausing while offline.
 export function fetchStats(params: StatsParams): Promise<StatsResponse> {
   return api<StatsResponse>("/stats/spending", { query: { ...params } });
 }

@@ -9,3 +9,8 @@ W-22 completes the screen: `dayBars` turns the server's day buckets into one bar
 consumed and `budgetStatus` phrases them (left · on track, at n% with d days left, over by x). The
 recent movements are composed in the app layer (`RecentTransactions`) because they reuse the
 transactions row and the account and category lookups of other features.
+
+O-F2a routes the accounts, categories and pending-tray reads through `lib/local/repository`, so the
+mirror can answer them offline; the month's spending and the budgets stay server calls because both
+are derived money (O-F3). Until those two can be answered, `QUERY_DOMAINS.home` is not in
+`MIRROR_BACKED_DOMAINS` and the screen keeps its offline skeleton rather than a failed request.

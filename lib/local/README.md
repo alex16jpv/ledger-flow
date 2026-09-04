@@ -4,8 +4,8 @@ One IndexedDB database per user, `lf-vault-<userId>`. Two users on a device neve
 in with the same `userId` finds the same vault **and the same outbox**.
 
 Delivered by O-F1 (the store and its migrations) and O-F2a (filling it, and reading accounts,
-categories and transactions from it while offline). Deriving money locally is O-F3; the outbox is
-O-F4.
+categories, transactions and Home's non-money lists from it while offline). Deriving money locally
+is O-F3; the outbox is O-F4.
 
 ## The hard line: disposable mirror, sacred outbox
 
@@ -92,6 +92,16 @@ keys and the components do not know the difference. `read(fromServer, fromMirror
   and the read falls through to the server, which produces the real network error rather than a
   fabricated one or an empty list that lies.
 
+`repository/budgets.ts` declines every read on purpose. The mirror stores `SyncBudget`, the saved
+shape, while the API answers the view, and the only field of that view the mirror cannot build is
+`spent` — which every budget surface reads. So the whole read goes to the server until
+`lib/local/derive` lands (O-F3), rather than being served with a figure nobody computed.
+`/stats/spending` is the same case for Home's month and for the whole stats feature.
+
+`lib/query/domains.ts` lists the domains whose reads all answer locally, and its prefix covers every
+key of a domain: `budgets`, `home` and `stats` are not in it, because unpausing a domain that still
+has a server-only read turns a paused skeleton into a failed request.
+
 `mirrorPage` rebuilds the `data` + `pagination` envelope the list endpoints return. It can page on
 the last `id` because the API sorts these lists by `_id` ascending, which is IndexedDB's own key
 order. React Query pauses fetches while offline, so `lib/query/client.ts` gives the mirror-backed
@@ -139,6 +149,6 @@ not exist yet**, so today unsent work always survives a logout.
 `npm run test` covers this directory against a real IndexedDB (`fake-indexeddb`, wired in
 `vitest.setup.ts`): the stores and every index key, both migration policies with 20 queued operations
 inside, the blocked path, the purge rules, the multi-page pull with its overlap and its stalled feed,
-the four rules of the read seam, and accounts and categories answering the same thing online and
-offline. Use `openTestVault` from `lib/testing/vault` — it
+the four rules of the read seam, accounts, categories, transactions and Home's lists answering the
+same thing online and offline, and budgets declining rather than answering without `spent`. Use `openTestVault` from `lib/testing/vault` — it
 tracks handles so one failed assertion does not leave a connection open and stall the next test.

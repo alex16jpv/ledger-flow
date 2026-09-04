@@ -21,3 +21,8 @@ category), expense-category chips (archived ones kept on edit), the six period t
 inputs for CUSTOM (inclusive end → half-open API window), amount, color and the advanced options
 (effective from, note). `budgetSuggestions` (owner request F-01) scales the global-budget chips by
 currency or by last month's spending.
+
+O-F2a routes the list and the detail through `lib/local/repository`, but the mirror declines both
+while offline: it stores the saved shape (`SyncBudget`) and the screens read the view's `spent`,
+which is derived money (O-F3). The reads reach the server and fail honestly instead of showing a
+figure nobody computed.

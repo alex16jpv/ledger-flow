@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { type BudgetListParams, readBudget, readBudgets } from "@/lib/local/repository";
 import type {
   Budget,
   BudgetAmountOverrideInput,
@@ -8,30 +9,12 @@ import type {
   UpdateBudgetInput,
 } from "@/types/api";
 
-export interface BudgetFilters {
-  reference?: string;
-  includeExpired?: boolean;
-  includeArchived?: boolean;
-}
+export type BudgetFilters = Omit<BudgetListParams, "limit">;
 
-// The expired/lifetime filters run after pagination on the server, so hasMore must be followed even for short pages.
-export async function fetchBudgets(filters: BudgetFilters = {}): Promise<Budget[]> {
-  const data: Budget[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await api<BudgetList>("/budgets", {
-      query: {
-        reference: filters.reference,
-        includeExpired: filters.includeExpired ? "true" : undefined,
-        includeArchived: filters.includeArchived ? "true" : undefined,
-        limit: 100,
-        cursor,
-      },
-    });
-    data.push(...page.data);
-    cursor = page.pagination.hasMore ? (page.pagination.nextCursor ?? undefined) : undefined;
-  } while (cursor);
-  return data;
+// Reads go through the repository; with no network the mirror declines them, because the view's
+// `spent` is derived money and that is O-F3. Writes stay plain API calls until the outbox (O-F4).
+export function fetchBudgets(filters: BudgetFilters = {}): Promise<Budget[]> {
+  return readBudgets(filters);
 }
 
 export function fetchBudgetsPage(filters: BudgetFilters = {}): Promise<BudgetList> {
@@ -49,7 +32,7 @@ export function createBudget(input: CreateBudgetInput): Promise<Budget> {
 }
 
 export function fetchBudget(id: string, reference?: string): Promise<Budget> {
-  return api<Budget>(`/budgets/${id}`, { query: { reference } });
+  return readBudget(id, reference);
 }
 
 export function updateBudget(id: string, input: UpdateBudgetInput): Promise<Budget> {

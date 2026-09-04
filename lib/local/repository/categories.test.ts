@@ -3,7 +3,7 @@ import { category, openTestVault, wipeVaults } from "@/lib/testing/vault";
 import type { Category, CategoryList, SyncChangesResponse } from "@/types/api";
 
 import { pullChanges } from "../pull";
-import { readCategories, readCategory } from "./categories";
+import { readCategories, readCategoriesPage, readCategory } from "./categories";
 import { setCurrentVault } from "./read";
 
 const dining = category({ id: "c1", name: "Dining", type: "EXPENSE" });
@@ -79,6 +79,22 @@ describe("categories through the repository", () => {
 
     await expect(readCategories()).resolves.toEqual([dining, salary]);
     await expect(readCategories({ type: "INCOME" })).resolves.toEqual([salary]);
+  });
+
+  it("pages the mirror the way the API pages the list", async () => {
+    fetchMock.mockResolvedValue(json(page([dining, salary])));
+    await mirrorOf([dining, salary, gym]);
+
+    const online = await readCategoriesPage({ limit: 100 });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/categories?limit=100");
+
+    reportOnline(false);
+
+    expect(await readCategoriesPage({ limit: 100 })).toEqual(online);
+    await expect(readCategoriesPage({ includeArchived: true, limit: 2 })).resolves.toEqual({
+      data: [dining, salary],
+      pagination: { limit: 2, offset: 0, total: 3, hasMore: true, nextCursor: "c2" },
+    });
   });
 
   it("reads one category from the mirror, archived included", async () => {

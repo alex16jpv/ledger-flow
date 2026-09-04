@@ -1135,3 +1135,42 @@ cover` is set once in the root layout for the standalone display.
   not a derivation — day buckets, balances and `spent` need a time zone and a period and belong to
   `lib/local/derive` (O-F3), which is checked against `auditoria/offline-fixtures/`. When O-F3 lands,
   the pending summary moves there with the rest and gets the same fixture check.
+
+## 2026-09-03 · Budgets decline offline instead of answering the view without `spent` (O-F2a)
+
+- **Decision:** the mirror declines the budget list and the budget detail while there is no network,
+  so both reads go to the server and fail honestly. `QUERY_DOMAINS.budgets` therefore stays out of
+  `MIRROR_BACKED_DOMAINS`: unpausing a domain that cannot answer only turns a paused skeleton into a
+  failed request. The seam is in place (`lib/local/repository/budgets.ts`) for O-F3 to fill.
+- **Alternatives:** serving the view with `spent` derived locally — forbidden here, that is O-F3 and
+  it is checked against `auditoria/offline-fixtures/`. Serving the half of the view that is not
+  money — rejected because no budget surface can paint without the figure: `BudgetCard`,
+  `GlobalBudgetCard`, `BudgetHero`, Home's `BudgetsSection` and `HeroCard`, the ordering in
+  `BudgetsView` and `topBudgets`, `budgetProgress` and `budgetStatus` all read `budget.spent`, and
+  `Budget` declares it required. Making it optional means changing five components and their tests,
+  which this item excludes, to ship a degraded screen that O-F3 would revert two items later.
+  Answering `spent: 0` was never on the table: invariant 2 forbids showing a figure nobody computed.
+  Confirmed with the owner before implementing.
+- **Consequence:** Budgets is exactly as offline-capable as it was — no better, no worse — until
+  O-F3. Verified against the running backend that the stored shape is what forces this: of the view's
+  fields, `archivedCategoryIds`, `periodKey`, `periodFrom`, `periodTo`, `baseAmount`, `spent`,
+  `hasOverride` and `expired` are absent from `SyncBudget`, and over the ten seeded budgets
+  everything but `spent` and the recurring period window derives from the stored row plus the
+  categories mirror with zero mismatches. Only `spent` needs the transactions, and one seeded budget
+  carries a non-zero one.
+
+## 2026-09-03 · Home and stats keep their server reads and stay paused offline (O-F2a)
+
+- **Decision:** Home's accounts, categories and pending tray now read through the repository and are
+  answered by the mirror; its month spending and its budgets stay server calls. `features/stats`
+  is not routed at all — it is `/stats/spending` and nothing else. Neither `QUERY_DOMAINS.home` nor
+  `QUERY_DOMAINS.stats` joins `MIRROR_BACKED_DOMAINS`.
+- **Alternatives:** unpausing `home` so the three local reads answer offline. Rejected after reading
+  `HomeView`: it renders the error card when any of spending/accounts/budgets/income errors and
+  returns the skeleton while `!data.spending.data`, so unpausing would replace today's offline
+  skeleton with an error card and still show no data. Splitting the home keys into per-domain
+  prefixes was rejected for the reason `domains.ts` exists: two files would then own the key shape.
+- **Consequence:** nothing changes on screen yet; O-F3 adds the derived spending and the budget view
+  and flips both domains at once. The plumbing is already verified: against the running backend,
+  `/accounts?limit=100`, `/categories?includeArchived=true&limit=100` and the pending tray with
+  `includeSummary` are byte-identical to what the mirror answers, envelope included.
