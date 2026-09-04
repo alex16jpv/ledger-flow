@@ -12,3 +12,8 @@ type), a dashed "New category" tile, a folded "Archived" list with Restore (409 
 toast with how many were recreated). `CategoryForm` is the single form: the picker uses it with a
 fixed type; the pages add the live preview, the type segment (locked with a `CATEGORY_TYPE_LOCKED`
 explanation when the category has history) and, on edit, "Archive category" with a confirmation.
+
+Reads go through `lib/local/repository` (O-F2a): `fetchCategories` and `fetchCategory` answer from
+the server while there is network and from the offline mirror when there is none, with the same
+shape either way. The usage counts still come from `stats/spending` and need the network — deriving
+them locally is O-F3. Writes are still plain API calls until the outbox lands (O-F4).

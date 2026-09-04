@@ -10,6 +10,10 @@ export const QUERY_DOMAINS = {
   home: ["home"],
 } as const;
 
+// Reads these can answer from the offline mirror, so their fetch must run instead of being paused
+// while offline (O-F2a). O-F2b adds the rest as each one starts reading locally.
+export const MIRROR_BACKED_DOMAINS = [QUERY_DOMAINS.accounts, QUERY_DOMAINS.categories];
+
 const MONEY_MOVEMENT_DOMAINS = [
   QUERY_DOMAINS.transactions,
   QUERY_DOMAINS.accounts,

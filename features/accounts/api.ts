@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { type AccountListParams, readAccount, readAccounts } from "@/lib/local/repository";
 import type {
   Account,
   AccountList,
@@ -7,19 +8,14 @@ import type {
   UpdateAccountInput,
 } from "@/types/api";
 
-export function fetchAccounts(
-  params: { includeArchived?: boolean; limit?: number } = {},
-): Promise<AccountList> {
-  return api<AccountList>("/accounts", {
-    query: {
-      includeArchived: params.includeArchived ? "true" : undefined,
-      limit: params.limit ?? 100,
-    },
-  });
+// Reads go through the repository, which falls back to the offline mirror; writes are still the
+// plain API call until the outbox lands (O-F4).
+export function fetchAccounts(params: AccountListParams = {}): Promise<AccountList> {
+  return readAccounts(params);
 }
 
 export function fetchAccount(id: string): Promise<Account> {
-  return api<Account>(`/accounts/${id}`);
+  return readAccount(id);
 }
 
 export function createAccount(input: CreateAccountInput): Promise<Account> {

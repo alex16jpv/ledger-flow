@@ -1,6 +1,7 @@
 import { ApiError, NetworkError } from "@/lib/api/errors";
 
 import { createQueryClient, retryDelayWithJitter, shouldRetryQuery } from "./client";
+import { QUERY_DOMAINS } from "./domains";
 import { cacheDatabaseName } from "./purge";
 
 describe("query client defaults", () => {
@@ -31,5 +32,13 @@ describe("query client defaults", () => {
     expect(client.getDefaultOptions().queries?.staleTime).toBe(30_000);
     expect(client.getDefaultOptions().mutations?.retry).toBe(0);
     expect(cacheDatabaseName("u1")).toBe("lf-cache-u1");
+  });
+
+  // Paused fetches never reach the repository, so the mirror could never answer them (O-F2a).
+  it("lets the mirror-backed domains fetch while offline, and pauses the rest", () => {
+    const client = createQueryClient();
+    expect(client.getQueryDefaults(QUERY_DOMAINS.accounts).networkMode).toBe("offlineFirst");
+    expect(client.getQueryDefaults(QUERY_DOMAINS.categories).networkMode).toBe("offlineFirst");
+    expect(client.getQueryDefaults(QUERY_DOMAINS.transactions).networkMode).toBeUndefined();
   });
 });

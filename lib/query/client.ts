@@ -2,6 +2,8 @@ import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 
 import { ApiError, NetworkError } from "@/lib/api/errors";
 
+import { MIRROR_BACKED_DOMAINS } from "./domains";
+
 export const DEFAULT_STALE_TIME_MS = 30_000;
 export const MAX_RETRY_DELAY_MS = 8_000;
 
@@ -17,7 +19,7 @@ export function shouldRetryQuery(failureCount: number, error: unknown): boolean 
 }
 
 export function createQueryClient(): QueryClient {
-  return new QueryClient({
+  const client = new QueryClient({
     queryCache: new QueryCache(),
     mutationCache: new MutationCache(),
     defaultOptions: {
@@ -30,4 +32,8 @@ export function createQueryClient(): QueryClient {
       mutations: { retry: 0 },
     },
   });
+  for (const queryKey of MIRROR_BACKED_DOMAINS) {
+    client.setQueryDefaults(queryKey, { networkMode: "offlineFirst" });
+  }
+  return client;
 }

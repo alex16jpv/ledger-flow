@@ -1,7 +1,7 @@
 import { api } from "@/lib/api/client";
+import { type CategoryListParams, readCategories, readCategory } from "@/lib/local/repository";
 import type {
   Category,
-  CategoryList,
   CreateCategoryInput,
   RestoreDefaultsResponse,
   RestoreInput,
@@ -12,31 +12,16 @@ import type {
 export type CategoryType = NonNullable<Category["type"]>;
 export type SpendingType = Extract<CategoryType, "EXPENSE" | "INCOME">;
 
-export interface CategoryFilters {
-  type?: CategoryType;
-  includeArchived?: boolean;
-}
+export type CategoryFilters = CategoryListParams;
 
-export async function fetchCategories(filters: CategoryFilters = {}): Promise<Category[]> {
-  const data: Category[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await api<CategoryList>("/categories", {
-      query: {
-        type: filters.type,
-        includeArchived: filters.includeArchived ? "true" : undefined,
-        limit: 100,
-        cursor,
-      },
-    });
-    data.push(...page.data);
-    cursor = page.pagination.hasMore ? (page.pagination.nextCursor ?? undefined) : undefined;
-  } while (cursor);
-  return data;
+// Reads go through the repository, which falls back to the offline mirror; writes are still the
+// plain API call until the outbox lands (O-F4).
+export function fetchCategories(filters: CategoryFilters = {}): Promise<Category[]> {
+  return readCategories(filters);
 }
 
 export function fetchCategory(id: string): Promise<Category> {
-  return api<Category>(`/categories/${id}`);
+  return readCategory(id);
 }
 
 export function createCategory(input: CreateCategoryInput): Promise<Category> {

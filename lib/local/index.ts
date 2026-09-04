@@ -15,8 +15,33 @@ export {
   type VaultHandle,
   VaultUnavailableError,
 } from "./db";
+export { PULL_STALE_MS, startMirror } from "./mirror";
 export { readStorageDurability, requestPersistentStorage, type StorageDurability } from "./persist";
+export {
+  PULL_PAGE_LIMIT,
+  pullChanges,
+  type PullOptions,
+  type PullPageFetcher,
+  type PullPageQuery,
+  type PullResult,
+  SyncFeedStalledError,
+} from "./pull";
 export { purgeVault, type VaultPurgeOptions, type VaultPurgeOutcome } from "./purge";
+export {
+  ACCOUNT_PAGE_LIMIT,
+  type AccountListParams,
+  CATEGORY_PAGE_LIMIT,
+  type CategoryListParams,
+  currentVault,
+  mirrorPage,
+  type MirrorReader,
+  read,
+  readAccount,
+  readAccounts,
+  readCategories,
+  readCategory,
+  setCurrentVault,
+} from "./repository";
 export {
   type AccountRecord,
   accountRecord,

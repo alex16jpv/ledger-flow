@@ -14,3 +14,7 @@ on creation (it becomes the immutable `openingBalance`), a live `AccountCard` pr
 a `409 DUPLICATE` is shown under the name with the case-insensitive explanation. The detail screen
 lives in the app layer because it composes the transactions of the account; the confirmation sheets
 (`MakeMainSheet`, `ArchiveAccountSheet`, `RestoreConflictSheet`) and `AccountHero` live here.
+
+Reads go through `lib/local/repository` (O-F2a): `fetchAccounts` and `fetchAccount` answer from the
+server while there is network and from the offline mirror when there is none, with the same shape
+either way. Writes are still plain API calls until the outbox lands (O-F4).

@@ -1043,3 +1043,50 @@ cover` is set once in the root layout for the standalone display.
   mirror and queueing writes. `SessionProvider` passes the safe default and warns when it keeps a
   queue; **the confirmation dialog that would pass `discardPendingWork: true` belongs to O-F5a/O-F6
   and does not exist yet**, so today unsent work always survives a logout.
+
+## 2026-09-03 · The mirror only answers when the network is gone, and the seam is one constant (O-F2a)
+
+- **Decision:** `features/*/api.ts` reads through `lib/local/repository`, whose `read()` calls the
+  server whenever the app has network and the mirror only when it does not. `READ_SOURCE` in
+  `repository/read.ts` is the single constant O-F2b flips to put the mirror in front always.
+- **Alternatives:** promoting the mirror to the primary path in this same item. Rejected by plan §6:
+  the two-step delivery is the safety mechanism of the whole offline stage, and the promotion is
+  conditioned on the 113+ Playwright specs and every screen test passing with the mirror in front.
+  Falling back on a `NetworkError` from the server instead of on the connectivity phase was also
+  rejected: it would serve stale rows during a real outage while the UI still claimed to be online.
+- **Consequence:** the online path is unchanged, so this item cannot break a screen that has network.
+  The mirror-backed code only runs offline, which is exactly the code whose failures are discovered
+  late — hence the tests that read the same data both ways and compare.
+
+## 2026-09-03 · A mirror that cannot answer says so, and the read falls through to the server (O-F2a)
+
+- **Decision:** a mirror reader returns `undefined` for "I cannot answer this", and `read()` then
+  asks the server. That covers an id the mirror never saw and a vault whose first snapshot never
+  finished (`meta.syncedAt` is written only by the page that drains the feed).
+- **Alternatives:** throwing a locally built `ApiError(404)` or `NetworkError`. Rejected: a
+  fabricated `requestId` is a lie in the one field support uses to trace a request, and a 404 for an
+  id we simply do not have locally is not true. Returning an empty list was rejected for the same
+  reason — a fresh device would render "no accounts yet" instead of an offline error.
+- **Consequence:** offline, the fall-through hits the network and fails with the real error the app
+  already knows how to present. Online, it is a normal request.
+
+## 2026-09-03 · Mirror-backed query domains fetch while offline (O-F2a)
+
+- **Decision:** `createQueryClient` gives `QUERY_DOMAINS.accounts` and `.categories`
+  `networkMode: "offlineFirst"` through `setQueryDefaults`. `MIRROR_BACKED_DOMAINS` in
+  `lib/query/domains.ts` is the list; O-F2b adds each domain as it starts reading locally.
+- **Alternatives:** changing the global default. Rejected: the transactions screen tells "offline
+  with nothing cached" apart by `fetchStatus === "paused"`, and that domain still reads from the
+  server. Per-hook options were rejected too — the item must not touch the hooks.
+- **Consequence:** without this the whole fallback would be dead code: React Query pauses a query
+  while `onlineManager` says offline, and a paused query never reaches its `queryFn`.
+
+## 2026-09-03 · The pull is scheduled by events, never by a timer (O-F2a)
+
+- **Decision:** `startMirror` pulls when the app opens, when it regains focus and the copy is older
+  than `PULL_STALE_MS` (5 min), and when the network comes back. `AppFrame` starts it for the
+  signed-in user, which is also where `requestPersistentStorage()` is finally called.
+- **Alternatives:** a background interval. Rejected by plan §4.2: a 30-second poll is 2 880 requests
+  a day per device even when nothing changes — worse than the traffic local-first exists to remove.
+- **Consequence:** freshness is bounded by user activity, which is the intended trade. Pulling right
+  after each push arrives with the outbox (O-F4).

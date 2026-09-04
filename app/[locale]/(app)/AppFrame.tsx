@@ -15,6 +15,7 @@ import { LOGIN_PATH } from "@/lib/auth/routes";
 import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
+import { startMirror } from "@/lib/local/mirror";
 import { HistoryTracker } from "@/lib/navigation/history";
 import { startHeartbeat } from "@/lib/network/heartbeat";
 import { SessionProvider, useSession } from "@/lib/session";
@@ -32,6 +33,8 @@ function Frame({ children }: { children: ReactNode }) {
     chain: false,
   });
   useEffect(() => startHeartbeat(), []);
+  const userId = session.user?.id;
+  useEffect(() => (userId ? startMirror(userId) : undefined), [userId]);
 
   const goToLogin = useCallback(() => {
     router.replace(`${LOGIN_PATH}?next=${encodeURIComponent(pathname)}`);
