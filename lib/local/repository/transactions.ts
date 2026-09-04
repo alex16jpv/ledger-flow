@@ -10,6 +10,7 @@ import type {
   TransactionList,
 } from "@/types/api";
 
+import { sumAmounts } from "../derive";
 import type { TransactionRecord, VaultSchema } from "../schema";
 import { read } from "./read";
 
@@ -124,8 +125,8 @@ async function queryMirror(
   }
 
   const data: Transaction[] = [];
+  const summed: number[] = [];
   let total = 0;
-  let cents = 0;
   let past = false;
   // Its own transaction: awaiting the pivot lookup first would let this one auto-commit mid-walk.
   const index = db.transaction("transactions").store.index("dateCursor");
@@ -133,8 +134,7 @@ async function queryMirror(
     const record = entry.value;
     if (!filter.matches(record)) continue;
     total += 1;
-    // Integer minor units, the way the server sums them: 0.1 + 0.2 in floats is not 0.30.
-    if (filter.includeSummary) cents += Math.round(record.row.amount * 100);
+    if (filter.includeSummary) summed.push(record.row.amount);
     if (pivot !== undefined && !past) {
       if (indexedDB.cmp(entry.key, pivot) >= 0) continue;
       past = true;
@@ -151,7 +151,8 @@ async function queryMirror(
     nextCursor: hasMore ? (data.at(-1)?.id ?? null) : null,
   };
   if (!filter.includeSummary) return { data, pagination };
-  return { data, pagination, summary: { totalAmount: cents / 100 } };
+  // The endpoint's own sum, added in minor units the way lib/local/derive adds every figure.
+  return { data, pagination, summary: { totalAmount: sumAmounts(summed) } };
 }
 
 export function readTransactions(query: TransactionQuery): Promise<TransactionList> {

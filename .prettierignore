@@ -8,3 +8,4 @@ types/api.d.ts
 tokens/
 plop-templates/
 public/
+lib/local/derive/fixtures/

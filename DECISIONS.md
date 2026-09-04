@@ -1174,3 +1174,19 @@ cover` is set once in the root layout for the standalone display.
   and flips both domains at once. The plumbing is already verified: against the running backend,
   `/accounts?limit=100`, `/categories?includeArchived=true&limit=100` and the pending tray with
   `includeSummary` are byte-identical to what the mirror answers, envelope included.
+
+## 2026-09-04 · Money derivations are pure functions with the fixtures vendored (O-F3 part 1)
+
+- **Decision:** `lib/local/derive` takes arrays and returns figures, with no IndexedDB inside, so the
+  very rows the backend verified against a real mongod are the rows the test feeds it. Balances and
+  the pending summary land first; `spent` and the day buckets are part 2. The parity fixtures are
+  copied verbatim into `lib/local/derive/fixtures/` and committed.
+- **Alternatives:** reading `auditoria/offline-fixtures/` from the test. Rejected because that folder
+  is in no repository and CI checks out only this one, so the parity test would never run where it
+  matters. A test that skips when the folder is missing would have been green in CI while proving
+  nothing. The vendored copy is guarded instead: on a machine that has the source folder, the test
+  compares the two byte for byte and fails on drift; in CI it skips with that reason in its name.
+- **Consequence:** `repository/transactions.ts` no longer does arithmetic — `includeSummary` calls
+  `sumAmounts`, the same adder every figure uses. Nothing paints a derived balance yet, and nothing
+  may until the projection is marked (invariant 2). Refreshing the fixtures now means copying them
+  into this repo as well; asked of the generator in `BACKEND-DESDE-FRONT.md`.

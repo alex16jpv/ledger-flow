@@ -15,6 +15,18 @@ export {
   type VaultHandle,
   VaultUnavailableError,
 } from "./db";
+export {
+  type AccountBalance,
+  type BalanceAccount,
+  type BalanceTransaction,
+  deriveBalances,
+  derivePendingSummary,
+  fromCents,
+  type PendingSummary,
+  type PendingTransaction,
+  sumAmounts,
+  toCents,
+} from "./derive";
 export { PULL_STALE_MS, startMirror } from "./mirror";
 export { readStorageDurability, requestPersistentStorage, type StorageDurability } from "./persist";
 export {

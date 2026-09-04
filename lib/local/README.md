@@ -3,9 +3,10 @@
 One IndexedDB database per user, `lf-vault-<userId>`. Two users on a device never cross; signing back
 in with the same `userId` finds the same vault **and the same outbox**.
 
-Delivered by O-F1 (the store and its migrations) and O-F2a (filling it, and reading accounts,
-categories, transactions and Home's non-money lists from it while offline). Deriving money locally
-is O-F3; the outbox is O-F4.
+Delivered by O-F1 (the store and its migrations), O-F2a (filling it, and reading accounts,
+categories, transactions and Home's non-money lists from it while offline) and O-F3 part 1
+(deriving balances and the pending summary). `spent` and the day buckets are O-F3 part 2; the
+outbox is O-F4.
 
 ## The hard line: disposable mirror, sacred outbox
 
@@ -123,6 +124,33 @@ its own envelope:
 - a query carrying a parameter the mirror does not apply is declined rather than answered, which is
   the same `undefined` contract as an id it never saw.
 
+## Deriving money: `derive/`
+
+Pure functions: they take arrays and return figures, and none of them opens IndexedDB. That is what
+lets the frontend feed them the very rows the backend checked against a real mongod, so the two
+sides cannot drift into disagreeing about the same money.
+
+- **Every figure is added in minor units** — multiply by 100, round, add integers, divide once at
+  the end. `1000 − 10.10 + 1500 − 7.77 − 100 − 3.45` as a running float is `2378.6800000000003`.
+- `deriveBalances` is `openingBalance` plus the effect of the live rows: an EXPENSE leaves its
+  `from`, an INCOME reaches its `to`, and a TRANSFER and an ADJUSTMENT move both. A deleted row
+  (`deletedAt`) leaves every figure; an archived one does not, and an archived account still gets a
+  balance. A row naming an account the mirror never saw is skipped rather than inventing one.
+- `derivePendingSummary` is the quick-add tray: the live rows with `pendingDetails`, oldest first,
+  with their count, their total and their ids.
+- `sumAmounts` is the one adder. `repository/transactions.ts` answers `includeSummary` with it, so
+  no arithmetic is left in the repository — that figure is the endpoint's own sum, not a projection.
+
+**A balance from here is a projection, never a figure the server sent.** Invariant 2 of the plan
+forbids painting one as if it were, so nothing renders these yet: the marking (the amber tone
+already designed) arrives with the outbox in O-F4/O-F5a.
+
+`fixtures/` holds `auditoria/offline-fixtures/` copied verbatim — that folder is in no repository
+and CI checks out only this one, so without the copy the parity test would never run where it
+counts. `parity.test.ts` compares the two byte for byte on any machine that has the source and
+fails on drift; in CI it skips, saying so in its name. Refresh it by re-running
+`npm run fixtures:offline` in the backend and copying the folder over.
+
 ## Persistence
 
 `startMirror` calls `requestPersistentStorage()` once, before the first pull writes anything.
@@ -146,8 +174,10 @@ not exist yet**, so today unsent work always survives a logout.
 
 ## Tests
 
-`npm run test` covers this directory against a real IndexedDB (`fake-indexeddb`, wired in
-`vitest.setup.ts`): the stores and every index key, both migration policies with 20 queued operations
+The derivations need no database at all, so `parity.test.ts` runs the four fixture scenarios
+(`cop-bogota`, `eur-madrid`, `jpy-tokyo`, `usd-new-york`) straight against `expected.balances` and
+`expected.pending`. Everything else `npm run test` covers against a real IndexedDB
+(`fake-indexeddb`, wired in `vitest.setup.ts`): the stores and every index key, both migration policies with 20 queued operations
 inside, the blocked path, the purge rules, the multi-page pull with its overlap and its stalled feed,
 the four rules of the read seam, accounts, categories, transactions and Home's lists answering the
 same thing online and offline, and budgets declining rather than answering without `spent`. Use `openTestVault` from `lib/testing/vault` — it
