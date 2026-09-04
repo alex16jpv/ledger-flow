@@ -8,7 +8,8 @@ export default {
   },
   parserPreset: {
     parserOpts: {
-      issuePrefixes: ["W-"],
+      // W-nn is the Fase 2 redesign backlog; O-Fn and O-Bn are the offline plan's items.
+      issuePrefixes: ["W-", "O-F", "O-B"],
     },
   },
 };

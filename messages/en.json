@@ -435,6 +435,8 @@
     "IDEMPOTENCY_KEY_INVALID": "Something went wrong sending this. Try again.",
     "IDEMPOTENCY_PAYLOAD_MISMATCH": "This request changed since the last try. Sending it again.",
     "IDEMPOTENCY_ORIGINAL_DELETED": "The original entry was deleted. Save it again as a new one.",
+    "ID_TAKEN": "That entry was already saved with a different content. It will be saved again under a new reference.",
+    "STALE_UPDATE": "Someone changed this from another device. Reload it to see the latest version.",
     "REFRESH_INVALID": "Your session ended. Sign in again.",
     "REFRESH_REVOKED": "Your session ended. Sign in again.",
     "CURRENT_PASSWORD_INVALID": "Your current password is wrong.",

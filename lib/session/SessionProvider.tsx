@@ -13,6 +13,7 @@ import {
 
 import { setUnauthorizedHandler } from "@/lib/api/client";
 import { noteRefreshedElsewhere, refreshSession } from "@/lib/api/refresh";
+import { purgeVault } from "@/lib/local/purge";
 import { purgePersistedCaches } from "@/lib/query/purge";
 import { themeStore } from "@/lib/theme/store";
 import type { User } from "@/types/api";
@@ -66,10 +67,20 @@ export function SessionProvider({
     };
   }, []);
 
+  const userId = query.data?.user.id ?? null;
+
+  // Explicit logout only: an expired session leaves the vault alone, because the app keeps working
+  // offline and its queue outlives the session (D-7, invariant 7). The mirror always goes, so the
+  // next user on this device sees nothing; unsent work is kept until O-F5a can offer the choice.
   const endLocalSession = useCallback(async () => {
     queryClient.clear();
     await purgePersistedCaches();
-  }, [queryClient]);
+    if (!userId) return;
+    const outcome = await purgeVault(userId);
+    if (outcome.operationsKept > 0) {
+      console.warn(`ledger-flow: kept ${outcome.operationsKept} unsent operations after logout`);
+    }
+  }, [queryClient, userId]);
 
   useEffect(() => {
     return tabChannel.subscribe((message) => {

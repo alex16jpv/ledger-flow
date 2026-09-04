@@ -96,6 +96,7 @@ components/shell/    AppShell, Sidebar, TabBar, Fab, PageHeader, ConnectionBanne
 features/<domain>/   api.ts · keys.ts · hooks.ts · schemas.ts · components/ · README.md
 lib/api              HTTP client, ApiError, error taxonomy, idempotency, single-flight refresh
 lib/query            QueryClient defaults and persistence
+lib/local            offline vault: IndexedDB schema, migrations, storage grant, vault purge
 lib/i18n             next-intl config, money and date formatting
 lib/theme            palette and mode
 lib/icons            curated Lucide map and CategoryIcon

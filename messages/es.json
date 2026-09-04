@@ -435,6 +435,8 @@
     "IDEMPOTENCY_KEY_INVALID": "Algo falló al enviar esto. Inténtalo de nuevo.",
     "IDEMPOTENCY_PAYLOAD_MISMATCH": "Esta solicitud cambió desde el último intento. Enviándola de nuevo.",
     "IDEMPOTENCY_ORIGINAL_DELETED": "El registro original fue eliminado. Guárdalo de nuevo como uno nuevo.",
+    "ID_TAKEN": "Ese registro ya se guardó con otro contenido. Se guardará de nuevo con una referencia nueva.",
+    "STALE_UPDATE": "Alguien cambió esto desde otro dispositivo. Vuelve a cargarlo para ver la versión más reciente.",
     "REFRESH_INVALID": "Tu sesión terminó. Entra de nuevo.",
     "REFRESH_REVOKED": "Tu sesión terminó. Entra de nuevo.",
     "CURRENT_PASSWORD_INVALID": "Tu contraseña actual es incorrecta.",

@@ -973,3 +973,73 @@ cover` is set once in the root layout for the standalone display.
 - **Not automated:** GitHub branch protection, the Vercel environment variables, the Sentry
   project and the `BACKEND_REPO_TOKEN`/`SENTRY_AUTH_TOKEN` secrets are console settings for the
   owner; the checklist lives in `auditoria/front/puertas/F5/README.md`.
+
+## 2026-09-03 · One database per user holds both the mirror and the outbox (O-F1)
+
+- **Decision:** the vault is a single IndexedDB database per user, `lf-vault-<userId>`, holding the
+  five mirror stores, the `outbox` and `meta` together.
+- **Alternatives:** two databases (`lf-vault-*` for the mirror, `lf-outbox-*` for the queue), which
+  would make "dropping the mirror never drops the outbox" structurally impossible to get wrong.
+  Rejected because **IndexedDB transactions cannot span two databases**, and O-F4 requires writing
+  the entity and its operation in one transaction (plan §4.1) — that is the difference between a
+  ghost movement and a saved one. Atomicity is a platform constraint; separation is a discipline we
+  can enforce with code and tests, so the discipline gives way.
+- **Consequence:** invariant 7 is protected by code, not by structure: nothing ever calls
+  `deleteDatabase` on a vault, the mirror reset transaction deliberately does not include the
+  `outbox` store, and both rules have a test that fails when they are broken.
+
+## 2026-09-03 · Three version numbers, because the two halves migrate by opposite rules (O-F1)
+
+- **Decision:** `VAULT_SCHEMA_VERSION` is the physical IndexedDB version and only ever creates
+  stores and indexes. `MIRROR_VERSION` and `OUTBOX_VERSION` are logical, live in `meta`, and are
+  reconciled on every open. Bumping the mirror clears it and drops the cursor, so the next pull is a
+  full snapshot. Bumping the outbox runs an explicit migration per operation; if any operation
+  cannot be carried forward, **nothing is written**, the vault reports `outbox: "blocked"` and the
+  version stays where it was until the queue drains.
+- **Alternatives:** doing both inside `upgradeneeded`. Rejected: a `versionchange` transaction
+  cannot await outside work, and aborting it to "block" the upgrade leaves the database in a state
+  that is far harder to reason about than simply not bumping a number in `meta`. A single version
+  for everything was also rejected: the two halves have opposite policies, so one number would force
+  the safe one to follow the disposable one.
+- **Consequence:** a logical bump needs no structural bump and vice versa. `migrateOperation` only
+  walks forward, so a queue written by a newer build blocks an older one instead of being
+  reinterpreted with fields it does not know.
+
+## 2026-09-03 · The mirror stores the feed row verbatim, with index keys alongside it (O-F1)
+
+- **Decision:** every mirror record is `{ id, row, updatedAt, …index keys }`, where `row` is exactly
+  what `GET /sync/changes` sent. Booleans and nulls are **not valid IndexedDB keys**, so flags are
+  stored as `0`/`1` (`archived`, `deleted`) and anything the index must skip is _omitted_:
+  `liveDate` is absent on tombstones, `pendingReview` is present only on live rows that need review,
+  and null foreign keys are left out rather than stored as null.
+- **Alternatives:** spreading the index keys flat onto the row. Rejected: `lib/local/derive` (O-F3)
+  is verified against `auditoria/offline-fixtures/`, and it has to receive the server's shape
+  untouched for that comparison to mean anything.
+- **Consequence:** reads unwrap `record.row`. The compound `dateCursor` index is `["liveDate", "id"]`
+  — IndexedDB skips a record when any part of a compound key path is missing, which is what keeps
+  the transaction list cursor from ever walking a tombstone, and the `id` half is what breaks ties
+  between two transactions on the same date.
+
+## 2026-09-03 · `idb` as a direct dependency (O-F1)
+
+- **Decision:** `idb@8.0.3` (exact), as recommended by the plan §6. It was already in the tree as a
+  transitive dependency of `serwist`, so it dedupes and costs ~1.2 kB gz.
+- **Alternatives:** a hand-written promise wrapper (~150 lines). Rejected: it is code we would own
+  and test for no gain, and `idb` gives a typed schema (`DBSchema`) plus the transaction handling
+  that O-F4's atomic mirror+outbox write depends on.
+- **Consequence:** `fake-indexeddb` joins as a devDependency, wired in `vitest.setup.ts`: jsdom has
+  no IndexedDB, and the migration tests this item requires have to run inside `npm run ci`.
+
+## 2026-09-03 · Purging is never automatic, and the outbox outlives the session (O-F1)
+
+- **Decision:** `lib/query/purge.ts` changes contract. `purgePersistedCaches()` runs on an explicit
+  logout and nowhere else, and never matches the `lf-vault-` prefix. The vault has its own
+  `purgeVault(userId, { discardPendingWork })`: the mirror is cleared every time, because it is
+  disposable and the next user on the device must not see it; unsent operations are kept unless the
+  caller says otherwise, and the outcome reports how many were kept or discarded.
+- **Alternatives:** refusing to purge anything while the queue is non-empty. Rejected: on a shared
+  device that would leave one user's data readable by the next one.
+- **Consequence:** an expired session touches nothing (D-7, invariant 7) — the app keeps reading the
+  mirror and queueing writes. `SessionProvider` passes the safe default and warns when it keeps a
+  queue; **the confirmation dialog that would pass `discardPendingWork: true` belongs to O-F5a/O-F6
+  and does not exist yet**, so today unsent work always survives a logout.
