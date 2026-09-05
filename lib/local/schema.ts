@@ -79,6 +79,10 @@ export interface OutboxOperation {
   // Set once, by the engine, after a `409 ID_TAKEN` moved the row to a new id (F-21). A second
   // collision on a fresh UUID v7 is a bug, not luck, so it is never re-minted twice.
   reminted?: true;
+  // The row as the server had it when it refused the write, straight from the `409 STALE_UPDATE`
+  // (O-B2). The resolution sheet reads it: the mirror cannot answer for the server, it holds this
+  // device's projection.
+  serverRow?: unknown;
 }
 
 export interface VaultSchema extends DBSchema {

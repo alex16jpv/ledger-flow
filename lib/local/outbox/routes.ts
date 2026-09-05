@@ -71,7 +71,8 @@ async function putCategory(tx: WriteTransaction, row: Category): Promise<void> {
 }
 
 async function putTransaction(tx: WriteTransaction, row: Transaction): Promise<void> {
-  await tx.objectStore("transactions").put(transactionRecord({ ...row, deletedAt: null }));
+  const deletedAt = (row as { deletedAt?: string | null }).deletedAt ?? null;
+  await tx.objectStore("transactions").put(transactionRecord({ ...row, deletedAt }));
 }
 
 // The view the API answers with drops what only the stored row carries — the override map, the
@@ -238,3 +239,14 @@ export const ROUTES: Record<RouteKey, Route> = {
 
 export const routeFor = (entity: OutboxEntity, action: string): Route =>
   ROUTES[`${entity}:${action}` as RouteKey];
+
+// How a row the server sent enters the mirror, by entity rather than by route: resolving a conflict
+// puts back the row the 409 answered with, and the action it belongs to may be one that writes
+// nothing on success (a delete keeps its tombstone).
+export const PUT_ROW: Record<OutboxEntity, (tx: WriteTransaction, row: unknown) => Promise<void>> =
+  {
+    account: (tx, row) => putAccount(tx, row as Account),
+    category: (tx, row) => putCategory(tx, row as Category),
+    transaction: (tx, row) => putTransaction(tx, row as Transaction),
+    budget: (tx, row) => mergeBudget(tx, row as Budget),
+  };

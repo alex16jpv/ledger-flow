@@ -3,6 +3,7 @@ import { connectivityStore } from "@/lib/network/connectivity";
 
 import { currentVault } from "../repository/read";
 import { type Cancelled, coalesce, type Collapsed } from "./coalesce";
+import { conflictKind } from "./conflict";
 import { isRemoval, newEntityId, operationPayload } from "./envelope";
 import {
   markOperation,
@@ -22,6 +23,10 @@ import { outboxStatusStore, refreshOutboxStatus } from "./status";
 export const BACKOFF_MIN_MS = 1_000;
 export const BACKOFF_MAX_MS = 60_000;
 
+// How many times a text-only edit may rebase itself onto a fresh stamp before it stops being bad
+// luck and starts being a row somebody else is writing continuously. Then it asks, like the rest.
+export const AUTO_MERGE_ATTEMPTS = 5;
+
 // What the service worker of O-F6 will register and post back. Registering the tag is harmless
 // where no worker handles it yet, and the listener is what turns a wake-up into a drain.
 export const OUTBOX_SYNC_TAG = "ledger-flow-outbox";
@@ -33,6 +38,7 @@ export type DrainOutcome =
   | { kind: "absorbed"; into: number }
   | { kind: "queued"; code: string }
   | { kind: "conflict" }
+  | { kind: "merged" }
   | { kind: "rejected"; error: unknown }
   | { kind: "held"; on: string }
   | { kind: "reminted"; entityId: string };
@@ -98,6 +104,9 @@ function takeRollbacks(seqs: number[]): ((tx: WriteTransaction) => Promise<void>
 const forget = (seqs: number[]): void => {
   for (const seq of seqs) rollbacks.delete(seq);
 };
+
+// Resolving a conflict settles operations the engine never sent: their rollbacks go with them.
+export const forgetRollbacks = forget;
 
 // Drops an operation and everything folded into it in one transaction, together with whatever the
 // server's answer leaves in the mirror.
@@ -214,9 +223,29 @@ async function sendPlanned(
         return result;
       }
       if (isConflict(error)) {
-        // The user's edit is neither lost nor applied: the resolution sheet is O-F5a. Until then the
-        // queue holds it, the figures stay marked, and only what named this row waits with it.
-        await markOperation(db, seq, "conflict", "STALE_UPDATE");
+        const current = error instanceof ApiError ? error.current : undefined;
+        const stamp = stampOf(current);
+        // §6 O-F5a: an edit that only carries text merges by itself over the stamp the server
+        // answered with — the API's PUT is a partial update, so the other device's other fields
+        // survive. A stamp that did not move would only conflict again, so it is not retried.
+        if (
+          conflictKind(operation) === "text" &&
+          stamp !== undefined &&
+          stamp !== operation.baseUpdatedAt &&
+          operation.attempts < AUTO_MERGE_ATTEMPTS
+        ) {
+          await markOperation(db, seq, "pending", "STALE_UPDATE", { baseUpdatedAt: stamp });
+          report.set(seq, { kind: "merged" });
+          result.progressed = true;
+          // The plan holds the guard this operation just moved: the pass looks at the queue again.
+          return result;
+        }
+        // Money or structure: the user's edit is neither lost nor applied, and the sheet is where
+        // it is decided. The queue holds it, the figures stay marked, and only what named this row
+        // waits with it. The server's own row rides along so the sheet needs no second request.
+        await markOperation(db, seq, "conflict", "STALE_UPDATE", {
+          ...(current === undefined ? {} : { serverRow: current }),
+        });
         blocked.add(entityId);
         report.set(seq, { kind: "conflict" });
         continue;

@@ -16,6 +16,15 @@ export {
 export { archiveCategory, createCategory, restoreCategory, updateCategory } from "./categories";
 export { coalesce } from "./coalesce";
 export {
+  type ConflictField,
+  conflictFields,
+  type ConflictKind,
+  conflictKind,
+  serverStamp,
+  TEXT_FIELDS,
+} from "./conflict";
+export {
+  AUTO_MERGE_ATTEMPTS,
   BACKOFF_MAX_MS,
   BACKOFF_MIN_MS,
   backoffDelay,
@@ -36,6 +45,7 @@ export {
 export { NotProjectableError } from "./projected";
 export { projectBalances, type ProjectedAccount } from "./projection";
 export { pendingOperations, queueWrite, type VaultDb, type WriteTransaction } from "./queue";
+export { discardOperation, operationsNeedingAttention, retryOperation } from "./resolve";
 export { ROUTES } from "./routes";
 export {
   EMPTY_OUTBOX,

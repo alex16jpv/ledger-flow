@@ -134,6 +134,7 @@ export interface ApiErrorInit {
   details?: ErrorResponse["details"];
   requestId: string;
   retryAfterSeconds?: number;
+  current?: unknown;
 }
 
 export class ApiError extends Error {
@@ -142,6 +143,9 @@ export class ApiError extends Error {
   readonly details: NonNullable<ErrorResponse["details"]>;
   readonly requestId: string;
   readonly retryAfterSeconds: number | undefined;
+  // What `409 STALE_UPDATE` carries: the row as the server has it, so a conflict can be shown
+  // without a second request (O-B2). Absent on every other error.
+  readonly current: unknown;
 
   constructor(init: ApiErrorInit) {
     super(init.message);
@@ -151,6 +155,7 @@ export class ApiError extends Error {
     this.details = init.details ?? [];
     this.requestId = init.requestId;
     this.retryAfterSeconds = init.retryAfterSeconds;
+    this.current = init.current;
   }
 }
 

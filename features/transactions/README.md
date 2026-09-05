@@ -52,4 +52,7 @@ so capture works the same with and without network. The idempotency key is the r
 each money operation records what it replaced so the balance projection knows what the server still
 has. `batchUpdateTransactions` queues one `transaction:update` per row and drains them in a single
 pass: one `If-Match` cannot guard N rows, so each row carries its own guard and its own outcome
-(F-20). Online that is N requests where it used to be one.
+(F-20). Online that is N requests where it used to be one. Since O-F5a a row whose own write is
+still queued says so: the amber "Pending sync" badge and the "saved on this device" meta, turning
+red ("Needs attention") once the server refused that write — the resolution sheet itself opens from
+the connection banner's "Review".

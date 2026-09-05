@@ -1,30 +1,49 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 import { Banner } from "@/components/ui/Banner";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { connectivityStore } from "@/lib/network/connectivity";
 
+import { SyncConflictSheet } from "./SyncConflictSheet";
+
 export function ConnectionBanner() {
   const t = useTranslations("states");
   const outbox = useOutbox();
+  const [reviewing, setReviewing] = useState<number | null>(null);
   const phase = useSyncExternalStore(
     connectivityStore.subscribe,
     connectivityStore.getSnapshot,
     connectivityStore.getServerSnapshot,
   );
 
-  // A conflict is the one thing the user has to act on, and it outlives coming back online. The
-  // sheet that resolves it arrives with O-F5a; until then the banner says how many are waiting.
-  if (outbox.conflicts > 0) {
+  // Something the user has to act on outlives coming back online, so it is checked before the
+  // network: a conflict, and a refusal the queue could not undo (F-23). "Review" opens the first of
+  // them in queue order; the tray that lists them all is the second half of O-F5a.
+  if (outbox.attention > 0) {
     return (
-      <Banner
-        variant="error"
-        title={t("conflicts.title")}
-        body={t("conflicts.body", { count: outbox.conflicts })}
-      />
+      <>
+        <Banner
+          variant="error"
+          title={t("conflicts.title")}
+          body={t("conflicts.body", { count: outbox.attention })}
+          action={{
+            label: t("conflicts.review"),
+            onClick: () => {
+              setReviewing(outbox.firstAttention);
+            },
+          }}
+        />
+        <SyncConflictSheet
+          open={reviewing !== null}
+          seq={reviewing}
+          onClose={() => {
+            setReviewing(null);
+          }}
+        />
+      </>
     );
   }
   if (phase === "offline") {

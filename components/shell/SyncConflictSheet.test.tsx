@@ -1,0 +1,150 @@
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+import { pendingOperations, refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
+import { setCurrentVault } from "@/lib/local/repository/read";
+import {
+  accountRecord,
+  categoryRecord,
+  type OutboxOperation,
+  profileRecord,
+  transactionRecord,
+} from "@/lib/local/schema";
+import { renderWithProviders } from "@/lib/testing/render";
+import {
+  account,
+  category,
+  openTestVault,
+  profile,
+  transaction,
+  wipeVaults,
+} from "@/lib/testing/vault";
+
+import { SyncConflictSheet } from "./SyncConflictSheet";
+
+const T0 = "2026-08-01T10:00:00.000Z";
+const T1 = "2026-09-04T12:00:00.000Z";
+
+const fetchMock = vi.fn<typeof fetch>();
+
+beforeEach(() => {
+  fetchMock.mockReset();
+  fetchMock.mockResolvedValue(
+    new Response("{}", { headers: { "content-type": "application/json" } }),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+});
+
+afterEach(async () => {
+  resetOutboxStatus();
+  setCurrentVault(null);
+  vi.unstubAllGlobals();
+  await wipeVaults();
+});
+
+async function vaultWith(operations: Partial<OutboxOperation>[]) {
+  const vault = await openTestVault("u1");
+  await vault.db.put("profile", profileRecord(profile()));
+  await vault.db.put("accounts", accountRecord(account({ id: "a1", name: "Cash" })));
+  await vault.db.put("categories", categoryRecord(category({ id: "c9", name: "Groceries" })));
+  await vault.db.put(
+    "transactions",
+    transactionRecord(transaction({ id: "t1", amount: 15, updatedAt: T0 })),
+  );
+  let seq = 0;
+  for (const overrides of operations) {
+    seq += 1;
+    await vault.db.put("outbox", {
+      seq,
+      opId: `op-${seq}`,
+      opVersion: 1,
+      entity: "transaction",
+      entityId: "t1",
+      action: "update",
+      occurredAt: "2026-09-04T10:00:00.000Z",
+      payload: { body: { amount: 15, categoryId: "c9" } },
+      dependsOn: [],
+      status: "conflict",
+      attempts: 1,
+      lastError: "STALE_UPDATE",
+      baseUpdatedAt: T0,
+      ...overrides,
+    });
+  }
+  await vault.db.put("meta", { key: "outboxSeq", value: seq });
+  setCurrentVault(vault);
+  await refreshOutboxStatus(vault.db);
+  return vault;
+}
+
+const server = transaction({ id: "t1", amount: 42, categoryId: "c9", updatedAt: T1 });
+
+describe("the Resolve sync conflict sheet", () => {
+  it("says it is reading the queue before it can show anything", async () => {
+    await vaultWith([{ serverRow: server }]);
+    renderWithProviders(<SyncConflictSheet open seq={1} onClose={vi.fn()} />);
+
+    expect(screen.getByText("Reading what’s waiting…")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("On the server")).toBeInTheDocument();
+    });
+  });
+
+  it("puts the two versions side by side and highlights the field in dispute", async () => {
+    await vaultWith([{ serverRow: server }]);
+    renderWithProviders(<SyncConflictSheet open seq={1} onClose={vi.fn()} />);
+
+    const cards = await screen.findAllByRole("heading", { level: 3 });
+    expect(cards.map((card) => card.textContent)).toEqual(["On the server", "On this device"]);
+    // The category both sides agree on is shown by name, not by id, and is not in dispute.
+    expect(screen.getAllByText("Groceries")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Keep this device’s version" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Use the server’s version" })).toBeInTheDocument();
+  });
+
+  it("keeps the server's version by discarding the operation, and never sends it", async () => {
+    const vault = await vaultWith([{ serverRow: server }]);
+    const onClose = vi.fn();
+    renderWithProviders(<SyncConflictSheet open seq={1} onClose={onClose} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Use the server’s version" }));
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+    expect(await pendingOperations(vault.db)).toEqual([]);
+    expect((await vault.db.get("transactions", "t1"))?.row.amount).toBe(42);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("shows a definitive refusal with its reason and offers discarding first", async () => {
+    await vaultWith([{ status: "failed", lastError: "RESOURCE_ARCHIVED", serverRow: undefined }]);
+    renderWithProviders(<SyncConflictSheet open seq={1} onClose={vi.fn()} />);
+
+    expect(await screen.findByText(/RESOURCE_ARCHIVED/)).toBeInTheDocument();
+    const buttons = screen.getAllByRole("button", { name: /Discard this change|Try again/ });
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      "Discard this change",
+      "Try again",
+    ]);
+    expect(screen.queryByText("On the server")).not.toBeInTheDocument();
+  });
+
+  it("says there is nothing left when the operation is no longer waiting", async () => {
+    await vaultWith([]);
+    renderWithProviders(<SyncConflictSheet open seq={1} onClose={vi.fn()} />);
+
+    expect(await screen.findByText("Nothing left to resolve")).toBeInTheDocument();
+    // The sheet's own dismiss and the footer's way out.
+    expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(2);
+  });
+
+  it("warns before overwriting a server version it was never told", async () => {
+    await vaultWith([{ serverRow: undefined }]);
+    renderWithProviders(<SyncConflictSheet open seq={1} onClose={vi.fn()} />);
+
+    expect(await screen.findByText(/The server didn’t say what it has/)).toBeInTheDocument();
+    expect(screen.queryByText("On the server")).not.toBeInTheDocument();
+    expect(screen.getByText("On this device")).toBeInTheDocument();
+  });
+});

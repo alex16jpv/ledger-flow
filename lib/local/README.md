@@ -226,12 +226,13 @@ and the screen agree by construction: with an empty queue the projection is the 
 and with a queue it equals `deriveBalances` over the optimistic rows. `repository/accounts.ts`
 applies it, so Accounts is the first screen to paint a projected figure.
 
-**Marking (invariant 2, F-16).** `outboxStatusStore` says how much is queued, how much is in
-conflict, and which families of figures the queue can move; `useOutbox()` reads it and
-`components/ui/Projected` puts the amber `cloud-off` mark next to the figure (DESIGN §8.12).
-Balances, `spent` and its progress bars, Home's month and day bars, the Statistics total and its
-bars, and Movements' period summary carry it. The per-row "Pending sync" badge and the conflict
-sheet are O-F5a.
+**Marking (invariant 2, F-16).** `outboxStatusStore` says how much is queued, how much needs a
+decision, which rows those are, and which families of figures the queue can move; `useOutbox()`
+reads it and `components/ui/Projected` puts the amber `cloud-off` mark next to the figure
+(DESIGN §8.12). Balances, `spent` and its progress bars, Home's month and day bars, the Statistics
+total and its bars, and Movements' period summary carry it. A movement whose own write is still
+queued also says so on its row: the amber "Pending sync" badge and the "saved on this device" meta,
+turning to a red "Needs attention" once the server refused that write.
 
 ## Draining it: the engine
 
@@ -276,6 +277,39 @@ the only way in.
   operation that outlived its tab has none: it stays queued as `failed` rather than vanishing, and
   the tray that shows it is O-F5a. The same goes for a fold with only some of its rollbacks left:
   undoing half of it would leave the mirror at an edit the server never got, so the whole run stays.
+- **A `409 STALE_UPDATE`** is either merged by the engine or handed to the user; see below.
+
+## Resolving what the queue cannot: `conflict.ts` and `resolve.ts`
+
+A `409 STALE_UPDATE` means the row moved under the operation's guard. What happens next is decided
+in the front, in one place, because the server does not need to know which fields are text (§6
+O-F5a):
+
+- **`conflict.ts` classifies the operation, not the diff.** An **edit** whose body carries only
+  `description`, `note`, `tags`, `name`, `color` or `icon` is `"text"`; anything else — money, a
+  category, a date, a create, a removal, making an account the default — is `"structural"`.
+- **Text merges itself.** The engine rewrites the guard to the stamp the 409 answered with and puts
+  the operation back in line, without a word to the user. The API's `PUT` is a partial update, so
+  the other device's other fields survive; the two edits both land. It gives up after
+  `AUTO_MERGE_ATTEMPTS`, and never retries against a stamp that did not move — that would only
+  conflict again.
+- **Money and structure ask.** The operation becomes `conflict`, and the row the server answered
+  with rides along in the envelope's `serverRow`. That is why the sheet needs no second request, and
+  why it can show a version the mirror no longer holds: the mirror holds **this device's**
+  projection.
+- **The sheet resolves it two ways** (`resolve.ts`). `discardOperation` settles the operation
+  without ever sending it and puts `serverRow` back in the mirror — the server never received the
+  write, so no pull would correct it. Discarding a **create** takes with it everything that named
+  that row in `dependsOn`, transitively, and the row itself: it will never exist on the server.
+  `retryOperation` puts the operation back as `pending` with the server's stamp as its guard and
+  `attempts` at zero, then asks for a drain.
+- **Each queued operation earns its own decision.** Resolving one does not rebase the guards of the
+  others on that row: D-22 only rebases what an answer from the server has just proved, and a choice
+  about one field is not a choice about the next one. The common case costs nothing, because a
+  text-only follow-up merges itself.
+
+`ConnectionBanner`'s red stripe counts conflicts **and** definitive refusals (F-23) and its "Review"
+opens the first of them in queue order. The tray that lists them all is the second half of O-F5a.
 
 ## Persistence
 

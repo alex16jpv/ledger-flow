@@ -1,6 +1,8 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
+import { setCurrentVault } from "@/lib/local/repository/read";
 import type { OutboxOperation } from "@/lib/local/schema";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { renderWithProviders } from "@/lib/testing/render";
@@ -29,12 +31,14 @@ function operation(seq: number, overrides: Partial<OutboxOperation> = {}): Outbo
 async function queueOf(operations: OutboxOperation[]): Promise<void> {
   const vault = await openTestVault("u1");
   for (const entry of operations) await vault.db.put("outbox", entry);
+  setCurrentVault(vault);
   await refreshOutboxStatus(vault.db);
 }
 
 afterEach(async () => {
   resetOutboxStatus();
   connectivityStore.reset();
+  setCurrentVault(null);
   await wipeVaults();
 });
 
@@ -62,5 +66,25 @@ describe("ConnectionBanner", () => {
     await queueOf([operation(1, { status: "conflict" })]);
     renderWithProviders(<ConnectionBanner />);
     expect(screen.getByRole("alert")).toHaveTextContent("1 change could not sync");
+  });
+
+  it("counts a refusal the queue could not undo as well (F-23)", async () => {
+    await queueOf([
+      operation(1, { status: "failed", lastError: "RESOURCE_ARCHIVED" }),
+      operation(2, { status: "conflict" }),
+    ]);
+    renderWithProviders(<ConnectionBanner />);
+    expect(screen.getByRole("alert")).toHaveTextContent("2 changes could not sync");
+  });
+
+  it("opens the first stuck operation from Review", async () => {
+    await queueOf([operation(1), operation(2, { status: "conflict" })]);
+    renderWithProviders(<ConnectionBanner />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Review" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toHaveTextContent("Resolve sync conflict");
+    });
   });
 });

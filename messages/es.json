@@ -317,7 +317,8 @@
     },
     "conflicts": {
       "title": "Algunos cambios necesitan tu atención.",
-      "body": "{count, plural, one {# cambio no se pudo sincronizar} other {# cambios no se pudieron sincronizar}}"
+      "body": "{count, plural, one {# cambio no se pudo sincronizar} other {# cambios no se pudieron sincronizar}}",
+      "review": "Revisar"
     },
     "projected": "Incluye cambios sin sincronizar",
     "sessionExpired": {
@@ -330,7 +331,77 @@
       "title": "Página no encontrada",
       "body": "Tu dinero está donde lo dejaste.",
       "cta": "Ir a Inicio"
-    }
+    },
+    "conflict": {
+      "title": "Resolver conflicto de sincronización",
+      "loading": "Leyendo lo que está esperando…",
+      "empty": {
+        "title": "No queda nada por resolver",
+        "body": "Este cambio ya no está esperando a sincronizarse."
+      },
+      "stale": {
+        "title": "Cambiado en dos sitios.",
+        "body": "Este {what} cambió en otro sitio mientras este dispositivo estaba sin conexión. Elige la versión que se queda."
+      },
+      "failed": {
+        "title": "El servidor rechazó este cambio.",
+        "body": "No se aplicó ni aquí ni allí. Motivo: {reason}. Al descartarlo, este {what} vuelve a lo que tiene el servidor.",
+        "unknown": "desconocido"
+      },
+      "noServerRow": "El servidor no dijo qué tiene. Si te quedas con la versión de este dispositivo, la sobrescribirás.",
+      "server": "En el servidor",
+      "device": "En este dispositivo",
+      "keepMine": "Quedarme con lo de este dispositivo",
+      "keepServer": "Usar la versión del servidor",
+      "discard": "Descartar este cambio",
+      "retry": "Intentar de nuevo",
+      "none": "—",
+      "yes": "Sí",
+      "no": "No",
+      "entities": {
+        "account": "cuenta",
+        "category": "categoría",
+        "transaction": "movimiento",
+        "budget": "presupuesto"
+      },
+      "actions": {
+        "create": "Este dispositivo pidió crear este {what}.",
+        "quickAdd": "Este dispositivo pidió registrar este {what}.",
+        "update": "Este dispositivo pidió editar este {what}.",
+        "delete": "Este dispositivo pidió eliminar este {what}.",
+        "archive": "Este dispositivo pidió archivar este {what}.",
+        "restore": "Este dispositivo pidió restaurar este {what}.",
+        "setDefault": "Este dispositivo pidió hacer principal este {what}.",
+        "setOverride": "Este dispositivo pidió cambiar el importe de este {what} para un período.",
+        "clearOverride": "Este dispositivo pidió quitar el importe de este {what} para un período."
+      },
+      "fields": {
+        "name": "Nombre",
+        "type": "Tipo",
+        "color": "Color",
+        "icon": "Icono",
+        "currency": "Moneda",
+        "initialBalance": "Saldo inicial",
+        "creditLimit": "Cupo",
+        "amount": "Importe",
+        "date": "Fecha",
+        "description": "Descripción",
+        "note": "Nota",
+        "tags": "Etiquetas",
+        "categoryId": "Categoría",
+        "categoryIds": "Categorías",
+        "fromAccountId": "Desde",
+        "toAccountId": "Hasta",
+        "pendingDetails": "Por revisar",
+        "effectiveFrom": "Vigente desde",
+        "periodType": "Período",
+        "periodStartDate": "El período empieza",
+        "periodEndDate": "El período termina"
+      }
+    },
+    "pendingSync": "Pendiente de sincronizar",
+    "needsAttention": "Necesita tu atención",
+    "savedHere": "Guardado en este dispositivo"
   },
   "dev": {
     "title": "Catálogo de componentes",

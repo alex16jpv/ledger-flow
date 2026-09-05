@@ -1391,3 +1391,56 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** `dependsOn` is an order as well as a hold. Re-minting an account now also rewrites
   the `effect` rows of the movements queued against it, so the projected balance of the new id keeps
   them.
+
+## 2026-09-04 · A text-only conflict merges itself; money and structure ask (O-F5a part 1)
+
+- **Decision:** the field classification of the offline plan (§6 O-F5a) lives in
+  `lib/local/outbox/conflict.ts` and looks at the **operation**, not at the diff: an `update` whose
+  body carries only `description`, `note`, `tags`, `name`, `color` or `icon` is text, and on a
+  `409 STALE_UPDATE` the engine rewrites its guard to the stamp the server answered with and puts it
+  back in line without a word to the user. Anything else — money, a category, a date, a create, a
+  removal — becomes `conflict` and waits for the sheet. The merge gives up after
+  `AUTO_MERGE_ATTEMPTS` (5) and never retries against a stamp that did not move.
+- **Why it is safe:** every `PUT` of the API takes each field as optional, so a body of text fields
+  is a partial update: retrying it over the new stamp keeps whatever the other device wrote in the
+  other fields. Verified against the real backend — an offline `description` and another device's
+  `amount` both survive.
+- **Alternatives:** classifying the diff (a text field that happens to match would stop being a
+  conflict, which is right, but a money field that matches would silently merge too — and the
+  server's row is exactly what the user has to see before that happens); putting the list in the
+  backend (two copies in two repos, and `POST /sync` would have to grow a vocabulary it does not
+  need).
+- **Consequence:** the common two-device case — renaming a category, fixing a description — never
+  reaches the user, and the sheet only ever opens on a decision that is genuinely one.
+
+## 2026-09-04 · The 409's `current` travels in the envelope, not in the mirror (O-F5a part 1)
+
+- **Decision:** `ApiError` carries `current` (the row the backend puts in a `409 STALE_UPDATE`, O-B2)
+  and the engine stores it on the operation as `serverRow`. The sheet reads the two versions from
+  the envelope alone: `payload.body` is what this device wanted, `serverRow` is what the server had.
+- **Alternatives:** re-reading the row after a pull. Rejected: the mirror holds **this device's**
+  projection of that row, so it can only answer for one of the two sides, and a pull that had not
+  run yet would leave the sheet with nothing to show. It also costs a request per conflict.
+- **Consequence:** `current` is not in the OpenAPI schema, so the client reads it as an untyped field
+  of the error body. If the backend ever stops sending it the sheet still opens, warns that the
+  server's version is unknown, and offers the same two ways out.
+
+## 2026-09-04 · Discarding a create takes its dependents with it (O-F5a part 1)
+
+- **Decision:** `discardOperation` settles the operation without sending it and puts `serverRow`
+  back in the mirror. When what is discarded is a **create**, everything that names that row in
+  `dependsOn` goes too, transitively, and the row leaves the mirror.
+- **Why:** the server never saw that id, so no pull would ever correct the mirror, and an operation
+  addressing it would ask about a row nobody has — it would sit held forever, keeping the amber on.
+- **Consequence:** discarding one refused create can remove several queued operations. The result
+  says how many, and the tray of part 2 is where that number is shown before the user confirms.
+
+## 2026-09-04 · Resolving one operation does not rebase the others on its row (O-F5a part 1)
+
+- **Decision:** neither discarding nor retrying moves the guard of the operations queued behind it on
+  the same row. Each earns its own 409 and its own resolution.
+- **Alternatives:** applying the user's choice to the whole chain. Rejected: D-22 rebases only what
+  an answer from the server has just proved, and "keep my amount" is not "keep my category". The
+  common case costs nothing anyway, because a text-only follow-up merges itself.
+- **Consequence:** a chain of structural edits on one row can open the sheet more than once. That is
+  the honest number of decisions, not a defect.

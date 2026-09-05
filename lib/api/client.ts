@@ -61,7 +61,7 @@ async function readJson(response: Response): Promise<unknown> {
 }
 
 function toApiError(response: Response, payload: unknown, requestId: string): ApiError {
-  const body = (payload ?? {}) as Partial<ErrorResponse>;
+  const body = (payload ?? {}) as Partial<ErrorResponse> & { current?: unknown };
   return new ApiError({
     status: response.status,
     code: isErrorCode(body.code) ? body.code : null,
@@ -69,6 +69,9 @@ function toApiError(response: Response, payload: unknown, requestId: string): Ap
     details: body.details,
     requestId: response.headers.get(REQUEST_ID_HEADER) ?? requestId,
     retryAfterSeconds: parseRetryAfter(response.headers.get("retry-after")),
+    // Only `STALE_UPDATE` carries it, and it is not in the OpenAPI schema: the resolution sheet
+    // needs the server's own row, and this is the response that already has it (O-B2).
+    current: body.current,
   });
 }
 

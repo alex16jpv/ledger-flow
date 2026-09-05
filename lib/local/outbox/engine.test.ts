@@ -6,6 +6,7 @@ import { setCurrentVault } from "../repository/read";
 import { accountRecord, type OutboxOperation, profileRecord, transactionRecord } from "../schema";
 import { archiveAccount, createAccount, restoreAccount, updateAccount } from "./accounts";
 import {
+  AUTO_MERGE_ATTEMPTS,
   BACKOFF_MAX_MS,
   BACKOFF_MIN_MS,
   backoffDelay,
@@ -16,7 +17,7 @@ import {
 import { operationPayload } from "./envelope";
 import { projectBalances } from "./projection";
 import { pendingOperations, type VaultDb } from "./queue";
-import { outboxStatusStore, refreshOutboxStatus, resetOutboxStatus } from "./status";
+import { EMPTY_OUTBOX, outboxStatusStore, refreshOutboxStatus, resetOutboxStatus } from "./status";
 import {
   batchUpdateTransactions,
   createTransaction,
@@ -208,11 +209,7 @@ describe("the sync engine", () => {
     await requestSync();
 
     expect(await pendingOperations(vault.db)).toEqual([]);
-    expect(outboxStatusStore.getSnapshot()).toEqual({
-      pending: 0,
-      conflicts: 0,
-      projected: { balances: false, spending: false, budgets: false },
-    });
+    expect(outboxStatusStore.getSnapshot()).toEqual(EMPTY_OUTBOX);
   });
 
   it("pulls after a push, and only after one that reached the server", async () => {
@@ -744,5 +741,114 @@ describe("a batch of rows (F-20)", () => {
     // The refused row goes back to what the mirror held; the row that went through does not.
     expect((await vault.db.get("transactions", "t2"))?.row.categoryId).toBe("c1");
     expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+});
+
+describe("what a 409 STALE_UPDATE does (O-F5a)", () => {
+  const T0 = "2026-08-01T10:00:00.000Z";
+  const T1 = "2026-09-04T12:00:00.000Z";
+
+  const stale = (current?: unknown) =>
+    json(
+      {
+        error: "Conflict",
+        message: "The resource changed since you last read it",
+        code: "STALE_UPDATE",
+        ...(current === undefined ? {} : { current }),
+      },
+      { status: 409 },
+    );
+
+  it("merges a text-only edit over the stamp the server answered with, without asking", async () => {
+    const vault = await vaultWith();
+    await seed(vault.db, [
+      { seq: 1, entityId: "t1", baseUpdatedAt: T0, payload: { body: { description: "lunch" } } },
+    ]);
+    let answered = 0;
+    fetchMock.mockImplementation(() => {
+      answered += 1;
+      return Promise.resolve(
+        answered === 1
+          ? stale(transaction({ id: "t1", description: "elsewhere", updatedAt: T1 }))
+          : json(transaction({ id: "t1", description: "lunch", updatedAt: T1 })),
+      );
+    });
+
+    await requestSync();
+
+    expect(ifMatches()).toEqual([T0, T1]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+    expect(outboxStatusStore.getSnapshot().attention).toBe(0);
+  });
+
+  it("asks about money, and keeps the server's row for the sheet", async () => {
+    const vault = await vaultWith();
+    const server = transaction({ id: "t1", amount: 42, updatedAt: T1 });
+    await seed(vault.db, [
+      { seq: 1, entityId: "t1", baseUpdatedAt: T0, payload: { body: { amount: 15 } } },
+    ]);
+    fetchMock.mockImplementation(() => Promise.resolve(stale(server)));
+
+    await requestSync();
+
+    expect(calls()).toEqual(["PUT /api/transactions/t1"]);
+    const [queued] = await pendingOperations(vault.db);
+    expect(queued).toMatchObject({ status: "conflict", serverRow: server });
+    expect(outboxStatusStore.getSnapshot().attention).toBe(1);
+  });
+
+  it("does not retry a text edit against a stamp that did not move", async () => {
+    const vault = await vaultWith();
+    await seed(vault.db, [
+      { seq: 1, entityId: "t1", baseUpdatedAt: T0, payload: { body: { note: "later" } } },
+    ]);
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(stale(transaction({ id: "t1", updatedAt: T0 }))),
+    );
+
+    await requestSync();
+
+    expect(calls()).toEqual(["PUT /api/transactions/t1"]);
+    expect((await pendingOperations(vault.db)).map((entry) => entry.status)).toEqual(["conflict"]);
+  });
+
+  it("stops merging by itself and asks when the row will not stop moving", async () => {
+    const vault = await vaultWith();
+    await seed(vault.db, [
+      { seq: 1, entityId: "t1", baseUpdatedAt: T0, payload: { body: { description: "mine" } } },
+    ]);
+    let answered = 0;
+    fetchMock.mockImplementation(() => {
+      answered += 1;
+      return Promise.resolve(
+        stale(transaction({ id: "t1", updatedAt: `2026-09-04T12:0${answered}:00.000Z` })),
+      );
+    });
+
+    await requestSync();
+
+    expect(answered).toBe(AUTO_MERGE_ATTEMPTS + 1);
+    const [queued] = await pendingOperations(vault.db);
+    expect(queued).toMatchObject({ status: "conflict", attempts: AUTO_MERGE_ATTEMPTS + 1 });
+  });
+
+  it("still holds only what named the row it could not write", async () => {
+    const vault = await vaultWith();
+    await seed(vault.db, [
+      { seq: 1, entityId: "t1", baseUpdatedAt: T0, payload: { body: { amount: 15 } } },
+      { seq: 2, entityId: "t2", baseUpdatedAt: T0, payload: { body: { amount: 30 } } },
+    ]);
+    fetchMock.mockImplementation((input) =>
+      Promise.resolve(
+        urlOf(input).endsWith("t1")
+          ? stale(transaction({ id: "t1", updatedAt: T1 }))
+          : json(transaction({ id: "t2", updatedAt: T1 })),
+      ),
+    );
+
+    await requestSync();
+
+    expect(calls()).toEqual(["PUT /api/transactions/t1", "PUT /api/transactions/t2"]);
+    expect((await pendingOperations(vault.db)).map((entry) => entry.seq)).toEqual([1]);
   });
 });

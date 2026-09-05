@@ -181,12 +181,19 @@ export async function markOperation(
   seq: number,
   status: OutboxOperation["status"],
   lastError: string | null,
+  extra: Partial<OutboxOperation> = {},
 ): Promise<void> {
   const tx = writeTransaction(db);
   const store = tx.objectStore("outbox");
   const operation = await store.get(seq);
   if (operation) {
-    await store.put({ ...operation, status, lastError, attempts: operation.attempts + 1 });
+    await store.put({
+      ...operation,
+      status,
+      lastError,
+      attempts: operation.attempts + 1,
+      ...extra,
+    });
   }
   await tx.done;
 }

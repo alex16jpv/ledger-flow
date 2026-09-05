@@ -317,7 +317,8 @@
     },
     "conflicts": {
       "title": "Some changes need your attention.",
-      "body": "{count, plural, one {# change could not sync} other {# changes could not sync}}"
+      "body": "{count, plural, one {# change could not sync} other {# changes could not sync}}",
+      "review": "Review"
     },
     "projected": "Includes changes not yet synced",
     "sessionExpired": {
@@ -330,7 +331,77 @@
       "title": "Page not found",
       "body": "Your money is where you left it.",
       "cta": "Go home"
-    }
+    },
+    "conflict": {
+      "title": "Resolve sync conflict",
+      "loading": "Reading what’s waiting…",
+      "empty": {
+        "title": "Nothing left to resolve",
+        "body": "This change is no longer waiting to sync."
+      },
+      "stale": {
+        "title": "Changed in two places.",
+        "body": "This {what} changed somewhere else while this device was offline. Choose the version to keep."
+      },
+      "failed": {
+        "title": "The server refused this change.",
+        "body": "It was never applied, here or there. Reason: {reason}. Discarding it puts this {what} back to what the server has.",
+        "unknown": "unknown"
+      },
+      "noServerRow": "The server didn’t say what it has. Keeping this device’s version will overwrite it.",
+      "server": "On the server",
+      "device": "On this device",
+      "keepMine": "Keep this device’s version",
+      "keepServer": "Use the server’s version",
+      "discard": "Discard this change",
+      "retry": "Try again",
+      "none": "—",
+      "yes": "Yes",
+      "no": "No",
+      "entities": {
+        "account": "account",
+        "category": "category",
+        "transaction": "movement",
+        "budget": "budget"
+      },
+      "actions": {
+        "create": "This device asked to create this {what}.",
+        "quickAdd": "This device asked to capture this {what}.",
+        "update": "This device asked to edit this {what}.",
+        "delete": "This device asked to delete this {what}.",
+        "archive": "This device asked to archive this {what}.",
+        "restore": "This device asked to restore this {what}.",
+        "setDefault": "This device asked to make this {what} the default.",
+        "setOverride": "This device asked to change this {what}’s amount for one period.",
+        "clearOverride": "This device asked to remove this {what}’s amount for one period."
+      },
+      "fields": {
+        "name": "Name",
+        "type": "Type",
+        "color": "Color",
+        "icon": "Icon",
+        "currency": "Currency",
+        "initialBalance": "Initial balance",
+        "creditLimit": "Credit limit",
+        "amount": "Amount",
+        "date": "Date",
+        "description": "Description",
+        "note": "Note",
+        "tags": "Tags",
+        "categoryId": "Category",
+        "categoryIds": "Categories",
+        "fromAccountId": "From",
+        "toAccountId": "To",
+        "pendingDetails": "To review",
+        "effectiveFrom": "Effective from",
+        "periodType": "Period",
+        "periodStartDate": "Period starts",
+        "periodEndDate": "Period ends"
+      }
+    },
+    "pendingSync": "Pending sync",
+    "needsAttention": "Needs attention",
+    "savedHere": "Saved on this device"
   },
   "dev": {
     "title": "Component catalog",

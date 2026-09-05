@@ -12,15 +12,31 @@ export interface OutboxProjection {
 
 export interface OutboxStatus {
   pending: number;
-  conflicts: number;
+  // Conflicts AND definitive refusals: both are stuck until the user decides, and a `failed`
+  // operation the queue could not undo is as far from the server as one in conflict (F-23).
+  attention: number;
+  // The rows a screen can mark: everything with something queued, and the subset the user has to
+  // act on. Ids, not operations — a row badge asks "is this one waiting?" and nothing more.
+  queuedRows: ReadonlySet<string>;
+  attentionRows: ReadonlySet<string>;
+  // Where "Review" goes: the first operation, in queue order, that needs a decision.
+  firstAttention: number | null;
   projected: OutboxProjection;
 }
 
+const NO_ROWS: ReadonlySet<string> = new Set<string>();
+
 export const EMPTY_OUTBOX: OutboxStatus = {
   pending: 0,
-  conflicts: 0,
+  attention: 0,
+  queuedRows: NO_ROWS,
+  attentionRows: NO_ROWS,
+  firstAttention: null,
   projected: { balances: false, spending: false, budgets: false },
 };
+
+const needsAttention = (operation: OutboxOperation): boolean =>
+  operation.status === "conflict" || operation.status === "failed";
 
 function projectionOf(operations: OutboxOperation[]): OutboxProjection {
   // A queued movement moves every money figure at once: it is a row the server's aggregations have
@@ -38,19 +54,29 @@ function projectionOf(operations: OutboxOperation[]): OutboxProjection {
 }
 
 function summarise(operations: OutboxOperation[]): OutboxStatus {
+  const stuck = operations.filter(needsAttention);
   return {
     pending: operations.length,
-    conflicts: operations.filter((operation) => operation.status === "conflict").length,
+    attention: stuck.length,
+    queuedRows: new Set(operations.map((operation) => operation.entityId)),
+    attentionRows: new Set(stuck.map((operation) => operation.entityId)),
+    firstAttention: stuck[0]?.seq ?? null,
     projected: projectionOf(operations),
   };
 }
 
+const sameRows = (left: ReadonlySet<string>, right: ReadonlySet<string>): boolean =>
+  left.size === right.size && [...left].every((id) => right.has(id));
+
 const same = (left: OutboxStatus, right: OutboxStatus): boolean =>
   left.pending === right.pending &&
-  left.conflicts === right.conflicts &&
+  left.attention === right.attention &&
+  left.firstAttention === right.firstAttention &&
   left.projected.balances === right.projected.balances &&
   left.projected.spending === right.projected.spending &&
-  left.projected.budgets === right.projected.budgets;
+  left.projected.budgets === right.projected.budgets &&
+  sameRows(left.queuedRows, right.queuedRows) &&
+  sameRows(left.attentionRows, right.attentionRows);
 
 type Listener = () => void;
 
