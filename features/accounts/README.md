@@ -15,9 +15,9 @@ a `409 DUPLICATE` is shown under the name with the case-insensitive explanation.
 lives in the app layer because it composes the transactions of the account; the confirmation sheets
 (`MakeMainSheet`, `ArchiveAccountSheet`, `RestoreConflictSheet`) and `AccountHero` live here.
 
-Reads go through `lib/local/repository` (O-F2a): `fetchAccounts` and `fetchAccount` answer from the
-server while there is network and from the offline mirror when there is none, with the same shape
-either way. Writes go through `lib/local/outbox` (O-F4): the account lands in the mirror and its operation in
+Reads go through `lib/local/repository`: since O-F2b `fetchAccounts` and `fetchAccount` answer from
+the mirror whenever a pull has drained, network or not, and reach the server only where the mirror
+cannot answer — a device with no snapshot yet, or an id it never saw. Writes go through `lib/local/outbox` (O-F4): the account lands in the mirror and its operation in
 the queue in one transaction, the screen gets that projection, and the server is asked afterwards. A
 create carries its own id, so no `Idempotency-Key`. The balances on this screen are the mirror's
 `balance` plus the effect of the queued operations, and they carry the amber projection mark while

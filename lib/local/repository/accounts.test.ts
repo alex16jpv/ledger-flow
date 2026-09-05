@@ -42,23 +42,31 @@ async function mirrorOf(accounts: Account[]): Promise<void> {
 }
 
 describe("accounts through the repository", () => {
-  it("reads the server while online and the mirror while offline, with the same answer", async () => {
+  // O-F2b: the mirror answers with network too, and the answer is the server's own, byte for byte.
+  // Until a pull has drained there is nothing to answer with, and only then does the server serve.
+  it("asks the server until a pull has drained and reads the mirror from then on", async () => {
     const served: AccountList = {
       data: [cash, bank],
       pagination: { limit: 100, offset: 0, total: 2, hasMore: false, nextCursor: null },
     };
     fetchMock.mockResolvedValue(json(served));
-    await mirrorOf([cash, bank, old]);
+    const vault = await openTestVault("u1");
+    setCurrentVault(vault);
 
-    const online = await readAccounts();
+    const beforeSnapshot = await readAccounts();
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/accounts?limit=100");
+
+    await pullChanges(vault, { fetchPage: () => Promise.resolve(feedPage([cash, bank, old])) });
+    fetchMock.mockClear();
+    const online = await readAccounts();
 
     reportOnline(false);
     const offline = await readAccounts();
 
+    expect(beforeSnapshot).toEqual(served);
     expect(online).toEqual(served);
     expect(offline).toEqual(served);
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("hands back the archived ones only when they were asked for", async () => {

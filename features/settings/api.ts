@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { pullAfterDirectSend } from "@/lib/local/outbox";
 import type {
   AccountList,
   AuthTokens,
@@ -8,8 +9,12 @@ import type {
   User,
 } from "@/types/api";
 
-export function updateUser(id: string, input: UpdateUserInput): Promise<User> {
-  return api<User>(`/users/${id}`, { method: "PUT", body: input });
+export async function updateUser(id: string, input: UpdateUserInput): Promise<User> {
+  const answer = await api<User>(`/users/${id}`, { method: "PUT", body: input });
+  // The profile row lives in the mirror too, and the zone `lib/local/derive` buckets by comes from
+  // it: without a pull the figures would keep being cut on the old day boundary.
+  await pullAfterDirectSend();
+  return answer;
 }
 
 export function deleteUser(id: string): Promise<unknown> {

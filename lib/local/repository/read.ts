@@ -8,9 +8,10 @@ import type { VaultSchema } from "../schema";
 
 type ReadSource = "server" | "mirror";
 
-// O-F2b flips this to "mirror" once the whole suite passes with the mirror in front. Until then the
-// mirror only answers when the app has no network, so the online path is byte for byte what it was.
-const READ_SOURCE: ReadSource = "server";
+// O-F2b: the mirror is the primary path, network or not (decision 12.2), and the server answers only
+// what the mirror cannot — no vault, no snapshot drained yet, or a question it does not know how to
+// ask. Setting this back to "server" is the whole way back to the fallback of O-F2a.
+const READ_SOURCE: ReadSource = "mirror";
 
 // Returning undefined means "the mirror cannot answer this", not "there is nothing": the caller then
 // asks the server, which either succeeds or fails with a real error instead of a fabricated one.
@@ -39,6 +40,14 @@ export function currentVault(): VaultHandle | null {
   return current;
 }
 
+// What a write has to wait for before deciding it has no vault (R-3 §B3): the screens fire their
+// first save as early as they fire their first read, and going straight to the server there would
+// skip the outbox on exactly the load where the queue is the only thing that survives.
+export async function vaultReady(): Promise<VaultHandle | null> {
+  if (opening) await opening;
+  return current;
+}
+
 // Test seam: the gate is raised once per page load, so nothing lowers it back for the next test.
 export function resetVaultGate(): void {
   opening = null;
@@ -56,8 +65,7 @@ export async function read<T>(
   fromServer: () => Promise<T>,
   fromMirror: MirrorReader<T>,
 ): Promise<T> {
-  if (opening) await opening;
-  const vault = current;
+  const vault = await vaultReady();
   if (!vault) return fromServer();
   if (READ_SOURCE === "server" && connectivityStore.getSnapshot() !== "offline") {
     return fromServer();

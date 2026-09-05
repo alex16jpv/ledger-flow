@@ -16,6 +16,9 @@ export const PULL_STALE_MS = 5 * 60_000;
 export interface MirrorOptions {
   pull?: PullOptions;
   now?: () => number;
+  // F-38: the pull writes to the mirror behind React Query's back, so the screens go on showing
+  // what they read before it. Nothing here knows about React, and the frame passes the bridge.
+  onChanged?: () => void;
 }
 
 // Nothing on this page is going to open a vault: the reads waiting for one (F-31) stop waiting.
@@ -45,8 +48,9 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   const pullOnce = (vault: VaultHandle): Promise<void> => {
     served = wanted;
     return pullChanges(vault, options.pull)
-      .then(() => {
+      .then((result) => {
         lastPullAt = now();
+        if (result.changed) options.onChanged?.();
       })
       .catch((error: unknown) => {
         // lib/api already reported it; the mirror keeps serving whatever the last pull left.

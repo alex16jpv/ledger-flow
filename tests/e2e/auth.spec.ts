@@ -55,7 +55,10 @@ test("register sets httpOnly session cookies, refresh rotates them and logout cl
   expect(home.status()).not.toBe(307);
 
   const logout = await request.post("/api/auth/logout", { headers: { origin: APP } });
-  expect(logout.headers()["clear-site-data"]).toContain("storage");
+  // O-F6 part 2: `"storage"` would delete IndexedDB, and with it the unsent outbox (invariant 7).
+  // What leaves on a logout is `purgeVault`'s decision now, not the header's.
+  expect(logout.headers()["clear-site-data"]).toContain("cache");
+  expect(logout.headers()["clear-site-data"]).not.toContain("storage");
   const afterLogout = await request.get("/api/auth/me");
   expect(afterLogout.status()).toBe(401);
 });

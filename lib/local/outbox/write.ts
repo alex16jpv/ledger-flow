@@ -1,5 +1,11 @@
-import { currentVault } from "../repository/read";
-import { type DrainOutcome, type DrainReport, registerRollback, requestSync } from "./engine";
+import { vaultReady } from "../repository/read";
+import {
+  type DrainOutcome,
+  type DrainReport,
+  pullAfterDirectSend,
+  registerRollback,
+  requestSync,
+} from "./engine";
 import { NotProjectableError } from "./projected";
 import { type LocalWrite, type QueuedWrite, queueWrite, type VaultDb } from "./queue";
 import { routeFor } from "./routes";
@@ -20,7 +26,10 @@ async function sendDirect<T>(local: LocalWrite): Promise<T> {
   // No vault, or a row the mirror cannot project: the write goes out the way it did before O-F4, and
   // with no network it fails as it always did rather than inventing a row. The cast is the one the
   // route's own type already made — this path has no projection to answer from.
-  return (await route.send({ entityId: local.entityId, payload: local.payload }, {})) as T;
+  const answer = (await route.send({ entityId: local.entityId, payload: local.payload }, {})) as T;
+  // It reached the server and left no trace in the mirror, which is what the screen reads (F-33).
+  await pullAfterDirectSend();
+  return answer;
 }
 
 // Follows a seq through the fold: an operation merged into an earlier one shares its fate.
@@ -35,7 +44,7 @@ function outcomeOf(report: DrainReport, seq: number): DrainOutcome | undefined {
 }
 
 export async function write<T>(request: WriteRequest<T>): Promise<T> {
-  const vault = currentVault();
+  const vault = await vaultReady();
   if (!vault) return sendDirect<T>(request.local);
   const { db } = vault;
 
@@ -63,7 +72,7 @@ export async function write<T>(request: WriteRequest<T>): Promise<T> {
 // does not make N round trips of its own. Each row keeps its own operation, its own guard and its
 // own outcome: that is what makes partial success per row possible (F-20).
 export async function writeAll<T>(requests: WriteRequest<T>[]): Promise<PromiseSettledResult<T>[]> {
-  const vault = currentVault();
+  const vault = await vaultReady();
   if (!vault) return Promise.allSettled(requests.map((request) => sendDirect<T>(request.local)));
   const { db } = vault;
 

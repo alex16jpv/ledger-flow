@@ -23,6 +23,16 @@ export const MIRROR_BACKED_DOMAINS = [
   QUERY_DOMAINS.stats,
 ];
 
+// F-38: a pull that brought news wrote straight into the mirror, and React Query has no idea. Every
+// mirror-backed domain is re-read rather than the ones whose store changed: a stale screen fails in
+// silence, and mapping an entity to the domains that show it is a map that drifts the first time a
+// screen joins one more. Re-reading is IndexedDB, not the network.
+export async function invalidateMirrorBacked(queryClient: QueryClient): Promise<void> {
+  await Promise.all(
+    MIRROR_BACKED_DOMAINS.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+  );
+}
+
 const MONEY_MOVEMENT_DOMAINS = [
   QUERY_DOMAINS.transactions,
   QUERY_DOMAINS.accounts,

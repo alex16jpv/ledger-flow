@@ -13,10 +13,11 @@ toast with how many were recreated). `CategoryForm` is the single form: the pick
 fixed type; the pages add the live preview, the type segment (locked with a `CATEGORY_TYPE_LOCKED`
 explanation when the category has history) and, on edit, "Archive category" with a confirmation.
 
-Reads go through `lib/local/repository` (O-F2a): `fetchCategories` and `fetchCategory` answer from
-the server while there is network and from the offline mirror when there is none, with the same
-shape either way. The usage counts come from `stats/spending` through `readSpending`, which derives
+Reads go through `lib/local/repository`: since O-F2b `fetchCategories` and `fetchCategory` answer
+from the mirror whenever a pull has drained, network or not, and reach the server only where the
+mirror cannot answer. The usage counts come from `stats/spending` through `readSpending`, which derives
 them locally since O-F3 part 2 — the unbounded ones walk the whole `dateCursor` index, which is what
 "all-time" means. Writes go through `lib/local/outbox` (O-F4), except `restoreDefaultCategories`: the server mints
-those rows and their ids, so there is nothing the client could project, and it stays an online-only
+those rows and their ids, so there is nothing the client could project — it asks for a pull once the
+server answers, because the list it feeds is the mirror's now — and it stays an online-only
 action (F-20).

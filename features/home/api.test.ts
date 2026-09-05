@@ -1,8 +1,16 @@
+import type { VaultHandle } from "@/lib/local/db";
 import { pullChanges } from "@/lib/local/pull";
 import { setCurrentVault } from "@/lib/local/repository";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { account, category, openTestVault, transaction, wipeVaults } from "@/lib/testing/vault";
-import type { SyncChangesResponse, SyncTransaction, Transaction } from "@/types/api";
+import {
+  account,
+  category,
+  openTestVault,
+  profile,
+  transaction,
+  wipeVaults,
+} from "@/lib/testing/vault";
+import type { SyncChangesResponse, SyncTransaction, Transaction, User } from "@/types/api";
 
 import {
   fetchHomeAccounts,
@@ -41,24 +49,27 @@ const json = (body: unknown) =>
 
 const fetchMock = vi.fn<typeof fetch>();
 
+function feedPage(user: User | null): SyncChangesResponse {
+  return {
+    serverTime: "2026-09-03T12:00:00.000Z",
+    changes: {
+      user,
+      accounts: [cash, gone],
+      categories: [dining, gym],
+      transactions: [pending, alsoPending, settled],
+      budgets: [],
+    },
+    pagination: { limit: 500, count: 7, hasMore: false, nextCursor: "v1|done|" },
+  };
+}
+
+let vault: VaultHandle;
+
 beforeEach(async () => {
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
-  const vault = await openTestVault("u1");
-  await pullChanges(vault, {
-    fetchPage: () =>
-      Promise.resolve<SyncChangesResponse>({
-        serverTime: "2026-09-03T12:00:00.000Z",
-        changes: {
-          user: null,
-          accounts: [cash, gone],
-          categories: [dining, gym],
-          transactions: [pending, alsoPending, settled],
-          budgets: [],
-        },
-        pagination: { limit: 500, count: 7, hasMore: false, nextCursor: "v1|done|" },
-      }),
-  });
+  vault = await openTestVault("u1");
+  await pullChanges(vault, { fetchPage: () => Promise.resolve(feedPage(null)) });
   setCurrentVault(vault);
 });
 
@@ -70,7 +81,10 @@ afterEach(async () => {
 });
 
 describe("home reads", () => {
-  it("answers accounts, categories and the pending tray the same online and offline", async () => {
+  // O-F2b: Home reads the mirror with network too, and what it answers is what the three endpoints
+  // answer. The URLs are still asserted because they are what a device with no snapshot falls back
+  // to on its first load, and getting one wrong would only show up there.
+  it("answers accounts, categories and the pending tray from the mirror, with network", async () => {
     fetchMock.mockImplementation((input) => {
       const url = urlOf(input);
       if (url.startsWith("/api/accounts"))
@@ -96,7 +110,15 @@ describe("home reads", () => {
       );
     });
 
-    const online = {
+    const local = {
+      accounts: await fetchHomeAccounts(),
+      categories: await fetchHomeCategories(),
+      pending: await fetchHomePending(),
+    };
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    setCurrentVault(null);
+    const served = {
       accounts: await fetchHomeAccounts(),
       categories: await fetchHomeCategories(),
       pending: await fetchHomePending(),
@@ -107,13 +129,7 @@ describe("home reads", () => {
       "/api/transactions?pendingDetails=true&limit=1&includeSummary=true",
     ]);
 
-    reportOnline(false);
-    fetchMock.mockReset();
-
-    expect(await fetchHomeAccounts()).toEqual(online.accounts);
-    expect(await fetchHomeCategories()).toEqual(online.categories);
-    expect(await fetchHomePending()).toEqual(online.pending);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(local).toEqual(served);
   });
 
   it("keeps the archived accounts out of the list and the archived categories in the map", async () => {
@@ -123,9 +139,10 @@ describe("home reads", () => {
     expect((await fetchHomeCategories()).data).toEqual([dining, gym]);
   });
 
-  // The month's buckets and every budget's `spent` are derived money (O-F3), so Home cannot be
-  // served locally yet: these two must reach the server rather than answer with made-up figures.
-  it("still asks the server for the spending and the budgets", async () => {
+  // The month's buckets and every budget's `spent` are derived money (O-F3), and the zone they are
+  // cut on comes from the profile: with no profile in the mirror there is nothing to derive with,
+  // and the server answers rather than the mirror inventing a figure.
+  it("asks the server for the spending and the budgets while the mirror has no profile", async () => {
     reportOnline(false);
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
 
@@ -136,5 +153,24 @@ describe("home reads", () => {
       "Network request failed",
     );
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("derives both once the profile has arrived, network or not", async () => {
+    await pullChanges(vault, { fetchPage: () => Promise.resolve(feedPage(profile())) });
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    const spending = await fetchSpending({
+      from: "2026-08-01T05:00:00.000Z",
+      to: "2026-10-01T05:00:00.000Z",
+      type: "EXPENSE",
+      groupBy: "day",
+    });
+
+    expect(spending.total).toBe(20.29);
+    await expect(fetchHomeBudgets("2026-09-03T12:00:00.000Z")).resolves.toEqual({
+      data: [],
+      pagination: { limit: 100, offset: 0, total: 0, hasMore: false, nextCursor: null },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

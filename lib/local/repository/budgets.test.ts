@@ -72,39 +72,59 @@ interface Seed {
   budgets?: SyncBudget[];
 }
 
+function feedPage(seed: Seed): SyncChangesResponse {
+  return {
+    serverTime: REFERENCE,
+    changes: {
+      user: seed.user === undefined ? profile() : seed.user,
+      accounts: [],
+      categories: seed.categories ?? [category({ id: "c1" })],
+      transactions: seed.transactions ?? [],
+      budgets: seed.budgets ?? [],
+    },
+    pagination: { limit: 500, count: 1, hasMore: false, nextCursor: "v1|done|" },
+  };
+}
+
 async function mirrorOf(seed: Seed): Promise<void> {
   const vault = await openTestVault("u1");
-  await pullChanges(vault, {
-    fetchPage: () =>
-      Promise.resolve<SyncChangesResponse>({
-        serverTime: REFERENCE,
-        changes: {
-          user: seed.user === undefined ? profile() : seed.user,
-          accounts: [],
-          categories: seed.categories ?? [category({ id: "c1" })],
-          transactions: seed.transactions ?? [],
-          budgets: seed.budgets ?? [],
-        },
-        pagination: { limit: 500, count: 1, hasMore: false, nextCursor: "v1|done|" },
-      }),
-  });
+  await pullChanges(vault, { fetchPage: () => Promise.resolve(feedPage(seed)) });
   setCurrentVault(vault);
 }
 
 describe("budgets through the repository", () => {
-  it("reads the list from the server while online", async () => {
+  // O-F2b: the view the mirror builds is the one the endpoint answers, and from here it is the one
+  // the screen gets with network too. The server serves only until the first snapshot has drained.
+  it("asks the server until a pull has drained and builds the view locally from then on", async () => {
     fetchMock.mockResolvedValue(
       json({
         data: [view],
         pagination: { limit: 100, offset: 0, total: 1, hasMore: false, nextCursor: null },
       }),
     );
-    await mirrorOf({ budgets: [dining] });
+    const vault = await openTestVault("u1");
+    setCurrentVault(vault);
 
     await expect(readBudgets({ reference: REFERENCE })).resolves.toEqual([view]);
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/budgets?reference=2026-09-03T12%3A00%3A00.000Z&limit=100",
     );
+
+    await pullChanges(vault, {
+      fetchPage: () =>
+        Promise.resolve(
+          feedPage({
+            budgets: [dining],
+            transactions: [
+              transaction({ id: "t1", amount: 120.5, date: "2026-09-02T15:00:00.000Z" }),
+            ],
+          }),
+        ),
+    });
+    fetchMock.mockClear();
+
+    await expect(readBudgets({ reference: REFERENCE })).resolves.toEqual([view]);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("builds the whole view offline, spent included", async () => {

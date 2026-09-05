@@ -1561,3 +1561,57 @@ cover` is set once in the root layout for the standalone display.
   knew how to drop the mirror and keep the queue. Losing `"storage"` on logout means non-vault
   origin storage is no longer wiped by the header; the mirror goes through `purgeVault` and the
   React Query caches through `purgePersistedCaches`, which is what actually held per-user data.
+
+## 2026-09-05 · The mirror is the read path, and the server is what it falls back to (O-F2b)
+
+- **Decision:** `READ_SOURCE` in `lib/local/repository/read.ts` is `"mirror"`. Every read of the six
+  mirror-backed domains is answered from IndexedDB whenever a pull has drained at least once, with
+  network or without it. The server answers a read only where the mirror says it cannot: no vault, no
+  finished snapshot, an id it never saw, a query it cannot apply, or a derivation with no profile to
+  take the zone from.
+- **Why:** plan decision 12.2. One read path is one set of bugs, one set of tests, and a feature
+  written once. A permanent fallback is code that only runs when the user has no network, so its
+  failures are found late and without logs — and the screens stop paying a request for data they
+  already hold (plan §4.2).
+- **Alternatives:** keeping the fallback of O-F2a. Rejected as above. Reading the mirror first and
+  reconciling against the server behind it: two answers per read, and the second one is exactly what
+  the pull already brings.
+- **Consequence:** setting the constant back to `"server"` is the whole way back, which is why it is
+  one constant and not a spread of branches. `/stats/spending` and the listing endpoints are no
+  longer on any screen's path — the backend keeps them: they are the oracle every parity test
+  compares against, and other clients read them. A device's first load still goes to the server, so a
+  new sign-in is not a blank app while the snapshot arrives.
+
+## 2026-09-05 · A pull that brought news invalidates every mirror-backed domain (O-F2b, F-38)
+
+- **Decision:** `pullChanges` answers whether any row it applied carried an `updatedAt` the mirror did
+  not already hold; `startMirror` reports that through `onChanged`, and `AppFrame` invalidates all six
+  mirror-backed domains at once.
+- **Why:** with the mirror in front, the pull writes where React Query cannot see it, so a change made
+  on another device landed in IndexedDB and the screen went on showing what it had read until a
+  reload. It is what made `budgets.spec.ts:89` fail 6 of 6 with the mirror primary.
+- **Alternatives:** mapping each entity to the domains that show it — rejected: the failure mode of a
+  wrong map is a screen that lies in silence, and the map drifts the first time a screen joins one
+  more domain. Publishing a snapshot the screens subscribe to — a second cache next to React Query's,
+  for a re-read that already costs nothing. Invalidating on every pull, news or not — the feed
+  overlaps 60 seconds on purpose (D-14), so that is a wave of refetches after every single push, and
+  with `READ_SOURCE` back at `"server"` those would be requests.
+- **Consequence:** an invalidation is a re-read of IndexedDB, not a request, so the granularity is
+  affordable; the same code with `"server"` would cost one refetch per active query, which is the
+  reason the news test exists and is asserted in `mirror.test.ts`.
+
+## 2026-09-05 · The transaction list counts with the index when nothing is asked of each row (O-F2b, F-15)
+
+- **Decision:** `queryMirror` takes `total` from `index.count(range)` and stops walking once the page
+  is full, but only when the query carries no per-row filter and no summary. A filtered query still
+  walks the whole set, as before.
+- **Why:** the endpoint counts the whole filtered set on every page and so must the mirror, but the
+  walk deserialises every record to do it. Measured in Chromium over 10 000 live rows: 141 ms per page
+  walking, 31 ms counting plus 1,4 ms walking — and that cost was paid again on every page of an
+  infinite scroll, on the main thread.
+- **Alternatives:** caching `total` per filter across pages (the cheapest, and the one the ficha
+  proposed) — it needs invalidation of its own and would answer a stale count after a pull; an index
+  per filter combination — that is how a local list starts disagreeing with the API.
+- **Consequence:** both requests are issued before the first `await`, so they share one read
+  transaction and cannot see two states. A filtered list is still O(n) per page; nothing measured says
+  it needs more than this yet.

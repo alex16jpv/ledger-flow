@@ -44,6 +44,9 @@ interface MirrorFilter {
   limit: number;
   cursor?: string;
   includeSummary: boolean;
+  // Whether `matches` can turn a row down. With nothing to ask of each row, the index knows the
+  // total on its own and the walk can stop at the page (F-15).
+  filtered: boolean;
   matches: (record: TransactionRecord) => boolean;
 }
 
@@ -81,6 +84,9 @@ function toMirrorFilter(query: TransactionQuery): MirrorFilter | undefined {
   const source = params.get("source");
   const pending = params.has("pendingDetails") ? isTrue(params.get("pendingDetails")) : undefined;
   const rawLimit = Number(params.get("limit"));
+  const predicates = [type, accountId, categoryId, tag, source, pending].filter(
+    (value) => value !== undefined,
+  );
 
   return {
     from,
@@ -88,6 +94,7 @@ function toMirrorFilter(query: TransactionQuery): MirrorFilter | undefined {
     limit: Math.min(Math.max(rawLimit || DEFAULT_LIMIT, 1), MAX_LIMIT),
     cursor: params.get("cursor"),
     includeSummary: isTrue(params.get("includeSummary")),
+    filtered: uncategorized || predicates.length > 0,
     matches: (record) =>
       (type === undefined || record.row.type === type) &&
       (accountId === undefined ||
@@ -116,21 +123,29 @@ async function queryMirror(
 
   const data: Transaction[] = [];
   const summed: number[] = [];
-  let total = 0;
+  let walked = 0;
   let past = false;
   // Its own transaction: awaiting the pivot lookup first would let this one auto-commit mid-walk.
   const index = db.transaction("transactions").store.index("dateCursor");
-  for await (const entry of index.iterate(dateCursorRange(filter.from, filter.to), "prev")) {
+  const range = dateCursorRange(filter.from, filter.to);
+  // The server counts the whole filtered set on every page, and so does this. With no question to
+  // ask of each row the index answers it without deserialising any, and the walk can then stop at
+  // the page instead of paying O(n) per page of an infinite scroll (F-15). Both requests go out
+  // before the first await, so they share this transaction rather than seeing two states.
+  const counting = filter.filtered || filter.includeSummary ? undefined : index.count(range);
+  for await (const entry of index.iterate(range, "prev")) {
     const record = entry.value;
     if (!filter.matches(record)) continue;
-    total += 1;
+    walked += 1;
     if (filter.includeSummary) summed.push(record.row.amount);
     if (pivot !== undefined && !past) {
       if (indexedDB.cmp(entry.key, pivot) >= 0) continue;
       past = true;
     }
     if (data.length < filter.limit) data.push(toApiRow(record.row));
+    if (counting !== undefined && data.length === filter.limit) break;
   }
+  const total = (await counting) ?? walked;
 
   const hasMore = filter.cursor !== undefined ? data.length === filter.limit : data.length < total;
   const pagination: Pagination = {

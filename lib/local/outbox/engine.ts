@@ -531,6 +531,13 @@ export function isSyncPaused(): boolean {
   return state.paused;
 }
 
+// A write that went straight to the server never touched the mirror, so the screen that reads the
+// mirror would not see what it just saved until something else pulled (F-33). It is the same pull a
+// round makes, asked for by the one caller that has no round.
+export async function pullAfterDirectSend(): Promise<void> {
+  await state.afterRound?.();
+}
+
 // Test seam: the queue survives, the engine's in-memory bookkeeping does not.
 export function resetSyncEngine(): void {
   state.stop?.();

@@ -105,26 +105,31 @@ afterEach(async () => {
 });
 
 describe("the transaction list through the repository", () => {
-  it("reads the server while online and the mirror while offline, with the same answer", async () => {
+  // O-F2b: the page the mirror builds is the page the endpoint answers — order, total, cursor and
+  // `hasMore` included — and from here it is the one the screen gets with network too.
+  it("asks the server until a pull has drained and pages the mirror from then on", async () => {
     const served: TransactionList = {
       data: [dinner, salary, coffee].map(apiRow),
       pagination: { limit: 3, offset: 0, total: 5, hasMore: true, nextCursor: "t4" },
     };
     fetchMock.mockResolvedValue(json(served));
-    await openTestVault("u1").then(async (vault) => {
-      await pullChanges(vault, { fetchPage: () => Promise.resolve(feedPage(ALL)) });
-      setCurrentVault(vault);
-    });
+    const vault = await openTestVault("u1");
+    setCurrentVault(vault);
 
-    const online = await readTransactions({ limit: 3 });
+    const beforeSnapshot = await readTransactions({ limit: 3 });
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/transactions?limit=3");
+
+    await pullChanges(vault, { fetchPage: () => Promise.resolve(feedPage(ALL)) });
+    fetchMock.mockClear();
+    const online = await readTransactions({ limit: 3 });
 
     reportOnline(false);
     const offline = await readTransactions({ limit: 3 });
 
+    expect(beforeSnapshot).toEqual(served);
     expect(online).toEqual(served);
     expect(offline).toEqual(served);
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("orders by date then id descending, breaking ties on the id", async () => {
@@ -133,6 +138,23 @@ describe("the transaction list through the repository", () => {
     await mirrorOf([early, late, dinner]);
 
     expect(ids(await readTransactions({ limit: 30 }))).toEqual(["t7b", "t7a", "t6"]);
+  });
+
+  // F-15: with nothing to ask of each row the index counts the set and the walk stops at the page,
+  // so a page of an infinite scroll stops costing O(n). A filter still has to look at every row.
+  it("counts the same filtered set whether or not the walk stops at the page", async () => {
+    await mirrorOf(ALL);
+
+    await expect(readTransactions({ limit: 2 })).resolves.toMatchObject({
+      pagination: { limit: 2, offset: 0, total: 5, hasMore: true, nextCursor: "t5" },
+    });
+    await expect(readTransactions({ type: "EXPENSE", limit: 2 })).resolves.toMatchObject({
+      pagination: { limit: 2, offset: 0, total: 3, hasMore: true, nextCursor: "t4" },
+    });
+    // The page is the whole set: `hasMore` has to come out false with the index's count too.
+    await expect(readTransactions({ limit: 5 })).resolves.toMatchObject({
+      pagination: { limit: 5, offset: 0, total: 5, hasMore: false, nextCursor: null },
+    });
   });
 
   it("keeps the tombstones out of every page and out of the total", async () => {

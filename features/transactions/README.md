@@ -40,9 +40,9 @@ operation per row rather than one `PATCH /transactions/batch`, so it works with 
 result is still per item, saved cards leave the list, failed ones stay with their error, and the
 individual "Done" keeps working.
 
-Reads go through `lib/local/repository` (O-F2a): the paged list, the detail, the counts, the pending
-tray and the tag list answer from the server while there is network and from the offline mirror when
-there is none, with the same shape either way. The mirror resolves the cursor as a keyset over
+Reads go through `lib/local/repository`: since O-F2b the paged list, the detail, the counts, the
+pending tray and the tag list answer from the mirror whenever a pull has drained, network or not, and
+reach the server only where the mirror cannot answer. The mirror resolves the cursor as a keyset over
 `(date, id)` — the same one the API uses — so infinite scroll and every filter work without network;
 a filter the mirror does not know how to apply makes it decline and the read goes to the server.
 `fetchDailyStats` goes through the stats seam and answers offline since O-F3 part 2: its buckets are

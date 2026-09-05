@@ -26,10 +26,12 @@ const feed: SyncChangesResponse = {
 let queries: PullPageQuery[] = [];
 let clock = 0;
 let answer: (page: SyncChangesResponse) => void = () => undefined;
+const onChanged = vi.fn();
 
 function start(pending = false): () => void {
   return startMirror("u1", {
     now: () => clock,
+    onChanged,
     pull: {
       fetchPage: (query) => {
         queries.push(query);
@@ -46,6 +48,7 @@ beforeEach(() => {
   queries = [];
   clock = 1_000_000;
   persist.mockClear();
+  onChanged.mockClear();
   Object.defineProperty(navigator, "storage", {
     value: { persisted: vi.fn().mockResolvedValue(false), persist },
     configurable: true,
@@ -169,6 +172,23 @@ describe("startMirror", () => {
         () => Promise.resolve("mirror"),
       ),
     ).resolves.toBe("server");
+    stop();
+  });
+
+  // F-38: the pull writes behind React Query's back, so a screen keeps showing what it read before
+  // the tirón unless something tells it to read again — and only a pull that brought news should.
+  it("says the mirror changed once, and not again when the overlap replays the same row", async () => {
+    const stop = start();
+    await vi.waitFor(() => {
+      expect(onChanged).toHaveBeenCalledOnce();
+    });
+
+    clock += PULL_STALE_MS;
+    window.dispatchEvent(new Event("focus"));
+    await vi.waitFor(() => {
+      expect(queries).toHaveLength(2);
+    });
+    expect(onChanged).toHaveBeenCalledOnce();
     stop();
   });
 

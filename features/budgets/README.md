@@ -22,12 +22,12 @@ inputs for CUSTOM (inclusive end → half-open API window), amount, color and th
 (effective from, note). `budgetSuggestions` (owner request F-01) scales the global-budget chips by
 currency or by last month's spending.
 
-O-F2a routes the list and the detail through `lib/local/repository`, and since O-F3 part 2 the
-mirror answers both offline: it stores the saved shape (`SyncBudget`) and builds the view on top,
-`spent` included, over the rows the `dateCursor` index selects for the period. `fetchSpendingTotal`
-goes through the same stats seam as the other five call sites. The reads reach the server and fail
-honestly instead of showing a
-figure nobody computed.
+O-F2a routed the list and the detail through `lib/local/repository`, and since O-F3 part 2 the mirror
+answers both — with network too, since O-F2b: it stores the saved shape (`SyncBudget`) and builds the
+view on top, `spent` included, over the rows the `dateCursor` index selects for the period.
+`fetchSpendingTotal` goes through the same stats seam as the other five call sites. With no profile in
+the mirror there is no zone to cut the period on, so the read reaches the server and fails honestly
+instead of showing a figure nobody computed.
 
 Writes go through `lib/local/outbox` (O-F4). The API answers with the **view**, which drops the
 override map, the CUSTOM dates and the owner, so a confirmed write merges the server's fields over

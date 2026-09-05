@@ -72,6 +72,7 @@ describe("pullChanges", () => {
     expect(result).toEqual({
       pages: 3,
       rows: 5,
+      changed: true,
       cursor: "v1|final|",
       serverTime: "2026-09-03T12:00:00.000Z",
     });
@@ -137,6 +138,45 @@ describe("pullChanges", () => {
 
     await expect(vault.db.count("accounts")).resolves.toBe(1);
     expect((await vault.db.get("accounts", "a1"))?.row.name).toBe("Wallet");
+  });
+
+  // F-38: the screens are made to read again off this flag, and the 60-second overlap replays rows
+  // the mirror already holds, so "rows arrived" would wake them after every push for nothing.
+  it("calls the overlap news only when a stamp actually moved", async () => {
+    const vault = await openTestVault("u1");
+    const first = account({ id: "a1", name: "Cash", updatedAt: "2026-09-01T00:00:00.000Z" });
+    const again = account({ id: "a1", name: "Wallet", updatedAt: "2026-09-02T00:00:00.000Z" });
+    await pullChanges(vault, {
+      fetchPage: feed([page({ accounts: [first] }, { count: 1, hasMore: false, nextCursor: "c1" })])
+        .fetchPage,
+    });
+
+    const replay = await pullChanges(vault, {
+      fetchPage: feed([page({ accounts: [first] }, { count: 1, hasMore: false, nextCursor: "c2" })])
+        .fetchPage,
+    });
+    expect(replay.changed).toBe(false);
+
+    const moved = await pullChanges(vault, {
+      fetchPage: feed([
+        page({ accounts: [first, again] }, { count: 2, hasMore: false, nextCursor: "c3" }),
+      ]).fetchPage,
+    });
+    expect(moved.changed).toBe(true);
+  });
+
+  it("calls an empty page no news, and a page that only moves the profile news", async () => {
+    const vault = await openTestVault("u1");
+    const empty = await pullChanges(vault, {
+      fetchPage: feed([page({}, { count: 0, hasMore: false, nextCursor: "c1" })]).fetchPage,
+    });
+    expect(empty.changed).toBe(false);
+
+    const user = await pullChanges(vault, {
+      fetchPage: feed([page({ user: profile() }, { count: 1, hasMore: false, nextCursor: "c2" })])
+        .fetchPage,
+    });
+    expect(user.changed).toBe(true);
   });
 
   it("leaves the mirror unreadable until the feed is drained", async () => {

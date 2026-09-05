@@ -30,6 +30,7 @@ export {
   backoffDelay,
   type DrainReport,
   isSyncPaused,
+  pullAfterDirectSend,
   requestSync,
   resetSyncEngine,
   resumeSyncEngine,

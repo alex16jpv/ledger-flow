@@ -18,13 +18,14 @@ async function readyVault(userId: string) {
 }
 
 describe("read", () => {
-  it("goes to the server while there is network, mirror or not", async () => {
+  // O-F2b: the mirror is the primary path, and the network no longer takes part in the decision.
+  // Everything that still reaches the server is the mirror saying it cannot answer.
+  it("answers from the mirror while there is network, once a pull has drained", async () => {
     await readyVault("u1");
     const fromServer = vi.fn().mockResolvedValue("server");
-    const fromMirror = vi.fn().mockResolvedValue("mirror");
 
-    await expect(read(fromServer, fromMirror)).resolves.toBe("server");
-    expect(fromMirror).not.toHaveBeenCalled();
+    await expect(read(fromServer, () => Promise.resolve("mirror"))).resolves.toBe("mirror");
+    expect(fromServer).not.toHaveBeenCalled();
   });
 
   it("answers from the mirror once the app has no network", async () => {
@@ -45,13 +46,15 @@ describe("read", () => {
   });
 
   // A mirror stopped halfway through its first snapshot holds a fraction of the data; answering
-  // from it would look like an empty account instead of a failed read.
-  it("goes to the server when no pull has ever finished", async () => {
+  // from it would look like an empty account instead of a failed read. With network, this is the
+  // whole of what the server still serves on a device that has one open (the first load).
+  it("goes to the server when no pull has ever finished, network or not", async () => {
     const vault = await openTestVault("u1");
     setCurrentVault(vault);
-    reportOnline(false);
     const fromMirror = vi.fn().mockResolvedValue("mirror");
 
+    await expect(read(() => Promise.resolve("server"), fromMirror)).resolves.toBe("server");
+    reportOnline(false);
     await expect(read(() => Promise.resolve("server"), fromMirror)).resolves.toBe("server");
     expect(fromMirror).not.toHaveBeenCalled();
   });
@@ -60,7 +63,6 @@ describe("read", () => {
   // went to the server with a full mirror sitting there.
   it("waits for the vault the frame is about to open before deciding", async () => {
     expectVault();
-    reportOnline(false);
     const fromServer = vi.fn().mockResolvedValue("server");
     const answer = read(fromServer, () => Promise.resolve("mirror"));
 
@@ -74,7 +76,6 @@ describe("read", () => {
 
   it("stops waiting when no vault opens", async () => {
     expectVault();
-    reportOnline(false);
     const answer = read(
       () => Promise.resolve("server"),
       () => Promise.resolve("mirror"),

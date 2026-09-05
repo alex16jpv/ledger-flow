@@ -5,7 +5,9 @@ in with the same `userId` finds the same vault **and the same outbox**.
 
 Delivered by O-F1 (the store and its migrations), O-F2a (filling it, and reading accounts,
 categories, transactions and Home's non-money lists from it while offline) and O-F3 part 1
-(deriving balances). `spent` and the day buckets are O-F3 part 2; the outbox is O-F4.
+(deriving balances). `spent` and the day buckets are O-F3 part 2; the outbox is O-F4. **Since O-F2b
+the mirror is the path every read takes**, network or not; the server answers a read only where the
+mirror says it cannot.
 
 ## The hard line: disposable mirror, sacred outbox
 
@@ -106,6 +108,17 @@ A request that arrives while a pull is running joins it and asks for **one more 
 (F-32): the pull in flight cannot carry what the server wrote after it started. It is the same
 `wanted`/`served` discipline the engine uses for the queue.
 
+**A pull that brought news makes the screens read again** (F-38). Writing into IndexedDB is invisible
+to React Query, so before this a change another device made landed in the mirror and the screen went
+on showing what it had read until a reload. `pullChanges` answers `changed`, `startMirror` calls
+`onChanged`, and `AppFrame` — the only piece here that knows React exists — invalidates every
+mirror-backed domain. Two things make it cheap: with the mirror primary an invalidation is a re-read
+of IndexedDB and not a request, and `changed` is **not** "rows arrived". The feed overlaps 60 seconds
+on purpose (D-14), so every pull after a push replays the row that was just pushed; a row counts as
+news only when its `updatedAt` is one the mirror did not already hold. Every domain is re-read rather
+than the ones whose store moved: a stale screen fails in silence, and a map from entity to the
+domains that show it drifts the first time a screen joins one more.
+
 ## Reading from it: `repository/`
 
 `features/*/api.ts` calls `lib/local/repository` instead of `lib/api/client`; the hooks, the query
@@ -115,13 +128,19 @@ keys and the components do not know the difference. `read(fromServer, fromMirror
   query, before `AppFrame`'s effects run, so a read that decided on the handle alone went to the
   server with a full mirror sitting there; `AppFrame` raises the gate while it renders and
   `startMirror` lowers it with the handle, or with null when none opens;
-- while there is network it calls `fromServer` and the online path is exactly what it was (O-F2a).
-  `READ_SOURCE` in `repository/read.ts` is the single constant O-F2b flips to make the mirror the
-  primary path, once the whole suite passes with it in front;
-- with no network it asks the mirror, but only when a pull has finished at least once;
-- a mirror reader returns `undefined` for "I cannot answer this" — an id it never saw, for instance —
-  and the read falls through to the server, which produces the real network error rather than a
-  fabricated one or an empty list that lies.
+- **the mirror is the primary path, network or not** (O-F2b, decision 12.2). `READ_SOURCE` in
+  `repository/read.ts` is the constant that says so, and setting it back to `"server"` is the whole
+  way back to the fallback of O-F2a;
+- it asks the mirror only once a pull has finished at least once, so the server still answers the
+  first load of a device — and only that;
+- a mirror reader returns `undefined` for "I cannot answer this" — an id it never saw, a query it
+  does not know how to apply, a derivation with no profile to take the zone from — and the read falls
+  through to the server, which produces the real network error rather than a fabricated one or an
+  empty list that lies.
+
+Everything the app still asks the server for a **read** is one of those three. The listing endpoints
+and `/stats/spending` are no longer on the screens' path, and they stay in the API: they are the
+oracle every parity test compares against, and other clients read them.
 
 `repository/budgets.ts` builds the API's view out of the saved shape. The mirror stores `SyncBudget`,
 and everything the view adds — `periodKey`, the window, `baseAmount`/`amount`, `hasOverride`,
@@ -167,7 +186,14 @@ its own envelope:
   read from the row it names — a tombstone still carries one — so the keyset survives rows arriving
   above the page already served, and deleting the last row of a page does not restart the list;
 - a query carrying a parameter the mirror does not apply is declined rather than answered, which is
-  the same `undefined` contract as an id it never saw.
+  the same `undefined` contract as an id it never saw;
+- `total` is the whole filtered set on every page, like the endpoint's. When the query asks nothing
+  of each row — no type, account, category, tag, source or `pendingDetails`, and no summary — the
+  index counts it without deserialising anything and the walk stops at the page (F-15). Measured in
+  Chromium over 10 000 live rows: 141 ms per page walking, 31 ms counting plus 1,4 ms walking. Both
+  requests are issued before the first `await`, so they share one transaction and cannot see two
+  states. A filtered query still looks at every row, which is the price of not inventing an index
+  per combination of filters.
 
 ## Deriving money: `derive/`
 
@@ -239,6 +265,16 @@ keyring, the key **is** the id now, so a retried submit still names one row. `PA
 into one `transaction:update` per row, so each row keeps its own guard and its own outcome (F-20).
 `POST /categories/restore-defaults` stays a plain call — the server mints those ids, so there is
 nothing the mirror can project.
+
+**A write that reached the server without going through the mirror asks for a pull** (F-33, R-3 §B3).
+There are three: `sendDirect`, which is what `write()` does when there is no vault or the row cannot
+be projected (`NotProjectableError` — a quick capture with no default account yet); `restore-defaults`;
+and `PUT /users/:id`, whose row is the profile the derivations take their zone from. All three used
+to be invisible, because the screen re-read the server. With the mirror in front the screen re-reads
+the mirror, which does not have what was just saved, so each of them ends in the same pull a round
+makes (`pullAfterDirectSend`). `write()` also waits for the vault gate before deciding it has none:
+the screens fire their first save as early as their first read, and going direct there would skip the
+outbox on the one load where the queue is the only thing that survives.
 
 **What a request looks like lives in `routes.ts`, once.** The engine replays operations it did not
 queue — after a reload the closures that made them are gone — so every route rebuilds its request

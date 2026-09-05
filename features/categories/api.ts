@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { pullAfterDirectSend } from "@/lib/local/outbox";
 import {
   type CategoryListParams,
   readCategories,
@@ -29,8 +30,13 @@ export function fetchCategory(id: string): Promise<Category> {
   return readCategory(id);
 }
 
-export function restoreDefaultCategories(): Promise<RestoreDefaultsResponse> {
-  return api<RestoreDefaultsResponse>("/categories/restore-defaults", { method: "POST" });
+export async function restoreDefaultCategories(): Promise<RestoreDefaultsResponse> {
+  const answer = await api<RestoreDefaultsResponse>("/categories/restore-defaults", {
+    method: "POST",
+  });
+  // The rows the server just minted are not in the mirror, and the mirror is what the list reads.
+  await pullAfterDirectSend();
+  return answer;
 }
 
 export interface CategoryUsageParams {

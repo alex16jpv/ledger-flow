@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocale } from "next-intl";
 import { type ReactNode, Suspense, useCallback, useEffect, useState } from "react";
 
@@ -22,6 +23,7 @@ import { expectVault } from "@/lib/local/repository";
 import { HistoryTracker } from "@/lib/navigation/history";
 import { startHeartbeat } from "@/lib/network/heartbeat";
 import { warmAppShell } from "@/lib/pwa/service-worker";
+import { invalidateMirrorBacked } from "@/lib/query/domains";
 import { SessionProvider, useSession } from "@/lib/session";
 
 import { QuickAddSheet } from "./QuickAddSheet";
@@ -35,6 +37,7 @@ function Frame({ children }: { children: ReactNode }) {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const pendingCount = usePendingCount(session.status === "authenticated");
   const [quickAdd, setQuickAdd] = useState<AddOptions & { open: boolean }>({
     open: false,
@@ -50,14 +53,18 @@ function Frame({ children }: { children: ReactNode }) {
     sessionStatus === "loading" ? "loading" : "resolved",
     marker,
   );
+  // F-38: what the pull writes into the mirror only reaches the screens through an invalidation.
+  const onMirrorChanged = useCallback(() => {
+    void invalidateMirrorBacked(queryClient);
+  }, [queryClient]);
   useEffect(() => {
     // §2.6: the session cannot be resolved — no network, or the refresh is dead — but the marker
     // says this device holds a vault for that user, so the app opens it and runs in local mode.
-    if (localUserId) return startMirror(localUserId);
+    if (localUserId) return startMirror(localUserId, { onChanged: onMirrorChanged });
     // Still asking who this is: the reads keep waiting. Anywhere else, no vault is coming.
     if (sessionStatus !== "loading") noMirror();
     return undefined;
-  }, [localUserId, sessionStatus]);
+  }, [localUserId, sessionStatus, onMirrorChanged]);
   useEffect(() => {
     if (sessionStatus !== "authenticated") return;
     void warmAppShell(locale);

@@ -51,15 +51,27 @@ async function mirrorOf(transactions: SyncTransaction[], user: User | null = pro
 const AUGUST = { from: "2026-08-01T05:00:00.000Z", to: "2026-09-01T05:00:00.000Z" };
 
 describe("spending through the repository", () => {
-  it("asks the server while online with the query the call site built", async () => {
+  // O-F2b: with a drained mirror the buckets are derived, network or not. The URL still has to be
+  // right, because it is what a mirror that cannot answer (no zone yet) falls back to.
+  it("derives with a mirror to read, and keeps the query it falls back with", async () => {
     fetchMock.mockResolvedValue(json({ groupBy: "day", buckets: [], total: 0 }));
-    await mirrorOf([]);
+    await mirrorOf([], null);
 
     await readSpending({ groupBy: "day", type: "EXPENSE", ...AUGUST });
-
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/stats/spending?groupBy=day&type=EXPENSE&from=2026-08-01T05%3A00%3A00.000Z&to=2026-09-01T05%3A00%3A00.000Z",
     );
+
+    setCurrentVault(null);
+    await mirrorOf([]);
+    fetchMock.mockClear();
+
+    await expect(readSpending({ groupBy: "day", type: "EXPENSE", ...AUGUST })).resolves.toEqual({
+      groupBy: "day",
+      buckets: [],
+      total: 0,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("buckets by the user's local day, not by the UTC one", async () => {

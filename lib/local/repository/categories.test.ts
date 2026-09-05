@@ -32,21 +32,17 @@ afterEach(async () => {
   await wipeVaults();
 });
 
+function feedPage(categories: Category[]): SyncChangesResponse {
+  return {
+    serverTime: "2026-09-03T12:00:00.000Z",
+    changes: { user: null, accounts: [], categories, transactions: [], budgets: [] },
+    pagination: { limit: 500, count: categories.length, hasMore: false, nextCursor: "v1|done|" },
+  };
+}
+
 async function mirrorOf(categories: Category[]): Promise<void> {
   const vault = await openTestVault("u1");
-  await pullChanges(vault, {
-    fetchPage: () =>
-      Promise.resolve<SyncChangesResponse>({
-        serverTime: "2026-09-03T12:00:00.000Z",
-        changes: { user: null, accounts: [], categories, transactions: [], budgets: [] },
-        pagination: {
-          limit: 500,
-          count: categories.length,
-          hasMore: false,
-          nextCursor: "v1|done|",
-        },
-      }),
-  });
+  await pullChanges(vault, { fetchPage: () => Promise.resolve(feedPage(categories)) });
   setCurrentVault(vault);
 }
 
@@ -56,21 +52,31 @@ const page = (data: Category[]): CategoryList => ({
 });
 
 describe("categories through the repository", () => {
-  it("reads the server while online and the mirror while offline, with the same answer", async () => {
+  // O-F2b: the mirror answers with network too, and the answer is the server's own, byte for byte.
+  it("asks the server until a pull has drained and reads the mirror from then on", async () => {
     fetchMock.mockResolvedValue(json(page([dining, gym])));
-    await mirrorOf([dining, salary, gym]);
+    const vault = await openTestVault("u1");
+    setCurrentVault(vault);
 
-    const online = await readCategories({ type: "EXPENSE", includeArchived: true });
+    const filters = { type: "EXPENSE", includeArchived: true } as const;
+    const beforeSnapshot = await readCategories(filters);
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/categories?type=EXPENSE&includeArchived=true&limit=100",
     );
 
-    reportOnline(false);
-    const offline = await readCategories({ type: "EXPENSE", includeArchived: true });
+    await pullChanges(vault, {
+      fetchPage: () => Promise.resolve(feedPage([dining, salary, gym])),
+    });
+    fetchMock.mockClear();
+    const online = await readCategories(filters);
 
+    reportOnline(false);
+    const offline = await readCategories(filters);
+
+    expect(beforeSnapshot).toEqual([dining, gym]);
     expect(online).toEqual([dining, gym]);
     expect(offline).toEqual([dining, gym]);
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("hides the archived ones and keeps every type when none is asked for", async () => {
@@ -85,16 +91,12 @@ describe("categories through the repository", () => {
     fetchMock.mockResolvedValue(json(page([dining, salary])));
     await mirrorOf([dining, salary, gym]);
 
-    const online = await readCategoriesPage({ limit: 100 });
-    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/categories?limit=100");
-
-    reportOnline(false);
-
-    expect(await readCategoriesPage({ limit: 100 })).toEqual(online);
+    expect(await readCategoriesPage({ limit: 100 })).toEqual(page([dining, salary]));
     await expect(readCategoriesPage({ includeArchived: true, limit: 2 })).resolves.toEqual({
       data: [dining, salary],
       pagination: { limit: 2, offset: 0, total: 3, hasMore: true, nextCursor: "c2" },
     });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("reads one category from the mirror, archived included", async () => {
