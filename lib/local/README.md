@@ -91,18 +91,30 @@ keys and the components do not know the difference. `read(fromServer, fromMirror
   and the read falls through to the server, which produces the real network error rather than a
   fabricated one or an empty list that lies.
 
-`repository/budgets.ts` declines every read on purpose. The mirror stores `SyncBudget`, the saved
-shape, while the API answers the view, and the only field of that view the mirror cannot build is
-`spent` — which every budget surface reads. So the whole read goes to the server until
-`lib/local/derive` lands (O-F3), rather than being served with a figure nobody computed.
-`/stats/spending` is the same case for Home's month and for the whole stats feature.
+`repository/budgets.ts` builds the API's view out of the saved shape. The mirror stores `SyncBudget`,
+and everything the view adds — `periodKey`, the window, `baseAmount`/`amount`, `hasOverride`,
+`expired`, `effectiveFrom` — comes from that row plus the categories mirror, except `spent`, which
+needs the transactions and arrived with O-F3 part 2. The list's two post-pagination filters are the
+server's: a period that closes on or before the budget's lifetime floor is dropped, and an expired
+CUSTOM one-shot leaves the default listing, both **after** the page is counted, so a page's `total`
+counts rows its `data` no longer shows. The detail answers for an archived budget; only the list
+leaves it out.
+
+`repository/stats.ts` is the single seam for `/stats/spending`. All six of its call sites in
+`features/*/api.ts` go through `readSpending` — `home.fetchSpending`, `budgets.fetchSpendingTotal`,
+`stats.fetchStats`, `transactions.fetchDailyStats`, `categories.fetchCategoryUsage` and
+`categories.fetchCategoryCounts` — so a screen's buckets come from one derivation rather than six.
+It stamps the defaults `StatsController` stamps on an absent parameter: `groupBy` is `category` and
+`type` is **EXPENSE**, which is not the service's "everything but ADJUSTMENT" — no URL can ask for
+that one, only a fixture can.
 
 `lib/query/domains.ts` lists the domains whose **list and detail** reads answer locally, and its
-prefix covers every key of a domain. `budgets`, `home` and `stats` are not in it, because unpausing a
-domain that still has a server-only read turns a paused skeleton into a failed request. Two listed
-domains already carry that cost knowingly: `categoryKeys.usage`/`counts` and `transactionKeys.daily`
-are `/stats/spending` reads that fail (once, quietly) while offline until O-F3 part 2 derives them —
-there are six `/stats/spending` call sites in `features/*/api.ts`, and all six move together.
+prefix covers every key of a domain. All six are in it: `budgets`, `home` and `stats` joined when
+O-F3 part 2 derived `spent` and the buckets, which were the last server-only reads any of them had,
+and with them went the last two that were paying the cost knowingly — `categoryKeys.usage`/`counts`
+and `transactionKeys.daily`, `/stats/spending` reads inside already-listed domains that failed once,
+quietly, while offline. A domain added with a read the mirror cannot answer has to stay out of the
+list, because unpausing it turns a paused skeleton into a failed request.
 
 `mirrorPage` rebuilds the `data` + `pagination` envelope the list endpoints return. It can page on
 the last `id` because the API sorts these lists by `_id` ascending, which is IndexedDB's own key
@@ -146,6 +158,16 @@ sides cannot drift into disagreeing about the same money.
   feeds the fixture rows into a test vault and reads the tray through the repository.
 - `sumAmounts` is the one adder. `repository/transactions.ts` answers `includeSummary` with it, so
   no arithmetic is left in the repository — that figure is the endpoint's own sum, not a projection.
+- `resolvePeriod` is the budget window: the same rules as the server's `shared/budgetPeriod.ts`,
+  including the BIWEEKLY grid anchored on the Monday of 2024-01-01 and the key that never carries a
+  dot because it is also a `$set` path in `amountOverrides`.
+- `deriveSpending` and `deriveBudgetView` restate the aggregation rules rather than assume the rows
+  were pre-filtered: **derive owns the rule, the repository owns which rows it sees.** Windows are
+  half-open `[from, to)` built in the user's zone, and a day bucket is the local calendar day, so a
+  March window in Madrid opens at +01:00 and closes at +02:00 and a November one in New York is 721
+  hours long. `repository/window.ts` picks those rows with the `dateCursor` index — never
+  `getAll` (D-18) — and normalises a bound to the feed's UTC shape first, because the index compares
+  the stamps as strings and a bound carrying an offset would sort below its own last day's rows.
 
 **A balance from here is a projection, never a figure the server sent.** Invariant 2 of the plan
 forbids painting one as if it were, so nothing renders these yet: the marking (the amber tone

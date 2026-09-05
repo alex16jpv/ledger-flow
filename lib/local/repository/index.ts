@@ -14,9 +14,11 @@ export {
   readCategory,
 } from "./categories";
 export { currentVault, mirrorPage, type MirrorReader, read, setCurrentVault } from "./read";
+export { readSpending, type SpendingQuery } from "./stats";
 export {
   readTransaction,
   readTransactions,
   readTransactionTags,
   type TransactionQuery,
 } from "./transactions";
+export { dateCursorRange, liveRowsInWindow, mirrorTimeZone } from "./window";

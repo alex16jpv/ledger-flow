@@ -1219,3 +1219,38 @@ cover` is set once in the root layout for the standalone display.
   and its files disagree, so every link of generator → backend files → this copy has a guard.
 - **Consequence:** the chain is only as good as the sync step. Refreshing the fixtures is one command
   and the test says which file drifted.
+
+## 2026-09-04 · Derive states the rule, the repository chooses the rows (O-F3 part 2)
+
+- **Decision:** `deriveSpending` and `deriveBudgetView` re-apply their own window and type filters
+  instead of trusting the caller to have pre-filtered, and `repository/window.ts` narrows the rows
+  with the `dateCursor` index before handing them over. The two overlap on purpose: the pure
+  function is the single written statement of the aggregation rule, checked against the fixtures the
+  backend validated on a real mongod, and the index is how the device avoids walking rows it already
+  knows are outside the window (D-18).
+- **Alternatives:** letting the repository be the only filter and making `derive` a plain grouper.
+  Rejected: the parity test would then have to pre-filter the fixture rows itself, which is a second
+  implementation of the very rule the fixture exists to pin down, in the test rather than in the
+  code. The other way round — no index, `getAll` and filter in the function — is what D-18 forbids.
+- **Consequence:** a window is expressed twice, as an `IDBKeyRange` and as a comparison, and the two
+  have to agree. `liveRowsInWindow` normalises each bound to the feed's UTC stamp before using it as
+  a key, because the index compares the stamps as strings: a bound written with an offset
+  (`2025-12-01T00:00:00-05:00`) sorts below every row of its own last day and would drop them
+  silently. The comparison inside `derive` uses `Date.parse` and never had that problem.
+
+## 2026-09-04 · The six `/stats/spending` call sites share one seam (O-F3 part 2)
+
+- **Decision:** `lib/local/repository/stats.ts` exposes one `readSpending`, and all six call sites
+  use it: `home.fetchSpending`, `budgets.fetchSpendingTotal`, `stats.fetchStats`,
+  `transactions.fetchDailyStats`, `categories.fetchCategoryUsage`, `categories.fetchCategoryCounts`.
+  It stamps the defaults `StatsController` stamps — `groupBy` `category`, `type` **EXPENSE** — which
+  is not the service's "everything but ADJUSTMENT": that query exists only below HTTP, so only a
+  fixture can ask for it and only `deriveSpending` implements it.
+- **Alternatives:** routing the three the plan named and leaving the three inside `categories` and
+  `transactions`. Rejected: those three live in domains that were already in
+  `MIRROR_BACKED_DOMAINS`, so they were failing quietly offline, and splitting the derivation across
+  six call sites is how the same figure starts disagreeing with itself.
+- **Consequence:** `budgets`, `home` and `stats` enter `MIRROR_BACKED_DOMAINS` together, and every
+  domain is now in it. `features/budgets/api.ts` lost `fetchBudgetsPage`, a dead export nobody
+  imported (F-09): the design backlog plans no screen that reads a single batch of budgets, and it
+  was the one budget read that never went through the repository.

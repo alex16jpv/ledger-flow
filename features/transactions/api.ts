@@ -1,6 +1,11 @@
 import { api } from "@/lib/api/client";
 import type { QueryValue } from "@/lib/api/query";
-import { readTransaction, readTransactions, readTransactionTags } from "@/lib/local/repository";
+import {
+  readSpending,
+  readTransaction,
+  readTransactions,
+  readTransactionTags,
+} from "@/lib/local/repository";
 import type {
   BatchUpdateResult,
   BatchUpdateTransactionsInput,
@@ -43,10 +48,8 @@ export interface DailyStatsParams {
   to: string;
 }
 
-// Still the server: day buckets are money derived over a time zone, which is O-F3, so with no
-// network the period summary has no figures rather than made-up ones.
 export function fetchDailyStats({ type, from, to }: DailyStatsParams): Promise<StatsResponse> {
-  return api<StatsResponse>("/stats/spending", { query: { groupBy: "day", type, from, to } });
+  return readSpending({ groupBy: "day", type, from, to });
 }
 
 export function fetchPendingCount(): Promise<TransactionList> {

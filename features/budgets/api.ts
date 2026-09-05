@@ -1,9 +1,13 @@
 import { api } from "@/lib/api/client";
-import { type BudgetListParams, readBudget, readBudgets } from "@/lib/local/repository";
+import {
+  type BudgetListParams,
+  readBudget,
+  readBudgets,
+  readSpending,
+} from "@/lib/local/repository";
 import type {
   Budget,
   BudgetAmountOverrideInput,
-  BudgetList,
   CreateBudgetInput,
   StatsResponse,
   UpdateBudgetInput,
@@ -11,20 +15,10 @@ import type {
 
 export type BudgetFilters = Omit<BudgetListParams, "limit">;
 
-// Reads go through the repository; with no network the mirror declines them, because the view's
-// `spent` is derived money and that is O-F3. Writes stay plain API calls until the outbox (O-F4).
+// Reads go through the repository, which answers from the mirror while offline; writes stay plain
+// API calls until the outbox lands (O-F4).
 export function fetchBudgets(filters: BudgetFilters = {}): Promise<Budget[]> {
   return readBudgets(filters);
-}
-
-export function fetchBudgetsPage(filters: BudgetFilters = {}): Promise<BudgetList> {
-  return api<BudgetList>("/budgets", {
-    query: {
-      reference: filters.reference,
-      includeExpired: filters.includeExpired ? "true" : undefined,
-      limit: 100,
-    },
-  });
 }
 
 export function createBudget(input: CreateBudgetInput): Promise<Budget> {
@@ -60,5 +54,5 @@ export function removeBudgetOverride(id: string, reference: string): Promise<Bud
 }
 
 export function fetchSpendingTotal(from: string, to: string): Promise<StatsResponse> {
-  return api<StatsResponse>("/stats/spending", { query: { type: "EXPENSE", from, to } });
+  return readSpending({ type: "EXPENSE", from, to });
 }

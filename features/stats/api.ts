@@ -1,4 +1,4 @@
-import { api } from "@/lib/api/client";
+import { readSpending } from "@/lib/local/repository";
 import type { StatsResponse } from "@/types/api";
 
 export const STATS_TYPES = ["EXPENSE", "INCOME", "TRANSFER", "ADJUSTMENT"] as const;
@@ -13,8 +13,7 @@ export interface StatsParams {
   to: string;
 }
 
-// Stats is /stats/spending and nothing else: every bucket is money derived over a time zone, so it
-// stays on the server until O-F3 and QUERY_DOMAINS.stats keeps pausing while offline.
+// Stats is /stats/spending and nothing else, so the whole feature rides on the one stats seam.
 export function fetchStats(params: StatsParams): Promise<StatsResponse> {
-  return api<StatsResponse>("/stats/spending", { query: { ...params } });
+  return readSpending({ ...params });
 }

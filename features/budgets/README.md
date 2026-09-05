@@ -22,7 +22,9 @@ inputs for CUSTOM (inclusive end → half-open API window), amount, color and th
 (effective from, note). `budgetSuggestions` (owner request F-01) scales the global-budget chips by
 currency or by last month's spending.
 
-O-F2a routes the list and the detail through `lib/local/repository`, but the mirror declines both
-while offline: it stores the saved shape (`SyncBudget`) and the screens read the view's `spent`,
-which is derived money (O-F3). The reads reach the server and fail honestly instead of showing a
+O-F2a routes the list and the detail through `lib/local/repository`, and since O-F3 part 2 the
+mirror answers both offline: it stores the saved shape (`SyncBudget`) and builds the view on top,
+`spent` included, over the rows the `dateCursor` index selects for the period. `fetchSpendingTotal`
+goes through the same stats seam as the other five call sites. The reads reach the server and fail
+honestly instead of showing a
 figure nobody computed.

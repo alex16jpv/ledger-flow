@@ -1,4 +1,4 @@
-import type { SyncTransaction } from "@/types/api";
+import type { StatsResponse, SyncBudget, SyncTransaction } from "@/types/api";
 
 import copBogota from "./fixtures/cop-bogota.json";
 import eurMadrid from "./fixtures/eur-madrid.json";
@@ -7,7 +7,8 @@ import usdNewYork from "./fixtures/usd-new-york.json";
 
 // The parity contract, vendored verbatim from the backend's committed `fixtures/offline/` with
 // `npm run fixtures:sync`; CI only ever sees this copy, and `parity.test.ts` fails if the two drift.
-// Only what O-F3 part 1 checks is typed here: `spending` and `budgets` arrive with part 2.
+// The shapes are `Fixture*` from the backend's `scripts/offline-fixtures/types.ts`, kept in its
+// vocabulary rather than restated: a field that changes name there has to change name here too.
 
 export interface FixtureAccount {
   key: string;
@@ -33,15 +34,72 @@ export interface FixtureTransaction {
   deletedAt: string | null;
 }
 
+export interface FixtureCategory {
+  key: string;
+  id: string;
+  name: string;
+  type: "EXPENSE" | "INCOME";
+  archivedAt: string | null;
+}
+
+// As STORED, which is the shape GET /sync/changes sends: no periodKey, spent or expired.
+export interface FixtureBudget {
+  key: string;
+  id: string;
+  name: string;
+  type: "EXPENSE" | "INCOME";
+  categoryIds: string[];
+  amount: number;
+  amountOverrides: Record<string, number>;
+  currency: string;
+  periodType: SyncBudget["periodType"];
+  periodStartDate: string | null;
+  periodEndDate: string | null;
+  effectiveFrom: string | null;
+  archivedAt: string | null;
+}
+
+// Every query is spelled out, so a test reads the question from the fixture instead of inventing it.
+export interface ExpectedSpending {
+  name: string;
+  query: {
+    groupBy: StatsResponse["groupBy"];
+    type: SyncTransaction["type"] | null;
+    from: string;
+    to: string;
+    timezone: string;
+  };
+  total: number;
+  buckets: { key: string; total: number; count: number; avg: number }[];
+}
+
+export interface ExpectedBudgetView {
+  key: string;
+  id: string;
+  periodKey: string;
+  periodFrom: string;
+  periodTo: string;
+  baseAmount: number;
+  amount: number;
+  hasOverride: boolean;
+  spent: number;
+  expired: boolean;
+  archivedCategoryIds: string[];
+}
+
 export interface ParityFixture {
   id: string;
   title: string;
   user: { id: string; timezone: string; currency: string; minorUnits: number };
   accounts: FixtureAccount[];
+  categories: FixtureCategory[];
   transactions: FixtureTransaction[];
+  budgets: FixtureBudget[];
   expected: {
     balances: { key: string; accountId: string; balance: number }[];
     pending: { count: number; total: number; transactionIds: string[] };
+    spending: ExpectedSpending[];
+    budgets: { reference: string; views: ExpectedBudgetView[] };
   };
 }
 

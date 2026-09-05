@@ -2,14 +2,30 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { openTestVault, transaction, wipeVaults } from "@/lib/testing/vault";
-import type { SyncChangesResponse, SyncTransaction } from "@/types/api";
+import {
+  budget as budgetRow,
+  category as categoryRow,
+  openTestVault,
+  profile,
+  transaction,
+  wipeVaults,
+} from "@/lib/testing/vault";
+import type { Category, SyncBudget, SyncChangesResponse, SyncTransaction, User } from "@/types/api";
 
 import { pullChanges } from "../pull";
-import { readTransactions, setCurrentVault } from "../repository";
+import { readBudgets, readSpending, readTransactions, setCurrentVault } from "../repository";
 import { deriveBalances } from "./balances";
-import { type FixtureTransaction, PARITY_FIXTURES, parityFixture } from "./fixtures";
+import { deriveBudgetView } from "./budgets";
+import {
+  type FixtureBudget,
+  type FixtureCategory,
+  type FixtureTransaction,
+  PARITY_FIXTURES,
+  type ParityFixture,
+  parityFixture,
+} from "./fixtures";
 import { sumAmounts } from "./money";
+import { deriveSpending } from "./spending";
 
 const VENDORED = resolve(process.cwd(), "lib/local/derive/fixtures");
 // The backend's committed copy, which `npm run fixtures:sync` copies here. The guard below runs only
@@ -27,13 +43,16 @@ function balanceOf(fixture: typeof bogota, key: string, rows = fixture.transacti
     .balance;
 }
 
-// A fixture row is the feed row minus its human `key` and the audit fields, which the tray never reads.
+// A fixture row is the feed row minus its human `key` and the audit fields, which the tray never
+// reads. The fixture keeps each date in the offset the user typed it in; the feed prints UTC, and
+// the mirror stores what the feed sends, so the stamp is normalised here and not anywhere later.
 function feedRow(userId: string, row: FixtureTransaction): SyncTransaction {
+  const date = new Date(row.date).toISOString();
   return transaction({
     id: row.id,
     type: row.type,
     amount: row.amount,
-    date: row.date,
+    date,
     description: row.description,
     categoryId: row.categoryId,
     fromAccountId: row.fromAccountId,
@@ -44,17 +63,85 @@ function feedRow(userId: string, row: FixtureTransaction): SyncTransaction {
     pendingDetails: row.pendingDetails,
     deletedAt: row.deletedAt,
     userId,
-    createdAt: row.date,
-    updatedAt: row.date,
+    createdAt: date,
+    updatedAt: date,
   });
 }
 
-function feedPage(transactions: SyncTransaction[]): SyncChangesResponse {
+function feedCategory(userId: string, row: FixtureCategory): Category {
+  return categoryRow({
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    archivedAt: row.archivedAt,
+    userId,
+  });
+}
+
+function feedBudget(userId: string, row: FixtureBudget): SyncBudget {
+  return budgetRow({
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    categoryIds: row.categoryIds,
+    amount: row.amount,
+    amountOverrides: row.amountOverrides,
+    currency: row.currency,
+    periodType: row.periodType,
+    periodStartDate: row.periodStartDate,
+    periodEndDate: row.periodEndDate,
+    effectiveFrom: row.effectiveFrom,
+    archivedAt: row.archivedAt,
+    userId,
+  });
+}
+
+function feedPage(
+  transactions: SyncTransaction[],
+  extra: { user?: User; categories?: Category[]; budgets?: SyncBudget[] } = {},
+): SyncChangesResponse {
   return {
     serverTime: "2026-09-03T12:00:00.000Z",
-    changes: { user: null, accounts: [], categories: [], transactions, budgets: [] },
+    changes: {
+      user: extra.user ?? null,
+      accounts: [],
+      categories: extra.categories ?? [],
+      transactions,
+      budgets: extra.budgets ?? [],
+    },
     pagination: { limit: 500, count: transactions.length, hasMore: false, nextCursor: "v1|done|" },
   };
+}
+
+// The whole scenario in a vault, so a read can be checked through the path a screen actually takes.
+// `effectiveFrom` is pulled back to the epoch: the fixture's expectations are the views themselves,
+// with none of the list's lifetime-floor filtering applied to them.
+async function vaultOf(fixture: ParityFixture) {
+  const userId = fixture.user.id;
+  const vault = await openTestVault(userId);
+  await pullChanges(vault, {
+    fetchPage: () =>
+      Promise.resolve(
+        feedPage(
+          fixture.transactions.map((row) => feedRow(userId, row)),
+          {
+            user: profile({
+              id: userId,
+              timezone: fixture.user.timezone,
+              currency: fixture.user.currency,
+            }),
+            categories: fixture.categories.map((row) => feedCategory(userId, row)),
+            budgets: fixture.budgets.map((row) => ({
+              ...feedBudget(userId, row),
+              effectiveFrom: "1970-01-01T00:00:00.000Z",
+            })),
+          },
+        ),
+      ),
+  });
+  setCurrentVault(vault);
+  reportOnline(false);
+  return vault;
 }
 
 afterEach(async () => {
@@ -67,6 +154,105 @@ describe.each(PARITY_FIXTURES)("$id", (fixture) => {
   it("derives every account balance", () => {
     expect(deriveBalances(fixture.accounts, fixture.transactions)).toEqual(
       fixture.expected.balances.map(({ accountId, balance }) => ({ accountId, balance })),
+    );
+  });
+
+  it.each(fixture.expected.spending)("derives the $name buckets", (expected) => {
+    // The query is read from the fixture, never invented: `type: null` is the service's "everything
+    // but ADJUSTMENT", which no URL can ask for.
+    expect(
+      deriveSpending(fixture.transactions, {
+        groupBy: expected.query.groupBy,
+        type: expected.query.type,
+        from: expected.query.from,
+        to: expected.query.to,
+        timeZone: expected.query.timezone,
+      }),
+    ).toEqual({ total: expected.total, buckets: expected.buckets });
+  });
+
+  it("derives every budget view as of the fixture's reference", () => {
+    const reference = new Date(fixture.expected.budgets.reference);
+    const archived = new Set(
+      fixture.categories.filter((row) => row.archivedAt !== null).map((row) => row.id),
+    );
+    // An archived budget produces no view at all, which is why the fixture lists none.
+    const views = fixture.budgets
+      .filter((row) => row.archivedAt === null)
+      .map((row) => {
+        const view = deriveBudgetView(
+          row,
+          fixture.transactions,
+          archived,
+          reference,
+          fixture.user.timezone,
+        );
+        return {
+          key: row.key,
+          id: row.id,
+          periodKey: view.periodKey,
+          periodFrom: view.periodFrom.toISOString(),
+          periodTo: view.periodTo.toISOString(),
+          baseAmount: view.baseAmount,
+          amount: view.amount,
+          hasOverride: view.hasOverride,
+          spent: view.spent,
+          expired: view.expired,
+          archivedCategoryIds: view.archivedCategoryIds,
+        };
+      });
+    expect(views).toEqual(fixture.expected.budgets.views);
+  });
+
+  // Reading through the repository is the other half: the derivation can be right while the rows
+  // the mirror hands it are the wrong ones. The queries a URL can express are checked this way.
+  it.each(fixture.expected.spending.filter((entry) => entry.query.type !== null))(
+    "answers $name through the repository",
+    async (expected) => {
+      await vaultOf(fixture);
+      await expect(
+        readSpending({
+          groupBy: expected.query.groupBy,
+          type: expected.query.type ?? undefined,
+          from: expected.query.from,
+          to: expected.query.to,
+        }),
+      ).resolves.toEqual({
+        groupBy: expected.query.groupBy,
+        total: expected.total,
+        buckets: expected.buckets,
+      });
+    },
+  );
+
+  it("answers every budget's spent through the repository", async () => {
+    await vaultOf(fixture);
+    const views = await readBudgets({
+      reference: fixture.expected.budgets.reference,
+      includeExpired: true,
+    });
+    expect(
+      views.map(({ id, periodKey, periodFrom, periodTo, amount, spent, hasOverride, expired }) => ({
+        id,
+        periodKey,
+        periodFrom,
+        periodTo,
+        amount,
+        spent,
+        hasOverride,
+        expired,
+      })),
+    ).toEqual(
+      fixture.expected.budgets.views.map((view) => ({
+        id: view.id,
+        periodKey: view.periodKey,
+        periodFrom: view.periodFrom,
+        periodTo: view.periodTo,
+        amount: view.amount,
+        spent: view.spent,
+        hasOverride: view.hasOverride,
+        expired: view.expired,
+      })),
     );
   });
 

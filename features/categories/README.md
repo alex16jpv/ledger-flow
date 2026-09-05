@@ -15,5 +15,6 @@ explanation when the category has history) and, on edit, "Archive category" with
 
 Reads go through `lib/local/repository` (O-F2a): `fetchCategories` and `fetchCategory` answer from
 the server while there is network and from the offline mirror when there is none, with the same
-shape either way. The usage counts still come from `stats/spending` and need the network — deriving
-them locally is O-F3. Writes are still plain API calls until the outbox lands (O-F4).
+shape either way. The usage counts come from `stats/spending` through `readSpending`, which derives
+them locally since O-F3 part 2 — the unbounded ones walk the whole `dateCursor` index, which is what
+"all-time" means. Writes are still plain API calls until the outbox lands (O-F4).

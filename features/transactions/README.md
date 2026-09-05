@@ -44,6 +44,6 @@ tray and the tag list answer from the server while there is network and from the
 there is none, with the same shape either way. The mirror resolves the cursor as a keyset over
 `(date, id)` — the same one the API uses — so infinite scroll and every filter work without network;
 a filter the mirror does not know how to apply makes it decline and the read goes to the server.
-`fetchDailyStats` is deliberately still a server call: the day buckets and the period summary are
-money derived over a time zone, which is O-F3, so offline they have no figures rather than made-up
-ones. Writes are still plain API calls until the outbox lands (O-F4).
+`fetchDailyStats` goes through the stats seam and answers offline since O-F3 part 2: its buckets are
+the user's local calendar days, derived over the window's rows. Writes are still plain API calls
+until the outbox lands (O-F4).

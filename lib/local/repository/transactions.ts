@@ -13,6 +13,7 @@ import type {
 import { sumAmounts } from "../derive";
 import type { TransactionRecord, VaultSchema } from "../schema";
 import { read } from "./read";
+import { dateCursorRange } from "./window";
 
 export type TransactionQuery = Record<string, QueryValue>;
 
@@ -100,17 +101,6 @@ function toMirrorFilter(query: TransactionQuery): MirrorFilter | undefined {
   };
 }
 
-// Comparing the dates as strings is comparing them as instants: they are the ISO stamps the server
-// printed. An array key [d, id] sorts after [d], so an open bound on [to] is the server's `$lt`.
-function windowRange(filter: MirrorFilter): IDBKeyRange | null {
-  if (filter.from !== undefined && filter.to !== undefined) {
-    return IDBKeyRange.bound([filter.from], [filter.to], false, true);
-  }
-  if (filter.from !== undefined) return IDBKeyRange.lowerBound([filter.from]);
-  if (filter.to !== undefined) return IDBKeyRange.upperBound([filter.to], true);
-  return null;
-}
-
 async function queryMirror(
   db: IDBPDatabase<VaultSchema>,
   filter: MirrorFilter,
@@ -130,7 +120,7 @@ async function queryMirror(
   let past = false;
   // Its own transaction: awaiting the pivot lookup first would let this one auto-commit mid-walk.
   const index = db.transaction("transactions").store.index("dateCursor");
-  for await (const entry of index.iterate(windowRange(filter), "prev")) {
+  for await (const entry of index.iterate(dateCursorRange(filter.from, filter.to), "prev")) {
     const record = entry.value;
     if (!filter.matches(record)) continue;
     total += 1;

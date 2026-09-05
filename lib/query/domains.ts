@@ -12,12 +12,15 @@ export const QUERY_DOMAINS = {
 
 // Reads these can answer from the offline mirror, so their fetch must run instead of being paused
 // while offline (O-F2a). The prefix covers every key of a domain, so a domain is only listed once
-// all its reads answer locally: budgets, home and stats still need derived money (O-F3), and
-// unpausing them would turn a paused skeleton into a failed request.
+// all its reads answer locally: budgets, home and stats joined when O-F3 part 2 derived `spent` and
+// the spending buckets, which were the last server-only reads any of them had.
 export const MIRROR_BACKED_DOMAINS = [
   QUERY_DOMAINS.accounts,
   QUERY_DOMAINS.categories,
   QUERY_DOMAINS.transactions,
+  QUERY_DOMAINS.budgets,
+  QUERY_DOMAINS.home,
+  QUERY_DOMAINS.stats,
 ];
 
 const MONEY_MOVEMENT_DOMAINS = [

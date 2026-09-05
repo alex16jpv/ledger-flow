@@ -1,5 +1,10 @@
 import { api } from "@/lib/api/client";
-import { type CategoryListParams, readCategories, readCategory } from "@/lib/local/repository";
+import {
+  type CategoryListParams,
+  readCategories,
+  readCategory,
+  readSpending,
+} from "@/lib/local/repository";
 import type {
   Category,
   CreateCategoryInput,
@@ -55,10 +60,10 @@ export function fetchCategoryUsage({
   from,
   to,
 }: CategoryUsageParams): Promise<StatsResponse> {
-  return api<StatsResponse>("/stats/spending", { query: { groupBy: "category", type, from, to } });
+  return readSpending({ groupBy: "category", type, from, to });
 }
 
 // No bounds: the whole history, which is what "n transactions" on a category tile means.
 export function fetchCategoryCounts(type: CategoryType): Promise<StatsResponse> {
-  return api<StatsResponse>("/stats/spending", { query: { groupBy: "category", type } });
+  return readSpending({ groupBy: "category", type });
 }

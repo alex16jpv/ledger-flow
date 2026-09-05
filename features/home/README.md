@@ -11,6 +11,7 @@ recent movements are composed in the app layer (`RecentTransactions`) because th
 transactions row and the account and category lookups of other features.
 
 O-F2a routes the accounts, categories and pending-tray reads through `lib/local/repository`, so the
-mirror can answer them offline; the month's spending and the budgets stay server calls because both
-are derived money (O-F3). Until those two can be answered, `QUERY_DOMAINS.home` is not in
-`MIRROR_BACKED_DOMAINS` and the screen keeps its offline skeleton rather than a failed request.
+mirror can answer them offline; since O-F3 part 2 the month's spending and the budgets answer there
+too, so all five reads are local and `QUERY_DOMAINS.home` is in `MIRROR_BACKED_DOMAINS`. The figures
+it paints offline are projections and none of them is marked yet — the amber tone arrives with the
+outbox in O-F4/O-F5a.

@@ -1,7 +1,7 @@
 import { ApiError, NetworkError } from "@/lib/api/errors";
 
 import { createQueryClient, retryDelayWithJitter, shouldRetryQuery } from "./client";
-import { QUERY_DOMAINS } from "./domains";
+import { MIRROR_BACKED_DOMAINS, QUERY_DOMAINS } from "./domains";
 import { cacheDatabaseName } from "./purge";
 
 describe("query client defaults", () => {
@@ -34,12 +34,16 @@ describe("query client defaults", () => {
     expect(cacheDatabaseName("u1")).toBe("lf-cache-u1");
   });
 
-  // Paused fetches never reach the repository, so the mirror could never answer them (O-F2a).
-  it("lets the mirror-backed domains fetch while offline, and pauses the rest", () => {
+  // Paused fetches never reach the repository, so the mirror could never answer them (O-F2a). Every
+  // domain answers locally since O-F3 part 2 derived `spent` and the spending buckets, so none of
+  // them pauses any more; a domain added without a local read has to stay out of the list.
+  it("lets every mirror-backed domain fetch while offline", () => {
     const client = createQueryClient();
-    expect(client.getQueryDefaults(QUERY_DOMAINS.accounts).networkMode).toBe("offlineFirst");
-    expect(client.getQueryDefaults(QUERY_DOMAINS.categories).networkMode).toBe("offlineFirst");
-    expect(client.getQueryDefaults(QUERY_DOMAINS.transactions).networkMode).toBe("offlineFirst");
-    expect(client.getQueryDefaults(QUERY_DOMAINS.budgets).networkMode).toBeUndefined();
+    for (const queryKey of Object.values(QUERY_DOMAINS)) {
+      expect(client.getQueryDefaults(queryKey).networkMode).toBe("offlineFirst");
+    }
+    expect([...MIRROR_BACKED_DOMAINS].flat().sort()).toEqual(
+      Object.values(QUERY_DOMAINS).flat().sort(),
+    );
   });
 });
