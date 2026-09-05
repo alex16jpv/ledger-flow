@@ -12,7 +12,8 @@ import {
 } from "@/components/shell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { usePendingCount } from "@/features/transactions/hooks";
-import { LOGIN_PATH } from "@/lib/auth/routes";
+import { readSessionMarker, vaultUserFor } from "@/lib/auth/marker";
+import { LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
 import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
@@ -42,19 +43,30 @@ function Frame({ children }: { children: ReactNode }) {
   useEffect(() => startHeartbeat(), []);
   const userId = session.user?.id;
   const sessionStatus = session.status;
+  // Read once per mount: the marker only changes on a sign-in or a sign-out, and both remount this.
+  const [marker] = useState(() => readSessionMarker());
+  const localUserId = vaultUserFor(
+    userId,
+    sessionStatus === "loading" ? "loading" : "resolved",
+    marker,
+  );
   useEffect(() => {
-    if (userId) return startMirror(userId);
+    // §2.6: the session cannot be resolved — no network, or the refresh is dead — but the marker
+    // says this device holds a vault for that user, so the app opens it and runs in local mode.
+    if (localUserId) return startMirror(localUserId);
     // Still asking who this is: the reads keep waiting. Anywhere else, no vault is coming.
     if (sessionStatus !== "loading") noMirror();
     return undefined;
-  }, [userId, sessionStatus]);
+  }, [localUserId, sessionStatus]);
   useEffect(() => {
     if (sessionStatus !== "authenticated") return;
     void warmAppShell(locale);
   }, [sessionStatus, locale]);
 
+  // `reauth` is what gets past the marker on the way to the login (§2.6); without it the proxy
+  // would send a device with a 400-day marker straight back to the app it cannot sync.
   const goToLogin = useCallback(() => {
-    router.replace(`${LOGIN_PATH}?next=${encodeURIComponent(pathname)}`);
+    router.replace(`${LOGIN_PATH}?${REAUTH_PARAM}=1&next=${encodeURIComponent(pathname)}`);
   }, [router, pathname]);
 
   return (
@@ -83,7 +95,11 @@ function Frame({ children }: { children: ReactNode }) {
           router.push({ pathname: ADD_HREF, query: Object.fromEntries(params) });
         }}
       />
-      <SessionExpiredSheet open={session.status === "expired"} onSignIn={goToLogin} />
+      <SessionExpiredSheet
+        open={session.status === "expired"}
+        localMode={localUserId !== undefined}
+        onSignIn={goToLogin}
+      />
     </FormatSettingsProvider>
   );
 }

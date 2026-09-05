@@ -23,6 +23,8 @@ export interface OutboxStatus {
   attentionRows: ReadonlyMap<string, number>;
   // Where "Review" goes: the first operation, in queue order, that needs a decision.
   firstAttention: number | null;
+  // The last thing the server (or the network) said no with, for Ajustes › Sync status.
+  lastError: string | null;
   projected: OutboxProjection;
 }
 
@@ -35,6 +37,7 @@ export const EMPTY_OUTBOX: OutboxStatus = {
   queuedRows: NO_ROWS,
   attentionRows: NO_ATTENTION,
   firstAttention: null,
+  lastError: null,
   projected: { balances: false, spending: false, budgets: false },
 };
 
@@ -67,6 +70,8 @@ function summarise(operations: OutboxOperation[]): OutboxStatus {
       [...stuck].reverse().map((operation) => [operation.entityId, operation.seq]),
     ),
     firstAttention: stuck[0]?.seq ?? null,
+    lastError:
+      [...operations].reverse().find((operation) => operation.lastError)?.lastError ?? null,
     projected: projectionOf(operations),
   };
 }
@@ -83,6 +88,7 @@ const same = (left: OutboxStatus, right: OutboxStatus): boolean =>
   left.pending === right.pending &&
   left.attention === right.attention &&
   left.firstAttention === right.firstAttention &&
+  left.lastError === right.lastError &&
   left.projected.balances === right.projected.balances &&
   left.projected.spending === right.projected.spending &&
   left.projected.budgets === right.projected.budgets &&

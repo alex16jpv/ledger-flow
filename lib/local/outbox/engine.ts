@@ -1,4 +1,5 @@
 import { ApiError, NetworkError } from "@/lib/api/errors";
+import { readSessionMarker } from "@/lib/auth/marker";
 import { connectivityStore } from "@/lib/network/connectivity";
 
 import { currentVault } from "../repository/read";
@@ -70,6 +71,11 @@ const isAlreadyGone = (error: unknown, action: string): boolean =>
 // id, not an error in the user's face (F-21).
 const isIdTaken = (error: unknown): boolean =>
   error instanceof ApiError && error.code === "ID_TAKEN";
+
+// The refresh already had its turn inside `lib/api` (a 401 here means it failed), so retrying is
+// asking a dead session the same question every minute until the tab closes (F-26).
+const isUnauthorized = (error: unknown): boolean =>
+  error instanceof ApiError && error.status === 401;
 
 // The `updatedAt` a successful write answers with, when it answers a row at all (an archive answers
 // `{ message }` today, F-22).
@@ -156,6 +162,8 @@ interface PassResult {
   // mirror may be behind it and the round ends with a pull (F-32). A network failure or a 5xx says
   // nothing new, and does not.
   answered: boolean;
+  // The session died under the queue: the pass stops and nothing is scheduled (F-26).
+  unauthorized: boolean;
   retryAfterMs: number;
 }
 
@@ -168,6 +176,7 @@ async function sendPlanned(
     progressed: false,
     stopped: false,
     answered: false,
+    unauthorized: false,
     retryAfterMs: 0,
   };
   // The ids nothing may be sent against: an operation in conflict or refused for good, and anything
@@ -276,6 +285,7 @@ async function sendPlanned(
         await markOperation(db, seq, "pending", codeOf(error));
         report.set(seq, { kind: "queued", code: codeOf(error) });
         result.stopped = true;
+        result.unauthorized = isUnauthorized(error);
         if (error instanceof ApiError && error.retryAfterSeconds) {
           result.retryAfterMs = error.retryAfterSeconds * 1_000;
         }
@@ -326,6 +336,8 @@ interface EngineState {
   failures: number;
   schedule: Scheduler;
   cancelRetry: (() => void) | null;
+  // Set by a 401 and cleared by a refresh or a fresh sign-in; while it is on, nothing is sent.
+  paused: boolean;
   afterRound: (() => Promise<void> | void) | null;
   random: () => number;
   stop: (() => void) | null;
@@ -338,6 +350,7 @@ const state: EngineState = {
   failures: 0,
   schedule: timeoutScheduler,
   cancelRetry: null,
+  paused: false,
   afterRound: null,
   random: Math.random,
   stop: null,
@@ -384,6 +397,13 @@ async function pass(db: VaultDb): Promise<DrainReport> {
     await refreshOutboxStatus(db);
     answered ||= outcome.answered;
     if (outcome.stopped) {
+      // A dead session is not a slow network: waiting longer never fixes it, so the queue holds
+      // where it is until `resumeSyncEngine` says the user is back (F-26).
+      if (outcome.unauthorized) {
+        state.paused = true;
+        clearRetry();
+        return report;
+      }
       backOff = true;
       retryAfterMs = outcome.retryAfterMs;
       break;
@@ -411,6 +431,11 @@ async function pass(db: VaultDb): Promise<DrainReport> {
 export function requestSync(): Promise<DrainReport> {
   const vault = currentVault();
   if (!vault) return Promise.resolve(EMPTY_REPORT);
+  if (state.paused) return Promise.resolve(EMPTY_REPORT);
+  // Somebody else signed in on this device while this tab held a vault open: sending now would file
+  // one user's writes under another's session (§2.6). The queue waits for its own user to come back.
+  const marker = readSessionMarker();
+  if (marker && marker.userId !== vault.userId) return Promise.resolve(EMPTY_REPORT);
   state.wanted += 1;
   const mine = state.wanted;
   if (!state.inFlight) {
@@ -456,6 +481,7 @@ export function startSyncEngine(options: SyncEngineOptions = {}): () => void {
   state.random = options.random ?? Math.random;
   state.schedule = options.schedule ?? timeoutScheduler;
   state.failures = 0;
+  state.paused = false;
 
   const wake = (): void => {
     void requestSync();
@@ -492,6 +518,19 @@ export function startSyncEngine(options: SyncEngineOptions = {}): () => void {
   return stop;
 }
 
+// The session is back: a refresh landed, or the user signed in again. Nothing was lost while the
+// engine was paused, so the queue goes out now (F-26).
+export function resumeSyncEngine(): void {
+  if (!state.paused) return;
+  state.paused = false;
+  state.failures = 0;
+  void requestSync();
+}
+
+export function isSyncPaused(): boolean {
+  return state.paused;
+}
+
 // Test seam: the queue survives, the engine's in-memory bookkeeping does not.
 export function resetSyncEngine(): void {
   state.stop?.();
@@ -500,6 +539,7 @@ export function resetSyncEngine(): void {
   state.wanted = 0;
   state.served = 0;
   state.failures = 0;
+  state.paused = false;
   state.afterRound = null;
   state.random = Math.random;
   state.schedule = timeoutScheduler;

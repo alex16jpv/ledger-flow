@@ -23,6 +23,7 @@ function Probe() {
       <output data-testid="status">{session.status}</output>
       <output data-testid="name">{session.user?.name ?? ""}</output>
       <button onClick={() => void session.logout()}>logout</button>
+      <button onClick={() => void session.logout({ discardPendingWork: true })}>discard</button>
     </div>
   );
 }
@@ -137,7 +138,6 @@ describe("SessionProvider", () => {
     });
 
     fetchMock.mockResolvedValue(json({ ok: true }));
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     await userEvent.click(screen.getByRole("button", { name: "logout" }));
     await waitFor(() => {
       expect(onSignedOut).toHaveBeenCalled();
@@ -146,7 +146,24 @@ describe("SessionProvider", () => {
     const vault = await openTestVault("u1");
     expect(await vault.db.count("accounts")).toBe(0);
     expect(await countPendingOperations("u1")).toBe(4);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("4 unsent operations"));
-    warn.mockRestore();
+  });
+
+  // F-34: the other half of the sheet. Keeping is the default; discarding only happens when the
+  // user was shown what they were throwing away and said so.
+  it("discards the queue on logout when the user chose to", async () => {
+    await fillVault("u1", 4);
+    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "A" } }));
+    const onSignedOut = renderSession();
+    await waitFor(() => {
+      expect(screen.getByTestId("status")).toHaveTextContent("authenticated");
+    });
+
+    fetchMock.mockResolvedValue(json({ ok: true }));
+    await userEvent.click(screen.getByRole("button", { name: "discard" }));
+    await waitFor(() => {
+      expect(onSignedOut).toHaveBeenCalled();
+    });
+
+    expect(await countPendingOperations("u1")).toBe(0);
   });
 });

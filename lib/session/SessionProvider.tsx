@@ -13,6 +13,7 @@ import {
 
 import { setUnauthorizedHandler } from "@/lib/api/client";
 import { noteRefreshedElsewhere, refreshSession } from "@/lib/api/refresh";
+import { resumeSyncEngine } from "@/lib/local/outbox/engine";
 import { purgeVault } from "@/lib/local/purge";
 import { purgePersistedCaches } from "@/lib/query/purge";
 import { themeStore } from "@/lib/theme/store";
@@ -28,10 +29,15 @@ interface SessionContextValue {
   status: SessionStatus;
   user: User | null;
   expired: boolean;
-  logout: () => Promise<void>;
-  logoutAll: () => Promise<void>;
+  logout: (options?: SignOutOptions) => Promise<void>;
+  logoutAll: (options?: SignOutOptions) => Promise<void>;
   refetch: () => Promise<unknown>;
   setUser: (user: User) => void;
+}
+
+export interface SignOutOptions {
+  // The user's answer to the sheet of F-34. Left out, the queue survives the logout.
+  discardPendingWork?: boolean;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -71,16 +77,16 @@ export function SessionProvider({
 
   // Explicit logout only: an expired session leaves the vault alone, because the app keeps working
   // offline and its queue outlives the session (D-7, invariant 7). The mirror always goes, so the
-  // next user on this device sees nothing; unsent work is kept until O-F5a can offer the choice.
-  const endLocalSession = useCallback(async () => {
-    queryClient.clear();
-    await purgePersistedCaches();
-    if (!userId) return;
-    const outcome = await purgeVault(userId);
-    if (outcome.operationsKept > 0) {
-      console.warn(`ledger-flow: kept ${outcome.operationsKept} unsent operations after logout`);
-    }
-  }, [queryClient, userId]);
+  // next user on this device sees nothing; the queue only goes if the user said so (F-34).
+  const endLocalSession = useCallback(
+    async ({ discardPendingWork = false }: SignOutOptions = {}) => {
+      queryClient.clear();
+      await purgePersistedCaches();
+      if (!userId) return;
+      await purgeVault(userId, { discardPendingWork });
+    },
+    [queryClient, userId],
+  );
 
   useEffect(() => {
     return tabChannel.subscribe((message) => {
@@ -89,10 +95,12 @@ export function SessionProvider({
           setExpired(true);
           break;
         case "session:logout":
-          void endLocalSession().then(onSignedOut);
+          // The tab that ran the logout already applied the user's choice to the shared vault.
+          void endLocalSession({ discardPendingWork: false }).then(onSignedOut);
           break;
         case "session:refreshed":
           noteRefreshedElsewhere(message.at);
+          resumeSyncEngine();
           break;
         case "theme":
           themeStore.set(
@@ -112,18 +120,19 @@ export function SessionProvider({
   }, [endLocalSession, onSignedOut, onLocaleChanged]);
 
   const logoutMutation = useMutation({
-    mutationFn: requestLogout,
-    onSettled: async () => {
-      await endLocalSession();
+    mutationFn: ({ options }: { options: SignOutOptions }) => requestLogout().then(() => options),
+    onSettled: async (_data, _error, variables) => {
+      await endLocalSession(variables.options);
       tabChannel.post({ type: "session:logout" });
       onSignedOut();
     },
   });
 
   const logoutAllMutation = useMutation({
-    mutationFn: requestLogoutAll,
-    onSettled: async () => {
-      await endLocalSession();
+    mutationFn: ({ options }: { options: SignOutOptions }) =>
+      requestLogoutAll().then(() => options),
+    onSettled: async (_data, _error, variables) => {
+      await endLocalSession(variables.options);
       tabChannel.post({ type: "session:logout" });
       onSignedOut();
     },
@@ -149,11 +158,11 @@ export function SessionProvider({
       status,
       user: query.data?.user ?? null,
       expired,
-      logout: async () => {
-        await logoutMutation.mutateAsync().catch(() => undefined);
+      logout: async (options = {}) => {
+        await logoutMutation.mutateAsync({ options }).catch(() => undefined);
       },
-      logoutAll: async () => {
-        await logoutAllMutation.mutateAsync().catch(() => undefined);
+      logoutAll: async (options = {}) => {
+        await logoutAllMutation.mutateAsync({ options }).catch(() => undefined);
       },
       refetch: query.refetch,
       setUser,

@@ -7,6 +7,7 @@ import {
   isGuestOnlyPath,
   isProtectedPath,
   LOGIN_PATH,
+  REAUTH_PARAM,
   safeNextPath,
   stripLocale,
 } from "@/lib/auth/routes";
@@ -29,14 +30,19 @@ export default function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const prefix = localePrefix(pathname);
   const path = stripLocale(pathname, routing.locales);
-  const hasSession = request.cookies.has(SESSION_COOKIE);
+  // The marker says this device holds a vault, not that the session is alive (§2.6): it is what
+  // lets `(app)` open with a dead refresh, and it is never proof of anything else.
+  const hasMarker = request.cookies.has(SESSION_COOKIE);
+  // ...which is why it cannot bounce anyone off the login: with a 400-day marker and a dead session
+  // that would be a device locked out of its own account.
+  const reauthenticating = request.nextUrl.searchParams.has(REAUTH_PARAM);
 
   // Previews must never be indexed, whatever the path (Vercel only adds the header on *.vercel.app).
   const noindex =
     isProtectedPath(path) ||
     path.startsWith("/dev/") ||
     process.env.NEXT_PUBLIC_VERCEL_ENV === "preview";
-  if (!hasSession && isProtectedPath(path)) {
+  if (!hasMarker && isProtectedPath(path)) {
     const url = request.nextUrl.clone();
     url.pathname = `${prefix}${LOGIN_PATH}`;
     url.search = `?next=${encodeURIComponent(`${path}${search}`)}`;
@@ -44,7 +50,7 @@ export default function proxy(request: NextRequest) {
     redirect.headers.set("x-robots-tag", "noindex, nofollow");
     return redirect;
   }
-  if (hasSession && isGuestOnlyPath(path)) {
+  if (hasMarker && !reauthenticating && isGuestOnlyPath(path)) {
     const url = request.nextUrl.clone();
     url.pathname = `${prefix}${safeNextPath(request.nextUrl.searchParams.get("next"), APP_HOME_PATH)}`;
     url.search = "";

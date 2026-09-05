@@ -2,9 +2,11 @@ import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { account, wipeVaults } from "@/lib/testing/vault";
 import type { SyncChangesResponse } from "@/types/api";
 
+import { VAULT } from "./db";
 import { PULL_STALE_MS, startMirror } from "./mirror";
 import type { PullPageQuery } from "./pull";
 import { currentVault, expectVault, read, resetVaultGate, setCurrentVault } from "./repository";
+import { vaultDatabaseName } from "./schema";
 
 const originalStorage = Object.getOwnPropertyDescriptor(navigator, "storage");
 const persist = vi.fn().mockResolvedValue(true);
@@ -57,6 +59,36 @@ afterEach(async () => {
   resetVaultGate();
   connectivityStore.reset();
   await wipeVaults();
+});
+
+describe("another tab upgrading the schema (F-14)", () => {
+  it("stops serving from a handle the browser closed under it", async () => {
+    const stop = start();
+    await vi.waitFor(() => {
+      expect(currentVault()?.userId).toBe("u1");
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    // A tab running a newer build opens the same database at a higher version, which fires
+    // `versionchange` here; holding the connection would stall that tab forever, so it is closed.
+    const other = indexedDB.open(vaultDatabaseName("u1"), VAULT.schemaVersion + 1);
+    await new Promise<void>((resolve) => {
+      other.onsuccess = () => {
+        other.result.close();
+        resolve();
+      };
+      other.onblocked = () => {
+        resolve();
+      };
+    });
+
+    // Before this, the handle stayed in place and the next read threw `InvalidStateError`.
+    await vi.waitFor(() => {
+      expect(currentVault()).toBeNull();
+    });
+    warn.mockRestore();
+    stop();
+  });
 });
 
 describe("startMirror", () => {

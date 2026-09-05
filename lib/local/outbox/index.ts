@@ -29,8 +29,10 @@ export {
   BACKOFF_MIN_MS,
   backoffDelay,
   type DrainReport,
+  isSyncPaused,
   requestSync,
   resetSyncEngine,
+  resumeSyncEngine,
   startSyncEngine,
 } from "./engine";
 export {

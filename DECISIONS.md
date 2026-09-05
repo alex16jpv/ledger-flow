@@ -1527,3 +1527,37 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** the gate is raised in a render, which is why it is one-shot and idempotent. When
   the session settles without a user, the frame lowers it: nothing is going to open a vault, and a
   read that waited forever would spin a screen instead of failing.
+
+## 2026-09-05 · The session marker stops being authority, and outlives the session (O-F6, §2.6)
+
+- **Decision:** `__Host-session` changes meaning. It carries `<userId>.<issuedAt>`, lasts 400 days
+  instead of 30, and is readable by scripts. It says "this device holds a vault for this user" and
+  nothing else; the API is what says whether a session is valid. `proxy.ts` uses it to let `(app)`
+  through, and `AppFrame` uses it to know whose vault to open when the session cannot be resolved.
+- **Why:** the refresh token lasts 30 days and the offline vault is meant to last indefinitely. At
+  day 31 the proxy sent the user to `/login` and the app they could still have used offline became
+  unreachable — with their unsent queue inside it.
+- **Alternatives:** lengthening the refresh token (D-15 keeps it at 30 days, and a long-lived
+  credential is a different risk); passing the id down from the server layout (the app-shell cache
+  of O-F6 part 1 would serve a document with a stale id after a user change); a second cookie for
+  liveness (a cookie the proxy cannot even see, since the refresh one is scoped to `/api/auth`).
+- **Consequence:** three things follow. A 400-day marker would bounce a dead session off `/login`
+  forever, so `?reauth=1` is the declared way past `isGuestOnlyPath`. The id is no longer secret to
+  scripts — it is an opaque id, never a credential, and an XSS that could read it already has the
+  API. And the engine compares the marker against the open vault before sending, so a second user
+  signing in on the device cannot get the first one's queue filed under their session.
+
+## 2026-09-05 · A dead refresh no longer clears site data (O-F6, invariant 7)
+
+- **Decision:** `endSessionResponse` splits in two. An explicit logout clears the three cookies and
+  asks for `Clear-Site-Data: "cache"`; a dead refresh token (`/api/auth/refresh` answering 401)
+  clears only the access and refresh cookies and asks for nothing.
+- **Why:** the old response sent `"cache", "storage"` on both paths. `"storage"` deletes IndexedDB,
+  so the moment a refresh token expired the browser threw away the vault, the unsent outbox and the
+  offline shell — the exact scenario local mode exists for, and a direct breach of invariant 7.
+- **Alternatives:** keeping `"storage"` on logout only (it still decides for the user what F-34 is
+  supposed to ask them); scoping the header (it has no per-store granularity).
+- **Consequence:** what leaves on a logout is now decided in one place, `purgeVault`, which already
+  knew how to drop the mirror and keep the queue. Losing `"storage"` on logout means non-vault
+  origin storage is no longer wiped by the header; the mirror goes through `purgeVault` and the
+  React Query caches through `purgePersistedCaches`, which is what actually held per-user data.

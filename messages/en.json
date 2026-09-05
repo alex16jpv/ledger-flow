@@ -284,7 +284,8 @@
     "install": {
       "title": "Install app",
       "subtitle": "Add Ledger Flow to your home screen",
-      "installed": "Installed"
+      "installed": "Installed",
+      "durability": "Add Ledger Flow to your home screen so the browser doesn’t delete what you record offline"
     },
     "delete": {
       "title": "Delete my account",
@@ -293,6 +294,67 @@
       "word": "DELETE",
       "confirm": "Delete account",
       "done": "Account deleted. Sign up again with the same email to come back."
+    },
+    "signOutPending": {
+      "title": "You have unsent changes",
+      "body": "{count, plural, one {# change hasn’t reached the server yet} other {# changes haven’t reached the server yet}}. Keeping them means they go out next time you sign in on this device.",
+      "keep": "Sign out and keep them",
+      "discard": "Discard and sign out"
+    },
+    "sync": {
+      "title": "Sync status",
+      "subtitle": "What this device has, and what it still owes the server",
+      "cursor": {
+        "label": "Sync cursor",
+        "help": "Where the next pull starts from",
+        "set": "Set",
+        "never": "Never synced"
+      },
+      "lastSync": {
+        "label": "Last full sync",
+        "never": "Never"
+      },
+      "queue": {
+        "label": "Waiting to send"
+      },
+      "lastError": {
+        "label": "Last error: {code}"
+      },
+      "storage": {
+        "label": "Storage used",
+        "unknown": "Unknown"
+      },
+      "persisted": {
+        "label": "Persistent storage",
+        "help": "Stops the browser evicting your offline data",
+        "yes": "Granted",
+        "no": "Not granted",
+        "unsupported": "Unsupported"
+      },
+      "mode": {
+        "label": "Running as",
+        "installed": "Installed app",
+        "browser": "Browser tab"
+      },
+      "durability": {
+        "warning": "You’re in a browser tab. Install the app to keep what you record offline — a browser can delete it after a few days without opening the site."
+      },
+      "tray": {
+        "title": "Changes that need you",
+        "stuck": "{count, plural, one {# change is stuck} other {# changes are stuck}}",
+        "empty": "Nothing needs you"
+      },
+      "resync": {
+        "cta": "Force full resync",
+        "help": "Throws away the local copy and downloads it again. Anything waiting to send is kept.",
+        "confirmTitle": "Download everything again?",
+        "confirmBody": "{count, plural, =0 {The local copy is deleted and downloaded again.} one {The local copy is deleted and downloaded again. # change waiting to send is kept.} other {The local copy is deleted and downloaded again. # changes waiting to send are kept.}}",
+        "confirm": "Resync now",
+        "cancel": "Cancel",
+        "done": "Resynced",
+        "failed": "Could not resync",
+        "offline": "Needs a connection: it downloads the copy again."
+      }
     }
   },
   "states": {
@@ -326,7 +388,10 @@
       "eyebrow": "Session",
       "title": "Your session ended",
       "body": "It was signed out from another device, or it’s been more than 30 days. Sign in again to continue.",
-      "cta": "Sign in"
+      "cta": "Sign in",
+      "localTitle": "Sign in to sync",
+      "localBody": "Your session ended, so nothing is syncing. The app keeps working on this device and your changes are saved here — sign in again to send them.",
+      "localCta": "Sign in to sync"
     },
     "notFound": {
       "title": "Page not found",
@@ -871,7 +936,8 @@
         "body": "Missing one of the default categories? Recreate them without duplicating the ones you renamed.",
         "cta": "Restore",
         "created": "{count, plural, one {# category created} other {# categories created}}",
-        "none": "Nothing was missing"
+        "none": "Nothing was missing",
+        "onlineOnly": "Needs a connection: the server creates these categories."
       }
     },
     "archive": {

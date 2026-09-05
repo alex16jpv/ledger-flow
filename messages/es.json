@@ -284,7 +284,8 @@
     "install": {
       "title": "Instalar app",
       "subtitle": "Añade Ledger Flow a tu pantalla de inicio",
-      "installed": "Instalada"
+      "installed": "Instalada",
+      "durability": "Añade Ledger Flow a tu pantalla de inicio para que el navegador no borre lo que registres sin conexión"
     },
     "delete": {
       "title": "Eliminar mi cuenta",
@@ -293,6 +294,67 @@
       "word": "ELIMINAR",
       "confirm": "Eliminar cuenta",
       "done": "Cuenta eliminada. Regístrate de nuevo con el mismo correo para volver."
+    },
+    "signOutPending": {
+      "title": "Tienes cambios sin enviar",
+      "body": "{count, plural, one {# cambio no ha llegado al servidor todavía} other {# cambios no han llegado al servidor todavía}}. Si los conservas, se enviarán la próxima vez que inicies sesión en este dispositivo.",
+      "keep": "Cerrar sesión y conservarlos",
+      "discard": "Descartar y cerrar sesión"
+    },
+    "sync": {
+      "title": "Estado de sincronización",
+      "subtitle": "Qué tiene este dispositivo y qué le debe al servidor",
+      "cursor": {
+        "label": "Cursor de sincronización",
+        "help": "Desde dónde empieza el próximo tirón",
+        "set": "Establecido",
+        "never": "Nunca sincronizado"
+      },
+      "lastSync": {
+        "label": "Última sincronización completa",
+        "never": "Nunca"
+      },
+      "queue": {
+        "label": "Esperando a enviarse"
+      },
+      "lastError": {
+        "label": "Último error: {code}"
+      },
+      "storage": {
+        "label": "Almacenamiento usado",
+        "unknown": "Desconocido"
+      },
+      "persisted": {
+        "label": "Almacenamiento persistente",
+        "help": "Evita que el navegador borre tus datos sin conexión",
+        "yes": "Concedido",
+        "no": "No concedido",
+        "unsupported": "No disponible"
+      },
+      "mode": {
+        "label": "Se ejecuta como",
+        "installed": "App instalada",
+        "browser": "Pestaña del navegador"
+      },
+      "durability": {
+        "warning": "Estás en una pestaña del navegador. Instala la app para conservar lo que registres sin conexión: un navegador puede borrarlo tras unos días sin abrir el sitio."
+      },
+      "tray": {
+        "title": "Cambios que te necesitan",
+        "stuck": "{count, plural, one {# cambio atascado} other {# cambios atascados}}",
+        "empty": "No hay nada pendiente"
+      },
+      "resync": {
+        "cta": "Forzar sincronización completa",
+        "help": "Descarta la copia local y la vuelve a descargar. Lo que esté esperando a enviarse se conserva.",
+        "confirmTitle": "¿Descargar todo otra vez?",
+        "confirmBody": "{count, plural, =0 {Se borra la copia local y se descarga de nuevo.} one {Se borra la copia local y se descarga de nuevo. Se conserva # cambio pendiente de enviar.} other {Se borra la copia local y se descarga de nuevo. Se conservan # cambios pendientes de enviar.}}",
+        "confirm": "Sincronizar ahora",
+        "cancel": "Cancelar",
+        "done": "Sincronizado",
+        "failed": "No se pudo sincronizar",
+        "offline": "Necesita conexión: vuelve a descargar la copia."
+      }
     }
   },
   "states": {
@@ -326,7 +388,10 @@
       "eyebrow": "Sesión",
       "title": "Tu sesión terminó",
       "body": "Se cerró desde otro dispositivo o pasaron más de 30 días. Entra de nuevo para continuar.",
-      "cta": "Entrar"
+      "cta": "Entrar",
+      "localTitle": "Inicia sesión para sincronizar",
+      "localBody": "Tu sesión terminó, así que no se está sincronizando nada. La app sigue funcionando en este dispositivo y tus cambios se guardan aquí: inicia sesión otra vez para enviarlos.",
+      "localCta": "Iniciar sesión para sincronizar"
     },
     "notFound": {
       "title": "Página no encontrada",
@@ -871,7 +936,8 @@
         "body": "¿Te falta alguna categoría predeterminada? Vuelve a crearlas sin duplicar las que renombraste.",
         "cta": "Restaurar",
         "created": "{count, plural, one {Se creó # categoría} other {Se crearon # categorías}}",
-        "none": "No faltaba ninguna"
+        "none": "No faltaba ninguna",
+        "onlineOnly": "Necesita conexión: estas categorías las crea el servidor."
       }
     },
     "archive": {

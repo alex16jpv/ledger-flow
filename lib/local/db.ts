@@ -144,9 +144,16 @@ async function upgradeOutbox(
   return { state: migrated.length > 0 ? "migrated" : "current", blocked: 0 };
 }
 
+export interface OpenVaultOptions {
+  // Called when another tab's upgrade forces this connection shut. Whoever holds the handle has to
+  // stop using it: every call on it from here on throws `InvalidStateError` (F-14).
+  onClosed?: () => void;
+}
+
 export async function openVault(
   userId: string,
   definition: VaultDefinition = VAULT,
+  options: OpenVaultOptions = {},
 ): Promise<VaultHandle> {
   if (!isVaultSupported()) throw new VaultUnavailableError();
 
@@ -157,6 +164,7 @@ export async function openVault(
     blocking(_currentVersion, _blockedVersion, event) {
       // Another tab is upgrading the schema; holding this connection open would stall it forever.
       (event.target as IDBDatabase | null)?.close();
+      options.onClosed?.();
     },
   });
 

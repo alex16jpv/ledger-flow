@@ -13,3 +13,14 @@ per device from the user agent, sign out one, or every device with a confirmatio
 goes too), the "Your data" section (rights under Law 1581, contact mailbox, policy link), the
 "Install app" row (`beforeinstallprompt`), About with the version, and `DeleteAccountSheet` (type the
 word, `DELETE /users/:id`, then sign out to `/login?deleted=1`).
+
+O-F6 part 2 adds `/settings/sync`, the screen support needs when someone spent three months without
+network: the sync cursor and last full pull, how many writes are still queued and the last error the
+server (or the network) answered with, storage used and whether the persistent grant was given,
+whether the app is running installed or in a tab — on iOS the two hold different data (§4.3) — a link
+to the `/sync` tray instead of a second copy of it (F-30), and "Force full resync", which deletes the
+local copy and downloads it again while keeping the queue, because the queue is the only place unsent
+work exists. The hub gains its row, the install row now explains durability rather than convenience,
+and signing out with a queue behind you asks first: keep the work for the next sign-in on this device,
+or discard it (F-34). Categories says out loud that "restore defaults" needs a connection, since the
+server mints those ids and there is nothing the queue could project (F-20).

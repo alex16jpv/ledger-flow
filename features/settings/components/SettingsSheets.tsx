@@ -187,3 +187,37 @@ export function DeleteAccountSheet({
     </Sheet>
   );
 }
+
+// F-34: signing out with a queue behind you is a decision, not a side effect. Keeping is the
+// default and the safe answer — the operations go out at the next sign-in on this device.
+export function SignOutSheet({
+  open,
+  onClose,
+  pending,
+  onKeep,
+  onDiscard,
+}: SheetProps & { pending: number; onKeep: () => void; onDiscard: () => void }) {
+  const t = useTranslations();
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={t("settings.signOutPending.title")}
+      footer={
+        <>
+          <Button size="lg" block onClick={onKeep}>
+            {t("settings.signOutPending.keep")}
+          </Button>
+          <Button variant="dangerSolid" size="lg" block onClick={onDiscard}>
+            {t("settings.signOutPending.discard")}
+          </Button>
+          <Button variant="ghost" size="lg" block onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+        </>
+      }
+    >
+      <Alert tone="warning">{t("settings.signOutPending.body", { count: pending })}</Alert>
+    </Sheet>
+  );
+}

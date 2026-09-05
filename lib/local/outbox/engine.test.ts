@@ -10,8 +10,10 @@ import {
   BACKOFF_MAX_MS,
   BACKOFF_MIN_MS,
   backoffDelay,
+  isSyncPaused,
   requestSync,
   resetSyncEngine,
+  resumeSyncEngine,
   startSyncEngine,
 } from "./engine";
 import { operationPayload } from "./envelope";
@@ -374,6 +376,82 @@ describe("backoff", () => {
 
     expect(cancelled).toHaveBeenCalled();
     expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+});
+
+describe("a session that died under the queue (F-26)", () => {
+  const unauthorized = () =>
+    Promise.resolve(json({ code: "UNAUTHORIZED", message: "no" }, { status: 401 }));
+
+  it("stops instead of asking a dead session once a minute", async () => {
+    const vault = await vaultWith();
+    const waits: number[] = [];
+    startSyncEngine({
+      random: () => 1,
+      schedule: (_run, delayMs) => {
+        waits.push(delayMs);
+        return () => undefined;
+      },
+    });
+    await seed(vault.db, [{ seq: 1 }]);
+    fetchMock.mockImplementation(unauthorized);
+
+    await requestSync();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // The backoff never starts: there is nothing to come back to until the user signs in.
+    expect(waits).toEqual([]);
+    expect(isSyncPaused()).toBe(true);
+    // The operation is neither sent nor lost (invariant 7).
+    expect((await pendingOperations(vault.db)).map((entry) => entry.seq)).toEqual([1]);
+  });
+
+  it("ignores every trigger while it is paused", async () => {
+    const vault = await vaultWith();
+    startSyncEngine({ schedule: () => () => undefined });
+    await seed(vault.db, [{ seq: 1 }]);
+    fetchMock.mockImplementation(unauthorized);
+
+    await requestSync();
+    await requestSync();
+    await requestSync();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends what it held as soon as the session comes back", async () => {
+    const vault = await vaultWith();
+    startSyncEngine({ schedule: () => () => undefined });
+    await seed(vault.db, [{ seq: 1 }]);
+    fetchMock.mockImplementation(unauthorized);
+    await requestSync();
+    expect(isSyncPaused()).toBe(true);
+
+    fetchMock.mockImplementation(() => Promise.resolve(json(transaction({ id: "t1" }))));
+    resumeSyncEngine();
+
+    await vi.waitFor(async () => {
+      expect(await pendingOperations(vault.db)).toEqual([]);
+    });
+    expect(isSyncPaused()).toBe(false);
+  });
+
+  it("does not send one user's queue under another user's session", async () => {
+    const vault = await vaultWith();
+    startSyncEngine({ schedule: () => () => undefined });
+    await seed(vault.db, [{ seq: 1 }]);
+    fetchMock.mockImplementation(() => Promise.resolve(json(transaction({ id: "t1" }))));
+    // Somebody else signed in on this device while this tab still held the first user's vault.
+    // jsdom refuses to set a `__Host-` cookie over http, so the read is stubbed instead.
+    const cookie = vi
+      .spyOn(document, "cookie", "get")
+      .mockReturnValue("__Host-session=someone-else.1000");
+
+    await requestSync();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect((await pendingOperations(vault.db)).map((entry) => entry.seq)).toEqual([1]);
+    cookie.mockRestore();
   });
 });
 
