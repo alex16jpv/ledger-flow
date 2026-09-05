@@ -54,6 +54,14 @@ function route<R>(spec: {
 // A removal keeps whatever the projection wrote: the archived row, the tombstone. Nothing to merge.
 const nothing = undefined;
 
+// An archive answers `{ message }` today (F-22). The day it answers the row, keeping it is what lets
+// the engine rebase the guard of a restore queued behind it.
+const isRow = (result: unknown): result is { id: string; updatedAt: string } =>
+  typeof result === "object" &&
+  result !== null &&
+  typeof (result as { id?: unknown }).id === "string" &&
+  typeof (result as { updatedAt?: unknown }).updatedAt === "string";
+
 async function putAccount(tx: WriteTransaction, row: Account): Promise<void> {
   await tx.objectStore("accounts").put(accountRecord(row));
 }
@@ -114,7 +122,7 @@ export const ROUTES: Record<RouteKey, Route> = {
   "account:archive": route<unknown>({
     send: ({ entityId }, guard) =>
       api<unknown>(`/accounts/${entityId}`, { method: "DELETE", ...ifMatch(guard) }),
-    confirm: nothing,
+    confirm: (tx, result) => (isRow(result) ? putAccount(tx, result as Account) : nothing),
   }),
   "account:restore": route<Account>({
     send: ({ entityId, payload }, guard) =>
@@ -147,7 +155,7 @@ export const ROUTES: Record<RouteKey, Route> = {
   "category:archive": route<unknown>({
     send: ({ entityId }, guard) =>
       api<unknown>(`/categories/${entityId}`, { method: "DELETE", ...ifMatch(guard) }),
-    confirm: nothing,
+    confirm: (tx, result) => (isRow(result) ? putCategory(tx, result as Category) : nothing),
   }),
   "category:restore": route<Category>({
     send: ({ entityId, payload }, guard) =>
@@ -196,7 +204,7 @@ export const ROUTES: Record<RouteKey, Route> = {
   "budget:archive": route<unknown>({
     send: ({ entityId }, guard) =>
       api<unknown>(`/budgets/${entityId}`, { method: "DELETE", ...ifMatch(guard) }),
-    confirm: nothing,
+    confirm: (tx, result) => (isRow(result) ? mergeBudget(tx, result as Budget) : nothing),
   }),
   "budget:restore": route<Budget>({
     send: ({ entityId, payload }, guard) =>

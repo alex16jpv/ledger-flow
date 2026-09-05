@@ -182,6 +182,42 @@ describe("folding the queue before it is sent", () => {
     expect(plan.operations[0]?.absorbed).toEqual([3]);
   });
 
+  it("does not fold an edit ahead of the create it depends on", () => {
+    const plan = coalesce([
+      operation(1, "update", { payload: { body: { description: "lunch" } } }),
+      operation(2, "create", {
+        entity: "account",
+        entityId: "a9",
+        payload: { body: { id: "a9" } },
+      }),
+      operation(3, "update", { dependsOn: ["a9"], payload: { body: { fromAccountId: "a9" } } }),
+    ]);
+
+    expect(plan.operations.map((entry) => [entry.operation.seq, entry.absorbed])).toEqual([
+      [1, []],
+      [2, []],
+      [3, []],
+    ]);
+  });
+
+  it("still folds when the create it depends on already sits before the run", () => {
+    const plan = coalesce([
+      operation(1, "create", {
+        entity: "account",
+        entityId: "a9",
+        payload: { body: { id: "a9" } },
+      }),
+      operation(2, "update", { payload: { body: { description: "lunch" } } }),
+      operation(3, "update", { dependsOn: ["a9"], payload: { body: { fromAccountId: "a9" } } }),
+    ]);
+
+    expect(plan.operations.map((entry) => [entry.operation.seq, entry.absorbed])).toEqual([
+      [1, []],
+      [2, [3]],
+    ]);
+    expect(plan.operations[1]?.operation.dependsOn).toEqual(["a9"]);
+  });
+
   it("carries every dependency the folded operations declared", () => {
     const plan = coalesce([
       operation(1, "update", { dependsOn: ["a1"] }),

@@ -155,6 +155,27 @@ export async function settleWrite(
   await tx.done;
 }
 
+// Every operation queued on one row reads the guard the mirror held at the time, and the client never
+// writes `updatedAt` (invariant 2), so a chain of them all carry the stamp the first one is about to
+// replace. When it lands, whatever still shares its guard moves to the stamp the server answered
+// with. A different guard means a pull brought another device's edit: that one keeps it and earns
+// its 409. Runs inside the transaction that settles the landed operation.
+export async function rebaseGuards(
+  tx: WriteTransaction,
+  landed: OutboxOperation,
+  stamp: string | undefined,
+): Promise<number> {
+  if (stamp === undefined) return 0;
+  const store = tx.objectStore("outbox");
+  let moved = 0;
+  for (const queued of await operationsFor(tx, landed.entity, landed.entityId)) {
+    if (queued.baseUpdatedAt !== landed.baseUpdatedAt || queued.baseUpdatedAt === stamp) continue;
+    await store.put({ ...queued, baseUpdatedAt: stamp });
+    moved += 1;
+  }
+  return moved;
+}
+
 export async function markOperation(
   db: VaultDb,
   seq: number,

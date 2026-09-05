@@ -7,6 +7,7 @@ import { isRemoval, newEntityId, operationPayload } from "./envelope";
 import {
   markOperation,
   pendingOperations,
+  rebaseGuards,
   settleWrite,
   type VaultDb,
   type WriteTransaction,
@@ -65,6 +66,15 @@ const isAlreadyGone = (error: unknown, action: string): boolean =>
 // id, not an error in the user's face (F-21).
 const isIdTaken = (error: unknown): boolean =>
   error instanceof ApiError && error.code === "ID_TAKEN";
+
+// The `updatedAt` a successful write answers with, when it answers a row at all (an archive answers
+// `{ message }` today, F-22).
+const stampOf = (answer: unknown): string | undefined => {
+  const updatedAt = (answer as { updatedAt?: unknown } | null)?.updatedAt;
+  return typeof updatedAt === "string" ? updatedAt : undefined;
+};
+
+const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
 
 // How a write undoes itself, kept by seq while the tab that made it is still open. The engine runs
 // it when the server refuses the operation for good; an operation replayed after a reload has none,
@@ -148,9 +158,13 @@ async function sendPlanned(
   // The ids nothing may be sent against: an operation in conflict or refused for good, and anything
   // that named it. Only its dependents are held; the rest of the queue keeps going.
   const blocked = new Set<string>();
+  // The rows whose create is still ahead in this plan: nothing that names one may go first. With
+  // `seq` alone this never happens; it is the belt for any fold that moves an operation earlier.
+  const creating = new Set<string>();
   for (const entry of entries) {
-    const { status, entityId } = entry.operation;
+    const { status, entityId, action } = entry.operation;
     if (status === "conflict" || status === "failed") blocked.add(entityId);
+    else if (isCreate(action)) creating.add(entityId);
   }
 
   for (const entry of entries) {
@@ -158,7 +172,7 @@ async function sendPlanned(
     const { seq, entityId, entity, action } = operation;
     if (operation.status === "conflict" || operation.status === "failed") continue;
 
-    const waitingOn = operation.dependsOn.find((id) => blocked.has(id));
+    const waitingOn = operation.dependsOn.find((id) => blocked.has(id) || creating.has(id));
     if (waitingOn !== undefined || blocked.has(entityId)) {
       blocked.add(entityId);
       report.set(seq, { kind: "held", on: waitingOn ?? entityId });
@@ -166,16 +180,23 @@ async function sendPlanned(
     }
     for (const absorbed of entry.absorbed) report.set(absorbed, { kind: "absorbed", into: seq });
 
+    creating.delete(entityId);
     await beginSend(db, seq);
     try {
       const answer = await routeFor(entity, action).send(
         { entityId, payload: operationPayload(operation) },
         { ifMatch: operation.baseUpdatedAt },
       );
-      await settle(db, entry, (tx) => routeFor(entity, action).confirm(tx, answer));
+      let rebased = 0;
+      await settle(db, entry, async (tx) => {
+        await routeFor(entity, action).confirm(tx, answer);
+        rebased = await rebaseGuards(tx, operation, stampOf(answer));
+      });
       report.set(seq, { kind: "sent", result: answer });
       result.progressed = true;
       result.pushed = true;
+      // The plan still holds the guards this answer just moved: the pass looks again.
+      if (rebased > 0) return result;
     } catch (error) {
       if (isAlreadyGone(error, action)) {
         await settle(db, entry);
@@ -211,9 +232,11 @@ async function sendPlanned(
         return result;
       }
       const undos = takeRollbacks([seq, ...entry.absorbed].reverse());
-      if (undos.length === 0) {
-        // Nobody left to hand the error to — this operation outlived the tab that made it. It stays
-        // in the queue as `failed` so the tray of O-F5a can show it, rather than vanishing.
+      if (undos.length < 1 + entry.absorbed.length) {
+        // Nobody left to hand the error to — this operation, or one folded into it, outlived the tab
+        // that made it. Undoing only half of a fold would leave the mirror at an edit the server never
+        // got, with no operation behind it; the whole run stays in the queue as `failed` so the tray
+        // of O-F5a can show it, rather than vanishing.
         await markOperation(db, seq, "failed", codeOf(error));
         blocked.add(entityId);
         report.set(seq, { kind: "rejected", error });

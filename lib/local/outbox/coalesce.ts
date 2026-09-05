@@ -117,6 +117,20 @@ export function coalesce(operations: OutboxOperation[]): CoalescePlan {
   const cancelled: Cancelled[] = [];
   const open = new Map<string, { at: number; entry: Collapsed }>();
 
+  // A fold moves the second operation to the first one's place. It must not move it ahead of a
+  // create it depends on: the server would refuse a movement against an account it has not seen.
+  const createdAt = new Map<string, number>();
+  for (const operation of ordered) {
+    if (operation.action === "create" || operation.action === "quickAdd") {
+      createdAt.set(operation.entityId, operation.seq);
+    }
+  }
+  const crossesCreate = (first: OutboxOperation, second: OutboxOperation): boolean =>
+    second.dependsOn.some((id) => {
+      const at = createdAt.get(id);
+      return at !== undefined && at > first.seq && at < second.seq;
+    });
+
   for (const operation of ordered) {
     const key = `${operation.entity}:${operation.entityId}`;
     const run = open.get(key);
@@ -125,7 +139,7 @@ export function coalesce(operations: OutboxOperation[]): CoalescePlan {
       collapsed.push({ operation, absorbed: [] });
       continue;
     }
-    if (run) {
+    if (run && !crossesCreate(run.entry.operation, operation)) {
       const result = fold(run.entry.operation, operation);
       if (result?.kind === "cancel") {
         cancelled.push({

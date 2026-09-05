@@ -4,7 +4,7 @@ import type { Account } from "@/types/api";
 
 import { setCurrentVault } from "../repository/read";
 import { accountRecord, type OutboxOperation, profileRecord, transactionRecord } from "../schema";
-import { createAccount, updateAccount } from "./accounts";
+import { archiveAccount, createAccount, restoreAccount, updateAccount } from "./accounts";
 import {
   BACKOFF_MAX_MS,
   BACKOFF_MIN_MS,
@@ -14,6 +14,7 @@ import {
   startSyncEngine,
 } from "./engine";
 import { operationPayload } from "./envelope";
+import { projectBalances } from "./projection";
 import { pendingOperations, type VaultDb } from "./queue";
 import { outboxStatusStore, refreshOutboxStatus, resetOutboxStatus } from "./status";
 import {
@@ -40,6 +41,11 @@ const calls = () => fetchMock.mock.calls.map(([input, init]) => `${init?.method}
 // `api` always serialises the body before it gets here, so the string is the request as sent.
 const bodyOf = (init: RequestInit | undefined): string =>
   typeof init?.body === "string" ? init.body : "{}";
+
+const ifMatchOf = (init: RequestInit | undefined): string | null =>
+  new Headers(init?.headers).get("if-match");
+
+const ifMatches = () => fetchMock.mock.calls.map(([, init]) => ifMatchOf(init));
 
 beforeEach(() => {
   fetchMock.mockReset();
@@ -379,6 +385,188 @@ describe("what the engine sends after the queue is folded", () => {
   });
 });
 
+describe("two guarded operations queued on one row (R-2 §A)", () => {
+  const T0 = "2026-08-01T10:00:00.000Z";
+  const T1 = "2026-09-04T12:00:00.000Z";
+
+  it("rebases the second guard on the stamp the first one earned: edit, then delete", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("transactions", transactionRecord(transaction({ id: "t1", updatedAt: T0 })));
+    reportOnline(false);
+    await updateTransaction("t1", { description: "lunch" });
+    await deleteTransaction("t1");
+    expect((await pendingOperations(vault.db)).map((entry) => entry.baseUpdatedAt)).toEqual([
+      T0,
+      T0,
+    ]);
+    fetchMock.mockImplementation((_input, init) =>
+      Promise.resolve(
+        init?.method === "PUT"
+          ? json(transaction({ id: "t1", description: "lunch", updatedAt: T1 }))
+          : json({ message: "deleted" }),
+      ),
+    );
+    reportOnline(true);
+
+    await requestSync();
+
+    expect(calls()).toEqual(["PUT /api/transactions/t1", "DELETE /api/transactions/t1"]);
+    expect(ifMatches()).toEqual([T0, T1]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+
+  it("archive, then restore: the restore carries the stamp the archive answered with", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    await archiveAccount("a1");
+    await restoreAccount("a1");
+    fetchMock.mockImplementation((_input, init) =>
+      Promise.resolve(
+        init?.method === "DELETE"
+          ? json(account({ id: "a1", archivedAt: T1, updatedAt: T1 }))
+          : json(account({ id: "a1", updatedAt: "2026-09-04T12:00:01.000Z" })),
+      ),
+    );
+    reportOnline(true);
+
+    await requestSync();
+
+    expect(calls()).toEqual(["DELETE /api/accounts/a1", "POST /api/accounts/a1/restore"]);
+    expect(ifMatches()).toEqual(["2026-08-01T00:00:00.000Z", T1]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+    expect((await vault.db.get("accounts", "a1"))?.row.archivedAt).toBeNull();
+  });
+
+  it("cannot rebase behind an archive that answers no row, which is what F-22 asks for", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    await archiveAccount("a1");
+    await restoreAccount("a1");
+    fetchMock.mockImplementation((_input, init) =>
+      Promise.resolve(
+        init?.method === "DELETE"
+          ? json({ message: "Account archived successfully" })
+          : json({ error: "Conflict", message: "stale", code: "STALE_UPDATE" }, { status: 409 }),
+      ),
+    );
+    reportOnline(true);
+
+    await requestSync();
+
+    expect(ifMatches()).toEqual(["2026-08-01T00:00:00.000Z", "2026-08-01T00:00:00.000Z"]);
+    expect((await pendingOperations(vault.db)).map((entry) => entry.status)).toEqual(["conflict"]);
+  });
+
+  it("leaves alone a guard that a pull moved: that one earns its own 409", async () => {
+    const vault = await vaultWith();
+    const elsewhere = "2026-09-03T00:00:00.000Z";
+    // An edit and a delete do not fold, so both go out; the delete's guard came from a later pull.
+    await seed(vault.db, [
+      { seq: 1, entityId: "t1", baseUpdatedAt: T0, payload: { body: { description: "one" } } },
+      { seq: 2, entityId: "t1", action: "delete", baseUpdatedAt: elsewhere },
+    ]);
+    fetchMock.mockImplementation((_input, init) =>
+      Promise.resolve(
+        init?.method === "PUT"
+          ? json(transaction({ id: "t1", updatedAt: T1 }))
+          : json({ message: "deleted" }),
+      ),
+    );
+
+    await requestSync();
+
+    expect(calls()).toEqual(["PUT /api/transactions/t1", "DELETE /api/transactions/t1"]);
+    expect(ifMatches()).toEqual([T0, elsewhere]);
+  });
+
+  it("guards an operation queued behind an unsent create with the stamp the create earned", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    // A create and an archive do not fold; neither carries a guard the server ever printed.
+    const created = await createAccount({ name: "Wallet", type: "CASH", balance: 0 });
+    await archiveAccount(created.id);
+    expect((await pendingOperations(vault.db)).map((entry) => entry.baseUpdatedAt)).toEqual([
+      undefined,
+      undefined,
+    ]);
+    fetchMock.mockImplementation((_input, init) =>
+      Promise.resolve(
+        init?.method === "POST"
+          ? json(account({ id: created.id, name: "Wallet", updatedAt: T1 }), { status: 201 })
+          : json({ message: "Account archived successfully" }),
+      ),
+    );
+    reportOnline(true);
+
+    await requestSync();
+
+    expect(calls()).toEqual(["POST /api/accounts", `DELETE /api/accounts/${created.id}`]);
+    expect(ifMatches()).toEqual([null, T1]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+});
+
+describe("an operation that sits ahead of the create it names (R-2 §B)", () => {
+  it("waits for the create, and goes out in the next look", async () => {
+    const vault = await vaultWith();
+    await seed(vault.db, [
+      { seq: 1, entityId: "t1", dependsOn: ["a9"], payload: { body: { fromAccountId: "a9" } } },
+      {
+        seq: 2,
+        entity: "account",
+        entityId: "a9",
+        action: "create",
+        payload: { body: { id: "a9" } },
+      },
+    ]);
+    fetchMock.mockImplementation((input) =>
+      Promise.resolve(
+        urlOf(input).endsWith("/api/accounts")
+          ? json(account({ id: "a9" }), { status: 201 })
+          : json(transaction({ id: "t1" })),
+      ),
+    );
+
+    await requestSync();
+
+    expect(calls()).toEqual(["POST /api/accounts", "PUT /api/transactions/t1"]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+});
+
+describe("a refused fold that cannot be undone whole (R-2 §C)", () => {
+  it("keeps the whole run as failed instead of undoing only the half it still can", async () => {
+    const vault = await vaultWith();
+    // As a reload leaves it: the first edit projected in the mirror, its operation queued, no undo.
+    await vault.db.put("accounts", accountRecord(account({ id: "a1", name: "First" })));
+    await seed(vault.db, [
+      {
+        seq: 1,
+        entity: "account",
+        entityId: "a1",
+        action: "update",
+        baseUpdatedAt: "2026-08-01T00:00:00.000Z",
+        payload: { body: { name: "First" } },
+      },
+    ]);
+    reportOnline(false);
+    await updateAccount("a1", { name: "Second" });
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(json({ code: "VALIDATION", message: "no" }, { status: 400 })),
+    );
+    reportOnline(true);
+
+    await requestSync();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect((await pendingOperations(vault.db)).map((entry) => [entry.seq, entry.status])).toEqual([
+      [1, "failed"],
+      [2, "pending"],
+    ]);
+    expect((await vault.db.get("accounts", "a1"))?.row.name).toBe("Second");
+  });
+});
+
 describe("a client id another user already owns (F-21)", () => {
   it("mints a new one, moves the row and everything that named it, and retries once", async () => {
     const vault = await vaultWith();
@@ -439,6 +627,37 @@ describe("a client id another user already owns (F-21)", () => {
     const [left] = await pendingOperations(vault.db);
     expect(left).toMatchObject({ status: "failed", lastError: "ID_TAKEN", reminted: true });
     expect(left?.entityId).not.toBe("a9");
+  });
+
+  it("moves the effects of the movements queued against a re-minted account (R-2 §D1)", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    const created = await createAccount({ name: "Wallet", type: "CASH", balance: 0 });
+    await createTransaction(
+      {
+        type: "EXPENSE",
+        amount: 12.5,
+        date: "2026-09-04T10:00:00.000Z",
+        fromAccountId: created.id,
+      },
+      "44444444-4444-7444-8444-444444444444",
+    );
+    reportOnline(true);
+    fetchMock
+      .mockImplementationOnce(() =>
+        Promise.resolve(json({ code: "ID_TAKEN", message: "taken" }, { status: 409 })),
+      )
+      .mockImplementation(() => Promise.reject(new TypeError("Failed to fetch")));
+
+    await requestSync();
+
+    const [accountOp, movementOp] = await pendingOperations(vault.db);
+    const minted = accountOp?.entityId ?? "";
+    expect(minted).not.toBe(created.id);
+    expect(operationPayload(movementOp!).effect?.after).toMatchObject({ fromAccountId: minted });
+    expect(projectBalances([{ id: minted, balance: 0 }], [movementOp!])).toEqual([
+      { accountId: minted, balance: -12.5 },
+    ]);
   });
 
   it("keeps what the figure moved when the row moves to a new id", async () => {

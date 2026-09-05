@@ -13,17 +13,34 @@ import { type VaultDb, type WriteTransaction, writeTransaction } from "./queue";
 // replay. All of them move together or the queue starts pointing at a row that is not there.
 const REFERENCE_KEYS = ["fromAccountId", "toAccountId", "categoryId", "id"] as const;
 
+// Returns the same object when nothing in it named the old id, so a caller can tell a rewrite apart.
 function rewriteBody(body: unknown, oldId: string, newId: string): unknown {
   if (typeof body !== "object" || body === null) return body;
   const next = { ...(body as Record<string, unknown>) };
+  let changed = false;
   for (const key of REFERENCE_KEYS) {
-    if (next[key] === oldId) next[key] = newId;
+    if (next[key] !== oldId) continue;
+    next[key] = newId;
+    changed = true;
   }
   const categoryIds: unknown = next.categoryIds;
-  if (Array.isArray(categoryIds)) {
+  if (Array.isArray(categoryIds) && categoryIds.includes(oldId)) {
     next.categoryIds = (categoryIds as unknown[]).map((value) => (value === oldId ? newId : value));
+    changed = true;
   }
-  return next;
+  return changed ? next : body;
+}
+
+// The balance projection keys a movement's effect by account id (`projectBalances`), so the rows an
+// effect holds have to move with the account or the re-minted account loses its queued movements.
+function rewriteEffect(effect: unknown, oldId: string, newId: string): unknown {
+  if (typeof effect !== "object" || effect === null) return effect;
+  const { before, after } = effect as { before?: unknown; after?: unknown };
+  const next = {
+    before: rewriteBody(before, oldId, newId),
+    after: rewriteBody(after, oldId, newId),
+  };
+  return next.before === before && next.after === after ? effect : next;
 }
 
 async function moveRow(
@@ -114,14 +131,19 @@ export async function remint(
   for (const operation of await outbox.getAll()) {
     const mine = operation.entity === entity && operation.entityId === oldId;
     const depends = operation.dependsOn.includes(oldId);
-    const payload = operation.payload as { body?: unknown } | undefined;
+    const payload = operation.payload as { body?: unknown; effect?: unknown } | undefined;
     const body = rewriteBody(payload?.body, oldId, newId);
-    if (!mine && !depends && body === payload?.body) continue;
+    const effect = rewriteEffect(payload?.effect, oldId, newId);
+    if (!mine && !depends && body === payload?.body && effect === payload?.effect) continue;
     const next: OutboxOperation = {
       ...operation,
       ...(mine ? { entityId: newId, status: "pending", lastError: null, reminted: true } : {}),
       dependsOn: operation.dependsOn.map((id) => (id === oldId ? newId : id)),
-      payload: { ...payload, ...(body === undefined ? {} : { body }) },
+      payload: {
+        ...payload,
+        ...(body === undefined ? {} : { body }),
+        ...(effect === undefined ? {} : { effect }),
+      },
     };
     await outbox.put(next);
   }

@@ -198,6 +198,8 @@ calls `createTransaction` and does not know the difference. Every write does the
    and without network. `write()` then asks the engine to drain and reads its own operation out of
    the report: a success hands the screen the server's row, a definitive refusal is thrown at the
    form, and anything else — queued, folded, in conflict, held — is answered from the projection.
+   With network the call therefore lasts the whole pass, the pull that follows the push included; the
+   pull swallows its own errors, so it never turns a saved write into an error.
 
 A create carries its own id and therefore no `Idempotency-Key` (O-B1). In the two forms that had a
 keyring, the key **is** the id now, so a retried submit still names one row. `PATCH
@@ -248,12 +250,21 @@ the only way in.
   asked about** (dispatched, sending or in conflict), and the `effect.before` that survives is the
   **first** one's — the mirror stopped holding the server's row at the first write, so keeping the
   second would count that move twice. Archiving is not a removal: an archived account is still the
-  user's row, so `create` + `archive` still reaches the server.
+  user's row, so `create` + `archive` still reaches the server. A fold never moves an operation
+  ahead of a create it names in `dependsOn`: that edit starts a run of its own and keeps its place.
+- **Chained guards are rebased.** Every operation queued on one row reads the guard the mirror held
+  when it was queued, and the client never writes `updatedAt`, so an edit followed by a delete (or an
+  archive followed by a restore) both carry the stamp the first one is about to replace. When the
+  first lands and answers a row, the operations of that row that still share its guard move to the
+  new stamp, inside the transaction that settles it. A guard that a pull moved in the meantime is
+  another device's edit: it is left alone and earns its 409. An archive answers `{ message }` today,
+  so a restore queued behind it cannot be rebased until the backend answers the row (F-22).
 - **Backoff.** 1 s doubling to 60 s, with equal jitter that can only shorten the step, and never
   shorter than a 429's `Retry-After`. It is the only timer the engine owns: there is no periodic
   push and no periodic pull (§4.2).
-- **`dependsOn`.** When an operation ends in conflict or is refused for good, only what named that
-  row waits with it; the rest of the queue goes out.
+- **`dependsOn`.** An operation never goes out before the create it names, and when an operation
+  ends in conflict or is refused for good, only what named that row waits with it; the rest of the
+  queue goes out.
 - **Triggers.** Back online, app open, regaining focus, and Background Sync where it exists —
   `startSyncEngine` registers the tag and listens for the worker's message, which O-F6 will post.
   After a push that reached the server, a pull (§4.2), wired by `startMirror`.
@@ -263,7 +274,8 @@ the only way in.
   is a bug, not luck.
 - **A refusal the queue cannot undo.** The rollback a write registers lives in memory, so an
   operation that outlived its tab has none: it stays queued as `failed` rather than vanishing, and
-  the tray that shows it is O-F5a.
+  the tray that shows it is O-F5a. The same goes for a fold with only some of its rollbacks left:
+  undoing half of it would leave the mirror at an edit the server never got, so the whole run stays.
 
 ## Persistence
 

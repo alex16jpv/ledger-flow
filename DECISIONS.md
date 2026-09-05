@@ -1357,3 +1357,37 @@ cover` is set once in the root layout for the standalone display.
   that silently never syncs.
 - **Consequence:** a `failed` operation holds its own row and its dependents, and keeps the amber
   mark on. The tray that lets the user see and resolve it is O-F5a.
+
+## 2026-09-04 · A chain of guarded operations on one row is rebased as it lands (R-2 review)
+
+- **Decision:** when an operation lands and the server answers a row, the engine rewrites the
+  `baseUpdatedAt` of the operations still queued on that row that share the landed one's guard, to
+  the `updatedAt` the server answered with, inside the transaction that settles it. A queued guard
+  that differs was moved by a pull and is left alone. The archive routes keep the row when the
+  answer carries one, so a restore queued behind an archive is rebased the day the backend answers
+  it (F-22).
+- **Alternatives:** reading the guard from the mirror at send time. Rejected: the mirror's
+  `updatedAt` also moves when a pull brings another device's edit, and sending that stamp would
+  silently overwrite it — the frozen guard is what makes the 409 honest. Dropping the guard on the
+  second operation of a chain. Rejected: it is the window in which another device can write.
+- **Consequence:** an edit followed by a delete, or an archive followed by a restore, no longer ends
+  in a `409 STALE_UPDATE` the user never caused — verified against the real API for the edit-then-
+  delete case; the archive case still waits for F-22. Without the rebase every unfolded chain on one
+  row conflicted, because the client never writes `updatedAt` (invariant 2) and both operations read
+  the same stamp when they were queued.
+
+## 2026-09-04 · A fold never crosses the create it depends on, and a half-undoable fold stays (R-2 review)
+
+- **Decision:** `coalesce` does not fold an edit into an earlier operation when the edit names, in
+  `dependsOn`, a row whose create sits between the two; the edit starts a run of its own. The engine
+  also holds any operation whose `dependsOn` names a create still ahead in the pass. And a refused
+  fold is undone only when every operation in it still has its rollback; otherwise the whole run is
+  kept as `failed`.
+- **Alternatives:** trusting `seq` alone for dependency order. Rejected: a fold moves the second
+  operation to the first one's place, and against the real API that put a movement's move to a new
+  account ahead of the account's `POST` — a `404` the engine took for a definitive refusal, undoing
+  both edits. Undoing the rollbacks a fold still has. Rejected: it leaves the mirror at the first
+  edit with no operation behind it, the phantom the `failed` state exists to prevent.
+- **Consequence:** `dependsOn` is an order as well as a hold. Re-minting an account now also rewrites
+  the `effect` rows of the movements queued against it, so the projected balance of the new id keeps
+  them.
