@@ -195,16 +195,21 @@ calls `createTransaction` and does not know the difference. Every write does the
    every attempt. `dependsOn` names the **other** rows the server has not seen (the account a
    movement was created against); same-entity order is `seq`'s job.
 3. **The projection answers the screen.** The row is in the mirror, so the UI responds the same with
-   and without network. `write()` then sends once, inline: a success drops the operation and writes
-   the server's row, a network failure or a 5xx/429/401 leaves it queued, `409 STALE_UPDATE` marks
-   it `conflict` (the sheet is O-F5a), a 404 on a delete or an archive **is** the state it asked
-   for, and any other 4xx undoes the mirror write and rethrows so the form can still fix it. The
-   engine — single flight, backoff, coalescing, retries — is O-F4 part 2.
+   and without network. `write()` then asks the engine to drain and reads its own operation out of
+   the report: a success hands the screen the server's row, a definitive refusal is thrown at the
+   form, and anything else — queued, folded, in conflict, held — is answered from the projection.
 
 A create carries its own id and therefore no `Idempotency-Key` (O-B1). In the two forms that had a
 keyring, the key **is** the id now, so a retried submit still names one row. `PATCH
-/transactions/batch` and `POST /categories/restore-defaults` stay plain calls: one header cannot
-guard N rows and the server mints those ids (F-20).
+/transactions/batch` no longer goes out as itself: `batchUpdateTransactions` queues the lot expanded
+into one `transaction:update` per row, so each row keeps its own guard and its own outcome (F-20).
+`POST /categories/restore-defaults` stays a plain call — the server mints those ids, so there is
+nothing the mirror can project.
+
+**What a request looks like lives in `routes.ts`, once.** The engine replays operations it did not
+queue — after a reload the closures that made them are gone — so every route rebuilds its request
+from the envelope's `entityId`, `payload.body` and `payload.query`, and both callers go through the
+same table. That is why the body is stored verbatim instead of being re-derived from the mirror.
 
 The client never writes `updatedAt`, `currency`, `source` or `balance` on a row the server already
 has (invariant 2). A row created offline has to show them anyway; they come from the profile the
@@ -225,6 +230,40 @@ conflict, and which families of figures the queue can move; `useOutbox()` reads 
 Balances, `spent` and its progress bars, Home's month and day bars, the Statistics total and its
 bars, and Movements' period summary carry it. The per-row "Pending sync" badge and the conflict
 sheet are O-F5a.
+
+## Draining it: the engine
+
+`engine.ts` is the only thing that talks to the server on the queue's behalf, and `requestSync()` is
+the only way in.
+
+- **Single flight.** One drain runs at a time; every trigger that arrives while it runs joins it. A
+  request that lands _after_ the running pass took its last look at the queue is not lost — the pass
+  records which request it served, and a later one asks for a pass of its own.
+- **Order is `seq` and only `seq`.** Nothing is reordered and nothing is dropped for taking too long
+  (invariant 7). A network failure, a 5xx, a 429 or a 401 ends the pass where it stands and the rest
+  of the queue keeps its place.
+- **Coalescing, before anything is sent** (`coalesce.ts`). Ten edits of one row become one request;
+  a movement created and deleted with no network becomes none at all, and its row leaves the mirror
+  too. Two rules make it safe: it never folds **across an operation the server has already been
+  asked about** (dispatched, sending or in conflict), and the `effect.before` that survives is the
+  **first** one's — the mirror stopped holding the server's row at the first write, so keeping the
+  second would count that move twice. Archiving is not a removal: an archived account is still the
+  user's row, so `create` + `archive` still reaches the server.
+- **Backoff.** 1 s doubling to 60 s, with equal jitter that can only shorten the step, and never
+  shorter than a 429's `Retry-After`. It is the only timer the engine owns: there is no periodic
+  push and no periodic pull (§4.2).
+- **`dependsOn`.** When an operation ends in conflict or is refused for good, only what named that
+  row waits with it; the rest of the queue goes out.
+- **Triggers.** Back online, app open, regaining focus, and Background Sync where it exists —
+  `startSyncEngine` registers the tag and listens for the worker's message, which O-F6 will post.
+  After a push that reached the server, a pull (§4.2), wired by `startMirror`.
+- **`409 ID_TAKEN` re-mints** (F-21). O-B1 with D-17 leaves that code for an id another user owns,
+  so the row takes a fresh one — in the mirror, in the rows that named it, and in the queued
+  operations that named it — and goes back in line **once**. A second collision on a fresh UUID v7
+  is a bug, not luck.
+- **A refusal the queue cannot undo.** The rollback a write registers lives in memory, so an
+  operation that outlived its tab has none: it stays queued as `failed` rather than vanishing, and
+  the tray that shows it is O-F5a.
 
 ## Persistence
 

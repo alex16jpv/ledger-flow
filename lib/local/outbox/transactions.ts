@@ -1,5 +1,8 @@
-import { api } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
 import type {
+  BatchUpdateFailure,
+  BatchUpdateResult,
+  BatchUpdateTransactionsInput,
   CreateTransactionInput,
   QuickAddTransactionInput,
   SyncTransaction,
@@ -24,10 +27,7 @@ import {
   type VaultDb,
   type WriteTransaction,
 } from "./queue";
-import { write, type WriteGuard } from "./write";
-
-const ifMatch = (guard: WriteGuard) =>
-  guard.ifMatch ? { headers: { "If-Match": guard.ifMatch } } : {};
+import { write, writeAll, type WriteRequest } from "./write";
 
 async function currentRow(tx: WriteTransaction, id: string): Promise<SyncTransaction> {
   const record = await tx.objectStore("transactions").get(id);
@@ -129,10 +129,6 @@ export function createTransaction(
         return { ...change, effect };
       },
     },
-    send: () => api<Transaction>("/transactions", { method: "POST", body }),
-    confirm: async (tx, result) => {
-      await tx.objectStore("transactions").put(transactionRecord({ ...result, deletedAt: null }));
-    },
     optimistic: readBack(id),
   });
 }
@@ -179,16 +175,12 @@ export function quickAddTransaction(
         return { ...change, effect };
       },
     },
-    send: () => api<Transaction>("/transactions/quick", { method: "POST", body }),
-    confirm: async (tx, result) => {
-      await tx.objectStore("transactions").put(transactionRecord({ ...result, deletedAt: null }));
-    },
     optimistic: readBack(id),
   });
 }
 
-export function updateTransaction(id: string, input: UpdateTransactionInput): Promise<Transaction> {
-  return write<Transaction>({
+function updateRequest(id: string, input: UpdateTransactionInput): WriteRequest<Transaction> {
+  return {
     local: {
       entity: "transaction",
       entityId: id,
@@ -200,13 +192,42 @@ export function updateTransaction(id: string, input: UpdateTransactionInput): Pr
         return { ...change, effect };
       },
     },
-    send: (guard) =>
-      api<Transaction>(`/transactions/${id}`, { method: "PUT", body: input, ...ifMatch(guard) }),
-    confirm: async (tx, result) => {
-      await tx.objectStore("transactions").put(transactionRecord({ ...result, deletedAt: null }));
-    },
     optimistic: readBack(id),
+  };
+}
+
+export function updateTransaction(id: string, input: UpdateTransactionInput): Promise<Transaction> {
+  return write(updateRequest(id, input));
+}
+
+// F-20: the batch endpoint addresses N rows with one request, and an envelope carries one entity and
+// one `If-Match`. So the lot enters the queue expanded into N `transaction:update` operations — each
+// row with its own guard, its own conflict and its own place in the order — and the screen still
+// gets the `{ updated, failed }` it always read. Online this is N requests where it used to be one:
+// the price of a row-by-row guard, and of the review tray working with no network at all.
+export async function batchUpdateTransactions(
+  input: BatchUpdateTransactionsInput,
+): Promise<BatchUpdateResult> {
+  const settled = await writeAll(
+    input.items.map(({ id, ...changes }) => updateRequest(id, changes)),
+  );
+  const updated: Transaction[] = [];
+  const failed: BatchUpdateFailure[] = [];
+  settled.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      updated.push(result.value);
+      return;
+    }
+    const reason: unknown = result.reason;
+    const code = reason instanceof ApiError ? reason.code : null;
+    failed.push({
+      // The screen maps `code` to its own message; this one is the server's own words, kept for logs.
+      id: input.items[index]?.id ?? "",
+      code: code ?? "INTERNAL",
+      message: reason instanceof Error ? reason.message : "",
+    });
   });
+  return { updated, failed };
 }
 
 export function deleteTransaction(id: string): Promise<unknown> {
@@ -224,8 +245,6 @@ export function deleteTransaction(id: string): Promise<unknown> {
         return { ...change, effect };
       },
     },
-    send: (guard) => api<unknown>(`/transactions/${id}`, { method: "DELETE", ...ifMatch(guard) }),
-    confirm: () => undefined,
     optimistic: () => null,
   });
 }

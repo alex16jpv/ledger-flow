@@ -3,7 +3,7 @@
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Alert } from "@/components/ui/Alert";
@@ -23,7 +23,6 @@ import {
   useTransactionsInfinite,
 } from "@/features/transactions/hooks";
 import { ERROR_TABLE, type ErrorMessageKey, isErrorCode, presentError } from "@/lib/api/errors";
-import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { Link } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
@@ -58,7 +57,6 @@ export function ReviewScreen() {
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
   const [failures, setFailures] = useState<Record<string, ErrorMessageKey>>({});
   const [confirming, setConfirming] = useState(false);
-  const keyring = useRef(new IdempotencyKeyring());
   const lookups = useMemo<TransactionLookups>(
     () => ({
       accounts: new Map((accounts.data ?? []).map((account) => [account.id, account])),
@@ -84,10 +82,7 @@ export function ReviewScreen() {
       }),
     };
     try {
-      const result = await batch.mutateAsync({
-        input,
-        idempotencyKey: keyring.current.keyFor(input),
-      });
+      const result = await batch.mutateAsync(input);
       setConfirming(false);
       setFailures(
         Object.fromEntries(

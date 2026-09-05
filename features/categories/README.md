@@ -18,4 +18,5 @@ the server while there is network and from the offline mirror when there is none
 shape either way. The usage counts come from `stats/spending` through `readSpending`, which derives
 them locally since O-F3 part 2 — the unbounded ones walk the whole `dateCursor` index, which is what
 "all-time" means. Writes go through `lib/local/outbox` (O-F4), except `restoreDefaultCategories`: the server mints
-those rows and their ids, so there is nothing the client could project (F-20).
+those rows and their ids, so there is nothing the client could project, and it stays an online-only
+action (F-20).

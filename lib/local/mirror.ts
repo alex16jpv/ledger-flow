@@ -1,7 +1,7 @@
 import { connectivityStore } from "@/lib/network/connectivity";
 
 import { isVaultSupported, openVault, type VaultHandle } from "./db";
-import { refreshOutboxStatus, resetOutboxStatus } from "./outbox";
+import { refreshOutboxStatus, requestSync, resetOutboxStatus, startSyncEngine } from "./outbox";
 import { requestPersistentStorage } from "./persist";
 import { pullChanges, type PullOptions } from "./pull";
 import { setCurrentVault } from "./repository";
@@ -51,6 +51,8 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   const unsubscribe = connectivityStore.subscribe(onConnectivity);
   window.addEventListener("focus", pullIfStale);
   document.addEventListener("visibilitychange", pullIfStale);
+  // The engine owns its own triggers; what it borrows from here is the pull that follows a push.
+  const stopEngine = startSyncEngine({ afterPush: pull });
 
   const ready = (async () => {
     if (!isVaultSupported()) return;
@@ -68,6 +70,8 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     // and without the grant the browser may evict it under storage pressure.
     await requestPersistentStorage();
     await pull();
+    // Opening the app is a trigger too: whatever the queue kept from the last session goes out now.
+    await requestSync();
   })();
 
   ready.catch((error: unknown) => {
@@ -77,6 +81,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   return () => {
     state.stopped = true;
     unsubscribe();
+    stopEngine();
     window.removeEventListener("focus", pullIfStale);
     document.removeEventListener("visibilitychange", pullIfStale);
     setCurrentVault(null);

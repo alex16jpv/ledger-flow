@@ -35,9 +35,10 @@ follows because the mutation invalidates the transactions domain.
 
 F-07 adds "Save all" to the inbox: the card drafts live in the screen, a sticky button counts the
 cards that already have a category, a sheet confirms how many save and how many stay pending, and
-`useBatchComplete` sends one `PATCH /transactions/batch` with an `Idempotency-Key`. The response is
-per item: saved cards leave the list, failed ones stay with their error, and the individual "Done"
-keeps working.
+`useBatchComplete` saves them. Since O-F4 part 2 the lot goes through the outbox expanded into one
+operation per row rather than one `PATCH /transactions/batch`, so it works with no network too; the
+result is still per item, saved cards leave the list, failed ones stay with their error, and the
+individual "Done" keeps working.
 
 Reads go through `lib/local/repository` (O-F2a): the paged list, the detail, the counts, the pending
 tray and the tag list answer from the server while there is network and from the offline mirror when
@@ -49,5 +50,6 @@ the user's local calendar days, derived over the window's rows. Writes go throug
 movement and its operation land in one transaction and the screen is answered from the projection,
 so capture works the same with and without network. The idempotency key is the row's id now, and
 each money operation records what it replaced so the balance projection knows what the server still
-has. `batchUpdateTransactions` is the one write still going straight out — one `If-Match` cannot
-guard N rows (F-20).
+has. `batchUpdateTransactions` queues one `transaction:update` per row and drains them in a single
+pass: one `If-Match` cannot guard N rows, so each row carries its own guard and its own outcome
+(F-20). Online that is N requests where it used to be one.

@@ -167,17 +167,21 @@ describe("ReviewScreen", () => {
     expect(screen.queryByText("−$12,500")).not.toBeInTheDocument();
   });
 
-  it("saves every categorized card in one batch and keeps the failed one with its error", async () => {
+  it("saves every categorized card row by row and keeps the failed one with its error", async () => {
     fetchMock.mockImplementation((input, init) => {
       const url = urlOf(input);
-      if (url.endsWith("/api/transactions/batch") && init?.method === "PATCH") {
-        const body = JSON.parse(init.body as string) as { items: { id: string }[] };
-        pending = pending.filter((row) => row.id !== "q1");
+      // F-20: the lot leaves as one operation per row, each addressed by its own id and guarded on
+      // its own, so one refusal does not take the rest of the batch down with it.
+      const row = /\/api\/transactions\/(q1|q2)$/.exec(url);
+      if (row && init?.method === "PUT") {
+        if (row[1] === "q2") {
+          return Promise.resolve(
+            json({ code: "CATEGORY_ARCHIVED", message: "archived" }, { status: 409 }),
+          );
+        }
+        pending = pending.filter((entry) => entry.id !== "q1");
         return Promise.resolve(
-          json({
-            updated: body.items.filter((item) => item.id === "q1"),
-            failed: [{ id: "q2", code: "CATEGORY_ARCHIVED", message: "archived" }],
-          }),
+          json({ ...INITIAL[0], categoryId: "c2", description: "Latte", pendingDetails: false }),
         );
       }
       if (url.includes("/api/accounts"))
@@ -245,14 +249,17 @@ describe("ReviewScreen", () => {
     );
     await userEvent.click(within(dialog).getByRole("button", { name: "Save 2" }));
 
-    const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
-    expect(JSON.parse(patch?.[1]?.body as string)).toEqual({
-      items: [
-        { id: "q1", categoryId: "c2", description: "Latte", pendingDetails: false },
-        { id: "q2", categoryId: "c1", description: null, pendingDetails: false },
-      ],
-    });
-    expect(new Headers(patch?.[1]?.headers).get("Idempotency-Key")).toMatch(/^[0-9a-f-]{36}$/);
+    const saved = fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT");
+    expect(saved.map(([url]) => urlOf(url))).toEqual([
+      "/api/transactions/q1",
+      "/api/transactions/q2",
+    ]);
+    expect(saved.map(([, init]) => JSON.parse(init?.body as string) as unknown)).toEqual([
+      { categoryId: "c2", description: "Latte", pendingDetails: false },
+      { categoryId: "c1", description: null, pendingDetails: false },
+    ]);
+    // The row carries its own id, so no header has to stand in for it.
+    expect(new Headers(saved[0]?.[1]?.headers).get("Idempotency-Key")).toBeNull();
     expect(await screen.findByText("1 saved · 1 with errors")).toBeVisible();
     await waitFor(() => {
       expect(document.querySelector('[data-transaction-id="q1"]')).toBeNull();

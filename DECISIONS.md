@@ -1303,3 +1303,57 @@ cover` is set once in the root layout for the standalone display.
   already marked on the same screen.
 - **Consequence:** what stays open in F-16 is O-F5a's: the per-row "Pending sync" badge on a movement
   saved locally, and the red banner's "Review" action with the conflict sheet behind it.
+
+## 2026-09-04 · One description of each request, shared by the write and the replay (O-F4 part 2)
+
+- **Decision:** `lib/local/outbox/routes.ts` holds one entry per route — how to build the request and
+  what to write back on success — and both callers use it: the write that queues the operation and
+  the engine that replays it later. The entity modules keep only their projection, their guard and
+  what the screen reads back.
+- **Alternatives:** leaving `send`/`confirm` in each entity module and giving the engine its own
+  replay table. Rejected: two descriptions of the same request drift, and the one the engine uses is
+  the one nobody exercises in a screen test.
+- **Consequence:** an operation replayed after a reload rebuilds its request from `payload.body` and
+  `payload.query`, which is why the envelope stores the body verbatim instead of re-deriving it from
+  the mirror. A route missing from the table is a typecheck error, not a runtime one.
+
+## 2026-09-04 · What the queue may fold, and what it may not (O-F4 part 2)
+
+- **Decision:** `coalesce.ts` folds only where the second operation states the whole of what the
+  first one did: `update` + `update`, `update` folded into an unsent `create`, two `setOverride` for
+  the **same** budget period, and `create` + `delete` of a movement, which cancels both and drops the
+  row from the mirror. Nothing folds across an operation the server has already been asked about
+  (dispatched, `sending`, or in conflict), and the `effect.before` that survives is the **first**
+  one's.
+- **Alternatives:** folding `create` + `archive` to nothing, the way `create` + `delete` folds.
+  Rejected: archiving is a state, not a removal — an archived account is still the user's row and can
+  be restored, so dropping it would lose data the user still has on screen. Also rejected: folding an
+  `update` into a later `archive`, which would silently throw away edits a restore would then show
+  stale.
+- **Consequence:** ten edits offline leave as one request and a created-then-deleted movement leaves
+  as none, verified against the real API. `effect.before` is what keeps the balance projection right:
+  the mirror stopped holding the server's row at the first write, so keeping the second `before`
+  would count that first move twice.
+
+## 2026-09-04 · The batch of movements is queued expanded, not sent as a batch (F-20)
+
+- **Decision:** `batchUpdateTransactions` queues one `transaction:update` per row and drains them in
+  a single pass, instead of calling `PATCH /transactions/batch`. The screen still reads
+  `{ updated, failed }`; the rows that fail are the ones the server refused.
+- **Alternatives:** an envelope action `batch`. Rejected: the envelope carries one `entityId` and one
+  `If-Match`, so a batch operation is one the engine cannot retry, guard or conflict-resolve per row.
+- **Consequence:** online this is N requests where it used to be one, which is the price of a
+  per-row guard and of the review tray working with no network at all. The `Idempotency-Key` the
+  screen minted is gone: each row is addressed by its own id.
+
+## 2026-09-04 · A rejection nobody is left to hear stays in the queue (O-F4 part 2)
+
+- **Decision:** the rollback a write registers lives in memory. When the server refuses an operation
+  for good and that rollback is still there, the engine undoes the mirror write and the error reaches
+  the form. When it is not — the operation outlived the tab that made it — the operation stays queued
+  as `failed` instead of disappearing.
+- **Alternatives:** dropping it and letting the next pull overwrite the row. Rejected: the server
+  never received the write, so no pull would ever correct the mirror, and the user would keep a row
+  that silently never syncs.
+- **Consequence:** a `failed` operation holds its own row and its dependents, and keeps the amber
+  mark on. The tray that lets the user see and resolve it is O-F5a.

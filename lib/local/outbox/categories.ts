@@ -1,14 +1,10 @@
-import { api } from "@/lib/api/client";
 import type { Category, CreateCategoryInput, RestoreInput, UpdateCategoryInput } from "@/types/api";
 
 import { categoryRecord } from "../schema";
 import { newEntityId } from "./envelope";
 import { NotProjectableError, patch, projectionContext } from "./projected";
 import { type LocalChange, unsent, type VaultDb, type WriteTransaction } from "./queue";
-import { write, type WriteGuard } from "./write";
-
-const ifMatch = (guard: WriteGuard) =>
-  guard.ifMatch ? { headers: { "If-Match": guard.ifMatch } } : {};
+import { write } from "./write";
 
 async function currentRow(tx: WriteTransaction, id: string): Promise<Category> {
   const record = await tx.objectStore("categories").get(id);
@@ -68,10 +64,6 @@ export function createCategory(input: CreateCategoryInput): Promise<Category> {
         });
       },
     },
-    send: () => api<Category>("/categories", { method: "POST", body }),
-    confirm: async (tx, result) => {
-      await tx.objectStore("categories").put(categoryRecord(result));
-    },
     optimistic: readBack(id),
   });
 }
@@ -84,11 +76,6 @@ export function updateCategory(id: string, input: UpdateCategoryInput): Promise<
       action: "update",
       payload: { body: input },
       project: async (tx) => projectCategory(tx, id, patch(await currentRow(tx, id), input)),
-    },
-    send: (guard) =>
-      api<Category>(`/categories/${id}`, { method: "PUT", body: input, ...ifMatch(guard) }),
-    confirm: async (tx, result) => {
-      await tx.objectStore("categories").put(categoryRecord(result));
     },
     optimistic: readBack(id),
   });
@@ -104,8 +91,6 @@ export function archiveCategory(id: string): Promise<unknown> {
       project: async (tx, occurredAt) =>
         projectCategory(tx, id, { ...(await currentRow(tx, id)), archivedAt: occurredAt }),
     },
-    send: (guard) => api<unknown>(`/categories/${id}`, { method: "DELETE", ...ifMatch(guard) }),
-    confirm: () => undefined,
     optimistic: () => null,
   });
 }
@@ -119,15 +104,6 @@ export function restoreCategory(id: string, input: RestoreInput = {}): Promise<C
       payload: { body: input },
       project: async (tx) =>
         projectCategory(tx, id, patch({ ...(await currentRow(tx, id)), archivedAt: null }, input)),
-    },
-    send: (guard) =>
-      api<Category>(`/categories/${id}/restore`, {
-        method: "POST",
-        body: input,
-        ...ifMatch(guard),
-      }),
-    confirm: async (tx, result) => {
-      await tx.objectStore("categories").put(categoryRecord(result));
     },
     optimistic: readBack(id),
   });

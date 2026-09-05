@@ -1,4 +1,3 @@
-import { api } from "@/lib/api/client";
 import type { QueryValue } from "@/lib/api/query";
 import {
   readSpending,
@@ -6,21 +5,15 @@ import {
   readTransactions,
   readTransactionTags,
 } from "@/lib/local/repository";
-import type {
-  BatchUpdateResult,
-  BatchUpdateTransactionsInput,
-  StatsResponse,
-  TagList,
-  Transaction,
-  TransactionList,
-} from "@/types/api";
+import type { StatsResponse, TagList, Transaction, TransactionList } from "@/types/api";
 
 export const LIST_PAGE_SIZE = 30;
 
 // Reads go through the repository, which falls back to the offline mirror; writes go through the
 // outbox, which queues the operation with the row and answers from the projection (O-F4). The batch
-// endpoint is the one write still going straight out: one header cannot guard N rows (F-20).
+// is queued expanded into one operation per row, because one `If-Match` cannot guard N of them.
 export {
+  batchUpdateTransactions,
   createTransaction,
   deleteTransaction,
   quickAddTransaction,
@@ -67,15 +60,4 @@ export function fetchTransaction(id: string): Promise<Transaction> {
 
 export function fetchTags(): Promise<TagList> {
   return readTransactionTags();
-}
-
-export function batchUpdateTransactions(
-  input: BatchUpdateTransactionsInput,
-  idempotencyKey: string,
-): Promise<BatchUpdateResult> {
-  return api<BatchUpdateResult>("/transactions/batch", {
-    method: "PATCH",
-    body: input,
-    idempotencyKey,
-  });
 }

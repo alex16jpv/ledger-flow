@@ -76,6 +76,9 @@ export interface OutboxOperation {
   status: OutboxStatus;
   attempts: number;
   lastError: string | null;
+  // Set once, by the engine, after a `409 ID_TAKEN` moved the row to a new id (F-21). A second
+  // collision on a fresh UUID v7 is a bug, not luck, so it is never re-minted twice.
+  reminted?: true;
 }
 
 export interface VaultSchema extends DBSchema {

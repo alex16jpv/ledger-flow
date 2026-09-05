@@ -1,4 +1,3 @@
-import { api } from "@/lib/api/client";
 import type {
   Budget,
   BudgetAmountOverrideInput,
@@ -19,41 +18,12 @@ import {
   type VaultDb,
   type WriteTransaction,
 } from "./queue";
-import { write, type WriteGuard } from "./write";
-
-const ifMatch = (guard: WriteGuard) =>
-  guard.ifMatch ? { headers: { "If-Match": guard.ifMatch } } : {};
+import { write } from "./write";
 
 async function currentRow(tx: WriteTransaction, id: string): Promise<SyncBudget> {
   const record = await tx.objectStore("budgets").get(id);
   if (!record) throw new NotProjectableError(`budget ${id}, which the mirror does not hold`);
   return record.row;
-}
-
-// The view the API answers with drops what only the stored row carries — the override map, the
-// CUSTOM dates, the owner — so the server's reply is merged over the projection instead of
-// replacing it, and the next pull brings the authoritative row.
-async function confirmBudget(tx: WriteTransaction, view: Budget): Promise<void> {
-  const store = tx.objectStore("budgets");
-  const record = await store.get(view.id);
-  if (!record) return;
-  await store.put(
-    budgetRecord({
-      ...record.row,
-      name: view.name,
-      color: view.color,
-      categoryIds: view.categoryIds,
-      type: view.type,
-      currency: view.currency,
-      amount: view.baseAmount,
-      periodType: view.periodType,
-      effectiveFrom: view.effectiveFrom,
-      note: view.note,
-      archivedAt: view.archivedAt,
-      createdAt: view.createdAt,
-      updatedAt: view.updatedAt,
-    }),
-  );
 }
 
 // The key an override hangs on, resolved the way the server resolves it: same rules, same zone.
@@ -134,10 +104,6 @@ export function createBudget(input: CreateBudgetInput): Promise<Budget> {
         });
       },
     },
-    send: () => api<Budget>("/budgets", { method: "POST", body }),
-    confirm: async (tx, result) => {
-      await confirmBudget(tx, result);
-    },
     optimistic: readBack(id),
   });
 }
@@ -150,11 +116,6 @@ export function updateBudget(id: string, input: UpdateBudgetInput): Promise<Budg
       action: "update",
       payload: { body: input },
       project: async (tx) => projectBudget(tx, id, patch(await currentRow(tx, id), input)),
-    },
-    send: (guard) =>
-      api<Budget>(`/budgets/${id}`, { method: "PUT", body: input, ...ifMatch(guard) }),
-    confirm: async (tx, result) => {
-      await confirmBudget(tx, result);
     },
     optimistic: readBack(id),
   });
@@ -170,8 +131,6 @@ export function archiveBudget(id: string): Promise<unknown> {
       project: async (tx, occurredAt) =>
         projectBudget(tx, id, { ...(await currentRow(tx, id)), archivedAt: occurredAt }),
     },
-    send: (guard) => api<unknown>(`/budgets/${id}`, { method: "DELETE", ...ifMatch(guard) }),
-    confirm: () => undefined,
     optimistic: () => null,
   });
 }
@@ -185,15 +144,6 @@ export function restoreBudget(id: string, reference?: string): Promise<Budget> {
       payload: { ...(reference ? { query: { reference } } : {}) },
       project: async (tx) =>
         projectBudget(tx, id, { ...(await currentRow(tx, id)), archivedAt: null }),
-    },
-    send: (guard) =>
-      api<Budget>(`/budgets/${id}/restore`, {
-        method: "POST",
-        query: { reference },
-        ...ifMatch(guard),
-      }),
-    confirm: async (tx, result) => {
-      await confirmBudget(tx, result);
     },
     optimistic: readBack(id, reference),
   });
@@ -217,16 +167,6 @@ export function setBudgetOverride(id: string, reference: string, amount: number)
         });
       },
     },
-    send: (guard) =>
-      api<Budget>(`/budgets/${id}/amount`, {
-        method: "PUT",
-        query: { reference },
-        body: { amount } satisfies BudgetAmountOverrideInput,
-        ...ifMatch(guard),
-      }),
-    confirm: async (tx, result) => {
-      await confirmBudget(tx, result);
-    },
     optimistic: readBack(id, reference),
   });
 }
@@ -246,15 +186,6 @@ export function removeBudgetOverride(id: string, reference: string): Promise<Bud
         );
         return projectBudget(tx, id, { ...current, amountOverrides });
       },
-    },
-    send: (guard) =>
-      api<Budget>(`/budgets/${id}/amount`, {
-        method: "DELETE",
-        query: { reference },
-        ...ifMatch(guard),
-      }),
-    confirm: async (tx, result) => {
-      await confirmBudget(tx, result);
     },
     optimistic: readBack(id, reference),
   });

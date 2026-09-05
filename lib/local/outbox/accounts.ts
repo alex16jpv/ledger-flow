@@ -1,14 +1,10 @@
-import { api } from "@/lib/api/client";
 import type { Account, CreateAccountInput, RestoreInput, UpdateAccountInput } from "@/types/api";
 
 import { accountRecord } from "../schema";
 import { newEntityId } from "./envelope";
 import { NotProjectableError, patch, projectionContext } from "./projected";
 import { type LocalChange, unsent, type VaultDb, type WriteTransaction } from "./queue";
-import { write, type WriteGuard } from "./write";
-
-const ifMatch = (guard: WriteGuard) =>
-  guard.ifMatch ? { headers: { "If-Match": guard.ifMatch } } : {};
+import { write } from "./write";
 
 async function currentRow(tx: WriteTransaction, id: string): Promise<Account> {
   const record = await tx.objectStore("accounts").get(id);
@@ -77,11 +73,6 @@ export function createAccount(input: CreateAccountInput): Promise<Account> {
         });
       },
     },
-    // O-B1: a create carrying an id is already idempotent, so the header would be redundant.
-    send: () => api<Account>("/accounts", { method: "POST", body }),
-    confirm: async (tx, result) => {
-      await tx.objectStore("accounts").put(accountRecord(result));
-    },
     optimistic: readBack(id),
   });
 }
@@ -94,11 +85,6 @@ export function updateAccount(id: string, input: UpdateAccountInput): Promise<Ac
       action: "update",
       payload: { body: input },
       project: async (tx) => projectAccount(tx, id, patch(await currentRow(tx, id), input)),
-    },
-    send: (guard) =>
-      api<Account>(`/accounts/${id}`, { method: "PUT", body: input, ...ifMatch(guard) }),
-    confirm: async (tx, result) => {
-      await tx.objectStore("accounts").put(accountRecord(result));
     },
     optimistic: readBack(id),
   });
@@ -114,8 +100,6 @@ export function archiveAccount(id: string): Promise<unknown> {
       project: async (tx, occurredAt) =>
         projectAccount(tx, id, { ...(await currentRow(tx, id)), archivedAt: occurredAt }),
     },
-    send: (guard) => api<unknown>(`/accounts/${id}`, { method: "DELETE", ...ifMatch(guard) }),
-    confirm: () => undefined,
     optimistic: () => null,
   });
 }
@@ -129,11 +113,6 @@ export function restoreAccount(id: string, input: RestoreInput = {}): Promise<Ac
       payload: { body: input },
       project: async (tx) =>
         projectAccount(tx, id, patch({ ...(await currentRow(tx, id)), archivedAt: null }, input)),
-    },
-    send: (guard) =>
-      api<Account>(`/accounts/${id}/restore`, { method: "POST", body: input, ...ifMatch(guard) }),
-    confirm: async (tx, result) => {
-      await tx.objectStore("accounts").put(accountRecord(result));
     },
     optimistic: readBack(id),
   });
@@ -168,10 +147,6 @@ export function setDefaultAccount(id: string): Promise<Account> {
           },
         };
       },
-    },
-    send: (guard) => api<Account>(`/accounts/${id}/default`, { method: "POST", ...ifMatch(guard) }),
-    confirm: async (tx, result) => {
-      await tx.objectStore("accounts").put(accountRecord(result));
     },
     optimistic: readBack(id),
   });

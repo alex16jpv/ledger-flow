@@ -14,6 +14,17 @@ export {
   updateBudget,
 } from "./budgets";
 export { archiveCategory, createCategory, restoreCategory, updateCategory } from "./categories";
+export { coalesce } from "./coalesce";
+export {
+  BACKOFF_MAX_MS,
+  BACKOFF_MIN_MS,
+  backoffDelay,
+  type DrainReport,
+  OUTBOX_SYNC_TAG,
+  requestSync,
+  resetSyncEngine,
+  startSyncEngine,
+} from "./engine";
 export {
   isRemoval,
   type MoneyEffect,
@@ -25,6 +36,7 @@ export {
 export { NotProjectableError } from "./projected";
 export { projectBalances, type ProjectedAccount } from "./projection";
 export { pendingOperations, queueWrite, type VaultDb, type WriteTransaction } from "./queue";
+export { ROUTES } from "./routes";
 export {
   EMPTY_OUTBOX,
   type OutboxProjection,
@@ -34,9 +46,10 @@ export {
   resetOutboxStatus,
 } from "./status";
 export {
+  batchUpdateTransactions,
   createTransaction,
   deleteTransaction,
   quickAddTransaction,
   updateTransaction,
 } from "./transactions";
-export { write } from "./write";
+export { write, writeAll } from "./write";

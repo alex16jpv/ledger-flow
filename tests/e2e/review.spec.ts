@@ -56,7 +56,10 @@ test("the Complete link on a pending detail lands on its card", async ({ page, r
   await request.delete(`/api/transactions/${created.id}`, { headers: { origin: APP } });
 });
 
-test("Save all completes the categorized cards in one request", async ({ page, request }) => {
+test("Save all completes the categorized cards, one guarded request per row", async ({
+  page,
+  request,
+}) => {
   // A fresh user: the batch sweeps every categorized card of the inbox, so sharing the seed inbox
   // with the other specs would let it swallow their rows mid-flight.
   const email = `e2e-saveall-${Date.now()}-${Math.random().toString(16).slice(2)}@ledgerflow.test`;
@@ -90,16 +93,21 @@ test("Save all completes the categorized cards in one request", async ({ page, r
   }
   await cards[1]!.getByRole("textbox", { name: "Description" }).fill("E2E batch");
 
-  const patches: string[] = [];
+  // F-20: the lot leaves the outbox expanded into one operation per row, so what goes out is one
+  // guarded PUT each and never the batch endpoint.
+  const sentUrls: string[] = [];
   page.on("request", (sent) => {
-    if (sent.method() === "PATCH") patches.push(sent.url());
+    if (sent.method() === "PUT" || sent.method() === "PATCH") sentUrls.push(sent.url());
   });
   await page.getByRole("button", { name: "Save all · 2" }).click();
   const dialog = page.getByRole("dialog", { name: "Save 2 expenses?" });
   await dialog.getByRole("button", { name: "Save 2" }).click();
   await expect(page.getByText("2 expenses saved")).toBeVisible();
   await expect(page.getByRole("heading", { name: "All reviewed" })).toBeVisible();
-  expect(patches.filter((url) => url.endsWith("/api/transactions/batch"))).toHaveLength(1);
+  expect(sentUrls.filter((url) => url.endsWith("/api/transactions/batch"))).toHaveLength(0);
+  for (const id of ids) {
+    expect(sentUrls.filter((url) => url.endsWith(`/api/transactions/${id}`))).toHaveLength(1);
+  }
 
   for (const id of ids) {
     const row = (await (await request.get(`/api/transactions/${id}`)).json()) as {
