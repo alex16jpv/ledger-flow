@@ -72,15 +72,29 @@ snapshot down the same code path.
 - A feed that says `hasMore` while handing back the same cursor would page forever; that is
   `SyncFeedStalledError`, not a retry.
 - **The row the feed sends is not the last word while the queue still holds writes for it** (D-23,
-  F-25). `applyPage` puts the server's row down and then projects back on top of it, in `seq` order,
-  every operation on that row that is still `pending` or `sending` — the table is `outbox/reproject.ts`,
-  one rule per route, the mirror image of what each write projects when it is queued. Without it a
-  movement deleted with no network comes back alive on the next pull, and an edit made offline is
-  reverted by the 60-second overlap of D-14. An operation in `conflict` or `failed` is **not**
-  projected back: it will never be sent, so the mirror shows the server's version and the user's
-  lives in the conflict sheet. `updatedAt` is never rewritten, so the guard the next write reads is
-  still the server's own stamp (invariant 2), and a create has no rule at all: a create in the feed
-  is one whose answer was lost, and the server's row is the more current of the two.
+  F-25). `applyPage` hands each row to `outbox/reconcile.ts`, which puts the server's row down and
+  projects back on top of it, in `seq` order, every operation on that row that is still `pending` or
+  `sending` — the table is `outbox/reproject.ts`, one rule per route, the mirror image of what each
+  write projects when it is queued. Without it a movement deleted with no network comes back alive on
+  the next pull, and an edit made offline is reverted by the 60-second overlap of D-14. An operation
+  in `conflict` or `failed` is **not** projected back: it will never be sent, so the mirror shows the
+  server's version and the user's lives in the conflict sheet. `updatedAt` is never rewritten, so the
+  guard the next write reads is still the server's own stamp (invariant 2), and a create has no rule
+  at all: a create in the feed is one whose answer was lost, and the server's row is the more current
+  of the two.
+- **The server's version is kept aside while the row has a queue** (D-24, R-3). Every mirror record
+  carries `server?`: the row as the server last sent it, present only while the outbox holds
+  operations on that row. `reconcileRow` restates the rule `row = server + what will still be sent`
+  in **one place**, and everything that learns something new about a row goes through it: a page of
+  the feed, the answer to a write (`routes.ts` `confirm`), the `current` of a `409`, a definitive
+  refusal, a discard, a retry. Before R-3 only the pull did this, so what a conflicted row showed
+  depended on whether the pull or the drain ran first, and discarding a refused write left the
+  refused projection in the mirror with no pull that would ever correct it (its stamp never moved).
+  The same walk restates each queued movement's money `effect` from the server's row, so the
+  projected balance telescopes from the server's figure; a create still in the queue keeps its own
+  `before: null`. An archive or delete confirmed without the row (`{ message }`, F-22; a `404` on a
+  removal) moves the baseline the way the operation asked (`reconcileRemoval`). A `MIRROR_VERSION`
+  bump introduced the field: the mirror is re-pulled, the outbox is untouched.
 
 Scheduling lives in `mirror.ts`. `startMirror(userId)` opens the vault, calls
 `requestPersistentStorage()` and pulls: on open, on regaining focus once the copy is older than
@@ -296,8 +310,10 @@ in the front, in one place, because the server does not need to know which field
 O-F5a):
 
 - **`conflict.ts` classifies the operation, not the diff.** An **edit** whose body carries only
-  `description`, `note`, `tags`, `name`, `color` or `icon` is `"text"`; anything else — money, a
-  category, a date, a create, a removal, making an account the default — is `"structural"`.
+  `description`, `note`, `tags`, `name`, `color`, `icon` or `pendingDetails` is `"text"`; anything
+  else — money, a category, a date, a create, a removal, making an account the default — is
+  `"structural"`. `pendingDetails` is the review flag the PUT behind every quick capture carries,
+  neither money nor a reference (R-3).
 - **Text merges itself.** The engine rewrites the guard to the stamp the 409 answered with and puts
   the operation back in line, without a word to the user. The API's `PUT` is a partial update, so
   the other device's other fields survive; the two edits both land. It gives up after
@@ -308,11 +324,14 @@ O-F5a):
   why it can show a version the mirror no longer holds: the mirror holds **this device's**
   projection.
 - **The sheet resolves it two ways** (`resolve.ts`). `discardOperation` settles the operation
-  without ever sending it and puts `serverRow` back in the mirror — the server never received the
-  write, so no pull would correct it. Discarding a **create** takes with it everything that named
-  that row in `dependsOn`, transitively, and the row itself: it will never exist on the server.
-  `retryOperation` puts the operation back as `pending` with the server's stamp as its guard and
-  `attempts` at zero, then asks for a drain.
+  without ever sending it and reconciles the row: the server's version the mirror kept aside (or the
+  409's `current`, for a row that has none) plus whatever the queue still holds for it — the server
+  never received the write, so no pull would correct it. Discarding a **create** takes with it
+  everything that named that row in `dependsOn`, transitively, and the row itself: it will never
+  exist on the server. `retryOperation` puts the operation back as `pending` with the server's stamp
+  as its guard and `attempts` at zero, reconciles the row so the user's version shows again, then
+  asks for a drain. Both act only on operations still `conflict` or `failed`: one another tab has
+  already put back in line is no longer the user's to discard.
 - **Each queued operation earns its own decision.** Resolving one does not rebase the guards of the
   others on that row: D-22 only rebases what an answer from the server has just proved, and a choice
   about one field is not a choice about the next one. The common case costs nothing, because a

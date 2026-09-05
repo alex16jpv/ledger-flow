@@ -4,6 +4,7 @@ import { account, openTestVault, transaction, wipeVaults } from "@/lib/testing/v
 
 import {
   countPendingOperations,
+  MIRROR_VERSION,
   type OutboxMigrations,
   VAULT,
   type VaultDefinition,
@@ -65,7 +66,7 @@ describe("mirror migrations", () => {
     expect(await again.db.count("accounts")).toBe(1);
     expect(await again.db.get("meta", "syncCursor")).toBeDefined();
 
-    const upgraded = await openTestVault("u1", definition({ mirrorVersion: 2 }));
+    const upgraded = await openTestVault("u1", definition({ mirrorVersion: MIRROR_VERSION + 1 }));
     expect(upgraded.mirrorReset).toBe(true);
     expect(await upgraded.db.count("accounts")).toBe(0);
     expect(await upgraded.db.count("transactions")).toBe(0);
@@ -73,7 +74,7 @@ describe("mirror migrations", () => {
     expect(await upgraded.db.get("meta", "syncedAt")).toBeUndefined();
     expect(await upgraded.db.get("meta", "mirrorVersion")).toEqual({
       key: "mirrorVersion",
-      value: 2,
+      value: MIRROR_VERSION + 1,
     });
   });
 
@@ -82,7 +83,7 @@ describe("mirror migrations", () => {
     const vault = await openTestVault("u1");
     await vault.db.put("accounts", accountRecord(account({ id: "a1" })));
 
-    const upgraded = await openTestVault("u1", definition({ mirrorVersion: 2 }));
+    const upgraded = await openTestVault("u1", definition({ mirrorVersion: MIRROR_VERSION + 1 }));
     expect(upgraded.mirrorReset).toBe(true);
     expect(await upgraded.db.count("accounts")).toBe(0);
     expect(await upgraded.db.count("outbox")).toBe(20);
@@ -218,7 +219,12 @@ describe("outbox migrations", () => {
     const outboxMigrations: OutboxMigrations = { 1: (op) => ({ ...op, opVersion: 2 }) };
     const upgraded = await openTestVault(
       "u1",
-      definition({ schemaVersion: 2, mirrorVersion: 2, outboxVersion: 2, outboxMigrations }),
+      definition({
+        schemaVersion: 2,
+        mirrorVersion: MIRROR_VERSION + 1,
+        outboxVersion: 2,
+        outboxMigrations,
+      }),
     );
 
     expect(upgraded.db.version).toBe(2);

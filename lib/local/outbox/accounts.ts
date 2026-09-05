@@ -22,7 +22,9 @@ async function projectAccount(
 ): Promise<LocalChange> {
   const store = tx.objectStore("accounts");
   const previous = await store.get(id);
-  await store.put(accountRecord(next));
+  // The server's version rides along while the row has a queue (D-24); a row created here is its
+  // own baseline until the server answers.
+  await store.put(accountRecord(next, previous ? (previous.server ?? previous.row) : next));
   const guarded = previous !== undefined && !(await unsent(tx, "account", id));
   return {
     ...(guarded ? { baseUpdatedAt: previous.updatedAt } : {}),

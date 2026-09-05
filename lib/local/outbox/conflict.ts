@@ -2,7 +2,8 @@ import type { OutboxOperation } from "../schema";
 import { operationPayload } from "./envelope";
 
 // §6 O-F5a: the text/money classification lives in the front, in one place. The server never needs
-// to know it, and a second copy in the other repo would drift from this one.
+// to know it, and a second copy in the other repo would drift from this one. `pendingDetails` is a
+// review flag, neither money nor a reference: the PUT that follows every quick capture carries it.
 export const TEXT_FIELDS: ReadonlySet<string> = new Set([
   "description",
   "note",
@@ -10,6 +11,7 @@ export const TEXT_FIELDS: ReadonlySet<string> = new Set([
   "name",
   "color",
   "icon",
+  "pendingDetails",
 ]);
 
 // "text" retries itself over the stamp the server answered with; "structural" is money or shape and

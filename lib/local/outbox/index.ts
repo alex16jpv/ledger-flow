@@ -45,11 +45,14 @@ export {
 export { NotProjectableError } from "./projected";
 export { projectBalances, type ProjectedAccount } from "./projection";
 export { pendingOperations, queueWrite, type VaultDb, type WriteTransaction } from "./queue";
+export { reconcileContext, reconcileRemoval, reconcileRow } from "./reconcile";
 export {
+  applyOperation,
   type MirrorRow,
   type QueuedMirror,
   queuedMirror,
   reproject,
+  reprojectWalk,
   willBeSent,
 } from "./reproject";
 export {
@@ -60,7 +63,7 @@ export {
   retryOperation,
   retryOperations,
 } from "./resolve";
-export { ROUTES } from "./routes";
+export { ROUTES, serverBaseline } from "./routes";
 export {
   EMPTY_OUTBOX,
   type OutboxProjection,

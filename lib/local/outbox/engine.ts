@@ -14,8 +14,9 @@ import {
   type WriteTransaction,
   writeTransaction,
 } from "./queue";
+import { reconcileRemoval, reconcileRow } from "./reconcile";
 import { remint } from "./remint";
-import { routeFor } from "./routes";
+import { routeFor, serverBaseline } from "./routes";
 import { outboxStatusStore, refreshOutboxStatus } from "./status";
 
 // The plan's numbers (§6 O-F4). The step doubles from a second to a minute; the jitter can only
@@ -198,7 +199,7 @@ async function sendPlanned(
       );
       let rebased = 0;
       await settle(db, entry, async (tx) => {
-        await routeFor(entity, action).confirm(tx, answer);
+        await routeFor(entity, action).confirm(tx, answer, operation);
         rebased = await rebaseGuards(tx, operation, stampOf(answer));
       });
       report.set(seq, { kind: "sent", result: answer });
@@ -208,7 +209,7 @@ async function sendPlanned(
       if (rebased > 0) return result;
     } catch (error) {
       if (isAlreadyGone(error, action)) {
-        await settle(db, entry);
+        await settle(db, entry, (tx) => reconcileRemoval(tx, operation));
         report.set(seq, { kind: "gone" });
         result.progressed = true;
         result.pushed = true;
@@ -242,10 +243,23 @@ async function sendPlanned(
         }
         // Money or structure: the user's edit is neither lost nor applied, and the sheet is where
         // it is decided. The queue holds it, the figures stay marked, and only what named this row
-        // waits with it. The server's own row rides along so the sheet needs no second request.
-        await markOperation(db, seq, "conflict", "STALE_UPDATE", {
-          ...(current === undefined ? {} : { serverRow: current }),
-        });
+        // waits with it. The server's own row rides along so the sheet needs no second request,
+        // and the mirror shows it (D-23): the user's version lives in the sheet from here on.
+        await markOperation(
+          db,
+          seq,
+          "conflict",
+          "STALE_UPDATE",
+          current === undefined ? {} : { serverRow: current },
+          async (tx) => {
+            await reconcileRow(
+              tx,
+              entity,
+              entityId,
+              current === undefined ? undefined : await serverBaseline(tx, entity, current),
+            );
+          },
+        );
         blocked.add(entityId);
         report.set(seq, { kind: "conflict" });
         continue;
@@ -266,7 +280,9 @@ async function sendPlanned(
         // that made it. Undoing only half of a fold would leave the mirror at an edit the server never
         // got, with no operation behind it; the whole run stays in the queue as `failed` so the tray
         // of O-F5a can show it, rather than vanishing.
-        await markOperation(db, seq, "failed", codeOf(error));
+        await markOperation(db, seq, "failed", codeOf(error), {}, (tx) =>
+          reconcileRow(tx, entity, entityId),
+        );
         blocked.add(entityId);
         report.set(seq, { kind: "rejected", error });
         continue;

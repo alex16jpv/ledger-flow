@@ -25,6 +25,11 @@ describe("the text/money classification of a conflict", () => {
     expect(conflictKind(operation({ payload: { body } }))).toBe("text");
   });
 
+  it("takes the review flag as text: the PUT behind every quick capture carries it", () => {
+    const body = { description: "Coffee", pendingDetails: false };
+    expect(conflictKind(operation({ payload: { body } }))).toBe("text");
+  });
+
   it("asks about anything that touches money", () => {
     expect(conflictKind(operation({ payload: { body: { amount: 1500 } } }))).toBe("structural");
     expect(

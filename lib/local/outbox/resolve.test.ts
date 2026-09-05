@@ -90,14 +90,31 @@ describe("resolving a conflict", () => {
     expect(outboxStatusStore.getSnapshot().attention).toBe(0);
   });
 
-  it("leaves the mirror alone when the server did not say what it has", async () => {
-    const vault = await vaultWithQueue([{}]);
+  it("puts the row back at the baseline the mirror kept when the server did not say what it has", async () => {
+    const vault = await vaultWithQueue([{ status: "failed", lastError: "FUTURE_DATE" }]);
+    await vault.db.put(
+      "transactions",
+      transactionRecord(
+        transaction({ id: "t1", amount: 15, updatedAt: T0 }),
+        transaction({ id: "t1", amount: 10, updatedAt: T0 }),
+      ),
+    );
 
     await discardOperation(vault.db, 1);
 
     expect(await pendingOperations(vault.db)).toEqual([]);
-    // Nothing to put back: the next pull is what corrects the row.
-    expect((await vault.db.get("transactions", "t1"))?.row.amount).toBe(15);
+    // No pull would bring this row back — its stamp never moved — so the baseline is the way out.
+    const record = await vault.db.get("transactions", "t1");
+    expect(record?.row.amount).toBe(10);
+    expect(record?.server).toBeUndefined();
+  });
+
+  it("resolves only what is still stuck: an operation put back in line elsewhere is not discarded", async () => {
+    const vault = await vaultWithQueue([{ status: "pending" }, { seq: 2, status: "conflict" }]);
+
+    expect(await discardImpact(vault.db, [1, 2])).toBe(1);
+    expect(await discardOperations(vault.db, [1, 2])).toEqual({ discarded: 1 });
+    expect(await statuses(vault.db)).toEqual(["1:pending"]);
   });
 
   it("takes with it what could never reach the server without it", async () => {

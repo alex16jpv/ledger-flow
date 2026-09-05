@@ -8,7 +8,7 @@ import {
   wipeVaults,
 } from "@/lib/testing/vault";
 
-import { VAULT_SCHEMA_VERSION } from "./db";
+import { MIRROR_VERSION, VAULT_SCHEMA_VERSION } from "./db";
 import {
   accountRecord,
   budgetRecord,
@@ -63,7 +63,7 @@ describe("vault schema", () => {
     expect(await vault.db.get("meta", "userId")).toEqual({ key: "userId", value: "u1" });
     expect(await vault.db.get("meta", "mirrorVersion")).toEqual({
       key: "mirrorVersion",
-      value: 1,
+      value: MIRROR_VERSION,
     });
     expect(await vault.db.get("meta", "outboxVersion")).toEqual({
       key: "outboxVersion",

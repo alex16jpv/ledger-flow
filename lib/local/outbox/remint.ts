@@ -43,6 +43,9 @@ function rewriteEffect(effect: unknown, oldId: string, newId: string): unknown {
   return next.before === before && next.after === after ? effect : next;
 }
 
+const moved = <T extends { id: string }>(server: T | undefined, newId: string): T | undefined =>
+  server && { ...server, id: newId };
+
 async function moveRow(
   tx: WriteTransaction,
   entity: OutboxEntity,
@@ -53,27 +56,35 @@ async function moveRow(
     const record = await tx.objectStore("accounts").get(oldId);
     if (!record) return;
     await tx.objectStore("accounts").delete(oldId);
-    await tx.objectStore("accounts").put(accountRecord({ ...record.row, id: newId }));
+    await tx
+      .objectStore("accounts")
+      .put(accountRecord({ ...record.row, id: newId }, moved(record.server, newId)));
     return;
   }
   if (entity === "category") {
     const record = await tx.objectStore("categories").get(oldId);
     if (!record) return;
     await tx.objectStore("categories").delete(oldId);
-    await tx.objectStore("categories").put(categoryRecord({ ...record.row, id: newId }));
+    await tx
+      .objectStore("categories")
+      .put(categoryRecord({ ...record.row, id: newId }, moved(record.server, newId)));
     return;
   }
   if (entity === "budget") {
     const record = await tx.objectStore("budgets").get(oldId);
     if (!record) return;
     await tx.objectStore("budgets").delete(oldId);
-    await tx.objectStore("budgets").put(budgetRecord({ ...record.row, id: newId }));
+    await tx
+      .objectStore("budgets")
+      .put(budgetRecord({ ...record.row, id: newId }, moved(record.server, newId)));
     return;
   }
   const record = await tx.objectStore("transactions").get(oldId);
   if (!record) return;
   await tx.objectStore("transactions").delete(oldId);
-  await tx.objectStore("transactions").put(transactionRecord({ ...record.row, id: newId }));
+  await tx
+    .objectStore("transactions")
+    .put(transactionRecord({ ...record.row, id: newId }, moved(record.server, newId)));
 }
 
 async function moveReferences(

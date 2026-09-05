@@ -90,8 +90,10 @@ export function AttentionScreen() {
       live = false;
     };
     // The queue is the source: a drain that resolved one of these while the tray was open has to
-    // take it off the list rather than leave a decision that no longer exists.
-  }, [reloads, outbox.attention]);
+    // take it off the list rather than leave a decision that no longer exists. The snapshot changes
+    // reference on any change of the queue, which the count alone would miss when one operation is
+    // resolved and another gets stuck in the same drain.
+  }, [reloads, outbox]);
 
   const act = useCallback(
     async (action: () => Promise<void>) => {

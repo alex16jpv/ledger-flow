@@ -13,10 +13,13 @@ export const willBeSent = (operation: OutboxOperation): boolean =>
 
 export type MirrorRow = Account | Category | SyncTransaction | SyncBudget;
 
-// What the mirror has to project back on top of a page of the feed: the queue grouped by the row
+// What the mirror has to project back on top of a row the server sent: the queue grouped by the row
 // each operation addresses, in `seq` order, which is the order they will reach the server.
 export interface QueuedMirror {
   rows: ReadonlyMap<string, readonly OutboxOperation[]>;
+  // Every row with an operation in the queue, whatever its status: the rows whose server version
+  // the mirror has to keep aside (D-24).
+  touched: ReadonlySet<string>;
   // The account a queued `setDefault` is about to hand the flag to, if any; the last one wins.
   defaultAccountId: string | null;
   // Absent until the first pull brings the profile. A budget override cannot resolve its period
@@ -24,17 +27,19 @@ export interface QueuedMirror {
   timezone: string | null;
 }
 
-const rowKey = (entity: OutboxEntity, id: string): string => `${entity}:${id}`;
+export const rowKey = (entity: OutboxEntity, id: string): string => `${entity}:${id}`;
 
 export function queuedMirror(
   operations: readonly OutboxOperation[],
   timezone: string | null,
 ): QueuedMirror {
   const rows = new Map<string, OutboxOperation[]>();
+  const touched = new Set<string>();
   let defaultAccountId: string | null = null;
   for (const operation of [...operations].sort((left, right) => left.seq - right.seq)) {
-    if (!willBeSent(operation)) continue;
     const key = rowKey(operation.entity, operation.entityId);
+    touched.add(key);
+    if (!willBeSent(operation)) continue;
     const queued = rows.get(key);
     if (queued) queued.push(operation);
     else rows.set(key, [operation]);
@@ -42,7 +47,7 @@ export function queuedMirror(
       defaultAccountId = operation.entityId;
     }
   }
-  return { rows, defaultAccountId, timezone };
+  return { rows, touched, defaultAccountId, timezone };
 }
 
 const bodyOf = (operation: OutboxOperation): Record<string, unknown> => {
@@ -119,24 +124,49 @@ const RULES: Partial<Record<RouteKey, Rule>> = {
   },
 };
 
-// The row the mirror keeps once a page of the feed has been applied: the server's, with the
-// operations that have not left the queue projected on top of it, in the order they will leave
-// (D-23). `updatedAt` is never touched, so the stamp the next write guards against stays the
-// server's own (invariant 2).
-export function reproject<R extends MirrorRow>(
+// What one operation does to a row it is applied on top of; a create leaves it as it is.
+export function applyOperation<R extends MirrorRow>(
+  entity: OutboxEntity,
+  row: R,
+  operation: OutboxOperation,
+  queued: QueuedMirror,
+): R {
+  const rule = RULES[`${entity}:${operation.action}` as RouteKey];
+  return rule ? (rule(row, operation, queued) as R) : row;
+}
+
+export interface ReprojectStep {
+  operation: OutboxOperation;
+  before: MirrorRow;
+  after: MirrorRow;
+}
+
+// The row the mirror keeps once the server's version is known: that version, with the operations
+// that have not left the queue projected on top of it, in the order they will leave (D-23). The
+// steps are what each operation moved, which is what its money `effect` has to say. `updatedAt` is
+// never touched, so the stamp the next write guards against stays the server's own (invariant 2).
+export function reprojectWalk<R extends MirrorRow>(
   entity: OutboxEntity,
   row: R,
   queued: QueuedMirror,
-): R {
-  let next: MirrorRow = row;
+): { row: R; steps: ReprojectStep[] } {
+  const steps: ReprojectStep[] = [];
+  let next: R = row;
   for (const operation of queued.rows.get(rowKey(entity, row.id)) ?? []) {
-    const rule = RULES[`${entity}:${operation.action}` as RouteKey];
-    if (rule) next = rule(next, operation, queued);
+    const after = applyOperation(entity, next, operation, queued);
+    steps.push({ operation, before: next, after });
+    next = after;
   }
   // Two defaults would have quick capture pick the wrong account for as long as the queue holds
   // the operation that moves the flag, so the account it is moving away from gives it up here too.
   if (entity === "account" && queued.defaultAccountId && queued.defaultAccountId !== row.id) {
-    next = { ...(next as Account), isDefault: false };
+    next = { ...(next as Account), isDefault: false } as R;
   }
-  return next as R;
+  return { row: next, steps };
 }
+
+export const reproject = <R extends MirrorRow>(
+  entity: OutboxEntity,
+  row: R,
+  queued: QueuedMirror,
+): R => reprojectWalk(entity, row, queued).row;

@@ -3,7 +3,7 @@ import { type IDBPDatabase, openDB } from "idb";
 import { MIRROR_STORES, type OutboxOperation, vaultDatabaseName, type VaultSchema } from "./schema";
 
 export const VAULT_SCHEMA_VERSION = 1;
-export const MIRROR_VERSION = 1;
+export const MIRROR_VERSION = 2;
 export const OUTBOX_VERSION = 1;
 
 // Returning null means "this operation cannot be carried forward": the vault then blocks the

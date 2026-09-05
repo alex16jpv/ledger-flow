@@ -19,7 +19,7 @@ async function projectCategory(
 ): Promise<LocalChange> {
   const store = tx.objectStore("categories");
   const previous = await store.get(id);
-  await store.put(categoryRecord(next));
+  await store.put(categoryRecord(next, previous ? (previous.server ?? previous.row) : next));
   const guarded = previous !== undefined && !(await unsent(tx, "category", id));
   return {
     ...(guarded ? { baseUpdatedAt: previous.updatedAt } : {}),

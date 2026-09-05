@@ -50,7 +50,7 @@ async function projectTransaction(
 ): Promise<Projected> {
   const store = tx.objectStore("transactions");
   const previous = await store.get(id);
-  await store.put(transactionRecord(next));
+  await store.put(transactionRecord(next, previous ? (previous.server ?? previous.row) : next));
   const guarded = previous !== undefined && !(await unsent(tx, "transaction", id));
   const dependsOn = await dependenciesOf(tx, [
     { entity: "account", id: next.fromAccountId },

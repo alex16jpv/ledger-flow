@@ -44,7 +44,7 @@ async function projectBudget(
 ): Promise<LocalChange> {
   const store = tx.objectStore("budgets");
   const previous = await store.get(id);
-  await store.put(budgetRecord(next));
+  await store.put(budgetRecord(next, previous ? (previous.server ?? previous.row) : next));
   const guarded = previous !== undefined && !(await unsent(tx, "budget", id));
   // A budget created offline can name categories created offline in the same session.
   const dependsOn = await dependenciesOf(

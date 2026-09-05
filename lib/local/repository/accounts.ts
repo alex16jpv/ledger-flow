@@ -3,6 +3,7 @@ import type { Account, AccountList } from "@/types/api";
 
 import { projectBalances } from "../outbox/projection";
 import { pendingOperations, type VaultDb } from "../outbox/queue";
+import { willBeSent } from "../outbox/reproject";
 import { mirrorPage, read } from "./read";
 
 export const ACCOUNT_PAGE_LIMIT = 100;
@@ -14,9 +15,10 @@ export interface AccountListParams {
 
 // The mirror keeps the server's `balance` and never writes one (invariant 2), so what a screen sees
 // while the queue is not empty is that figure plus the effect of the operations the server has not
-// applied yet. With an empty queue it is the server's own figure, untouched.
+// applied yet. With an empty queue it is the server's own figure, untouched. An operation in
+// conflict or refused for good moves nothing: its row shows the server's version too (D-23).
 async function withProjectedBalances(db: VaultDb, rows: Account[]): Promise<Account[]> {
-  const operations = await pendingOperations(db);
+  const operations = (await pendingOperations(db)).filter(willBeSent);
   if (operations.length === 0) return rows;
   const projected = new Map(
     projectBalances(rows, operations).map((entry) => [entry.accountId, entry.balance]),

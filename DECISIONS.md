@@ -1469,3 +1469,27 @@ cover` is set once in the root layout for the standalone display.
   of its own is also what the stripe, the sheet and (later) Sync status can all link to.
 - **Consequence:** O-F6 links to `/sync` from Sync status instead of rebuilding the list. The route
   is not in the nav: it is reached from the stripe, and it says so when there is nothing to show.
+
+## 2026-09-04 · The mirror keeps the server's row aside while a row has a queue (R-3, D-24)
+
+- **Decision:** every mirror record carries `server?`, the row as the server last sent it, present
+  only while the outbox holds operations on that row. One function, `reconcileRow`, restates
+  `row = server + what the queue will still send` and is the only way a row changes when something
+  new is known about it: a page of the feed, a write's answer, a 409's `current`, a definitive
+  refusal, a discard, a retry. The projected balance uses only operations that will still be sent,
+  and each queued movement's money `effect` is restated from the server's row on every pull.
+- **Why:** D-23 promised that a row whose operation is in `conflict` or `failed` shows the server's
+  version, and only the pull kept that promise. Reproduced against the real API in R-3: after a
+  `409`, what the row showed depended on whether the pull or the drain ran first on coming back
+  online (two runs of the same sequence gave both answers), the balance still carried the effect of
+  an operation that would never be sent, and discarding a `failed` write left the refused projection
+  in the mirror for good — the server's stamp never moved, so no pull ever brought the row back.
+- **Alternatives:** fetching the row when a `failed` write is discarded (needs network to resolve
+  something the tray offers to resolve without it, and fixes one of four moments); reprojecting from
+  the operation's own `serverRow` (a 409 has one, a 400 does not); storing the pre-projection row on
+  each operation (stale the moment a pull brings a newer server row).
+- **Consequence:** `MIRROR_VERSION` goes to 2 — the mirror is re-pulled, the outbox untouched.
+  `Route.confirm` receives the operation, so a removal confirmed without a row (F-22) can move the
+  baseline the way it asked. A resolution acts only on operations still stuck. `pendingDetails`
+  joins the text fields: the PUT behind every quick capture no longer asks the user when the other
+  device touched the row.

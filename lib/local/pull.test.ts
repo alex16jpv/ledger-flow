@@ -287,6 +287,77 @@ describe("a pull with operations still queued", () => {
     expect((await vault.db.get("accounts", "a2"))?.row.isDefault).toBe(true);
   });
 
+  it("hands the flag to the last of two queued setDefault operations, and to no one else", async () => {
+    const vault = await openTestVault("u1");
+    await queue(vault, { entity: "account", entityId: "a2", action: "setDefault" });
+    await queue(vault, {
+      seq: 2,
+      opId: "op-2",
+      entity: "account",
+      entityId: "a3",
+      action: "setDefault",
+    });
+    const { fetchPage } = feed([
+      page(
+        {
+          accounts: [
+            account({ id: "a1", isDefault: true }),
+            account({ id: "a2", name: "Bank", isDefault: false }),
+            account({ id: "a3", name: "Wallet", isDefault: false }),
+          ],
+        },
+        { count: 3, hasMore: false, nextCursor: "c1" },
+      ),
+    ]);
+
+    await pullChanges(vault, { fetchPage });
+
+    const flags = await Promise.all(
+      ["a1", "a2", "a3"].map(async (id) => (await vault.db.get("accounts", id))?.row.isDefault),
+    );
+    expect(flags).toEqual([false, false, true]);
+  });
+
+  it("lets the server complete a quick capture and keeps the details queued behind it", async () => {
+    const vault = await openTestVault("u1");
+    await queue(vault, { action: "quickAdd", payload: { body: { id: "t1", amount: 10 } } });
+    await queue(vault, {
+      seq: 2,
+      opId: "op-2",
+      payload: { body: { description: "Coffee", pendingDetails: false } },
+    });
+    const { fetchPage } = feed([
+      page(
+        { transactions: [transaction({ id: "t1", amount: 10, pendingDetails: true })] },
+        { count: 1, hasMore: false, nextCursor: "c1" },
+      ),
+    ]);
+
+    await pullChanges(vault, { fetchPage });
+
+    const record = await vault.db.get("transactions", "t1");
+    expect(record?.row).toMatchObject({ pendingDetails: false, description: "Coffee" });
+    expect(record?.pendingReview).toBeUndefined();
+    // The server's own row stays aside for the sheet and the next reconciliation (D-24).
+    expect(record?.server).toMatchObject({ pendingDetails: true, description: null });
+  });
+
+  it("keeps no baseline for a row the queue does not touch", async () => {
+    const vault = await openTestVault("u1");
+    await queue(vault, { action: "delete" });
+    const { fetchPage } = feed([
+      page(
+        { transactions: [transaction({ id: "t1" }), transaction({ id: "t2" })] },
+        { count: 2, hasMore: false, nextCursor: "c1" },
+      ),
+    ]);
+
+    await pullChanges(vault, { fetchPage });
+
+    expect((await vault.db.get("transactions", "t1"))?.server).toBeDefined();
+    expect((await vault.db.get("transactions", "t2"))?.server).toBeUndefined();
+  });
+
   it("keeps a budget override the queue has not sent, resolved in the owner's zone", async () => {
     const vault = await openTestVault("u1");
     await vault.db.put("profile", {

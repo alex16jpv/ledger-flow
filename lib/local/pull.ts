@@ -2,16 +2,9 @@ import { api } from "@/lib/api/client";
 import type { SyncChangesResponse } from "@/types/api";
 
 import type { VaultHandle } from "./db";
-import { type QueuedMirror, queuedMirror, reproject } from "./outbox/reproject";
-import {
-  accountRecord,
-  budgetRecord,
-  categoryRecord,
-  MIRROR_STORES,
-  PROFILE_KEY,
-  profileRecord,
-  transactionRecord,
-} from "./schema";
+import { writeTransaction } from "./outbox/queue";
+import { reconcileContext, reconcileRow } from "./outbox/reconcile";
+import { profileRecord } from "./schema";
 
 export const PULL_PAGE_LIMIT = 500;
 
@@ -50,30 +43,17 @@ function requestPage(query: PullPageQuery): Promise<SyncChangesResponse> {
 
 async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promise<void> {
   const { changes, pagination } = page;
-  const tx = handle.db.transaction([...MIRROR_STORES, "outbox", "meta"], "readwrite");
+  const tx = writeTransaction(handle.db);
   if (changes.user) await tx.objectStore("profile").put(profileRecord(changes.user));
   // D-23 (F-25): the server's row lands, and what the queue still has to send is projected back on
   // top of it. Without this a movement deleted with no network comes back alive on the next pull.
-  const timezone =
-    changes.user?.timezone ??
-    (await tx.objectStore("profile").get(PROFILE_KEY))?.row.timezone ??
-    null;
-  const queued: QueuedMirror = queuedMirror(await tx.objectStore("outbox").getAll(), timezone);
-
-  for (const row of changes.accounts) {
-    await tx.objectStore("accounts").put(accountRecord(reproject("account", row, queued)));
-  }
-  for (const row of changes.categories) {
-    await tx.objectStore("categories").put(categoryRecord(reproject("category", row, queued)));
-  }
+  const context = await reconcileContext(tx);
+  for (const row of changes.accounts) await reconcileRow(tx, "account", row.id, row, context);
+  for (const row of changes.categories) await reconcileRow(tx, "category", row.id, row, context);
   for (const row of changes.transactions) {
-    await tx
-      .objectStore("transactions")
-      .put(transactionRecord(reproject("transaction", row, queued)));
+    await reconcileRow(tx, "transaction", row.id, row, context);
   }
-  for (const row of changes.budgets) {
-    await tx.objectStore("budgets").put(budgetRecord(reproject("budget", row, queued)));
-  }
+  for (const row of changes.budgets) await reconcileRow(tx, "budget", row.id, row, context);
 
   const meta = tx.objectStore("meta");
   // Stored verbatim: the cursor is opaque, and the next run resumes from it whatever it encodes.

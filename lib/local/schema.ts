@@ -33,6 +33,9 @@ export interface MirrorRecord<T> {
   id: string;
   row: T;
   updatedAt: string;
+  // The row as the server last sent it, kept only while the outbox holds operations on this row:
+  // `row` is then that plus what the queue will still send (D-24). Absent, `row` is the server's.
+  server?: T;
 }
 
 export interface ProfileRecord extends MirrorRecord<User> {
@@ -116,23 +119,44 @@ export interface VaultSchema extends DBSchema {
   meta: { key: string; value: MetaRecord };
 }
 
-export function accountRecord(row: Account): AccountRecord {
-  return { id: row.id, row, updatedAt: row.updatedAt, archived: row.archivedAt ? 1 : 0 };
+export function accountRecord(row: Account, server?: Account): AccountRecord {
+  return {
+    id: row.id,
+    row,
+    updatedAt: row.updatedAt,
+    archived: row.archivedAt ? 1 : 0,
+    ...(server ? { server } : {}),
+  };
 }
 
-export function categoryRecord(row: Category): CategoryRecord {
-  return { id: row.id, row, updatedAt: row.updatedAt, archived: row.archivedAt ? 1 : 0 };
+export function categoryRecord(row: Category, server?: Category): CategoryRecord {
+  return {
+    id: row.id,
+    row,
+    updatedAt: row.updatedAt,
+    archived: row.archivedAt ? 1 : 0,
+    ...(server ? { server } : {}),
+  };
 }
 
-export function budgetRecord(row: SyncBudget): BudgetRecord {
-  return { id: row.id, row, updatedAt: row.updatedAt, archived: row.archivedAt ? 1 : 0 };
+export function budgetRecord(row: SyncBudget, server?: SyncBudget): BudgetRecord {
+  return {
+    id: row.id,
+    row,
+    updatedAt: row.updatedAt,
+    archived: row.archivedAt ? 1 : 0,
+    ...(server ? { server } : {}),
+  };
 }
 
 export function profileRecord(row: User): ProfileRecord {
   return { id: PROFILE_KEY, row, updatedAt: row.updatedAt };
 }
 
-export function transactionRecord(row: SyncTransaction): TransactionRecord {
+export function transactionRecord(
+  row: SyncTransaction,
+  server?: SyncTransaction,
+): TransactionRecord {
   const deleted = row.deletedAt ? 1 : 0;
   const record: TransactionRecord = {
     id: row.id,
@@ -140,6 +164,7 @@ export function transactionRecord(row: SyncTransaction): TransactionRecord {
     updatedAt: row.updatedAt,
     date: row.date,
     deleted,
+    ...(server ? { server } : {}),
   };
   if (!deleted) record.liveDate = row.date;
   if (row.categoryId) record.categoryId = row.categoryId;

@@ -105,7 +105,7 @@ describe("writing through the outbox", () => {
     expect(operation).toMatchObject({ status: "pending", attempts: 1, lastError: "NETWORK" });
   });
 
-  it("marks a stale edit as a conflict instead of dropping it", async () => {
+  it("marks a stale edit as a conflict, shows the server's row and keeps the edit in the envelope", async () => {
     const vault = await vaultWith();
     fetchMock.mockResolvedValue(
       json({ error: "Conflict", message: "stale", code: "STALE_UPDATE" }, { status: 409 }),
@@ -113,10 +113,14 @@ describe("writing through the outbox", () => {
 
     const updated = await updateAccount("a1", { name: "Renamed" });
 
-    expect(updated.name).toBe("Renamed");
+    // D-23: a row whose write is in conflict shows the server's version; the user's lives in the
+    // sheet, read off the envelope. The screen gets the same row it will read back.
+    expect(updated.name).toBe("Cash");
+    expect((await vault.db.get("accounts", "a1"))?.row.name).toBe("Cash");
     expect((await pendingOperations(vault.db))[0]).toMatchObject({
       status: "conflict",
       lastError: "STALE_UPDATE",
+      payload: { body: { name: "Renamed" } },
     });
   });
 

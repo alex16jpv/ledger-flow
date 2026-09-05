@@ -1,11 +1,17 @@
 import type { OutboxEntity, OutboxOperation } from "../schema";
 import { serverStamp } from "./conflict";
 import { forgetRollbacks, requestSync } from "./engine";
-import { pendingOperations, type VaultDb, writeTransaction } from "./queue";
-import { PUT_ROW } from "./routes";
+import { pendingOperations, type VaultDb, type WriteTransaction, writeTransaction } from "./queue";
+import { reconcileRow } from "./reconcile";
+import { serverBaseline } from "./routes";
 import { refreshOutboxStatus } from "./status";
 
 const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
+
+// Only what the user was asked about can be resolved: an operation another tab has already put back
+// in line between the question and the answer is no longer theirs to discard.
+const stuck = (operation: OutboxOperation): boolean =>
+  operation.status === "conflict" || operation.status === "failed";
 
 const STORE_OF: Record<OutboxEntity, "accounts" | "categories" | "transactions" | "budgets"> = {
   account: "accounts",
@@ -13,6 +19,19 @@ const STORE_OF: Record<OutboxEntity, "accounts" | "categories" | "transactions" 
   transaction: "transactions",
   budget: "budgets",
 };
+
+// The row goes back to the server's version plus what the queue will still send (D-24). The
+// baseline the mirror kept aside is at least as fresh as the 409's `current` (the conflict put it
+// there, and any pull since replaced it); `current` only serves a row that has none.
+async function reconcileResolved(tx: WriteTransaction, operation: OutboxOperation): Promise<void> {
+  const { entity, entityId, serverRow } = operation;
+  const record = await tx.objectStore(STORE_OF[entity]).get(entityId);
+  const baseline =
+    record?.server === undefined && serverRow !== undefined
+      ? await serverBaseline(tx, entity, serverRow)
+      : undefined;
+  await reconcileRow(tx, entity, entityId, baseline);
+}
 
 // Everything that cannot survive without the operations being thrown away. Only a create is named
 // in a `dependsOn`, so only discarding one cascades: the row will never exist on the server, and an
@@ -41,7 +60,7 @@ function victimsOf(queue: OutboxOperation[], discarded: OutboxOperation[]): Outb
 }
 
 const seedsOf = (queue: OutboxOperation[], seqs: readonly number[]): OutboxOperation[] =>
-  queue.filter((operation) => seqs.includes(operation.seq));
+  queue.filter((operation) => seqs.includes(operation.seq) && stuck(operation));
 
 export interface DiscardResult {
   // How many operations left the queue, the discarded one included.
@@ -63,17 +82,19 @@ export async function discardOperations(
 
   forgetRollbacks(victims.map((victim) => victim.seq));
   const tx = writeTransaction(db);
+  for (const victim of victims) await tx.objectStore("outbox").delete(victim.seq);
+  const reconciled = new Set<string>();
   for (const victim of victims) {
-    await tx.objectStore("outbox").delete(victim.seq);
-    // A create the server never saw leaves no row behind; anything else keeps whatever the mirror
-    // holds until the row the server answered with, or the next pull, replaces it.
-    if (isCreate(victim.action))
+    // A create the server never saw leaves no row behind; every other row goes back to the server's
+    // version plus whatever the queue still holds for it.
+    if (isCreate(victim.action)) {
       await tx.objectStore(STORE_OF[victim.entity]).delete(victim.entityId);
-  }
-  for (const seed of seeds) {
-    if (seed.serverRow !== undefined && !isCreate(seed.action)) {
-      await PUT_ROW[seed.entity](tx, seed.serverRow);
+      continue;
     }
+    const key = `${victim.entity}:${victim.entityId}`;
+    if (reconciled.has(key)) continue;
+    reconciled.add(key);
+    await reconcileResolved(tx, victim);
   }
   await tx.done;
   await refreshOutboxStatus(db);
@@ -100,7 +121,7 @@ export async function retryOperations(db: VaultDb, seqs: readonly number[]): Pro
   const store = tx.objectStore("outbox");
   for (const seq of seqs) {
     const operation = await store.get(seq);
-    if (!operation) continue;
+    if (!operation || !stuck(operation)) continue;
     const stamp = serverStamp(operation);
     const next: OutboxOperation = {
       ...operation,
@@ -111,6 +132,8 @@ export async function retryOperations(db: VaultDb, seqs: readonly number[]): Pro
     };
     delete next.serverRow;
     await store.put(next);
+    // Back in line means back on the row: the user's version shows again until the server answers.
+    await reconcileResolved(tx, operation);
   }
   await tx.done;
   await refreshOutboxStatus(db);

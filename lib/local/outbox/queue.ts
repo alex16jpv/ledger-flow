@@ -182,6 +182,7 @@ export async function markOperation(
   status: OutboxOperation["status"],
   lastError: string | null,
   extra: Partial<OutboxOperation> = {},
+  apply?: (tx: WriteTransaction) => Promise<void> | void,
 ): Promise<void> {
   const tx = writeTransaction(db);
   const store = tx.objectStore("outbox");
@@ -194,6 +195,7 @@ export async function markOperation(
       attempts: operation.attempts + 1,
       ...extra,
     });
+    await apply?.(tx);
   }
   await tx.done;
 }

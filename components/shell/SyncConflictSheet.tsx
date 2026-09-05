@@ -24,7 +24,7 @@ interface Loaded {
 
 type View = { kind: "loading" } | { kind: "empty" } | ({ kind: "resolve" } & Loaded);
 
-const MONEY_FIELDS = new Set(["amount", "initialBalance", "creditLimit"]);
+const MONEY_FIELDS = new Set(["amount", "balance", "openingBalance"]);
 const DATE_FIELDS = new Set([
   "date",
   "effectiveFrom",
