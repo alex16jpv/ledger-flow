@@ -5,8 +5,7 @@ in with the same `userId` finds the same vault **and the same outbox**.
 
 Delivered by O-F1 (the store and its migrations), O-F2a (filling it, and reading accounts,
 categories, transactions and Home's non-money lists from it while offline) and O-F3 part 1
-(deriving balances and the pending summary). `spent` and the day buckets are O-F3 part 2; the
-outbox is O-F4.
+(deriving balances). `spent` and the day buckets are O-F3 part 2; the outbox is O-F4.
 
 ## The hard line: disposable mirror, sacred outbox
 
@@ -43,9 +42,8 @@ aborting a schema upgrade.
 ## Record shape
 
 Mirror records are `{ id, row, updatedAt, …index keys }` and `row` is **exactly** what
-`GET /sync/changes` sent — `lib/local/derive` (O-F3) is checked against
-`auditoria/offline-fixtures/`, and that comparison only means something if the server's shape arrives
-untouched.
+`GET /sync/changes` sent — `lib/local/derive` (O-F3) is checked against the backend's parity
+fixtures, and that comparison only means something if the server's shape arrives untouched.
 
 IndexedDB will not index a boolean or a null, so:
 
@@ -99,9 +97,12 @@ shape, while the API answers the view, and the only field of that view the mirro
 `lib/local/derive` lands (O-F3), rather than being served with a figure nobody computed.
 `/stats/spending` is the same case for Home's month and for the whole stats feature.
 
-`lib/query/domains.ts` lists the domains whose reads all answer locally, and its prefix covers every
-key of a domain: `budgets`, `home` and `stats` are not in it, because unpausing a domain that still
-has a server-only read turns a paused skeleton into a failed request.
+`lib/query/domains.ts` lists the domains whose **list and detail** reads answer locally, and its
+prefix covers every key of a domain. `budgets`, `home` and `stats` are not in it, because unpausing a
+domain that still has a server-only read turns a paused skeleton into a failed request. Two listed
+domains already carry that cost knowingly: `categoryKeys.usage`/`counts` and `transactionKeys.daily`
+are `/stats/spending` reads that fail (once, quietly) while offline until O-F3 part 2 derives them —
+there are six `/stats/spending` call sites in `features/*/api.ts`, and all six move together.
 
 `mirrorPage` rebuilds the `data` + `pagination` envelope the list endpoints return. It can page on
 the last `id` because the API sorts these lists by `_id` ascending, which is IndexedDB's own key
@@ -136,8 +137,13 @@ sides cannot drift into disagreeing about the same money.
   `from`, an INCOME reaches its `to`, and a TRANSFER and an ADJUSTMENT move both. A deleted row
   (`deletedAt`) leaves every figure; an archived one does not, and an archived account still gets a
   balance. A row naming an account the mirror never saw is skipped rather than inventing one.
-- `derivePendingSummary` is the quick-add tray: the live rows with `pendingDetails`, oldest first,
-  with their count, their total and their ids.
+  **It is the parity oracle, not the screen's recipe** (decision of 2026-09-04): what Accounts will
+  show once the outbox exists is the server's `balance` from the mirror plus the effect of the unsent
+  operations — a walk over the outbox, not over the whole history — and a test in O-F4 must prove the
+  two agree whenever the outbox is empty.
+- The pending tray is **not** a second derivation: `repository/transactions.ts` already answers it
+  (`pendingDetails=true&includeSummary=true`, count in `total`, sum in `summary`), so the parity test
+  feeds the fixture rows into a test vault and reads the tray through the repository.
 - `sumAmounts` is the one adder. `repository/transactions.ts` answers `includeSummary` with it, so
   no arithmetic is left in the repository — that figure is the endpoint's own sum, not a projection.
 
@@ -145,11 +151,11 @@ sides cannot drift into disagreeing about the same money.
 forbids painting one as if it were, so nothing renders these yet: the marking (the amber tone
 already designed) arrives with the outbox in O-F4/O-F5a.
 
-`fixtures/` holds `auditoria/offline-fixtures/` copied verbatim — that folder is in no repository
-and CI checks out only this one, so without the copy the parity test would never run where it
-counts. `parity.test.ts` compares the two byte for byte on any machine that has the source and
-fails on drift; in CI it skips, saying so in its name. Refresh it by re-running
-`npm run fixtures:offline` in the backend and copying the folder over.
+`fixtures/` is the backend's committed `lag-money-manager/fixtures/offline/` copied verbatim by
+`npm run fixtures:sync` (CI checks out this repo alone, so the copy has to travel with it).
+`parity.test.ts` compares the two byte for byte wherever both repos sit side by side and fails on
+drift; in CI it skips, saying so in its name. The backend's own CI fails when its generator and its
+committed files disagree, so the chain generator → backend files → this copy has a guard at each link.
 
 ## Persistence
 
@@ -174,9 +180,10 @@ not exist yet**, so today unsent work always survives a logout.
 
 ## Tests
 
-The derivations need no database at all, so `parity.test.ts` runs the four fixture scenarios
-(`cop-bogota`, `eur-madrid`, `jpy-tokyo`, `usd-new-york`) straight against `expected.balances` and
-`expected.pending`. Everything else `npm run test` covers against a real IndexedDB
+`parity.test.ts` runs the four fixture scenarios (`cop-bogota`, `eur-madrid`, `jpy-tokyo`,
+`usd-new-york`): `deriveBalances` straight against `expected.balances`, and the pending tray
+through the repository over a test vault against `expected.pending`. Everything else `npm run test`
+covers against a real IndexedDB
 (`fake-indexeddb`, wired in `vitest.setup.ts`): the stores and every index key, both migration policies with 20 queued operations
 inside, the blocked path, the purge rules, the multi-page pull with its overlap and its stalled feed,
 the four rules of the read seam, accounts, categories, transactions and Home's lists answering the

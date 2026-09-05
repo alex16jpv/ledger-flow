@@ -45,7 +45,7 @@ A change is not done until all of these hold. If one does not apply, say so and 
   BFF; per-user caches are partitioned and purged on logout.
 - **No money math in the client, with one declared exception**: balances, totals and `spent` come
   from the API. The exception is `lib/local/derive`, which projects them offline (plan D-5): pure
-  functions, added in minor units, checked against `auditoria/offline-fixtures/`, and whatever
+  functions, added in minor units, checked against the backend's parity fixtures (vendored in `lib/local/derive/fixtures/`, refreshed with `npm run fixtures:sync`), and whatever
   paints a projection marks it as one — never as a figure the server sent (invariant 2). Amounts are
   formatted with `Intl`, never parsed from formatted strings.
 - **Never duplicate what can be derived**: enums, error codes and DTOs come from

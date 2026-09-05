@@ -5,8 +5,8 @@ import eurMadrid from "./fixtures/eur-madrid.json";
 import jpyTokyo from "./fixtures/jpy-tokyo.json";
 import usdNewYork from "./fixtures/usd-new-york.json";
 
-// The parity fixtures, vendored verbatim from `auditoria/offline-fixtures/` because that folder is
-// in no repository and CI only ever sees this copy; `parity.test.ts` fails if the two drift.
+// The parity contract, vendored verbatim from the backend's committed `fixtures/offline/` with
+// `npm run fixtures:sync`; CI only ever sees this copy, and `parity.test.ts` fails if the two drift.
 // Only what O-F3 part 1 checks is typed here: `spending` and `budgets` arrive with part 2.
 
 export interface FixtureAccount {
@@ -22,8 +22,13 @@ export interface FixtureTransaction {
   type: SyncTransaction["type"];
   amount: number;
   date: string;
+  description: string | null;
+  categoryId: string | null;
   fromAccountId: string | null;
   toAccountId: string | null;
+  tags: string[];
+  currency: string;
+  source: SyncTransaction["source"];
   pendingDetails: boolean;
   deletedAt: string | null;
 }

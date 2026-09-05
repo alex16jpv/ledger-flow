@@ -4,16 +4,23 @@
 
 The contract between the figures the backend computes and the ones the app
 derives on the device with no network (`lib/local/derive`, O-F3). Each file
-holds a set of rows and the figures they must produce. The backend checks
-them against a real mongod in `src/__tests__/mongo/parityFixtures.mongo.test.ts`;
-the frontend feeds the same file to its pure derivations. When a figure here
-changes, both sides change with it — invariant 6 of `OFFLINE-SYNC-PLAN.md §10`.
+holds a set of rows and the figures they must produce. The canonical copy is
+`fixtures/offline/` in lag-money-manager: `npm run fixtures:check` fails its CI
+when the generator and these files disagree, and
+`src/__tests__/mongo/parityFixtures.mongo.test.ts` checks the real services
+against them on a real mongod. The frontend vendors the folder verbatim in
+`ledger-flow/lib/local/derive/fixtures/` (`npm run fixtures:sync` there) and
+feeds it to its pure derivations. When a figure here changes, both sides
+change with it — invariant 6 of `OFFLINE-SYNC-PLAN.md §10`.
 
 ## The rules the figures follow
 
 - **Add in minor units.** Every amount is a decimal in the currency's own unit,
   as the API prints it. Multiply by 100, round, add as integers, divide once at
-  the end. Adding `0.10 + 0.20 + 19.99 + 2.30` in floats gives `22.590000000000003`.
+  the end. As a running float sum, `1000 − 10.10 + 1500 − 7.77 − 100 − 3.45` is
+  `2378.6800000000003`; in minor units it is `2378.68`, the `current` balance
+  of `eur-madrid`. (Most short sums happen to come back exact in floats — that
+  is what makes the rule easy to skip and hard to see.)
 - **Windows are half-open `[from, to)`** and built in the **user's timezone**. A
   month is `[1st 00:00 local, next 1st 00:00 local)`; the two ends can carry
   different UTC offsets across a DST change.
@@ -35,6 +42,10 @@ changes, both sides change with it — invariant 6 of `OFFLINE-SYNC-PLAN.md §10
   those. Archived budgets produce no view at all.
 - **Balances** are `openingBalance` plus the effect of the live rows. The client
   never writes a balance (invariant 2): it projects it and marks the projection.
+  This is the rule, not the client's recipe: on the device the shown balance is
+  the server's `balance` from the mirror plus the effect of the unsent outbox,
+  and the two agree whenever the outbox is empty.
+- **`pending.transactionIds` is a set.** No order is part of the contract.
 
 ## Shape of a file
 
@@ -64,7 +75,7 @@ human handle, never an id. `expected` holds `balances`, `pending`, `spending`
 
 ### `eur-madrid.json` — EUR · Europe/Madrid · two decimals and the spring DST jump
 
-- Amounts with decimals only add up exactly in minor units: 0.10 + 0.20 + 19.99 + 2.30 is 22.59.
+- Amounts with decimals only add up exactly in minor units: the `current` balance, 1000 − 10.10 + 1500 − 7.77 − 100 − 3.45, drifts to 2378.6800000000003 as a float sum.
 - A March window opens at +01:00 and closes at +02:00: its ends have different offsets.
 - 2026-03-29 is a 23-hour day — the local times 02:00–02:59 do not exist.
 - A transaction 5 minutes into April is UTC-March: a UTC window would take it and drop the one on 1 March.

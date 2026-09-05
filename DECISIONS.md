@@ -1190,3 +1190,32 @@ cover` is set once in the root layout for the standalone display.
   `sumAmounts`, the same adder every figure uses. Nothing paints a derived balance yet, and nothing
   may until the projection is marked (invariant 2). Refreshing the fixtures now means copying them
   into this repo as well; asked of the generator in `BACKEND-DESDE-FRONT.md`.
+
+## 2026-09-04 · The pending tray has one path, and a derived balance is an oracle, not the screen's recipe (O-F3 review)
+
+- **Decision:** `derivePendingSummary` is removed. The repository already answers the quick-add tray
+  (`pendingDetails=true&includeSummary=true`) and Home and Transactions read it there; the parity
+  test now feeds the fixture rows into a test vault and checks that path against `expected.pending`.
+  `deriveBalances` stays as the parity oracle for the balance rule, but what Accounts will paint once
+  the outbox exists is the server's `balance` from the mirror plus the effect of the unsent
+  operations, and O-F4 has to prove the two agree whenever the outbox is empty.
+- **Alternatives:** keeping both derivations "because the plan listed the pending summary under
+  `derive`". Rejected: two paths for one figure inside one repo is the drift the fixtures exist to
+  prevent, and the second one was only ever executed by its own test. Deriving the shown balance from
+  `openingBalance` plus the whole history. Rejected: it walks every transaction on the main thread for
+  a figure the feed already carries, and the plan (§6) describes the mirror-plus-outbox projection.
+- **Consequence:** the fixtures declare `pending.transactionIds` a set (the API's tray order is
+  `date DESC`, which the old derivation did not follow either). Part 2 derives `spent` and the buckets
+  over the rows the `dateCursor` index selects for the window, never over `getAll`.
+
+## 2026-09-04 · The parity fixtures are vendored from the backend repo, not from a folder outside git (O-F3 review)
+
+- **Decision:** `lib/local/derive/fixtures/` is refreshed with `npm run fixtures:sync` from the
+  backend's committed `fixtures/offline/`, and `parity.test.ts` guards against that copy. The old
+  `auditoria/offline-fixtures/` is no longer read by anyone.
+- **Alternatives:** the previous arrangement (see the 2026-09-04 O-F3 part 1 entry above), where the
+  source of the copy was a folder in no repository. Rejected once the backend committed the files:
+  the contract can now be worked on from any machine, and the backend's CI fails when its generator
+  and its files disagree, so every link of generator → backend files → this copy has a guard.
+- **Consequence:** the chain is only as good as the sync step. Refreshing the fixtures is one command
+  and the test says which file drifted.

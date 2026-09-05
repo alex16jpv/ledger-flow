@@ -25,6 +25,7 @@
     "size-limit": "node tools/size-limit.mjs",
     "lighthouse": "lhci autorun",
     "gen:api-types": "node tools/gen-api-types.mjs",
+    "fixtures:sync": "node tools/sync-fixtures.mjs",
     "gen:feature": "plop feature",
     "ci": "npm run typecheck && npm run lint && npm run format:check && npm run check-tokens && npm run contrast-check && npm run test && npm run build && npm run size-limit",
     "prepare": "lefthook install",
