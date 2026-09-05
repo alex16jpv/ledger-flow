@@ -311,6 +311,15 @@
       "title": "De vuelta en línea.",
       "synced": "{count, plural, one {# cambio sincronizado} other {# cambios sincronizados}}"
     },
+    "pending": {
+      "title": "Cambios pendientes de sincronizar.",
+      "body": "Están guardados en este dispositivo."
+    },
+    "conflicts": {
+      "title": "Algunos cambios necesitan tu atención.",
+      "body": "{count, plural, one {# cambio no se pudo sincronizar} other {# cambios no se pudieron sincronizar}}"
+    },
+    "projected": "Incluye cambios sin sincronizar",
     "sessionExpired": {
       "eyebrow": "Sesión",
       "title": "Tu sesión terminó",

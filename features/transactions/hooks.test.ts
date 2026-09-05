@@ -81,7 +81,9 @@ describe("transactions", () => {
     });
     const [quick, put] = fetchMock.mock.calls;
     expect(quick?.[0]).toContain("/api/transactions/quick");
-    expect(new Headers(quick?.[1]?.headers).get("Idempotency-Key")).toBe("key-1");
+    // The key is the row's id now, in the body: a create carrying an id is already idempotent.
+    expect(JSON.parse(quick?.[1]?.body as string)).toMatchObject({ id: "key-1" });
+    expect(new Headers(quick?.[1]?.headers).get("Idempotency-Key")).toBeNull();
     expect(put?.[1]?.method).toBe("PUT");
     expect(JSON.parse(put?.[1]?.body as string)).toEqual({
       description: "Uber",

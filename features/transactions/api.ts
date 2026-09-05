@@ -9,19 +9,24 @@ import {
 import type {
   BatchUpdateResult,
   BatchUpdateTransactionsInput,
-  CreateTransactionInput,
-  QuickAddTransactionInput,
   StatsResponse,
   TagList,
   Transaction,
   TransactionList,
-  UpdateTransactionInput,
 } from "@/types/api";
 
 export const LIST_PAGE_SIZE = 30;
 
-// Reads go through the repository, which falls back to the offline mirror; writes are still the
-// plain API call until the outbox lands (O-F4).
+// Reads go through the repository, which falls back to the offline mirror; writes go through the
+// outbox, which queues the operation with the row and answers from the projection (O-F4). The batch
+// endpoint is the one write still going straight out: one header cannot guard N rows (F-20).
+export {
+  createTransaction,
+  deleteTransaction,
+  quickAddTransaction,
+  updateTransaction,
+} from "@/lib/local/outbox";
+
 export function fetchTransactionsPage(
   query: Record<string, QueryValue>,
   cursor?: string,
@@ -64,24 +69,6 @@ export function fetchTags(): Promise<TagList> {
   return readTransactionTags();
 }
 
-export function createTransaction(
-  input: CreateTransactionInput,
-  idempotencyKey: string,
-): Promise<Transaction> {
-  return api<Transaction>("/transactions", { method: "POST", body: input, idempotencyKey });
-}
-
-export function quickAddTransaction(
-  input: QuickAddTransactionInput,
-  idempotencyKey: string,
-): Promise<Transaction> {
-  return api<Transaction>("/transactions/quick", { method: "POST", body: input, idempotencyKey });
-}
-
-export function updateTransaction(id: string, input: UpdateTransactionInput): Promise<Transaction> {
-  return api<Transaction>(`/transactions/${id}`, { method: "PUT", body: input });
-}
-
 export function batchUpdateTransactions(
   input: BatchUpdateTransactionsInput,
   idempotencyKey: string,
@@ -91,8 +78,4 @@ export function batchUpdateTransactions(
     body: input,
     idempotencyKey,
   });
-}
-
-export function deleteTransaction(id: string): Promise<unknown> {
-  return api<unknown>(`/transactions/${id}`, { method: "DELETE" });
 }

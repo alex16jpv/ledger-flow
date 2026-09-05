@@ -311,6 +311,15 @@
       "title": "Back online.",
       "synced": "{count, plural, one {# change synced} other {# changes synced}}"
     },
+    "pending": {
+      "title": "Changes waiting to sync.",
+      "body": "They are saved on this device."
+    },
+    "conflicts": {
+      "title": "Some changes need your attention.",
+      "body": "{count, plural, one {# change could not sync} other {# changes could not sync}}"
+    },
+    "projected": "Includes changes not yet synced",
     "sessionExpired": {
       "eyebrow": "Session",
       "title": "Your session ended",

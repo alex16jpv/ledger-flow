@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 import type { Category } from "@/types/api";
 
@@ -136,6 +137,7 @@ describe("CategoryPickerSheet", () => {
     });
     const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
     expect(JSON.parse(post?.[1]?.body as string)).toEqual({
+      id: expect.stringMatching(UUID),
       name: "Gym",
       icon: "dumbbell",
       color: "TEAL",

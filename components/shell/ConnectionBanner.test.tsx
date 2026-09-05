@@ -1,0 +1,66 @@
+import { screen } from "@testing-library/react";
+
+import { refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
+import type { OutboxOperation } from "@/lib/local/schema";
+import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
+import { renderWithProviders } from "@/lib/testing/render";
+import { openTestVault, wipeVaults } from "@/lib/testing/vault";
+
+import { ConnectionBanner } from "./ConnectionBanner";
+
+function operation(seq: number, overrides: Partial<OutboxOperation> = {}): OutboxOperation {
+  return {
+    seq,
+    opId: `op-${seq}`,
+    opVersion: 1,
+    entity: "transaction",
+    entityId: `t${seq}`,
+    action: "create",
+    occurredAt: "2026-09-04T10:00:00.000Z",
+    payload: {},
+    dependsOn: [],
+    status: "pending",
+    attempts: 0,
+    lastError: null,
+    ...overrides,
+  };
+}
+
+async function queueOf(operations: OutboxOperation[]): Promise<void> {
+  const vault = await openTestVault("u1");
+  for (const entry of operations) await vault.db.put("outbox", entry);
+  await refreshOutboxStatus(vault.db);
+}
+
+afterEach(async () => {
+  resetOutboxStatus();
+  connectivityStore.reset();
+  await wipeVaults();
+});
+
+describe("ConnectionBanner", () => {
+  it("says nothing with network and an empty queue", async () => {
+    await queueOf([]);
+    renderWithProviders(<ConnectionBanner />);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("counts what the queue is holding while offline", async () => {
+    await queueOf([operation(1), operation(2)]);
+    reportOnline(false);
+    renderWithProviders(<ConnectionBanner />);
+    expect(screen.getByRole("status")).toHaveTextContent("2 changes waiting");
+  });
+
+  it("keeps the amber stripe with network while the queue has not drained", async () => {
+    await queueOf([operation(1)]);
+    renderWithProviders(<ConnectionBanner />);
+    expect(screen.getByRole("status")).toHaveTextContent("Changes waiting to sync.");
+  });
+
+  it("turns red when an operation is in conflict, online or not", async () => {
+    await queueOf([operation(1, { status: "conflict" })]);
+    renderWithProviders(<ConnectionBanner />);
+    expect(screen.getByRole("alert")).toHaveTextContent("1 change could not sync");
+  });
+});

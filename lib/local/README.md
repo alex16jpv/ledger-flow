@@ -179,6 +179,53 @@ already designed) arrives with the outbox in O-F4/O-F5a.
 drift; in CI it skips, saying so in its name. The backend's own CI fails when its generator and its
 committed files disagree, so the chain generator → backend files → this copy has a guard at each link.
 
+## Writing to it: `outbox/`
+
+The mirror image of `repository/`. `features/*/api.ts` re-exports its writes, so a screen still
+calls `createTransaction` and does not know the difference. Every write does the same three things:
+
+1. **One transaction.** `queueWrite` opens `[...mirror stores, outbox, meta]` at once, lets the
+   entity's `project` put the row it should show, takes the next `seq` from `meta.outboxSeq`, and
+   puts the operation. Any failure aborts the lot — explicitly, because an IndexedDB transaction
+   left open commits by itself and the mirror would keep a row with no operation behind it.
+2. **The envelope.** `seq` is the **only** ordering criterion (§2.8 / D-6); `occurredAt` is the
+   device's clock and is never used to decide what the server sees first. `baseUpdatedAt` is the
+   mirror's `updatedAt`, and only when the server has already seen the row — a row still waiting for
+   its own create carries a stamp the server never printed, and guarding with it would be a 409 on
+   every attempt. `dependsOn` names the **other** rows the server has not seen (the account a
+   movement was created against); same-entity order is `seq`'s job.
+3. **The projection answers the screen.** The row is in the mirror, so the UI responds the same with
+   and without network. `write()` then sends once, inline: a success drops the operation and writes
+   the server's row, a network failure or a 5xx/429/401 leaves it queued, `409 STALE_UPDATE` marks
+   it `conflict` (the sheet is O-F5a), a 404 on a delete or an archive **is** the state it asked
+   for, and any other 4xx undoes the mirror write and rethrows so the form can still fix it. The
+   engine — single flight, backoff, coalescing, retries — is O-F4 part 2.
+
+A create carries its own id and therefore no `Idempotency-Key` (O-B1). In the two forms that had a
+keyring, the key **is** the id now, so a retried submit still names one row. `PATCH
+/transactions/batch` and `POST /categories/restore-defaults` stay plain calls: one header cannot
+guard N rows and the server mints those ids (F-20).
+
+The client never writes `updatedAt`, `currency`, `source` or `balance` on a row the server already
+has (invariant 2). A row created offline has to show them anyway; they come from the profile the
+mirror holds, and the next pull replaces the row. Budgets are the one confirmation that merges
+instead of replacing: the API answers with the **view**, which drops the override map, the CUSTOM
+dates and the owner.
+
+**The balance projection.** `projectBalances` is the server's `balance` from the mirror plus the
+effect of the queued operations, which is why each money operation records what it replaced and what
+it left. It borrows the movement rule from `deriveBalances` rather than restating it, so the oracle
+and the screen agree by construction: with an empty queue the projection is the mirror's own figure,
+and with a queue it equals `deriveBalances` over the optimistic rows. `repository/accounts.ts`
+applies it, so Accounts is the first screen to paint a projected figure.
+
+**Marking (invariant 2, F-16).** `outboxStatusStore` says how much is queued, how much is in
+conflict, and which families of figures the queue can move; `useOutbox()` reads it and
+`components/ui/Projected` puts the amber `cloud-off` mark next to the figure (DESIGN §8.12).
+Balances, `spent` and its progress bars, Home's month and day bars, the Statistics total and its
+bars, and Movements' period summary carry it. The per-row "Pending sync" badge and the conflict
+sheet are O-F5a.
+
 ## Persistence
 
 `startMirror` calls `requestPersistentStorage()` once, before the first pull writes anything.
@@ -209,5 +256,8 @@ covers against a real IndexedDB
 (`fake-indexeddb`, wired in `vitest.setup.ts`): the stores and every index key, both migration policies with 20 queued operations
 inside, the blocked path, the purge rules, the multi-page pull with its overlap and its stalled feed,
 the four rules of the read seam, accounts, categories, transactions and Home's lists answering the
-same thing online and offline, and budgets declining rather than answering without `spent`. Use `openTestVault` from `lib/testing/vault` — it
+same thing online and offline, and budgets declining rather than answering without `spent`. For the
+outbox: the counter across a reopen, the envelope, both halves of the atomic write (a projection
+that throws and a queue put the store refuses), `dependsOn`, every branch of `write()`, and the
+balance projection against the oracle on all four fixtures and over the optimistic rows. Use `openTestVault` from `lib/testing/vault` — it
 tracks handles so one failed assertion does not leave a connection open and stall the next test.

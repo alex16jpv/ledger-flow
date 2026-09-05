@@ -15,6 +15,7 @@ import { Chip, ChipRow } from "@/components/ui/Chip";
 import { Empty } from "@/components/ui/Empty";
 import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { PeriodNav } from "@/components/ui/PeriodNav";
+import { Projected } from "@/components/ui/Projected";
 import { Segment } from "@/components/ui/Segment";
 import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
 import { useAccountsQuery } from "@/features/accounts/hooks";
@@ -51,6 +52,7 @@ import { useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 
 function parseType(value: string | null): StatsType {
   return (STATS_TYPES as readonly string[]).includes(value ?? "")
@@ -66,6 +68,7 @@ function parseGroup(value: string | null): StatsGroup {
 
 export function StatsScreen() {
   const t = useTranslations();
+  const outbox = useOutbox();
   const router = useRouter();
   const params = useSearchParams();
   const dates = useDates();
@@ -270,22 +273,25 @@ export function StatsScreen() {
           {groupBy === "day" && series && (
             <>
               <Card className="flex flex-col gap-2">
-                <Bars
-                  bars={series.bars.map((bar) => ({
-                    value: bar.value,
-                    today: bar.today,
-                    label: t("stats.dayBar", {
-                      day: dates.formatDay(new Date(`${bar.key}T12:00:00Z`)),
-                      amount: money.format(bar.value),
-                    }),
-                  }))}
-                  label={t("stats.perDay")}
-                  height={140}
-                  onSelect={(index) => {
-                    const key = series.bars[index]?.key;
-                    if (key) openTransactions({ from: key, to: key });
-                  }}
-                />
+                <Projected when={outbox.projected.spending} align="center" className="w-full">
+                  <Bars
+                    bars={series.bars.map((bar) => ({
+                      value: bar.value,
+                      today: bar.today,
+                      label: t("stats.dayBar", {
+                        day: dates.formatDay(new Date(`${bar.key}T12:00:00Z`)),
+                        amount: money.format(bar.value),
+                      }),
+                    }))}
+                    label={t("stats.perDay")}
+                    height={140}
+                    onSelect={(index) => {
+                      const key = series.bars[index]?.key;
+                      if (key) openTransactions({ from: key, to: key });
+                    }}
+                    className="flex-1"
+                  />
+                </Projected>
                 <div className="flex justify-between text-xs text-text-3">
                   <span>{dates.formatDay(window.from)}</span>
                   <span>

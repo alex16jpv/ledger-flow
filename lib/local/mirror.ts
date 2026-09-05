@@ -1,6 +1,7 @@
 import { connectivityStore } from "@/lib/network/connectivity";
 
 import { isVaultSupported, openVault, type VaultHandle } from "./db";
+import { refreshOutboxStatus, resetOutboxStatus } from "./outbox";
 import { requestPersistentStorage } from "./persist";
 import { pullChanges, type PullOptions } from "./pull";
 import { setCurrentVault } from "./repository";
@@ -60,6 +61,9 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     }
     handle = opened;
     setCurrentVault(opened);
+    // The queue survives reloads, so the banner and the marked figures have to know about it before
+    // the first write of the session (invariant 7).
+    await refreshOutboxStatus(opened.db);
     // Written in O-F1 and called here for the first time: from this item on the vault holds data,
     // and without the grant the browser may evict it under storage pressure.
     await requestPersistentStorage();
@@ -76,6 +80,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     window.removeEventListener("focus", pullIfStale);
     document.removeEventListener("visibilitychange", pullIfStale);
     setCurrentVault(null);
+    resetOutboxStatus();
     handle?.close();
     handle = null;
   };

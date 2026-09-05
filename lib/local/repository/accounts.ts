@@ -1,6 +1,8 @@
 import { api } from "@/lib/api/client";
 import type { Account, AccountList } from "@/types/api";
 
+import { projectBalances } from "../outbox/projection";
+import { pendingOperations, type VaultDb } from "../outbox/queue";
 import { mirrorPage, read } from "./read";
 
 export const ACCOUNT_PAGE_LIMIT = 100;
@@ -8,6 +10,18 @@ export const ACCOUNT_PAGE_LIMIT = 100;
 export interface AccountListParams {
   includeArchived?: boolean;
   limit?: number;
+}
+
+// The mirror keeps the server's `balance` and never writes one (invariant 2), so what a screen sees
+// while the queue is not empty is that figure plus the effect of the operations the server has not
+// applied yet. With an empty queue it is the server's own figure, untouched.
+async function withProjectedBalances(db: VaultDb, rows: Account[]): Promise<Account[]> {
+  const operations = await pendingOperations(db);
+  if (operations.length === 0) return rows;
+  const projected = new Map(
+    projectBalances(rows, operations).map((entry) => [entry.accountId, entry.balance]),
+  );
+  return rows.map((row) => ({ ...row, balance: projected.get(row.id) ?? row.balance }));
 }
 
 export function readAccounts(params: AccountListParams = {}): Promise<AccountList> {
@@ -22,7 +36,7 @@ export function readAccounts(params: AccountListParams = {}): Promise<AccountLis
       const rows = records
         .filter((record) => params.includeArchived === true || record.archived === 0)
         .map((record) => record.row);
-      return mirrorPage(rows, limit);
+      return mirrorPage(await withProjectedBalances(db, rows), limit);
     },
   );
 }
@@ -31,6 +45,9 @@ export function readAccounts(params: AccountListParams = {}): Promise<AccountLis
 export function readAccount(id: string): Promise<Account> {
   return read<Account>(
     () => api<Account>(`/accounts/${id}`),
-    async (db) => (await db.get("accounts", id))?.row,
+    async (db) => {
+      const record = await db.get("accounts", id);
+      return record && (await withProjectedBalances(db, [record.row]))[0];
+    },
   );
 }

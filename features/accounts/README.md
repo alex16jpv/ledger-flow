@@ -17,4 +17,8 @@ lives in the app layer because it composes the transactions of the account; the 
 
 Reads go through `lib/local/repository` (O-F2a): `fetchAccounts` and `fetchAccount` answer from the
 server while there is network and from the offline mirror when there is none, with the same shape
-either way. Writes are still plain API calls until the outbox lands (O-F4).
+either way. Writes go through `lib/local/outbox` (O-F4): the account lands in the mirror and its operation in
+the queue in one transaction, the screen gets that projection, and the server is asked afterwards. A
+create carries its own id, so no `Idempotency-Key`. The balances on this screen are the mirror's
+`balance` plus the effect of the queued operations, and they carry the amber projection mark while
+the queue is not empty (invariant 2).

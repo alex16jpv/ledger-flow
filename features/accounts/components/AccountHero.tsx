@@ -8,11 +8,13 @@ import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/cn";
+import { Projected } from "@/components/ui/Projected";
 import { Tile } from "@/components/ui/Tile";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { iconProps } from "@/lib/icons/sizes";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { featureColorStyle } from "@/lib/theme/feature-color";
 import type { Account } from "@/types/api";
 
@@ -20,6 +22,7 @@ export function AccountHero({ account }: { account: Account }) {
   const t = useTranslations();
   const money = useMoney();
   const dates = useDates();
+  const outbox = useOutbox();
   const archived = Boolean(account.archivedAt);
   return (
     <Card
@@ -46,7 +49,9 @@ export function AccountHero({ account }: { account: Account }) {
         {t(`accountTypes.${account.type}`)}
       </span>
       <p className="text-lg font-semibold">{account.name}</p>
-      <Amount value={account.balance} signed={false} size="hero" />
+      <Projected when={outbox.projected.balances}>
+        <Amount value={account.balance} signed={false} size="hero" />
+      </Projected>
       <span className="text-sm text-text-3">
         {t("accounts.detail.openingLine", {
           amount: money.format(account.openingBalance),

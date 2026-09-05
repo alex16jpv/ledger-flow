@@ -6,11 +6,13 @@ import { useTranslations } from "next-intl";
 import { Amount } from "@/components/ui/Amount";
 import { Card } from "@/components/ui/Card";
 import { Progress } from "@/components/ui/Progress";
+import { Projected } from "@/components/ui/Projected";
 import { Tile } from "@/components/ui/Tile";
 import { Link } from "@/lib/i18n/navigation";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import type { Budget, Category } from "@/types/api";
 
 import { budgetStatus } from "../hooks";
@@ -24,6 +26,7 @@ interface BudgetsSectionProps {
 export function BudgetsSection({ budgets, categories, now }: BudgetsSectionProps) {
   const t = useTranslations("home");
   const tc = useTranslations("common");
+  const outbox = useOutbox();
   const money = useMoney();
   if (budgets.length === 0) return null;
   return (
@@ -53,19 +56,24 @@ export function BudgetsSection({ budgets, categories, now }: BudgetsSectionProps
                 </Tile>
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{budget.name}</span>
                 <span className="text-sm text-text-2 tabular-nums">
-                  <Amount value={budget.spent} signed={false} size="sm" />{" "}
+                  <Projected when={outbox.projected.budgets}>
+                    <Amount value={budget.spent} signed={false} size="sm" />
+                  </Projected>{" "}
                   <span className="text-text-3">
                     {t("budgetOf", { amount: money.format(budget.amount) })}
                   </span>
                 </span>
               </div>
-              <Progress
-                value={budget.spent}
-                max={budget.amount}
-                thin
-                color={budget.color}
-                label={budget.name}
-              />
+              <Projected when={outbox.projected.budgets} align="center" className="w-full">
+                <Progress
+                  value={budget.spent}
+                  max={budget.amount}
+                  thin
+                  color={budget.color}
+                  label={budget.name}
+                  className="flex-1"
+                />
+              </Projected>
               <span className="text-xs text-text-3">
                 {status.kind === "over"
                   ? t("budgetOver", { amount: money.format(status.by) })

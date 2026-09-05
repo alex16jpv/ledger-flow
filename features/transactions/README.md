@@ -45,5 +45,9 @@ there is none, with the same shape either way. The mirror resolves the cursor as
 `(date, id)` — the same one the API uses — so infinite scroll and every filter work without network;
 a filter the mirror does not know how to apply makes it decline and the read goes to the server.
 `fetchDailyStats` goes through the stats seam and answers offline since O-F3 part 2: its buckets are
-the user's local calendar days, derived over the window's rows. Writes are still plain API calls
-until the outbox lands (O-F4).
+the user's local calendar days, derived over the window's rows. Writes go through `lib/local/outbox` (O-F4): the
+movement and its operation land in one transaction and the screen is answered from the projection,
+so capture works the same with and without network. The idempotency key is the row's id now, and
+each money operation records what it replaced so the balance projection knows what the server still
+has. `batchUpdateTransactions` is the one write still going straight out — one `If-Match` cannot
+guard N rows (F-20).

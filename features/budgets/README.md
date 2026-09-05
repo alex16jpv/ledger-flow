@@ -28,3 +28,8 @@ mirror answers both offline: it stores the saved shape (`SyncBudget`) and builds
 goes through the same stats seam as the other five call sites. The reads reach the server and fail
 honestly instead of showing a
 figure nobody computed.
+
+Writes go through `lib/local/outbox` (O-F4). The API answers with the **view**, which drops the
+override map, the CUSTOM dates and the owner, so a confirmed write merges the server's fields over
+the projected row instead of replacing it and the next pull brings the authoritative one. `spent`
+and its progress bars carry the amber projection mark while the queue is not empty.

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 
 import { QuickAddSheet } from "./QuickAddSheet";
@@ -131,11 +132,12 @@ describe("QuickAddSheet", () => {
     });
     const [post] = calls("POST");
     expect(JSON.parse(post?.[1]?.body as string)).toEqual({
+      id: expect.stringMatching(UUID),
       amount: 12500,
       categoryId: "c1",
       fromAccountId: "a1",
     });
-    expect(new Headers(post?.[1]?.headers).get("Idempotency-Key")).toMatch(/^[0-9a-f-]{36}$/);
+    expect(new Headers(post?.[1]?.headers).get("Idempotency-Key")).toBeNull();
     expect(JSON.parse(calls("PUT")[0]?.[1]?.body as string)).toEqual({
       description: "Latte",
       pendingDetails: false,
@@ -219,6 +221,9 @@ describe("QuickAddSheet", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Choose an account: you don’t have a main one yet.",
     );
-    expect(JSON.parse(calls("POST")[0]?.[1]?.body as string)).toEqual({ amount: 500 });
+    expect(JSON.parse(calls("POST")[0]?.[1]?.body as string)).toEqual({
+      id: expect.stringMatching(UUID),
+      amount: 500,
+    });
   });
 });

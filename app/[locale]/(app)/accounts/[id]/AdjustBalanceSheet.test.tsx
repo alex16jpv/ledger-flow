@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 import type { Account } from "@/types/api";
 
@@ -95,8 +96,9 @@ describe("AdjustBalanceSheet", () => {
     });
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("/api/transactions");
-    expect(new Headers(init?.headers).get("Idempotency-Key")).toMatch(/[0-9a-f-]{36}/);
+    expect(new Headers(init?.headers).get("Idempotency-Key")).toBeNull();
     expect(JSON.parse(init?.body as string)).toMatchObject({
+      id: expect.stringMatching(UUID),
       type: "ADJUSTMENT",
       amount: 12_300,
       fromAccountId: "banco",

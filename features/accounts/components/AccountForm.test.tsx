@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 
 import { AccountForm } from "./AccountForm";
@@ -45,7 +46,14 @@ describe("AccountForm", () => {
       string,
       unknown
     >;
-    expect(body).toEqual({ name: "Bancolombia", type: "CASH", color: "TEAL", balance: 0 });
+    // The create carries the client-minted id (O-B1), which is what makes it idempotent.
+    expect(body).toEqual({
+      id: expect.stringMatching(UUID),
+      name: "Bancolombia",
+      type: "CASH",
+      color: "TEAL",
+      balance: 0,
+    });
   });
 
   it("sends the typed opening balance", async () => {

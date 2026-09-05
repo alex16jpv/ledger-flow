@@ -8,11 +8,13 @@ import { Amount, type AmountKind } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/cn";
+import { Projected } from "@/components/ui/Projected";
 import { List, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Tile } from "@/components/ui/Tile";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { type ColorToken, featureColorStyle } from "@/lib/theme/feature-color";
 import type { Category } from "@/types/api";
 
@@ -39,12 +41,15 @@ export function TotalCard({
 }) {
   const t = useTranslations("stats");
   const money = useMoney();
+  const outbox = useOutbox();
   return (
     <Card className="flex flex-col gap-1">
       <span className="text-xs font-medium tracking-caps text-text-3 uppercase">
         {t(`totals.${type}`)}
       </span>
-      <Amount value={total} signed={false} size="hero" kind={AMOUNT_KIND[type]} />
+      <Projected when={outbox.projected.spending}>
+        <Amount value={total} signed={false} size="hero" kind={AMOUNT_KIND[type]} />
+      </Projected>
       <span className="text-sm text-text-3">
         {t("summary", { count, average: money.format(money.round(average)) })}
       </span>

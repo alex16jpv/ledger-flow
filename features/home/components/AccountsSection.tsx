@@ -4,7 +4,9 @@ import { useTranslations } from "next-intl";
 
 import { AccountCard, AccountCardGrid } from "@/components/ui/AccountCard";
 import { Amount } from "@/components/ui/Amount";
+import { Projected } from "@/components/ui/Projected";
 import { Link } from "@/lib/i18n/navigation";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import type { Account } from "@/types/api";
 
 interface AccountsSectionProps {
@@ -13,6 +15,7 @@ interface AccountsSectionProps {
 
 export function AccountsSection({ accounts }: AccountsSectionProps) {
   const t = useTranslations();
+  const outbox = useOutbox();
   const ordered = [...accounts].sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
   return (
     <section className="flex flex-col gap-2">
@@ -28,7 +31,11 @@ export function AccountsSection({ accounts }: AccountsSectionProps) {
             key={account.id}
             name={account.name}
             typeLabel={t(`accountTypes.${account.type}`)}
-            balance={<Amount value={account.balance} signed={false} size="lg" />}
+            balance={
+              <Projected when={outbox.projected.balances}>
+                <Amount value={account.balance} signed={false} size="lg" />
+              </Projected>
+            }
             color={account.color}
             mainLabel={account.isDefault ? t("home.main") : undefined}
           />

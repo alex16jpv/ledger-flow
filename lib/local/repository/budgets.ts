@@ -175,15 +175,23 @@ export function readBudgetsPage(params: BudgetListParams = {}): Promise<BudgetLi
   );
 }
 
+// The view built from the mirror alone, with no server behind it: what a queued write answers with
+// while its operation waits (O-F4). `readBudget` is the same thing with the seam in front.
+export async function mirrorBudget(
+  db: IDBPDatabase<VaultSchema>,
+  id: string,
+  reference?: string,
+): Promise<Budget | undefined> {
+  const record = await db.get("budgets", id);
+  // The detail endpoint answers for an archived budget too; only the list leaves it out.
+  if (!record) return undefined;
+  const context = await viewContext(db, [record.row], referenceOf(reference));
+  return context && toView(record.row, context);
+}
+
 export function readBudget(id: string, reference?: string): Promise<Budget> {
   return read<Budget>(
     () => api<Budget>(`/budgets/${id}`, { query: { reference } }),
-    async (db) => {
-      const record = await db.get("budgets", id);
-      // The detail endpoint answers for an archived budget too; only the list leaves it out.
-      if (!record) return undefined;
-      const context = await viewContext(db, [record.row], referenceOf(reference));
-      return context && toView(record.row, context);
-    },
+    (db) => mirrorBudget(db, id, reference),
   );
 }

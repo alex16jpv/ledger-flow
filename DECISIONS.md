@@ -1254,3 +1254,52 @@ cover` is set once in the root layout for the standalone display.
   domain is now in it. `features/budgets/api.ts` lost `fetchBudgetsPage`, a dead export nobody
   imported (F-09): the design backlog plans no screen that reads a single batch of budgets, and it
   was the one budget read that never went through the repository.
+
+## 2026-09-04 · Writes queue through `lib/local/outbox`, and the projection answers the screen (O-F4 part 1)
+
+- **Decision:** every entity write moves out of `features/*/api.ts` into `lib/local/outbox`, the
+  mirror image of `lib/local/repository`. `queueWrite` writes the projected row and its operation in
+  **one** IndexedDB transaction and aborts explicitly on any failure; `write()` answers the caller
+  from that projection and then sends once, inline. Only the transport policy is deferred: single
+  flight, backoff, coalescing and retries are O-F4 part 2.
+- **Alternatives:** keeping the mirror as the server's copy and replaying the queue at read time.
+  Rejected: the plan says the row is written optimistically, and replaying a queue on every list
+  read is the cost the mirror exists to avoid. Writing the row and the operation in two transactions
+  was never on the table — that is the phantom movement the item exists to prevent, and it is why
+  both stores share one database (O-F1).
+- **Consequence:** each money operation carries what it replaced and what it left, because after the
+  optimistic write the mirror no longer holds the row the server has. Those deltas telescope, so a
+  second operation on the same row records what the first one left and their sum is still the
+  distance between the server's row and the screen. `projectBalances` is the mirror's `balance` plus
+  that sum, and it borrows the movement rule from `deriveBalances` instead of restating it: with an
+  empty queue the two agree by construction, and with a queue the projection equals the oracle over
+  the optimistic rows. Four kinds of server answer are told apart by hand: retryable (network, 5xx,
+  429, 401) keeps the operation, `409 STALE_UPDATE` marks it `conflict`, a 404 on a removal **is**
+  the desired state, and any other 4xx undoes the mirror write and rethrows.
+
+## 2026-09-04 · The idempotency key becomes the row's id (O-F4 part 1)
+
+- **Decision:** creates carry a client-minted UUID v7 and stop sending `Idempotency-Key`, which O-B1
+  makes redundant. Where a form already had an `IdempotencyKeyring` — the transaction form, quick
+  capture, adjust balance — the key it produces **is** the id, so a retried submit still names one
+  row. `PATCH /transactions/batch` keeps its header: it has no single id to carry.
+- **Alternatives:** dropping the keyrings and minting an id per call. Rejected: it would duplicate a
+  row on a double submit, which is exactly what the keyring was there to prevent.
+- **Consequence:** `POST /transactions/batch` and `POST /categories/restore-defaults` are the two
+  writes still going straight to the server (F-20). Verified against the real API: the server keeps
+  a v7 id (zod 4's `.uuid()` accepts it, zod 3's would not), replays the same id with 200, and
+  answers `409 STALE_UPDATE` to a stale `If-Match` and 404 to a second delete.
+
+## 2026-09-04 · What the marking of projected figures covers now, and what waits for O-F5a (F-16)
+
+- **Decision:** `components/ui/Projected` puts the amber `cloud-off` mark of DESIGN §8.12 next to a
+  figure whose family the queue can move, driven by `outboxStatusStore`. It covers the balances
+  (list, detail, Home, the total and the card debt), `spent` with its progress bars in every budget
+  surface, Home's month figure and day bars, Statistics' headline total and its day bars, and
+  Movements' period summary. The `ConnectionBanner` counts what is waiting and turns red on a
+  conflict.
+- **Alternatives:** marking every row of the Statistics breakdown and every category usage count.
+  Rejected: twenty cloud icons in one list is noise, and those rows sit under a headline that is
+  already marked on the same screen.
+- **Consequence:** what stays open in F-16 is O-F5a's: the per-row "Pending sync" badge on a movement
+  saved locally, and the red banner's "Review" action with the conflict sheet behind it.

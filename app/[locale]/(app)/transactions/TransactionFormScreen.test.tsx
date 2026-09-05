@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 
 import { EditTransactionScreen, NewTransactionScreen } from "./TransactionFormScreen";
@@ -117,6 +118,7 @@ describe("NewTransactionScreen", () => {
     });
     const [post] = calls("POST");
     expect(JSON.parse(post?.[1]?.body as string)).toMatchObject({
+      id: expect.stringMatching(UUID),
       type: "EXPENSE",
       amount: 4500,
       fromAccountId: "a1",
@@ -126,7 +128,7 @@ describe("NewTransactionScreen", () => {
       tags: ["travel"],
       note: null,
     });
-    expect(new Headers(post?.[1]?.headers).get("Idempotency-Key")).toMatch(/^[0-9a-f-]{36}$/);
+    expect(new Headers(post?.[1]?.headers).get("Idempotency-Key")).toBeNull();
     expect(await screen.findByText("Transaction saved")).toBeVisible();
   });
 

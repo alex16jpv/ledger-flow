@@ -57,7 +57,7 @@ function isTrue(value: QueryValue): boolean {
 }
 
 // deletedAt exists only on the sync feed; everywhere else a deleted transaction stops existing.
-function toApiRow(row: SyncTransaction): Transaction {
+export function toApiRow(row: SyncTransaction): Transaction {
   const transaction: Transaction & { deletedAt?: string | null } = { ...row };
   delete transaction.deletedAt;
   return transaction;

@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 import type { Category } from "@/types/api";
 
@@ -58,6 +59,7 @@ describe("CategoryForm", () => {
     const [, init] = fetchMock.mock.calls[0] ?? [];
     expect(init?.method).toBe("POST");
     expect(JSON.parse(init?.body as string)).toEqual({
+      id: expect.stringMatching(UUID),
       name: "Gym",
       icon: "tag",
       color: "BLUE",
