@@ -1615,3 +1615,20 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** both requests are issued before the first `await`, so they share one read
   transaction and cannot see two states. A filtered list is still O(n) per page; nothing measured says
   it needs more than this yet.
+
+## 2026-09-05 · Writes run with no network instead of being paused (Puerta O-A)
+
+- **Decision:** mutations default to `networkMode: "offlineFirst"`, and `shouldRetryQuery` refuses a
+  retry while the connectivity store says the app is offline.
+- **Why:** the gate demo found that no write worked with no network. React Query pauses a mutation
+  while `onlineManager` is offline, so the `mutationFn` — and with it `lib/local/outbox/write` and the
+  whole queue of O-F4 — was never reached: the form spun for ever and nothing was saved, not even
+  locally. With the mutation running, a second pause appeared behind it: `offlineFirst` fires the
+  first fetch and pauses the retry, so the invalidation a write awaits on success never resolved when
+  the read it re-ran was one the mirror cannot answer (a deleted row's detail, F-46).
+- **Alternatives:** setting the mode per mutation — the same trap for the next feature, and §11's
+  checklist cannot enforce a default; keeping the retry and having the invalidation not be awaited —
+  it is the awaited invalidation that keeps a screen from painting a stale figure after a save.
+- **Consequence:** a write that has no vault to queue into now fails visibly with no network instead
+  of hanging, which is what §6 of `CLAUDE.md` asks for; a read that misses the mirror offline shows
+  its error state after one attempt instead of never settling.

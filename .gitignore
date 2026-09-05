@@ -3,6 +3,7 @@ node_modules/
 out/
 coverage/
 playwright-report/
+playwright-report-gate/
 test-results/
 *.tsbuildinfo
 next-env.d.ts

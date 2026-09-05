@@ -39,6 +39,7 @@
     ".next",
     "coverage",
     "playwright-report",
+    "playwright-report-gate",
     "test-results",
     "public/sw.js"
   ]

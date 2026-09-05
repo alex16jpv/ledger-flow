@@ -25,6 +25,7 @@ export default defineConfig([
     "node_modules/**",
     "coverage/**",
     "playwright-report/**",
+    "playwright-report-gate/**",
     "test-results/**",
     "next-env.d.ts",
     "types/api.d.ts",

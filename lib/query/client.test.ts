@@ -1,4 +1,5 @@
 import { ApiError, NetworkError } from "@/lib/api/errors";
+import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 
 import { createQueryClient, retryDelayWithJitter, shouldRetryQuery } from "./client";
 import { MIRROR_BACKED_DOMAINS, QUERY_DOMAINS } from "./domains";
@@ -19,6 +20,16 @@ describe("query client defaults", () => {
     expect(shouldRetryQuery(0, new NetworkError("r", true))).toBe(true);
   });
 
+  // A retry is paused until the network is back, so whatever awaits the refetch — the invalidation
+  // a write runs on success — never resolves and the form spins for ever (puerta O-A).
+  it("does not ask for a retry it cannot get while offline", () => {
+    reportOnline(false);
+    expect(connectivityStore.getSnapshot()).toBe("offline");
+    expect(shouldRetryQuery(0, new NetworkError("r", true))).toBe(false);
+    connectivityStore.reset();
+    expect(shouldRetryQuery(0, new NetworkError("r", true))).toBe(true);
+  });
+
   it("backs off exponentially with jitter and never beyond the cap", () => {
     for (let attempt = 0; attempt < 6; attempt += 1) {
       const delay = retryDelayWithJitter(attempt);
@@ -31,6 +42,8 @@ describe("query client defaults", () => {
     const client = createQueryClient();
     expect(client.getDefaultOptions().queries?.staleTime).toBe(30_000);
     expect(client.getDefaultOptions().mutations?.retry).toBe(0);
+    // A paused mutation never runs its mutationFn, so the outbox of O-F4 was never reached.
+    expect(client.getDefaultOptions().mutations?.networkMode).toBe("offlineFirst");
     expect(cacheDatabaseName("u1")).toBe("lf-cache-u1");
   });
 

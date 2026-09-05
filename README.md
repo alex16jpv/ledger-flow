@@ -49,6 +49,9 @@ the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no envir
 | `npm run contrast-check`  | WCAG AA over every `tokens/palette.*.css` in light and dark                                     |
 | `npm run test`            | Vitest + Testing Library (`test:watch`, `test:coverage`)                                        |
 | `npm run test:e2e`        | Playwright smoke tests against the local backend                                                |
+| `npm run demo:offline`    | The demo of gate O-A: three days with no network and one clean drain (`tests/gate/`)            |
+| `demo:offline:watch`      | The same demo, headed and slowed down, so it can be watched as it happens                       |
+| `demo:offline:report`     | Opens the demo's report: one video per cold start, and a trace with every request               |
 | `npm run size-limit`      | Route JS budgets over the production build                                                      |
 | `npm run lighthouse`      | Lighthouse CI against a production build with the thresholds in `lighthouserc.json`             |
 | `npm run gen:api-types`   | Regenerates `types/api.d.ts` from the backend OpenAPI                                           |
