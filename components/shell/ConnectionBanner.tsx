@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, useSyncExternalStore } from "react";
 
 import { Banner } from "@/components/ui/Banner";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { connectivityStore } from "@/lib/network/connectivity";
 
@@ -12,6 +13,7 @@ import { SyncConflictSheet } from "./SyncConflictSheet";
 export function ConnectionBanner() {
   const t = useTranslations("states");
   const outbox = useOutbox();
+  const router = useRouter();
   const [reviewing, setReviewing] = useState<number | null>(null);
   const phase = useSyncExternalStore(
     connectivityStore.subscribe,
@@ -21,7 +23,7 @@ export function ConnectionBanner() {
 
   // Something the user has to act on outlives coming back online, so it is checked before the
   // network: a conflict, and a refusal the queue could not undo (F-23). "Review" opens the first of
-  // them in queue order; the tray that lists them all is the second half of O-F5a.
+  // them in queue order; "See all" goes to the tray that lists every one of them.
   if (outbox.attention > 0) {
     return (
       <>
@@ -29,12 +31,20 @@ export function ConnectionBanner() {
           variant="error"
           title={t("conflicts.title")}
           body={t("conflicts.body", { count: outbox.attention })}
-          action={{
-            label: t("conflicts.review"),
-            onClick: () => {
-              setReviewing(outbox.firstAttention);
+          action={[
+            {
+              label: t("conflicts.review"),
+              onClick: () => {
+                setReviewing(outbox.firstAttention);
+              },
             },
-          }}
+            {
+              label: t("conflicts.seeAll"),
+              onClick: () => {
+                router.push("/sync");
+              },
+            },
+          ]}
         />
         <SyncConflictSheet
           open={reviewing !== null}

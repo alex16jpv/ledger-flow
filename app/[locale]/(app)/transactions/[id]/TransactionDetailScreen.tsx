@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { createElement, type ReactNode, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
+import { SyncConflictSheet } from "@/components/shell/SyncConflictSheet";
 import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
@@ -31,6 +32,7 @@ import { useDates } from "@/lib/i18n/useDates";
 import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { useBackNavigation } from "@/lib/navigation/history";
 import type { Account } from "@/types/api";
 
@@ -65,7 +67,12 @@ export function TransactionDetailScreen({ id }: { id: string }) {
   const accounts = useAccountsQuery(true);
   const categories = useCategoriesQuery(undefined);
   const remove = useDeleteTransaction();
+  const outbox = useOutbox();
   const [confirming, setConfirming] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  // F-29: DESIGN §8.12 asks for the conflict sheet from Movements too, and a row is a button, so
+  // the way in is here rather than inside the list row.
+  const stuck = outbox.attentionRows.get(id) ?? null;
   const notFound = transaction.error instanceof ApiError && transaction.error.status === 404;
   const lookups = useMemo<TransactionLookups>(
     () => ({
@@ -129,6 +136,24 @@ export function TransactionDetailScreen({ id }: { id: string }) {
         />
       ) : (
         <>
+          {stuck !== null && (
+            <Alert tone="danger" title={t("states.conflicts.title")}>
+              <span className="flex flex-1 flex-wrap items-center justify-between gap-2">
+                <span>
+                  {t("states.attention.onRow", { what: t("states.conflict.entities.transaction") })}
+                </span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setResolving(true);
+                  }}
+                >
+                  {t("states.conflicts.review")}
+                </Button>
+              </span>
+            </Alert>
+          )}
           {row.pendingDetails && (
             <Alert tone="warning">
               <span className="flex flex-1 flex-wrap items-center justify-between gap-2">
@@ -271,6 +296,13 @@ export function TransactionDetailScreen({ id }: { id: string }) {
         }}
         onClose={() => {
           setConfirming(false);
+        }}
+      />
+      <SyncConflictSheet
+        open={resolving}
+        seq={stuck}
+        onClose={() => {
+          setResolving(false);
         }}
       />
     </div>

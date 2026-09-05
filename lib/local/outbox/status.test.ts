@@ -55,6 +55,20 @@ describe("what the queue says about the figures on screen", () => {
     );
   });
 
+  it("hands a stuck row the first operation on it that needs a decision", async () => {
+    const status = await statusOf([
+      { ...operation(1, "transaction", "update"), entityId: "t1", status: "conflict" },
+      { ...operation(2, "transaction", "update"), entityId: "t1", status: "failed" },
+      { ...operation(3, "transaction", "update"), entityId: "t2", status: "pending" },
+    ]);
+
+    expect(status.attention).toBe(2);
+    // The row opens on the earliest of its stuck operations, and a row that is only waiting is not
+    // in the map at all (F-29).
+    expect([...status.attentionRows]).toEqual([["t1", 1]]);
+    expect(status.queuedRows.has("t2")).toBe(true);
+  });
+
   it("keeps the same snapshot when nothing changed, so a screen does not re-render", async () => {
     await statusOf([operation(1, "transaction", "create")]);
     const first = outboxStatusStore.getSnapshot();

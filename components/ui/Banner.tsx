@@ -20,16 +20,22 @@ const ICON: Record<BannerVariant, typeof WifiOff> = {
   error: CircleAlert,
 };
 
+export interface BannerAction {
+  label: ReactNode;
+  onClick: () => void;
+}
+
 export interface BannerProps {
   variant: BannerVariant;
   title: ReactNode;
   body?: ReactNode;
-  action?: { label: ReactNode; onClick: () => void };
+  action?: BannerAction | readonly BannerAction[];
   className?: string;
 }
 
 export function Banner({ variant, title, body, action, className }: BannerProps) {
   const Icon = ICON[variant];
+  const actions: readonly BannerAction[] = !action ? [] : Array.isArray(action) ? action : [action];
   return (
     <div
       role={variant === "error" ? "alert" : "status"}
@@ -45,15 +51,16 @@ export function Banner({ variant, title, body, action, className }: BannerProps)
         <b className="font-semibold">{title}</b>
         {body && <span className="block font-normal opacity-85">{body}</span>}
       </span>
-      {action && (
+      {actions.map((entry, index) => (
         <button
+          key={index}
           type="button"
-          onClick={action.onClick}
+          onClick={entry.onClick}
           className="font-semibold underline underline-offset-[3px]"
         >
-          {action.label}
+          {entry.label}
         </button>
-      )}
+      ))}
     </div>
   );
 }

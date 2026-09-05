@@ -9,7 +9,9 @@ import {
 } from "@/lib/testing/vault";
 import type { SyncChangesResponse } from "@/types/api";
 
+import type { VaultHandle } from "./db";
 import { pullChanges, type PullPageQuery, SyncFeedStalledError } from "./pull";
+import type { OutboxOperation } from "./schema";
 
 type Changes = Partial<SyncChangesResponse["changes"]>;
 
@@ -157,5 +159,172 @@ describe("pullChanges", () => {
     ]);
 
     await expect(pullChanges(vault, { fetchPage })).rejects.toBeInstanceOf(SyncFeedStalledError);
+  });
+});
+
+const QUEUED = "2026-09-03T11:00:00.000Z";
+
+async function queue(vault: VaultHandle, overrides: Partial<OutboxOperation>): Promise<void> {
+  await vault.db.put("outbox", {
+    seq: 1,
+    opId: "op-1",
+    opVersion: 1,
+    entity: "transaction",
+    entityId: "t1",
+    action: "update",
+    occurredAt: QUEUED,
+    payload: {},
+    dependsOn: [],
+    status: "pending",
+    attempts: 0,
+    lastError: null,
+    ...overrides,
+  });
+}
+
+// D-23 (F-25): the feed is authoritative for the row, and what the queue has not sent yet is
+// projected back on top of it — otherwise a pull undoes an edit made with no network.
+describe("a pull with operations still queued", () => {
+  afterEach(wipeVaults);
+
+  it("keeps a movement deleted with no network deleted", async () => {
+    const vault = await openTestVault("u1");
+    await queue(vault, { action: "delete" });
+    const { fetchPage } = feed([
+      page(
+        { transactions: [transaction({ id: "t1", deletedAt: null })] },
+        { count: 1, hasMore: false, nextCursor: "c1" },
+      ),
+    ]);
+
+    await pullChanges(vault, { fetchPage });
+
+    const record = await vault.db.get("transactions", "t1");
+    expect(record?.row.deletedAt).toBe(QUEUED);
+    expect(record?.deleted).toBe(1);
+    expect(record?.liveDate).toBeUndefined();
+  });
+
+  it("keeps an edit made with no network on top of the other device's row", async () => {
+    const vault = await openTestVault("u1");
+    await queue(vault, {
+      payload: { body: { amount: 90 } },
+      baseUpdatedAt: "2026-08-01T10:00:00.000Z",
+    });
+    const server = transaction({
+      id: "t1",
+      amount: 42,
+      description: "From the other device",
+      updatedAt: "2026-09-03T09:00:00.000Z",
+    });
+    const { fetchPage } = feed([
+      page({ transactions: [server] }, { count: 1, hasMore: false, nextCursor: "c1" }),
+    ]);
+
+    await pullChanges(vault, { fetchPage });
+
+    const record = await vault.db.get("transactions", "t1");
+    expect(record?.row.amount).toBe(90);
+    // Everything the operation did not ask to change is the server's, the stamp included: the guard
+    // the next write reads has to be the one the server printed (invariant 2).
+    expect(record?.row.description).toBe("From the other device");
+    expect(record?.updatedAt).toBe("2026-09-03T09:00:00.000Z");
+  });
+
+  it("shows the server's row for an operation that will never be sent", async () => {
+    const vault = await openTestVault("u1");
+    await queue(vault, { status: "conflict", payload: { body: { amount: 90 } } });
+    await queue(vault, { seq: 2, opId: "op-2", status: "failed", action: "delete" });
+    const { fetchPage } = feed([
+      page(
+        { transactions: [transaction({ id: "t1", amount: 42 })] },
+        { count: 1, hasMore: false, nextCursor: "c1" },
+      ),
+    ]);
+
+    await pullChanges(vault, { fetchPage });
+
+    const record = await vault.db.get("transactions", "t1");
+    expect(record?.row.amount).toBe(42);
+    expect(record?.row.deletedAt).toBeNull();
+  });
+
+  it("re-archives an account the queue has not archived on the server yet", async () => {
+    const vault = await openTestVault("u1");
+    await queue(vault, { entity: "account", entityId: "a1", action: "archive" });
+    const { fetchPage } = feed([
+      page(
+        { accounts: [account({ id: "a1", archivedAt: null })] },
+        { count: 1, hasMore: false, nextCursor: "c1" },
+      ),
+    ]);
+
+    await pullChanges(vault, { fetchPage });
+
+    const record = await vault.db.get("accounts", "a1");
+    expect(record?.row.archivedAt).toBe(QUEUED);
+    expect(record?.archived).toBe(1);
+  });
+
+  it("leaves one default account when the queue is moving the flag", async () => {
+    const vault = await openTestVault("u1");
+    await queue(vault, { entity: "account", entityId: "a2", action: "setDefault" });
+    const { fetchPage } = feed([
+      page(
+        {
+          accounts: [
+            account({ id: "a1", isDefault: true }),
+            account({ id: "a2", name: "Bank", isDefault: false }),
+          ],
+        },
+        { count: 2, hasMore: false, nextCursor: "c1" },
+      ),
+    ]);
+
+    await pullChanges(vault, { fetchPage });
+
+    expect((await vault.db.get("accounts", "a1"))?.row.isDefault).toBe(false);
+    expect((await vault.db.get("accounts", "a2"))?.row.isDefault).toBe(true);
+  });
+
+  it("keeps a budget override the queue has not sent, resolved in the owner's zone", async () => {
+    const vault = await openTestVault("u1");
+    await vault.db.put("profile", {
+      id: "me",
+      row: profile(),
+      updatedAt: profile().updatedAt,
+    });
+    await queue(vault, {
+      entity: "budget",
+      entityId: "b1",
+      action: "setOverride",
+      payload: { query: { reference: "2026-09-10T00:00:00.000Z" }, body: { amount: 500 } },
+    });
+    const { fetchPage } = feed([
+      page({ budgets: [budget({ id: "b1" })] }, { count: 1, hasMore: false, nextCursor: "c1" }),
+    ]);
+
+    await pullChanges(vault, { fetchPage });
+
+    const overrides = (await vault.db.get("budgets", "b1"))?.row.amountOverrides ?? {};
+    expect(Object.values(overrides)).toEqual([500]);
+  });
+
+  it("lets the server's row win for a create whose answer was lost", async () => {
+    const vault = await openTestVault("u1");
+    await queue(vault, {
+      action: "create",
+      payload: { body: { id: "t1", amount: 10, type: "EXPENSE", date: QUEUED } },
+    });
+    const { fetchPage } = feed([
+      page(
+        { transactions: [transaction({ id: "t1", amount: 10, description: "Named there" })] },
+        { count: 1, hasMore: false, nextCursor: "c1" },
+      ),
+    ]);
+
+    await pullChanges(vault, { fetchPage });
+
+    expect((await vault.db.get("transactions", "t1"))?.row.description).toBe("Named there");
   });
 });

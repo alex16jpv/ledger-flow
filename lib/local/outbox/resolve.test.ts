@@ -5,7 +5,14 @@ import { setCurrentVault } from "../repository/read";
 import { accountRecord, type OutboxOperation, profileRecord, transactionRecord } from "../schema";
 import { resetSyncEngine, startSyncEngine } from "./engine";
 import { pendingOperations, type VaultDb } from "./queue";
-import { discardOperation, operationsNeedingAttention, retryOperation } from "./resolve";
+import {
+  discardImpact,
+  discardOperation,
+  discardOperations,
+  operationsNeedingAttention,
+  retryOperation,
+  retryOperations,
+} from "./resolve";
 import { outboxStatusStore, refreshOutboxStatus, resetOutboxStatus } from "./status";
 
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -139,6 +146,53 @@ describe("resolving a conflict", () => {
 
     expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("if-match")).toBe(T1);
     expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+
+  it("counts what a discard would take before anything is deleted", async () => {
+    const vault = await vaultWithQueue([
+      { seq: 1, entity: "account", entityId: "a2", action: "create", status: "failed" },
+      { seq: 2, entityId: "t2", dependsOn: ["a2"], status: "pending" },
+      { seq: 3, entityId: "t3", status: "conflict" },
+    ]);
+
+    expect(await discardImpact(vault.db, [1])).toBe(2);
+    expect(await discardImpact(vault.db, [1, 3])).toBe(3);
+    expect(await discardImpact(vault.db, [99])).toBe(0);
+    // Counting changes nothing: the tray asks first and discards after the user says so.
+    expect(await statuses(vault.db)).toEqual(["1:failed", "2:pending", "3:conflict"]);
+  });
+
+  it("discards the whole tray in one transaction, cascades included", async () => {
+    const vault = await vaultWithQueue([
+      { seq: 1, entity: "account", entityId: "a2", action: "create", status: "failed" },
+      { seq: 2, entityId: "t2", dependsOn: ["a2"], status: "pending" },
+      { seq: 3, entityId: "t3", status: "conflict" },
+      { seq: 4, entityId: "t4", status: "pending" },
+    ]);
+
+    expect(await discardOperations(vault.db, [1, 3])).toEqual({ discarded: 3 });
+
+    expect(await statuses(vault.db)).toEqual(["4:pending"]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("puts every stuck operation back in line with its own guard", async () => {
+    const vault = await vaultWithQueue([
+      { seq: 1, serverRow: transaction({ id: "t1", updatedAt: T1 }) },
+      { seq: 2, entityId: "t2", serverRow: transaction({ id: "t2", updatedAt: T0 }) },
+      { seq: 3, entityId: "t3", status: "failed", lastError: "RESOURCE_ARCHIVED" },
+    ]);
+    startSyncEngine();
+    reportOnline(false);
+
+    await retryOperations(vault.db, [1, 2, 3]);
+
+    const queue = await pendingOperations(vault.db);
+    expect(queue.map((entry) => entry.status)).toEqual(["pending", "pending", "pending"]);
+    // Each takes the stamp its own 409 answered with; the refusal that carried none keeps its own.
+    expect(queue.map((entry) => entry.baseUpdatedAt)).toEqual([T1, T0, T0]);
+    expect(queue.map((entry) => entry.attempts)).toEqual([0, 0, 0]);
+    expect(outboxStatusStore.getSnapshot().attention).toBe(0);
   });
 
   it("lists conflicts and definitive refusals alike, in queue order", async () => {

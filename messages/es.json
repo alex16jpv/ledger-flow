@@ -318,7 +318,8 @@
     "conflicts": {
       "title": "Algunos cambios necesitan tu atención.",
       "body": "{count, plural, one {# cambio no se pudo sincronizar} other {# cambios no se pudieron sincronizar}}",
-      "review": "Revisar"
+      "review": "Revisar",
+      "seeAll": "Ver todo"
     },
     "projected": "Incluye cambios sin sincronizar",
     "sessionExpired": {
@@ -397,6 +398,31 @@
         "periodType": "Período",
         "periodStartDate": "El período empieza",
         "periodEndDate": "El período termina"
+      }
+    },
+    "attention": {
+      "title": "Necesitan tu atención",
+      "titleCount": "{count, plural, one {# cambio te necesita} other {# cambios te necesitan}}",
+      "loading": "Leyendo lo que está esperando…",
+      "intro": "Estos cambios están guardados en este dispositivo y el servidor no los ha aceptado. El resto de la cola no los está esperando.",
+      "onRow": "Este {what} tiene un cambio que el servidor no ha aceptado.",
+      "kinds": {
+        "conflict": "Cambiado en dos sitios",
+        "failed": "Rechazado por el servidor"
+      },
+      "compare": "Comparar versiones",
+      "discardAll": "Descartar todo",
+      "retryAll": "Reintentar todo",
+      "confirmTitle": "{count, plural, one {¿Descartar # cambio?} other {¿Descartar # cambios?}}",
+      "confirmBody": "No llegarán nunca al servidor, y este dispositivo vuelve a lo que el servidor tiene.",
+      "confirmCascade": "{count, plural, one {# de ellos se hizo sobre algo creado aquí y se va con él.} other {# de ellos se hicieron sobre algo creado aquí y se van con él.}}",
+      "confirmCta": "Descartar",
+      "discarded": "{count, plural, one {# cambio descartado} other {# cambios descartados}}",
+      "retried": "{count, plural, one {# cambio de vuelta en la cola} other {# cambios de vuelta en la cola}}",
+      "empty": {
+        "title": "Nada te necesita",
+        "body": "Todos los cambios de este dispositivo se sincronizaron o van de camino.",
+        "cta": "Ir al inicio"
       }
     },
     "pendingSync": "Pendiente de sincronizar",

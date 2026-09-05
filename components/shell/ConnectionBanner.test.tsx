@@ -10,6 +10,12 @@ import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 
 import { ConnectionBanner } from "./ConnectionBanner";
 
+const push = vi.fn();
+vi.mock("@/lib/i18n/navigation", () => ({
+  useRouter: () => ({ push, back: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/home",
+}));
+
 function operation(seq: number, overrides: Partial<OutboxOperation> = {}): OutboxOperation {
   return {
     seq,
@@ -36,6 +42,7 @@ async function queueOf(operations: OutboxOperation[]): Promise<void> {
 }
 
 afterEach(async () => {
+  push.mockReset();
   resetOutboxStatus();
   connectivityStore.reset();
   setCurrentVault(null);
@@ -86,5 +93,14 @@ describe("ConnectionBanner", () => {
     await waitFor(() => {
       expect(screen.getByRole("dialog")).toHaveTextContent("Resolve sync conflict");
     });
+  });
+
+  it("also leads to the tray that lists every stuck operation", async () => {
+    await queueOf([operation(1, { status: "conflict" }), operation(2, { status: "failed" })]);
+    renderWithProviders(<ConnectionBanner />);
+
+    await userEvent.click(screen.getByRole("button", { name: "See all" }));
+
+    expect(push).toHaveBeenCalledWith("/sync");
   });
 });

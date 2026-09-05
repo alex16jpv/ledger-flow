@@ -318,7 +318,8 @@
     "conflicts": {
       "title": "Some changes need your attention.",
       "body": "{count, plural, one {# change could not sync} other {# changes could not sync}}",
-      "review": "Review"
+      "review": "Review",
+      "seeAll": "See all"
     },
     "projected": "Includes changes not yet synced",
     "sessionExpired": {
@@ -397,6 +398,31 @@
         "periodType": "Period",
         "periodStartDate": "Period starts",
         "periodEndDate": "Period ends"
+      }
+    },
+    "attention": {
+      "title": "Needs your attention",
+      "titleCount": "{count, plural, one {# change needs you} other {# changes need you}}",
+      "loading": "Reading what’s waiting…",
+      "intro": "These changes are saved on this device and the server has not taken them. Nothing else in the queue is waiting for them.",
+      "onRow": "This {what} has a change the server hasn’t taken.",
+      "kinds": {
+        "conflict": "Changed in two places",
+        "failed": "Refused by the server"
+      },
+      "compare": "Compare versions",
+      "discardAll": "Discard all",
+      "retryAll": "Try all again",
+      "confirmTitle": "{count, plural, one {Discard # change?} other {Discard # changes?}}",
+      "confirmBody": "They will never reach the server, and this device goes back to what the server has.",
+      "confirmCascade": "{count, plural, one {# of them was made on top of something created here and goes with it.} other {# of them were made on top of something created here and go with them.}}",
+      "confirmCta": "Discard",
+      "discarded": "{count, plural, one {# change discarded} other {# changes discarded}}",
+      "retried": "{count, plural, one {# change back in the queue} other {# changes back in the queue}}",
+      "empty": {
+        "title": "Nothing needs you",
+        "body": "Every change on this device either synced or is still on its way.",
+        "cta": "Go home"
       }
     },
     "pendingSync": "Pending sync",

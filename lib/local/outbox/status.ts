@@ -16,21 +16,24 @@ export interface OutboxStatus {
   // operation the queue could not undo is as far from the server as one in conflict (F-23).
   attention: number;
   // The rows a screen can mark: everything with something queued, and the subset the user has to
-  // act on. Ids, not operations — a row badge asks "is this one waiting?" and nothing more.
+  // act on. The first is ids alone — a row badge asks "is this one waiting?" and nothing more; the
+  // second carries the `seq` of the first stuck operation on the row, which is what a screen opens
+  // the conflict sheet on (F-29).
   queuedRows: ReadonlySet<string>;
-  attentionRows: ReadonlySet<string>;
+  attentionRows: ReadonlyMap<string, number>;
   // Where "Review" goes: the first operation, in queue order, that needs a decision.
   firstAttention: number | null;
   projected: OutboxProjection;
 }
 
 const NO_ROWS: ReadonlySet<string> = new Set<string>();
+const NO_ATTENTION: ReadonlyMap<string, number> = new Map<string, number>();
 
 export const EMPTY_OUTBOX: OutboxStatus = {
   pending: 0,
   attention: 0,
   queuedRows: NO_ROWS,
-  attentionRows: NO_ROWS,
+  attentionRows: NO_ATTENTION,
   firstAttention: null,
   projected: { balances: false, spending: false, budgets: false },
 };
@@ -59,7 +62,10 @@ function summarise(operations: OutboxOperation[]): OutboxStatus {
     pending: operations.length,
     attention: stuck.length,
     queuedRows: new Set(operations.map((operation) => operation.entityId)),
-    attentionRows: new Set(stuck.map((operation) => operation.entityId)),
+    // Reversed so the lowest `seq` on a row is the one that survives the collapse into a map.
+    attentionRows: new Map(
+      [...stuck].reverse().map((operation) => [operation.entityId, operation.seq]),
+    ),
     firstAttention: stuck[0]?.seq ?? null,
     projected: projectionOf(operations),
   };
@@ -67,6 +73,11 @@ function summarise(operations: OutboxOperation[]): OutboxStatus {
 
 const sameRows = (left: ReadonlySet<string>, right: ReadonlySet<string>): boolean =>
   left.size === right.size && [...left].every((id) => right.has(id));
+
+const sameAttention = (
+  left: ReadonlyMap<string, number>,
+  right: ReadonlyMap<string, number>,
+): boolean => left.size === right.size && [...left].every(([id, seq]) => right.get(id) === seq);
 
 const same = (left: OutboxStatus, right: OutboxStatus): boolean =>
   left.pending === right.pending &&
@@ -76,7 +87,7 @@ const same = (left: OutboxStatus, right: OutboxStatus): boolean =>
   left.projected.spending === right.projected.spending &&
   left.projected.budgets === right.projected.budgets &&
   sameRows(left.queuedRows, right.queuedRows) &&
-  sameRows(left.attentionRows, right.attentionRows);
+  sameAttention(left.attentionRows, right.attentionRows);
 
 type Listener = () => void;
 

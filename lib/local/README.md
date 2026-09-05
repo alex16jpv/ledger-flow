@@ -71,6 +71,16 @@ snapshot down the same code path.
   incomplete copy would read as an empty account.
 - A feed that says `hasMore` while handing back the same cursor would page forever; that is
   `SyncFeedStalledError`, not a retry.
+- **The row the feed sends is not the last word while the queue still holds writes for it** (D-23,
+  F-25). `applyPage` puts the server's row down and then projects back on top of it, in `seq` order,
+  every operation on that row that is still `pending` or `sending` — the table is `outbox/reproject.ts`,
+  one rule per route, the mirror image of what each write projects when it is queued. Without it a
+  movement deleted with no network comes back alive on the next pull, and an edit made offline is
+  reverted by the 60-second overlap of D-14. An operation in `conflict` or `failed` is **not**
+  projected back: it will never be sent, so the mirror shows the server's version and the user's
+  lives in the conflict sheet. `updatedAt` is never rewritten, so the guard the next write reads is
+  still the server's own stamp (invariant 2), and a create has no rule at all: a create in the feed
+  is one whose answer was lost, and the server's row is the more current of the two.
 
 Scheduling lives in `mirror.ts`. `startMirror(userId)` opens the vault, calls
 `requestPersistentStorage()` and pulls: on open, on regaining focus once the copy is older than
@@ -308,8 +318,23 @@ O-F5a):
   about one field is not a choice about the next one. The common case costs nothing, because a
   text-only follow-up merges itself.
 
-`ConnectionBanner`'s red stripe counts conflicts **and** definitive refusals (F-23) and its "Review"
-opens the first of them in queue order. The tray that lists them all is the second half of O-F5a.
+- **Both ways out are also batch.** `discardOperations` and `retryOperations` take a list of `seq`
+  and do the whole thing in one transaction and one drain; the single-operation calls are those with
+  a list of one. `discardImpact` answers the question the tray has to ask **before** deleting
+  anything: how many operations a discard would take with it, cascade included.
+
+Where they are resolved:
+
+- `ConnectionBanner`'s red stripe counts conflicts **and** definitive refusals (F-23). "Review"
+  opens the first of them in queue order; "See all" goes to the tray.
+- **The tray, `/sync` — "Needs your attention"** (`app/[locale]/(app)/sync`). Every stuck operation
+  in `seq` order, each with its reason in plain language and the same two ways out, plus "Discard
+  all" and "Try all again". It has a route of its own rather than a place in Settings because
+  Ajustes › Sync status is O-F6's, and the stripe has to be able to reach this list today. Nothing
+  here blocks the rest of the queue: only what named a stuck row waits with it.
+- **The movement's own detail screen** (F-29). `outboxStatus.attentionRows` maps a row id to the
+  `seq` of the first stuck operation on it, so the screen showing a movement can open the sheet for
+  it. The list row cannot: it is a `RowButton`, and a button inside a button is not HTML.
 
 ## Persistence
 

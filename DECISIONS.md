@@ -1444,3 +1444,28 @@ cover` is set once in the root layout for the standalone display.
   common case costs nothing anyway, because a text-only follow-up merges itself.
 - **Consequence:** a chain of structural edits on one row can open the sheet more than once. That is
   the honest number of decisions, not a defect.
+
+## 2026-09-04 · The pull reprojects what the queue has not sent (O-F5a part 2, D-23)
+
+- **Decision:** `applyPage` writes the row the feed sent and then projects back on top of it, in
+  `seq` order, the `payload.body` of every operation on that row still `pending` or `sending`. The
+  table of rules is `lib/local/outbox/reproject.ts`, one entry per route. A row whose operations are
+  `conflict` or `failed` shows the **server's** version: those will never be sent, and the user's
+  version lives in the sheet, which is its only home.
+- **Why:** without it the 60-second overlap of D-14, or any edit from the other device, reverts a
+  change made with no network — and a movement deleted offline reappears alive.
+- **Alternatives:** skipping any row with a queue (hides the new `balance` of an account and
+  everything the other device touched); letting the server win (the resurrection above). Both were
+  rejected by the owner on 2026-09-04, who delegated the choice.
+- **Consequence:** `applyPage` needs `outbox` in its transaction scope, and every new route needs a
+  reprojection rule or its offline write is lost on the next pull. A **create** deliberately has no
+  rule: a create in the feed is one whose answer was lost, so the server's row is the newer of the
+  two. `updatedAt` is never rewritten, so the guard the next write reads is still the server's stamp.
+
+## 2026-09-04 · The tray has a route of its own, not a place in Settings (O-F5a part 2)
+
+- **Decision:** "Needs your attention" lives at `/sync`, not under Ajustes › Sync status.
+- **Why:** Sync status is O-F6's, and the red stripe needs somewhere to send the user today. A page
+  of its own is also what the stripe, the sheet and (later) Sync status can all link to.
+- **Consequence:** O-F6 links to `/sync` from Sync status instead of rebuilding the list. The route
+  is not in the nav: it is reached from the stripe, and it says so when there is nothing to show.

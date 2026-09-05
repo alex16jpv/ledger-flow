@@ -2,8 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
+import { setCurrentVault } from "@/lib/local/repository/read";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
+import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 
 import { TransactionDetailScreen } from "./TransactionDetailScreen";
 
@@ -84,8 +87,11 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
+  resetOutboxStatus();
+  setCurrentVault(null);
   vi.unstubAllGlobals();
+  await wipeVaults();
 });
 
 function render(id = "t1") {
@@ -150,6 +156,35 @@ describe("TransactionDetailScreen", () => {
     );
     expect(screen.getByRole("heading", { level: 2, name: "Quick expense" })).toBeVisible();
     expect(screen.getByText("Quick add")).toBeVisible();
+  });
+
+  // F-29: DESIGN §8.12 asks for the conflict sheet from Movements too, and the list row is a
+  // button, so the way in is the detail screen.
+  it("opens the conflict of the movement it is showing", async () => {
+    const vault = await openTestVault("u1");
+    await vault.db.put("outbox", {
+      seq: 7,
+      opId: "op-7",
+      opVersion: 1,
+      entity: "transaction",
+      entityId: "t1",
+      action: "update",
+      occurredAt: "2026-09-04T10:00:00.000Z",
+      payload: { body: { amount: 18400 } },
+      dependsOn: [],
+      status: "conflict",
+      attempts: 1,
+      lastError: "STALE_UPDATE",
+    });
+    setCurrentVault(vault);
+    await refreshOutboxStatus(vault.db);
+    render();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Review" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toHaveTextContent("Resolve sync conflict");
+    });
   });
 
   it("shows the not-found state for a missing id", async () => {
