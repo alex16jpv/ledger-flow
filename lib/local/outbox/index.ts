@@ -29,7 +29,6 @@ export {
   BACKOFF_MIN_MS,
   backoffDelay,
   type DrainReport,
-  OUTBOX_SYNC_TAG,
   requestSync,
   resetSyncEngine,
   startSyncEngine,
@@ -72,6 +71,7 @@ export {
   refreshOutboxStatus,
   resetOutboxStatus,
 } from "./status";
+export { OUTBOX_SYNC_TAG } from "./tag";
 export {
   batchUpdateTransactions,
   createTransaction,

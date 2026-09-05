@@ -18,6 +18,7 @@ import { reconcileRemoval, reconcileRow } from "./reconcile";
 import { remint } from "./remint";
 import { routeFor, serverBaseline } from "./routes";
 import { outboxStatusStore, refreshOutboxStatus } from "./status";
+import { OUTBOX_SYNC_TAG } from "./tag";
 
 // The plan's numbers (§6 O-F4). The step doubles from a second to a minute; the jitter can only
 // shorten it, so a fleet of devices that lost the network together does not come back in lockstep.
@@ -27,10 +28,6 @@ export const BACKOFF_MAX_MS = 60_000;
 // How many times a text-only edit may rebase itself onto a fresh stamp before it stops being bad
 // luck and starts being a row somebody else is writing continuously. Then it asks, like the rest.
 export const AUTO_MERGE_ATTEMPTS = 5;
-
-// What the service worker of O-F6 will register and post back. Registering the tag is harmless
-// where no worker handles it yet, and the listener is what turns a wake-up into a drain.
-export const OUTBOX_SYNC_TAG = "ledger-flow-outbox";
 
 export type DrainOutcome =
   | { kind: "sent"; result: unknown }
@@ -155,7 +152,10 @@ interface PassResult {
   progressed: boolean;
   // The network or the server asked us to come back later: the pass ends and the backoff starts.
   stopped: boolean;
-  pushed: boolean;
+  // The server said something about the data — a write that landed, a conflict, a refusal — so the
+  // mirror may be behind it and the round ends with a pull (F-32). A network failure or a 5xx says
+  // nothing new, and does not.
+  answered: boolean;
   retryAfterMs: number;
 }
 
@@ -164,7 +164,12 @@ async function sendPlanned(
   entries: Collapsed[],
   report: DrainReport,
 ): Promise<PassResult> {
-  const result: PassResult = { progressed: false, stopped: false, pushed: false, retryAfterMs: 0 };
+  const result: PassResult = {
+    progressed: false,
+    stopped: false,
+    answered: false,
+    retryAfterMs: 0,
+  };
   // The ids nothing may be sent against: an operation in conflict or refused for good, and anything
   // that named it. Only its dependents are held; the rest of the queue keeps going.
   const blocked = new Set<string>();
@@ -204,7 +209,7 @@ async function sendPlanned(
       });
       report.set(seq, { kind: "sent", result: answer });
       result.progressed = true;
-      result.pushed = true;
+      result.answered = true;
       // The plan still holds the guards this answer just moved: the pass looks again.
       if (rebased > 0) return result;
     } catch (error) {
@@ -212,7 +217,7 @@ async function sendPlanned(
         await settle(db, entry, (tx) => reconcileRemoval(tx, operation));
         report.set(seq, { kind: "gone" });
         result.progressed = true;
-        result.pushed = true;
+        result.answered = true;
         continue;
       }
       if (isIdTaken(error) && !operation.reminted) {
@@ -220,6 +225,7 @@ async function sendPlanned(
         await remint(db, entity, entityId, minted);
         report.set(seq, { kind: "reminted", entityId: minted });
         result.progressed = true;
+        result.answered = true;
         // Everything after this in the snapshot may name the old id: the pass looks again.
         return result;
       }
@@ -238,6 +244,7 @@ async function sendPlanned(
           await markOperation(db, seq, "pending", "STALE_UPDATE", { baseUpdatedAt: stamp });
           report.set(seq, { kind: "merged" });
           result.progressed = true;
+          result.answered = true;
           // The plan holds the guard this operation just moved: the pass looks at the queue again.
           return result;
         }
@@ -262,6 +269,7 @@ async function sendPlanned(
         );
         blocked.add(entityId);
         report.set(seq, { kind: "conflict" });
+        result.answered = true;
         continue;
       }
       if (retryable(error)) {
@@ -285,6 +293,7 @@ async function sendPlanned(
         );
         blocked.add(entityId);
         report.set(seq, { kind: "rejected", error });
+        result.answered = true;
         continue;
       }
       await settleWrite(db, seq, async (tx) => {
@@ -293,6 +302,7 @@ async function sendPlanned(
       });
       report.set(seq, { kind: "rejected", error });
       result.progressed = true;
+      result.answered = true;
     }
   }
   return result;
@@ -316,7 +326,7 @@ interface EngineState {
   failures: number;
   schedule: Scheduler;
   cancelRetry: (() => void) | null;
-  afterPush: (() => Promise<void> | void) | null;
+  afterRound: (() => Promise<void> | void) | null;
   random: () => number;
   stop: (() => void) | null;
 }
@@ -328,7 +338,7 @@ const state: EngineState = {
   failures: 0,
   schedule: timeoutScheduler,
   cancelRetry: null,
-  afterPush: null,
+  afterRound: null,
   random: Math.random,
   stop: null,
 };
@@ -354,7 +364,7 @@ function scheduleRetry(retryAfterMs: number): void {
 
 async function pass(db: VaultDb): Promise<DrainReport> {
   const report: DrainReport = new Map();
-  let pushed = false;
+  let answered = false;
   let retryAfterMs = 0;
   let backOff = false;
 
@@ -372,7 +382,7 @@ async function pass(db: VaultDb): Promise<DrainReport> {
     if (plan.operations.length === 0) break;
     const outcome = await sendPlanned(db, plan.operations, report);
     await refreshOutboxStatus(db);
-    pushed ||= outcome.pushed;
+    answered ||= outcome.answered;
     if (outcome.stopped) {
       backOff = true;
       retryAfterMs = outcome.retryAfterMs;
@@ -381,8 +391,8 @@ async function pass(db: VaultDb): Promise<DrainReport> {
     if (!outcome.progressed) break;
   }
 
-  // §4.2: a pull after every push, and never on a background timer.
-  if (pushed && state.afterPush) await state.afterPush();
+  // §4.2: a pull after every round the server answered, and never on a background timer.
+  if (answered && state.afterRound) await state.afterRound();
   if (backOff) {
     state.failures += 1;
     scheduleRetry(retryAfterMs);
@@ -431,8 +441,8 @@ async function registerBackgroundSync(): Promise<void> {
 }
 
 export interface SyncEngineOptions {
-  // The pull of §4.2, run after a push actually reached the server.
-  afterPush?: () => Promise<void> | void;
+  // The pull of §4.2, run after a round in which the server answered something about the data.
+  afterRound?: () => Promise<void> | void;
   random?: () => number;
   schedule?: Scheduler;
 }
@@ -442,7 +452,7 @@ export interface SyncEngineOptions {
 // backoff, and only while the queue still holds something.
 export function startSyncEngine(options: SyncEngineOptions = {}): () => void {
   state.stop?.();
-  state.afterPush = options.afterPush ?? null;
+  state.afterRound = options.afterRound ?? null;
   state.random = options.random ?? Math.random;
   state.schedule = options.schedule ?? timeoutScheduler;
   state.failures = 0;
@@ -474,7 +484,7 @@ export function startSyncEngine(options: SyncEngineOptions = {}): () => void {
     worker?.removeEventListener("message", onWorkerMessage);
     clearRetry();
     state.stop = null;
-    state.afterPush = null;
+    state.afterRound = null;
     state.schedule = timeoutScheduler;
     state.failures = 0;
   };
@@ -490,7 +500,7 @@ export function resetSyncEngine(): void {
   state.wanted = 0;
   state.served = 0;
   state.failures = 0;
-  state.afterPush = null;
+  state.afterRound = null;
   state.random = Math.random;
   state.schedule = timeoutScheduler;
   rollbacks.clear();

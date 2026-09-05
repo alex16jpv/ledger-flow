@@ -97,6 +97,7 @@ features/<domain>/   api.ts · keys.ts · hooks.ts · schemas.ts · components/ 
 lib/api              HTTP client, ApiError, error taxonomy, idempotency, single-flight refresh
 lib/query            QueryClient defaults and persistence
 lib/local            offline vault: IndexedDB schema, migrations, storage grant, vault purge
+lib/pwa              service worker registration, the (app) routes it caches and the offline fallback
 lib/i18n             next-intl config, money and date formatting
 lib/theme            palette and mode
 lib/icons            curated Lucide map and CategoryIcon

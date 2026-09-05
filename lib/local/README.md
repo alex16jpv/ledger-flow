@@ -102,11 +102,19 @@ Scheduling lives in `mirror.ts`. `startMirror(userId)` opens the vault, calls
 30-second poll is 2 880 requests a day per device, worse than the traffic local-first exists to
 remove. `AppFrame` starts it with the signed-in user and tears it down when that user changes.
 
+A request that arrives while a pull is running joins it and asks for **one more pass** when it ends
+(F-32): the pull in flight cannot carry what the server wrote after it started. It is the same
+`wanted`/`served` discipline the engine uses for the queue.
+
 ## Reading from it: `repository/`
 
 `features/*/api.ts` calls `lib/local/repository` instead of `lib/api/client`; the hooks, the query
 keys and the components do not know the difference. `read(fromServer, fromMirror)` is the seam:
 
+- it first waits for the vault the frame said it was about to open (F-31). The screens render, and
+  query, before `AppFrame`'s effects run, so a read that decided on the handle alone went to the
+  server with a full mirror sitting there; `AppFrame` raises the gate while it renders and
+  `startMirror` lowers it with the handle, or with null when none opens;
 - while there is network it calls `fromServer` and the online path is exactly what it was (O-F2a).
   `READ_SOURCE` in `repository/read.ts` is the single constant O-F2b flips to make the mirror the
   primary path, once the whole suite passes with it in front;
@@ -291,8 +299,10 @@ the only way in.
   ends in conflict or is refused for good, only what named that row waits with it; the rest of the
   queue goes out.
 - **Triggers.** Back online, app open, regaining focus, and Background Sync where it exists —
-  `startSyncEngine` registers the tag and listens for the worker's message, which O-F6 will post.
-  After a push that reached the server, a pull (§4.2), wired by `startMirror`.
+  `startSyncEngine` registers the tag and listens for the worker's message, which `app/sw.ts` posts
+  to its clients when the browser wakes it with that tag (F-24). After a round the server **answered**
+  — a write that landed, a `409`, a refusal for good — a pull (`afterRound`, §4.2), wired by
+  `startMirror`. A network failure or a 5xx says nothing new about the data and pulls nothing.
 - **`409 ID_TAKEN` re-mints** (F-21). O-B1 with D-17 leaves that code for an id another user owns,
   so the row takes a fresh one — in the mirror, in the rows that named it, and in the queued
   operations that named it — and goes back in line **once**. A second collision on a fresh UUID v7

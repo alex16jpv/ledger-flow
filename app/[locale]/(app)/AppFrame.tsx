@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { type ReactNode, Suspense, useCallback, useEffect, useState } from "react";
 
 import {
@@ -15,16 +16,22 @@ import { LOGIN_PATH } from "@/lib/auth/routes";
 import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
-import { startMirror } from "@/lib/local/mirror";
+import { noMirror, startMirror } from "@/lib/local/mirror";
+import { expectVault } from "@/lib/local/repository";
 import { HistoryTracker } from "@/lib/navigation/history";
 import { startHeartbeat } from "@/lib/network/heartbeat";
+import { warmAppShell } from "@/lib/pwa/service-worker";
 import { SessionProvider, useSession } from "@/lib/session";
 
 import { QuickAddSheet } from "./QuickAddSheet";
 import { ServiceWorkerUpdates } from "./ServiceWorkerUpdates";
 
 function Frame({ children }: { children: ReactNode }) {
+  // The screens below render, and query, before any effect here runs: the gate that makes a read
+  // wait for the vault has to go up now, not where the vault is opened (F-31).
+  expectVault();
   const session = useSession();
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const pendingCount = usePendingCount(session.status === "authenticated");
@@ -34,7 +41,17 @@ function Frame({ children }: { children: ReactNode }) {
   });
   useEffect(() => startHeartbeat(), []);
   const userId = session.user?.id;
-  useEffect(() => (userId ? startMirror(userId) : undefined), [userId]);
+  const sessionStatus = session.status;
+  useEffect(() => {
+    if (userId) return startMirror(userId);
+    // Still asking who this is: the reads keep waiting. Anywhere else, no vault is coming.
+    if (sessionStatus !== "loading") noMirror();
+    return undefined;
+  }, [userId, sessionStatus]);
+  useEffect(() => {
+    if (sessionStatus !== "authenticated") return;
+    void warmAppShell(locale);
+  }, [sessionStatus, locale]);
 
   const goToLogin = useCallback(() => {
     router.replace(`${LOGIN_PATH}?next=${encodeURIComponent(pathname)}`);

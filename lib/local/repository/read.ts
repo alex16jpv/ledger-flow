@@ -17,13 +17,32 @@ const READ_SOURCE: ReadSource = "server";
 export type MirrorReader<T> = (db: IDBPDatabase<VaultSchema>) => Promise<T | undefined>;
 
 let current: VaultHandle | null = null;
+let opening: Promise<VaultHandle | null> | null = null;
+let opened: ((handle: VaultHandle | null) => void) | null = null;
+
+// The screens render and fire their queries before the frame's effects run, so a read that decided
+// on `current` alone went to the server with a full mirror sitting there (F-31). The frame raises
+// this gate while it renders; `startMirror` lowers it with the handle, or with null when none opens.
+export function expectVault(): void {
+  opening ??= new Promise<VaultHandle | null>((resolve) => {
+    opened = resolve;
+  });
+}
 
 export function setCurrentVault(handle: VaultHandle | null): void {
   current = handle;
+  opened?.(handle);
+  opened = null;
 }
 
 export function currentVault(): VaultHandle | null {
   return current;
+}
+
+// Test seam: the gate is raised once per page load, so nothing lowers it back for the next test.
+export function resetVaultGate(): void {
+  opening = null;
+  opened = null;
 }
 
 // A mirror that never finished a snapshot would answer with a fraction of the data and look like an
@@ -37,6 +56,7 @@ export async function read<T>(
   fromServer: () => Promise<T>,
   fromMirror: MirrorReader<T>,
 ): Promise<T> {
+  if (opening) await opening;
   const vault = current;
   if (!vault) return fromServer();
   if (READ_SOURCE === "server" && connectivityStore.getSnapshot() !== "offline") {

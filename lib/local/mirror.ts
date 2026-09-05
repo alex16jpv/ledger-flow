@@ -15,28 +15,43 @@ export interface MirrorOptions {
   now?: () => number;
 }
 
+// Nothing on this page is going to open a vault: the reads waiting for one (F-31) stop waiting.
+export function noMirror(): void {
+  setCurrentVault(null);
+}
+
 export function startMirror(userId: string, options: MirrorOptions = {}): () => void {
   const now = options.now ?? Date.now;
   let handle: VaultHandle | null = null;
   let running: Promise<void> | null = null;
+  let wanted = 0;
+  let served = 0;
   let lastPullAt = 0;
   const state = { stopped: false };
 
-  const pull = (): Promise<void> => {
-    const vault = handle;
-    if (!vault || state.stopped) return Promise.resolve();
-    running ??= pullChanges(vault, options.pull)
+  const pullOnce = (vault: VaultHandle): Promise<void> => {
+    served = wanted;
+    return pullChanges(vault, options.pull)
       .then(() => {
         lastPullAt = now();
       })
       .catch((error: unknown) => {
         // lib/api already reported it; the mirror keeps serving whatever the last pull left.
         console.warn("ledger-flow: pulling the offline mirror failed", error);
-      })
-      .finally(() => {
-        running = null;
       });
-    return running;
+  };
+
+  // The engine's discipline (F-32): a request that arrives mid-pull joins the one in flight, which
+  // cannot carry what the server wrote after it started, so it asks for a pass of its own after.
+  const pull = (): Promise<void> => {
+    const vault = handle;
+    if (!vault || state.stopped) return Promise.resolve();
+    wanted += 1;
+    const mine = wanted;
+    running ??= pullOnce(vault).finally(() => {
+      running = null;
+    });
+    return running.then(() => (mine > served ? pull() : undefined));
   };
 
   const pullIfStale = (): void => {
@@ -51,8 +66,8 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   const unsubscribe = connectivityStore.subscribe(onConnectivity);
   window.addEventListener("focus", pullIfStale);
   document.addEventListener("visibilitychange", pullIfStale);
-  // The engine owns its own triggers; what it borrows from here is the pull that follows a push.
-  const stopEngine = startSyncEngine({ afterPush: pull });
+  // The engine owns its own triggers; what it borrows from here is the pull that follows a round.
+  const stopEngine = startSyncEngine({ afterRound: pull });
 
   const ready = (async () => {
     if (!isVaultSupported()) return;
@@ -74,9 +89,14 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     await requestSync();
   })();
 
-  ready.catch((error: unknown) => {
-    console.warn("ledger-flow: the offline mirror could not be opened", error);
-  });
+  ready
+    .catch((error: unknown) => {
+      console.warn("ledger-flow: the offline mirror could not be opened", error);
+    })
+    .finally(() => {
+      // A read waiting for this vault (F-31) gets its answer even when none opened.
+      if (!state.stopped) setCurrentVault(handle);
+    });
 
   return () => {
     state.stopped = true;

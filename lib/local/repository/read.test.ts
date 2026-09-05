@@ -1,10 +1,11 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 
-import { mirrorPage, read, setCurrentVault } from "./read";
+import { expectVault, mirrorPage, read, resetVaultGate, setCurrentVault } from "./read";
 
 afterEach(async () => {
   setCurrentVault(null);
+  resetVaultGate();
   connectivityStore.reset();
   await wipeVaults();
 });
@@ -53,6 +54,34 @@ describe("read", () => {
 
     await expect(read(() => Promise.resolve("server"), fromMirror)).resolves.toBe("server");
     expect(fromMirror).not.toHaveBeenCalled();
+  });
+
+  // F-31: the screens query before the frame has opened the vault, and a read that decided then
+  // went to the server with a full mirror sitting there.
+  it("waits for the vault the frame is about to open before deciding", async () => {
+    expectVault();
+    reportOnline(false);
+    const fromServer = vi.fn().mockResolvedValue("server");
+    const answer = read(fromServer, () => Promise.resolve("mirror"));
+
+    await Promise.resolve();
+    expect(fromServer).not.toHaveBeenCalled();
+
+    await readyVault("u1");
+    await expect(answer).resolves.toBe("mirror");
+    expect(fromServer).not.toHaveBeenCalled();
+  });
+
+  it("stops waiting when no vault opens", async () => {
+    expectVault();
+    reportOnline(false);
+    const answer = read(
+      () => Promise.resolve("server"),
+      () => Promise.resolve("mirror"),
+    );
+
+    setCurrentVault(null);
+    await expect(answer).resolves.toBe("server");
   });
 
   it("falls through to the server when the mirror cannot answer", async () => {

@@ -1493,3 +1493,37 @@ cover` is set once in the root layout for the standalone display.
   baseline the way it asked. A resolution acts only on operations still stuck. `pendingDetails`
   joins the text fields: the PUT behind every quick capture no longer asks the user when the other
   device touched the row.
+
+## 2026-09-04 · The offline shell caches a route by its path, not by its URL (O-F6, F-06)
+
+- **Decision:** the worker keeps two runtime caches of its own for the `(app)` routes, `app-shell`
+  (documents) and `app-shell-rsc` (RSC payloads), both keyed on origin + pathname and matched with
+  `ignoreVary`. When the app has a session it posts the list of routes and the worker fetches the
+  ones it does not already hold. A navigation that neither the network nor the cache can answer
+  falls back to `public/offline.html` (or `.es.html`), precached with a revision of its own.
+- **Why:** `defaultCache` keys on the whole URL, so `/transactions?type=EXPENSE&_rsc=…` never
+  matched the entry stored for `/transactions` and changing a filter with no network showed the
+  browser's error page (F-06, reproduced against the previous worker). None of these pages reads
+  `searchParams` on the server, so one entry per route is the right key. Warming is what makes a
+  route the user never opened answer at all: without it the first visit offline has nothing.
+- **Alternatives:** precaching at install (the worker installs before there is a session, so every
+  route would be the login redirect); one cached document for the whole group (it would show Home at
+  `/budgets`); leaving the RSC hop to fail (Next falls back to a full load, which the document cache
+  can answer, but the hop is a second of nothing first).
+- **Consequence:** a new worker deletes both caches on `activate`, because its build ships new
+  chunks and the documents the old one warmed point at files that are gone. The fallback documents
+  are static, so their text lives in `public/` and not in `messages/` — one file per locale.
+
+## 2026-09-04 · A read waits for the vault the frame is about to open (O-F6, F-31)
+
+- **Decision:** `repository/read.ts` holds a gate that `AppFrame` raises while it renders and that
+  `startMirror` lowers with the handle, or with null when no vault opens. `read()` waits for it
+  before choosing a source.
+- **Why:** the screens render, and query, before the frame's effects run: `read()` saw no vault and
+  went to the server with a full mirror sitting there. Measured with `READ_SOURCE="mirror"`: opening
+  Home cost 12 reads with the gate missing and **0** with it.
+- **Alternatives:** raising the gate in the effect that opens the vault (child effects run first, so
+  it is already too late); a deadline (a timer that hides the ordering instead of fixing it).
+- **Consequence:** the gate is raised in a render, which is why it is one-shot and idempotent. When
+  the session settles without a user, the frame lowers it: nothing is going to open a vault, and a
+  read that waited forever would spin a screen instead of failing.

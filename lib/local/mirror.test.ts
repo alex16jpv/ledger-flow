@@ -4,7 +4,7 @@ import type { SyncChangesResponse } from "@/types/api";
 
 import { PULL_STALE_MS, startMirror } from "./mirror";
 import type { PullPageQuery } from "./pull";
-import { currentVault, setCurrentVault } from "./repository";
+import { currentVault, expectVault, read, resetVaultGate, setCurrentVault } from "./repository";
 
 const originalStorage = Object.getOwnPropertyDescriptor(navigator, "storage");
 const persist = vi.fn().mockResolvedValue(true);
@@ -23,14 +23,18 @@ const feed: SyncChangesResponse = {
 
 let queries: PullPageQuery[] = [];
 let clock = 0;
+let answer: (page: SyncChangesResponse) => void = () => undefined;
 
-function start(): () => void {
+function start(pending = false): () => void {
   return startMirror("u1", {
     now: () => clock,
     pull: {
       fetchPage: (query) => {
         queries.push(query);
-        return Promise.resolve(feed);
+        if (!pending) return Promise.resolve(feed);
+        return new Promise<SyncChangesResponse>((resolve) => {
+          answer = resolve;
+        });
       },
     },
   });
@@ -48,7 +52,9 @@ beforeEach(() => {
 
 afterEach(async () => {
   if (originalStorage) Object.defineProperty(navigator, "storage", originalStorage);
+  vi.unstubAllGlobals();
   setCurrentVault(null);
+  resetVaultGate();
   connectivityStore.reset();
   await wipeVaults();
 });
@@ -96,6 +102,41 @@ describe("startMirror", () => {
     await vi.waitFor(() => {
       expect(queries).toHaveLength(2);
     });
+    stop();
+  });
+
+  // F-32: a request that arrives mid-pull joins the one in flight, which cannot carry what the
+  // server wrote after it started.
+  it("pulls once more when a request arrives while a pull is in flight", async () => {
+    const stop = start(true);
+    await vi.waitFor(() => {
+      expect(queries).toHaveLength(1);
+    });
+
+    reportOnline(false);
+    reportOnline(true);
+    expect(queries).toHaveLength(1);
+
+    answer(feed);
+    await vi.waitFor(() => {
+      expect(queries).toHaveLength(2);
+    });
+    answer(feed);
+    stop();
+  });
+
+  // F-31: a read that waited for this vault has to be answered even when none opens.
+  it("stops the waiting reads when there is no vault to open", async () => {
+    expectVault();
+    vi.stubGlobal("indexedDB", undefined);
+    const stop = start();
+
+    await expect(
+      read(
+        () => Promise.resolve("server"),
+        () => Promise.resolve("mirror"),
+      ),
+    ).resolves.toBe("server");
     stop();
   });
 

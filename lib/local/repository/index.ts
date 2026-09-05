@@ -13,7 +13,15 @@ export {
   readCategoriesPage,
   readCategory,
 } from "./categories";
-export { currentVault, mirrorPage, type MirrorReader, read, setCurrentVault } from "./read";
+export {
+  currentVault,
+  expectVault,
+  mirrorPage,
+  type MirrorReader,
+  read,
+  resetVaultGate,
+  setCurrentVault,
+} from "./read";
 export { readSpending, type SpendingQuery } from "./stats";
 export {
   readTransaction,

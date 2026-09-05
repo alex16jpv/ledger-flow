@@ -214,16 +214,53 @@ describe("the sync engine", () => {
 
   it("pulls after a push, and only after one that reached the server", async () => {
     const vault = await vaultWith();
-    const afterPush = vi.fn();
-    startSyncEngine({ afterPush });
+    const afterRound = vi.fn();
+    startSyncEngine({ afterRound });
     await seed(vault.db, [{ seq: 1 }]);
     fetchMock.mockImplementation(() => Promise.resolve(json(transaction({ id: "t1" }))));
 
     await requestSync();
-    expect(afterPush).toHaveBeenCalledTimes(1);
+    expect(afterRound).toHaveBeenCalledTimes(1);
 
     await requestSync();
-    expect(afterPush).toHaveBeenCalledTimes(1);
+    expect(afterRound).toHaveBeenCalledTimes(1);
+  });
+
+  // F-32: the server refusing a write is the server saying it knows something the mirror does not.
+  it("pulls after a refusal for good and after a conflict", async () => {
+    const vault = await vaultWith();
+    const afterRound = vi.fn();
+    startSyncEngine({ afterRound });
+    await seed(vault.db, [{ seq: 1 }]);
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(json({ code: "VALIDATION", message: "no" }, { status: 400 })),
+    );
+
+    await requestSync();
+    expect(afterRound).toHaveBeenCalledTimes(1);
+
+    await seed(vault.db, [{ seq: 1, baseUpdatedAt: "2026-09-04T09:00:00.000Z" }]);
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        json({ code: "STALE_UPDATE", message: "stale", current: transaction() }, { status: 409 }),
+      ),
+    );
+
+    await requestSync();
+    expect(afterRound).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not pull when the round only learned that the network is down", async () => {
+    const vault = await vaultWith();
+    const afterRound = vi.fn();
+    startSyncEngine({ afterRound, schedule: () => () => undefined });
+    await seed(vault.db, [{ seq: 1 }]);
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(json({ code: "SERVER_ERROR", message: "later" }, { status: 503 })),
+    );
+
+    await requestSync();
+    expect(afterRound).not.toHaveBeenCalled();
   });
 
   it("drains when the network comes back and when the window regains focus", async () => {
