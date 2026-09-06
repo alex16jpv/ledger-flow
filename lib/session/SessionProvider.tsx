@@ -145,11 +145,14 @@ export function SessionProvider({
     [queryClient],
   );
 
+  // React Query drops an error back to pending when a query with no data refetches, so a session
+  // that failed offline would read as "loading" again the moment the network returns — and whatever
+  // hangs on the answer (the vault of §2.6) would be torn down and rebuilt in the gap (R-3b).
   const status: SessionStatus = expired
     ? "expired"
     : query.data
       ? "authenticated"
-      : query.isError
+      : query.isError || query.isFetched
         ? "error"
         : "loading";
 

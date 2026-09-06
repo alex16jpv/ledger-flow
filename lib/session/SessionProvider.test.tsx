@@ -16,11 +16,15 @@ const fetchMock = vi.fn<typeof fetch>();
 const urlOf = (input: string | URL | Request) =>
   typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
 
+const statuses: string[] = [];
+
 function Probe() {
   const session = useSession();
+  statuses.push(session.status);
   return (
     <div>
       <output data-testid="status">{session.status}</output>
+      <button onClick={() => void session.refetch()}>refetch</button>
       <output data-testid="name">{session.user?.name ?? ""}</output>
       <button onClick={() => void session.logout()}>logout</button>
       <button onClick={() => void session.logout({ discardPendingWork: true })}>discard</button>
@@ -81,6 +85,26 @@ describe("SessionProvider", () => {
     });
     expect(screen.getByTestId("name")).toHaveTextContent("John");
     expect(urlOf(fetchMock.mock.calls[0]?.[0] ?? "")).toBe("/api/auth/me");
+  });
+
+  // R-3b: React Query drops an errored query with no data back to pending when it refetches; the
+  // vault of §2.6 hangs on this status and must not be torn down while the network comes back.
+  it("does not fall back to loading when a failed session is fetched again", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    statuses.length = 0;
+    renderWithProviders(
+      <QueryProvider>
+        <SessionProvider onSignedOut={vi.fn()}>
+          <Probe />
+        </SessionProvider>
+      </QueryProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("error"));
+    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "Ada" } }));
+    await userEvent.click(screen.getByRole("button", { name: "refetch" }));
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"));
+    const afterError = statuses.slice(statuses.indexOf("error"));
+    expect(afterError).not.toContain("loading");
   });
 
   it("logs out, tells the other tabs and calls onSignedOut", async () => {

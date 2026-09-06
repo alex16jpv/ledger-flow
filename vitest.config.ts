@@ -26,6 +26,9 @@ export default defineConfig({
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["node_modules/**", ".next/**", "tests/e2e/**"],
     passWithNoTests: true,
+    // Under the pre-commit hook the machine is often still running Playwright's servers, and the
+    // default 5 s made valid commits fail on timing alone (F-19).
+    testTimeout: 15_000,
     server: { deps: { inline: ["next-intl"] } },
     coverage: {
       provider: "v8",
