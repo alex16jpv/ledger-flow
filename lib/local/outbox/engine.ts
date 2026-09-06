@@ -1,6 +1,7 @@
 import { ApiError, isErrorCode, NetworkError } from "@/lib/api/errors";
 import { readSessionMarker } from "@/lib/auth/marker";
 import { connectivityStore } from "@/lib/network/connectivity";
+import { reportError } from "@/lib/observability/reporter";
 import type { Account, SyncBatchResponse } from "@/types/api";
 
 import { currentVault } from "../repository/read";
@@ -639,6 +640,8 @@ async function sendBatch(
   const byRoute = async (): Promise<PassResult> =>
     sendPlanned(db, coalesce(await pendingOperations(db)).operations, report);
 
+  // Spans every batch of this pass: the rows already guarded must not be guarded again (F-61).
+  const guarded = new Set<string>();
   for (const chunk of chunkBatch(sendable)) {
     const sent: Collapsed[] = [];
     for (const entry of chunk) {
@@ -659,7 +662,7 @@ async function sendBatch(
     await beginSending(db, seqs);
     let response: SyncBatchResponse;
     try {
-      response = await postBatch(batchBody(sent));
+      response = await postBatch(batchBody(sent, guarded));
     } catch (error) {
       await holdOperations(db, seqs);
       if (isBatchMissing(error)) {
@@ -756,41 +759,50 @@ async function pass(db: VaultDb): Promise<DrainReport> {
   let retryAfterMs = 0;
   let backOff = false;
 
-  for (;;) {
-    // Everything the queue held at this point is accounted for: a write that lands afterwards makes
-    // `wanted` run ahead of this, and `requestSync` asks for another pass rather than losing it.
-    state.served = state.wanted;
-    if (connectivityStore.getSnapshot() === "offline") break;
-    const plan = coalesce(await pendingOperations(db));
-    if (plan.cancelled.length > 0) {
-      await cancel(db, plan.cancelled, report);
-      await refreshOutboxStatus(db);
-      continue;
-    }
-    if (plan.operations.length === 0) break;
-    const outcome =
-      state.transport === "batch"
-        ? await sendBatch(db, plan.operations, report)
-        : await sendPlanned(db, plan.operations, report);
-    await refreshOutboxStatus(db);
-    answered ||= outcome.answered;
-    if (outcome.stopped) {
-      // A dead session is not a slow network: waiting longer never fixes it, so the queue holds
-      // where it is until `resumeSyncEngine` says the user is back (F-26).
-      if (outcome.unauthorized) {
-        state.paused = true;
-        clearRetry();
-        return report;
+  try {
+    for (;;) {
+      // Everything the queue held at this point is accounted for: a write that lands afterwards makes
+      // `wanted` run ahead of this, and `requestSync` asks for another pass rather than losing it.
+      state.served = state.wanted;
+      if (connectivityStore.getSnapshot() === "offline") break;
+      const plan = coalesce(await pendingOperations(db));
+      if (plan.cancelled.length > 0) {
+        await cancel(db, plan.cancelled, report);
+        await refreshOutboxStatus(db);
+        continue;
       }
-      backOff = true;
-      retryAfterMs = outcome.retryAfterMs;
-      break;
+      if (plan.operations.length === 0) break;
+      const outcome =
+        state.transport === "batch"
+          ? await sendBatch(db, plan.operations, report)
+          : await sendPlanned(db, plan.operations, report);
+      await refreshOutboxStatus(db);
+      answered ||= outcome.answered;
+      if (outcome.stopped) {
+        // A dead session is not a slow network: waiting longer never fixes it, so the queue holds
+        // where it is until `resumeSyncEngine` says the user is back (F-26).
+        if (outcome.unauthorized) {
+          state.paused = true;
+          clearRetry();
+          return report;
+        }
+        backOff = true;
+        retryAfterMs = outcome.retryAfterMs;
+        break;
+      }
+      if (!outcome.progressed) break;
     }
-    if (!outcome.progressed) break;
-  }
 
-  // §4.2: a pull after every round the server answered, and never on a background timer.
-  if (answered && state.afterRound) await state.afterRound();
+    // §4.2: a pull after every round the server answered, and never on a background timer.
+    if (answered && state.afterRound) await state.afterRound();
+  } catch (error) {
+    // IndexedDB failing mid-pass, or a bug: the write is already queued and durable, so the pass
+    // ends like a cut network — report, back off, come back — instead of rejecting the caller and
+    // telling a form that a saved write failed (F-27).
+    reportError(error, "vault");
+    backOff = true;
+    retryAfterMs = 0;
+  }
   if (backOff) {
     state.failures += 1;
     scheduleRetry(retryAfterMs);

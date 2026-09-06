@@ -1,4 +1,5 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
+import { setErrorReporter } from "@/lib/observability/reporter";
 import { account, openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
 import type { Account, SyncBatchInput, SyncOpResult } from "@/types/api";
 
@@ -107,6 +108,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  setErrorReporter(null);
   resetSyncEngine();
   resetOutboxStatus();
   setCurrentVault(null);
@@ -399,6 +401,53 @@ describe("backoff", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     // Nothing was reordered and nothing was dropped: the operation is still first in line.
     expect((await pendingOperations(vault.db)).map((entry) => entry.seq)).toEqual([1]);
+  });
+
+  it("ends the pass like a cut network when the vault throws mid-drain (F-27)", async () => {
+    const vault = await vaultWith();
+    await seed(vault.db, [{ seq: 1 }]);
+    const waits: number[] = [];
+    const reported: unknown[] = [];
+    setErrorReporter((error) => {
+      reported.push(error);
+    });
+    startSyncEngine({
+      random: () => 1,
+      schedule: (_run, delayMs) => {
+        waits.push(delayMs);
+        return () => undefined;
+      },
+    });
+    answers(() => ({ result: transaction({ id: "t1" }) }));
+    // Another tab upgraded the schema, or the browser took the handle away: every read throws now.
+    vault.db.close();
+
+    await expect(requestSync()).resolves.toEqual(new Map());
+
+    expect(reported).toHaveLength(1);
+    expect(waits).toEqual([BACKOFF_MIN_MS]);
+    // Nothing was sent, so nothing was lost: the retry will find the queue as it was.
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("answers the form instead of rejecting a write that is already queued (F-27)", async () => {
+    await vaultWith();
+    const reported: unknown[] = [];
+    setErrorReporter((error) => {
+      reported.push(error);
+    });
+    startSyncEngine({
+      schedule: () => () => undefined,
+      afterRound: () => {
+        throw new Error("the pull blew up");
+      },
+    });
+    answers(() => ({ result: account({ id: "a1", name: "Renamed" }) }));
+
+    await expect(updateAccount("a1", { name: "Renamed" })).resolves.toMatchObject({
+      name: "Renamed",
+    });
+    expect(reported).toHaveLength(1);
   });
 
   it("waits at least as long as a 429 asked for", async () => {
