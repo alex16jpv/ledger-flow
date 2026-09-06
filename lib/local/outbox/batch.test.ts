@@ -255,6 +255,40 @@ describe("how the engine spreads the answers", () => {
     expect(await queued(vault.db)).toEqual([]);
   });
 
+  it("keeps the server's row the mirror already had when a merge lands on it (R-4)", async () => {
+    const vault = await vaultWith([
+      {
+        entity: "category",
+        entityId: "c-mine",
+        action: "create",
+        payload: { body: { id: "c-mine", name: "comida", color: "RED" } },
+      },
+    ]);
+    const server = category({ id: "c-server", name: "Comida", color: "BLUE" });
+    await vault.db.put("categories", categoryRecord(server, server));
+    await vault.db.put(
+      "categories",
+      categoryRecord(category({ id: "c-mine", name: "comida", color: "RED" })),
+    );
+    const named = { ...transaction({ id: "t1" }), categoryId: "c-mine" };
+    await vault.db.put("transactions", transactionRecord(named, named));
+    // A resent opId the registry answered as a merge: no `result` travels back, so nothing but the
+    // mirror itself can keep the server's category as the server has it.
+    answerBatch(fetchMock, () => ({ status: "duplicate", mergedInto: "c-server" }));
+
+    await requestSync();
+
+    expect(await vault.db.get("categories", "c-mine")).toBeUndefined();
+    const kept = await vault.db.get("categories", "c-server");
+    // With no queue left on it, D-24 keeps no separate baseline: the row is the server's.
+    expect(kept?.row).toMatchObject({ name: "Comida", color: "BLUE" });
+    expect(kept?.server).toBeUndefined();
+    // The rows that named it move, baseline included (D-24).
+    const moved = await vault.db.get("transactions", "t1");
+    expect(moved?.row.categoryId).toBe("c-server");
+    expect(moved?.server?.categoryId).toBe("c-server");
+  });
+
   it("keeps the warning of a movement the server saved without its category (F-57)", async () => {
     const vault = await vaultWith([{ entityId: "t1", action: "create" }]);
     const saved = { ...transaction({ id: "t1" }), categoryId: null, pendingDetails: true };
