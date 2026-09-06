@@ -2,7 +2,6 @@ import { expect, test } from "@playwright/test";
 
 import {
   addButton,
-  APP,
   coldStart,
   freshUser,
   listAccounts,
@@ -89,7 +88,7 @@ test("twenty movements with no network survive a reload and reach the server exa
   // The screen agrees: nothing is waiting, and no row is marked as this device's own any more.
   await back.goto("/transactions");
   await expect(back.getByRole("button", { name: /Pending sync/ })).toHaveCount(0);
-  await expect(back.getByText(/changes waiting/)).toHaveCount(0);
+  await expect(back.getByText(/changes? waiting/)).toHaveCount(0);
 });
 
 // §1 example 2: the drain reaches the server and the answer is cut on the way back. The queue
@@ -119,18 +118,23 @@ test("a reply lost after the server applied it replays as a duplicate, not as a 
   await expect(sheet).toBeHidden();
   expect((await vaultState(page))?.pending).toBe(1);
 
-  let dropped = 0;
-  await context.route(`${APP}/api/sync`, async (route) => {
-    if (dropped > 0) return route.continue();
-    dropped += 1;
+  // The first batch reaches the server and its answer is cut on the way back; the second is the
+  // replay. Counted and read, not assumed: a queue that dropped the operation after the abort would
+  // drain to zero and leave one row on the server too, so only the second answer saying `duplicate`
+  // proves what the title says.
+  const answers: string[][] = [];
+  await context.route("**/api/sync", async (route) => {
     const answered = await route.fetch();
-    expect(answered.status()).toBe(200);
-    await route.abort("connectionfailed");
+    const text = await answered.text();
+    const body = JSON.parse(text) as { results?: { status: string }[] };
+    answers.push((body.results ?? []).map((result) => result.status));
+    if (answers.length === 1) return route.abort("connectionfailed");
+    await route.fulfill({ response: answered, body: text });
   });
 
   await context.setOffline(false);
   await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
-  expect(dropped).toBe(1);
+  expect(answers).toEqual([["applied"], ["duplicate"]]);
 
   const after = await listTransactions(request);
   expect(after).toHaveLength(1);

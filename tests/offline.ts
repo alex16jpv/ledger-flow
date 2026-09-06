@@ -8,11 +8,9 @@ import {
 
 import { SW_PATH } from "./sw-path";
 
+// `playwright.config.ts` puts this on the runner too: in CI the app is on another port, and a wrong
+// origin here is a `403 UNTRUSTED_ORIGIN` from the BFF on the very first request of every spec.
 export const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
-export const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
-
-// A prefix every row these specs create carries, so the teardown can find them whatever went wrong.
-export const MARK = "OF7-";
 
 export interface Row {
   id: string;
@@ -83,22 +81,6 @@ export async function signInAs(
   who: Credentials,
 ): Promise<void> {
   const response = await request.post("/api/auth/login", { headers: { origin: APP }, data: who });
-  expect(response.ok()).toBe(true);
-  await context.addCookies((await request.storageState()).cookies);
-}
-
-export async function signIn(page: Page, request: APIRequestContext): Promise<void> {
-  const response = await request.post("/api/auth/login", { headers: { origin: APP }, data: SEED });
-  expect(response.ok()).toBe(true);
-  await page.context().addCookies((await request.storageState()).cookies);
-}
-
-// Signs a second browser context in on its own, so two devices hold two sessions of one user.
-export async function signInContext(
-  context: BrowserContext,
-  request: APIRequestContext,
-): Promise<void> {
-  const response = await request.post("/api/auth/login", { headers: { origin: APP }, data: SEED });
   expect(response.ok()).toBe(true);
   await context.addCookies((await request.storageState()).cookies);
 }
@@ -253,16 +235,6 @@ export function addButton(page: Page) {
     : page.getByRole("button", { name: "Add", exact: true });
 }
 
-// One quick capture: a sheet, no navigation, which is what makes twenty of them affordable.
-export async function quickAdd(page: Page, amount: number): Promise<void> {
-  await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add expense" });
-  await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
-  await page.keyboard.type(String(amount));
-  await sheet.getByRole("button", { name: "Save" }).click();
-  await expect(sheet).toBeHidden();
-}
-
 export async function createExpense(
   page: Page,
   amount: number,
@@ -301,9 +273,11 @@ export async function coldStart(context: BrowserContext, at?: Date): Promise<Pag
 // The first snapshot has drained and the shell is cached: from here the device works with no network.
 export async function readyForOffline(page: Page): Promise<void> {
   await installWorker(page);
+  // A string, not "not null": with no vault at all `vaultState` is null, `?.syncedAt` is undefined,
+  // and `not.toBeNull()` would pass in exactly the failure this gate exists to catch.
   await expect
     .poll(async () => (await vaultState(page))?.syncedAt, { timeout: 60_000 })
-    .not.toBeNull();
+    .toEqual(expect.any(String));
   await expect
     .poll(
       async () =>
@@ -311,18 +285,4 @@ export async function readyForOffline(page: Page): Promise<void> {
       { timeout: 60_000 },
     )
     .toBeGreaterThanOrEqual(25);
-}
-
-// Every row these specs left on the server, whatever else happened: by the mark they write in the
-// description, and by amount for the quick captures, which carry no description at all. Each spec
-// registers it in `afterEach` so a failed run never hands the next one its leftovers (F-59).
-export async function sweep(
-  request: APIRequestContext,
-  amounts = new Set<number>(),
-): Promise<void> {
-  for (const row of await listTransactions(request)) {
-    const mine = (row.description ?? "").startsWith(MARK) || amounts.has(row.amount);
-    if (mine) await request.delete(`/api/transactions/${row.id}`, { headers: { origin: APP } });
-  }
-  amounts.clear();
 }

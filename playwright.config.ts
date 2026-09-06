@@ -14,6 +14,9 @@ const apiUrl =
 process.env.NEXT_DIST_DIR ??= ".next-e2e";
 process.env.SERWIST_SW_DEST ??= "public/sw-e2e.js";
 process.env.NEXT_PUBLIC_SW_PATH ??= "/sw-e2e.js";
+// Same reason: `tests/offline.ts` reads it for the `origin` header and the routes it intercepts, and
+// in CI the app is not on the port its default names.
+process.env.E2E_APP_URL ??= baseURL;
 
 const frontEnv = {
   ...process.env,

@@ -86,7 +86,7 @@ test("a request cut before the server sees it leaves the queue exactly as it was
   await expect(sheet).toBeHidden();
 
   let cut = 0;
-  await context.route(`${APP}/api/sync`, async (route) => {
+  await context.route("**/api/sync", async (route) => {
     if (cut >= 2) return route.continue();
     cut += 1;
     await route.abort("connectionfailed");
@@ -217,6 +217,6 @@ test("the connection strip passes axe with no network and with a queue behind it
   // And the same strip once it has something the user has to answer.
   await context.setOffline(false);
   await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
-  await expect(page.getByText(/changes waiting/)).toHaveCount(0);
+  await expect(page.getByText(/changes? waiting/)).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });

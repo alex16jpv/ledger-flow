@@ -264,9 +264,10 @@ test("three days with no network, a cold start each day, and one drain with no d
     await expect
       .poll(async () => warmedRoutes(page, "app-shell"), { timeout: 60_000 })
       .toBeGreaterThanOrEqual(25);
+    // A string, not "not null": with no vault `vaultState` is null and `?.syncedAt` undefined.
     await expect
       .poll(async () => (await vaultState(page))?.syncedAt, { timeout: 60_000 })
-      .not.toBeNull();
+      .toEqual(expect.any(String));
     report.mirrorAfterFirstLoad = await vaultState(page);
 
     const seeded = await listTransactions(request);
