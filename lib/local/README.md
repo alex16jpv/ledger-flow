@@ -345,11 +345,12 @@ the only way in.
   ahead of a create it names in `dependsOn`: that edit starts a run of its own and keeps its place.
 - **Chained guards.** Every operation queued on one row reads the guard the mirror held when it was
   queued, and the client never writes `updatedAt`, so an edit followed by a delete (or an archive
-  followed by a restore) both carry the stamp the first one is about to replace. **Inside one batch
-  only the first operation of a row carries its `If-Match`** (D-34): there is no gap to rebase the
-  ones behind it in, and unguarded they open no window, because `POST /sync` blocks by entity id — if
-  the first conflicts, the rest come back `blocked` without being applied. Across batches the rebase
-  still happens: when an operation lands and answers a row, whatever of that row still shares its old
+  followed by a restore) both carry the stamp the first one is about to replace. **Inside one pass
+  only the first operation of a row carries its `If-Match`** (D-34) — per pass, not per batch: a row
+  split across two batches keeps its guard on the first one only (F-61). There is no gap to rebase
+  the ones behind it in, and unguarded they open no window, because `POST /sync` blocks by entity
+  id — if the first conflicts, the rest come back `blocked` without being applied. Across passes the
+  rebase still happens: when an operation lands and answers a row, whatever of that row still shares its old
   guard moves to the new stamp inside the transaction that settles it, and a guard a pull moved in
   the meantime is another device's edit, left alone to earn its conflict.
 - **Backoff.** 1 s doubling to 60 s, with equal jitter that can only shorten the step, and never
@@ -394,7 +395,10 @@ front, in one place, because the server does not need to know which fields are t
   `description`, `note`, `tags`, `name`, `color`, `icon` or `pendingDetails` is `"text"`; anything
   else — money, a category, a date, a create, a removal, making an account the default — is
   `"structural"`. `pendingDetails` is the review flag the PUT behind every quick capture carries,
-  neither money nor a reference (R-3).
+  neither money nor a reference (R-3). **This rests on the forms sending only what the user
+  touched** (`lib/form/changes.ts`, `toTransactionChanges`): a form that names every field turns
+  every disagreement between two devices into a money question, and an untouched form sends nothing,
+  because the API refuses an empty `PUT` (R-5).
 - **Text merges itself.** The engine rewrites the guard to the stamp the 409 answered with and puts
   the operation back in line, without a word to the user. The API's `PUT` is a partial update, so
   the other device's other fields survive; the two edits both land. It gives up after
