@@ -57,18 +57,24 @@ function Frame({ children }: { children: ReactNode }) {
   const onMirrorChanged = useCallback(() => {
     void invalidateMirrorBacked(queryClient);
   }, [queryClient]);
+  // §2.6: the session cannot be resolved — no network, or the refresh is dead — but the marker says
+  // this device holds a vault for that user, so the app opens it and runs in local mode. Only the
+  // user decides this: a session that settles later for the same user must not restart the mirror,
+  // because every read in that gap would go to the server (R-3b).
   useEffect(() => {
-    // §2.6: the session cannot be resolved — no network, or the refresh is dead — but the marker
-    // says this device holds a vault for that user, so the app opens it and runs in local mode.
     if (localUserId) return startMirror(localUserId, { onChanged: onMirrorChanged });
-    // Still asking who this is: the reads keep waiting. Anywhere else, no vault is coming.
-    if (sessionStatus !== "loading") noMirror();
     return undefined;
-  }, [localUserId, sessionStatus, onMirrorChanged]);
+  }, [localUserId, onMirrorChanged]);
   useEffect(() => {
-    if (sessionStatus !== "authenticated") return;
+    // Still asking who this is: the reads keep waiting. Anywhere else, no vault is coming.
+    if (!localUserId && sessionStatus !== "loading") noMirror();
+  }, [localUserId, sessionStatus]);
+  // Warmed for whoever has a vault here, not only for a live session: local mode (§2.6) has to
+  // survive a worker update too, and a dead session still has the marker the proxy lets through.
+  useEffect(() => {
+    if (!localUserId) return;
     void warmAppShell(locale);
-  }, [sessionStatus, locale]);
+  }, [localUserId, locale]);
 
   // `reauth` is what gets past the marker on the way to the login (§2.6); without it the proxy
   // would send a device with a 400-day marker straight back to the app it cannot sync.

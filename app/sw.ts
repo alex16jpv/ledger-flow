@@ -6,7 +6,6 @@ import {
   Serwist,
   type SerwistGlobalConfig,
   type SerwistPlugin,
-  type Strategy,
 } from "serwist";
 
 import { OUTBOX_SYNC_TAG } from "@/lib/local/outbox/tag";
@@ -14,10 +13,10 @@ import {
   isShellPath,
   offlineDocument,
   SHELL_CACHE,
-  SHELL_RSC_CACHE,
   shellCacheKey,
   WARM_SHELL_MESSAGE,
   type WarmShellMessage,
+  warmUrlFor,
 } from "@/lib/pwa/shell";
 
 declare global {
@@ -36,18 +35,11 @@ declare global {
 declare const self: ServiceWorkerGlobalScope;
 
 // A filter, a month or Next's `_rsc` token change the URL and not the answer, so every request for
-// a route shares one entry and changing a filter with no network still finds it (F-06).
+// a route shares one entry and changing a filter with no network still finds it (F-06); a row's id
+// folds into its route template the same way (F-48).
 const byRoute: SerwistPlugin = {
   cacheKeyWillBeUsed: ({ request }) => Promise.resolve(shellCacheKey(request.url)),
 };
-
-// Next varies its RSC answers on headers the router does not repeat on every request; matching on
-// them would leave every warmed entry unreachable.
-const shellRsc: NetworkFirst = new NetworkFirst({
-  cacheName: SHELL_RSC_CACHE,
-  plugins: [byRoute],
-  matchOptions: { ignoreVary: true },
-});
 
 const shellPages: NetworkFirst = new NetworkFirst({
   cacheName: SHELL_CACHE,
@@ -71,10 +63,14 @@ const serwist: Serwist = new Serwist({
   navigationPreload: true,
   runtimeCaching: [
     { matcher: ({ url }) => url.pathname.startsWith("/api/"), handler: new NetworkOnly() },
+    // An RSC payload is never served from a cache: the router reads the URL and the rewrite headers
+    // of the response it gets, and a cached one names the route it was stored under, not the one
+    // asked for — with no network it then chases a rewrite that never happened, or keeps the old
+    // URL. Failing the hop instead makes the router load the document, which the cache answers.
     {
       matcher: ({ request, sameOrigin, url }) =>
         sameOrigin && request.headers.get("RSC") === "1" && isShellPath(url.pathname),
-      handler: shellRsc,
+      handler: new NetworkOnly(),
     },
     {
       matcher: ({ request, sameOrigin, url }) =>
@@ -98,22 +94,17 @@ self.addEventListener("sync", (event) => {
   );
 });
 
-async function warmRoute(strategy: Strategy, request: Request, event: ExtendableEvent) {
-  const cache = await caches.open(strategy.cacheName);
+async function warmRoute(request: Request, event: ExtendableEvent) {
+  const cache = await caches.open(SHELL_CACHE);
   if (await cache.match(shellCacheKey(request.url), { ignoreVary: true })) return;
-  await strategy.handle({ request, event }).catch(() => undefined);
+  await shellPages.handle({ request, event }).catch(() => undefined);
 }
 
 // The routes the user has not opened yet: without this, the first visit with no network has nothing
 // to answer with (§6 O-F6). Already cached routes are left alone, so opening the app costs nothing.
 async function warmShell(urls: string[], event: ExtendableEvent): Promise<void> {
   for (const url of urls) {
-    await warmRoute(shellPages, new Request(url, { credentials: "same-origin" }), event);
-    await warmRoute(
-      shellRsc,
-      new Request(url, { credentials: "same-origin", headers: { RSC: "1" } }),
-      event,
-    );
+    await warmRoute(new Request(url, { credentials: "same-origin" }), event);
   }
 }
 
@@ -123,9 +114,41 @@ self.addEventListener("message", (event) => {
   event.waitUntil(warmShell(data.urls ?? [], event));
 });
 
+const STAGED = "-next";
+
 // A new worker ships new chunks, so the documents the old one warmed point at files that are gone.
+// They are fetched again while this worker installs — the one moment a new build is guaranteed to
+// have the network, and the page's cookies — into a staging cache, and swapped in on activate. A
+// route that cannot be fetched now is dropped: a stale document would ask for chunks that no longer
+// exist, which is worse than the offline page.
+async function stageShell(event: ExtendableEvent): Promise<void> {
+  const live = await caches.open(SHELL_CACHE);
+  const staging = new NetworkFirst({
+    cacheName: `${SHELL_CACHE}${STAGED}`,
+    plugins: [byRoute],
+    matchOptions: { ignoreVary: true },
+  });
+  for (const key of await live.keys()) {
+    const request = new Request(warmUrlFor(key.url), { credentials: "same-origin" });
+    await staging.handle({ request, event }).catch(() => undefined);
+  }
+}
+
+async function swapShell(cacheName: string): Promise<void> {
+  await caches.delete(cacheName);
+  const staged = await caches.open(`${cacheName}${STAGED}`);
+  const live = await caches.open(cacheName);
+  for (const key of await staged.keys()) {
+    const response = await staged.match(key);
+    if (response) await live.put(key, response);
+  }
+  await caches.delete(`${cacheName}${STAGED}`);
+}
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(stageShell(event));
+});
+
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    Promise.all([caches.delete(SHELL_CACHE), caches.delete(SHELL_RSC_CACHE)]).then(() => undefined),
-  );
+  event.waitUntil(swapShell(SHELL_CACHE));
 });

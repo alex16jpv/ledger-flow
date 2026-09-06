@@ -20,6 +20,7 @@ interface Row {
 interface Call {
   method: string;
   path: string;
+  search: string;
 }
 
 // Every /api call the pages make, in order, so a phase can be measured by slicing the log (§4.2).
@@ -28,9 +29,9 @@ class Tally {
 
   watch(page: Page): void {
     page.on("request", (request) => {
-      const { pathname } = new URL(request.url());
+      const { pathname, search } = new URL(request.url());
       if (pathname.startsWith("/api/")) {
-        this.calls.push({ method: request.method(), path: pathname });
+        this.calls.push({ method: request.method(), path: pathname, search });
       }
     });
   }
@@ -179,9 +180,14 @@ async function createExpense(page: Page, amount: number, description: string): P
   await page.getByRole("button", { name: /^Account/ }).click();
   await page.getByRole("dialog", { name: "Account" }).getByRole("option", { name: /Cash/ }).click();
   await page.getByRole("button", { name: "Save transaction" }).click();
-  await expect(page.getByText("Transaction saved")).toBeVisible();
-  // The screen leaves the form on its own; a goto fired into that navigation is aborted.
-  await expect(page).not.toHaveURL(/\/transactions\/new/);
+  // The screen leaves the form on its own; a goto fired into that navigation is aborted. With no
+  // network that leave is a full page load (F-51), so the toast cannot be waited for here: the row
+  // and its "Pending sync" badge on the list are what prove the save.
+  await expect(page).toHaveURL(/\/transactions(\?|$)/, { timeout: 15_000 });
+  await expect(page.getByRole("heading", { level: 1, name: "Transactions" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: new RegExp(`${description}.*Pending sync`) }),
+  ).toBeVisible();
   await page.waitForLoadState("load");
 }
 
@@ -227,11 +233,10 @@ test("three days with no network, a cold start each day, and one drain with no d
     await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     await installWorker(page);
     await page.clock.setSystemTime(days[0]!);
-    for (const cacheName of ["app-shell", "app-shell-rsc"]) {
-      await expect
-        .poll(async () => warmedRoutes(page, cacheName), { timeout: 60_000 })
-        .toBeGreaterThanOrEqual(9);
-    }
+    // 18 static routes and 7 detail templates (lib/pwa/shell.ts).
+    await expect
+      .poll(async () => warmedRoutes(page, "app-shell"), { timeout: 60_000 })
+      .toBeGreaterThanOrEqual(25);
     await expect
       .poll(async () => (await vaultState(page))?.syncedAt, { timeout: 60_000 })
       .not.toBeNull();
@@ -245,19 +250,8 @@ test("three days with no network, a cold start each day, and one drain with no d
     deleteRow = editable[1]!;
     expect(editRow.id).not.toBe(deleteRow.id);
     before = seeded.length;
-    // Detail routes are not in the warmed shell (lib/pwa/shell.ts): they arrive with what the user
-    // visits, so the two rows the outage is going to touch are visited now, with network.
-    for (const path of [
-      // Not a detail route: `/transactions/review` is simply missing from SHELL_PATHS, so the inbox
-      // every quick capture lands in is not reachable with no network unless it was opened before.
-      "/transactions/review",
-      `/transactions/${editRow.id}`,
-      `/transactions/${editRow.id}/edit`,
-      `/transactions/${deleteRow.id}`,
-    ]) {
-      await page.goto(path);
-      await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-    }
+    // Nothing else is visited on purpose: the rows the outage edits and deletes, and the inbox the
+    // capture is completed in, have to open from the warmed shell alone (F-47, F-48).
   });
 
   await test.step("Se corta la red", async () => {
@@ -309,8 +303,9 @@ test("three days with no network, a cold start each day, and one drain with no d
     await expect(day2.getByRole("heading", { level: 1, name: "Edit transaction" })).toBeVisible();
     await day2.getByRole("textbox", { name: /^Description/ }).fill("GATE-EDIT offline");
     await day2.getByRole("button", { name: "Save changes" }).click();
-    await expect(day2.getByText("Changes saved")).toBeVisible();
-    await expect(day2).not.toHaveURL(/\/edit$/);
+    // Same as createExpense: the leave is a full load offline (F-51), the detail proves the save.
+    await expect(day2).not.toHaveURL(/\/edit$/, { timeout: 15_000 });
+    await expect(day2.getByText(/3 changes waiting/)).toBeVisible();
     await day2.waitForLoadState("load");
 
     await day2.goto(`/transactions/${deleteRow.id}`);
@@ -329,16 +324,21 @@ test("three days with no network, a cold start each day, and one drain with no d
     await day2.goto("/budgets");
     await expect(day2.getByRole("heading", { level: 1, name: "Budgets" })).toBeVisible();
     const beforeClick = tally.mark();
-    await day2.getByRole("button", { name: "Previous month" }).click();
-    await expect(day2).toHaveURL(/reference=\d{4}-\d{2}/);
+    // A click that lands before hydration is lost on a page that has just fully reloaded (F-51).
+    await expect(async () => {
+      await day2.getByRole("button", { name: "Previous month" }).click();
+      await expect(day2).toHaveURL(/reference=\d{4}-\d{2}/, { timeout: 3_000 });
+    }).toPass({ timeout: 20_000 });
     await expect(day2.getByRole("button", { name: "Next month" })).toBeEnabled();
     const monthCalls = tally.since(beforeClick);
 
     await day2.goto("/transactions");
     await expect(day2.getByRole("heading", { level: 1, name: "Transactions" })).toBeVisible();
     const beforeFilter = tally.mark();
-    await day2.getByRole("button", { name: "Expenses" }).click();
-    await expect(day2).toHaveURL(/type=EXPENSE/);
+    await expect(async () => {
+      await day2.getByRole("button", { name: "Expenses" }).click();
+      await expect(day2).toHaveURL(/type=EXPENSE/, { timeout: 3_000 });
+    }).toPass({ timeout: 20_000 });
     await expect(day2.getByRole("button", { name: "Expenses", pressed: true })).toBeVisible();
     const filterCalls = tally.since(beforeFilter);
 
@@ -350,9 +350,9 @@ test("three days with no network, a cold start each day, and one drain with no d
       changeMonth: reads(monthCalls).length,
       changeFilter: reads(filterCalls).length,
     };
-    // The one read the mirror does not answer with no network: a deleted row leaves a tombstone the
-    // repository refuses to read, so the detail query falls through to a server that is not there.
-    expect(day2Reads).toEqual([`/api/transactions/${deleteRow.id}`]);
+    // No read of data may leave the device while the network is down (§4.2). The detail of the row
+    // just deleted used to be the one exception (F-46); it is recorded above so a regression shows.
+    expect(day2Reads).toEqual([]);
     expect(pushes(tally.since(mark))).toHaveLength(0);
     expect((await vaultState(day2))?.pending).toBe(5);
     await day2.close();
@@ -376,9 +376,11 @@ test("three days with no network, a cold start each day, and one drain with no d
     expect(reads(tally.since(mark))).toHaveLength(0);
     expect(pushes(tally.since(mark))).toHaveLength(0);
 
-    // What a movement created during the outage can be opened with: its detail route was never
-    // cached, so this records what the app answers rather than asserting today's answer (F-48).
+    // A movement born during the outage opens, with no network, from the template entry of its
+    // route (F-48): the row comes from the mirror, the screen from the worker.
     await day3.goto(`/transactions/${createdId}`);
+    await expect(day3.getByRole("heading", { level: 1, name: "Transaction" })).toBeVisible();
+    await expect(day3.getByText("GATE-D1 market")).toBeVisible();
     report.detailOfAnOfflineRow = await day3
       .getByRole("heading", { level: 1 })
       .first()
@@ -386,6 +388,8 @@ test("three days with no network, a cold start each day, and one drain with no d
 
     queued = (await vaultState(day3))?.pending ?? -1;
     report.queuedBeforeDrain = queued;
+    // Two creates, a quick capture, an edit, a delete, a create, and the capture's completion.
+    expect(queued).toBe(7);
     await day3.close();
   });
 
@@ -413,11 +417,16 @@ test("three days with no network, a cold start each day, and one drain with no d
     report.drain = {
       pushes: pushes(drain).length,
       pulls: pulls(drain).length,
-      reads: reads(drain).length,
+      reads: reads(drain).map((call) => `${call.path}${call.search}`),
       droppedAnswer: dropped !== null,
       byRoute: pushes(drain).map((call) => `${call.method} ${call.path}`),
     };
     expect(dropped).not.toBeNull();
+    // One request per operation, plus the retry of the one whose answer was dropped: neither a
+    // duplicate the server had to absorb nor a fold that lost an operation.
+    expect(pushes(drain)).toHaveLength(queued + 1);
+    // The mirror was full the whole time: coming back online reads nothing from the server (§4.2).
+    expect(reads(drain)).toEqual([]);
   });
 
   await test.step("Contra el API real · cero duplicados", async () => {

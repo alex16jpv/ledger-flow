@@ -13,22 +13,49 @@ const APP_SEGMENTS = [
   "sync",
 ] as const;
 
-// The routes the worker fetches ahead of time, so one the user never opened still has a shell with
-// no network (§6 O-F6). Detail routes are not here: they arrive with whatever the user visits.
+// Every static route of `(app)`, so one the user never opened still has a shell with no network
+// (§6 O-F6). `shell.test.ts` checks this list against the route files: a screen added without an
+// entry here is a screen that answers `offline.html` the first time it is needed offline (F-47).
 export const SHELL_PATHS = [
   "/home",
   "/transactions",
   "/transactions/new",
+  "/transactions/review",
   "/budgets",
+  "/budgets/new",
+  "/budgets/past",
   "/accounts",
+  "/accounts/new",
   "/categories",
+  "/categories/new",
   "/stats",
   "/settings",
+  "/settings/appearance",
+  "/settings/profile",
+  "/settings/sessions",
+  "/settings/sync",
   "/sync",
 ] as const;
 
+// The dynamic routes, cached once per template rather than once per id: the document and the RSC
+// payload of a detail screen carry no id (the screen reads it from the URL, `useDetailRouteId`), so
+// one entry answers every row — including one created on this device with no network (F-48).
+export const DETAIL_TEMPLATES = [
+  "/transactions/[id]",
+  "/transactions/[id]/edit",
+  "/accounts/[id]",
+  "/accounts/[id]/edit",
+  "/budgets/[id]",
+  "/budgets/[id]/edit",
+  "/categories/[id]/edit",
+] as const;
+
+// A valid UUID no row will ever have: the request that warms a template has to name some id.
+export const TEMPLATE_ID = "00000000-0000-7000-8000-000000000000";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const SHELL_CACHE = "app-shell";
-export const SHELL_RSC_CACHE = "app-shell-rsc";
 
 export const WARM_SHELL_MESSAGE = "ledger-flow-warm-shell";
 
@@ -47,11 +74,27 @@ export function isShellPath(pathname: string): boolean {
   return (APP_SEGMENTS as readonly string[]).includes(segment);
 }
 
+// `/accounts/<uuid>` and `/accounts/<uuid>/edit` become their template; every other path is itself.
+export function templatePath(pathname: string): string {
+  const segments = pathname.split("/");
+  const at = localeOf(pathname) === DEFAULT_LOCALE ? 2 : 3;
+  const id = segments[at];
+  if (id === undefined || !UUID.test(id)) return pathname;
+  if (!(APP_SEGMENTS as readonly string[]).includes(segments[at - 1] ?? "")) return pathname;
+  return [...segments.slice(0, at), "[id]", ...segments.slice(at + 1)].join("/");
+}
+
 // One entry per route: a filter, a month and Next's own `_rsc` token live in the query string, and
-// neither the document nor the RSC payload behind them depends on it (F-06).
+// neither the document nor the RSC payload behind them depends on it (F-06); a row's id lives in
+// the path, and the shell of a detail route does not depend on it either (F-48).
 export function shellCacheKey(url: string): string {
   const parsed = new URL(url);
-  return `${parsed.origin}${parsed.pathname}`;
+  return `${parsed.origin}${templatePath(parsed.pathname)}`;
+}
+
+// The URL that fetches a cache key: a template needs a real-looking id in place of `[id]`.
+export function warmUrlFor(cacheKey: string): string {
+  return cacheKey.replace("[id]", TEMPLATE_ID);
 }
 
 // The fallback is a static file, so its text cannot come from `messages/`: there is one per locale.
@@ -63,5 +106,7 @@ export function offlineDocument(pathname: string): string {
 
 export function shellUrls(locale: string, origin: string): string[] {
   const prefix = localePrefix(locale);
-  return SHELL_PATHS.map((path) => `${origin}${prefix}${path}`);
+  return [...SHELL_PATHS, ...DETAIL_TEMPLATES].map((path) =>
+    warmUrlFor(`${origin}${prefix}${path}`),
+  );
 }

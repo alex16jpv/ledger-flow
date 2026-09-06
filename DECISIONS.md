@@ -1632,3 +1632,95 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** a write that has no vault to queue into now fails visibly with no network instead
   of hanging, which is what §6 of `CLAUDE.md` asks for; a read that misses the mirror offline shows
   its error state after one attempt instead of never settling.
+
+## 2026-09-05 · Every static route is in the shell, and a detail route is cached once, by template (R-3b, F-47, F-48)
+
+- **Decision:** `SHELL_PATHS` lists every static route of `(app)` — eighteen, not nine — and
+  `shell.test.ts` compares the list with the `page.tsx` files, so a screen added without an entry
+  fails the build. The dynamic routes (`/<entity>/[id]` and `/[id]/edit`, seven) are cached **once
+  per template**: `shellCacheKey` folds a UUID segment into `[id]`, the warm-up fetches each template
+  with a placeholder id, and the seven pages render a client wrapper that reads the id from the URL
+  (`useDetailRouteId`) instead of passing `params.id` down.
+- **Why:** the R-3b probe found that with no network the app could not create an account, a category
+  or a budget — not because the queue failed, but because their forms were not in the shell and
+  answered `offline.html`; and that saving an account or a budget navigated to a detail route no
+  cache entry had ever been made for. F-48 as written (a movement created offline cannot be opened)
+  was the smallest face of it: **no detail route opened offline unless that exact row had been
+  visited before with network.**
+- **Alternatives:** opening details as a sheet over the list (a Next route still fetches its RSC
+  payload, so it only works with the id in the query string — a URL change for four entities);
+  rewriting `/<entity>/<uuid>` to a static route in `proxy.ts` (cleaner router state, but a rewrite
+  per entity plus moved files for the same result); serving the list's document for a detail URL
+  (the router would render the list).
+- **Consequence:** the document and the RSC payload of a detail route carry no id, which is why the
+  screens render nothing until the client has mounted (`useSyncExternalStore` with a false server
+  snapshot): server HTML that named a row would hydrate against a different URL. `useParams()` must
+  not be used on these routes — the router tree can name the row the cache entry was made for. A
+  detail request always tries the network first, so with network nothing changes.
+
+## 2026-09-05 · The mirror answers 404 for a deleted row itself (R-3b, F-46)
+
+- **Decision:** `readTransaction` throws the API's 404 (`mirrorNotFound`) when the record is a
+  tombstone, instead of returning `undefined` and letting `read()` ask the server.
+- **Why:** it was the one data read that left the device with no network in the whole gate demo, and
+  the root of the sheet that spun for ever on delete: the invalidation a write awaits re-read a
+  detail the mirror refused to settle, and the retry paused. `shouldRetryQuery` refusing a retry
+  offline (the demo's fix) closes the symptom; this closes the cause, and it is what makes awaiting an
+  invalidation safe — no mirror-backed read goes to the server while offline.
+- **Alternatives:** keeping "only the server can say 404" — true for an id the mirror never saw,
+  which still goes to the server; not awaiting invalidations — a saved screen could paint a stale
+  figure.
+- **Consequence:** `MirrorReader` has two ways to decline: `undefined` means "ask the server", a
+  thrown `ApiError` means "this is the answer". The detail of a row just deleted shows its not-found
+  state for a frame before the screen leaves for the list, which is what the server path did too.
+
+## 2026-09-05 · Signing out needs a connection (R-3b)
+
+- **Decision:** «Sign out» in Settings and «Sign out all other sessions» are disabled while the
+  connectivity store says offline, with a line saying why. `useOffline` is the shared hook, also used
+  by F-20's restore-defaults.
+- **Why:** with mutations on `offlineFirst` the logout request runs and fails offline, `onSettled`
+  purges the device anyway, and the HttpOnly cookies — the session — stay: the probe ended on the
+  browser's error page (`/login` is not a shell route), `GET /api/auth/me` answered 200 when the
+  network came back and `/home` opened signed in. Before, the mutation paused and the button spun
+  until the network returned; that was slow, this was a lie.
+- **Alternatives:** `networkMode: "online"` for the two logout mutations (back to the infinite
+  spinner); clearing the device and leaving the server session for later (a shared device stays
+  signed in for whoever comes next).
+- **Consequence:** sign-out is the one action in `(app)` besides restore-defaults that says it needs
+  the network, in line with plan §13 (session flows are not offline features).
+
+## 2026-09-05 · A new worker re-warms the shell it replaces, and local mode warms it too (R-3b)
+
+- **Decision:** on `install` the new worker fetches every key of the current shell caches again into
+  a staging cache (through the same `NetworkFirst` strategies, so the key rules hold), and on
+  `activate` it swaps staging for live instead of only deleting. `AppFrame` asks for the warm-up
+  whenever it has a vault to open (`localUserId`), not only when the session is `authenticated`.
+- **Why:** deleting on `activate` left the shell empty until the next open with a live session. A
+  worker activates when the last tab closes, so "deploy, open once online, close, open offline" showed
+  `offline.html`; and in local mode (dead session) the warm-up never ran again, so one deploy ended
+  offline use for good. Install is the one moment a new build is certain to have the network.
+- **Alternatives:** keeping the old documents (they point at chunks the precache cleanup removes);
+  versioned cache names (the worker has no build id to name them by).
+- **Consequence:** a route the install cannot fetch is dropped and warmed again by the app on its
+  next open; nothing stale survives an update. Not exercised end to end — Playwright cannot ship a
+  second worker build in one run — so this rests on the worker's code and on the shell tests.
+
+## 2026-09-05 · The worker serves documents from its cache, never RSC payloads (R-3b, F-51)
+
+- **Decision:** the `app-shell-rsc` cache is gone. A client-side navigation's RSC request is
+  network-only; with no network it fails, the router falls back to loading the document, and the
+  document cache (keyed by route template) answers that.
+- **Why:** the router reads the URL and the rewrite headers of the response it gets. A payload served
+  from a cache keyed by path carries the URL it was stored under — without the query, and for a
+  template entry with another row's id in `x-nextjs-rewritten-path` — so Next concluded the server had
+  rewritten the request: on desktop it chased the rewrite and reloaded anyway (the toast after a save
+  vanished), on mobile the month change in Budgets never changed the URL at all. Reproduced in
+  isolation on `feabe7f` too: it predates this review.
+- **Alternatives:** re-pointing the rewrite headers on the cached response (a new `Response` loses
+  `url`, which the router also reads, and the fix would track Next's internals release by release);
+  keying RSC entries by path plus query (soft navigations only for exact matches, the rest still
+  reload — the same behaviour with more code).
+- **Consequence:** with no network every navigation is a full document load from the cache: slower
+  than a soft navigation, and a toast shown just before it does not survive. With network nothing
+  changes. The gate demo asserts the outcome of a save on the destination screen, not on the toast.
