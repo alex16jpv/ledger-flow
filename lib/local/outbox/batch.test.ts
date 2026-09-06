@@ -24,7 +24,13 @@ import {
   profileRecord,
   transactionRecord,
 } from "../schema";
-import { batchBody, chunkBatch, SYNC_MAX_OPERATIONS, wireOperation } from "./batch";
+import {
+  batchBody,
+  chunkBatch,
+  SYNC_MAX_OPERATIONS,
+  type SyncOperationInput,
+  wireOperation,
+} from "./batch";
 import type { Collapsed } from "./coalesce";
 import { requestSync, resetSyncEngine, syncTransport } from "./engine";
 import { readNotices } from "./notices";
@@ -96,7 +102,7 @@ async function vaultWith(operations: Partial<OutboxOperation>[]) {
   return vault;
 }
 
-const uuid = (n: number) => `00000000-0000-7000-8000-00000000000${n}`;
+const uuid = (n: number) => `00000000-0000-7000-8000-${String(n).padStart(12, "0")}`;
 
 const queued = async (db: VaultDb) => await pendingOperations(db);
 
@@ -147,6 +153,20 @@ describe("the envelope the batch sends", () => {
     ]);
 
     expect(body.operations.map((op) => op.baseUpdatedAt)).toEqual([stamp, undefined, stamp]);
+  });
+
+  it("guards a row once per pass, not once per batch (F-61)", () => {
+    const stamp = "2026-08-01T00:00:00.000Z";
+    const pass = new Set<string>();
+
+    const first = batchBody([entry({ seq: 1, entityId: "t1", baseUpdatedAt: stamp })], pass);
+    const second = batchBody(
+      [entry({ seq: 2, entityId: "t1", action: "delete", baseUpdatedAt: stamp })],
+      pass,
+    );
+
+    expect(first.operations[0]?.baseUpdatedAt).toBe(stamp);
+    expect(second.operations[0]?.baseUpdatedAt).toBeUndefined();
   });
 
   it("cuts the queue at the two hundred the server takes", () => {
@@ -375,6 +395,66 @@ describe("how the engine spreads the answers", () => {
     await requestSync();
 
     expect(await queued(vault.db)).toMatchObject([{ status: "pending", lastError: "INTERNAL" }]);
+  });
+});
+
+describe("a queue bigger than one batch", () => {
+  const OLD = "2026-08-01T00:00:00.000Z";
+
+  // What each batch carried, so a test can look at the second one on its own.
+  const sentBatches = (): SyncOperationInput[][] =>
+    fetchMock.mock.calls.map(([, init]) => operationsOf(init));
+
+  it("sends 250 operations in two batches, in seq order and with nothing dropped", async () => {
+    const rows = Array.from({ length: 250 }, (_, index) => `t${index + 1}`);
+    const vault = await vaultWith(rows.map((entityId) => ({ entityId })));
+    for (const id of rows) {
+      await vault.db.put("transactions", transactionRecord(transaction({ id })));
+    }
+    answerBatch(fetchMock, (op) => applied(transaction({ id: op.id })));
+
+    await requestSync();
+
+    const batches = sentBatches();
+    expect(batches.map((batch) => batch.length)).toEqual([SYNC_MAX_OPERATIONS, 50]);
+    // The wire's `seq` is the rank inside its own batch (D-33); the order is the queue's.
+    expect(batches.flat().map((op) => op.id)).toEqual(rows);
+    expect(batches[1]?.map((op) => op.seq)).toEqual(Array.from({ length: 50 }, (_, i) => i));
+    expect(await queued(vault.db)).toEqual([]);
+  });
+
+  it("does not send the second batch's first operation of a row under a stamp the first already replaced (F-61)", async () => {
+    // The row is split across the two batches: 200 other rows sit between its two operations, and
+    // `update` → `delete` is not a fold, so both travel in the same pass.
+    const middle = Array.from({ length: 200 }, (_, index) => ({
+      entityId: `t${index + 2}`,
+      baseUpdatedAt: OLD,
+    }));
+    const vault = await vaultWith([
+      { entityId: "t1", baseUpdatedAt: OLD },
+      ...middle,
+      { entityId: "t1", action: "delete", baseUpdatedAt: OLD },
+    ]);
+    for (const id of ["t1", ...middle.map((row) => row.entityId)]) {
+      await vault.db.put("transactions", transactionRecord(transaction({ id })));
+    }
+    // The replay of a lost response: the registry remembers the opId and answers without a row, so
+    // there is no fresh stamp to rebase the operations behind it onto.
+    answerBatch(fetchMock, (op) =>
+      op.id === "t1" && op.action === "update"
+        ? { status: "duplicate" }
+        : applied(transaction({ id: op.id })),
+    );
+
+    await requestSync();
+
+    const batches = sentBatches();
+    expect(batches).toHaveLength(2);
+    const guard = batches[1]?.find((op) => op.id === "t1");
+    expect(guard?.action).toBe("delete");
+    // Guarded, it would earn a `STALE_UPDATE` that means nothing and land in the conflict sheet.
+    expect(guard?.baseUpdatedAt).toBeUndefined();
+    expect(await queued(vault.db)).toEqual([]);
   });
 });
 

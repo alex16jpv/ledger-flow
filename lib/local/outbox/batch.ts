@@ -53,12 +53,16 @@ export function wireOperation(
   };
 }
 
-// D-34: inside one batch only the first operation of a row carries its `If-Match`. The ones behind
-// it were queued against the stamp the first one is about to replace (D-22), and a batch has no gap
-// to rebase them in. Unguarded they open no window: `POST /sync` blocks by entity id, so if the
-// first one conflicts the rest come back `blocked` without ever being applied (D-30).
-export function batchBody(entries: Collapsed[]): SyncBatchInput {
-  const guarded = new Set<string>();
+// D-34: only the first operation of a row carries its `If-Match`. The ones behind it were queued
+// against the stamp the first one is about to replace (D-22), and a batch has no gap to rebase them
+// in. Unguarded they open no window: `POST /sync` blocks by entity id, so if the first one conflicts
+// the rest come back `blocked` without ever being applied (D-30).
+//
+// "First" is per PASS, not per batch: a row split across two batches whose first operation landed
+// without a row to rebase onto (a replay answered `duplicate`) would otherwise send the next batch's
+// first operation with the stamp the earlier one already replaced (F-61). The caller owns the set so
+// it spans the batches of one pass; a pass that rebuilds its plan starts a fresh one.
+export function batchBody(entries: Collapsed[], guarded = new Set<string>()): SyncBatchInput {
   return {
     operations: entries.map((entry, rank) => {
       const { entity, entityId } = entry.operation;
