@@ -1724,3 +1724,50 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** with no network every navigation is a full document load from the cache: slower
   than a soft navigation, and a toast shown just before it does not survive. With network nothing
   changes. The gate demo asserts the outcome of a save on the destination screen, not on the toast.
+
+## 2026-09-05 · The (app) screens render on the client only (R-3b, D-29)
+
+- **Decision:** `AppFrame` renders the page's children only once the client owns the page
+  (`useMounted`); the shell around them — navigation, banner, sheets — still comes from the server.
+- **Why:** with the worker serving one cached document per route template (D-28), the HTML a page
+  hydrates against may have been rendered for another URL: another query, another row. React keeps the
+  server's attributes when they do not match the client's, so a filter chip or a segment stayed on the
+  server's choice after an offline reload — Stats showed the first type and the first grouping as
+  selected whatever the URL said — and every text that depends on the URL or the clock raised a
+  hydration error (F-53). The screens are data-driven client work already; the server HTML they lost
+  was a skeleton.
+- **Alternatives:** gating each URL-dependent control by hand (the next one is forgotten); rendering
+  documents per URL (that is the cache-by-id problem F-48 removed); `suppressHydrationWarning` (it
+  hides the warning and keeps the wrong attribute).
+- **Consequence:** the first paint of an `(app)` page shows the shell and an empty content area for
+  one frame, then the screen with its own loading state. `useDetailRouteId` reuses the same hook.
+  Screens outside `(app)` — the landing, login, legal pages — are untouched and still render on the
+  server.
+
+## 2026-09-05 · Server-side preferences say they need a connection (R-3b)
+
+- **Decision:** language, currency, time zone, the profile form and deleting the account show
+  «Changing this needs a connection» and keep their action disabled while the connectivity store says
+  offline, the way restore-defaults (F-20) and sign-out already do.
+- **Why:** offline, choosing a language did nothing and said nothing (the options were silently
+  disabled because the session could not be resolved), and saving a time zone failed with «Something
+  unexpected happened» — the mutation threw its own "No session" error before any request. Plan §13
+  keeps these out of the offline scope; the app has to say so instead of failing oddly.
+- **Alternatives:** queueing profile changes in the outbox (the profile is not an entity the queue
+  projects, and a locale change also moves the route; a design of its own); switching the UI locale
+  locally and saving later (two sources of truth for one preference).
+- **Consequence:** one message key, `settings.needsConnection`, and the `useOffline` hook in the five
+  places. Nothing changes with network.
+
+## 2026-09-05 · Hover hints on the projected mark and the stats bar (R-3b)
+
+- **Decision:** the cloud that marks a projected figure (`Projected`) and each colour of the Stats
+  category bar (`StackBar`) show a hint on hover and focus with the existing `Tooltip`: the mark says
+  «Includes changes not yet synced», the bar segment names its category.
+- **Why:** the owner's manual test: the mark alone, without the badge's text, said nothing to a
+  pointer, and the bar's colours could not be told apart from the list below without matching them by
+  eye.
+- **Alternatives:** `title` attributes (no styling, no keyboard); a legend under the bar (the list
+  below is the legend; the hint answers the question where the eye is).
+- **Consequence:** `Tooltip` accepts a `style`, because a stacked bar sizes its segments by
+  percentage and the wrapper has to carry that width.

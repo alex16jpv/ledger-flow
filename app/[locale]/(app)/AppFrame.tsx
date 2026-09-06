@@ -24,6 +24,7 @@ import { HistoryTracker } from "@/lib/navigation/history";
 import { startHeartbeat } from "@/lib/network/heartbeat";
 import { warmAppShell } from "@/lib/pwa/service-worker";
 import { invalidateMirrorBacked } from "@/lib/query/domains";
+import { useMounted } from "@/lib/react/useMounted";
 import { SessionProvider, useSession } from "@/lib/session";
 
 import { QuickAddSheet } from "./QuickAddSheet";
@@ -33,6 +34,11 @@ function Frame({ children }: { children: ReactNode }) {
   // The screens below render, and query, before any effect here runs: the gate that makes a read
   // wait for the vault has to go up now, not where the vault is opened (F-31).
   expectVault();
+  // The document the worker serves for this URL may have been rendered for another one — another
+  // query, another row (D-28) — and React keeps the server's attributes when they do not match, so
+  // a filter chip would stay on the server's choice. The screens are data-driven client work anyway:
+  // they render once the client owns the page.
+  const mounted = useMounted();
   const session = useSession();
   const locale = useLocale();
   const router = useRouter();
@@ -96,7 +102,7 @@ function Frame({ children }: { children: ReactNode }) {
         }}
         banner={<ConnectionBanner />}
       >
-        {children}
+        {mounted ? children : null}
       </AppShell>
       <QuickAddSheet
         open={quickAdd.open}
