@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { iconProps } from "@/lib/icons/sizes";
 
 import { cn } from "./cn";
+import { Tooltip } from "./Tooltip";
 
 export interface ProjectedProps {
   when: boolean;
@@ -31,13 +32,16 @@ export function Projected({ when, align = "baseline", children, className }: Pro
       )}
     >
       {children}
-      <CloudOff
-        {...iconProps("sm")}
-        aria-hidden={false}
-        role="img"
-        aria-label={t("projected")}
-        className={cn("shrink-0 text-warning", align === "baseline" && "translate-y-[2px]")}
-      />
+      <Tooltip label={t("projected")} className="shrink-0">
+        <CloudOff
+          {...iconProps("sm")}
+          aria-hidden={false}
+          role="img"
+          tabIndex={0}
+          aria-label={t("projected")}
+          className={cn("shrink-0 text-warning", align === "baseline" && "translate-y-[2px]")}
+        />
+      </Tooltip>
     </span>
   );
 }

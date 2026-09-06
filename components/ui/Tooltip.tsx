@@ -1,17 +1,18 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { cn } from "./cn";
 
 export interface TooltipProps {
   label: ReactNode;
   className?: string;
+  style?: CSSProperties;
   children: ReactNode;
 }
 
 // Visual hint only: the wrapped control already carries its accessible name, so the bubble is hidden from readers.
-export function Tooltip({ label, className, children }: TooltipProps) {
+export function Tooltip({ label, className, style, children }: TooltipProps) {
   return (
-    <span className={cn("group/tip relative inline-flex", className)}>
+    <span className={cn("group/tip relative inline-flex", className)} style={style}>
       {children}
       <span
         aria-hidden="true"

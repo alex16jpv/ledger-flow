@@ -22,5 +22,10 @@ describe("Projected", () => {
       </Projected>,
     );
     expect(screen.getByRole("img", { name: "Includes changes not yet synced" })).toBeVisible();
+    // The mark alone says nothing to a pointer: the same words appear as a hint on hover.
+    expect(screen.getByText("Includes changes not yet synced")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 });

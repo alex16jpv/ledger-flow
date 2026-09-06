@@ -256,6 +256,11 @@ export function StatsScreen() {
               <StackBar
                 shares={categoryShares}
                 colors={(key) => categoryMap.get(key)?.color ?? null}
+                names={(key) =>
+                  key === UNCATEGORIZED_KEY
+                    ? t("stats.uncategorized")
+                    : (categoryMap.get(key)?.name ?? t("stats.uncategorized"))
+                }
                 label={t("stats.breakdown")}
               />
               <CategoryRows
