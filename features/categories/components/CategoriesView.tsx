@@ -287,19 +287,21 @@ export function CategoriesView() {
           )}
           <Alert
             tone="neutral"
+            // The server mints these rows, so this write cannot be queued: no network, no button.
             action={
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={offline}
-                loading={restoreDefaults.isPending}
-                onClick={() => {
-                  void recreateDefaults();
-                }}
-              >
-                <RotateCcw {...iconProps("sm")} />
-                {t("categories.list.restoreDefaults.cta")}
-              </Button>
+              offline ? undefined : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={restoreDefaults.isPending}
+                  onClick={() => {
+                    void recreateDefaults();
+                  }}
+                >
+                  <RotateCcw {...iconProps("sm")} />
+                  {t("categories.list.restoreDefaults.cta")}
+                </Button>
+              )
             }
           >
             {t("categories.list.restoreDefaults.body")}{" "}

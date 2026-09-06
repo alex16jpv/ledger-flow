@@ -145,13 +145,14 @@ describe("CategoriesView", () => {
   });
 
   // F-20: the server mints these rows and their ids, so this one write of the screen cannot be
-  // queued offline. It says so and refuses, instead of failing with a network error.
-  it("does not offer to restore the defaults while offline, and says why", async () => {
+  // queued offline. With no network the button is not offered at all (owner, 2026-09-06) and the
+  // alert says why, instead of a dead control or a network error.
+  it("hides the restore-defaults button while offline, and says why", async () => {
     routeFetch();
     reportOnline(false);
     renderView();
     await screen.findByRole("button", { name: "Expense · 2" });
-    expect(screen.getByRole("button", { name: /^Restore$/ })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /^Restore$/ })).not.toBeInTheDocument();
     expect(screen.getByText(/Needs a connection/)).toBeVisible();
   });
 
