@@ -22,12 +22,14 @@ export function CurrencySheet({
   currency,
   locked,
   pending,
+  offline = false,
   error,
   onSave,
 }: SheetProps & {
   currency: string;
   locked: boolean;
   pending: boolean;
+  offline?: boolean;
   error: unknown;
   onSave: (currency: string) => void;
 }) {
@@ -49,7 +51,7 @@ export function CurrencySheet({
             <Button
               size="lg"
               block
-              disabled={value === currency}
+              disabled={value === currency || offline}
               loading={pending}
               onClick={() => {
                 onSave(value);
@@ -68,6 +70,8 @@ export function CurrencySheet({
         <Alert tone="neutral">{t("settings.currency.lockedBody", { currency })}</Alert>
       ) : (
         <div className="flex flex-col gap-3">
+          {offline && <Alert tone="warning">{t("settings.needsConnection")}</Alert>}
+          {offline && <Alert tone="warning">{t("settings.needsConnection")}</Alert>}
           {failure && <Alert tone="danger">{t(failure.messageKey)}</Alert>}
           <CurrencyPicker
             value={value}
@@ -87,12 +91,14 @@ export function TimeZoneSheet({
   onClose,
   timeZone,
   pending,
+  offline = false,
   error,
   onSave,
 }: SheetProps & {
   timeZone: string;
   pending: boolean;
   error: unknown;
+  offline?: boolean;
   onSave: (timeZone: string) => void;
 }) {
   const t = useTranslations();
@@ -108,7 +114,7 @@ export function TimeZoneSheet({
           <Button
             size="lg"
             block
-            disabled={value === timeZone}
+            disabled={value === timeZone || offline}
             loading={pending}
             onClick={() => {
               onSave(value);
@@ -139,9 +145,10 @@ export function DeleteAccountSheet({
   open,
   onClose,
   pending,
+  offline = false,
   error,
   onConfirm,
-}: SheetProps & { pending: boolean; error: unknown; onConfirm: () => void }) {
+}: SheetProps & { pending: boolean; offline?: boolean; error: unknown; onConfirm: () => void }) {
   const t = useTranslations();
   const word = t("settings.delete.word");
   const [typed, setTyped] = useState("");
@@ -157,7 +164,7 @@ export function DeleteAccountSheet({
             variant="dangerSolid"
             size="lg"
             block
-            disabled={typed.trim() !== word}
+            disabled={typed.trim() !== word || offline}
             loading={pending}
             onClick={onConfirm}
           >
@@ -171,6 +178,7 @@ export function DeleteAccountSheet({
     >
       <div className="flex flex-col gap-4">
         <Alert tone="danger">{t("settings.delete.body")}</Alert>
+        {offline && <Alert tone="warning">{t("settings.needsConnection")}</Alert>}
         {failure && <Alert tone="danger">{t(failure.messageKey)}</Alert>}
         <Field label={t("settings.delete.confirmLabel", { word })}>
           <Input

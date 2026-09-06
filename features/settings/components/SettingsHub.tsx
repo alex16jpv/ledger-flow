@@ -355,6 +355,7 @@ export function SettingsHub() {
         open={sheet === "currency"}
         currency={currency}
         locked={currencyLocked}
+        offline={offline}
         pending={updateCurrency.isPending}
         error={updateCurrency.error}
         onSave={(next) => {
@@ -374,6 +375,7 @@ export function SettingsHub() {
         key={`timezone-${sheet === "timeZone" ? "open" : "closed"}`}
         open={sheet === "timeZone"}
         timeZone={timeZone}
+        offline={offline}
         pending={updateTimeZone.isPending}
         error={updateTimeZone.error}
         onSave={(next) => {
@@ -391,6 +393,7 @@ export function SettingsHub() {
       />
       <DeleteAccountSheet
         open={sheet === "delete"}
+        offline={offline}
         pending={deleteAccount.isPending}
         error={deleteAccount.error}
         onConfirm={() => {

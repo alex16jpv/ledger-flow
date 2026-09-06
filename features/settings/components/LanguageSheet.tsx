@@ -17,6 +17,7 @@ import {
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { type AppLocale, LOCALES } from "@/lib/i18n/routing";
 import { iconProps } from "@/lib/icons/sizes";
+import { useOffline } from "@/lib/network/useOffline";
 import { useSession } from "@/lib/session/SessionProvider";
 
 import { useUpdateLocale } from "../hooks";
@@ -45,7 +46,9 @@ export function LanguageSheet({ open, onClose }: LanguageSheetProps) {
   const pathname = usePathname();
   const update = useUpdateLocale();
   const session = useSession();
-  const ready = session.status === "authenticated";
+  const offline = useOffline();
+  // The preference lives on the user's profile: it needs the server, and says so (§13 of the plan).
+  const ready = session.status === "authenticated" && !offline;
   const failure = update.error ? presentError(update.error) : null;
   const mode: LocaleMode = readLocaleMode(storage());
   const selected: Choice = mode === "device" ? "device" : current;
@@ -79,6 +82,7 @@ export function LanguageSheet({ open, onClose }: LanguageSheetProps) {
   return (
     <Sheet open={open} onClose={onClose} title={t("title")}>
       <div className="flex flex-col gap-4">
+        {offline && <Alert tone="warning">{tErrors("settings.needsConnection")}</Alert>}
         {failure && <Alert tone="danger">{tErrors(failure.messageKey)}</Alert>}
         <List className="-mx-4" role="listbox" aria-label={t("title")}>
           {options.map((option) => (

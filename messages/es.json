@@ -295,6 +295,7 @@
       "confirm": "Eliminar cuenta",
       "done": "Cuenta eliminada. Regístrate de nuevo con el mismo correo para volver."
     },
+    "needsConnection": "Cambiar esto necesita conexión: se guarda en el servidor.",
     "signOutOffline": "Cerrar sesión necesita conexión: la sesión vive en el servidor.",
     "signOutPending": {
       "title": "Tienes cambios sin enviar",

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
 import { validationMessage } from "@/lib/i18n/validation";
+import { useOffline } from "@/lib/network/useOffline";
 import type { User } from "@/types/api";
 
 import { type ProfileChange, useUpdateProfile } from "../hooks";
@@ -22,6 +23,7 @@ export interface ProfileViewProps {
 export function ProfileView({ user, onSaved }: ProfileViewProps) {
   const t = useTranslations();
   const update = useUpdateProfile();
+  const offline = useOffline();
   const form = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema(user.email)),
     defaultValues: { name: user.name, email: user.email, newPassword: "", currentPassword: "" },
@@ -113,8 +115,9 @@ export function ProfileView({ user, onSaved }: ProfileViewProps) {
         )}
       </div>
       <div className="flex flex-col gap-2">
+        {offline && <Alert tone="warning">{t("settings.needsConnection")}</Alert>}
         {formError && <Alert tone="danger">{t(formError.messageKey)}</Alert>}
-        <Button type="submit" size="lg" block loading={update.isPending}>
+        <Button type="submit" size="lg" block loading={update.isPending} disabled={offline}>
           {t("common.saveChanges")}
         </Button>
       </div>
