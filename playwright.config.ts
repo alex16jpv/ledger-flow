@@ -14,6 +14,11 @@ const frontEnv = {
   NEXT_PUBLIC_CONTACT_EMAIL: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "ledgerflow@alexpiral.com",
   NEXT_PUBLIC_APP_ENV: "test",
   E2E_APP_URL: baseURL,
+  // F-56: the suite builds into its own directory and its own worker, so a `next start` the owner
+  // has running keeps serving the `.next` and the `public/sw.js` it was built with.
+  NEXT_DIST_DIR: ".next-e2e",
+  SERWIST_SW_DEST: "public/sw-e2e.js",
+  NEXT_PUBLIC_SW_PATH: "/sw-e2e.js",
 };
 
 export default defineConfig({

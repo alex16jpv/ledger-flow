@@ -14,9 +14,14 @@ const revisionOf = (url) =>
     .slice(0, 16);
 
 // Next builds with Turbopack, so the worker is bundled by the Serwist CLI after `next build` (see package.json).
+// The e2e build writes its worker beside this one so `public/sw.js` stays the running app's (F-56).
+const swDest = process.env.SERWIST_SW_DEST ?? "public/sw.js";
+
 export default await serwist({
   swSrc: "app/sw.ts",
-  swDest: "public/sw.js",
+  swDest,
+  // A worker left in `public/` by the other build is a file, not an asset: it never gets precached.
+  globIgnores: ["public/sw*.js", "public/sw*.js.map"],
   // @serwist/next strips `.html` before it strips the `public/` prefix, so a document there reaches
   // the manifest as `/public/offline`, which 404s and fails the install. Added by hand instead.
   manifestTransforms: [

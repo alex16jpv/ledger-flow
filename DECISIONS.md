@@ -1852,3 +1852,23 @@ cover` is set once in the root layout for the standalone display.
   replaces the row, and inventing a server field would be a lie).
 - **Consequence:** one more `MetaKey`. A notice outlives its row by nothing: `pruneNotices` drops it
   as soon as the movement is reviewed, deleted or gone from the mirror.
+
+## 2026-09-06 · The browser suite builds into its own directory and its own worker (F-56, O-F7)
+
+- **Decision:** `next.config.ts` reads `distDir` from `NEXT_DIST_DIR`, `serwist.config.mjs` reads
+  `swDest` from `SERWIST_SW_DEST`, and the app registers `env.NEXT_PUBLIC_SW_PATH`. `playwright.config.ts`
+  sets the three to `.next-e2e`, `public/sw-e2e.js` and `/sw-e2e.js`, so `npm run test:e2e` and
+  `npm run demo:offline` never write the `.next` or the `public/sw.js` that a `next start` is serving.
+- **Why:** on 2026-09-05 four Playwright runs rebuilt `.next` under the owner's running app and his
+  screen broke apart (tabs that stopped reacting, chunks that no longer existed); and the e2e worker,
+  built with `NEXT_PUBLIC_APP_ENV=test` and other hashes, stayed in `public/sw.js` and made his browser
+  precache another build's URLs.
+- **Alternatives:** a separate checkout (`git worktree`) for the suite — a second `node_modules` and a
+  second install to keep in step; telling every session not to run the suite while the app is up (the
+  rule that was in force, and it depends on remembering it).
+- **Consequence:** three defaulted environment variables, and the worker path is public env instead of a
+  literal. `npm run ci` builds through `build:gate` (`.next-gate`, `public/sw-gate.js`), so `.next` and
+  `public/sw.js` are written only by a plain `npm run build` — the owner's. `globIgnores` drops
+  `public/sw*.js` from the precache manifest, so no build precaches another's worker. `next build`
+  rewrites `next-env.d.ts` to point at whichever `distDir` it used; both files are git-ignored and
+  `npm run ci` runs `next typegen` first, which puts it back.

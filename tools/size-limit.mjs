@@ -8,7 +8,8 @@ const BUDGETS = [
   { name: "app shell", route: /^(?:\/\[locale\])?\/\(app\)\/page$/, limitKb: 200 },
 ];
 
-const NEXT_DIR = ".next";
+// The gate builds into its own directory so it never overwrites the `.next` a running app serves (F-56).
+const NEXT_DIR = process.env.NEXT_DIST_DIR ?? ".next";
 const gzipKb = (files) =>
   files.reduce((sum, file) => sum + gzipSync(readFileSync(join(NEXT_DIR, file))).length, 0) / 1024;
 
@@ -23,7 +24,7 @@ function routeManifests(dir, out = []) {
 
 const routeOf = (manifestPath) =>
   manifestPath
-    .replace(/^\.next\/server\/app/, "")
+    .replace(new RegExp(`^${NEXT_DIR}/server/app`), "")
     .replace(/\/page_client-reference-manifest\.js$/, "/page")
     .replace(/^\/page$/, "/page");
 

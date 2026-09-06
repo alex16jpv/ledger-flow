@@ -11,6 +11,7 @@ export const env = createEnv({
     NEXT_PUBLIC_CONTACT_EMAIL: z.email(),
     NEXT_PUBLIC_APP_VERSION: z.string().min(1).default("dev"),
     NEXT_PUBLIC_APP_ENV: z.enum(["development", "test", "production"]).optional(),
+    NEXT_PUBLIC_SW_PATH: z.string().startsWith("/").default("/sw.js"),
     NEXT_PUBLIC_SENTRY_DSN: z.url().optional(),
     NEXT_PUBLIC_VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
   },
@@ -31,6 +32,7 @@ export const env = createEnv({
       process.env.NEXT_PUBLIC_APP_VERSION ??
       process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7),
     NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
+    NEXT_PUBLIC_SW_PATH: process.env.NEXT_PUBLIC_SW_PATH,
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
     NEXT_PUBLIC_VERCEL_ENV: process.env.NEXT_PUBLIC_VERCEL_ENV,
     NODE_ENV: process.env.NODE_ENV,

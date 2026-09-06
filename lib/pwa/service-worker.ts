@@ -1,11 +1,16 @@
+import { env } from "@/lib/env";
+
 import { shellUrls, WARM_SHELL_MESSAGE, type WarmShellMessage } from "./shell";
 
 export type UpdateListener = () => void;
 
-// Registers /sw.js (emitted by Serwist in production builds) and reports when a newer worker is waiting.
+// Registers the worker Serwist emitted for this build (`/sw.js`, or the e2e one — F-56) and reports
+// when a newer worker is waiting.
 export async function registerServiceWorker(onUpdate: UpdateListener): Promise<void> {
   if (!("serviceWorker" in navigator)) return;
-  const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  const registration = await navigator.serviceWorker.register(env.NEXT_PUBLIC_SW_PATH, {
+    scope: "/",
+  });
   const watch = (worker: ServiceWorker | null) => {
     if (!worker) return;
     worker.addEventListener("statechange", () => {

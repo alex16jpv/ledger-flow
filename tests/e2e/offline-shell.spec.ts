@@ -1,5 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
+import { SW_PATH } from "../sw-path";
+
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
 type Request = Parameters<Parameters<typeof test>[2]>[0]["request"];
@@ -13,7 +15,7 @@ async function signIn(page: Page, request: Request) {
 // The e2e build is flagged as "test", so the app does not install the worker by itself: the suite
 // registers it to exercise what a production install would do.
 async function installWorker(page: Page) {
-  await page.evaluate(() => navigator.serviceWorker.register("/sw.js", { scope: "/" }));
+  await page.evaluate((path) => navigator.serviceWorker.register(path, { scope: "/" }), SW_PATH);
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
   await page.reload();
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
