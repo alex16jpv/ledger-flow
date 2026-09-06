@@ -171,7 +171,10 @@ list, because unpausing it turns a paused skeleton into a failed request.
 the last `id` because the API sorts these lists by `_id` ascending, which is IndexedDB's own key
 order. React Query pauses fetches while offline, so `lib/query/client.ts` gives the mirror-backed
 domains `networkMode: "offlineFirst"`: a paused query never reaches its `queryFn` and the mirror
-would never be asked.
+would never be asked. Mutations get the same default, for the same reason: a paused mutation never
+reaches `write()`, which is what chooses the queue over the wire (the gate O-A demo found every write
+frozen offline without it). A read the mirror can settle on its own does not go to the server either:
+a deleted transaction's detail is the 404 its tombstone already implies (`mirrorNotFound`, F-46).
 
 Transactions are the one list the API does not sort by `_id`, so `repository/transactions.ts` builds
 its own envelope:

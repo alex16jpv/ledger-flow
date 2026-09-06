@@ -323,14 +323,26 @@ describe("one transaction and the tag list", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  // Deleted rows are a 404 everywhere but the sync feed, and only the server can answer that.
-  it("asks the server for a deleted transaction and for one it never saw", async () => {
+  // F-46: a deleted row is a 404 everywhere but the sync feed, and the tombstone is enough to say
+  // so — asking the server was the one data read that left the device with no network.
+  it("answers 404 for a deleted transaction from its own tombstone, without a request", async () => {
     await mirrorOf(ALL);
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
 
-    await expect(readTransaction("t1")).rejects.toThrow("Network request failed");
+    await expect(readTransaction("t1")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 404,
+      code: "NOT_FOUND",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("still asks the server for a transaction it never saw", async () => {
+    await mirrorOf(ALL);
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+
     await expect(readTransaction("t99")).rejects.toThrow("Network request failed");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("lists the distinct tags of the live rows, sorted", async () => {

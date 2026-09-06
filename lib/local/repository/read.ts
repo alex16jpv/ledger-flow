@@ -1,5 +1,6 @@
 import type { IDBPDatabase } from "idb";
 
+import { ApiError } from "@/lib/api/errors";
 import { connectivityStore } from "@/lib/network/connectivity";
 import type { Pagination } from "@/types/api";
 
@@ -15,7 +16,20 @@ const READ_SOURCE: ReadSource = "mirror";
 
 // Returning undefined means "the mirror cannot answer this", not "there is nothing": the caller then
 // asks the server, which either succeeds or fails with a real error instead of a fabricated one.
+// "There is nothing" is an answer too, and the mirror gives it by throwing `mirrorNotFound`.
 export type MirrorReader<T> = (db: IDBPDatabase<VaultSchema>) => Promise<T | undefined>;
+
+// The 404 the API would answer for a row the mirror knows is gone (F-46): a deleted transaction
+// keeps its tombstone, so asking the server — which with no network is not there — told the screen
+// nothing the mirror did not already know, and was the one data read that left the device offline.
+export function mirrorNotFound(entity: string, id: string): ApiError {
+  return new ApiError({
+    status: 404,
+    code: "NOT_FOUND",
+    message: `${entity} ${id} not found`,
+    requestId: "mirror",
+  });
+}
 
 let current: VaultHandle | null = null;
 let opening: Promise<VaultHandle | null> | null = null;

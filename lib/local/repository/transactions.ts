@@ -12,7 +12,7 @@ import type {
 
 import { sumAmounts } from "../derive";
 import type { TransactionRecord, VaultSchema } from "../schema";
-import { read } from "./read";
+import { mirrorNotFound, read } from "./read";
 import { dateCursorRange } from "./window";
 
 export type TransactionQuery = Record<string, QueryValue>;
@@ -173,8 +173,9 @@ export function readTransaction(id: string): Promise<Transaction> {
     () => api<Transaction>(`/transactions/${id}`),
     async (db) => {
       const record = await db.get("transactions", id);
-      // A deleted transaction is a 404 everywhere but the sync feed, and only the server can say so.
-      return record?.deleted === 0 ? toApiRow(record.row) : undefined;
+      // A deleted transaction is a 404 everywhere but the sync feed, and the tombstone says so.
+      if (record?.deleted === 1) throw mirrorNotFound("transaction", id);
+      return record ? toApiRow(record.row) : undefined;
     },
   );
 }
