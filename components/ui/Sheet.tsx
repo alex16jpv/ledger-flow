@@ -101,7 +101,11 @@ export function Sheet({
               <X {...iconProps("sm")} />
             </Button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+          {/* Focusable so a keyboard can scroll it: a sheet whose body has no control of its own
+              (the conflict sheet's two cards) is otherwise unreachable without a pointer. */}
+          <div tabIndex={0} className="min-h-0 flex-1 overflow-y-auto">
+            {children}
+          </div>
           {footer && <div className="flex flex-col gap-2">{footer}</div>}
         </div>
       </div>
