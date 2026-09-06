@@ -16,6 +16,7 @@ import { useToast } from "@/components/ui/Toast";
 import { presentError } from "@/lib/api/errors";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
+import { useOffline } from "@/lib/network/useOffline";
 
 import { useRevokeSession, useSessionsQuery } from "../hooks";
 import { describeUserAgent, type DeviceKind } from "../user-agent";
@@ -29,6 +30,7 @@ const ACTIVE_NOW_MS = 5 * 60 * 1000;
 
 export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<void> }) {
   const t = useTranslations();
+  const offline = useOffline();
   const dates = useDates();
   const toast = useToast();
   const sessions = useSessionsQuery();
@@ -123,6 +125,7 @@ export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<voi
       <Button
         variant="danger"
         block
+        disabled={offline}
         onClick={() => {
           setConfirming(true);
         }}
@@ -130,6 +133,11 @@ export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<voi
         <LogOut {...iconProps("sm")} />
         {t("settings.sessions.signOutOthers")}
       </Button>
+      {offline && (
+        <p className="text-center text-sm text-text-3" role="status">
+          {t("settings.signOutOffline")}
+        </p>
+      )}
       <Sheet
         open={confirming}
         onClose={() => {

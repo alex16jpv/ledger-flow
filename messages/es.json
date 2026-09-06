@@ -295,6 +295,7 @@
       "confirm": "Eliminar cuenta",
       "done": "Cuenta eliminada. Regístrate de nuevo con el mismo correo para volver."
     },
+    "signOutOffline": "Cerrar sesión necesita conexión: la sesión vive en el servidor.",
     "signOutPending": {
       "title": "Tienes cambios sin enviar",
       "body": "{count, plural, one {# cambio no ha llegado al servidor todavía} other {# cambios no han llegado al servidor todavía}}. Si los conservas, se enviarán la próxima vez que inicies sesión en este dispositivo.",

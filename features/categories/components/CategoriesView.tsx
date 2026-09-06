@@ -3,7 +3,7 @@
 import { ChevronDown, Plus, RotateCcw, Tags } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useId, useMemo, useState, useSyncExternalStore } from "react";
+import { useId, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Alert } from "@/components/ui/Alert";
@@ -22,7 +22,7 @@ import { ApiError, presentError } from "@/lib/api/errors";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
-import { connectivityStore } from "@/lib/network/connectivity";
+import { useOffline } from "@/lib/network/useOffline";
 import type { Category } from "@/types/api";
 
 import type { CategoryType } from "../api";
@@ -62,12 +62,7 @@ export function CategoriesView() {
   const archivedId = useId();
   // F-20: the server mints these ids, so there is nothing the queue could project. It is the one
   // action on this screen that needs the network, and it says so instead of failing.
-  const offline =
-    useSyncExternalStore(
-      connectivityStore.subscribe,
-      connectivityStore.getSnapshot,
-      connectivityStore.getServerSnapshot,
-    ) === "offline";
+  const offline = useOffline();
 
   const active = useMemo(
     () => (categories.data ?? []).filter((category) => !category.archivedAt),

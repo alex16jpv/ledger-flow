@@ -295,6 +295,7 @@
       "confirm": "Delete account",
       "done": "Account deleted. Sign up again with the same email to come back."
     },
+    "signOutOffline": "Signing out needs a connection: your session lives on the server.",
     "signOutPending": {
       "title": "You have unsent changes",
       "body": "{count, plural, one {# change hasn’t reached the server yet} other {# changes haven’t reached the server yet}}. Keeping them means they go out next time you sign in on this device.",

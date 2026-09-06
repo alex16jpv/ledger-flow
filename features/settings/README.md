@@ -24,3 +24,7 @@ work exists. The hub gains its row, the install row now explains durability rath
 and signing out with a queue behind you asks first: keep the work for the next sign-in on this device,
 or discard it (F-34). Categories says out loud that "restore defaults" needs a connection, since the
 server mints those ids and there is nothing the queue could project (F-20).
+
+Signing out — the hub's button and «Sign out all other sessions» — is disabled with no network and
+says why: the session lives on the server, and an offline sign-out could only clear this device while
+the account stayed signed in (R-3b). Restore-defaults follows the same rule (F-20).

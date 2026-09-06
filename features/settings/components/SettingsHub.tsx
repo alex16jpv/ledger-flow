@@ -37,6 +37,7 @@ import { useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
+import { useOffline } from "@/lib/network/useOffline";
 import { useInstallPrompt } from "@/lib/pwa/install";
 import { useSession } from "@/lib/session/SessionProvider";
 import { useTheme } from "@/lib/theme";
@@ -130,6 +131,9 @@ export function SettingsHub() {
   const deleteAccount = useDeleteAccount();
   const install = useInstallPrompt();
   const outbox = useOutbox();
+  // The session lives on the server: with no network a sign-out could only clear this device and
+  // leave the cookies — and the account — signed in. It waits and says so (R-3b §C).
+  const offline = useOffline();
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<
@@ -310,6 +314,7 @@ export function SettingsHub() {
         <Button
           variant="secondary"
           block
+          disabled={offline}
           onClick={() => {
             if (outbox.pending > 0) {
               setSheet("signOut");
@@ -321,6 +326,11 @@ export function SettingsHub() {
           <LogOut {...iconProps("sm")} />
           {t("settings.signOut")}
         </Button>
+        {offline && (
+          <p className="text-center text-sm text-text-3" role="status">
+            {t("settings.signOutOffline")}
+          </p>
+        )}
         <Button
           variant="ghost"
           block
