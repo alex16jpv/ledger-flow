@@ -1,3 +1,5 @@
+import { connectivityStore, onNetworkFailure, reportOnline } from "@/lib/network/connectivity";
+
 import { api, setUnauthorizedHandler } from "./client";
 import { ApiError, NetworkError } from "./errors";
 
@@ -28,6 +30,23 @@ describe("api", () => {
     const headers = init?.headers as Record<string, string>;
     expect(headers["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
     expect(headers.accept).toBe("application/json");
+  });
+
+  // F-64: an answer — any answer — is the app's proof that the network is back, and the only one it
+  // gets while it believes it is offline and has stopped asking.
+  it("reports an answer that came back while the app believed it was offline", async () => {
+    const asked = vi.fn();
+    const stop = onNetworkFailure(asked);
+    connectivityStore.reset();
+    fetchMock.mockResolvedValue(json({ code: "UNAUTHORIZED", message: "no" }, { status: 401 }));
+    await api("/transactions").catch(() => undefined);
+    expect(asked).not.toHaveBeenCalled();
+
+    reportOnline(false);
+    await api("/transactions").catch(() => undefined);
+    expect(asked).toHaveBeenCalledTimes(1);
+    stop();
+    connectivityStore.reset();
   });
 
   it("sends the body and the Idempotency-Key", async () => {

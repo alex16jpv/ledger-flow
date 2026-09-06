@@ -220,3 +220,61 @@ test("the connection strip passes axe with no network and with a queue behind it
   await expect(page.getByText(/changes? waiting/)).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+// F-64: the session dies while the app stays open. Nothing is reloaded, so whatever says so has to
+// come from the request that got the 401 — until it does, the queue stops with no explanation.
+test("a session that dies with the app open says so without a reload", async ({
+  page,
+  request,
+  context,
+}) => {
+  test.setTimeout(180_000);
+  const user = await freshUser(request, "dead-open");
+  const amount = uniqueAmount();
+
+  await signInAs(context, request, user);
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+
+  // The outage: something is queued with no network, and the session dies while the device is away.
+  await context.setOffline(true);
+  await page.goto("/home");
+  await expect(page.getByText("You’re offline.")).toBeVisible();
+
+  // The session dies, the tab does not: no reload, no navigation, the vault marker kept (§2.6).
+  const kept = (await context.cookies()).filter(
+    (cookie) => !cookie.name.includes("access") && !cookie.name.includes("refresh"),
+  );
+  await context.clearCookies();
+  await context.addCookies(kept);
+
+  // Something to send, so the queue asks the server and earns the 401.
+  await addButton(page).click();
+  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
+  await page.keyboard.type(String(amount));
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await expect(sheet).toBeHidden();
+  expect((await vaultState(page))?.pending).toBe(1);
+
+  // A cold start with no session and no network: the app opens in local mode (§2.6), which is the
+  // state F-64 was reported in — the tab that will have to speak is this one.
+  await page.reload();
+  await expect(page.getByText("You’re offline.")).toBeVisible();
+
+  // The network comes back and nobody reloads anything: the queue asks, gets its 401, and the only
+  // thing that can tell the user why nothing syncs is this tab.
+  await context.setOffline(false);
+
+  // Well under the 30 s of the heartbeat: the app must not need the tick to notice. What tells it is
+  // the answer to the request it just made — a 401 is still an answer, and only the network can
+  // deliver one (F-64). Before that hint existed, this sheet took a whole tick to appear.
+  const dead = page.getByRole("dialog", { name: "Sign in to sync" });
+  await expect(dead).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("You’re offline.")).toHaveCount(0);
+
+  // And the change is still here: a dead session never costs the queue anything (invariant 7).
+  expect((await vaultState(page))?.pending).toBe(1);
+  expect((await listTransactions(request)).filter((row) => row.amount === amount)).toHaveLength(0);
+});

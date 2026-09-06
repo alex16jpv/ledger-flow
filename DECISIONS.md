@@ -1909,3 +1909,26 @@ cover` is set once in the root layout for the standalone display.
   every call site, and wrongly the day a body changes.
 - **Consequence:** one `querySelector` per open. The axe check in
   `tests/e2e/offline-two-devices.spec.ts` is what keeps it.
+
+## 2026-09-06 · An answered request is proof of a network; the heartbeat still decides (F-64)
+
+- **Decision:** `lib/api/client` reports every response it receives — any status — to
+  `reportNetworkAnswer()`, and while the connectivity store believes the app is offline that report
+  asks the heartbeat for a health check **now** instead of waiting for its next 30 s tick. Online,
+  the call returns immediately and costs nothing.
+- **Why:** a session that died with the app open announced itself only after the store learned the
+  network was back, and the store learned it from the heartbeat (or the browser's `online` event,
+  which does not always fire). Measured in the browser: the first request after the network returned
+  was answered at **36 ms** with a `401`, and the sheet that says "Sign in to sync" appeared at
+  **30 058 ms** — one whole tick later, with the strip still saying "You're offline." and the queue
+  stopped with no explanation. The 401 plumbing was never the problem (F-64 suspected it was): the
+  app simply did not know it was online. With the report, the same run announces in ~3 s.
+- **Alternatives:** letting a response set the phase directly — a response can come from the service
+  worker's cache, and the store's rule since W-19 is that only `/api/health` decides; a shorter
+  heartbeat while offline — more requests for every device that is really offline, which is the case
+  the interval exists for; announcing the dead session without a network — asking someone with no
+  connection to sign in, which is what `SessionExpiredSheet` deliberately refuses to do.
+- **Consequence:** the worst case goes from one heartbeat interval to one health request, for
+  everything that waits on the phase: the strip, React Query's `onlineManager`, the outbox engine and
+  the sign-in sheet. `tests/e2e/offline-hardening.spec.ts` asserts the sheet inside 15 s — well under
+  the tick — so a regression cannot hide behind the interval again.

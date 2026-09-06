@@ -1,4 +1,4 @@
-import { reportNetworkFailure } from "@/lib/network/connectivity";
+import { reportNetworkAnswer, reportNetworkFailure } from "@/lib/network/connectivity";
 import { isReportable, reportError } from "@/lib/observability/reporter";
 import type { ErrorResponse } from "@/types/api";
 
@@ -91,7 +91,10 @@ async function send(path: string, request: ApiRequest, requestId: string): Promi
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   };
   try {
-    return await fetch(`${API_PREFIX}${path}${toQueryString(query)}`, init);
+    const response = await fetch(`${API_PREFIX}${path}${toQueryString(query)}`, init);
+    // Whatever it says, it came from the other side: the app can stop believing it is offline.
+    reportNetworkAnswer();
+    return response;
   } catch (cause) {
     const timedOut = cause instanceof DOMException && cause.name === "TimeoutError";
     if (cause instanceof DOMException && cause.name === "AbortError" && signal?.aborted)
