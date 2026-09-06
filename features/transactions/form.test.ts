@@ -5,6 +5,7 @@ import {
   draftFromSearchParams,
   fromTransaction,
   isTooFarAhead,
+  toTransactionChanges,
   toTransactionInput,
   transactionFormSchema,
   type TransactionFormValues,
@@ -127,5 +128,48 @@ describe("transaction form model", () => {
     expect(draftFromSearchParams(new URLSearchParams("amount=abc&categoryId=c1"))).toEqual({
       categoryId: "c1",
     });
+  });
+});
+
+describe("what an edit sends", () => {
+  const input = {
+    type: "EXPENSE" as const,
+    amount: 30_000,
+    date: "2026-09-06T12:00:00.000Z",
+    categoryId: "c1",
+    fromAccountId: "a1",
+    toAccountId: null,
+    description: "Taxi",
+    tags: ["work"],
+    note: "Airport run",
+  };
+
+  it("sends only the fields the user touched", () => {
+    expect(toTransactionChanges(input, { note: true })).toEqual({ note: "Airport run" });
+  });
+
+  it("sends the date when either the day or the time moved", () => {
+    expect(toTransactionChanges(input, { time: true })).toEqual({ date: input.date });
+    expect(toTransactionChanges(input, { date: true })).toEqual({ date: input.date });
+  });
+
+  it("sends both sides and the category when the type changed", () => {
+    expect(toTransactionChanges(input, { type: true })).toEqual({
+      type: "EXPENSE",
+      categoryId: "c1",
+      fromAccountId: "a1",
+      toAccountId: null,
+    });
+  });
+
+  it("sends both sides when the single account picker moved, because either side may be it", () => {
+    expect(toTransactionChanges(input, { accountId: true })).toEqual({
+      fromAccountId: "a1",
+      toAccountId: null,
+    });
+  });
+
+  it("sends nothing when nothing was touched", () => {
+    expect(toTransactionChanges(input, {})).toEqual({});
   });
 });

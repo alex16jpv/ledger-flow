@@ -20,6 +20,7 @@ import {
   type AdjustmentDirection,
   categoryAllowed,
   isTooFarAhead,
+  toTransactionChanges,
   toTransactionInput,
   TRANSACTION_TYPES,
   transactionFormSchema,
@@ -32,7 +33,7 @@ import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
-import type { CreateTransactionInput } from "@/types/api";
+import type { CreateTransactionInput, UpdateTransactionInput } from "@/types/api";
 
 const TYPE_TONE = {
   EXPENSE: "default",
@@ -46,7 +47,13 @@ export interface TransactionFormProps {
   submitLabel: string;
   pending: boolean;
   error: unknown;
-  onSubmit: (input: CreateTransactionInput, idempotencyKey: string) => Promise<unknown>;
+  // `changes` is the same input narrowed to the fields the user touched: an edit sends that, so a
+  // note typed on one device does not travel as a new amount and a new date too (§1 example 3).
+  onSubmit: (
+    input: CreateTransactionInput,
+    idempotencyKey: string,
+    changes: UpdateTransactionInput,
+  ) => Promise<unknown>;
   secondaryAction?: React.ReactNode;
 }
 
@@ -67,7 +74,10 @@ export function TransactionForm({
     resolver: zodResolver(transactionFormSchema),
     defaultValues,
   });
-  const { errors } = form.formState;
+  // `dirtyFields` is read during render on purpose: React Hook Form's formState is a Proxy that only
+  // tracks what the component subscribed to, and reading it for the first time inside the submit
+  // handler would answer with an empty object.
+  const { errors, dirtyFields } = form.formState;
   const type = useWatch({ control: form.control, name: "type" });
 
   // The amount is the first thing to type on entering the form and after every type switch (owner request P-22).
@@ -99,15 +109,21 @@ export function TransactionForm({
     }
     const input = toTransactionInput(values, timeZone);
     try {
-      await onSubmit(input, keyring.current.keyFor(input));
+      await onSubmit(
+        input,
+        keyring.current.keyFor(input),
+        toTransactionChanges(input, dirtyFields),
+      );
     } catch {
       return;
     }
   }
 
   function changeType(next: TransactionType) {
-    form.setValue("type", next);
-    if (!categoryAllowed(next)) form.setValue("categoryId", null);
+    // `shouldDirty` because an edit only sends what is dirty: a value the screen sets on the user's
+    // behalf is still the user's change.
+    form.setValue("type", next, { shouldDirty: true });
+    if (!categoryAllowed(next)) form.setValue("categoryId", null, { shouldDirty: true });
     form.clearErrors();
   }
 
@@ -209,8 +225,8 @@ export function TransactionForm({
               round
               aria-label={t("transactions.form.swap")}
               onClick={() => {
-                form.setValue("fromAccountId", toAccountId);
-                form.setValue("toAccountId", fromAccountId);
+                form.setValue("fromAccountId", toAccountId, { shouldDirty: true });
+                form.setValue("toAccountId", fromAccountId, { shouldDirty: true });
               }}
             >
               <ArrowUpDown {...iconProps("sm")} />

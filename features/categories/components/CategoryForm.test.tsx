@@ -89,11 +89,8 @@ describe("CategoryForm", () => {
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("/api/categories/food");
     expect(init?.method).toBe("PUT");
-    expect(JSON.parse(init?.body as string)).toEqual({
-      name: "Groceries",
-      icon: "utensils",
-      color: "ORANGE",
-    });
+    // The icon and the colour were not touched, so they do not travel (§1 example 3).
+    expect(JSON.parse(init?.body as string)).toEqual({ name: "Groceries" });
   });
 
   it("lets an unused category change type and shows the server lock if the API disagrees", async () => {

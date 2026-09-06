@@ -16,6 +16,7 @@ import { Chip, ChipRow } from "@/components/ui/Chip";
 import { Field, Input } from "@/components/ui/Field";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
+import { changedOnly } from "@/lib/form/changes";
 import { validationMessage } from "@/lib/i18n/validation";
 import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { iconProps } from "@/lib/icons/sizes";
@@ -49,7 +50,8 @@ export function AccountForm({
       ? { name: account.name, type: account.type, balance: null, color: account.color ?? "BLUE" }
       : { name: "", type: "ACCOUNT", balance: null, color: "BLUE" },
   });
-  const { errors } = form.formState;
+  // Read during render: `formState` is a Proxy that only tracks what the component subscribed to.
+  const { errors, dirtyFields } = form.formState;
   const serverFields = fieldErrors(mutation.error);
   const failure = mutation.error;
   const duplicate = failure instanceof ApiError && failure.code === "DUPLICATE";
@@ -64,7 +66,12 @@ export function AccountForm({
     try {
       onSaved(
         account
-          ? await update.mutateAsync({ name: values.name, type: values.type, color: values.color })
+          ? await update.mutateAsync(
+              changedOnly(
+                { name: values.name, type: values.type, color: values.color },
+                dirtyFields,
+              ),
+            )
           : await create.mutateAsync({
               name: values.name,
               type: values.type,

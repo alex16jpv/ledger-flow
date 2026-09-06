@@ -125,11 +125,9 @@ describe("AccountForm", () => {
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("/api/accounts/a1");
     expect(init?.method).toBe("PUT");
-    expect(JSON.parse(init?.body as string)).toEqual({
-      name: "Nu Bank",
-      type: "SAVINGS",
-      color: "PURPLE",
-    });
+    // Only the name was touched, so only the name travels: a body naming the type and the colour
+    // too would make a rename on another device a conflict the user has to answer (§1 example 3).
+    expect(JSON.parse(init?.body as string)).toEqual({ name: "Nu Bank" });
   });
 
   it("offers all nine account types as chips", () => {

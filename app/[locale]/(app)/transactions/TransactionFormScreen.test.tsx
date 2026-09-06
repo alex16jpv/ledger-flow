@@ -205,12 +205,9 @@ describe("EditTransactionScreen", () => {
     await waitFor(() => {
       expect(calls("PUT")).toHaveLength(1);
     });
-    expect(JSON.parse(calls("PUT")[0]?.[1]?.body as string)).toMatchObject({
-      description: "Taxi",
-      categoryId: "c1",
-      fromAccountId: "a1",
-      toAccountId: null,
-    });
+    // Only what was touched travels: a body that also named the amount and the date would make the
+    // queue treat every two-device disagreement about this row as a money conflict (§1 example 3).
+    expect(JSON.parse(calls("PUT")[0]?.[1]?.body as string)).toEqual({ description: "Taxi" });
     expect(push).toHaveBeenCalledWith("/transactions");
 
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
@@ -251,9 +248,8 @@ describe("EditTransactionScreen", () => {
     await waitFor(() => {
       expect(calls("PUT")).toHaveLength(1);
     });
-    expect(JSON.parse(calls("PUT")[0]?.[1]?.body as string)).toMatchObject({
+    expect(JSON.parse(calls("PUT")[0]?.[1]?.body as string)).toEqual({
       description: "Latte",
-      categoryId: "c1",
       pendingDetails: false,
     });
   });

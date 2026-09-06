@@ -1872,3 +1872,34 @@ cover` is set once in the root layout for the standalone display.
   `public/sw*.js` from the precache manifest, so no build precaches another's worker. `next build`
   rewrites `next-env.d.ts` to point at whichever `distDir` it used; both files are git-ignored and
   `npm run ci` runs `next typegen` first, which puts it back.
+
+## 2026-09-06 · An edit sends what the user changed, and nothing else (O-F7)
+
+- **Decision:** the three edit forms (transaction, account, category) send only the fields the user
+  touched. `lib/form/changes.ts` (`changedOnly`) does it where the form field and the request field
+  are the same name; `toTransactionChanges` does it for the transaction form, where they are not
+  (`date` + `time` → `date`, the type and the account pickers → both account sides). Every
+  `form.setValue` the screens make on the user's behalf now passes `{ shouldDirty: true }`.
+- **Why:** the queue classifies a conflict by the fields the operation carries (§6 O-F5a): text-only
+  edits rebase themselves, anything with money or shape is asked about. A body that always named the
+  amount and the date made **every** disagreement between two devices a money question, and the
+  winner overwrote fields the other device had changed — the exact opposite of §1 example 3 of the
+  offline plan, where a rename on the tablet and a note on the phone combine without a word. Found by
+  `tests/e2e/offline-two-devices.spec.ts`, which failed until this.
+- **Alternatives:** diffing the built request against the row that was loaded — the date does not
+  survive the round trip through the form's day and time fields, so it would always look changed;
+  classifying by "field present but equal to the server's" in the queue — the server's version is
+  exactly what a stale operation does not have.
+- **Consequence:** a `PUT` with an untouched form now sends `{}`, which the route accepts as a no-op.
+  `dirtyFields` is read during render because React Hook Form's `formState` is a Proxy that only
+  tracks what the component subscribed to — reading it first inside the submit handler answers `{}`.
+
+## 2026-09-06 · A sheet's body can be scrolled with the keyboard (O-F7)
+
+- **Decision:** the scrollable body of `components/ui/Sheet` carries `tabIndex={0}`.
+- **Why:** axe's `scrollable-region-focusable` (serious) on the "Resolve sync conflict" sheet, whose
+  body is two cards with no control in them: its footer buttons are outside the scroll area, so a
+  keyboard could not reach the content at all. Every sheet shares the container; the ones whose body
+  holds a form passed only because their fields happened to be focusable.
+- **Consequence:** one extra tab stop per sheet, before the body. The axe check in
+  `tests/e2e/offline-two-devices.spec.ts` is what keeps it.

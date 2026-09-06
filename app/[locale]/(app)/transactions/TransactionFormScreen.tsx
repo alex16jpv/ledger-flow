@@ -138,10 +138,10 @@ export function EditTransactionScreen({ id }: { id: string }) {
           submitLabel={t("common.saveChanges")}
           pending={update.isPending}
           error={update.error}
-          onSubmit={async (input) => {
+          onSubmit={async (input, _key, changes) => {
             // The same rule as the inbox (P-17): a category is what completes a quick capture.
             const completes = transaction.data.pendingDetails && input.categoryId != null;
-            await update.mutateAsync(completes ? { ...input, pendingDetails: false } : input);
+            await update.mutateAsync(completes ? { ...changes, pendingDetails: false } : changes);
             toast.show({ message: t("transactions.form.updated") });
             router.push(AFTER_SAVE_PATH);
           }}

@@ -144,6 +144,43 @@ export function toTransactionInput(
   };
 }
 
+// Which fields of the request each form field owns. An edit sends what the user actually touched:
+// the queue classifies a conflict by the fields the operation carries (§6 O-F5a), so a body that
+// always names the amount and the date turns every disagreement between two devices into a money
+// question — the opposite of §1 example 3, where a rename on one device and a note on the other
+// combine without asking anyone.
+const OWNED_BY: Record<keyof TransactionFormValues, readonly (keyof UpdateTransactionInput)[]> = {
+  // The type decides whether a category is allowed and which side each account goes on.
+  type: ["type", "categoryId", "fromAccountId", "toAccountId"],
+  amount: ["amount"],
+  categoryId: ["categoryId"],
+  accountId: ["fromAccountId", "toAccountId"],
+  fromAccountId: ["fromAccountId", "toAccountId"],
+  toAccountId: ["fromAccountId", "toAccountId"],
+  direction: ["fromAccountId", "toAccountId"],
+  date: ["date"],
+  time: ["date"],
+  description: ["description"],
+  tags: ["tags"],
+  note: ["note"],
+};
+
+export type TouchedFields = Partial<Record<keyof TransactionFormValues, unknown>>;
+
+// React Hook Form marks a field dirty only while its value differs from the one the form opened
+// with, so a value typed and typed back is not a change and does not travel.
+export function toTransactionChanges(
+  input: CreateTransactionInput & UpdateTransactionInput,
+  touched: TouchedFields,
+): UpdateTransactionInput {
+  const wanted = new Set<string>();
+  for (const [field, dirty] of Object.entries(touched)) {
+    if (!dirty) continue;
+    for (const key of OWNED_BY[field as keyof TransactionFormValues]) wanted.add(key);
+  }
+  return Object.fromEntries(Object.entries(input).filter(([key]) => wanted.has(key)));
+}
+
 export function fromTransaction(transaction: Transaction, timeZone: string): TransactionFormValues {
   const single =
     transaction.type === "TRANSFER" ? null : (transaction.fromAccountId ?? transaction.toAccountId);
