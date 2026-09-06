@@ -1896,10 +1896,14 @@ cover` is set once in the root layout for the standalone display.
 
 ## 2026-09-06 · A sheet's body can be scrolled with the keyboard (O-F7)
 
-- **Decision:** the scrollable body of `components/ui/Sheet` carries `tabIndex={0}`.
+- **Decision:** the scrollable body of `components/ui/Sheet` takes a tab stop **only when nothing
+  inside it can take one**, measured on open.
 - **Why:** axe's `scrollable-region-focusable` (serious) on the "Resolve sync conflict" sheet, whose
   body is two cards with no control in them: its footer buttons are outside the scroll area, so a
   keyboard could not reach the content at all. Every sheet shares the container; the ones whose body
   holds a form passed only because their fields happened to be focusable.
-- **Consequence:** one extra tab stop per sheet, before the body. The axe check in
+- **Alternatives:** a tab stop on every sheet — it lands in front of the search box of every picker,
+  and `pickers.spec.ts` said so; a prop each sheet sets by hand — the same question answered again in
+  every call site, and wrongly the day a body changes.
+- **Consequence:** one `querySelector` per open. The axe check in
   `tests/e2e/offline-two-devices.spec.ts` is what keeps it.

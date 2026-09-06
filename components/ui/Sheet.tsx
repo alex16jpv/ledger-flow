@@ -9,12 +9,16 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
 } from "react";
 
 import { iconProps } from "@/lib/icons/sizes";
 
 import { Button } from "./Button";
 import { cn } from "./cn";
+
+const FOCUSABLE =
+  'a[href],button,input,select,textarea,summary,[contenteditable],[tabindex]:not([tabindex="-1"])';
 
 export interface SheetProps {
   open: boolean;
@@ -37,7 +41,9 @@ export function Sheet({
 }: SheetProps) {
   const t = useTranslations("common");
   const ref = useRef<HTMLDialogElement>(null);
+  const body = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const [bodyNeedsFocus, setBodyNeedsFocus] = useState(false);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -45,6 +51,14 @@ export function Sheet({
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
   }, [open]);
+
+  // axe's `scrollable-region-focusable`: a region that scrolls has to be reachable by keyboard. It
+  // needs a tab stop of its own only when nothing inside it can take one — a sheet whose body is
+  // reading matter and whose buttons live in the footer, like "Resolve sync conflict". Giving every
+  // sheet one would put a stop in front of the search box of every picker.
+  useEffect(() => {
+    setBodyNeedsFocus(open && body.current?.querySelector(FOCUSABLE) == null);
+  }, [open, children]);
 
   // React re-dispatches the non-bubbling dialog events up the tree: ignore those of a nested sheet.
   function handleCancel(event: SyntheticEvent<HTMLDialogElement>) {
@@ -101,9 +115,11 @@ export function Sheet({
               <X {...iconProps("sm")} />
             </Button>
           </div>
-          {/* Focusable so a keyboard can scroll it: a sheet whose body has no control of its own
-              (the conflict sheet's two cards) is otherwise unreachable without a pointer. */}
-          <div tabIndex={0} className="min-h-0 flex-1 overflow-y-auto">
+          <div
+            ref={body}
+            tabIndex={bodyNeedsFocus ? 0 : undefined}
+            className="min-h-0 flex-1 overflow-y-auto"
+          >
             {children}
           </div>
           {footer && <div className="flex flex-col gap-2">{footer}</div>}
