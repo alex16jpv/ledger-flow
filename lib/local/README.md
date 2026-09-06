@@ -260,7 +260,11 @@ calls `createTransaction` and does not know the difference. Every write does the
    the report: a success hands the screen the server's row, a definitive refusal is thrown at the
    form, and anything else — queued, folded, in conflict, held — is answered from the projection.
    With network the call therefore lasts the whole pass, the pull that follows the push included; the
-   pull swallows its own errors, so it never turns a saved write into an error.
+   pull swallows its own errors, so it never turns a saved write into an error. **The undo is the
+   signal that a form is waiting** (D-35): `write()` registers it before asking for the drain and
+   drops it the moment it answers from the projection, so an answer the queue cannot act on — a
+   `conflict` that is not `STALE_UPDATE`, a `merged` — is thrown at the form while the undo is there,
+   and left in the tray when it is not.
 
 A create carries its own id and therefore no `Idempotency-Key` (O-B1). In the two forms that had a
 keyring, the key **is** the id now, so a retried submit still names one row. `PATCH
@@ -368,6 +372,13 @@ the only way in.
   the tray that shows it is O-F5a. The same goes for a fold with only some of its rollbacks left:
   undoing half of it would leave the mirror at an edit the server never got, so the whole run stays.
 - **A `STALE_UPDATE`** is either merged by the engine or handed to the user; see below.
+- **Any other `conflict`, and a `merged`, go to whoever is waiting** (D-35). A name already taken, a
+  reference the server will not take, a create that landed on a row the server already had: while the
+  write that queued it still holds its undo, the form gets the 4xx its route would have answered
+  (`code`, `message`, `current`) and the projection is undone; when nobody is waiting — a later drain,
+  a reload — the operation stays `conflict` in the tray with the server's row only if it is its own
+  (`ownServerRow`). `STALE_UPDATE` on money never takes this path: it is the sheet's even with a form
+  open (D-23).
 - **A warning is not a failure.** An operation can land degraded: `warnings:
 ["CATEGORY_ARCHIVED_DROPPED"]` means the movement was saved **without** its category, because
   another device archived it while this one had no network. The write is done; what is missing is the

@@ -1818,6 +1818,27 @@ cover` is set once in the root layout for the standalone display.
   client does not write `updatedAt`, invariant 2).
 - **Consequence:** the owner approved it on 2026-09-06. Across batches the old rebase still applies.
 
+## 2026-09-06 · An answer the queue cannot act on belongs to the form that is waiting for it (O-F5b, D-35)
+
+- **Decision:** a `conflict` that is not `STALE_UPDATE` — a name already taken, a reference the server
+  will not take, an id of another user — and a `merged` are handed to the form that is still waiting
+  for the write, as the 4xx its route would have answered (`code`, `message`, `current`); only when
+  nobody is waiting do they go to the tray as `conflict`. `STALE_UPDATE` on money or structure goes to
+  the sheet even with a form open (D-23). What decides is the undo the write registered: `write()`
+  keeps it while it waits for the drain and drops it the moment it answers the screen from the
+  projection, so a refusal that arrives in a later drain leaves the operation `failed` in the tray
+  instead of undoing a write nobody is looking at (F-23, which until now covered only the dead tab).
+- **Why:** `test:e2e` found it — with the batch, a `409 DUPLICATE` that used to reach the form became a
+  `conflict` in a tray the user had not opened, and the form believed the row was saved. A taken name
+  is fixed by typing another one, where the user is. And the undo is already the exact signal: `write()`
+  awaits the whole pass, so "an undo is registered" is "`write()` has not returned yet".
+- **Alternatives:** a flag in the envelope saying a form waits (a field the server does not use, to
+  tell the queue what it already knows); always the tray (the form lies about a save it did not make);
+  always the form (a refusal after a reload has no form, and undoing then would erase a write the
+  user thinks is saved).
+- **Consequence:** `awaited(seq)` in the engine reads the rollback map; `write()` and `writeAll()` call
+  `forgetRollbacks` before answering from the projection. Reviewed and confirmed in R-4.
+
 ## 2026-09-06 · A warning lives with the row it explains, in `meta` (F-57)
 
 - **Decision:** `warnings: ["CATEGORY_ARCHIVED_DROPPED"]` on a landed operation is kept as one notice
