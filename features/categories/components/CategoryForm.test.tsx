@@ -93,6 +93,16 @@ describe("CategoryForm", () => {
     expect(JSON.parse(init?.body as string)).toEqual({ name: "Groceries" });
   });
 
+  // R-5 §A: the API refuses an empty PUT, and offline it would sit in the attention tray.
+  it("saving an untouched edit sends nothing and hands back the category as it was", async () => {
+    const onSaved = renderForm({ category: food });
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledWith(food);
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("lets an unused category change type and shows the server lock if the API disagrees", async () => {
     fetchMock.mockResolvedValue(
       json({ code: "CATEGORY_TYPE_LOCKED", message: "locked" }, { status: 400 }),

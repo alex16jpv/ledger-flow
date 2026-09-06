@@ -16,7 +16,7 @@ import { Chip, ChipRow } from "@/components/ui/Chip";
 import { Field, Input } from "@/components/ui/Field";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
-import { changedOnly } from "@/lib/form/changes";
+import { changedOnly, nothingChanged } from "@/lib/form/changes";
 import { validationMessage } from "@/lib/i18n/validation";
 import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { iconProps } from "@/lib/icons/sizes";
@@ -64,20 +64,21 @@ export function AccountForm({
 
   const submit = form.handleSubmit(async (values) => {
     try {
+      if (account) {
+        const changes = changedOnly(
+          { name: values.name, type: values.type, color: values.color },
+          dirtyFields,
+        );
+        onSaved(nothingChanged(changes) ? account : await update.mutateAsync(changes));
+        return;
+      }
       onSaved(
-        account
-          ? await update.mutateAsync(
-              changedOnly(
-                { name: values.name, type: values.type, color: values.color },
-                dirtyFields,
-              ),
-            )
-          : await create.mutateAsync({
-              name: values.name,
-              type: values.type,
-              color: values.color,
-              balance: values.balance ?? 0,
-            }),
+        await create.mutateAsync({
+          name: values.name,
+          type: values.type,
+          color: values.color,
+          balance: values.balance ?? 0,
+        }),
       );
     } catch {
       return;

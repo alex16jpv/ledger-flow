@@ -1890,14 +1890,16 @@ cover` is set once in the root layout for the standalone display.
   survive the round trip through the form's day and time fields, so it would always look changed;
   classifying by "field present but equal to the server's" in the queue — the server's version is
   exactly what a stale operation does not have.
-- **Consequence:** a `PUT` with an untouched form now sends `{}`, which the route accepts as a no-op.
+- **Consequence:** an untouched form has nothing to send, and sends nothing (`nothingChanged`): every
+  `PUT` of the API refuses an empty body with `400` "At least one field must be provided", so `{}`
+  would fail online and, offline, sit in the attention tray for having changed nothing (R-5 §A).
   `dirtyFields` is read during render because React Hook Form's `formState` is a Proxy that only
   tracks what the component subscribed to — reading it first inside the submit handler answers `{}`.
 
 ## 2026-09-06 · A sheet's body can be scrolled with the keyboard (O-F7)
 
 - **Decision:** the scrollable body of `components/ui/Sheet` takes a tab stop **only when nothing
-  inside it can take one**, measured on open.
+  inside it can take one**, measured on open and again whenever its children change.
 - **Why:** axe's `scrollable-region-focusable` (serious) on the "Resolve sync conflict" sheet, whose
   body is two cards with no control in them: its footer buttons are outside the scroll area, so a
   keyboard could not reach the content at all. Every sheet shares the container; the ones whose body

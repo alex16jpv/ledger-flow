@@ -254,6 +254,19 @@ describe("EditTransactionScreen", () => {
     });
   });
 
+  // R-5 §A: the API refuses an empty PUT, and offline it would sit in the attention tray.
+  it("saving an untouched edit sends nothing and leaves the form", async () => {
+    render(<EditTransactionScreen id="t1" />);
+    expect(await screen.findByRole("textbox", { name: /^Description/ })).toHaveValue(
+      "Uber to work",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/transactions");
+    });
+    expect(calls("PUT")).toHaveLength(0);
+  });
+
   it("shows the not-found state for a missing id", async () => {
     fetchMock.mockImplementation(() =>
       Promise.resolve(json({ code: "NOT_FOUND", message: "missing" }, { status: 404 })),

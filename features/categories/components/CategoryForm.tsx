@@ -14,7 +14,7 @@ import { Segment } from "@/components/ui/Segment";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { Tile } from "@/components/ui/Tile";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
-import { changedOnly } from "@/lib/form/changes";
+import { changedOnly, nothingChanged } from "@/lib/form/changes";
 import { Link } from "@/lib/i18n/navigation";
 import { validationMessage } from "@/lib/i18n/validation";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
@@ -86,21 +86,20 @@ export function CategoryForm({
 
   const submit = form.handleSubmit(async (values) => {
     try {
-      onSaved(
-        category
-          ? await update.mutateAsync(
-              changedOnly(
-                {
-                  name: values.name,
-                  icon: values.icon,
-                  color: values.color,
-                  ...(locked ? {} : { type: values.type }),
-                },
-                dirtyFields,
-              ),
-            )
-          : await create.mutateAsync(values),
-      );
+      if (category) {
+        const changes = changedOnly(
+          {
+            name: values.name,
+            icon: values.icon,
+            color: values.color,
+            ...(locked ? {} : { type: values.type }),
+          },
+          dirtyFields,
+        );
+        onSaved(nothingChanged(changes) ? category : await update.mutateAsync(changes));
+        return;
+      }
+      onSaved(await create.mutateAsync(values));
     } catch {
       return;
     }

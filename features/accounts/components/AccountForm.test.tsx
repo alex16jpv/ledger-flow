@@ -146,4 +146,33 @@ describe("AccountForm", () => {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
   });
+
+  // R-5 §A: the API refuses an empty PUT, and offline it would sit in the attention tray.
+  it("saving an untouched edit sends nothing and hands back the account as it was", async () => {
+    const account = {
+      id: "a1",
+      name: "Nu",
+      type: "SAVINGS" as const,
+      balance: 250_000,
+      openingBalance: 0,
+      color: "PURPLE" as const,
+      userId: "u1",
+      isDefault: true,
+      currency: "COP",
+      archivedAt: null,
+      createdAt: "",
+      updatedAt: "",
+    };
+    const onSaved = vi.fn();
+    renderWithProviders(
+      <QueryProvider>
+        <AccountForm account={account} submitLabel="Save changes" onSaved={onSaved} />
+      </QueryProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledWith(account);
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
