@@ -7,6 +7,14 @@ const backendPort = process.env.E2E_BACKEND_PORT ?? "3200";
 const apiUrl =
   process.env.E2E_API_URL ?? (isCI ? "http://localhost:3000" : `http://localhost:${backendPort}`);
 
+// F-56: the suite builds into its own directory and its own worker, so a `next start` the owner has
+// running keeps serving the `.next` and the `public/sw.js` it was built with. It goes on this process
+// too, not only on the web server's: the specs read it to register the worker of THIS build, and the
+// one in `public/sw.js` precaches another build's chunks — its install would 404 and never finish.
+process.env.NEXT_DIST_DIR ??= ".next-e2e";
+process.env.SERWIST_SW_DEST ??= "public/sw-e2e.js";
+process.env.NEXT_PUBLIC_SW_PATH ??= "/sw-e2e.js";
+
 const frontEnv = {
   ...process.env,
   API_URL: apiUrl,
@@ -14,11 +22,6 @@ const frontEnv = {
   NEXT_PUBLIC_CONTACT_EMAIL: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "ledgerflow@alexpiral.com",
   NEXT_PUBLIC_APP_ENV: "test",
   E2E_APP_URL: baseURL,
-  // F-56: the suite builds into its own directory and its own worker, so a `next start` the owner
-  // has running keeps serving the `.next` and the `public/sw.js` it was built with.
-  NEXT_DIST_DIR: ".next-e2e",
-  SERWIST_SW_DEST: "public/sw-e2e.js",
-  NEXT_PUBLIC_SW_PATH: "/sw-e2e.js",
 };
 
 export default defineConfig({
