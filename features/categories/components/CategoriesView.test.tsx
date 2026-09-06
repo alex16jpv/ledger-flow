@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
 import type { Category } from "@/types/api";
@@ -111,6 +112,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  connectivityStore.reset();
 });
 
 describe("CategoriesView", () => {
@@ -140,6 +142,17 @@ describe("CategoriesView", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     await userEvent.click(toggle);
     expect(screen.getByRole("button", { name: "Restore Old" })).toBeVisible();
+  });
+
+  // F-20: the server mints these rows and their ids, so this one write of the screen cannot be
+  // queued offline. It says so and refuses, instead of failing with a network error.
+  it("does not offer to restore the defaults while offline, and says why", async () => {
+    routeFetch();
+    reportOnline(false);
+    renderView();
+    await screen.findByRole("button", { name: "Expense · 2" });
+    expect(screen.getByRole("button", { name: /^Restore$/ })).toBeDisabled();
+    expect(screen.getByText(/Needs a connection/)).toBeVisible();
   });
 
   it("restores an archived category and, on a 409, restores it under a new name", async () => {
