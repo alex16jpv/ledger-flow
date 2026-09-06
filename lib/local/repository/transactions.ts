@@ -13,7 +13,7 @@ import type {
 import { sumAmounts } from "../derive";
 import type { TransactionRecord, VaultSchema } from "../schema";
 import { mirrorNotFound, read } from "./read";
-import { dateCursorRange } from "./window";
+import { dateCursorRange, storedStamp } from "./window";
 
 export type TransactionQuery = Record<string, QueryValue>;
 
@@ -71,8 +71,14 @@ function toMirrorFilter(query: TransactionQuery): MirrorFilter | undefined {
   if (entries.some(([key]) => !SUPPORTED_PARAMS.has(key))) return undefined;
   const params = new Map(entries.map(([key, value]) => [key, String(value)]));
 
-  const from = params.get("from");
-  const to = params.get("to");
+  // The index compares the bounds as strings against the feed's UTC stamps, so one written with an
+  // offset ("2025-12-01T00:00:00-05:00") sorts below every row of its own last day and would drop
+  // them without a word. Normalised before it is compared or used as a key (F-17).
+  const bound = (raw?: string) => (raw === undefined ? undefined : storedStamp(raw));
+  const from = bound(params.get("from"));
+  const to = bound(params.get("to"));
+  // Not a date at all: the server answers that with a 400, and so should the mirror by not taking it.
+  if (from === null || to === null) return undefined;
   // IDBKeyRange.bound throws on an inverted window; the server just matches nothing.
   if (from !== undefined && to !== undefined && from > to) return undefined;
 

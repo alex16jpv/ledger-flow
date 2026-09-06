@@ -30,4 +30,4 @@ export {
   readTransactionTags,
   type TransactionQuery,
 } from "./transactions";
-export { dateCursorRange, liveRowsInWindow, mirrorTimeZone } from "./window";
+export { dateCursorRange, liveRowsInWindow, mirrorTimeZone, storedStamp } from "./window";

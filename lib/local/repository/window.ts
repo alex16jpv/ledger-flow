@@ -15,9 +15,20 @@ export function dateCursorRange(from?: string, to?: string): IDBKeyRange | null 
 
 // The index compares the stamps as strings, and a stored date is always the feed's UTC one. A bound
 // carrying an offset instead ("2025-12-01T00:00:00-05:00") would compare below every row of its own
-// last day and drop them, so a bound is normalised to the same shape before it is used as a key.
-const asStoredStamp = (bound?: string): string | undefined =>
-  bound === undefined ? undefined : new Date(bound).toISOString();
+// last day and drop them in silence, so a bound is normalised to the same shape before it is used as
+// a key — here and wherever else a window reaches the mirror (F-17). `null` is a bound that is not a
+// date at all, which the server answers with a 400.
+export function storedStamp(bound: string): string | null {
+  const at = new Date(bound);
+  return Number.isNaN(at.getTime()) ? null : at.toISOString();
+}
+
+const asStoredStamp = (bound?: string): string | undefined => {
+  if (bound === undefined) return undefined;
+  const stamp = storedStamp(bound);
+  if (stamp === null) throw new RangeError(`Not a date: ${bound}`);
+  return stamp;
+};
 
 // Every derived figure is bounded by a window, and this is how its rows are chosen: the dateCursor
 // index, never a walk of the whole store (D-18). A tombstone carries no `liveDate`, so the index

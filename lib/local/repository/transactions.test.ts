@@ -247,6 +247,30 @@ describe("the screen filters against the mirror", () => {
     expect(ids(await readTransactions({ ...window, limit: 30 }))).toEqual(["t4", "t3"]);
   });
 
+  it("takes a bound written with an offset instead of dropping rows of its own day (F-17)", async () => {
+    // Midnight in a −05:00 zone is 05:00 UTC, but as a string it sorts at "T00", below every row of
+    // its own day: an early row inside the window would fall out of it without a word.
+    const early = transaction({ id: "t5a", date: "2026-08-05T02:00:00.000Z" });
+    await mirrorOf([...ALL, early]);
+
+    expect(ids(await readTransactions({ to: "2026-08-05T00:00:00-05:00", limit: 30 }))).toEqual([
+      "t5a",
+      "t4",
+      "t3",
+      "t2",
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("leaves a bound that is not a date to the server, which answers it with a 400", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await expect(readTransactions({ from: "last tuesday", limit: 30 })).rejects.toThrow(
+      "Network request failed",
+    );
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it("filters by type", async () => {
     expect(ids(await readTransactions({ type: "INCOME", limit: 30 }))).toEqual(["t5"]);
     expect(ids(await readTransactions({ type: "TRANSFER", limit: 30 }))).toEqual(["t2"]);
