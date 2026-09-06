@@ -222,6 +222,42 @@ describe("EditTransactionScreen", () => {
     expect(await screen.findByText("Transaction deleted")).toBeVisible();
   });
 
+  // Owner report after R-3b: a quick capture edited through the full form, category included, kept
+  // its "To review" badge. The form applies the inbox's rule (P-17).
+  it("completes a quick capture when the full form saves it with a category", async () => {
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/transactions/t1") && method === "GET")
+        return Promise.resolve(json({ ...stored, pendingDetails: true, source: "QUICK" }));
+      if (url.endsWith("/api/transactions/t1") && method === "PUT")
+        return Promise.resolve(json(stored));
+      if (url.includes("/api/accounts"))
+        return Promise.resolve(json({ data: accounts, pagination }));
+      if (url.includes("/api/categories"))
+        return Promise.resolve(json({ data: categories, pagination }));
+      if (url.includes("/api/stats/spending"))
+        return Promise.resolve(json({ groupBy: "category", total: 0, buckets: [] }));
+      if (url.endsWith("/api/transactions/tags")) return Promise.resolve(json({ data: ["work"] }));
+      return Promise.resolve(json({ code: "INTERNAL", message: url }, { status: 500 }));
+    });
+    render(<EditTransactionScreen id="t1" />);
+    expect(await screen.findByRole("textbox", { name: /^Description/ })).toHaveValue(
+      "Uber to work",
+    );
+    await userEvent.clear(screen.getByRole("textbox", { name: /^Description/ }));
+    await userEvent.type(screen.getByRole("textbox", { name: /^Description/ }), "Latte");
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(calls("PUT")).toHaveLength(1);
+    });
+    expect(JSON.parse(calls("PUT")[0]?.[1]?.body as string)).toMatchObject({
+      description: "Latte",
+      categoryId: "c1",
+      pendingDetails: false,
+    });
+  });
+
   it("shows the not-found state for a missing id", async () => {
     fetchMock.mockImplementation(() =>
       Promise.resolve(json({ code: "NOT_FOUND", message: "missing" }, { status: 404 })),
