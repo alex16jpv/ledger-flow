@@ -2,6 +2,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 
+import { SW_PATH } from "../sw-path";
+
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
 const DAY_MS = 86_400_000;
@@ -12,6 +14,7 @@ interface Row {
   id: string;
   amount: number;
   type: string;
+  date: string;
   description: string | null;
   categoryId: string | null;
   pendingDetails: boolean;
@@ -85,7 +88,7 @@ async function listTransactions(request: Request): Promise<Row[]> {
 
 // The e2e build is flagged as "test", so the app does not install the worker by itself.
 async function installWorker(page: Page): Promise<void> {
-  await page.evaluate(() => navigator.serviceWorker.register("/sw.js", { scope: "/" }));
+  await page.evaluate((path) => navigator.serviceWorker.register(path, { scope: "/" }), SW_PATH);
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
   await page.reload();
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
@@ -216,6 +219,16 @@ async function coldStart(context: BrowserContext, tally: Tally, at: Date): Promi
   return page;
 }
 
+// The rows the run leaves behind are dated today and yesterday, so a run that fails before its last
+// step would hand the next one a `GATE-*` row as the one to edit — and the edit form, with the clock
+// pushed back three days, refuses a date that far ahead. Sweeping here runs on failure too (F-59).
+test.afterEach(async ({ request }) => {
+  for (const row of await listTransactions(request)) {
+    if (!(row.description ?? "").startsWith("GATE-")) continue;
+    await request.delete(`/api/transactions/${row.id}`, { headers: { origin: APP } });
+  }
+});
+
 test("three days with no network, a cold start each day, and one drain with no duplicates", async ({
   page,
   request,
@@ -257,8 +270,17 @@ test("three days with no network, a cold start each day, and one drain with no d
     report.mirrorAfterFirstLoad = await vaultState(page);
 
     const seeded = await listTransactions(request);
+    // Dated before the outage: day 2 edits one of them with the clock pushed back, and the form
+    // refuses a date more than a day ahead of what it believes today is (F-59).
     const editable = seeded.filter(
-      (row) => row.type === "EXPENSE" && row.description && !row.pendingDetails,
+      (row) =>
+        row.type === "EXPENSE" &&
+        row.description &&
+        !row.pendingDetails &&
+        new Date(row.date).getTime() < days[0]!.getTime(),
+    );
+    expect(editable.length, "the seed needs two expenses dated before the outage").toBeGreaterThan(
+      1,
     );
     editRow = editable[0]!;
     deleteRow = editable[1]!;
@@ -479,17 +501,7 @@ test("three days with no network, a cold start each day, and one drain with no d
     expect((await vaultState(settled))?.pending).toBe(0);
   });
 
-  await test.step("Limpieza · el recorrido se lleva lo que trajo", async () => {
-    for (const row of after.filter((candidate) =>
-      (candidate.description ?? "").startsWith("GATE-D"),
-    )) {
-      await request.delete(`/api/transactions/${row.id}`, { headers: { origin: APP } });
-    }
-    for (const row of after.filter((candidate) =>
-      (candidate.description ?? "").startsWith("GATE-REVIEW"),
-    )) {
-      await request.delete(`/api/transactions/${row.id}`, { headers: { origin: APP } });
-    }
+  await test.step("El informe · lo que la corrida midió", () => {
     mkdirSync("test-results", { recursive: true });
     writeFileSync(
       `test-results/offline-gate-${test.info().project.name}.json`,
