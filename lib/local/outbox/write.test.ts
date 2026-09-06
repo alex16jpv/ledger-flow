@@ -224,3 +224,35 @@ describe("writing through the outbox", () => {
     expect((await vault.db.get("transactions", "t1"))?.row.amount).toBe(20);
   });
 });
+
+// Trap 7.3 seen from the write side: the browser refuses the write because there is no room left.
+// The whole point of §4.1 is that the row and its operation go in ONE transaction — so a refusal
+// leaves neither, and the form is told instead of showing a movement that was never saved.
+describe("when IndexedDB refuses the write", () => {
+  it("fails loudly and leaves nothing half-written", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    const quota = new DOMException("no space left", "QuotaExceededError");
+    const open = vault.db.transaction.bind(vault.db);
+    let refuse = true;
+    vault.db.transaction = ((...args: Parameters<typeof open>) => {
+      if (refuse) {
+        refuse = false;
+        throw quota;
+      }
+      return open(...args);
+    }) as typeof open;
+
+    await expect(
+      createTransaction(
+        { type: "EXPENSE", amount: 5, date: "2026-09-06T10:00:00.000Z", fromAccountId: "a1" },
+        "22222222-2222-7222-8222-222222222222",
+      ),
+    ).rejects.toBe(quota);
+
+    expect(await pendingOperations(vault.db)).toEqual([]);
+    expect(await vault.db.getAll("transactions")).toEqual([]);
+    // The account keeps the figure the server gave it: nothing was projected onto it.
+    expect((await vault.db.get("accounts", "a1"))?.row.balance).toBe(1000);
+  });
+});
