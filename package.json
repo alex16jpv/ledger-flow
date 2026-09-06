@@ -31,8 +31,10 @@
     "ci": "npm run typecheck && npm run lint && npm run format:check && npm run check-tokens && npm run contrast-check && npm run test && npm run build:gate",
     "prepare": "lefthook install",
     "e2e:backend": "node tools/e2e-backend.mjs",
-    "demo:offline": "playwright test --config=playwright.gate.config.ts",
-    "demo:offline:watch": "DEMO_SLOW_MS=400 playwright test --config=playwright.gate.config.ts --project=desktop --headed",
+    "demo:offline": "playwright test --config=playwright.gate.config.ts tests/gate/offline-o-a.spec.ts",
+    "demo:offline:watch": "DEMO_SLOW_MS=400 playwright test --config=playwright.gate.config.ts tests/gate/offline-o-a.spec.ts --project=desktop --headed",
+    "demo:offline:b": "playwright test --config=playwright.gate.config.ts tests/gate/offline-o-b.spec.ts",
+    "demo:offline:b:watch": "DEMO_SLOW_MS=400 playwright test --config=playwright.gate.config.ts tests/gate/offline-o-b.spec.ts --project=desktop --headed",
     "demo:offline:report": "playwright show-report playwright-report-gate"
   },
   "dependencies": {
