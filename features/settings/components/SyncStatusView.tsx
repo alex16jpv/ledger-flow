@@ -7,6 +7,7 @@ import {
   MonitorSmartphone,
   RefreshCw,
   ShieldCheck,
+  Split,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useSyncExternalStore } from "react";
@@ -22,6 +23,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 import { forceFullResync } from "@/lib/local/mirror";
+import { syncTransport } from "@/lib/local/outbox/engine";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { connectivityStore } from "@/lib/network/connectivity";
 
@@ -112,6 +114,16 @@ export function SyncStatusView() {
             meta={outbox.lastError ? t("lastError.label", { code: outbox.lastError }) : undefined}
             value={String(outbox.pending)}
           />
+          {/* Only when it fell back: a server without `POST /sync` takes the queue one operation at
+              a time, and support has no other way to see it. */}
+          {syncTransport() === "routes" && (
+            <StatusRow
+              icon={<Split {...iconProps("sm")} />}
+              title={t("transport.label")}
+              meta={t("transport.help")}
+              value={t("transport.routes")}
+            />
+          )}
           <StatusRow
             icon={<HardDrive {...iconProps("sm")} />}
             title={t("storage.label")}

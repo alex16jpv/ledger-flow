@@ -37,6 +37,9 @@ interface ReviewCardProps {
   recent: readonly Category[];
   focused: boolean;
   errorKey: ErrorMessageKey | null;
+  // F-57: the server saved this movement without its category because it had been archived while
+  // this device had no network, so the card says why it is here.
+  droppedCategory?: boolean;
 }
 
 export function ReviewCard({
@@ -47,6 +50,7 @@ export function ReviewCard({
   recent,
   focused,
   errorKey,
+  droppedCategory = false,
 }: ReviewCardProps) {
   const t = useTranslations();
   const tc = useTranslations("common");
@@ -116,6 +120,7 @@ export function ReviewCard({
         <Badge tone="warning">{t("transactions.list.toReview")}</Badge>
       </div>
       {errorKey && <Alert tone="danger">{t(errorKey)}</Alert>}
+      {droppedCategory && <Alert tone="warning">{t("transactions.review.droppedCategory")}</Alert>}
       <ChipRow role="group" aria-label={t("transactions.form.category")}>
         {chips.map((category) => (
           <CategoryChip

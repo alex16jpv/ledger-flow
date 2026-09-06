@@ -22,6 +22,7 @@ import {
   discardImpact,
   discardOperations,
   operationsNeedingAttention,
+  restoreArchivedAccount,
   retryOperations,
 } from "@/lib/local/outbox/resolve";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
@@ -36,6 +37,11 @@ interface Item {
 }
 
 type View = { kind: "loading" } | { kind: "error" } | { kind: "ready"; items: Item[] };
+
+// F-58: the account the operation names was archived online, so trying again as it is would earn the
+// same refusal. Its way out is restoring the account, which travels in the same batch.
+const isArchivedAccount = (operation: OutboxOperation): boolean =>
+  operation.status === "conflict" && operation.lastError === "RESOURCE_ARCHIVED";
 
 async function nameOf(
   db: IDBPDatabase<VaultSchema>,
@@ -134,12 +140,29 @@ export function AttentionScreen() {
       toast.show({ message: t("states.attention.retried", { count: seqs.length }) });
     });
 
+  const restore = (seq: number) =>
+    act(async () => {
+      const vault = currentVault();
+      if (!vault) return;
+      if (await restoreArchivedAccount(vault.db, seq)) {
+        toast.show({ message: t("states.attention.retried", { count: 1 }) });
+        return;
+      }
+      toast.show({ message: t("states.conflict.archived.gone"), tone: "danger" });
+    });
+
   const items = view.kind === "ready" ? view.items : [];
   const allSeqs = items.map((item) => item.operation.seq);
 
   function reason(operation: OutboxOperation): string {
     const what = t(`states.conflict.entities.${operation.entity}`);
-    if (operation.status !== "failed") return t("states.conflict.stale.body", { what });
+    if (isArchivedAccount(operation)) return t("states.conflict.archived.body", { what });
+    // A `conflict` the server explained with a code of its own — a name already taken, a reference
+    // it will not take — never applied either, and the code is the reason. Only `STALE_UPDATE` is
+    // the same row written in two places.
+    if (operation.status !== "failed" && operation.lastError === "STALE_UPDATE") {
+      return t("states.conflict.stale.body", { what });
+    }
     const code = operation.lastError;
     return t("states.conflict.failed.body", {
       what,
@@ -158,17 +181,25 @@ export function AttentionScreen() {
     return t.has(key) ? t(key, { what }) : what;
   }
 
+  function kind(operation: OutboxOperation): string {
+    if (isArchivedAccount(operation)) return t("states.attention.kinds.archived");
+    return t(
+      operation.status === "failed"
+        ? "states.attention.kinds.failed"
+        : "states.attention.kinds.conflict",
+    );
+  }
+
   function card({ operation, name }: Item) {
     const what = t(`states.conflict.entities.${operation.entity}`);
     const said = saidAbout(operation, what);
     const refused = operation.status === "failed";
+    const archived = isArchivedAccount(operation);
     return (
       <Card key={operation.seq} className="flex flex-col gap-3 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-md font-semibold">{name ?? said}</h2>
-          <Badge tone="danger">
-            {t(refused ? "states.attention.kinds.failed" : "states.attention.kinds.conflict")}
-          </Badge>
+          <Badge tone="danger">{kind(operation)}</Badge>
         </div>
         {name && <p className="text-sm text-text-2">{said}</p>}
         <p className="text-sm text-text-2">{reason(operation)}</p>
@@ -183,9 +214,11 @@ export function AttentionScreen() {
           <Button
             variant={refused ? "secondary" : "primary"}
             disabled={busy}
-            onClick={() => void retry([operation.seq])}
+            onClick={() => (archived ? void restore(operation.seq) : void retry([operation.seq]))}
           >
-            {t(refused ? "states.conflict.retry" : "states.conflict.keepMine")}
+            {archived
+              ? t("states.conflict.archived.restore")
+              : t(refused ? "states.conflict.retry" : "states.conflict.keepMine")}
           </Button>
           <Button
             variant="ghost"

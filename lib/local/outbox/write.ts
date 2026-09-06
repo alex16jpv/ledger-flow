@@ -2,12 +2,19 @@ import { vaultReady } from "../repository/read";
 import {
   type DrainOutcome,
   type DrainReport,
+  forgetRollbacks,
   pullAfterDirectSend,
   registerRollback,
   requestSync,
 } from "./engine";
 import { NotProjectableError } from "./projected";
-import { type LocalWrite, type QueuedWrite, queueWrite, type VaultDb } from "./queue";
+import {
+  type LocalWrite,
+  type QueuedWrite,
+  type QueueOptions,
+  queueWrite,
+  type VaultDb,
+} from "./queue";
 import { routeFor } from "./routes";
 import { refreshOutboxStatus } from "./status";
 
@@ -43,6 +50,19 @@ function outcomeOf(report: DrainReport, seq: number): DrainOutcome | undefined {
   return outcome;
 }
 
+// Queues a write and stops there. The one caller is a resolution that has to travel with the
+// operation it unblocks (F-58): asking for a drain here would send the resolution on its own, in a
+// batch of one, which is the whole thing it exists to avoid.
+export async function enqueue(
+  db: VaultDb,
+  local: LocalWrite,
+  options: QueueOptions = {},
+): Promise<QueuedWrite> {
+  const queued = await queueWrite(db, local, undefined, options);
+  await refreshOutboxStatus(db);
+  return queued;
+}
+
 export async function write<T>(request: WriteRequest<T>): Promise<T> {
   const vault = await vaultReady();
   if (!vault) return sendDirect<T>(request.local);
@@ -65,6 +85,11 @@ export async function write<T>(request: WriteRequest<T>): Promise<T> {
   if (outcome?.kind === "rejected") throw outcome.error;
   // The server answered in time, so the screen gets its row rather than the projection of it.
   if (outcome?.kind === "sent") return outcome.result as T;
+  // Answered from the projection, so nobody is waiting for this operation any more. Whatever undo
+  // it left behind stops being an answer to a form: a later drain that finds the server refusing it
+  // leaves it in the tray for the user to resolve instead of undoing a write nobody is looking at
+  // (F-23). Settled operations have already dropped theirs; this is the one still queued.
+  forgetRollbacks([seq]);
   return request.optimistic(db);
 }
 
@@ -97,6 +122,7 @@ export async function writeAll<T>(requests: WriteRequest<T>[]): Promise<PromiseS
       const outcome = outcomeOf(report, entry.operation.seq);
       if (outcome?.kind === "rejected") throw outcome.error;
       if (outcome?.kind === "sent") return outcome.result as T;
+      forgetRollbacks([entry.operation.seq]);
       return request.optimistic(db);
     }),
   );

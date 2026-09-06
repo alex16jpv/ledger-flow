@@ -2,8 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { setCurrentVault } from "@/lib/local/repository/read";
+import { profileRecord, transactionRecord } from "@/lib/local/schema";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
+import { openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
 
 import { ReviewScreen } from "./ReviewScreen";
 
@@ -120,8 +123,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
+  setCurrentVault(null);
+  await wipeVaults();
 });
 
 function render() {
@@ -272,5 +277,27 @@ describe("ReviewScreen", () => {
     render();
     expect(await screen.findByRole("heading", { name: "All reviewed" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Go home" })).toHaveAttribute("href", "/home");
+  });
+  it("says why the server saved a movement without its category (F-57)", async () => {
+    const vault = await openTestVault("u1");
+    await vault.db.put("profile", profileRecord(profile()));
+    for (const id of ["q1", "q2"]) {
+      await vault.db.put(
+        "transactions",
+        transactionRecord({ ...transaction({ id }), categoryId: null, pendingDetails: true }),
+      );
+    }
+    await vault.db.put("meta", {
+      key: "syncNotices",
+      value: JSON.stringify([
+        { code: "CATEGORY_ARCHIVED_DROPPED", id: "q1", at: "2026-09-06T10:00:00.000Z" },
+      ]),
+    });
+    setCurrentVault(vault);
+    render();
+
+    expect(await screen.findByText(/Its category had been archived/)).toBeVisible();
+    // One row was warned about, not both.
+    expect(screen.getAllByText(/Its category had been archived/)).toHaveLength(1);
   });
 });

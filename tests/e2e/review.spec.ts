@@ -56,7 +56,7 @@ test("the Complete link on a pending detail lands on its card", async ({ page, r
   await request.delete(`/api/transactions/${created.id}`, { headers: { origin: APP } });
 });
 
-test("Save all completes the categorized cards, one guarded request per row", async ({
+test("Save all completes the categorized cards, one guarded operation per row", async ({
   page,
   request,
 }) => {
@@ -93,11 +93,19 @@ test("Save all completes the categorized cards, one guarded request per row", as
   }
   await cards[1]!.getByRole("textbox", { name: "Description" }).fill("E2E batch");
 
-  // F-20: the lot leaves the outbox expanded into one operation per row, so what goes out is one
-  // guarded PUT each and never the batch endpoint.
+  // F-20 with O-F5b: the lot leaves the outbox expanded into one operation per row — each with its
+  // own guard and its own outcome — and the queue travels as one `POST /sync`, never as the API's
+  // own `PATCH /transactions/batch`.
   const sentUrls: string[] = [];
+  const batches: { entity: string; action: string; id: string; baseUpdatedAt?: string }[][] = [];
   page.on("request", (sent) => {
     if (sent.method() === "PUT" || sent.method() === "PATCH") sentUrls.push(sent.url());
+    if (sent.method() === "POST" && sent.url().endsWith("/api/sync")) {
+      const body = sent.postDataJSON() as {
+        operations: { entity: string; action: string; id: string; baseUpdatedAt?: string }[];
+      };
+      batches.push(body.operations);
+    }
   });
   await page.getByRole("button", { name: "Save all · 2" }).click();
   const dialog = page.getByRole("dialog", { name: "Save 2 expenses?" });
@@ -105,9 +113,14 @@ test("Save all completes the categorized cards, one guarded request per row", as
   await expect(page.getByText("2 expenses saved")).toBeVisible();
   await expect(page.getByRole("heading", { name: "All reviewed" })).toBeVisible();
   expect(sentUrls.filter((url) => url.endsWith("/api/transactions/batch"))).toHaveLength(0);
-  for (const id of ids) {
-    expect(sentUrls.filter((url) => url.endsWith(`/api/transactions/${id}`))).toHaveLength(1);
-  }
+  expect(batches).toHaveLength(1);
+  const operations = batches[0]!;
+  expect(operations.map((operation) => `${operation.entity}:${operation.action}`)).toEqual([
+    "transaction:update",
+    "transaction:update",
+  ]);
+  expect(operations.map((operation) => operation.id).sort()).toEqual([...ids].sort());
+  expect(operations.every((operation) => typeof operation.baseUpdatedAt === "string")).toBe(true);
 
   for (const id of ids) {
     const row = (await (await request.get(`/api/transactions/${id}`)).json()) as {

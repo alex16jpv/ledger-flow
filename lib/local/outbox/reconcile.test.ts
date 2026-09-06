@@ -1,4 +1,12 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
+import {
+  answerBatch,
+  applied,
+  conflictWith,
+  operationsOf,
+  rejectedWith,
+  SERVER_TIME,
+} from "@/lib/testing/sync";
 import { account, openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
 import type { SyncChangesResponse } from "@/types/api";
 
@@ -50,11 +58,9 @@ async function vaultWith() {
   return vault;
 }
 
-const stale = (current?: unknown) =>
-  json(
-    { error: "Conflict", message: "stale", code: "STALE_UPDATE", ...(current ? { current } : {}) },
-    { status: 409 },
-  );
+const stale = (current: unknown) => {
+  answerBatch(fetchMock, () => conflictWith("STALE_UPDATE", current));
+};
 
 const row = async (db: VaultDb) => (await db.get("transactions", "t1"))?.row;
 const kept = async (db: VaultDb) => (await db.get("transactions", "t1"))?.server;
@@ -78,7 +84,7 @@ describe("the row the mirror keeps while its queue is not empty", () => {
     expect((await row(vault.db))?.amount).toBe(130);
     expect((await kept(vault.db))?.amount).toBe(100);
 
-    fetchMock.mockResolvedValue(json({ ...served, amount: 130, updatedAt: T1 }));
+    answerBatch(fetchMock, () => applied({ ...served, amount: 130, updatedAt: T1 }));
     reportOnline(true);
     await requestSync();
 
@@ -103,7 +109,7 @@ describe("the row the mirror keeps while its queue is not empty", () => {
     });
 
     // ...then the drain earns the 409: the row goes back to the server's, the edit lives on the op.
-    fetchMock.mockResolvedValue(stale(other));
+    stale(other);
     reportOnline(true);
     await requestSync();
 
@@ -119,7 +125,7 @@ describe("the row the mirror keeps while its queue is not empty", () => {
     const vault = await vaultWith();
     reportOnline(false);
     await updateTransaction("t1", { amount: 130 });
-    fetchMock.mockResolvedValue(stale({ ...served, updatedAt: T1 }));
+    stale({ ...served, updatedAt: T1 });
     reportOnline(true);
     await requestSync();
     expect(await statuses(vault.db)).toEqual(["conflict"]);
@@ -137,9 +143,7 @@ describe("the row the mirror keeps while its queue is not empty", () => {
     await updateTransaction("t1", { date: "2027-01-01T00:00:00.000Z" });
     // The tab that made the write is gone: the rollback with it, which is what leaves `failed`.
     resetSyncEngine();
-    fetchMock.mockResolvedValue(
-      json({ error: "Validation", message: "future", code: "FUTURE_DATE" }, { status: 400 }),
-    );
+    answerBatch(fetchMock, () => rejectedWith("FUTURE_DATE"));
     reportOnline(true);
     await requestSync();
 
@@ -158,7 +162,7 @@ describe("the row the mirror keeps while its queue is not empty", () => {
     reportOnline(false);
     await updateTransaction("t1", { amount: 130 });
     await updateTransaction("t1", { description: "Dinner" });
-    fetchMock.mockResolvedValue(stale({ ...served, updatedAt: T1 }));
+    stale({ ...served, updatedAt: T1 });
     reportOnline(true);
     await requestSync();
     expect(await statuses(vault.db)).toEqual(["conflict", "pending"]);
@@ -176,15 +180,25 @@ describe("the row the mirror keeps while its queue is not empty", () => {
     reportOnline(false);
     await updateTransaction("t1", { amount: 130 });
     await deleteTransaction("t1");
-    let calls = 0;
-    fetchMock.mockImplementation(() => {
-      calls += 1;
-      return Promise.resolve(
-        calls === 1
-          ? json({ ...served, amount: 130, updatedAt: T1 })
-          : json({ error: "Server", message: "later", code: "INTERNAL" }, { status: 503 }),
-      );
-    });
+    // The batch takes the edit and says nothing about the delete: an operation the server did not
+    // answer for is never taken for landed, so it stays in line.
+    fetchMock.mockImplementation((_input, init) =>
+      Promise.resolve(
+        json({
+          serverTime: SERVER_TIME,
+          results: operationsOf(init)
+            .filter((operation) => operation.action === "update")
+            .map((operation) => ({
+              opId: operation.opId,
+              seq: operation.seq,
+              entity: operation.entity,
+              id: operation.id,
+              status: "applied",
+              result: { ...served, amount: 130, updatedAt: T1 },
+            })),
+        }),
+      ),
+    );
     reportOnline(true);
     await requestSync();
 

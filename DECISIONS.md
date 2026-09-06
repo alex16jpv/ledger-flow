@@ -1771,3 +1771,63 @@ cover` is set once in the root layout for the standalone display.
   below is the legend; the hint answers the question where the eye is).
 - **Consequence:** `Tooltip` accepts a `style`, because a stacked bar sizes its segments by
   percentage and the wrapper has to carry that width.
+
+## 2026-09-06 · The queue leaves in one request, and the routes stay as the fallback (O-F5b)
+
+- **Decision:** the engine sends the whole outbox to `POST /sync` as one batch (1–200 operations,
+  body under a megabyte, cut in `batch.ts`) and spreads the six statuses of the answer over the queue
+  transitions that already existed. If `POST /sync` answers `404` or `501` — a server older than this
+  front — the queue keeps leaving by the ordinary per-operation routes for the rest of the session; a
+  `400` or `413` on the envelope sends that one pass by the routes too, and keeps the batch.
+- **Why:** N requests deduced each operation's fate from N error codes, and three of the six outcomes
+  the contract now answers (`merged`, `duplicate`, `blocked`) have no HTTP code to deduce them from.
+  The owner asked for the fallback (2026-09-06): front and backend deploy apart, and a `404` with no
+  fallback strands every queued write on the device until the backend catches up. `routes.ts` cannot
+  be deleted in any case — `sendDirect`, the write with no vault, still goes through it.
+- **Alternatives:** batch only, no fallback (one transport, less code; a bad deploy order stalls
+  every device's queue); keeping the routes for conflicts and the batch for the rest (two paths for
+  the same operation, which is the duplication trap 7.8 warns about).
+- **Consequence:** two transports and two suites. `syncTransport()` says which one is in use, for
+  Ajustes › Sync status (O-F6) to report.
+
+## 2026-09-06 · `seq` on the wire is the rank inside the batch (O-F5b)
+
+- **Decision:** each operation travels with its position in the batch as `seq`, not with the device's
+  counter. Locally, a resolution that has to be applied **before** the operation it unblocks is
+  queued with a fractional `seq` between its target and whatever precedes it (F-58).
+- **Why:** the server takes `seq` as `z.number().int()` and uses it for one thing, the order it
+  applies the batch in; the local queue needs to insert **before** an existing operation, and the
+  counter only goes up. Renumbering the queue instead would move an operation past a later edit of
+  the same row, and moving the target later would break the chain it belongs to.
+- **Alternatives:** integer gaps reserved up front (does nothing for a queue already numbered);
+  renumbering on insert (`seq` is the primary key of the store, the rollback map's key and what the
+  tray and the sheet address an operation by).
+- **Consequence:** results are matched back by `opId`, never by `seq`, and nothing local reads `seq`
+  as anything but an order.
+
+## 2026-09-06 · Inside one batch, only the first operation of a row is guarded (O-F5b)
+
+- **Decision:** when a batch carries several operations of the same row, only the first one sends
+  `baseUpdatedAt`; the rest travel unconditional.
+- **Why:** they were all queued against the stamp the first one is about to replace (D-22), and a
+  batch has no gap in which to rebase them — they would earn a `conflict` `STALE_UPDATE` that means
+  nothing. Unguarded they are still safe: `POST /sync` blocks by entity id, so if the first one
+  conflicts or is refused, the rest come back `blocked` without being applied (D-30).
+- **Alternatives:** one operation per row per batch (splits the queue into more requests in exactly
+  the case the batch existed to fix); guessing the stamp the previous operation will produce (the
+  client does not write `updatedAt`, invariant 2).
+- **Consequence:** the owner approved it on 2026-09-06. Across batches the old rebase still applies.
+
+## 2026-09-06 · A warning lives with the row it explains, in `meta` (F-57)
+
+- **Decision:** `warnings: ["CATEGORY_ARCHIVED_DROPPED"]` on a landed operation is kept as one notice
+  per row in `meta.syncNotices` (JSON), and the **review screen** reads them and prunes what no longer
+  needs a review.
+- **Why:** the write landed, so there is nothing to resolve in the sync tray — and with an empty queue
+  the tray is not even reachable. The user meets the movement where the missing category has to be
+  filled in, and that is where the reason belongs.
+- **Alternatives:** an object store of its own (a mirror version bump, and a re-pull, for a handful of
+  notices); a toast (a drain can happen with no tab open); a field on the mirror row (the next pull
+  replaces the row, and inventing a server field would be a lie).
+- **Consequence:** one more `MetaKey`. A notice outlives its row by nothing: `pruneNotices` drops it
+  as soon as the movement is reviewed, deleted or gone from the mirror.

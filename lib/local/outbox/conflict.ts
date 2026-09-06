@@ -69,9 +69,18 @@ export function conflictFields(operation: OutboxOperation, serverRow: unknown): 
     }));
 }
 
+// The refusal's row, but only when it IS the operation's row. A `conflict` `DUPLICATE` answers with
+// the row that already holds the name — somebody else's row — and taking that one as the operation's
+// own baseline would put a foreign row in the mirror and guard the retry against a stamp that never
+// belonged to it. The sheet still shows it: comparing the two names is the point.
+export function ownServerRow(operation: OutboxOperation): unknown {
+  const row = operation.serverRow as { id?: unknown } | null | undefined;
+  return row?.id === operation.entityId ? operation.serverRow : undefined;
+}
+
 // The stamp a retry has to guard against: the one the server answered the 409 with.
 export function serverStamp(operation: OutboxOperation): string | undefined {
-  const row = operation.serverRow;
+  const row = ownServerRow(operation);
   const updatedAt = (row as { updatedAt?: unknown } | null | undefined)?.updatedAt;
   return typeof updatedAt === "string" ? updatedAt : undefined;
 }

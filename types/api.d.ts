@@ -65,7 +65,7 @@ export type paths = {
         /**
          * Create a new account
          * @description The first account is marked default automatically. Currency is stamped from the user (mono-currency mode). Active account names are unique per user, case-insensitively ("Efectivo" = "efectivo"; accents still distinct) and trimmed; archiving an account frees its name.
-         *     Accepts an optional client-minted `id` (UUID). Replaying the same create returns 200 with the stored resource; the same id with a different payload, or one that belongs to another user, is rejected with 409 ID_TAKEN.
+         *     Accepts an optional client-minted `id` (UUID). An id the user already owns replays with 200 and the stored resource, whatever the payload says now (the row may have been edited elsewhere since); an id that belongs to another user is rejected with 409 ID_TAKEN.
          */
         post: {
             parameters: {
@@ -281,13 +281,13 @@ export type paths = {
             };
             requestBody?: never;
             responses: {
-                /** @description Account archived */
+                /** @description The archived account (also when it was already archived), with its new `updatedAt` */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Message"];
+                        "application/json": components["schemas"]["Account"];
                     };
                 };
                 /** @description Invalid ID format (code VALIDATION) or account is the default (code DEFAULT_ACCOUNT_ARCHIVE_BLOCKED, set another default first) */
@@ -1019,10 +1019,10 @@ export type paths = {
          *     can exist. `periodStartDate`/`periodEndDate` are required with `periodType=CUSTOM`
          *     and rejected for any other period type. `currency` is stamped from the user.
          *
-         *     Accepts an optional client-minted `id` (UUID). Replaying the same
-         *     create returns 200 with the stored budget; the same id with a
-         *     different payload, or one that belongs to another user, is rejected
-         *     with 409 ID_TAKEN.
+         *     Accepts an optional client-minted `id` (UUID). An id the user already
+         *     owns replays with 200 and the stored budget, whatever the payload
+         *     says now (the row may have been edited elsewhere since); an id that
+         *     belongs to another user is rejected with 409 ID_TAKEN.
          */
         post: {
             parameters: {
@@ -1232,13 +1232,13 @@ export type paths = {
         /**
          * Archive a budget
          * @description Soft delete; the budget stays readable via GET /budgets/{id}. Idempotent —
-         *     archiving an already-archived budget is a no-op success. There is no restore
-         *     endpoint: to recover, create a new budget.
+         *     archiving an already-archived budget is a no-op success. Reversible with
+         *     POST /budgets/{id}/restore.
          */
         delete: {
             parameters: {
                 query?: {
-                    /** @description Accepted for uniformity; not used by this operation */
+                    /** @description Resolves the period of the archived view answered (default: now) */
                     reference?: string;
                 };
                 header?: {
@@ -1253,13 +1253,13 @@ export type paths = {
             };
             requestBody?: never;
             responses: {
-                /** @description Budget archived (or already archived) */
+                /** @description The archived budget view (also when it was already archived), with its new `updatedAt` */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Message"];
+                        "application/json": components["schemas"]["Budget"];
                     };
                 };
                 /** @description Invalid ID or reference */
@@ -1612,7 +1612,7 @@ export type paths = {
         /**
          * Create a new category
          * @description Active category names are unique per user, case-insensitively ("Comida" = "comida"; accents still distinct).
-         *     Accepts an optional client-minted `id` (UUID). Replaying the same create returns 200 with the stored resource; the same id with a different payload, or one that belongs to another user, is rejected with 409 ID_TAKEN.
+         *     Accepts an optional client-minted `id` (UUID). An id the user already owns replays with 200 and the stored resource, whatever the payload says now (the row may have been edited elsewhere since); an id that belongs to another user is rejected with 409 ID_TAKEN.
          */
         post: {
             parameters: {
@@ -1879,13 +1879,13 @@ export type paths = {
             };
             requestBody?: never;
             responses: {
-                /** @description Category archived (or already archived) */
+                /** @description The archived category (also when it was already archived), with its new `updatedAt` */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Message"];
+                        "application/json": components["schemas"]["Category"];
                     };
                 };
                 /** @description Invalid ID format (code VALIDATION) */
@@ -2188,6 +2188,121 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Push the offline outbox as one batch
+         * @description Applies up to 200 queued write operations in `seq` order, each one
+         *     through **the same service the matching HTTP route calls** — no rule
+         *     lives here that the routes do not enforce — and answers **one result
+         *     per operation**. The batch is not a transaction: the response is
+         *     `200` whenever the envelope is valid, and each operation's `status`
+         *     says what happened to it.
+         *
+         *     | status | meaning | what the client does |
+         *     |---|---|---|
+         *     | `applied` | landed now; `result` is what the route would have answered | drop the operation, keep `result` |
+         *     | `duplicate` | already landed: a resent `opId`, or a create whose `id` the user already owns (`result` carries the row in that case) | drop the operation |
+         *     | `conflict` | the route would have answered 409 (`STALE_UPDATE` with `current`, `DUPLICATE`, `ID_TAKEN`), or a row the server has explains it: a `DUPLICATE` whose name an active row holds, and `RESOURCE_ARCHIVED` for an account archived online. `current` carries that row | keep it; resolve |
+         *     | `rejected` | the route would have answered another 4xx (`VALIDATION`, `NOT_FOUND`, `CATEGORY_ARCHIVED`, `BUDGET_PERIOD_OVERLAP`, `FUTURE_DATE`…) | keep it; the user fixes or discards |
+         *     | `blocked` | a row it names (`dependsOn`, or its own `id`) had an operation fail earlier in this batch; `blockedBy` is that opId | keep it; resend once the blocker is resolved |
+         *     | `merged` | a category create whose name and type an active category already has: it landed on that row, named by `mergedInto`, and the rest of the batch was redirected to it | drop it; point the local row at `mergedInto` |
+         *
+         *     **Reconciliation (per entity).** A category create whose name (case
+         *     folded, like the unique index) and type match an ACTIVE category comes
+         *     back `merged`; same name, another type stays a conflict. Accounts never
+         *     merge — it would rewrite balances — so a taken name is a conflict with
+         *     the server's account in `current`. A movement whose category was
+         *     archived online is saved WITHOUT it, flagged `pendingDetails`, with
+         *     `warnings: ["CATEGORY_ARCHIVED_DROPPED"]`; a budget's category is never
+         *     dropped (no categories means a global budget). A movement whose account
+         *     was archived online is a `conflict` `RESOURCE_ARCHIVED` and is never
+         *     lost. Archiving an already-archived row lands, and deleting a movement
+         *     another device deleted answers `duplicate`.
+         *
+         *     **Actions per entity:** account: create, update, archive, restore,
+         *     setDefault · category: create, update, archive, restore · transaction:
+         *     create, quickAdd, update, delete · budget: create, update, archive,
+         *     restore, setOverride, clearOverride. `payload.body` is the body the
+         *     matching route takes, validated with the same rules (a bad body
+         *     rejects that operation only); `payload.query.reference` is the budget
+         *     routes' `reference`; `baseUpdatedAt` is the route's `If-Match`. A
+         *     create's `payload.body.id`, if sent, must equal `id`.
+         *
+         *     **Idempotency:** every landed `opId` is remembered for 30 days; sending
+         *     it again answers `duplicate` without applying anything. A conflict or
+         *     a rejection is not remembered — the operation is still pending on the
+         *     device, which may resend it once fixed.
+         *
+         *     **Limits:** 1–200 operations, body up to 1 MB, `opVersion` 1.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SyncBatchInput"];
+                };
+            };
+            responses: {
+                /** @description One result per operation, in `seq` order */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SyncBatchResponse"];
+                    };
+                };
+                /**
+                 * @description The envelope is invalid (code VALIDATION): empty or too long, a
+                 *     repeated opId, a malformed field. Nothing was applied.
+                 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Body over 1 MB (code PAYLOAD_TOO_LARGE) */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/transactions": {
         parameters: {
             query?: never;
@@ -2277,10 +2392,10 @@ export type paths = {
          *
          *     The server stamps `currency` (from the involved account) and `source`; client-sent values are ignored.
          *
-         *     Accepts an optional client-minted `id` (UUID). Replaying the same
-         *     create returns 200 with the stored transaction; the same id with a
-         *     different payload, or one that belongs to another user, is rejected
-         *     with 409 ID_TAKEN.
+         *     Accepts an optional client-minted `id` (UUID). An id the user already
+         *     owns replays with 200 and the stored transaction, whatever the
+         *     payload says now (the row may have been edited elsewhere since); an
+         *     id that belongs to another user is rejected with 409 ID_TAKEN.
          */
         post: {
             parameters: {
@@ -2387,10 +2502,10 @@ export type paths = {
          *     The created transaction is flagged `pendingDetails: true` and `source: QUICK`
          *     so the client can list it for later detailing. ADJUSTMENT is not allowed here.
          *
-         *     Accepts an optional client-minted `id` (UUID). Replaying the same
-         *     create returns 200 with the stored transaction; the same id with a
-         *     different payload, or one that belongs to another user, is rejected
-         *     with 409 ID_TAKEN.
+         *     Accepts an optional client-minted `id` (UUID). An id the user already
+         *     owns replays with 200 and the stored transaction, whatever the
+         *     payload says now (the row may have been edited elsewhere since); an
+         *     id that belongs to another user is rejected with 409 ID_TAKEN.
          */
         post: {
             parameters: {
@@ -3147,6 +3262,36 @@ export type components = {
         BudgetAmountOverrideInput: {
             amount: number;
         };
+        SyncBatchInput: {
+            operations: {
+                /** Format: uuid */
+                opId: string;
+                seq: number;
+                /** Format: date-time */
+                occurredAt: string;
+                /** @enum {string} */
+                entity: "account" | "category" | "transaction" | "budget";
+                /** @description Per entity — account: create, update, archive, restore, setDefault; category: create, update, archive, restore; transaction: create, quickAdd, update, delete; budget: create, update, archive, restore, setOverride, clearOverride */
+                action: string;
+                /** Format: uuid */
+                id: string;
+                /** @default {} */
+                payload: {
+                    body?: {
+                        [key: string]: unknown;
+                    };
+                    query?: {
+                        /** Format: date-time */
+                        reference?: string;
+                    };
+                };
+                /** Format: date-time */
+                baseUpdatedAt?: string;
+                /** @default [] */
+                dependsOn: string[];
+                opVersion: number;
+            }[];
+        };
         ErrorResponse: {
             /** @example NotFoundError */
             error: string;
@@ -3456,6 +3601,55 @@ export type components = {
                 nextCursor: string;
             };
         };
+        SyncOpResult: {
+            /** Format: uuid */
+            opId: string;
+            seq: number;
+            /** @enum {string} */
+            entity: "account" | "category" | "transaction" | "budget";
+            /**
+             * Format: uuid
+             * @description The entity the operation was about.
+             */
+            id: string;
+            /** @enum {string} */
+            status: "applied" | "merged" | "duplicate" | "conflict" | "rejected" | "blocked";
+            /**
+             * @description conflict / rejected: the code the matching route would have answered.
+             * @enum {string}
+             */
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            message?: string;
+            details?: {
+                field?: string;
+                message?: string;
+            }[];
+            /** @description The row as the server has it, like the HTTP 409: STALE_UPDATE, a DUPLICATE whose name an active row holds, and RESOURCE_ARCHIVED. */
+            current?: components["schemas"]["Account"] | components["schemas"]["Category"] | components["schemas"]["Transaction"] | components["schemas"]["Budget"];
+            /** @description applied, merged, and duplicate by client-minted id: what the route would have answered. Absent for transaction:delete and for a duplicate opId. */
+            result?: components["schemas"]["Account"] | components["schemas"]["Category"] | components["schemas"]["Transaction"] | components["schemas"]["Budget"];
+            /**
+             * Format: uuid
+             * @description blocked only: the opId, in this batch, whose failure blocks this one.
+             */
+            blockedBy?: string;
+            /**
+             * Format: uuid
+             * @description merged (and a resent merged opId): the server row this operation landed on instead of `id`. Later operations of the same batch that name `id` are applied against it.
+             */
+            mergedInto?: string;
+            /** @description The write landed, but not as it was sent: CATEGORY_ARCHIVED_DROPPED — the category was archived online, so the movement was saved without it and flagged pendingDetails. */
+            warnings?: "CATEGORY_ARCHIVED_DROPPED"[];
+        };
+        SyncBatchResponse: {
+            /**
+             * Format: date-time
+             * @description The server's clock when the batch started.
+             */
+            serverTime: string;
+            /** @description One per operation, in `seq` order. */
+            results: components["schemas"]["SyncOpResult"][];
+        };
         AccountList: {
             data: components["schemas"]["Account"][];
             pagination: components["schemas"]["Pagination"];
@@ -3523,6 +3717,7 @@ export type RestoreInput = components['schemas']['RestoreInput'];
 export type CreateBudgetInput = components['schemas']['CreateBudgetInput'];
 export type UpdateBudgetInput = components['schemas']['UpdateBudgetInput'];
 export type BudgetAmountOverrideInput = components['schemas']['BudgetAmountOverrideInput'];
+export type SyncBatchInput = components['schemas']['SyncBatchInput'];
 export type ErrorResponse = components['schemas']['ErrorResponse'];
 export type Message = components['schemas']['Message'];
 export type Pagination = components['schemas']['Pagination'];
@@ -3540,6 +3735,8 @@ export type StatsResponse = components['schemas']['StatsResponse'];
 export type SyncTransaction = components['schemas']['SyncTransaction'];
 export type SyncBudget = components['schemas']['SyncBudget'];
 export type SyncChangesResponse = components['schemas']['SyncChangesResponse'];
+export type SyncOpResult = components['schemas']['SyncOpResult'];
+export type SyncBatchResponse = components['schemas']['SyncBatchResponse'];
 export type AccountList = components['schemas']['AccountList'];
 export type CategoryList = components['schemas']['CategoryList'];
 export type TransactionList = components['schemas']['TransactionList'];

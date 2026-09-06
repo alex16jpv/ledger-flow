@@ -20,7 +20,15 @@ export type MirrorStore = (typeof MIRROR_STORES)[number];
 export const PROFILE_KEY = "me";
 
 export type MetaKey =
-  "userId" | "mirrorVersion" | "outboxVersion" | "syncCursor" | "syncedAt" | "outboxSeq";
+  | "userId"
+  | "mirrorVersion"
+  | "outboxVersion"
+  | "syncCursor"
+  | "syncedAt"
+  | "outboxSeq"
+  // What `POST /sync` warned about the writes that landed degraded, as JSON: a store of its own
+  // would cost a mirror version bump (D-24) for a handful of notices the next pull cannot rebuild.
+  | "syncNotices";
 
 export interface MetaRecord {
   key: MetaKey;
@@ -83,9 +91,13 @@ export interface OutboxOperation {
   // collision on a fresh UUID v7 is a bug, not luck, so it is never re-minted twice.
   reminted?: true;
   // The row as the server had it when it refused the write, straight from the `409 STALE_UPDATE`
-  // (O-B2). The resolution sheet reads it: the mirror cannot answer for the server, it holds this
-  // device's projection.
+  // (O-B2) or from a `conflict` of the batch. The resolution sheet reads it: the mirror cannot
+  // answer for the server, it holds this device's projection. A `DUPLICATE` carries the row that
+  // holds the name, which is somebody else's row: `ownServerRow` is what tells the two apart.
   serverRow?: unknown;
+  // The account `conflict` `RESOURCE_ARCHIVED` names: archived online while this device had no
+  // network, so the movement cannot land until it is restored (F-58).
+  archivedId?: string;
 }
 
 export interface VaultSchema extends DBSchema {

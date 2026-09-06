@@ -1,10 +1,13 @@
 import type { OutboxEntity, OutboxOperation } from "../schema";
-import { serverStamp } from "./conflict";
+import { restoreAccountWrite } from "./accounts";
+import { ownServerRow, serverStamp } from "./conflict";
 import { forgetRollbacks, requestSync } from "./engine";
+import { NotProjectableError } from "./projected";
 import { pendingOperations, type VaultDb, type WriteTransaction, writeTransaction } from "./queue";
 import { reconcileRow } from "./reconcile";
 import { serverBaseline } from "./routes";
 import { refreshOutboxStatus } from "./status";
+import { enqueue } from "./write";
 
 const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
 
@@ -24,7 +27,8 @@ const STORE_OF: Record<OutboxEntity, "accounts" | "categories" | "transactions" 
 // baseline the mirror kept aside is at least as fresh as the 409's `current` (the conflict put it
 // there, and any pull since replaced it); `current` only serves a row that has none.
 async function reconcileResolved(tx: WriteTransaction, operation: OutboxOperation): Promise<void> {
-  const { entity, entityId, serverRow } = operation;
+  const { entity, entityId } = operation;
+  const serverRow = ownServerRow(operation);
   const record = await tx.objectStore(STORE_OF[entity]).get(entityId);
   const baseline =
     record?.server === undefined && serverRow !== undefined
@@ -144,6 +148,48 @@ export async function retryOperations(db: VaultDb, seqs: readonly number[]): Pro
 
 export const retryOperation = (db: VaultDb, seq: number): Promise<void> =>
   retryOperations(db, [seq]);
+
+// The way out of a `conflict` `RESOURCE_ARCHIVED`: the account the movement names was archived
+// online while this device had no network (F-58). The restore is an operation like any other — no
+// endpoint of its own, no validation skipped (D-32) — and it has to reach the server ahead of the
+// movement, in the same batch, which is what the `seq` below the movement's buys. Nothing is atomic
+// and nothing needs to be: a restore that lands without the movement leaves the account restored,
+// which is what the user asked for, and the movement in the tray.
+export async function restoreArchivedAccount(db: VaultDb, seq: number): Promise<boolean> {
+  const operation = await db.get("outbox", seq);
+  if (!operation || !stuck(operation)) return false;
+  const accountId = operation.archivedId;
+  if (accountId === undefined) return false;
+  try {
+    await enqueue(db, restoreAccountWrite(accountId), { before: seq });
+  } catch (error) {
+    // The mirror no longer holds the account, so there is no row to un-archive and nothing to send.
+    if (error instanceof NotProjectableError) return false;
+    throw error;
+  }
+
+  const tx = writeTransaction(db);
+  const store = tx.objectStore("outbox");
+  const queued = await store.get(seq);
+  if (queued) {
+    const next: OutboxOperation = {
+      ...queued,
+      status: "pending",
+      attempts: 0,
+      lastError: null,
+      // Naming the account is what makes the batch answer `blocked` instead of the same
+      // `RESOURCE_ARCHIVED` if the restore does not land: `POST /sync` blocks by entity id (D-30).
+      dependsOn: [...new Set([...queued.dependsOn, accountId])],
+    };
+    delete next.archivedId;
+    await store.put(next);
+    await reconcileResolved(tx, queued);
+  }
+  await tx.done;
+  await refreshOutboxStatus(db);
+  await requestSync();
+  return true;
+}
 
 // What the tray of part 2 and the sheet both open on: the queue in `seq` order, only what the user
 // has to act on (F-23 — a definitive refusal is as stuck as a conflict).

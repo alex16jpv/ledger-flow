@@ -33,6 +33,11 @@ expense with the recent category chips, "Other" for the full picker, a descripti
 which `PUT`s `categoryId`, `description` and `pendingDetails: false`; the pending count in the shell
 follows because the mutation invalidates the transactions domain.
 
+O-F5b adds one line to a card, when there is one to add: a movement the server saved **without** its
+category — archived on another device while this one had no network — says so, because that warning
+(`CATEGORY_ARCHIVED_DROPPED`) is the only place the reason exists. `pruneNotices` reads them off the
+vault when the screen opens and drops what no longer needs a review (F-57).
+
 F-07 adds "Save all" to the inbox: the card drafts live in the screen, a sticky button counts the
 cards that already have a category, a sheet confirms how many save and how many stay pending, and
 `useBatchComplete` saves them. Since O-F4 part 2 the lot goes through the outbox expanded into one

@@ -310,12 +310,27 @@ turning to a red "Needs attention" once the server refused that write.
 `engine.ts` is the only thing that talks to the server on the queue's behalf, and `requestSync()` is
 the only way in.
 
+- **One request: `POST /sync`** (O-F5b). The queue leaves as one batch of up to 200 operations and
+  up to a megabyte — `batch.ts` cuts it and keeps `seq` order — and the answer carries one status per
+  operation, over the same transitions the routes used to drive one error code at a time: `applied`
+  and `duplicate` leave the queue, `merged` leaves it and **repoints the local id** to the row the
+  server landed on (F-57), `conflict` and `rejected` stay for the user, and `blocked` — never
+  attempted, because a row it names failed earlier in the same batch — goes back in line without
+  counting an attempt. `seq` on the wire is the operation's **rank inside the batch**, not the
+  device's counter: the server takes an integer and uses it only to order what it applies, and the
+  results are matched back by `opId`. What only the mirror needs (`payload.effect`) never travels.
+  **The fallback is alive:** a `404` or `501` from `POST /sync` means a server older than this front,
+  and the queue keeps leaving by the ordinary routes for the rest of the session (owner, 2026-09-06);
+  a `400`/`413` on the envelope — nothing applied, this client's own bug — sends that pass one request
+  at a time so each operation earns the verdict of its own route instead of the queue stalling on a
+  batch nobody can fix.
 - **Single flight.** One drain runs at a time; every trigger that arrives while it runs joins it. A
   request that lands _after_ the running pass took its last look at the queue is not lost — the pass
   records which request it served, and a later one asks for a pass of its own.
 - **Order is `seq` and only `seq`.** Nothing is reordered and nothing is dropped for taking too long
-  (invariant 7). A network failure, a 5xx, a 429 or a 401 ends the pass where it stands and the rest
-  of the queue keeps its place.
+  (invariant 7). A network failure, a 5xx, a 429 or a 401 ends the pass where it stands and the whole
+  batch comes back to the queue: every operation in it counts an attempt, because a request that
+  never answered may still have landed — and the same `opId` replays as a `duplicate` if it did.
 - **Coalescing, before anything is sent** (`coalesce.ts`). Ten edits of one row become one request;
   a movement created and deleted with no network becomes none at all, and its row leaves the mirror
   too. Two rules make it safe: it never folds **across an operation the server has already been
@@ -324,13 +339,15 @@ the only way in.
   second would count that move twice. Archiving is not a removal: an archived account is still the
   user's row, so `create` + `archive` still reaches the server. A fold never moves an operation
   ahead of a create it names in `dependsOn`: that edit starts a run of its own and keeps its place.
-- **Chained guards are rebased.** Every operation queued on one row reads the guard the mirror held
-  when it was queued, and the client never writes `updatedAt`, so an edit followed by a delete (or an
-  archive followed by a restore) both carry the stamp the first one is about to replace. When the
-  first lands and answers a row, the operations of that row that still share its guard move to the
-  new stamp, inside the transaction that settles it. A guard that a pull moved in the meantime is
-  another device's edit: it is left alone and earns its 409. An archive answers `{ message }` today,
-  so a restore queued behind it cannot be rebased until the backend answers the row (F-22).
+- **Chained guards.** Every operation queued on one row reads the guard the mirror held when it was
+  queued, and the client never writes `updatedAt`, so an edit followed by a delete (or an archive
+  followed by a restore) both carry the stamp the first one is about to replace. **Inside one batch
+  only the first operation of a row carries its `If-Match`** (D-34): there is no gap to rebase the
+  ones behind it in, and unguarded they open no window, because `POST /sync` blocks by entity id — if
+  the first conflicts, the rest come back `blocked` without being applied. Across batches the rebase
+  still happens: when an operation lands and answers a row, whatever of that row still shares its old
+  guard moves to the new stamp inside the transaction that settles it, and a guard a pull moved in
+  the meantime is another device's edit, left alone to earn its conflict.
 - **Backoff.** 1 s doubling to 60 s, with equal jitter that can only shorten the step, and never
   shorter than a 429's `Retry-After`. It is the only timer the engine owns: there is no periodic
   push and no periodic pull (§4.2).
@@ -342,7 +359,7 @@ the only way in.
   to its clients when the browser wakes it with that tag (F-24). After a round the server **answered**
   — a write that landed, a `409`, a refusal for good — a pull (`afterRound`, §4.2), wired by
   `startMirror`. A network failure or a 5xx says nothing new about the data and pulls nothing.
-- **`409 ID_TAKEN` re-mints** (F-21). O-B1 with D-17 leaves that code for an id another user owns,
+- **`ID_TAKEN` re-mints** (F-21). O-B1 with D-17 leaves that code for an id another user owns,
   so the row takes a fresh one — in the mirror, in the rows that named it, and in the queued
   operations that named it — and goes back in line **once**. A second collision on a fresh UUID v7
   is a bug, not luck.
@@ -350,13 +367,17 @@ the only way in.
   operation that outlived its tab has none: it stays queued as `failed` rather than vanishing, and
   the tray that shows it is O-F5a. The same goes for a fold with only some of its rollbacks left:
   undoing half of it would leave the mirror at an edit the server never got, so the whole run stays.
-- **A `409 STALE_UPDATE`** is either merged by the engine or handed to the user; see below.
+- **A `STALE_UPDATE`** is either merged by the engine or handed to the user; see below.
+- **A warning is not a failure.** An operation can land degraded: `warnings:
+["CATEGORY_ARCHIVED_DROPPED"]` means the movement was saved **without** its category, because
+  another device archived it while this one had no network. The write is done; what is missing is the
+  explanation, so `notices.ts` keeps one per row in `meta.syncNotices` and the review screen — where
+  the user picks a new category — is what reads and prunes them (F-57).
 
 ## Resolving what the queue cannot: `conflict.ts` and `resolve.ts`
 
-A `409 STALE_UPDATE` means the row moved under the operation's guard. What happens next is decided
-in the front, in one place, because the server does not need to know which fields are text (§6
-O-F5a):
+A `STALE_UPDATE` means the row moved under the operation's guard. What happens next is decided in the
+front, in one place, because the server does not need to know which fields are text (§6 O-F5a):
 
 - **`conflict.ts` classifies the operation, not the diff.** An **edit** whose body carries only
   `description`, `note`, `tags`, `name`, `color`, `icon` or `pendingDetails` is `"text"`; anything
@@ -371,7 +392,18 @@ O-F5a):
 - **Money and structure ask.** The operation becomes `conflict`, and the row the server answered
   with rides along in the envelope's `serverRow`. That is why the sheet needs no second request, and
   why it can show a version the mirror no longer holds: the mirror holds **this device's**
-  projection.
+  projection. A `DUPLICATE` answers with the row that already **holds the name**, which is somebody
+  else's row: `ownServerRow` is what tells the two apart, so a foreign row is shown in the sheet but
+  never becomes this row's baseline nor the guard of its retry.
+- **An account archived online** answers `conflict` `RESOURCE_ARCHIVED` with the account in `current`
+  — not the row the operation is about. The mirror learns the account is archived, the operation
+  keeps its `archivedId`, and the way out is an operation like any other: **`account:restore` queued
+  with a `seq` below the movement's**, so both travel in the same batch (F-58, D-32). Nothing needs
+  to be atomic, because no outcome leaves a half-applied state: a restore that lands without the
+  movement leaves the account restored — which is what the user asked for — and the movement in the
+  tray. The movement also names the account in `dependsOn`, so a restore that does not land answers
+  `blocked` instead of the same refusal. There is no `POST /sync/resolve` and there will not be one:
+  every resolution goes out as one more operation, through the same validations (D-32).
 - **The sheet resolves it two ways** (`resolve.ts`). `discardOperation` settles the operation
   without ever sending it and reconciles the row: the server's version the mirror kept aside (or the
   409's `current`, for a row that has none) plus whatever the queue still holds for it — the server

@@ -21,6 +21,8 @@ interface Call {
   method: string;
   path: string;
   search: string;
+  // How many operations a `POST /sync` carried, so the report can say the queue left in one request.
+  operations?: number;
 }
 
 // Every /api call the pages make, in order, so a phase can be measured by slicing the log (§4.2).
@@ -30,9 +32,17 @@ class Tally {
   watch(page: Page): void {
     page.on("request", (request) => {
       const { pathname, search } = new URL(request.url());
-      if (pathname.startsWith("/api/")) {
-        this.calls.push({ method: request.method(), path: pathname, search });
-      }
+      if (!pathname.startsWith("/api/")) return;
+      const body =
+        pathname === "/api/sync" && request.method() === "POST"
+          ? (request.postDataJSON() as { operations?: unknown[] } | null)
+          : null;
+      this.calls.push({
+        method: request.method(),
+        path: pathname,
+        search,
+        ...(body?.operations ? { operations: body.operations.length } : {}),
+      });
     });
   }
 
@@ -51,6 +61,10 @@ const reads = (calls: Call[]): Call[] =>
 const pushes = (calls: Call[]): Call[] =>
   calls.filter((c) => c.method !== "GET" && DATA.test(c.path));
 const pulls = (calls: Call[]): Call[] => calls.filter((c) => c.path === "/api/sync/changes");
+// Since O-F5b the queue leaves as one batch: `pushes` counts what would go by the ordinary routes —
+// which is nothing now — and `batches` counts the requests the queue actually makes.
+const batches = (calls: Call[]): Call[] =>
+  calls.filter((c) => c.method === "POST" && c.path === "/api/sync");
 const health = (calls: Call[]): Call[] => calls.filter((c) => c.path.startsWith("/api/health"));
 
 function uniqueAmount(): number {
@@ -280,6 +294,7 @@ test("three days with no network, a cold start each day, and one drain with no d
     };
     expect(reads(tally.since(mark))).toHaveLength(0);
     expect(pushes(tally.since(mark))).toHaveLength(0);
+    expect(batches(tally.since(mark))).toHaveLength(0);
 
     await page.goto("/transactions");
     await expect(page.getByRole("button", { name: /GATE-D1 market.*Pending sync/ })).toBeVisible();
@@ -354,6 +369,7 @@ test("three days with no network, a cold start each day, and one drain with no d
     // just deleted used to be the one exception (F-46); it is recorded above so a regression shows.
     expect(day2Reads).toEqual([]);
     expect(pushes(tally.since(mark))).toHaveLength(0);
+    expect(batches(tally.since(mark))).toHaveLength(0);
     expect((await vaultState(day2))?.pending).toBe(5);
     await day2.close();
   });
@@ -375,6 +391,7 @@ test("three days with no network, a cold start each day, and one drain with no d
     await day3.waitForLoadState("load");
     expect(reads(tally.since(mark))).toHaveLength(0);
     expect(pushes(tally.since(mark))).toHaveLength(0);
+    expect(batches(tally.since(mark))).toHaveLength(0);
 
     // A movement born during the outage opens, with no network, from the template entry of its
     // route (F-48): the row comes from the mirror, the screen from the worker.
@@ -393,14 +410,15 @@ test("three days with no network, a cold start each day, and one drain with no d
     await day3.close();
   });
 
-  await test.step("Vuelve la red · la cola se drena, y a un POST se le tira la respuesta a propósito", async () => {
+  await test.step("Vuelve la red · la cola se drena en un lote, y se le tira la respuesta a propósito", async () => {
     const day4 = await coldStart(context, tally, new Date(now));
     expect((await vaultState(day4))?.pending).toBe(queued);
 
-    // The duplicate the gate is about: the server applies a create and the answer never arrives, so
-    // the queue retries an operation that already exists on the other side.
+    // The duplicate the gate is about: the server applies the batch and the answer never arrives, so
+    // the queue replays operations that already exist on the other side. Since O-F5b that is the
+    // whole queue at once, which puts the registry of `POST /sync` under test.
     let dropped: string | null = null;
-    await day4.route("**/api/transactions", async (route) => {
+    await day4.route("**/api/sync", async (route) => {
       if (dropped !== null || route.request().method() !== "POST") {
         await route.continue();
         return;
@@ -415,16 +433,20 @@ test("three days with no network, a cold start each day, and one drain with no d
     await expect.poll(async () => (await vaultState(day4))?.pending, { timeout: 120_000 }).toBe(0);
     const drain = tally.since(beforeDrain);
     report.drain = {
+      batches: batches(drain).length,
+      operationsPerBatch: batches(drain).map((call) => call.operations ?? 0),
       pushes: pushes(drain).length,
       pulls: pulls(drain).length,
       reads: reads(drain).map((call) => `${call.path}${call.search}`),
       droppedAnswer: dropped !== null,
-      byRoute: pushes(drain).map((call) => `${call.method} ${call.path}`),
     };
     expect(dropped).not.toBeNull();
-    // One request per operation, plus the retry of the one whose answer was dropped: neither a
-    // duplicate the server had to absorb nor a fold that lost an operation.
-    expect(pushes(drain)).toHaveLength(queued + 1);
+    // The whole queue in one batch, and one replay of it because its answer was thrown away: the
+    // second time the server answers `duplicate` for whatever already landed, so nothing is applied
+    // twice and nothing is lost. Not one operation goes by the ordinary routes any more.
+    expect(batches(drain)).toHaveLength(2);
+    expect(batches(drain)[0]?.operations).toBe(queued);
+    expect(pushes(drain)).toHaveLength(0);
     // The mirror was full the whole time: coming back online reads nothing from the server (§4.2).
     expect(reads(drain)).toEqual([]);
   });

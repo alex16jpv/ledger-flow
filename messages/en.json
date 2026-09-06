@@ -322,6 +322,11 @@
       "lastError": {
         "label": "Last error: {code}"
       },
+      "transport": {
+        "label": "Sending mode",
+        "help": "This server takes changes one at a time, not in one batch",
+        "routes": "One at a time"
+      },
       "storage": {
         "label": "Storage used",
         "unknown": "Unknown"
@@ -416,6 +421,12 @@
         "body": "It was never applied, here or there. Reason: {reason}. Discarding it puts this {what} back to what the server has.",
         "unknown": "unknown"
       },
+      "archived": {
+        "title": "The account was archived somewhere else.",
+        "body": "This {what} uses an account that was archived on another device, so the server will not take it. Restore the account and it goes through in the same batch, or edit the {what} to use another account.",
+        "restore": "Restore the account",
+        "gone": "This device no longer holds that account, so there is nothing to restore. Discard the change, or edit the movement to use another account."
+      },
       "noServerRow": "The server didn’t say what it has. Keeping this device’s version will overwrite it.",
       "server": "On the server",
       "device": "On this device",
@@ -475,7 +486,8 @@
       "onRow": "This {what} has a change the server hasn’t taken.",
       "kinds": {
         "conflict": "Changed in two places",
-        "failed": "Refused by the server"
+        "failed": "Refused by the server",
+        "archived": "Account archived"
       },
       "compare": "Compare versions",
       "discardAll": "Discard all",
@@ -1090,6 +1102,7 @@
       "title": "To review",
       "titleCount": "To review · {count}",
       "intro": "Quick expenses already reduced your balance and already count toward your total budget. Here you just name and categorize them.",
+      "droppedCategory": "Its category had been archived, so the server saved it without one. Pick another.",
       "when": "{day} {time} · {account}",
       "other": "Other",
       "descriptionPlaceholder": "Description (optional)",

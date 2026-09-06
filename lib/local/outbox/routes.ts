@@ -53,8 +53,8 @@ function route<R>(spec: {
   };
 }
 
-// An archive answers `{ message }` today (F-22). The day it answers the row, keeping it is what lets
-// the engine rebase the guard of a restore queued behind it.
+// An archive answers the row since F-22 (backend `7e4edb4`), which is what lets the engine rebase
+// the guard of a restore queued behind it. The guard stays: `transaction:delete` answers a message.
 const isRow = (result: unknown): result is { id: string; updatedAt: string } =>
   typeof result === "object" &&
   result !== null &&

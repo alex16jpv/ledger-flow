@@ -3,7 +3,13 @@ import type { Account, CreateAccountInput, RestoreInput, UpdateAccountInput } fr
 import { accountRecord } from "../schema";
 import { newEntityId } from "./envelope";
 import { NotProjectableError, patch, projectionContext } from "./projected";
-import { type LocalChange, unsent, type VaultDb, type WriteTransaction } from "./queue";
+import {
+  type LocalChange,
+  type LocalWrite,
+  unsent,
+  type VaultDb,
+  type WriteTransaction,
+} from "./queue";
 import { write } from "./write";
 
 async function currentRow(tx: WriteTransaction, id: string): Promise<Account> {
@@ -106,18 +112,19 @@ export function archiveAccount(id: string): Promise<unknown> {
   });
 }
 
+// The queue's own description of a restore, so the resolution of F-58 puts the same operation in
+// the queue as the button does — one guard, one projection, one undo, in one place.
+export const restoreAccountWrite = (id: string, input: RestoreInput = {}): LocalWrite => ({
+  entity: "account",
+  entityId: id,
+  action: "restore",
+  payload: { body: input },
+  project: async (tx) =>
+    projectAccount(tx, id, patch({ ...(await currentRow(tx, id)), archivedAt: null }, input)),
+});
+
 export function restoreAccount(id: string, input: RestoreInput = {}): Promise<Account> {
-  return write<Account>({
-    local: {
-      entity: "account",
-      entityId: id,
-      action: "restore",
-      payload: { body: input },
-      project: async (tx) =>
-        projectAccount(tx, id, patch({ ...(await currentRow(tx, id)), archivedAt: null }, input)),
-    },
-    optimistic: readBack(id),
-  });
+  return write<Account>({ local: restoreAccountWrite(id, input), optimistic: readBack(id) });
 }
 
 export function setDefaultAccount(id: string): Promise<Account> {

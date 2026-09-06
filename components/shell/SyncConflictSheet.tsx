@@ -7,9 +7,14 @@ import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
 import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
+import { useToast } from "@/components/ui/Toast";
 import { useDates } from "@/lib/i18n/useDates";
-import { type ConflictField, conflictFields } from "@/lib/local/outbox/conflict";
-import { discardOperation, retryOperation } from "@/lib/local/outbox/resolve";
+import { type ConflictField, conflictFields, ownServerRow } from "@/lib/local/outbox/conflict";
+import {
+  discardOperation,
+  restoreArchivedAccount,
+  retryOperation,
+} from "@/lib/local/outbox/resolve";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { currentVault } from "@/lib/local/repository/read";
 import type { OutboxOperation } from "@/lib/local/schema";
@@ -61,9 +66,15 @@ export interface SyncConflictSheetProps {
   onClose: () => void;
 }
 
+// F-58: the account this movement names was archived online. The way out is an operation like any
+// other — an `account:restore` queued ahead of it — so both travel in the same batch.
+const isArchivedAccount = (operation: OutboxOperation): boolean =>
+  operation.status === "conflict" && operation.lastError === "RESOURCE_ARCHIVED";
+
 export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps) {
   const t = useTranslations("states.conflict");
   const common = useTranslations("common");
+  const toast = useToast();
   const dates = useDates();
   const outbox = useOutbox();
   const [loaded, setLoaded] = useState<{ seq: number; view: View } | null>(null);
@@ -177,12 +188,28 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
     }
     const { operation, fields } = view;
     const what = t(`entities.${operation.entity}`);
-    if (operation.status === "failed") {
+    if (isArchivedAccount(operation)) {
+      const name = operation.archivedId ? view.names.get(operation.archivedId) : undefined;
+      return (
+        <div className="flex flex-col gap-3">
+          <Alert tone="danger" title={t("archived.title")}>
+            {t("archived.body", { what })}
+          </Alert>
+          {name !== undefined && <p className="text-sm text-text-2">{name}</p>}
+          {fields.length > 0 && card(t("device"), "mine", view)}
+        </div>
+      );
+    }
+    // A refusal for good, and a `conflict` the server explained with a code of its own — a name
+    // already taken, a reference it will not accept: the change never applied, and the reason is the
+    // code, not "two versions of the same row".
+    if (operation.status === "failed" || operation.lastError !== "STALE_UPDATE") {
       return (
         <div className="flex flex-col gap-3">
           <Alert tone="danger" title={t("failed.title")}>
             {t("failed.body", { reason: operation.lastError ?? t("failed.unknown"), what })}
           </Alert>
+          {ownServerRow(operation) !== undefined && card(t("server"), "theirs", view)}
           {fields.length > 0 && card(t("device"), "mine", view)}
         </div>
       );
@@ -239,6 +266,30 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
         {discardFirst ? t("retry") : t("keepMine")}
       </Button>
     );
+    // Trying again as it is would earn the same refusal: what unblocks this one is restoring the
+    // account, and the other way out — moving the movement to another account — is an ordinary edit.
+    if (isArchivedAccount(operation)) {
+      return (
+        <>
+          <Button
+            size="lg"
+            block
+            variant="primary"
+            disabled={busy}
+            onClick={() =>
+              void resolve(async (db) => {
+                if (!(await restoreArchivedAccount(db, operation.seq))) {
+                  toast.show({ message: t("archived.gone"), tone: "danger" });
+                }
+              })
+            }
+          >
+            {t("archived.restore")}
+          </Button>
+          {discard}
+        </>
+      );
+    }
     return discardFirst ? (
       <>
         {discard}

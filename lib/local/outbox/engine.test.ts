@@ -1,10 +1,11 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { account, openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
-import type { Account } from "@/types/api";
+import type { Account, SyncBatchInput, SyncOpResult } from "@/types/api";
 
 import { setCurrentVault } from "../repository/read";
 import { accountRecord, type OutboxOperation, profileRecord, transactionRecord } from "../schema";
 import { archiveAccount, createAccount, restoreAccount, updateAccount } from "./accounts";
+import type { SyncOperationInput } from "./batch";
 import {
   AUTO_MERGE_ATTEMPTS,
   BACKOFF_MAX_MS,
@@ -45,10 +46,60 @@ const calls = () => fetchMock.mock.calls.map(([input, init]) => `${init?.method}
 const bodyOf = (init: RequestInit | undefined): string =>
   typeof init?.body === "string" ? init.body : "{}";
 
-const ifMatchOf = (init: RequestInit | undefined): string | null =>
-  new Headers(init?.headers).get("if-match");
+const SERVER_TIME = "2026-09-06T10:00:00.000Z";
 
-const ifMatches = () => fetchMock.mock.calls.map(([, init]) => ifMatchOf(init));
+const opsOf = (init: RequestInit | undefined): SyncOperationInput[] =>
+  (JSON.parse(bodyOf(init)) as SyncBatchInput).operations;
+
+// One entry per batch the engine sent, each listing its operations in the order they travelled.
+const batches = (): string[][] =>
+  fetchMock.mock.calls.map(([, init]) =>
+    opsOf(init).map((op) => `${op.entity}:${op.action}:${op.id}`),
+  );
+
+const sent = (): string[] => batches().flat();
+
+// The guards the operations travelled with, batch by batch. `undefined` is an unconditional write:
+// inside one batch only the first operation of a row carries its `If-Match` (D-34).
+const guards = (): (string | undefined)[] =>
+  fetchMock.mock.calls.flatMap(([, init]) => opsOf(init).map((op) => op.baseUpdatedAt));
+
+const bodies = (): unknown[] =>
+  fetchMock.mock.calls.flatMap(([, init]) => opsOf(init).map((op) => op.payload.body));
+
+// The server's answer to a batch: one result per operation, `applied` unless the test says else.
+function answers(reply: (op: SyncOperationInput) => Partial<SyncOpResult> = () => ({})): void {
+  fetchMock.mockImplementation((_input, init) =>
+    Promise.resolve(
+      json({
+        serverTime: SERVER_TIME,
+        results: opsOf(init).map((op) => ({
+          opId: op.opId,
+          seq: op.seq,
+          entity: op.entity,
+          id: op.id,
+          status: "applied",
+          ...reply(op),
+        })),
+      }),
+    ),
+  );
+}
+
+const conflictWith = (code: string, current?: unknown): Partial<SyncOpResult> => ({
+  status: "conflict",
+  code: code as NonNullable<SyncOpResult["code"]>,
+  message: "no",
+  ...(current === undefined ? {} : { current: current as SyncOpResult["current"] }),
+});
+
+const rejectedWith = (code: string): Partial<SyncOpResult> => ({
+  status: "rejected",
+  code: code as NonNullable<SyncOpResult["code"]>,
+  message: "no",
+});
+
+const blockedBy = (opId: string): Partial<SyncOpResult> => ({ status: "blocked", blockedBy: opId });
 
 beforeEach(() => {
   fetchMock.mockReset();
@@ -80,7 +131,7 @@ async function seed(db: VaultDb, operations: Partial<OutboxOperation>[]): Promis
     seq += 1;
     await db.put("outbox", {
       seq,
-      opId: `op-${seq}`,
+      opId: `00000000-0000-7000-8000-00000000000${seq}`,
       opVersion: 1,
       entity: "transaction",
       entityId: "t1",
@@ -103,9 +154,7 @@ describe("the sync engine", () => {
     const vault = await vaultWith();
     reportOnline(false);
     await updateAccount("a1", { name: "Renamed" });
-    fetchMock.mockImplementation(() =>
-      Promise.resolve(json(account({ id: "a1", name: "Renamed" }))),
-    );
+    answers(() => ({ result: account({ id: "a1", name: "Renamed" }) }));
     reportOnline(true);
 
     const reports = await Promise.all([
@@ -121,26 +170,47 @@ describe("the sync engine", () => {
     expect(await pendingOperations(vault.db)).toEqual([]);
   });
 
-  it("sends in seq order and stops at the first request that never arrived, dropping nothing", async () => {
+  it("sends the whole queue in one request, in seq order", async () => {
     const vault = await vaultWith();
     await seed(vault.db, [
       { seq: 1, entityId: "t1" },
       { seq: 2, entityId: "t2" },
       { seq: 3, entityId: "t3" },
     ]);
-    fetchMock
-      .mockImplementationOnce(() => Promise.resolve(json(transaction({ id: "t1" }))))
-      .mockImplementationOnce(() => Promise.reject(new TypeError("Failed to fetch")));
+    answers((op) => ({ result: transaction({ id: op.id }) }));
 
     await requestSync();
 
-    expect(calls()).toEqual(["PUT /api/transactions/t1", "PUT /api/transactions/t2"]);
-    expect((await pendingOperations(vault.db)).map((entry) => entry.seq)).toEqual([2, 3]);
-    expect((await pendingOperations(vault.db))[0]).toMatchObject({
-      status: "pending",
-      attempts: 1,
-      lastError: "NETWORK",
-    });
+    expect(calls()).toEqual(["POST /api/sync"]);
+    expect(sent()).toEqual([
+      "transaction:update:t1",
+      "transaction:update:t2",
+      "transaction:update:t3",
+    ]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+
+  it("brings the whole batch back to the queue when the request never arrived, dropping nothing", async () => {
+    const vault = await vaultWith();
+    await seed(vault.db, [
+      { seq: 1, entityId: "t1" },
+      { seq: 2, entityId: "t2" },
+      { seq: 3, entityId: "t3" },
+    ]);
+    fetchMock.mockImplementation(() => Promise.reject(new TypeError("Failed to fetch")));
+
+    await requestSync();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const left = await pendingOperations(vault.db);
+    expect(left.map((entry) => entry.seq)).toEqual([1, 2, 3]);
+    // The request may have landed: every operation in it counts an attempt, which is what stops the
+    // fold from crossing it, and none of them is taken for sent.
+    expect(left.map((entry) => [entry.status, entry.attempts, entry.lastError])).toEqual([
+      ["pending", 1, "NETWORK"],
+      ["pending", 1, "NETWORK"],
+      ["pending", 1, "NETWORK"],
+    ]);
   });
 
   it("holds only what depended on the operation that failed, and lets the rest through", async () => {
@@ -178,21 +248,23 @@ describe("the sync engine", () => {
         payload: { body: { name: "Food" } },
       },
     ]);
-    fetchMock.mockImplementation((input) =>
-      Promise.resolve(
-        urlOf(input).includes("/accounts")
-          ? json({ code: "VALIDATION", message: "no" }, { status: 400 })
-          : json({ id: "c1", name: "Food" }),
-      ),
+    // The batch sends all three: the server is the one that blocks what named the refused row.
+    answers((op) =>
+      op.entity === "account"
+        ? rejectedWith("VALIDATION")
+        : op.entity === "transaction"
+          ? blockedBy("00000000-0000-7000-8000-000000000001")
+          : { result: { id: "c1", name: "Food" } as SyncOpResult["result"] },
     );
 
     await requestSync();
 
-    expect(calls()).toEqual(["POST /api/accounts", "PUT /api/categories/c1"]);
+    expect(sent()).toEqual(["account:create:a9", "transaction:update:t1", "category:update:c1"]);
     const left = await pendingOperations(vault.db);
     expect(left.map((entry) => entry.seq)).toEqual([1, 2]);
     expect(left[0]?.status).toBe("failed");
-    expect(left[1]?.status).toBe("pending");
+    // Never attempted, so nothing about it changed but its place in line.
+    expect(left[1]).toMatchObject({ status: "pending", attempts: 0 });
   });
 
   it("takes the amber off the figures the moment the queue is empty", async () => {
@@ -204,9 +276,7 @@ describe("the sync engine", () => {
     );
     expect(outboxStatusStore.getSnapshot().projected.balances).toBe(true);
 
-    fetchMock.mockImplementation(() =>
-      Promise.resolve(json(transaction({ id: "11111111-1111-7111-8111-111111111111" }))),
-    );
+    answers(() => ({ result: transaction({ id: "11111111-1111-7111-8111-111111111111" }) }));
     reportOnline(true);
     await requestSync();
 
@@ -219,7 +289,7 @@ describe("the sync engine", () => {
     const afterRound = vi.fn();
     startSyncEngine({ afterRound });
     await seed(vault.db, [{ seq: 1 }]);
-    fetchMock.mockImplementation(() => Promise.resolve(json(transaction({ id: "t1" }))));
+    answers(() => ({ result: transaction({ id: "t1" }) }));
 
     await requestSync();
     expect(afterRound).toHaveBeenCalledTimes(1);
@@ -234,19 +304,13 @@ describe("the sync engine", () => {
     const afterRound = vi.fn();
     startSyncEngine({ afterRound });
     await seed(vault.db, [{ seq: 1 }]);
-    fetchMock.mockImplementation(() =>
-      Promise.resolve(json({ code: "VALIDATION", message: "no" }, { status: 400 })),
-    );
+    answers(() => rejectedWith("VALIDATION"));
 
     await requestSync();
     expect(afterRound).toHaveBeenCalledTimes(1);
 
     await seed(vault.db, [{ seq: 1, baseUpdatedAt: "2026-09-04T09:00:00.000Z" }]);
-    fetchMock.mockImplementation(() =>
-      Promise.resolve(
-        json({ code: "STALE_UPDATE", message: "stale", current: transaction() }, { status: 409 }),
-      ),
-    );
+    answers(() => conflictWith("STALE_UPDATE", transaction()));
 
     await requestSync();
     expect(afterRound).toHaveBeenCalledTimes(2);
@@ -258,7 +322,7 @@ describe("the sync engine", () => {
     startSyncEngine({ afterRound, schedule: () => () => undefined });
     await seed(vault.db, [{ seq: 1 }]);
     fetchMock.mockImplementation(() =>
-      Promise.resolve(json({ code: "SERVER_ERROR", message: "later" }, { status: 503 })),
+      Promise.resolve(json({ code: "DB_UNAVAILABLE", message: "later" }, { status: 503 })),
     );
 
     await requestSync();
@@ -269,7 +333,7 @@ describe("the sync engine", () => {
     const vault = await vaultWith();
     startSyncEngine();
     await seed(vault.db, [{ seq: 1 }]);
-    fetchMock.mockImplementation(() => Promise.resolve(json(transaction({ id: "t1" }))));
+    answers(() => ({ result: transaction({ id: "t1" }) }));
 
     reportOnline(false);
     reportOnline(true);
@@ -367,9 +431,8 @@ describe("backoff", () => {
     const cancelled = vi.fn();
     startSyncEngine({ schedule: () => cancelled });
     await seed(vault.db, [{ seq: 1 }]);
-    fetchMock
-      .mockImplementationOnce(() => Promise.reject(new TypeError("Failed to fetch")))
-      .mockImplementationOnce(() => Promise.resolve(json(transaction({ id: "t1" }))));
+    fetchMock.mockImplementationOnce(() => Promise.reject(new TypeError("Failed to fetch")));
+    answers(() => ({ result: transaction({ id: "t1" }) }));
 
     await requestSync();
     await requestSync();
@@ -427,7 +490,7 @@ describe("a session that died under the queue (F-26)", () => {
     await requestSync();
     expect(isSyncPaused()).toBe(true);
 
-    fetchMock.mockImplementation(() => Promise.resolve(json(transaction({ id: "t1" }))));
+    answers(() => ({ result: transaction({ id: "t1" }) }));
     resumeSyncEngine();
 
     await vi.waitFor(async () => {
@@ -440,7 +503,7 @@ describe("a session that died under the queue (F-26)", () => {
     const vault = await vaultWith();
     startSyncEngine({ schedule: () => () => undefined });
     await seed(vault.db, [{ seq: 1 }]);
-    fetchMock.mockImplementation(() => Promise.resolve(json(transaction({ id: "t1" }))));
+    answers(() => ({ result: transaction({ id: "t1" }) }));
     // Somebody else signed in on this device while this tab still held the first user's vault.
     // jsdom refuses to set a `__Host-` cookie over http, so the read is stubbed instead.
     const cookie = vi
@@ -463,17 +526,14 @@ describe("what the engine sends after the queue is folded", () => {
     for (let amount = 2; amount <= 11; amount += 1) await updateTransaction("t1", { amount });
     expect(await pendingOperations(vault.db)).toHaveLength(10);
 
-    fetchMock.mockImplementation(() =>
-      Promise.resolve(json(transaction({ id: "t1", amount: 11 }))),
-    );
+    answers(() => ({ result: transaction({ id: "t1", amount: 11 }) }));
     reportOnline(true);
     await requestSync();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ amount: 11 });
-    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("If-Match")).toBe(
-      transaction({ id: "t1" }).updatedAt,
-    );
+    expect(sent()).toEqual(["transaction:update:t1"]);
+    expect(bodies()).toEqual([{ amount: 11 }]);
+    expect(guards()).toEqual([transaction({ id: "t1" }).updatedAt]);
     expect(await pendingOperations(vault.db)).toEqual([]);
   });
 
@@ -501,7 +561,7 @@ describe("two guarded operations queued on one row (R-2 §A)", () => {
   const T0 = "2026-08-01T10:00:00.000Z";
   const T1 = "2026-09-04T12:00:00.000Z";
 
-  it("rebases the second guard on the stamp the first one earned: edit, then delete", async () => {
+  it("sends the second operation of a row unguarded: edit, then delete", async () => {
     const vault = await vaultWith();
     await vault.db.put("transactions", transactionRecord(transaction({ id: "t1", updatedAt: T0 })));
     reportOnline(false);
@@ -511,20 +571,45 @@ describe("two guarded operations queued on one row (R-2 §A)", () => {
       T0,
       T0,
     ]);
-    fetchMock.mockImplementation((_input, init) =>
-      Promise.resolve(
-        init?.method === "PUT"
-          ? json(transaction({ id: "t1", description: "lunch", updatedAt: T1 }))
-          : json({ message: "deleted" }),
-      ),
+    answers((op) =>
+      op.action === "update"
+        ? { result: transaction({ id: "t1", description: "lunch", updatedAt: T1 }) }
+        : {},
     );
     reportOnline(true);
 
     await requestSync();
 
-    expect(calls()).toEqual(["PUT /api/transactions/t1", "DELETE /api/transactions/t1"]);
-    expect(ifMatches()).toEqual([T0, T1]);
+    // Both travel in one batch, so there is no gap to rebase the second guard in: the stamp the
+    // first one earns is the server's own, and it applies them in `seq` order (D-34).
+    expect(sent()).toEqual(["transaction:update:t1", "transaction:delete:t1"]);
+    expect(guards()).toEqual([T0, undefined]);
     expect(await pendingOperations(vault.db)).toEqual([]);
+    expect((await vault.db.get("transactions", "t1"))?.row.deletedAt).not.toBeNull();
+  });
+
+  it("lets the server block the rest of the row when the guarded one conflicts", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("transactions", transactionRecord(transaction({ id: "t1", updatedAt: T0 })));
+    reportOnline(false);
+    await updateTransaction("t1", { amount: 99 });
+    await deleteTransaction("t1");
+    reportOnline(true);
+    answers((op) =>
+      op.action === "update"
+        ? conflictWith("STALE_UPDATE", transaction({ id: "t1", amount: 42, updatedAt: T1 }))
+        : blockedBy(opsOf(fetchMock.mock.calls[0]?.[1])[0]?.opId ?? ""),
+    );
+
+    await requestSync();
+
+    // The unguarded delete was never applied: `POST /sync` blocks by entity id, which is what makes
+    // dropping its guard safe (D-30).
+    const left = await pendingOperations(vault.db);
+    expect(left.map((entry) => [entry.action, entry.status])).toEqual([
+      ["update", "conflict"],
+      ["delete", "pending"],
+    ]);
   });
 
   it("archive, then restore: the restore carries the stamp the archive answered with", async () => {
@@ -532,44 +617,40 @@ describe("two guarded operations queued on one row (R-2 §A)", () => {
     reportOnline(false);
     await archiveAccount("a1");
     await restoreAccount("a1");
-    fetchMock.mockImplementation((_input, init) =>
-      Promise.resolve(
-        init?.method === "DELETE"
-          ? json(account({ id: "a1", archivedAt: T1, updatedAt: T1 }))
-          : json(account({ id: "a1", updatedAt: "2026-09-04T12:00:01.000Z" })),
-      ),
-    );
+    answers((op) => ({
+      result:
+        op.action === "archive"
+          ? account({ id: "a1", archivedAt: T1, updatedAt: T1 })
+          : account({ id: "a1", updatedAt: "2026-09-04T12:00:01.000Z" }),
+    }));
     reportOnline(true);
 
     await requestSync();
 
-    expect(calls()).toEqual(["DELETE /api/accounts/a1", "POST /api/accounts/a1/restore"]);
-    expect(ifMatches()).toEqual(["2026-08-01T00:00:00.000Z", T1]);
+    expect(sent()).toEqual(["account:archive:a1", "account:restore:a1"]);
+    expect(guards()).toEqual(["2026-08-01T00:00:00.000Z", undefined]);
     expect(await pendingOperations(vault.db)).toEqual([]);
     expect((await vault.db.get("accounts", "a1"))?.row.archivedAt).toBeNull();
   });
 
-  it("cannot rebase behind an archive that answers no row, which is what F-22 asks for", async () => {
+  it("settles an operation the server took without sending a row back", async () => {
     const vault = await vaultWith();
     reportOnline(false);
     await archiveAccount("a1");
     await restoreAccount("a1");
-    fetchMock.mockImplementation((_input, init) =>
-      Promise.resolve(
-        init?.method === "DELETE"
-          ? json({ message: "Account archived successfully" })
-          : json({ error: "Conflict", message: "stale", code: "STALE_UPDATE" }, { status: 409 }),
-      ),
+    // `applied` with no `result`: what a route that answers a message looks like in a batch.
+    answers((op) =>
+      op.action === "archive" ? {} : { result: account({ id: "a1", updatedAt: T1 }) },
     );
     reportOnline(true);
 
     await requestSync();
 
-    expect(ifMatches()).toEqual(["2026-08-01T00:00:00.000Z", "2026-08-01T00:00:00.000Z"]);
-    expect((await pendingOperations(vault.db)).map((entry) => entry.status)).toEqual(["conflict"]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+    expect((await vault.db.get("accounts", "a1"))?.row.archivedAt).toBeNull();
   });
 
-  it("leaves alone a guard that a pull moved: that one earns its own 409", async () => {
+  it("drops the guard of the second operation of a row whatever stamp it held", async () => {
     const vault = await vaultWith();
     const elsewhere = "2026-09-03T00:00:00.000Z";
     // An edit and a delete do not fold, so both go out; the delete's guard came from a later pull.
@@ -577,18 +658,15 @@ describe("two guarded operations queued on one row (R-2 §A)", () => {
       { seq: 1, entityId: "t1", baseUpdatedAt: T0, payload: { body: { description: "one" } } },
       { seq: 2, entityId: "t1", action: "delete", baseUpdatedAt: elsewhere },
     ]);
-    fetchMock.mockImplementation((_input, init) =>
-      Promise.resolve(
-        init?.method === "PUT"
-          ? json(transaction({ id: "t1", updatedAt: T1 }))
-          : json({ message: "deleted" }),
-      ),
+    answers((op) =>
+      op.action === "update" ? { result: transaction({ id: "t1", updatedAt: T1 }) } : {},
     );
 
     await requestSync();
 
-    expect(calls()).toEqual(["PUT /api/transactions/t1", "DELETE /api/transactions/t1"]);
-    expect(ifMatches()).toEqual([T0, elsewhere]);
+    expect(sent()).toEqual(["transaction:update:t1", "transaction:delete:t1"]);
+    expect(guards()).toEqual([T0, undefined]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
   });
 
   it("guards an operation queued behind an unsent create with the stamp the create earned", async () => {
@@ -601,19 +679,17 @@ describe("two guarded operations queued on one row (R-2 §A)", () => {
       undefined,
       undefined,
     ]);
-    fetchMock.mockImplementation((_input, init) =>
-      Promise.resolve(
-        init?.method === "POST"
-          ? json(account({ id: created.id, name: "Wallet", updatedAt: T1 }), { status: 201 })
-          : json({ message: "Account archived successfully" }),
-      ),
+    answers((op) =>
+      op.action === "create"
+        ? { result: account({ id: created.id, name: "Wallet", updatedAt: T1 }) }
+        : {},
     );
     reportOnline(true);
 
     await requestSync();
 
-    expect(calls()).toEqual(["POST /api/accounts", `DELETE /api/accounts/${created.id}`]);
-    expect(ifMatches()).toEqual([null, T1]);
+    expect(sent()).toEqual([`account:create:${created.id}`, `account:archive:${created.id}`]);
+    expect(guards()).toEqual([undefined, undefined]);
     expect(await pendingOperations(vault.db)).toEqual([]);
   });
 });
@@ -631,17 +707,15 @@ describe("an operation that sits ahead of the create it names (R-2 §B)", () => 
         payload: { body: { id: "a9" } },
       },
     ]);
-    fetchMock.mockImplementation((input) =>
-      Promise.resolve(
-        urlOf(input).endsWith("/api/accounts")
-          ? json(account({ id: "a9" }), { status: 201 })
-          : json(transaction({ id: "t1" })),
-      ),
-    );
+    answers((op) => ({
+      result: op.entity === "account" ? account({ id: "a9" }) : transaction({ id: "t1" }),
+    }));
 
     await requestSync();
 
-    expect(calls()).toEqual(["POST /api/accounts", "PUT /api/transactions/t1"]);
+    // The movement is held out of the first batch — nothing may go ahead of the create it names —
+    // and leaves in the next one.
+    expect(batches()).toEqual([["account:create:a9"], ["transaction:update:t1"]]);
     expect(await pendingOperations(vault.db)).toEqual([]);
   });
 });
@@ -663,9 +737,7 @@ describe("a refused fold that cannot be undone whole (R-2 §C)", () => {
     ]);
     reportOnline(false);
     await updateAccount("a1", { name: "Second" });
-    fetchMock.mockImplementation(() =>
-      Promise.resolve(json({ code: "VALIDATION", message: "no" }, { status: 400 })),
-    );
+    answers(() => rejectedWith("VALIDATION"));
     reportOnline(true);
 
     await requestSync();
@@ -695,26 +767,26 @@ describe("a client id another user already owns (F-21)", () => {
     );
     reportOnline(true);
 
-    fetchMock.mockImplementation((input, init) => {
-      const body = JSON.parse(bodyOf(init)) as { id: string };
-      if (!urlOf(input).endsWith("/api/accounts")) return Promise.resolve(json(transaction({})));
-      return Promise.resolve(
-        body.id === created.id
-          ? json({ code: "ID_TAKEN", message: "taken" }, { status: 409 })
-          : json(account({ id: body.id, name: "Wallet" }), { status: 201 }),
-      );
+    answers((op) => {
+      if (op.entity !== "account") {
+        return op.dependsOn.includes(created.id)
+          ? blockedBy(opsOf(fetchMock.mock.calls[0]?.[1])[0]?.opId ?? "")
+          : { result: transaction({}) };
+      }
+      return op.id === created.id
+        ? conflictWith("ID_TAKEN")
+        : { result: account({ id: op.id, name: "Wallet" }) };
     });
 
     await requestSync();
 
-    const minted = JSON.parse(bodyOf(fetchMock.mock.calls[1]?.[1])) as { id: string };
-    expect(minted.id).not.toBe(created.id);
+    const second = opsOf(fetchMock.mock.calls[1]?.[1]);
+    const minted = second[0]?.id ?? "";
+    expect(minted).not.toBe(created.id);
     expect(await vault.db.get("accounts", created.id)).toBeUndefined();
-    expect(await vault.db.get("accounts", minted.id)).toBeDefined();
-    const movement = JSON.parse(bodyOf(fetchMock.mock.calls[2]?.[1])) as {
-      fromAccountId: string;
-    };
-    expect(movement.fromAccountId).toBe(minted.id);
+    expect(await vault.db.get("accounts", minted)).toBeDefined();
+    expect(second[1]?.payload.body).toMatchObject({ fromAccountId: minted });
+    expect(second[1]?.dependsOn).toEqual([minted]);
     expect(await pendingOperations(vault.db)).toEqual([]);
   });
 
@@ -729,15 +801,14 @@ describe("a client id another user already owns (F-21)", () => {
         payload: { body: { id: "a9" } },
       },
     ]);
-    fetchMock.mockImplementation(() =>
-      Promise.resolve(json({ code: "ID_TAKEN", message: "taken" }, { status: 409 })),
-    );
+    answers(() => conflictWith("ID_TAKEN"));
 
     await requestSync();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [left] = await pendingOperations(vault.db);
-    expect(left).toMatchObject({ status: "failed", lastError: "ID_TAKEN", reminted: true });
+    // A second collision is the batch's own `conflict`, and it waits for the user in the tray.
+    expect(left).toMatchObject({ status: "conflict", lastError: "ID_TAKEN", reminted: true });
     expect(left?.entityId).not.toBe("a9");
   });
 
@@ -755,11 +826,26 @@ describe("a client id another user already owns (F-21)", () => {
       "44444444-4444-7444-8444-444444444444",
     );
     reportOnline(true);
-    fetchMock
-      .mockImplementationOnce(() =>
-        Promise.resolve(json({ code: "ID_TAKEN", message: "taken" }, { status: 409 })),
-      )
-      .mockImplementation(() => Promise.reject(new TypeError("Failed to fetch")));
+    let asked = 0;
+    fetchMock.mockImplementation((_input, init) => {
+      asked += 1;
+      if (asked > 1) return Promise.reject(new TypeError("Failed to fetch"));
+      const operations = opsOf(init);
+      return Promise.resolve(
+        json({
+          serverTime: SERVER_TIME,
+          results: operations.map((op) => ({
+            opId: op.opId,
+            seq: op.seq,
+            entity: op.entity,
+            id: op.id,
+            ...(op.entity === "account"
+              ? conflictWith("ID_TAKEN")
+              : blockedBy(operations[0]?.opId ?? "")),
+          })),
+        }),
+      );
+    });
 
     await requestSync();
 
@@ -782,10 +868,10 @@ describe("a client id another user already owns (F-21)", () => {
     );
     reportOnline(true);
     let taken = true;
-    fetchMock.mockImplementation(() => {
-      if (!taken) return Promise.resolve(json(transaction({ id: "server" })));
+    answers((op) => {
+      if (!taken) return { result: transaction({ id: op.id }) };
       taken = false;
-      return Promise.resolve(json({ code: "ID_TAKEN", message: "taken" }, { status: 409 }));
+      return conflictWith("ID_TAKEN");
     });
 
     const before = operationPayload((await pendingOperations(vault.db))[0]!).effect;
@@ -821,13 +907,11 @@ describe("a batch of rows (F-20)", () => {
       "transaction:update:t2",
     ]);
 
-    fetchMock.mockImplementation((input) =>
-      Promise.resolve(json(transaction({ id: urlOf(input).endsWith("t1") ? "t1" : "t2" }))),
-    );
+    answers((op) => ({ result: transaction({ id: op.id }) }));
     reportOnline(true);
     await requestSync();
 
-    expect(calls()).toEqual(["PUT /api/transactions/t1", "PUT /api/transactions/t2"]);
+    expect(batches()).toEqual([["transaction:update:t1", "transaction:update:t2"]]);
     expect(await pendingOperations(vault.db)).toEqual([]);
   });
 
@@ -836,12 +920,8 @@ describe("a batch of rows (F-20)", () => {
     for (const id of ["t1", "t2"]) {
       await vault.db.put("transactions", transactionRecord(transaction({ id })));
     }
-    fetchMock.mockImplementation((input) =>
-      Promise.resolve(
-        urlOf(input).endsWith("t2")
-          ? json({ code: "CATEGORY_ARCHIVED", message: "archived" }, { status: 409 })
-          : json(transaction({ id: "t1" })),
-      ),
+    answers((op) =>
+      op.id === "t2" ? rejectedWith("CATEGORY_ARCHIVED") : { result: transaction({ id: "t1" }) },
     );
 
     const result = await batchUpdateTransactions({
@@ -863,16 +943,7 @@ describe("what a 409 STALE_UPDATE does (O-F5a)", () => {
   const T0 = "2026-08-01T10:00:00.000Z";
   const T1 = "2026-09-04T12:00:00.000Z";
 
-  const stale = (current?: unknown) =>
-    json(
-      {
-        error: "Conflict",
-        message: "The resource changed since you last read it",
-        code: "STALE_UPDATE",
-        ...(current === undefined ? {} : { current }),
-      },
-      { status: 409 },
-    );
+  const stale = (current: unknown) => conflictWith("STALE_UPDATE", current);
 
   it("merges a text-only edit over the stamp the server answered with, without asking", async () => {
     const vault = await vaultWith();
@@ -880,18 +951,16 @@ describe("what a 409 STALE_UPDATE does (O-F5a)", () => {
       { seq: 1, entityId: "t1", baseUpdatedAt: T0, payload: { body: { description: "lunch" } } },
     ]);
     let answered = 0;
-    fetchMock.mockImplementation(() => {
+    answers(() => {
       answered += 1;
-      return Promise.resolve(
-        answered === 1
-          ? stale(transaction({ id: "t1", description: "elsewhere", updatedAt: T1 }))
-          : json(transaction({ id: "t1", description: "lunch", updatedAt: T1 })),
-      );
+      return answered === 1
+        ? stale(transaction({ id: "t1", description: "elsewhere", updatedAt: T1 }))
+        : { result: transaction({ id: "t1", description: "lunch", updatedAt: T1 }) };
     });
 
     await requestSync();
 
-    expect(ifMatches()).toEqual([T0, T1]);
+    expect(guards()).toEqual([T0, T1]);
     expect(await pendingOperations(vault.db)).toEqual([]);
     expect(outboxStatusStore.getSnapshot().attention).toBe(0);
   });
@@ -902,11 +971,11 @@ describe("what a 409 STALE_UPDATE does (O-F5a)", () => {
     await seed(vault.db, [
       { seq: 1, entityId: "t1", baseUpdatedAt: T0, payload: { body: { amount: 15 } } },
     ]);
-    fetchMock.mockImplementation(() => Promise.resolve(stale(server)));
+    answers(() => stale(server));
 
     await requestSync();
 
-    expect(calls()).toEqual(["PUT /api/transactions/t1"]);
+    expect(sent()).toEqual(["transaction:update:t1"]);
     const [queued] = await pendingOperations(vault.db);
     expect(queued).toMatchObject({ status: "conflict", serverRow: server });
     expect(outboxStatusStore.getSnapshot().attention).toBe(1);
@@ -917,13 +986,11 @@ describe("what a 409 STALE_UPDATE does (O-F5a)", () => {
     await seed(vault.db, [
       { seq: 1, entityId: "t1", baseUpdatedAt: T0, payload: { body: { note: "later" } } },
     ]);
-    fetchMock.mockImplementation(() =>
-      Promise.resolve(stale(transaction({ id: "t1", updatedAt: T0 }))),
-    );
+    answers(() => stale(transaction({ id: "t1", updatedAt: T0 })));
 
     await requestSync();
 
-    expect(calls()).toEqual(["PUT /api/transactions/t1"]);
+    expect(sent()).toEqual(["transaction:update:t1"]);
     expect((await pendingOperations(vault.db)).map((entry) => entry.status)).toEqual(["conflict"]);
   });
 
@@ -933,11 +1000,9 @@ describe("what a 409 STALE_UPDATE does (O-F5a)", () => {
       { seq: 1, entityId: "t1", baseUpdatedAt: T0, payload: { body: { description: "mine" } } },
     ]);
     let answered = 0;
-    fetchMock.mockImplementation(() => {
+    answers(() => {
       answered += 1;
-      return Promise.resolve(
-        stale(transaction({ id: "t1", updatedAt: `2026-09-04T12:0${answered}:00.000Z` })),
-      );
+      return stale(transaction({ id: "t1", updatedAt: `2026-09-04T12:0${answered}:00.000Z` }));
     });
 
     await requestSync();
@@ -953,17 +1018,15 @@ describe("what a 409 STALE_UPDATE does (O-F5a)", () => {
       { seq: 1, entityId: "t1", baseUpdatedAt: T0, payload: { body: { amount: 15 } } },
       { seq: 2, entityId: "t2", baseUpdatedAt: T0, payload: { body: { amount: 30 } } },
     ]);
-    fetchMock.mockImplementation((input) =>
-      Promise.resolve(
-        urlOf(input).endsWith("t1")
-          ? stale(transaction({ id: "t1", updatedAt: T1 }))
-          : json(transaction({ id: "t2", updatedAt: T1 })),
-      ),
+    answers((op) =>
+      op.id === "t1"
+        ? stale(transaction({ id: "t1", updatedAt: T1 }))
+        : { result: transaction({ id: "t2", updatedAt: T1 }) },
     );
 
     await requestSync();
 
-    expect(calls()).toEqual(["PUT /api/transactions/t1", "PUT /api/transactions/t2"]);
+    expect(sent()).toEqual(["transaction:update:t1", "transaction:update:t2"]);
     expect((await pendingOperations(vault.db)).map((entry) => entry.seq)).toEqual([1]);
   });
 });

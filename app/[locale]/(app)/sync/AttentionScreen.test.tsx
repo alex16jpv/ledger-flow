@@ -196,4 +196,34 @@ describe("the Needs your attention tray", () => {
     expect(await screen.findByText("On the server")).toBeInTheDocument();
     expect(screen.getByText("On this device")).toBeInTheDocument();
   });
+  it("gives a movement stuck on an archived account its own card and its own way out (F-58)", async () => {
+    const vault = await vaultWith([
+      {
+        action: "create",
+        payload: { body: { id: "t1", amount: 15, fromAccountId: "a1" } },
+        lastError: "RESOURCE_ARCHIVED",
+        archivedId: "a1",
+      },
+    ]);
+    await vault.db.put(
+      "accounts",
+      accountRecord(account({ id: "a1", name: "Cash", archivedAt: T1 })),
+    );
+    render();
+
+    expect(await screen.findByText("Account archived")).toBeInTheDocument();
+    expect(screen.getByText(/archived on another device/)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Keep this device’s version" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Restore the account" }));
+
+    await waitFor(async () => {
+      expect((await pendingOperations(vault.db)).map((entry) => entry.seq)).toEqual([0.5, 1]);
+    });
+    // With no network the two stay in the queue, in the order they will travel in.
+    expect((await pendingOperations(vault.db)).map((entry) => entry.action)).toEqual([
+      "restore",
+      "create",
+    ]);
+  });
 });

@@ -6,6 +6,13 @@ export {
   updateAccount,
 } from "./accounts";
 export {
+  batchBody,
+  chunkBatch,
+  SYNC_BODY_BUDGET_BYTES,
+  SYNC_MAX_OPERATIONS,
+  type SyncOperationInput,
+} from "./batch";
+export {
   archiveBudget,
   createBudget,
   removeBudgetOverride,
@@ -20,6 +27,7 @@ export {
   conflictFields,
   type ConflictKind,
   conflictKind,
+  ownServerRow,
   serverStamp,
   TEXT_FIELDS,
 } from "./conflict";
@@ -35,6 +43,8 @@ export {
   resetSyncEngine,
   resumeSyncEngine,
   startSyncEngine,
+  type SyncTransport,
+  syncTransport,
 } from "./engine";
 export {
   isRemoval,
@@ -44,6 +54,7 @@ export {
   operationPayload,
   OUTBOX_ACTIONS,
 } from "./envelope";
+export { pruneNotices, readNotices, type SyncNotice, type SyncWarning } from "./notices";
 export { NotProjectableError } from "./projected";
 export { projectBalances, type ProjectedAccount } from "./projection";
 export { pendingOperations, queueWrite, type VaultDb, type WriteTransaction } from "./queue";
@@ -62,6 +73,7 @@ export {
   discardOperation,
   discardOperations,
   operationsNeedingAttention,
+  restoreArchivedAccount,
   retryOperation,
   retryOperations,
 } from "./resolve";
@@ -82,4 +94,4 @@ export {
   quickAddTransaction,
   updateTransaction,
 } from "./transactions";
-export { write, writeAll } from "./write";
+export { enqueue, write, writeAll } from "./write";

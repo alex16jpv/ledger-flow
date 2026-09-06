@@ -322,6 +322,11 @@
       "lastError": {
         "label": "Último error: {code}"
       },
+      "transport": {
+        "label": "Modo de envío",
+        "help": "Este servidor acepta los cambios de uno en uno, no en un lote",
+        "routes": "De uno en uno"
+      },
       "storage": {
         "label": "Almacenamiento usado",
         "unknown": "Desconocido"
@@ -416,6 +421,12 @@
         "body": "No se aplicó ni aquí ni allí. Motivo: {reason}. Al descartarlo, este {what} vuelve a lo que tiene el servidor.",
         "unknown": "desconocido"
       },
+      "archived": {
+        "title": "La cuenta se archivó en otro sitio.",
+        "body": "Este {what} usa una cuenta que se archivó en otro dispositivo, así que el servidor no lo acepta. Restaura la cuenta y sale en el mismo lote, o edita el {what} para usar otra cuenta.",
+        "restore": "Restaurar la cuenta",
+        "gone": "Este dispositivo ya no tiene esa cuenta, así que no hay nada que restaurar. Descarta el cambio o edita el movimiento para usar otra cuenta."
+      },
       "noServerRow": "El servidor no dijo qué tiene. Si te quedas con la versión de este dispositivo, la sobrescribirás.",
       "server": "En el servidor",
       "device": "En este dispositivo",
@@ -475,7 +486,8 @@
       "onRow": "Este {what} tiene un cambio que el servidor no ha aceptado.",
       "kinds": {
         "conflict": "Cambiado en dos sitios",
-        "failed": "Rechazado por el servidor"
+        "failed": "Rechazado por el servidor",
+        "archived": "Cuenta archivada"
       },
       "compare": "Comparar versiones",
       "discardAll": "Descartar todo",
@@ -1090,6 +1102,7 @@
       "title": "Por revisar",
       "titleCount": "Por revisar · {count}",
       "intro": "Los gastos rápidos ya descontaron tu saldo y ya cuentan en tu presupuesto total. Aquí solo les pones nombre y categoría.",
+      "droppedCategory": "Su categoría estaba archivada, así que el servidor lo guardó sin ella. Elige otra.",
       "when": "{day} {time} · {account}",
       "other": "Otra",
       "descriptionPlaceholder": "Descripción (opcional)",

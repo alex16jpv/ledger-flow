@@ -1,6 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { ToastProvider } from "@/components/ui/Toast";
 import { pendingOperations, refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
 import { setCurrentVault } from "@/lib/local/repository/read";
 import {
@@ -82,7 +83,11 @@ const server = transaction({ id: "t1", amount: 42, categoryId: "c9", updatedAt: 
 describe("the Resolve sync conflict sheet", () => {
   it("says it is reading the queue before it can show anything", async () => {
     await vaultWith([{ serverRow: server }]);
-    renderWithProviders(<SyncConflictSheet open seq={1} onClose={vi.fn()} />);
+    renderWithProviders(
+      <ToastProvider>
+        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+      </ToastProvider>,
+    );
 
     expect(screen.getByText("Reading what’s waiting…")).toBeInTheDocument();
     await waitFor(() => {
@@ -92,7 +97,11 @@ describe("the Resolve sync conflict sheet", () => {
 
   it("puts the two versions side by side and highlights the field in dispute", async () => {
     await vaultWith([{ serverRow: server }]);
-    renderWithProviders(<SyncConflictSheet open seq={1} onClose={vi.fn()} />);
+    renderWithProviders(
+      <ToastProvider>
+        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+      </ToastProvider>,
+    );
 
     const cards = await screen.findAllByRole("heading", { level: 3 });
     expect(cards.map((card) => card.textContent)).toEqual(["On the server", "On this device"]);
@@ -105,7 +114,11 @@ describe("the Resolve sync conflict sheet", () => {
   it("keeps the server's version by discarding the operation, and never sends it", async () => {
     const vault = await vaultWith([{ serverRow: server }]);
     const onClose = vi.fn();
-    renderWithProviders(<SyncConflictSheet open seq={1} onClose={onClose} />);
+    renderWithProviders(
+      <ToastProvider>
+        <SyncConflictSheet open seq={1} onClose={onClose} />
+      </ToastProvider>,
+    );
 
     await userEvent.click(await screen.findByRole("button", { name: "Use the server’s version" }));
 
@@ -119,7 +132,11 @@ describe("the Resolve sync conflict sheet", () => {
 
   it("shows a definitive refusal with its reason and offers discarding first", async () => {
     await vaultWith([{ status: "failed", lastError: "RESOURCE_ARCHIVED", serverRow: undefined }]);
-    renderWithProviders(<SyncConflictSheet open seq={1} onClose={vi.fn()} />);
+    renderWithProviders(
+      <ToastProvider>
+        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+      </ToastProvider>,
+    );
 
     expect(await screen.findByText(/RESOURCE_ARCHIVED/)).toBeInTheDocument();
     const buttons = screen.getAllByRole("button", { name: /Discard this change|Try again/ });
@@ -132,7 +149,11 @@ describe("the Resolve sync conflict sheet", () => {
 
   it("says there is nothing left when the operation is no longer waiting", async () => {
     await vaultWith([]);
-    renderWithProviders(<SyncConflictSheet open seq={1} onClose={vi.fn()} />);
+    renderWithProviders(
+      <ToastProvider>
+        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+      </ToastProvider>,
+    );
 
     expect(await screen.findByText("Nothing left to resolve")).toBeInTheDocument();
     // The sheet's own dismiss and the footer's way out.
@@ -141,10 +162,53 @@ describe("the Resolve sync conflict sheet", () => {
 
   it("warns before overwriting a server version it was never told", async () => {
     await vaultWith([{ serverRow: undefined }]);
-    renderWithProviders(<SyncConflictSheet open seq={1} onClose={vi.fn()} />);
+    renderWithProviders(
+      <ToastProvider>
+        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+      </ToastProvider>,
+    );
 
     expect(await screen.findByText(/The server didn’t say what it has/)).toBeInTheDocument();
     expect(screen.queryByText("On the server")).not.toBeInTheDocument();
     expect(screen.getByText("On this device")).toBeInTheDocument();
+  });
+  it("offers restoring the account a movement is stuck on, ahead of the movement (F-58)", async () => {
+    const vault = await vaultWith([
+      {
+        action: "create",
+        payload: { body: { id: "t1", amount: 15, fromAccountId: "a1" } },
+        lastError: "RESOURCE_ARCHIVED",
+        archivedId: "a1",
+        serverRow: undefined,
+      },
+    ]);
+    await vault.db.put(
+      "accounts",
+      accountRecord(account({ id: "a1", name: "Cash", archivedAt: T1 })),
+    );
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ serverTime: T1, results: [] }), {
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    renderWithProviders(
+      <ToastProvider>
+        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+      </ToastProvider>,
+    );
+
+    expect(await screen.findByText(/archived on another device/)).toBeInTheDocument();
+    // The row it needs is named, and trying again as it is is not offered: it would be refused again.
+    expect(screen.getAllByText("Cash").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Keep this device’s version" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Restore the account" }));
+
+    await waitFor(async () => {
+      expect((await pendingOperations(vault.db)).map((entry) => entry.seq)).toEqual([0.5, 1]);
+    });
+    const [restore, movement] = await pendingOperations(vault.db);
+    expect(restore).toMatchObject({ entity: "account", action: "restore", entityId: "a1" });
+    expect(movement).toMatchObject({ status: "pending", dependsOn: ["a1"] });
   });
 });

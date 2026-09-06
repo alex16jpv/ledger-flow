@@ -1,19 +1,23 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { account, openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
+import { answerBatch, conflictWith, operationsOf, rejectedWith } from "@/lib/testing/sync";
+import {
+  account,
+  category,
+  openTestVault,
+  profile,
+  transaction,
+  wipeVaults,
+} from "@/lib/testing/vault";
 import type { Account } from "@/types/api";
 
 import { setCurrentVault } from "../repository/read";
 import { accountRecord, profileRecord, transactionRecord } from "../schema";
 import { createAccount, updateAccount } from "./accounts";
+import { createCategory } from "./categories";
+import { requestSync } from "./engine";
 import { operationPayload } from "./envelope";
 import { pendingOperations } from "./queue";
 import { createTransaction, deleteTransaction, updateTransaction } from "./transactions";
-
-const json = (body: unknown, init: ResponseInit = {}) =>
-  new Response(JSON.stringify(body), {
-    headers: { "content-type": "application/json" },
-    ...init,
-  });
 
 const fetchMock = vi.fn<typeof fetch>();
 const cash = account({ id: "a1", name: "Cash", balance: 1000, openingBalance: 1000 });
@@ -42,6 +46,8 @@ async function vaultWith(rows: { accounts?: Account[] } = {}) {
 const headerOf = (call: number, name: string) =>
   new Headers(fetchMock.mock.calls[call]?.[1]?.headers).get(name);
 
+const guardOf = (call: number) => operationsOf(fetchMock.mock.calls[call]?.[1])[0]?.baseUpdatedAt;
+
 describe("writing through the outbox", () => {
   it("answers from the projection with no network, and leaves the operation queued", async () => {
     const vault = await vaultWith();
@@ -65,7 +71,7 @@ describe("writing through the outbox", () => {
   it("with network the operation leaves the queue and the server's row replaces the projection", async () => {
     const vault = await vaultWith();
     const saved = account({ id: "server-id", name: "Wallet", balance: 250 });
-    fetchMock.mockResolvedValue(json(saved, { status: 201 }));
+    answerBatch(fetchMock, () => ({ result: saved }));
 
     const created = await createAccount({
       id: "server-id",
@@ -83,13 +89,11 @@ describe("writing through the outbox", () => {
 
   it("guards an edit with the updatedAt the mirror knew, and undoes it when the server refuses", async () => {
     const vault = await vaultWith();
-    fetchMock.mockResolvedValue(
-      json({ error: "BadRequest", message: "nope", code: "VALIDATION" }, { status: 400 }),
-    );
+    answerBatch(fetchMock, () => rejectedWith("VALIDATION"));
 
     await expect(updateAccount("a1", { name: "Renamed" })).rejects.toThrow();
 
-    expect(headerOf(0, "If-Match")).toBe(cash.updatedAt);
+    expect(guardOf(0)).toBe(cash.updatedAt);
     expect((await vault.db.get("accounts", "a1"))?.row).toEqual(cash);
     expect(await pendingOperations(vault.db)).toEqual([]);
   });
@@ -107,9 +111,7 @@ describe("writing through the outbox", () => {
 
   it("marks a stale edit as a conflict, shows the server's row and keeps the edit in the envelope", async () => {
     const vault = await vaultWith();
-    fetchMock.mockResolvedValue(
-      json({ error: "Conflict", message: "stale", code: "STALE_UPDATE" }, { status: 409 }),
-    );
+    answerBatch(fetchMock, () => conflictWith("STALE_UPDATE"));
 
     const updated = await updateAccount("a1", { name: "Renamed" });
 
@@ -124,12 +126,12 @@ describe("writing through the outbox", () => {
     });
   });
 
-  it("takes a 404 on a delete as the state the operation asked for", async () => {
+  it("takes a movement another device already deleted as the state it asked for", async () => {
     const vault = await vaultWith();
     await vault.db.put("transactions", transactionRecord(transaction({ id: "t1" })));
-    fetchMock.mockResolvedValue(
-      json({ error: "NotFound", message: "gone", code: "NOT_FOUND" }, { status: 404 }),
-    );
+    // Another device deleted it first: the batch answers `duplicate`, which is the state the
+    // operation asked for.
+    answerBatch(fetchMock, () => ({ status: "duplicate" }));
 
     await deleteTransaction("t1");
 
@@ -168,5 +170,57 @@ describe("writing through the outbox", () => {
     const { effect } = operationPayload((await pendingOperations(vault.db))[0]!);
     expect(effect?.before).toMatchObject({ amount: 20 });
     expect(effect?.after).toMatchObject({ amount: 35 });
+  });
+  it("hands a taken name to the form, not to a tray the user never opened", async () => {
+    const vault = await vaultWith();
+    answerBatch(fetchMock, () => conflictWith("DUPLICATE", cash));
+
+    await expect(createAccount({ name: "Cash", type: "CASH", balance: 0 })).rejects.toMatchObject({
+      code: "DUPLICATE",
+    });
+
+    // The write is undone, exactly as the route's own 409 undid it: the form is where it is fixed.
+    expect(await pendingOperations(vault.db)).toEqual([]);
+    expect(await vault.db.getAll("accounts")).toHaveLength(1);
+  });
+
+  it("tells the form the category it typed already exists, and keeps the server's row", async () => {
+    const vault = await vaultWith();
+    const server = { ...category({ id: "c-server", name: "Comida" }) };
+    answerBatch(fetchMock, () => ({ status: "merged", mergedInto: "c-server", result: server }));
+
+    await expect(
+      createCategory({ name: "comida", type: "EXPENSE", color: "GREEN" }),
+    ).rejects.toMatchObject({ code: "DUPLICATE" });
+
+    // Nothing dangles: the row the device minted is the server's row now (F-57), and the queue is
+    // empty — the operation did land, on a row that already existed.
+    expect(await pendingOperations(vault.db)).toEqual([]);
+    expect((await vault.db.getAll("categories")).map((record) => record.id)).toEqual(["c-server"]);
+  });
+
+  it("leaves a refusal nobody is waiting for in the tray instead of undoing it (F-23)", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("transactions", transactionRecord(transaction({ id: "t1", amount: 20 })));
+    reportOnline(false);
+
+    // Queued with no network: the form was answered from the projection and walked away.
+    await updateTransaction("t1", { amount: 35 });
+
+    answerBatch(fetchMock, () => rejectedWith("FUTURE_DATE"));
+    reportOnline(true);
+    await requestSync();
+
+    // It stays for the tray with what the user typed still in its envelope, instead of being
+    // undone and dropped: nobody was there to be told why it went.
+    const [left] = await pendingOperations(vault.db);
+    expect(left).toMatchObject({
+      status: "failed",
+      lastError: "FUTURE_DATE",
+      payload: { body: { amount: 35 } },
+    });
+    // The row shows the server's version while the operation is stuck (D-23); the sheet is where
+    // this device's version lives from here on.
+    expect((await vault.db.get("transactions", "t1"))?.row.amount).toBe(20);
   });
 });

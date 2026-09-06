@@ -37,6 +37,16 @@ async function allocateSeq(tx: WriteTransaction): Promise<number> {
   return next;
 }
 
+// A resolution has to travel ahead of the operation it unblocks, in the same batch (F-58), and the
+// counter only goes up: the room is made between `before` and whatever precedes it, which is why
+// this one is not an integer. Nothing local reads `seq` as anything but an order, and the wire sends
+// the rank inside the batch instead (D-33).
+async function insertSeq(tx: WriteTransaction, before: number): Promise<number> {
+  const keys = await tx.objectStore("outbox").getAllKeys(IDBKeyRange.upperBound(before, true));
+  const previous = keys.length > 0 ? (keys[keys.length - 1] ?? 0) : 0;
+  return (previous + before) / 2;
+}
+
 export async function operationsFor(
   tx: WriteTransaction,
   entity: OutboxEntity,
@@ -99,16 +109,23 @@ export interface QueuedWrite {
   undo: (tx: WriteTransaction) => Promise<void>;
 }
 
+export interface QueueOptions {
+  // Where in the queue the operation goes. Absent: at the end, with the next number of the counter.
+  before?: number;
+}
+
 export async function queueWrite(
   db: VaultDb,
   write: LocalWrite,
   now: () => Date = () => new Date(),
+  options: QueueOptions = {},
 ): Promise<QueuedWrite> {
   const occurredAt = now().toISOString();
   const tx = writeTransaction(db);
   try {
     const change = await write.project(tx, occurredAt);
-    const seq = await allocateSeq(tx);
+    const seq =
+      options.before === undefined ? await allocateSeq(tx) : await insertSeq(tx, options.before);
     const operation = envelope(
       {
         entity: write.entity,
@@ -196,6 +213,43 @@ export async function markOperation(
       ...extra,
     });
     await apply?.(tx);
+  }
+  await tx.done;
+}
+
+// The batch answered for every operation at once, so the queue moves for all of them at once too.
+// `attempts` counts an operation the server was asked about: a request that never came back may
+// have landed, which is what stops the fold of `coalesce` from crossing it.
+export async function requeueOperations(
+  db: VaultDb,
+  seqs: readonly number[],
+  lastError: string | null,
+): Promise<void> {
+  const tx = writeTransaction(db);
+  const store = tx.objectStore("outbox");
+  for (const seq of seqs) {
+    const operation = await store.get(seq);
+    if (!operation) continue;
+    await store.put({
+      ...operation,
+      status: "pending",
+      lastError,
+      attempts: operation.attempts + 1,
+    });
+  }
+  await tx.done;
+}
+
+// `blocked`: the server did not attempt it, so nothing about it changed but the fact that it is
+// back in line. Counting an attempt here would stop it from ever being folded again for a batch it
+// was never part of.
+export async function holdOperations(db: VaultDb, seqs: readonly number[]): Promise<void> {
+  const tx = writeTransaction(db);
+  const store = tx.objectStore("outbox");
+  for (const seq of seqs) {
+    const operation = await store.get(seq);
+    if (operation?.status !== "sending") continue;
+    await store.put({ ...operation, status: "pending" });
   }
   await tx.done;
 }

@@ -1,6 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { ToastProvider } from "@/components/ui/Toast";
 import { refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
 import { setCurrentVault } from "@/lib/local/repository/read";
 import type { OutboxOperation } from "@/lib/local/schema";
@@ -49,29 +50,36 @@ afterEach(async () => {
   await wipeVaults();
 });
 
+const render = () =>
+  renderWithProviders(
+    <ToastProvider>
+      <ConnectionBanner />
+    </ToastProvider>,
+  );
+
 describe("ConnectionBanner", () => {
   it("says nothing with network and an empty queue", async () => {
     await queueOf([]);
-    renderWithProviders(<ConnectionBanner />);
+    render();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("counts what the queue is holding while offline", async () => {
     await queueOf([operation(1), operation(2)]);
     reportOnline(false);
-    renderWithProviders(<ConnectionBanner />);
+    render();
     expect(screen.getByRole("status")).toHaveTextContent("2 changes waiting");
   });
 
   it("keeps the amber stripe with network while the queue has not drained", async () => {
     await queueOf([operation(1)]);
-    renderWithProviders(<ConnectionBanner />);
+    render();
     expect(screen.getByRole("status")).toHaveTextContent("Changes waiting to sync.");
   });
 
   it("turns red when an operation is in conflict, online or not", async () => {
     await queueOf([operation(1, { status: "conflict" })]);
-    renderWithProviders(<ConnectionBanner />);
+    render();
     expect(screen.getByRole("alert")).toHaveTextContent("1 change could not sync");
   });
 
@@ -80,13 +88,13 @@ describe("ConnectionBanner", () => {
       operation(1, { status: "failed", lastError: "RESOURCE_ARCHIVED" }),
       operation(2, { status: "conflict" }),
     ]);
-    renderWithProviders(<ConnectionBanner />);
+    render();
     expect(screen.getByRole("alert")).toHaveTextContent("2 changes could not sync");
   });
 
   it("opens the first stuck operation from Review", async () => {
     await queueOf([operation(1), operation(2, { status: "conflict" })]);
-    renderWithProviders(<ConnectionBanner />);
+    render();
 
     await userEvent.click(screen.getByRole("button", { name: "Review" }));
 
@@ -97,7 +105,7 @@ describe("ConnectionBanner", () => {
 
   it("also leads to the tray that lists every stuck operation", async () => {
     await queueOf([operation(1, { status: "conflict" }), operation(2, { status: "failed" })]);
-    renderWithProviders(<ConnectionBanner />);
+    render();
 
     await userEvent.click(screen.getByRole("button", { name: "See all" }));
 

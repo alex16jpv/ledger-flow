@@ -95,9 +95,10 @@ export async function reconcileRow(
   }
 }
 
-// A removal the server confirmed without sending the row back (an archive answers `{ message }`,
-// F-22; a delete that was already gone answers 404): the baseline moves the way the operation asked,
-// because the server did do it and nothing else will say so until the next pull.
+// A removal the server confirmed without sending the row back (a `transaction:delete` answers a
+// message; a delete that was already gone answers 404 or, in a batch, `duplicate`): the baseline
+// moves the way the operation asked, because the server did do it and nothing else will say so
+// until the next pull.
 export async function reconcileRemoval(
   tx: WriteTransaction,
   operation: OutboxOperation,

@@ -1,4 +1,5 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
+import { answerBatch, applied, operationsOf } from "@/lib/testing/sync";
 import { account, openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
 
 import { setCurrentVault } from "../repository/read";
@@ -10,16 +11,11 @@ import {
   discardOperation,
   discardOperations,
   operationsNeedingAttention,
+  restoreArchivedAccount,
   retryOperation,
   retryOperations,
 } from "./resolve";
 import { outboxStatusStore, refreshOutboxStatus, resetOutboxStatus } from "./status";
-
-const json = (body: unknown, init: ResponseInit = {}) =>
-  new Response(JSON.stringify(body), {
-    headers: { "content-type": "application/json" },
-    ...init,
-  });
 
 const fetchMock = vi.fn<typeof fetch>();
 const T0 = "2026-08-01T00:00:00.000Z";
@@ -152,16 +148,14 @@ describe("resolving a conflict", () => {
     const server = transaction({ id: "t1", amount: 42, updatedAt: T1 });
     const vault = await vaultWithQueue([{ serverRow: server }]);
     startSyncEngine();
-    fetchMock.mockImplementation(() =>
-      Promise.resolve(
-        json(transaction({ id: "t1", amount: 15, updatedAt: "2026-09-04T13:00:00.000Z" })),
-      ),
+    answerBatch(fetchMock, () =>
+      applied(transaction({ id: "t1", amount: 15, updatedAt: "2026-09-04T13:00:00.000Z" })),
     );
     reportOnline(true);
 
     await retryOperation(vault.db, 1);
 
-    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("if-match")).toBe(T1);
+    expect(operationsOf(fetchMock.mock.calls[0]?.[1])[0]?.baseUpdatedAt).toBe(T1);
     expect(await pendingOperations(vault.db)).toEqual([]);
   });
 
@@ -222,5 +216,81 @@ describe("resolving a conflict", () => {
     expect((await operationsNeedingAttention(vault.db)).map((entry) => entry.seq)).toEqual([2, 3]);
     expect(outboxStatusStore.getSnapshot().attention).toBe(2);
     expect(outboxStatusStore.getSnapshot().firstAttention).toBe(2);
+  });
+});
+
+describe("the way out of a movement whose account was archived online (F-58)", () => {
+  const archived = account({ id: "a1", archivedAt: "2026-09-05T00:00:00.000Z", updatedAt: T1 });
+
+  async function vaultWithArchived() {
+    const vault = await vaultWithQueue([
+      {
+        action: "create",
+        payload: { body: { id: "t1", amount: 15, fromAccountId: "a1" } },
+        lastError: "RESOURCE_ARCHIVED",
+        archivedId: "a1",
+      },
+    ]);
+    await vault.db.put("accounts", accountRecord(archived));
+    return vault;
+  }
+
+  it("queues the restore ahead of the movement, so the two travel in one batch", async () => {
+    const vault = await vaultWithArchived();
+    startSyncEngine();
+    answerBatch(fetchMock, (op) =>
+      applied(
+        op.entity === "account" ? account({ id: "a1", updatedAt: T1 }) : transaction({ id: "t1" }),
+      ),
+    );
+    reportOnline(true);
+
+    expect(await restoreArchivedAccount(vault.db, 1)).toBe(true);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const sent = operationsOf(fetchMock.mock.calls[0]?.[1]);
+    expect(sent.map((op) => `${op.entity}:${op.action}`)).toEqual([
+      "account:restore",
+      "transaction:create",
+    ]);
+    // The movement names the account, so a restore that does not land answers `blocked` instead of
+    // the same refusal (D-30).
+    expect(sent[1]?.dependsOn).toEqual(["a1"]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+    expect((await vault.db.get("accounts", "a1"))?.row.archivedAt).toBeNull();
+  });
+
+  it("keeps the movement in the tray when the restore does not land", async () => {
+    const vault = await vaultWithArchived();
+    startSyncEngine();
+    answerBatch(fetchMock, (op) =>
+      op.entity === "account"
+        ? { status: "rejected", code: "VALIDATION", message: "no" }
+        : { status: "blocked", blockedBy: operationsOf(fetchMock.mock.calls[0]?.[1])[0]?.opId },
+    );
+    reportOnline(true);
+
+    await restoreArchivedAccount(vault.db, 1);
+
+    // Nothing was half-applied: the restore is in the tray, the movement is still in line.
+    expect(await statuses(vault.db)).toEqual(["0.5:failed", "1:pending"]);
+  });
+
+  it("says so when the mirror no longer holds the account", async () => {
+    const vault = await vaultWithArchived();
+    await vault.db.delete("accounts", "a1");
+
+    expect(await restoreArchivedAccount(vault.db, 1)).toBe(false);
+
+    expect(await statuses(vault.db)).toEqual(["1:conflict"]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not touch an operation stuck on anything else", async () => {
+    const vault = await vaultWithQueue([{ lastError: "STALE_UPDATE" }]);
+
+    expect(await restoreArchivedAccount(vault.db, 1)).toBe(false);
+
+    expect(await statuses(vault.db)).toEqual(["1:conflict"]);
   });
 });

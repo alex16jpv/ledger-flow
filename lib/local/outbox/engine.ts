@@ -1,15 +1,21 @@
-import { ApiError, NetworkError } from "@/lib/api/errors";
+import { ApiError, isErrorCode, NetworkError } from "@/lib/api/errors";
 import { readSessionMarker } from "@/lib/auth/marker";
 import { connectivityStore } from "@/lib/network/connectivity";
+import type { Account, SyncBatchResponse } from "@/types/api";
 
 import { currentVault } from "../repository/read";
+import type { OutboxOperation } from "../schema";
+import { batchBody, chunkBatch, postBatch } from "./batch";
 import { type Cancelled, coalesce, type Collapsed } from "./coalesce";
 import { conflictKind } from "./conflict";
 import { isRemoval, newEntityId, operationPayload } from "./envelope";
+import { recordNotices, type SyncNotice } from "./notices";
 import {
+  holdOperations,
   markOperation,
   pendingOperations,
   rebaseGuards,
+  requeueOperations,
   settleWrite,
   type VaultDb,
   type WriteTransaction,
@@ -32,6 +38,9 @@ export const AUTO_MERGE_ATTEMPTS = 5;
 
 export type DrainOutcome =
   | { kind: "sent"; result: unknown }
+  // It landed and the server sent no row back: a duplicate `opId` the registry answered from
+  // memory. The screen keeps the projection it already had and the pull of the round brings the row.
+  | { kind: "landed" }
   | { kind: "gone" }
   | { kind: "cancelled" }
   | { kind: "absorbed"; into: number }
@@ -77,8 +86,19 @@ const isIdTaken = (error: unknown): boolean =>
 const isUnauthorized = (error: unknown): boolean =>
   error instanceof ApiError && error.status === 401;
 
-// The `updatedAt` a successful write answers with, when it answers a row at all (an archive answers
-// `{ message }` today, F-22).
+// A server with no batch endpoint: the front was deployed ahead of its backend. One answer settles
+// it for the session and the queue keeps leaving by the ordinary routes (owner, 2026-09-06).
+const isBatchMissing = (error: unknown): boolean =>
+  error instanceof ApiError && (error.status === 404 || error.status === 501);
+
+// The envelope itself was refused, so nothing in the batch was applied: this client built a batch
+// the server cannot read, or one over the megabyte. The plan goes out one request at a time instead,
+// where each operation gets the verdict of its own route rather than the queue stalling on a batch
+// nobody can fix.
+const isEnvelopeRefused = (error: unknown): boolean =>
+  error instanceof ApiError && (error.status === 400 || error.status === 413);
+
+// The `updatedAt` a successful write answers with, when it answers a row at all.
 const stampOf = (answer: unknown): string | undefined => {
   const updatedAt = (answer as { updatedAt?: unknown } | null)?.updatedAt;
   return typeof updatedAt === "string" ? updatedAt : undefined;
@@ -112,6 +132,12 @@ const forget = (seqs: number[]): void => {
 // Resolving a conflict settles operations the engine never sent: their rollbacks go with them.
 export const forgetRollbacks = forget;
 
+// True while the write that made this operation is still waiting for it: `write()` registers the
+// undo before it asks for the drain, and drops it as soon as it answers the screen from the
+// projection. So an undo still registered means a form is on screen waiting for this very pass —
+// and an answer it cannot act on belongs to it, not to a tray it never opened.
+const awaited = (seq: number): boolean => rollbacks.has(seq);
+
 // Drops an operation and everything folded into it in one transaction, together with whatever the
 // server's answer leaves in the mirror.
 async function settle(
@@ -142,14 +168,16 @@ async function cancel(db: VaultDb, cancelled: Cancelled[], report: DrainReport):
   await tx.done;
 }
 
-// Marks the operation as being asked about without counting the attempt: `markOperation` does that
+// Marks the operations as being asked about without counting the attempt: `markOperation` does that
 // once, when the answer is in. A tab killed mid-flight leaves `sending` behind, which the next pass
 // picks up like any other queued operation — and which coalescing will not fold across.
-async function beginSend(db: VaultDb, seq: number): Promise<void> {
+async function beginSending(db: VaultDb, seqs: readonly number[]): Promise<void> {
   const tx = writeTransaction(db);
   const store = tx.objectStore("outbox");
-  const operation = await store.get(seq);
-  if (operation) await store.put({ ...operation, status: "sending" });
+  for (const seq of seqs) {
+    const operation = await store.get(seq);
+    if (operation) await store.put({ ...operation, status: "sending" });
+  }
   await tx.done;
 }
 
@@ -167,45 +195,66 @@ interface PassResult {
   retryAfterMs: number;
 }
 
+const emptyPass = (): PassResult => ({
+  progressed: false,
+  stopped: false,
+  answered: false,
+  unauthorized: false,
+  retryAfterMs: 0,
+});
+
+interface Holds {
+  // The ids nothing may be sent against: an operation in conflict or refused for good, and anything
+  // that named it. Only its dependents are held; the rest of the queue keeps going.
+  blocked: Set<string>;
+  // The rows whose create is still ahead in this plan: nothing that names one may go first. With
+  // `seq` alone this never happens; it is the belt for any fold that moves an operation earlier.
+  creating: Set<string>;
+}
+
+function initialHolds(entries: Collapsed[]): Holds {
+  const holds: Holds = { blocked: new Set(), creating: new Set() };
+  for (const entry of entries) {
+    const { status, entityId, action } = entry.operation;
+    if (status === "conflict" || status === "failed") holds.blocked.add(entityId);
+    else if (isCreate(action)) holds.creating.add(entityId);
+  }
+  return holds;
+}
+
+// The id this operation has to wait for, if any.
+function heldOn(operation: OutboxOperation, holds: Holds): string | undefined {
+  const waitingOn = operation.dependsOn.find(
+    (id) => holds.blocked.has(id) || holds.creating.has(id),
+  );
+  if (waitingOn !== undefined) return waitingOn;
+  return holds.blocked.has(operation.entityId) ? operation.entityId : undefined;
+}
+
 async function sendPlanned(
   db: VaultDb,
   entries: Collapsed[],
   report: DrainReport,
 ): Promise<PassResult> {
-  const result: PassResult = {
-    progressed: false,
-    stopped: false,
-    answered: false,
-    unauthorized: false,
-    retryAfterMs: 0,
-  };
-  // The ids nothing may be sent against: an operation in conflict or refused for good, and anything
-  // that named it. Only its dependents are held; the rest of the queue keeps going.
-  const blocked = new Set<string>();
-  // The rows whose create is still ahead in this plan: nothing that names one may go first. With
-  // `seq` alone this never happens; it is the belt for any fold that moves an operation earlier.
-  const creating = new Set<string>();
-  for (const entry of entries) {
-    const { status, entityId, action } = entry.operation;
-    if (status === "conflict" || status === "failed") blocked.add(entityId);
-    else if (isCreate(action)) creating.add(entityId);
-  }
+  const result = emptyPass();
+  const holds = initialHolds(entries);
+  const { blocked, creating } = holds;
 
   for (const entry of entries) {
     const operation = entry.operation;
     const { seq, entityId, entity, action } = operation;
     if (operation.status === "conflict" || operation.status === "failed") continue;
 
-    const waitingOn = operation.dependsOn.find((id) => blocked.has(id) || creating.has(id));
-    if (waitingOn !== undefined || blocked.has(entityId)) {
+    const waitingOn = heldOn(operation, holds);
+    if (waitingOn !== undefined) {
       blocked.add(entityId);
-      report.set(seq, { kind: "held", on: waitingOn ?? entityId });
+      report.set(seq, { kind: "held", on: waitingOn });
       continue;
     }
     for (const absorbed of entry.absorbed) report.set(absorbed, { kind: "absorbed", into: seq });
 
     creating.delete(entityId);
-    await beginSend(db, seq);
+    await beginSending(db, [seq]);
     try {
       const answer = await routeFor(entity, action).send(
         { entityId, payload: operationPayload(operation) },
@@ -318,6 +367,325 @@ async function sendPlanned(
   return result;
 }
 
+type BatchAnswer = SyncBatchResponse["results"][number];
+
+interface BatchRun {
+  db: VaultDb;
+  report: DrainReport;
+  result: PassResult;
+  holds: Holds;
+  // A re-mint moved ids under the queue, or a landed answer moved a guard: whatever is left of the
+  // plan describes a queue that no longer exists, so the pass looks at it again.
+  stale: boolean;
+}
+
+// The refusal as the route itself would have raised it, so the form maps it by `code` exactly as it
+// does online and the tray reads the same table. `requestId` names the batch, the way the mirror's
+// own refusals name themselves (`repository/read`): there is one request behind many operations.
+const rejection = (answer: BatchAnswer): ApiError =>
+  new ApiError({
+    status: answer.status === "conflict" ? 409 : answer.code === "NOT_FOUND" ? 404 : 400,
+    code: isErrorCode(answer.code) ? answer.code : null,
+    message: answer.message ?? "The server refused this change",
+    details: answer.details,
+    requestId: "sync",
+    current: answer.current,
+  });
+
+// What the mirror does with an operation the server took. With a row, the route's own `confirm`;
+// without one — a `transaction:delete`, an archive that answers a message, an `opId` the registry
+// answered from memory — the baseline moves the way the operation asked, or the row is reprojected
+// without it, and the pull that closes the round brings what the server actually holds.
+async function confirmLanded(
+  tx: WriteTransaction,
+  operation: OutboxOperation,
+  row: unknown,
+): Promise<void> {
+  if (row !== undefined) {
+    await routeFor(operation.entity, operation.action).confirm(tx, row, operation);
+    return;
+  }
+  if (isRemoval(operation.action)) {
+    await reconcileRemoval(tx, operation);
+    return;
+  }
+  await reconcileRow(tx, operation.entity, operation.entityId);
+}
+
+// `applied`, `duplicate` and `merged`: the operation's desired state is on the server, so it leaves
+// the queue whatever the answer carried.
+// The server landed the create on a row it already had, and a form is waiting to hear it created
+// one. The re-mint stands — the row does exist, under the server's id — and the form is told what
+// the route would have told it: the name is taken, which is the one thing it can act on.
+const nameTaken = (answer: BatchAnswer): ApiError =>
+  new ApiError({
+    status: 409,
+    code: "DUPLICATE",
+    message: "The server already had a row with this name",
+    requestId: "sync",
+    current: answer.result,
+  });
+
+async function applyLanded(run: BatchRun, entry: Collapsed, answer: BatchAnswer): Promise<void> {
+  const { db, report } = run;
+  let operation = entry.operation;
+  const waiting = awaited(operation.seq);
+  // F-57: the server landed the create on a row it already had (same name and type). The id moves
+  // everywhere this device wrote it — the mirror row, the rows that name it and the operations still
+  // queued — or the queue keeps pointing at an id the server does not have, and no pull fixes it.
+  if (answer.mergedInto !== undefined && answer.mergedInto !== operation.entityId) {
+    await remint(db, operation.entity, operation.entityId, answer.mergedInto);
+    operation = { ...operation, entityId: answer.mergedInto };
+    run.stale = true;
+  }
+  const notices: SyncNotice[] = (answer.warnings ?? []).map((code) => ({
+    code,
+    id: operation.entityId,
+    at: answer.result?.updatedAt ?? operation.occurredAt,
+  }));
+  let rebased = 0;
+  const landed = operation;
+  await settle(db, { ...entry, operation: landed }, async (tx) => {
+    await confirmLanded(tx, landed, answer.result);
+    rebased = await rebaseGuards(tx, landed, stampOf(answer.result));
+    await recordNotices(tx, notices);
+  });
+  report.set(
+    landed.seq,
+    answer.status === "merged" && waiting
+      ? { kind: "rejected", error: nameTaken(answer) }
+      : answer.result !== undefined
+        ? { kind: "sent", result: answer.result }
+        : isRemoval(landed.action)
+          ? { kind: "gone" }
+          : { kind: "landed" },
+  );
+  run.result.progressed = true;
+  if (rebased > 0) run.stale = true;
+}
+
+async function applyConflict(run: BatchRun, entry: Collapsed, answer: BatchAnswer): Promise<void> {
+  const { db, report } = run;
+  const operation = entry.operation;
+  const { seq, entity, entityId } = operation;
+  // The contract answers every conflict with a code; the OpenAPI cannot say "required for this
+  // status", so a missing one is not guessed — it falls through to the sheet with what came.
+  const { code, current } = answer;
+
+  // O-B1 with D-17: the id belongs to ANOTHER user, so the row takes a new one and goes back in the
+  // queue instead of an error nobody can act on (F-21).
+  if (code === "ID_TAKEN" && !operation.reminted) {
+    const minted = newEntityId();
+    await remint(db, entity, entityId, minted);
+    report.set(seq, { kind: "reminted", entityId: minted });
+    run.result.progressed = true;
+    run.stale = true;
+    return;
+  }
+  const stamp = stampOf(current);
+  // §6 O-F5a: an edit that only carries text merges by itself over the stamp the server answered
+  // with. A stamp that did not move would only conflict again, so it is not retried.
+  if (
+    code === "STALE_UPDATE" &&
+    conflictKind(operation) === "text" &&
+    stamp !== undefined &&
+    stamp !== operation.baseUpdatedAt &&
+    operation.attempts < AUTO_MERGE_ATTEMPTS
+  ) {
+    await markOperation(db, seq, "pending", code, { baseUpdatedAt: stamp });
+    report.set(seq, { kind: "merged" });
+    run.result.progressed = true;
+    run.stale = true;
+    return;
+  }
+  // Everything else is the server saying no for a reason the queue cannot rebase away: a name
+  // already taken, a reference it will not accept, an id that is not this user's. If a form is
+  // waiting for it, that is where the answer belongs — a taken name is fixed by typing another one,
+  // not in a tray the user never opened, and it is what the route itself would have answered.
+  if (code !== "STALE_UPDATE" && awaited(seq)) {
+    await applyRejected(run, entry, answer);
+    return;
+  }
+  // `RESOURCE_ARCHIVED` answers with the ARCHIVED ACCOUNT, not with the row the operation is about:
+  // it is not this operation's server version, it is the row its resolution acts on (F-58). The
+  // mirror learns the account is archived — which is true, and is what the sheet reads to offer
+  // restoring it — and the operation keeps only its id.
+  const archived = code === "RESOURCE_ARCHIVED" ? (current as Account | undefined) : undefined;
+  const own = archived === undefined && (current as { id?: string } | undefined)?.id === entityId;
+  await markOperation(
+    db,
+    seq,
+    "conflict",
+    code ?? answer.status,
+    archived !== undefined
+      ? { archivedId: archived.id }
+      : current === undefined
+        ? {}
+        : { serverRow: current },
+    async (tx) => {
+      if (archived !== undefined) await reconcileRow(tx, "account", archived.id, archived);
+      await reconcileRow(
+        tx,
+        entity,
+        entityId,
+        own ? await serverBaseline(tx, entity, current) : undefined,
+      );
+    },
+  );
+  run.holds.blocked.add(entityId);
+  report.set(seq, { kind: "conflict" });
+}
+
+async function applyRejected(run: BatchRun, entry: Collapsed, answer: BatchAnswer): Promise<void> {
+  const { db, report } = run;
+  const { seq, entity, entityId } = entry.operation;
+  const error = rejection(answer);
+  const undos = takeRollbacks([seq, ...entry.absorbed].reverse());
+  if (undos.length < 1 + entry.absorbed.length) {
+    // Nobody left to hand the error to — this operation, or one folded into it, outlived the tab
+    // that made it. The whole run stays in the queue as `failed` for the tray of O-F5a rather than
+    // vanishing, and undoing only the half it still can would leave the mirror at an edit the
+    // server never got.
+    await markOperation(db, seq, "failed", codeOf(error), {}, (tx) =>
+      reconcileRow(tx, entity, entityId),
+    );
+    run.holds.blocked.add(entityId);
+    report.set(seq, { kind: "rejected", error });
+    return;
+  }
+  await settleWrite(db, seq, async (tx) => {
+    for (const absorbed of entry.absorbed) await tx.objectStore("outbox").delete(absorbed);
+    for (const undo of undos) await undo(tx);
+  });
+  report.set(seq, { kind: "rejected", error });
+  run.result.progressed = true;
+}
+
+async function applyAnswers(
+  run: BatchRun,
+  sent: Collapsed[],
+  response: SyncBatchResponse,
+): Promise<void> {
+  const answers = new Map(response.results.map((answer) => [answer.opId, answer]));
+  const unanswered: number[] = [];
+  for (const entry of sent) {
+    const answer = answers.get(entry.operation.opId);
+    if (!answer) {
+      unanswered.push(entry.operation.seq);
+      continue;
+    }
+    // A re-mint rewrote the operations still queued: the plan's copy of this one is behind the vault.
+    const fresh = run.stale ? await run.db.get("outbox", entry.operation.seq) : undefined;
+    const current: Collapsed = fresh ? { ...entry, operation: fresh } : entry;
+    if (
+      answer.status === "applied" ||
+      answer.status === "duplicate" ||
+      answer.status === "merged"
+    ) {
+      await applyLanded(run, current, answer);
+    } else if (answer.status === "conflict") {
+      await applyConflict(run, current, answer);
+    } else if (answer.status === "rejected") {
+      await applyRejected(run, current, answer);
+    } else {
+      // `blocked`: never attempted, because a row it names failed earlier in the same batch. It
+      // goes back in line untouched — counting an attempt would stop it from ever being folded
+      // again for a batch it was not part of — and its own row waits with it.
+      await holdOperations(run.db, [current.operation.seq]);
+      run.holds.blocked.add(current.operation.entityId);
+      run.report.set(current.operation.seq, {
+        kind: "held",
+        on: answer.blockedBy ?? current.operation.entityId,
+      });
+    }
+  }
+  if (unanswered.length > 0) {
+    // The batch came back without a word about this operation. It is not taken for landed: it stays
+    // in the queue with the server's own failure on it, visible in Ajustes › Sync status.
+    await requeueOperations(run.db, unanswered, "INTERNAL");
+    for (const seq of unanswered) run.report.set(seq, { kind: "queued", code: "INTERNAL" });
+  }
+}
+
+// The queue leaves in one request (§6 O-F5b): `POST /sync` takes up to 200 operations of up to a
+// megabyte and answers one status per operation, over the same queue transitions the routes drove
+// one error code at a time. What it cannot take goes in the batch behind it, in `seq` order.
+async function sendBatch(
+  db: VaultDb,
+  entries: Collapsed[],
+  report: DrainReport,
+): Promise<PassResult> {
+  const result = emptyPass();
+  const holds = initialHolds(entries);
+  const run: BatchRun = { db, report, result, holds, stale: false };
+
+  const sendable: Collapsed[] = [];
+  for (const entry of entries) {
+    const operation = entry.operation;
+    if (operation.status === "conflict" || operation.status === "failed") continue;
+    const waitingOn = heldOn(operation, holds);
+    if (waitingOn !== undefined) {
+      holds.blocked.add(operation.entityId);
+      report.set(operation.seq, { kind: "held", on: waitingOn });
+      continue;
+    }
+    holds.creating.delete(operation.entityId);
+    sendable.push(entry);
+  }
+  if (sendable.length === 0) return result;
+
+  // Falls back to one request per operation with the queue as it stands, never with the plan: what
+  // an earlier batch already settled must not be sent a second time.
+  const byRoute = async (): Promise<PassResult> =>
+    sendPlanned(db, coalesce(await pendingOperations(db)).operations, report);
+
+  for (const chunk of chunkBatch(sendable)) {
+    const sent: Collapsed[] = [];
+    for (const entry of chunk) {
+      // An earlier batch of this pass may have left a row blocked: what named it waits for the next.
+      const waitingOn = heldOn(entry.operation, holds);
+      if (waitingOn !== undefined) {
+        holds.blocked.add(entry.operation.entityId);
+        report.set(entry.operation.seq, { kind: "held", on: waitingOn });
+        continue;
+      }
+      for (const absorbed of entry.absorbed) {
+        report.set(absorbed, { kind: "absorbed", into: entry.operation.seq });
+      }
+      sent.push(entry);
+    }
+    if (sent.length === 0) continue;
+    const seqs = sent.map((entry) => entry.operation.seq);
+    await beginSending(db, seqs);
+    let response: SyncBatchResponse;
+    try {
+      response = await postBatch(batchBody(sent));
+    } catch (error) {
+      await holdOperations(db, seqs);
+      if (isBatchMissing(error)) {
+        state.transport = "routes";
+        return byRoute();
+      }
+      if (isEnvelopeRefused(error)) return byRoute();
+      await requeueOperations(db, seqs, codeOf(error));
+      for (const seq of seqs) report.set(seq, { kind: "queued", code: codeOf(error) });
+      result.stopped = true;
+      result.unauthorized = isUnauthorized(error);
+      if (error instanceof ApiError && error.retryAfterSeconds) {
+        result.retryAfterMs = error.retryAfterSeconds * 1_000;
+      }
+      // Nothing is reordered and nothing is dropped: the rest of the queue waits its turn.
+      return result;
+    }
+    result.answered = true;
+    await applyAnswers(run, sent, response);
+    // A guard moved or an id was re-minted: the batches behind this one describe a queue that has
+    // changed, and the pass builds the plan again.
+    if (run.stale) return result;
+  }
+  return result;
+}
+
 // The one timer the engine owns: the backoff. There is no periodic pull and no periodic push, so a
 // device that changes nothing makes no requests at all (§4.2).
 export type Scheduler = (run: () => void, delayMs: number) => () => void;
@@ -329,7 +697,13 @@ const timeoutScheduler: Scheduler = (run, delayMs) => {
   };
 };
 
+// How the queue leaves. `POST /sync` is what the plan asks for (§6 O-F5b); the ordinary routes are
+// the fallback for a server that has no batch endpoint, and one 404 or 501 settles it for the rest
+// of the session (owner, 2026-09-06: the front can be deployed ahead of its backend).
+export type SyncTransport = "batch" | "routes";
+
 interface EngineState {
+  transport: SyncTransport;
   inFlight: Promise<DrainReport> | null;
   wanted: number;
   served: number;
@@ -344,6 +718,7 @@ interface EngineState {
 }
 
 const state: EngineState = {
+  transport: "batch",
   inFlight: null,
   wanted: 0,
   served: 0,
@@ -393,7 +768,10 @@ async function pass(db: VaultDb): Promise<DrainReport> {
       continue;
     }
     if (plan.operations.length === 0) break;
-    const outcome = await sendPlanned(db, plan.operations, report);
+    const outcome =
+      state.transport === "batch"
+        ? await sendBatch(db, plan.operations, report)
+        : await sendPlanned(db, plan.operations, report);
     await refreshOutboxStatus(db);
     answered ||= outcome.answered;
     if (outcome.stopped) {
@@ -482,6 +860,7 @@ export function startSyncEngine(options: SyncEngineOptions = {}): () => void {
   state.schedule = options.schedule ?? timeoutScheduler;
   state.failures = 0;
   state.paused = false;
+  state.transport = "batch";
 
   const wake = (): void => {
     void requestSync();
@@ -531,6 +910,14 @@ export function isSyncPaused(): boolean {
   return state.paused;
 }
 
+// Which transport the queue is leaving by, and the switch the 404 answer throws. Ajustes › Sync
+// status (O-F6) is the screen that has to say it, and the fallback's own tests set it.
+export const syncTransport = (): SyncTransport => state.transport;
+
+export function setSyncTransport(transport: SyncTransport): void {
+  state.transport = transport;
+}
+
 // A write that went straight to the server never touched the mirror, so the screen that reads the
 // mirror would not see what it just saved until something else pulled (F-33). It is the same pull a
 // round makes, asked for by the one caller that has no round.
@@ -542,6 +929,7 @@ export async function pullAfterDirectSend(): Promise<void> {
 export function resetSyncEngine(): void {
   state.stop?.();
   clearRetry();
+  state.transport = "batch";
   state.inFlight = null;
   state.wanted = 0;
   state.served = 0;
