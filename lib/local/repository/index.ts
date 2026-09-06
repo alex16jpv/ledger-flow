@@ -13,6 +13,7 @@ export {
   readCategoriesPage,
   readCategory,
 } from "./categories";
+export { readMirrorProfile } from "./profile";
 export {
   currentVault,
   expectVault,

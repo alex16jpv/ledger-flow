@@ -52,16 +52,29 @@ export interface Fixture extends Credentials {
 // count rows, compare balances and let two devices disagree about one row: on a shared user every
 // one of those assertions is a race with whatever else is running (F-45 is that lesson already).
 // Registration signs `request` in, so its cookies are this user's from here on.
+export interface FreshUserOptions {
+  openingBalance?: number;
+  // Left out, the backend's defaults — the same the app falls back to, which is what hides F-63.
+  currency?: string;
+  timezone?: string;
+}
+
 export async function freshUser(
   request: APIRequestContext,
   tag: string,
-  openingBalance = 5_000_000,
+  { openingBalance = 5_000_000, currency, timezone }: FreshUserOptions = {},
 ): Promise<Fixture> {
   const email = `e2e-${tag}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}@ledgerflow.test`;
   const password = "LedgerFlow!2026";
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: `Offline ${tag}`, email, password },
+    data: {
+      name: `Offline ${tag}`,
+      email,
+      password,
+      ...(currency ? { currency } : {}),
+      ...(timezone ? { timezone } : {}),
+    },
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   const accountName = "Cash";

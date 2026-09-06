@@ -8,6 +8,8 @@ export const QUERY_DOMAINS = {
   budgets: ["budgets"],
   stats: ["stats"],
   home: ["home"],
+  // The mirror's copy of the user (F-63); the session itself is `sessionKeys`, and stays a server read.
+  profile: ["profile"],
 } as const;
 
 // Reads these can answer from the offline mirror, so their fetch must run instead of being paused
@@ -21,6 +23,7 @@ export const MIRROR_BACKED_DOMAINS = [
   QUERY_DOMAINS.budgets,
   QUERY_DOMAINS.home,
   QUERY_DOMAINS.stats,
+  QUERY_DOMAINS.profile,
 ];
 
 // F-38: a pull that brought news wrote straight into the mirror, and React Query has no idea. Every

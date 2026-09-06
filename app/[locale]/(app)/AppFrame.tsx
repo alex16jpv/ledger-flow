@@ -20,6 +20,7 @@ import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
 import { noMirror, startMirror } from "@/lib/local/mirror";
 import { expectVault } from "@/lib/local/repository";
+import { useMirrorProfile } from "@/lib/local/useMirrorProfile";
 import { HistoryTracker } from "@/lib/navigation/history";
 import { startHeartbeat } from "@/lib/network/heartbeat";
 import { warmAppShell } from "@/lib/pwa/service-worker";
@@ -59,6 +60,12 @@ function Frame({ children }: { children: ReactNode }) {
     sessionStatus === "loading" ? "loading" : "resolved",
     marker,
   );
+  // Who the user is when the session cannot say — an offline cold start, or local mode (§2.6): the
+  // profile the pull stored, the same row `/api/auth/me` answers. Without it the currency and the
+  // zone fell to the app's defaults and every figure shown offline wore the wrong symbol (F-63).
+  // With a session, the session wins.
+  const mirrorProfile = useMirrorProfile(Boolean(localUserId) && session.user === null);
+  const user = session.user ?? mirrorProfile;
   // F-38: what the pull writes into the mirror only reaches the screens through an invalidation.
   const onMirrorChanged = useCallback(() => {
     void invalidateMirrorBacked(queryClient);
@@ -89,13 +96,13 @@ function Frame({ children }: { children: ReactNode }) {
   }, [router, pathname]);
 
   return (
-    <FormatSettingsProvider currency={session.user?.currency} timeZone={session.user?.timezone}>
+    <FormatSettingsProvider currency={user?.currency} timeZone={user?.timezone}>
       <Suspense>
         <HistoryTracker />
       </Suspense>
       <ServiceWorkerUpdates />
       <AppShell
-        userName={session.user?.name ?? ""}
+        userName={user?.name ?? ""}
         pendingCount={pendingCount}
         onAdd={({ chain }) => {
           setQuickAdd({ open: true, chain });

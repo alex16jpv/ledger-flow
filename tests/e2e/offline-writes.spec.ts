@@ -23,7 +23,9 @@ test("twenty movements with no network survive a reload and reach the server exa
   context,
 }) => {
   test.setTimeout(300_000);
-  const user = await freshUser(request, "writes");
+  // Euros in Madrid, not the defaults: what the shell shows with no session has to come from the
+  // mirror's profile, and a user born with the app's own fallbacks could not tell the two apart (F-63).
+  const user = await freshUser(request, "writes", { currency: "EUR", timezone: "Europe/Madrid" });
   const amounts = new Set<number>();
   while (amounts.size < HOW_MANY) amounts.add(uniqueAmount());
   const wanted = [...amounts];
@@ -67,6 +69,12 @@ test("twenty movements with no network survive a reload and reach the server exa
   expect((await vaultState(back))?.pending).toBe(HOW_MANY);
   await back.goto("/transactions");
   await expect(back.getByRole("button", { name: /Pending sync/ })).toHaveCount(HOW_MANY);
+  // And it knows whose device this is: the amounts are euros, not the fallback currency, and the
+  // sidebar names the user, all read from the mirror's profile (F-63).
+  await expect(back.getByText(/€/).first()).toBeVisible();
+  await expect(back.getByText(/COP/)).toHaveCount(0);
+  if (test.info().project.name === "desktop")
+    await expect(back.getByRole("link", { name: /Offline writes/ })).toBeVisible();
 
   await context.setOffline(false);
   await expect.poll(async () => (await vaultState(back))?.pending, { timeout: 90_000 }).toBe(0);
