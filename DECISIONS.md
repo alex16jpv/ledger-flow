@@ -2428,3 +2428,108 @@ cover` is set once in the root layout for the standalone display.
 - **Written in the design first** (D-36): `DESIGN.md` §2 and §7.1 carry the rule. Measured in the
   browser by `tests/e2e/reduced-motion.spec.ts`: under `reduce` the three borders are one colour,
   without the preference they are not.
+
+## 2026-09-07 · The generated API files are sorted, and endpoints.md is generated too (W-39)
+
+- **Found, regenerating `types/api.d.ts` for the closing item:** the file came back with **1197 lines
+  changed and 1197 lines added**, and not one of them was a change to the contract. Sorting the old
+  file and the new one and diffing them gives **zero lines apart**: the backend lists its paths in
+  registration order, that order differs between processes, and `openapi-typescript` writes them in
+  the order it is given.
+- **Decision:** `tools/gen-api-types.mjs` sorts the spec before it generates — paths alphabetically,
+  the methods inside a path in HTTP order, `components.schemas` alphabetically. A regeneration now
+  only shows what really moved. This commit carries the one-time reordering.
+- **Why it matters beyond the noise:** the `e2e` job of `ci.yml` regenerates the types and runs
+  `git diff --exit-code` on them, so before this the job could fail on a rebuilt backend that had not
+  changed a single endpoint — and, worse, a real change would have been invisible inside 2394 lines.
+- **`endpoints.md` comes back, generated.** W-39 asked for it "regenerated"; the one the old front
+  carried was written by hand and `FASE-2-CONTRATO-FRONTEND.md` already called it stale. The same
+  tool now writes it from the same spec: 43 operations in eight groups, each with its parameters,
+  body schema and responses, plus the note that the client never calls those URLs directly — every
+  request goes through the BFF under `/api/*`. It is Prettier-formatted by the generator so
+  `format:check` keeps watching it, and CI diffs it next to the types.
+- **Consequence:** running the generator twice leaves both files byte for byte identical. Descriptions
+  keep their own markdown (the `POST /sync` one is a table), so they are written as blocks, not
+  flattened into a cell.
+
+## 2026-09-07 · The development screens are proved gone from a production build (W-39)
+
+- **Decision:** `npm run ci` ends by starting the gate build it just made — with `NEXT_PUBLIC_APP_ENV`
+  deleted so nothing reopens the flags — and asking it for the seven development-only URLs
+  (`/dev/ui` in both locales, `/dev/frame`, `/dev/pickers`, `/api/dev/login`) plus `/login` in both
+  locales. The public pair is the control: a server that answered 404 to everything would otherwise
+  pass a check made only of 404s. `tools/check-dev-routes.mjs`, wired into `build:gate`.
+- **Verified the other way round too:** the same build served with `NEXT_PUBLIC_APP_ENV=test` answers
+  200 on all three screens, so the 404s come from the flag and not from a route that was never built.
+- **It found one.** `/dev/pickers` answered **200 with the not-found page inside it**. It is the only
+  development screen inside the `(app)` group, that group has a `loading.tsx`, and a segment with a
+  loading boundary starts streaming before the page runs: by the time `notFound()` arrives the status
+  line is already sent. Guarding `generateMetadata` as well changes nothing — measured.
+- **Decision:** the proxy answers 404 for any `/dev/` path when `componentCatalog` is off, before
+  anything renders, and the per-page `notFound()` guards stay. The flag is a routing fact, not a
+  rendering one, and this also covers the next development route somebody adds without a guard.
+- **Alternatives:** moving `dev/pickers` out of `(app)` — it would lose the app frame it is a bench
+  for; rewriting to the catch-all route to keep the pretty 404 page — a magic path for a URL that
+  must not exist. `/api/dev/login` already answered a bare 404, so this matches what the repo does.
+- **Consequence:** the check refuses to run when something already answers on its port and stops the
+  server by process group. Killing `npx` alone leaves the server listening, and the run that found
+  the `/dev/pickers` bug had in fact measured a stale server from an earlier probe — the check now
+  cannot lie that way.
+
+## 2026-09-07 · The attention screen needs a session like the rest (F-75)
+
+- **Found:** `/sync` was the one screen of `(app)` missing from `APP_PREFIXES`, so a browser with no
+  marker cookie got 200 and the "Needs your attention" screen instead of the login, and the path
+  never carried the `x-robots-tag: noindex` every other app path does.
+- **Decision:** it joins the list. The exemption protected nobody: the redirect only fires when the
+  marker cookie is absent, and a device whose session died still has it (400 days), which is exactly
+  the case the screen exists for. A browser without the marker has no vault, so the screen it was
+  being shown was empty by construction.
+- **The list is checked now, not trusted:** `lib/auth/routes.test.ts` reads the folders of
+  `app/[locale]/(app)` and fails when one of them is not protected, with `dev/` declared as the
+  exception the `componentCatalog` flag guards instead. Removing `/sync` again fails that test.
+  In the browser, `auth.spec.ts` asserts the 307 to `/login?next=%2Fsync` and the noindex header.
+- **Consequence:** a device with a queue and a dead session still opens `/sync` — it has the marker.
+  A signed-out device is sent to the login, like everywhere else.
+
+## 2026-09-07 · The intermittents get room, not guesses (F-73, F-77)
+
+- **Measured first:** six full runs of the unit suite, 137 files and 778 tests each, all green.
+  Neither of F-73's two intermittents reproduced. That is the number, and it is written here because
+  "did not reproduce" is a result, not a reason to change nothing.
+- **Decision, two changes, each a better wait and not a weaker assertion:** the discard test read its
+  toast with `getByText` right after waiting for a different condition, so it now waits for the toast
+  itself; and Testing Library's async utilities move from their default one second to five
+  (`asyncUtilTimeout`), the same reasoning that made F-19 raise the test timeout to 15 s — with 137
+  files across eight workers a render that normally settles in milliseconds can miss a second, and
+  the failure then says the element does not exist rather than that the machine was busy.
+- **F-77, in the browser suite:** the Save all spec asserted the length of the intercepted `POST
+/sync` batches right after the toast appeared, and once Playwright had not yet delivered the request
+  event. It polls for the batch now, and the negative assertion — nothing went to
+  `PATCH /transactions/batch` — moves after it so both are judged on the same window.
+- **Consequence:** a passing test still passes just as fast; only a failing one takes longer to say
+  so.
+
+## 2026-09-07 · The authenticated audit runs when asked, not every night (F-76)
+
+- **Decision:** `.github/workflows/lighthouse-app.yml` checks out both repositories, brings up the
+  Mongo replica set, lets `tools/lighthouse.mjs` start and seed the backend the way it does locally,
+  runs `npm run lighthouse:app` over the 25 screens and uploads `.lighthouseci` whatever the outcome.
+  `workflow_dispatch`, with a 60-minute limit.
+- **Why not nightly, and not in `ci.yml`:** the run needs the backend, the replica set and about half
+  an hour, so it cannot ride on every push; and while **F-78** is open the audit fails by design
+  (performance 78–86 against a threshold of 90). A job that goes red every night is a job everyone
+  learns to ignore. Once F-78 is decided, adding a `schedule` is one line.
+- **Alternative:** a subset of four or five screens on every pull request. Rejected for the same
+  reason — it would fail on every pull request until F-78 is decided.
+
+## 2026-09-07 · No branch is retired (W-39)
+
+- **Decision:** nothing is deleted. W-39 lists "retire the old branch" and the owner was asked
+  explicitly on 2026-09-07: the answer was to leave every branch alone and write down what there is.
+- **What there is:** `audit/fase-2-frontend` (the front as it was before the redesign, local only,
+  never pushed), `redesign/fase-2` and `feat/offline` (both merged into `main` through pull requests
+  #4 and #6, local and remote), `demo`, and the remotes `improvements` and `updateCache`. Deleting a
+  remote branch would need a push, which the owner's rules forbid anyway.
+- **Consequence:** `ci.yml` no longer runs on pushes to `redesign/fase-2`, which is merged; it runs
+  on `main`, on `feat/**` and on every pull request. The branches stay until the owner says otherwise.
