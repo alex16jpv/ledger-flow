@@ -2344,3 +2344,42 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** `tests/e2e/reduced-motion.spec.ts` measures it in the browser on `/en/dev/ui` —
   under `reduce` a button's transition and the spinner's animation are 0 s and the shimmer's
   `animation-name` is `none`; under `no-preference` all three move. Two tests, both projects.
+
+## 2026-09-07 · Lighthouse measures the screens the product lives on, with a session (W-38)
+
+- **Decision:** `npm run lighthouse:app` audits the **25 authenticated screens** of `(app)` on mobile
+  (Lighthouse's default emulation). `tools/lighthouse.mjs --app` builds into `.next-lh`, starts the
+  test backend when nothing answers at `:3200`, serves the build on `:3003`, signs in, resolves the
+  `[id]` screens from the API, collects one run per screen and asserts against
+  `lighthouserc.app.json`: performance ≥ 0.9, accessibility ≥ 0.95, best practices ≥ 0.9. It exits 1
+  when a screen misses, and prints a table of the 25 before the failures.
+- **Why the real login and not `/api/dev/login`:** that route is behind the `devLogin` flag, which is
+  only on in `development`, and a build with dev flags on is not the build that ships. `POST
+/api/auth/login` is the BFF's own route, works in a production build, and is what the e2e suite
+  uses.
+- **Why the URLs carry no locale prefix — measured:** `en` is the default locale, so next-intl
+  redirects `/en/home` to `/home`, and **Lighthouse's `extraHeaders` do not survive that redirect**.
+  The first full run took the prefixed URLs and measured 24 of the 25 screens at `/login`; the
+  twenty-fifth was `/sync`, which turned out to be the one `(app)` screen that opens without a
+  session (F-75).
+- **Why five screens per sign-in:** the access cookie lives 15 minutes and a screen takes about a
+  minute, so the run signs in again every five.
+- **Why no SEO assertion here:** every `(app)` screen answers `x-robots-tag: noindex`, and the SEO
+  category scores that as blocked from indexing — correctly. The public run keeps its SEO ≥ 0.95.
+- **Measured on this machine (2026-09-07):** performance **77–83**, accessibility **100** on all 25,
+  best practices 93–96 — the deduction is two 404s, `/_vercel/insights` and `/_vercel/speed-insights`,
+  which only exist on Vercel. `/home` is the worst at 77: FCP 0.9 s, **LCP 5.2 s**, **TBT 220 ms**,
+  CLS 0, 598 KiB transferred, 91 KiB of unused JS. **No authenticated screen reaches 90**, and the
+  threshold stays at 90 so the command keeps saying so. What is between 83 and 90 is F-70.
+- **F-12, reproduced at last and finished:** the run left three directories literally named
+  `C:\Users\ultima\AppData\Local\lighthouse.<n>` in the repo root, and the next Turbopack build died
+  reading `.../SingletonSocket` ("No such device or address"). `--user-data-dir` was never enough:
+  under WSL `chrome-launcher` builds a profile of its own from `TEMP`, and `TEMP` there is a Windows
+  path, so `mkdir` writes it relative to the working directory. The tool now points `TEMP` at its own
+  temporary profile **with a trailing slash**, so the `\lighthouse.n` it appends stays inside it, and
+  both modes are covered. Verified: a full `npm run lighthouse` leaves the repo root clean.
+- **Local caveat, unchanged:** `npm run lighthouse` (public) serves whatever is in `.next`, so on a
+  checkout built for another origin the `canonical` audit fails and SEO lands at 0.92. CI builds with
+  `NEXT_PUBLIC_APP_URL=http://localhost:3002` for exactly that reason (`ci.yml:84`).
+- **Consequence:** `lighthouse:app` is not in `npm run ci` — it needs the backend, the Docker Mongo
+  and about 25 minutes. Wiring it into CI is registered as F-76.

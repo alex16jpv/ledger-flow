@@ -58,6 +58,7 @@ the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no envir
 | `demo:offline:report`     | Opens the demo's report: one video per cold start, and a trace with every request              |
 | `npm run size-limit`      | Route JS budgets over the production build                                                     |
 | `npm run lighthouse`      | Lighthouse CI against a production build with the thresholds in `lighthouserc.json`            |
+| `npm run lighthouse:app`  | The same, over the 25 authenticated screens with a real session (`lighthouserc.app.json`)      |
 | `npm run gen:api-types`   | Regenerates `types/api.d.ts` from the backend OpenAPI                                          |
 | `npm run gen:feature`     | Scaffolds `features/<name>/{api,keys,hooks,schemas,components}`                                |
 
@@ -92,7 +93,8 @@ CI (`.github/workflows/ci.yml`): `quality` (typecheck, lint, format, tokens, con
 build, size budgets, `npm audit`), `security` (gitleaks, osv-scanner), `e2e` (Playwright against
 the backend repo on an ephemeral Mongo replica set; needs the `BACKEND_REPO_TOKEN` secret) and
 `lighthouse` (`lighthouserc.json`: performance ≥ 90, accessibility ≥ 95, best practices ≥ 90,
-SEO ≥ 95 on the public pages; the report is uploaded as an artifact).
+SEO ≥ 95 on the public pages; the report is uploaded as an artifact). The authenticated screens are
+audited by `npm run lighthouse:app`, which needs the backend and runs outside CI (F-76).
 
 ## Structure
 

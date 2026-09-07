@@ -24,6 +24,7 @@
     "test:e2e": "playwright test",
     "size-limit": "node tools/size-limit.mjs",
     "lighthouse": "node tools/lighthouse.mjs",
+    "lighthouse:app": "node tools/lighthouse.mjs --app",
     "gen:api-types": "node tools/gen-api-types.mjs",
     "fixtures:sync": "node tools/sync-fixtures.mjs",
     "gen:feature": "plop feature",
