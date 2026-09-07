@@ -61,3 +61,9 @@ pass: one `If-Match` cannot guard N rows, so each row carries its own guard and 
 still queued says so: the amber "Pending sync" badge and the "saved on this device" meta, turning
 red ("Needs attention") once the server refused that write — the resolution sheet itself opens from
 the connection banner's "Review".
+
+Date and time are the app's own controls since F-05, not the browser's: a calendar with "Today" /
+"Yesterday" chips and the days past the ceiling disabled, and a wheel of hours and minutes. The form
+passes tomorrow as that ceiling, so a date the server would refuse cannot be picked at all — and,
+the other half of F-66, when the device's clock runs more than an hour ahead of the `serverTime` the
+sync answers with, the form says so above the date instead of waiting for the refusal.

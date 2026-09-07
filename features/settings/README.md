@@ -28,3 +28,11 @@ server mints those ids and there is nothing the queue could project (F-20).
 Signing out — the hub's button and «Sign out all other sessions» — is disabled with no network and
 says why: the session lives on the server, and an offline sign-out could only clear this device while
 the account stayed signed in (R-3b). Restore-defaults follows the same rule (F-20).
+
+Sync status opens with three rows the offline phase added. **Session** is first (F-41): with no
+session nothing below it reaches the server, so it says `Active` or `Signed out` and carries the way
+back to the login. **Offline ready** (F-54) is true only when both halves are — the pull wrote
+`syncedAt` _and_ the worker's cache holds all 25 screens of `shellUrls()` for the language in use —
+and it counts them while it prepares; a device announces itself once, ever, with a toast. And when
+`openVault` reports an outbox an app update left behind (F-65), the screen opens with a `danger`
+alert and **Waiting to send** reads `n · blocked`, because that queue is not slow, it is stuck.

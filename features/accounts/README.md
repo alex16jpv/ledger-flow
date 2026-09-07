@@ -22,3 +22,8 @@ the queue in one transaction, the screen gets that projection, and the server is
 create carries its own id, so no `Idempotency-Key`. The balances on this screen are the mirror's
 `balance` plus the effect of the queued operations, and they carry the amber projection mark while
 the queue is not empty (invariant 2).
+
+Since F-03 the type is chosen in one `picker` row that shows the type with the line explaining it —
+"Bank account · a checking or current account" — and opens a sheet with the nine and a description
+each. The onboarding gets the same control by rendering the same `AccountForm`, so there is one way
+to choose the same thing (§8.4, §8.6).

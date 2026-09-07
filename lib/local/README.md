@@ -451,6 +451,26 @@ Where they are resolved:
   `seq` of the first stuck operation on it, so the screen showing a movement can open the sheet for
   it. The list row cannot: it is a `RowButton`, and a button inside a button is not HTML.
 
+Two refusals have a way out of their own, because trying again unchanged would earn the same answer:
+
+- **`DUPLICATE` on a restore** (`isNameTaken`, F-60). The restore route takes a `name`, so
+  `restoreWithName` puts the same operation back in line with `payload.body.name` changed. The sheet
+  shows the row that holds the name — the `current` the backend answers the 409 with, which is
+  somebody else's row and never this one's baseline, so it is dropped when the operation requeues.
+- **`FUTURE_DATE`** (`isFutureDate`, F-66). `retryWithDate` rewrites `payload.body.date` and requeues,
+  so it stays the same creation with the same `opId` and the same dependents behind it. The date it
+  offers is the server's own: every answer carrying a `serverTime` — `POST /sync` and each page of
+  `GET /sync/changes` — teaches `clock.ts` how far this device runs from the server, and the offset
+  lives in `meta.clockOffsetMs` because the form needs it exactly when there is no network left to
+  learn it again.
+
+**An outbox an app update left behind** is not a refusal at all (F-65): `openVault` answers
+`outbox: "blocked"` with the seqs it could not migrate, `startMirror` publishes them through
+`setBlockedOperations`, and the stripe, Sync status and the tray read them from the status snapshot.
+Those operations are `pending`, not stuck, so `discardOperations` does not admit them;
+`discardBlockedOperations` shares its machinery, cascade included. The app keeps writing normally
+while they sit there — blocking the record would be worse than not sending the old.
+
 ## Persistence
 
 `startMirror` calls `requestPersistentStorage()` once, before the first pull writes anything.

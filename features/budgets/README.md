@@ -33,3 +33,10 @@ Writes go through `lib/local/outbox` (O-F4). The API answers with the **view**, 
 override map, the CUSTOM dates and the owner, so a confirmed write merges the server's fields over
 the projected row instead of replacing it and the next pull brings the authoritative one. `spent`
 and its progress bars carry the amber projection mark while the queue is not empty.
+
+The pace mark on a progress bar is a focusable control (F-08): it carries its own `aria-label` and a
+tooltip, "Day 22 of 30 · 73% expected", wherever it is drawn — the Home hero, the global card and the
+detail. Only the detail repeats it as a fixed line under the bar, because a tooltip does not exist
+for a finger and it is the one screen with room. `budgetProgress` returns the `day` and `days` that
+text says out loud. The CUSTOM dates and "Effective from" use the app's own calendar (F-05), so the
+end can never be set before the start: that day is not offered.
