@@ -333,6 +333,6 @@ describe("the Needs your attention tray", () => {
     await waitFor(async () => {
       expect(await pendingOperations(vault.db)).toHaveLength(0);
     });
-    expect(screen.getByText("1 change discarded")).toBeInTheDocument();
+    expect(await screen.findByText("1 change discarded")).toBeInTheDocument();
   });
 });
