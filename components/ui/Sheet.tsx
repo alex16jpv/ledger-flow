@@ -27,6 +27,8 @@ export interface SheetProps {
   children: ReactNode;
   footer?: ReactNode;
   dismissible?: boolean;
+  // The calendar and the wheel of 7.28 are 360 px wide from `sm` up; everything else is 520.
+  width?: "md" | "sm";
   className?: string;
 }
 
@@ -37,6 +39,7 @@ export function Sheet({
   children,
   footer,
   dismissible = true,
+  width = "md",
   className,
 }: SheetProps) {
   const t = useTranslations("common");
@@ -93,7 +96,8 @@ export function Sheet({
         <div
           className={cn(
             "flex max-h-[92%] w-full flex-col gap-4 rounded-t-2xl bg-surface px-4 pt-2 pb-[calc(var(--sp-4)+env(safe-area-inset-bottom))] text-text shadow-3",
-            "sm:w-[min(520px,92%)] sm:rounded-xl sm:pb-5",
+            width === "sm" ? "sm:w-[min(360px,92%)]" : "sm:w-[min(520px,92%)]",
+            "sm:rounded-xl sm:pb-5",
           )}
         >
           <span

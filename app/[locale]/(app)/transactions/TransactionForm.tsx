@@ -30,6 +30,7 @@ import {
 import { useTagsQuery } from "@/features/transactions/hooks";
 import { fieldErrors, presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
+import { dayKey, shiftDayKey } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
@@ -71,6 +72,8 @@ export function TransactionForm({
   // F-66, the preventive half: the form's own guard uses this device's clock, so a device that runs
   // ahead accepts a date the server will refuse. The distance is only knowable from the server, and
   // the vault keeps it for exactly this moment.
+  // The server refuses anything more than 24 h ahead, so the calendar stops there (7.28).
+  const tomorrow = shiftDayKey(dayKey(new Date(), timeZone), 1);
   const skew = aheadOfServer(
     useSyncExternalStore(
       clockStore.subscribe,
@@ -331,6 +334,8 @@ export function TransactionForm({
                 }}
                 dateLabel={t("common.date")}
                 timeLabel={t("common.time")}
+                max={tomorrow}
+                dateNote={t("transactions.form.dateLimit")}
                 dateError={validationMessage(t, errors.date?.message ?? serverFields.date)}
               />
             )}

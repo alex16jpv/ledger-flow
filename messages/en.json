@@ -35,7 +35,17 @@
     "backToList": "Back to the list",
     "removeTag": "Remove tag {tag}",
     "suggestions": "Suggestions",
-    "delete": "Delete"
+    "delete": "Delete",
+    "done": "Done",
+    "now": "Now",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "dayPeriod": "AM or PM",
+    "am": "AM",
+    "pm": "PM",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "savedInZone": "Saved in your time zone, {zone}."
   },
   "nav": {
     "label": "Navigation",
@@ -1090,7 +1100,8 @@
         "days": "{count, plural, one {This device’s clock is # day ahead of the server.} other {This device’s clock is # days ahead of the server.}}",
         "hours": "{count, plural, one {This device’s clock is # hour ahead of the server.} other {This device’s clock is # hours ahead of the server.}}",
         "refused": "Dates more than 24 hours in the future will be refused."
-      }
+      },
+      "dateLimit": "Days after tomorrow are not available: the server refuses dates more than 24 hours ahead."
     },
     "list": {
       "title": "Transactions",

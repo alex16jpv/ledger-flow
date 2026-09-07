@@ -188,7 +188,7 @@ describe("NewTransactionScreen", () => {
 
   it("says nothing when the two clocks agree", async () => {
     render(<NewTransactionScreen />);
-    expect(await screen.findByLabelText("Date")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /^Date/ })).toBeInTheDocument();
     expect(screen.queryByText(/clock is/)).not.toBeInTheDocument();
   });
 

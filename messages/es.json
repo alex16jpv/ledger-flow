@@ -35,7 +35,17 @@
     "backToList": "Volver a la lista",
     "removeTag": "Quitar etiqueta {tag}",
     "suggestions": "Sugerencias",
-    "delete": "Eliminar"
+    "delete": "Eliminar",
+    "done": "Listo",
+    "now": "Ahora",
+    "hours": "Horas",
+    "minutes": "Minutos",
+    "dayPeriod": "AM o PM",
+    "am": "AM",
+    "pm": "PM",
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "savedInZone": "Se guarda en tu zona horaria, {zone}."
   },
   "nav": {
     "label": "Navegación",
@@ -1090,7 +1100,8 @@
         "days": "{count, plural, one {El reloj de este dispositivo va # día adelantado respecto al servidor.} other {El reloj de este dispositivo va # días adelantado respecto al servidor.}}",
         "hours": "{count, plural, one {El reloj de este dispositivo va # hora adelantado respecto al servidor.} other {El reloj de este dispositivo va # horas adelantado respecto al servidor.}}",
         "refused": "Las fechas con más de 24 horas en el futuro se rechazan."
-      }
+      },
+      "dateLimit": "Los días posteriores a mañana no están disponibles: el servidor rechaza fechas con más de 24 horas de adelanto."
     },
     "list": {
       "title": "Movimientos",

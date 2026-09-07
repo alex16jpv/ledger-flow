@@ -2057,3 +2057,26 @@ cover` is set once in the root layout for the standalone display.
   change synced" after "2 changes waiting", which is the arithmetic the user cannot follow.
 - **Consequence:** the count is set by each round, never accumulated, so it is the last round's
   answer and nothing older. `cancelled` is excluded on purpose: it never reached anyone.
+
+## 2026-09-06 · Dates and times are the app's own controls, not the browser's (F-05)
+
+- **Decision:** `DateTimeField` stops rendering `<input type="date">` and `<input type="time">`. Each
+  half is an opener drawn like the input it replaces, and it opens a sheet of 7.28: a 7×n calendar
+  with "Today" / "Yesterday" chips, the month's neighbours at 55 %, keyboard movement (arrows a day,
+  `PageUp`/`PageDown` a month) and the days past the ceiling disabled; and a wheel of hours and
+  minutes (in fives) with "Now", plus an AM/PM column where the language reads time that way. A new
+  `DateField` serves the places that ask for a day alone: the range of the filters sheet (§8.5) and
+  the budget's dates (§8.8). This reverses the decision of 2026-09-01 that date and time were the one
+  place native controls were allowed.
+- **Why:** the browser's widgets follow neither the tokens nor the app's language, and — the reason
+  that decided it — they cannot grey out what the server refuses. The transaction form passes
+  `max` = tomorrow, so a date more than 24 h ahead is no longer reachable from the form at all; the
+  budget's period, which is legitimately in the future, passes no ceiling.
+- **Alternatives:** styling the native control (nothing in it can be styled past the border);
+  validating after the fact (which is what F-66 exists to clean up afterwards).
+- **Consequence:** every day the calendar shows carries its whole date as its accessible name, so a
+  screen reader hears "Wednesday, September 30, 2026" and the neighbour months are told apart. The
+  sheets are remounted on each open, which is what makes "Cancel" leave nothing behind. Two e2e tests
+  changed shape: the far-future date of `transaction-form.spec.ts` cannot be typed any more, so the
+  test asserts the calendar refuses it, and the inverted budget window of `BudgetForm.test.tsx` is
+  now a day the picker does not offer.

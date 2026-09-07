@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
@@ -336,8 +336,13 @@ describe("the Resolve sync conflict sheet", () => {
     // Prefilled with the server's own clock — three days behind this device's — and never with the
     // date that was refused.
     const onTheServer = dayKey(new Date(Date.now() - 3 * DAY), "America/Bogota");
-    expect(screen.getByLabelText("Date")).toHaveValue(onTheServer);
-    expect(screen.getByLabelText("Date")).not.toHaveValue("2026-09-25");
+    await userEvent.click(screen.getByRole("button", { name: /^Date/ }));
+    const calendar = screen.getByRole("dialog", { name: "Date" });
+    const selected = within(calendar)
+      .getAllByRole("gridcell")
+      .find((cell) => cell.getAttribute("aria-selected") === "true");
+    expect(selected).toHaveTextContent(String(Number(onTheServer.slice(8))));
+    await userEvent.click(within(calendar).getByRole("button", { name: "Cancel" }));
 
     await userEvent.click(screen.getByRole("button", { name: "Save and try again" }));
 

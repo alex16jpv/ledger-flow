@@ -246,7 +246,8 @@ test("the form creates a category budget, refuses a second global one, edits it 
   await expect(page).toHaveURL(/\/budgets\/new\?from=/);
   await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue("Old trip");
   await expect(page.getByRole("button", { name: "Custom", pressed: true })).toBeVisible();
-  await expect(page.getByLabel("Start")).not.toHaveValue("2026-07-01");
+  // The dates are openers now (F-05), so what they show is the day, not an input value.
+  await expect(page.getByRole("button", { name: /^Start/ })).not.toContainText("Jul 1");
 });
 
 // Owner report P-24: a user west of the server's zone saw an empty list while the create call said "overlap".
