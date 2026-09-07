@@ -2271,3 +2271,29 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** a device that never reopens the app never syncs, which is the same as before the
   tag existed; the tag only shortens the wait when a tab is alive. `app/sw.ts` says so where the
   handler is, so the next person does not read the empty `matchAll` as a bug.
+
+## 2026-09-06 · The CSP is enforced, and the upgrade directive stays off loopback (F-71)
+
+- **Decision:** `CSP_REPORT_ONLY` in `proxy.ts` is `false`. The policy that has been reported for
+  weeks is now the policy the browser applies: `default-src 'self'`, `script-src 'self'
+'nonce-…' 'strict-dynamic'`, `connect-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`.
+  `report-uri` stays, so anything the enforced policy blocks still reaches `/api/csp-report`.
+- **What made it safe:** F-67 removed the only violation the app produced (Zod's JIT probe). Measured
+  again with the policy enforced: **zero `csp-report` events** in two full e2e runs and in both
+  offline demos, where the report-only policy used to log 229 and 8.
+- **Found while enforcing:** `upgrade-insecure-requests` ships only when the policy is enforced, and
+  it upgraded the service worker's shell warm — `http://localhost:3002/es/home`, built from
+  `window.location.origin` — to `https`, which on a plain `next start` dies with
+  `ERR_SSL_PROTOCOL_ERROR`. The warm is a sequential loop, so it stopped at its first URL and the
+  device never became ready to run offline. `settings.spec.ts:29` caught it, being the one test that
+  asserts an empty console.
+- **Fix:** `buildCsp` takes `loopback`, and the proxy sets it when the request is `http:` on
+  `localhost`/`127.0.0.0/8`/`::1`. An http loopback origin has nothing to upgrade to, so the
+  directive there can only break the requests it rewrites. The condition is the host, not the
+  environment, so production can never drop the directive by accident.
+- **Alternatives:** dropping `upgrade-insecure-requests` outright (loses a real protection on the
+  deployed origin), or serving the e2e build over https (a certificate and a proxy to maintain for a
+  directive that is a no-op on an origin that is already https).
+- **Consequence:** what the browser refused to run in report-only, it now refuses for real. If a
+  dependency ever needs `eval` again it fails visibly instead of logging — which is the point — and
+  the `csp-report` log is where it will say so.

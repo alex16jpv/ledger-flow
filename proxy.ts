@@ -15,7 +15,8 @@ import { routing } from "@/lib/i18n/routing";
 import { buildCsp, cspHeaderName, newNonce } from "@/lib/security/csp";
 
 const intl = createMiddleware(routing);
-const CSP_REPORT_ONLY = true;
+const CSP_REPORT_ONLY = false;
+const LOOPBACK_HOST = /^(?:localhost|127(?:\.\d{1,3}){3}|::1|\[::1\])$/;
 
 function localePrefix(pathname: string): string {
   const [, first] = pathname.split("/");
@@ -63,6 +64,7 @@ export default function proxy(request: NextRequest) {
     isDevelopment: process.env.NODE_ENV === "development",
     reportOnly: CSP_REPORT_ONLY,
     reportUri: "/api/csp-report",
+    loopback: request.nextUrl.protocol === "http:" && LOOPBACK_HOST.test(request.nextUrl.hostname),
   });
   const headerName = cspHeaderName(CSP_REPORT_ONLY);
   request.headers.set(headerName, csp);

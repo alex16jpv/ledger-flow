@@ -3,6 +3,8 @@ export interface SecurityHeaderOptions {
   isDevelopment: boolean;
   reportOnly: boolean;
   reportUri: string;
+  // An http loopback origin has nothing to upgrade to, so the upgrade only breaks what it rewrites.
+  loopback?: boolean;
 }
 
 export function buildCsp({
@@ -10,6 +12,7 @@ export function buildCsp({
   isDevelopment,
   reportOnly,
   reportUri,
+  loopback = false,
 }: SecurityHeaderOptions): string {
   const scriptSrc = [
     `'self'`,
@@ -31,7 +34,7 @@ export function buildCsp({
     `form-action 'self'`,
     `object-src 'none'`,
     `report-uri ${reportUri}`,
-    ...(isDevelopment || reportOnly ? [] : [`upgrade-insecure-requests`]),
+    ...(isDevelopment || reportOnly || loopback ? [] : [`upgrade-insecure-requests`]),
   ];
   return directives.join("; ");
 }

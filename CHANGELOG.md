@@ -45,7 +45,8 @@ the network comes back. 70 commits since 0.1.0.
 
 - The whole end-to-end suite is green for the first time: three long-standing intermittents, each
   with its own cause (F-45, F-11), and the landing's footer link on mobile (F-37).
-- No page load reports a blocked `eval` any more: it was Zod's JIT probe (F-67).
+- No page load reports a blocked `eval` any more: it was Zod's JIT probe (F-67), so the
+  Content-Security-Policy is now enforced instead of only reported (F-71).
 - The size budget watches the authenticated app, which it had never matched (F-10), and Lighthouse
   no longer leaves a browser profile in the repository (F-12).
 
