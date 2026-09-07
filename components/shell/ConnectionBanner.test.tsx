@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
@@ -15,7 +15,7 @@ import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { renderWithProviders } from "@/lib/testing/render";
 import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 
-import { ConnectionBanner } from "./ConnectionBanner";
+import { ConnectionBanner, PENDING_GRACE_MS } from "./ConnectionBanner";
 
 const push = vi.fn();
 vi.mock("@/lib/i18n/navigation", () => ({
@@ -78,8 +78,35 @@ describe("ConnectionBanner", () => {
     expect(screen.getByRole("status")).toHaveTextContent("2 changes waiting");
   });
 
-  it("keeps the amber stripe with network while the queue has not drained", async () => {
+  // F-72: with a network the queue drains in ~30 ms, so the stripe said "waiting" for one frame on
+  // every write. It waits out the grace first, and what is under it never moves for a round trip.
+  // Real timers on purpose: faking `setTimeout` before rendering deadlocks React's own scheduler,
+  // which falls back to it under jsdom, so this test costs the grace it is measuring.
+  it("says nothing about a queue that has not been waiting long enough", async () => {
     await queueOf([operation(1)]);
+    render();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(screen.getByRole("status")).toHaveTextContent("Changes waiting to sync.");
+      },
+      { timeout: PENDING_GRACE_MS * 3 },
+    );
+
+    // And the grace is forgotten when the queue drains, or the next write would inherit it and the
+    // flash would be back on the second save.
+    act(() => {
+      resetOutboxStatus();
+    });
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    await queueOf([operation(2)]);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  // A round that already came back with something to say has waited long enough, whatever the clock
+  // says: the grace exists for the round trip nobody is waiting on, not for a queue that is stuck.
+  it("says it straight away when the last round failed", async () => {
+    await queueOf([operation(1, { lastError: "NETWORK" })]);
     render();
     expect(screen.getByRole("status")).toHaveTextContent("Changes waiting to sync.");
   });

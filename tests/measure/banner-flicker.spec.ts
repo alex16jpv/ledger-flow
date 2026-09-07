@@ -1,10 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
 
+import { addButton, freshUser, signInAs, uniqueAmount } from "../offline";
+
 // F-72: how long the amber "changes waiting" stripe is on screen when the network is up, and how far
 // it moves the content under it. Sampled with requestAnimationFrame, which is the granularity the eye
 // gets: a change that never survives a frame is never painted.
-const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
-const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
 const RUNS = Number(process.env.MEASURE_RUNS ?? 6);
 
 interface Sample {
@@ -66,19 +66,13 @@ async function samples(page: Page): Promise<{ t0: number; list: Sample[] }> {
   });
 }
 
-function addButton(page: Page) {
-  return test.info().project.name === "mobile"
-    ? page.getByRole("button", { name: "Add expense" })
-    : page.getByRole("button", { name: "Add", exact: true });
-}
-
 test("how long the pending stripe lives, and how far it pushes the content", async ({
   page,
   request,
 }) => {
-  const response = await request.post("/api/auth/login", { headers: { origin: APP }, data: SEED });
-  expect(response.ok()).toBe(true);
-  await page.context().addCookies((await request.storageState()).cookies);
+  // Its own user and its own account: this script writes dozens of expenses, and doing that on the
+  // shared seed user drove its balance negative and broke `pickers.spec.ts` two runs later.
+  await signInAs(page.context(), request, await freshUser(request, "banner"));
   await page.goto("/home");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   // Let the first sync drain before measuring: a queue left over from the arrival is not the flicker.
@@ -90,7 +84,7 @@ test("how long the pending stripe lives, and how far it pushes the content", asy
     await addButton(page).click();
     const sheet = page.getByRole("dialog", { name: "Add expense" });
     await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
-    await page.keyboard.type(String(100_000 + Math.floor(Math.random() * 899_999)));
+    await page.keyboard.type(String(uniqueAmount()));
     await mark(page);
     await sheet.getByRole("button", { name: "Save" }).click();
     await expect(sheet).toBeHidden();
@@ -117,9 +111,7 @@ test("how long the pending stripe lives, and how far it pushes the content", asy
 const LATENCY_MS = Number(process.env.MEASURE_LATENCY_MS ?? 250);
 
 test("the same write over a slower link", async ({ page, request }) => {
-  const response = await request.post("/api/auth/login", { headers: { origin: APP }, data: SEED });
-  expect(response.ok()).toBe(true);
-  await page.context().addCookies((await request.storageState()).cookies);
+  await signInAs(page.context(), request, await freshUser(request, "banner-slow"));
   await page.route("**/api/sync", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, LATENCY_MS));
     await route.continue();
@@ -134,16 +126,18 @@ test("the same write over a slower link", async ({ page, request }) => {
     await addButton(page).click();
     const sheet = page.getByRole("dialog", { name: "Add expense" });
     await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
-    await page.keyboard.type(String(100_000 + Math.floor(Math.random() * 899_999)));
+    await page.keyboard.type(String(uniqueAmount()));
     await mark(page);
     await sheet.getByRole("button", { name: "Save" }).click();
-    await expect(sheet).toBeHidden();
     if (run === 0) {
-      await page.waitForTimeout(Math.min(LATENCY_MS / 2, 400));
+      // After the stripe's grace and before waiting for the sheet, which does not close until the
+      // server answers: by then the stripe this shot exists for is already gone (F-72).
+      await page.waitForTimeout(Math.min(LATENCY_MS - 400, 1600));
       await page.screenshot({
         path: `test-results/measure/with-stripe-${test.info().project.name}.png`,
       });
     }
+    await expect(sheet).toBeHidden();
     await page.waitForTimeout(LATENCY_MS + 2500);
     if (run === 0) {
       await page.screenshot({

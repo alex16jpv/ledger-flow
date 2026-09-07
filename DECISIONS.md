@@ -2297,3 +2297,25 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** what the browser refused to run in report-only, it now refuses for real. If a
   dependency ever needs `eval` again it fails visibly instead of logging — which is the point — and
   the `csp-report` log is where it will say so.
+
+## 2026-09-06 · The "changes waiting" stripe waits a second before saying anything (F-72)
+
+- **Measured first** (`npm run measure:banner`): with a network the queue drains in ~30 ms, so the
+  stripe was painted 70 ms after Save and gone 16-33 ms later — one or two frames — and the content
+  under it moved 55.3 px down and back up. With 250 ms added to `POST /sync` it lived 270-280 ms,
+  still unreadable. It was a false positive: nothing was waiting, that was the round trip.
+- **Decision (owner, 2026-09-06, chosen from three):** `pending` is not painted until the queue has
+  been undrained for `PENDING_GRACE_MS` (1 s, a constant in `ConnectionBanner.tsx` so it can be
+  raised or lowered without redesigning anything). A queue whose last round came back with an error
+  paints at once, whatever the clock says: the grace exists for a round trip nobody is waiting on.
+- **What did NOT change, on the owner's instruction:** every write still goes through the queue with
+  a network, in the same order, through the same engine. `lib/local/outbox/` is untouched. This is
+  presentation only — the only thing that moved is _when_ the stripe is painted.
+- **Alternatives:** (a) hide `pending` while the engine has a batch in flight — the truest reading,
+  but the engine refreshes the status store _before_ it marks operations `sending`, so it would mean
+  editing `engine.ts`, and a slow three-second send would then say nothing at all; (c) reserve the
+  stripe's height so it never pushes the content — removes the jump but not the false positive, and
+  leaves an empty band at the top of every screen.
+- **Consequence:** the offline stripe, the conflict stripe, the blocked stripe and the signed-out
+  stripe are unaffected — they never went through this branch. `DESIGN.md` §8.12 carries the rule,
+  because when a drawn state appears is a design decision (D-36).
