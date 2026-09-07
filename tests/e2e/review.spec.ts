@@ -113,8 +113,10 @@ test("Save all completes the categorized cards, one guarded operation per row", 
   await dialog.getByRole("button", { name: "Save 2" }).click();
   await expect(page.getByText("2 expenses saved")).toBeVisible();
   await expect(page.getByRole("heading", { name: "All reviewed" })).toBeVisible();
+  // F-77: the toast and the empty state can both be on screen before Playwright has seen the request
+  // go out, so the batch is waited for, not read.
+  await expect.poll(() => batches).toHaveLength(1);
   expect(sentUrls.filter((url) => url.endsWith("/api/transactions/batch"))).toHaveLength(0);
-  expect(batches).toHaveLength(1);
   const operations = batches[0]!;
   expect(operations.map((operation) => `${operation.entity}:${operation.action}`)).toEqual([
     "transaction:update",
