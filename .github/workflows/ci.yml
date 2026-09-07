@@ -8,9 +8,9 @@ env:
   NEXT_PUBLIC_APP_URL: http://localhost:3001
   NEXT_PUBLIC_CONTACT_EMAIL: ledgerflow@alexpiral.com
   NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
-  # The backend branch the e2e job builds and regenerates types/api.d.ts against. This branch needs
-  # the sync endpoints of feat/offline; move it back to main once both repos merge (backend first).
-  BACKEND_REF: feat/offline
+  # The backend branch the e2e job builds and regenerates types/api.d.ts against. Back on main since
+  # 2026-09-07: the backend merged feat/offline in its pull request #7, and the front in #6.
+  BACKEND_REF: main
 jobs:
   quality:
     runs-on: ubuntu-latest

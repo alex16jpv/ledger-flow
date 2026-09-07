@@ -2533,3 +2533,13 @@ cover` is set once in the root layout for the standalone display.
   remote branch would need a push, which the owner's rules forbid anyway.
 - **Consequence:** `ci.yml` no longer runs on pushes to `redesign/fase-2`, which is merged; it runs
   on `main`, on `feat/**` and on every pull request. The branches stay until the owner says otherwise.
+
+## 2026-09-07 · CI builds the backend from main again (W-39)
+
+- **Decision:** `BACKEND_REF` goes from `feat/offline` back to `main` in `ci.yml` and in the new
+  `lighthouse-app.yml`. This was the single line the offline plan left for the end of the merge
+  dance, backend first.
+- **Verified, not assumed:** `origin/feat/offline` is an ancestor of `origin/main` in
+  `lag-money-manager` (pull request #7), the sync routes are on `main`, and the types regenerated
+  today came from a backend running `main` — sorted, they are identical to the ones the branch
+  produced, so the contract the e2e job diffs against has not moved.

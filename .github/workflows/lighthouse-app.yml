@@ -10,7 +10,7 @@ env:
   NEXT_PUBLIC_CONTACT_EMAIL: ledgerflow@alexpiral.com
   NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
   # Same branch the e2e job of ci.yml builds the backend from; move both together.
-  BACKEND_REF: feat/offline
+  BACKEND_REF: main
 jobs:
   lighthouse-app:
     runs-on: ubuntu-latest
