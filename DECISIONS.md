@@ -2319,3 +2319,28 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** the offline stripe, the conflict stripe, the blocked stripe and the signed-out
   stripe are unaffected — they never went through this branch. `DESIGN.md` §8.12 carries the rule,
   because when a drawn state appears is a design decision (D-36).
+
+## 2026-09-07 · Reduced motion is switched off at the sheet, not component by component (W-38)
+
+- **Found:** the duration tokens already went to 0 under `prefers-reduced-motion` (`tokens/base.css`),
+  and every `transition-*` in the app names one (`duration-(--dur-1|2|3)`), so transitions were
+  covered. Animations were not: `Skeleton`'s shimmer was guarded with `motion-safe:`, and the
+  spinner of a loading `Button` (`animate-spin`) was not — it kept turning, once per second, for a
+  user who asked the system for less motion.
+- **Decision:** `app/globals.css` ends with an unlayered
+  `@media (prefers-reduced-motion: reduce)` block that takes every element's animation and transition
+  duration to 0.01 ms, its delay to 0, its iteration count to 1 and its scroll behaviour to `auto`,
+  with `!important`. `DESIGN.md` §2 already says "everything at 0 with `prefers-reduced-motion`":
+  this is that sentence, once, where nothing can miss it.
+- **Alternatives:** adding `motion-safe:` to the spinner and to whatever comes next. Rejected: it is
+  the rule the tokens already failed to enforce once, it only covers the code we remember to mark,
+  and it cannot reach a stylesheet the app does not own.
+- **Why `!important` and outside every layer:** Tailwind's utilities are normal declarations, so an
+  important one beats them wherever it sits; unlayered keeps it out of the way of the `@theme` and
+  `base` layers.
+- **What it does not change:** the loading `Button` still draws the same arc, now still. Whether a
+  static three-quarter ring is the right way to say "busy" is a design question, not a CSS one, and
+  it is registered as F-74.
+- **Consequence:** `tests/e2e/reduced-motion.spec.ts` measures it in the browser on `/en/dev/ui` —
+  under `reduce` a button's transition and the spinner's animation are 0 s and the shimmer's
+  `animation-name` is `none`; under `no-preference` all three move. Two tests, both projects.
