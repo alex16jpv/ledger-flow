@@ -6,6 +6,7 @@ import { refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
 import { setCurrentVault } from "@/lib/local/repository";
 import { accountRecord, type OutboxOperation } from "@/lib/local/schema";
 import { reportOnline } from "@/lib/network/connectivity";
+import { SHELL_SCREENS, shellCacheKey, shellUrls } from "@/lib/pwa/shell";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { tabChannel } from "@/lib/session/channel";
 import { SessionProvider } from "@/lib/session/SessionProvider";
@@ -30,8 +31,22 @@ const operation = (seq: number): OutboxOperation => ({
 });
 
 const fetchMock = vi.fn<typeof fetch>();
+const shellCache = new Set<string>();
+
+const fakeCaches = {
+  open: () => Promise.resolve({ match: (key: string) => Promise.resolve(shellCache.has(key)) }),
+};
+
+// What the worker leaves behind after warming the screens of §6 O-F6.
+const warmScreens = (count: number): void => {
+  for (const url of shellUrls("en", window.location.origin).slice(0, count)) {
+    shellCache.add(shellCacheKey(url));
+  }
+};
 
 beforeEach(() => {
+  shellCache.clear();
+  vi.stubGlobal("caches", fakeCaches);
   fetchMock.mockReset();
   fetchMock.mockResolvedValue(
     new Response(JSON.stringify({ user: { id: "u1", name: "John", locale: "en" } }), {
@@ -77,6 +92,54 @@ describe("Sync status", () => {
     expect(screen.getByText("Last error: NETWORK")).toBeInTheDocument();
     // §4.3 rule 3: the app says which mode it runs in, because on iOS they hold different data.
     expect(screen.getByText("Browser tab")).toBeInTheDocument();
+  });
+
+  // F-54: nobody could tell when a device had finished preparing; "Last synced" only ever spoke
+  // for the data, never for the screens.
+  it("says the device is ready when both the data and the screens are here", async () => {
+    warmScreens(SHELL_SCREENS);
+    const vault = await openTestVault("u1");
+    await vault.db.put("meta", { key: "syncedAt", value: "2026-09-06T10:00:00.000Z" });
+    setCurrentVault(vault);
+
+    view();
+
+    expect(await screen.findByText("Ready")).toBeInTheDocument();
+    expect(
+      screen.getByText("Your data and the app’s screens are on this device"),
+    ).toBeInTheDocument();
+  });
+
+  it("counts the screens while it is still preparing", async () => {
+    warmScreens(18);
+    const vault = await openTestVault("u1");
+    await vault.db.put("meta", { key: "syncedAt", value: "2026-09-06T10:00:00.000Z" });
+    setCurrentVault(vault);
+
+    view();
+
+    expect(
+      await screen.findByText(
+        `Copying your data and the app’s screens · 18 of ${SHELL_SCREENS} screens`,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Preparing…")).toBeInTheDocument();
+  });
+
+  it("is not ready on the screens alone: the data is the other half", async () => {
+    warmScreens(SHELL_SCREENS);
+    const vault = await openTestVault("u1");
+    setCurrentVault(vault);
+
+    view();
+
+    expect(
+      await screen.findByText(
+        `Copying your data and the app’s screens · ${SHELL_SCREENS} of ${SHELL_SCREENS} screens`,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Preparing…")).toBeInTheDocument();
+    expect(screen.queryByText("Ready")).not.toBeInTheDocument();
   });
 
   // F-41: without a session nothing below this row reaches the server, so the screen says so and
@@ -142,6 +205,20 @@ describe("Sync status", () => {
 describe("Sync status with no network", () => {
   afterEach(() => {
     reportOnline(true);
+  });
+
+  it("says what is missing is paused, not slow", async () => {
+    warmScreens(18);
+    const vault = await openTestVault("u1");
+    await vault.db.put("meta", { key: "syncedAt", value: "2026-09-06T10:00:00.000Z" });
+    setCurrentVault(vault);
+    reportOnline(false);
+
+    view();
+
+    expect(await screen.findByText("Incomplete")).toBeInTheDocument();
+    expect(await screen.findByText("Paused: it needs a connection to finish")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeDisabled();
   });
 
   it("will not throw the copy away when it cannot download a new one", async () => {

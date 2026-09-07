@@ -11,6 +11,7 @@ export {
   SETTINGS_ITEM,
   TAB_ITEMS,
 } from "./nav";
+export { OfflineReadyAnnouncement } from "./OfflineReadyAnnouncement";
 export { PageHeader } from "./PageHeader";
 export { SessionExpiredSheet } from "./SessionExpiredSheet";
 export { Sidebar } from "./Sidebar";

@@ -13,6 +13,7 @@ import {
   isShellPath,
   offlineDocument,
   SHELL_CACHE,
+  SHELL_WARMED_MESSAGE,
   shellCacheKey,
   WARM_SHELL_MESSAGE,
   type WarmShellMessage,
@@ -111,7 +112,12 @@ async function warmShell(urls: string[], event: ExtendableEvent): Promise<void> 
 self.addEventListener("message", (event) => {
   const data = event.data as Partial<WarmShellMessage> | null;
   if (data?.type !== WARM_SHELL_MESSAGE) return;
-  event.waitUntil(warmShell(data.urls ?? [], event));
+  const source = event.source;
+  event.waitUntil(
+    warmShell(data.urls ?? [], event).then(() => {
+      source?.postMessage({ type: SHELL_WARMED_MESSAGE });
+    }),
+  );
 });
 
 const STAGED = "-next";

@@ -9,6 +9,7 @@ import {
   type AddOptions,
   AppShell,
   ConnectionBanner,
+  OfflineReadyAnnouncement,
   SessionExpiredSheet,
 } from "@/components/shell";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -104,6 +105,7 @@ function Frame({ children }: { children: ReactNode }) {
         <HistoryTracker />
       </Suspense>
       <ServiceWorkerUpdates />
+      <OfflineReadyAnnouncement enabled={Boolean(localUserId)} />
       <AppShell
         userName={user?.name ?? ""}
         pendingCount={pendingCount}

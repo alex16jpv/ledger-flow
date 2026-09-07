@@ -324,6 +324,16 @@
         "label": "Última sincronización completa",
         "never": "Nunca"
       },
+      "offlineReady": {
+        "label": "Listo sin conexión",
+        "help": "Tus datos y las pantallas de la app están en este dispositivo",
+        "ready": "Listo",
+        "preparing": "Preparando…",
+        "preparingHelp": "Copiando tus datos y las pantallas de la app · {cached} de {expected} pantallas",
+        "incomplete": "Incompleto",
+        "incompleteHelp": "En pausa: necesita conexión para terminar",
+        "retry": "Reintentar"
+      },
       "queue": {
         "label": "Esperando a enviarse"
       },
@@ -369,6 +379,10 @@
         "done": "Sincronizado",
         "failed": "No se pudo sincronizar",
         "offline": "Necesita conexión: vuelve a descargar la copia."
+      },
+      "offlineReadyToast": {
+        "title": "Ya puedes usar la app sin conexión",
+        "action": "Qué significa"
       }
     }
   },

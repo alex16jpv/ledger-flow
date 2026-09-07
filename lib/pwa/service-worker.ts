@@ -1,6 +1,11 @@
 import { env } from "@/lib/env";
 
-import { shellUrls, WARM_SHELL_MESSAGE, type WarmShellMessage } from "./shell";
+import {
+  SHELL_WARMED_MESSAGE,
+  shellUrls,
+  WARM_SHELL_MESSAGE,
+  type WarmShellMessage,
+} from "./shell";
 
 export type UpdateListener = () => void;
 
@@ -45,4 +50,17 @@ export async function warmAppShell(locale: string): Promise<void> {
     urls: shellUrls(locale, window.location.origin),
   };
   registration.active?.postMessage(message);
+}
+
+// When the worker says it has been through the list. Without it the page would have to poll to find
+// out whether this device is ready to run with no network (F-54).
+export function onShellWarmed(listener: () => void): () => void {
+  if (!("serviceWorker" in navigator)) return () => undefined;
+  const handler = (event: MessageEvent) => {
+    if ((event.data as { type?: string } | null)?.type === SHELL_WARMED_MESSAGE) listener();
+  };
+  navigator.serviceWorker.addEventListener("message", handler);
+  return () => {
+    navigator.serviceWorker.removeEventListener("message", handler);
+  };
 }

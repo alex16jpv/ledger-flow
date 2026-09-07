@@ -324,6 +324,16 @@
         "label": "Last full sync",
         "never": "Never"
       },
+      "offlineReady": {
+        "label": "Offline ready",
+        "help": "Your data and the app’s screens are on this device",
+        "ready": "Ready",
+        "preparing": "Preparing…",
+        "preparingHelp": "Copying your data and the app’s screens · {cached} of {expected} screens",
+        "incomplete": "Incomplete",
+        "incompleteHelp": "Paused: it needs a connection to finish",
+        "retry": "Retry"
+      },
       "queue": {
         "label": "Waiting to send"
       },
@@ -369,6 +379,10 @@
         "done": "Resynced",
         "failed": "Could not resync",
         "offline": "Needs a connection: it downloads the copy again."
+      },
+      "offlineReadyToast": {
+        "title": "Ready to use offline",
+        "action": "What this means"
       }
     }
   },

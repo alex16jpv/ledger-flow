@@ -1954,3 +1954,24 @@ cover` is set once in the root layout for the standalone display.
   DESIGN.md §8.12 declares** — `offline` → `signedout` → `error` → `pending` → `online` — which moves
   `error` below `offline`: with no network nothing can be signed in or sent, and resolving a conflict
   changes nothing until there is a session to send it with.
+
+## 2026-09-06 · "Offline ready" is two halves, and the page counts them itself (F-54)
+
+- **Decision:** Ajustes › Sync status gains a fixed **Offline ready** row — `Ready` /
+  `Preparing… · n of 25 screens` / `Incomplete` with a `Retry` — and a device announces itself once,
+  ever, with a toast ("Ready to use offline" · "What this means" → Sync status). Ready means both
+  halves: the pull wrote `syncedAt` into the vault **and** the worker's `app-shell` cache holds all
+  25 screens of `shellUrls()` for the language in use.
+- **Why:** the copy and the screens are fetched in the background on the way in and nothing said
+  when they landed; "Last synced" spoke for the data alone. Counting the keys the warm should have
+  left answers the same question a message to the worker would, without a protocol to keep in step,
+  and it is locale-aware on purpose: a device warmed only in Spanish is not ready for English.
+- **Alternatives:** a state of the connection stripe — rejected in design, the stripe is for what is
+  going wrong and its green is already "Back online"; polling readiness on a timer — §4.2 has no
+  periodic anything, so the worker now answers `SHELL_WARMED_MESSAGE` when it has been through the
+  list and the page checks on that and on mount.
+- **Consequence:** `warmAppShell` gained a reply, and the shell knows how many screens it owes
+  (`SHELL_SCREENS`). The two halves can land in either order, so a device that finishes its pull
+  after the warm announces itself on the next visit rather than the current one; the fixed row is
+  always right in the meantime. The "announced" flag is a single boolean in `localStorage`, per
+  device and per origin, and a browser that refuses storage would say it again rather than never.

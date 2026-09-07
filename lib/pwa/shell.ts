@@ -59,6 +59,10 @@ export const SHELL_CACHE = "app-shell";
 
 export const WARM_SHELL_MESSAGE = "ledger-flow-warm-shell";
 
+// The worker's answer when it has been through the list: the page has no other way to know the
+// warm ended, and "Ready to use offline" is a promise nobody should make early (F-54).
+export const SHELL_WARMED_MESSAGE = "ledger-flow-shell-warmed";
+
 export interface WarmShellMessage {
   type: typeof WARM_SHELL_MESSAGE;
   urls: string[];
@@ -103,6 +107,9 @@ export function offlineDocument(pathname: string): string {
     ? "/offline.html"
     : `/offline.${localeOf(pathname)}.html`;
 }
+
+// How many screens a prepared device holds, which is what Sync status counts against (F-54).
+export const SHELL_SCREENS = SHELL_PATHS.length + DETAIL_TEMPLATES.length;
 
 export function shellUrls(locale: string, origin: string): string[] {
   const prefix = localePrefix(locale);

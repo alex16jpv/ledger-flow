@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CloudCheck,
   CloudOff,
   Database,
   HardDrive,
@@ -10,7 +11,7 @@ import {
   ShieldCheck,
   Split,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useSyncExternalStore } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
@@ -29,6 +30,7 @@ import { forceFullResync } from "@/lib/local/mirror";
 import { syncTransport } from "@/lib/local/outbox/engine";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { connectivityStore } from "@/lib/network/connectivity";
+import { warmAppShell } from "@/lib/pwa/service-worker";
 import { useSession } from "@/lib/session";
 
 import { useSyncSnapshot } from "../sync";
@@ -74,6 +76,7 @@ export function SyncStatusView() {
   const outbox = useOutbox();
   const toast = useToast();
   const session = useSession();
+  const locale = useLocale();
   const { snapshot, reload } = useSyncSnapshot();
   const [confirming, setConfirming] = useState(false);
   const [resyncing, setResyncing] = useState(false);
@@ -92,6 +95,12 @@ export function SyncStatusView() {
   // F-41: a screen that says what this device owes the server cannot stay quiet about there being
   // nobody to say it to. The stripe warns; this row answers whoever came to look.
   const signedOut = session.status === "expired";
+
+  // F-54: "offline ready" is two halves — the data the pull left in the vault, and the screens the
+  // worker warmed. It is ready only when both are, and with no network what is missing stays
+  // missing, which is a state of its own and not a slower "preparing".
+  const shell = snapshot.shell;
+  const offlineReady = Boolean(snapshot.syncedAt) && shell.cached >= shell.expected;
 
   const persisted = !storage?.supported
     ? t("persisted.unsupported")
@@ -136,6 +145,41 @@ export function SyncStatusView() {
             title={t("lastSync.label")}
             value={
               snapshot.syncedAt ? dates.formatDay(new Date(snapshot.syncedAt)) : t("lastSync.never")
+            }
+          />
+          <StatusRow
+            icon={<CloudCheck {...iconProps("sm")} />}
+            title={t("offlineReady.label")}
+            meta={
+              offlineReady
+                ? t("offlineReady.help")
+                : offline
+                  ? t("offlineReady.incompleteHelp")
+                  : t("offlineReady.preparingHelp", {
+                      cached: shell.cached,
+                      expected: shell.expected,
+                    })
+            }
+            value={
+              offlineReady
+                ? t("offlineReady.ready")
+                : offline
+                  ? t("offlineReady.incomplete")
+                  : t("offlineReady.preparing")
+            }
+            action={
+              !offlineReady && offline ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={offline}
+                  onClick={() => {
+                    void warmAppShell(locale).then(reload);
+                  }}
+                >
+                  {t("offlineReady.retry")}
+                </Button>
+              ) : undefined
             }
           />
           <StatusRow
