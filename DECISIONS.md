@@ -2113,3 +2113,23 @@ cover` is set once in the root layout for the standalone display.
   the fill, and the mark and its bubble sit outside it, so the tooltip is not cut off by the element
   it explains. A mark with no label stays a decorative line — that is what the landing's mock uses.
   `budgetProgress` gained `day` and `days`, which is what the text says out loud.
+
+## 2026-09-06 · The language is chosen before the account exists (F-02)
+
+- **Decision:** the access frame gains a language chip (globe + `EN` / `ES`) beside the brand on
+  login, register and onboarding, and the register form a **Language** row. Both open the same sheet
+  — English and Español, the device's own marked "Detected from your device" — and both do the same
+  thing: navigate to the same page in the other language. There is no third value to keep in step,
+  because the language of the screen **is** the `locale` the account is created with. No "Follow
+  device" here: that is a local mode of Settings, not a value the contract takes.
+- **Why:** `locale` was whatever the URL happened to carry, and nothing on the screen said so or
+  offered to change it. Someone who lands on `/en/register` from a shared link had to know to edit
+  the address bar.
+- **Alternatives:** swapping the messages in place without navigating — the URL would still say
+  `/en`, so every `Link` on the page and the onboarding it hands over to would carry the wrong
+  language; keeping a separate `locale` field in the form — two values saying the same thing, and the
+  screen would still be in the other language while the user filled it in.
+- **Consequence:** switching on the register screen reloads it in the other language, which empties
+  what was typed — the same thing that happens in Settings, and the reason the row shows the detected
+  language, which is what most people will already want. The switch carries the query string with it,
+  so a `?reauth=1&next=…` login does not lose its way back (§2.6).
