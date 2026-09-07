@@ -1,5 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 test("the landing is static, bilingual and links to sign-up, sign-in and the legal pages", async ({
   page,
@@ -24,7 +25,7 @@ test("the landing is static, bilingual and links to sign-up, sign-in and the leg
   await expect(
     page.getByRole("heading", { level: 2, name: "Up and running in a minute" }),
   ).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   const html = await (await request.get("/")).text();
   expect(html).toContain("See where your money actually goes.");
@@ -56,7 +57,7 @@ test("the landing is static, bilingual and links to sign-up, sign-in and the leg
     page.getByRole("heading", { level: 1, name: "Política de privacidad" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: /Ley 1581/ })).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 });
 
 test("an unknown public address answers a real 404 inside the public frame", async ({

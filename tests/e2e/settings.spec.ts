@@ -119,6 +119,8 @@ test("a new user edits the profile, changes currency and time zone, reviews sess
   await expect(remove.getByRole("button", { name: "Delete account" })).toBeDisabled();
   await remove.getByRole("textbox").fill("DELETE");
   await remove.getByRole("button", { name: "Delete account" }).click();
-  await expect(page).toHaveURL(/\/login\?deleted=1$/);
+  // F-45: deleting the account is a round trip plus purging the vault plus a navigation, and with
+  // eight workers it does not fit in the 5 s an `expect` waits by default.
+  await expect(page).toHaveURL(/\/login\?deleted=1$/, { timeout: 30_000 });
   await expect(page.getByText(/Your account was deleted/)).toBeVisible();
 });

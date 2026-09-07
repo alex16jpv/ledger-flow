@@ -1,4 +1,3 @@
-import AxeBuilder from "@axe-core/playwright";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 
 import {
@@ -14,6 +13,7 @@ import {
   uniqueAmount,
   vaultState,
 } from "../offline";
+import { expectNoAxeViolations } from "./axe";
 
 // §1 examples 3, 4, 5 and 7, and §6 O-F7's second bullet: two devices of the same user, one of them
 // with no network. The tablet works through its own browser, like a person on the other side.
@@ -154,7 +154,7 @@ test("a money conflict is asked, and the sheet applies the answer", async ({
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole("heading", { level: 3, name: "On the server" })).toBeVisible();
   await expect(sheet.getByRole("heading", { level: 3, name: "On this device" })).toBeVisible();
-  expect((await new AxeBuilder({ page: phone.page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(phone.page);
 
   await sheet.getByRole("button", { name: "Keep this device’s version" }).click();
   await expect
@@ -259,7 +259,7 @@ test("the same account created on both devices is asked, never merged", async ({
 
   await phone.page.goto("/sync");
   await expect(phone.page.getByRole("heading", { level: 1 })).toHaveText(/change needs you/);
-  expect((await new AxeBuilder({ page: phone.page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(phone.page);
   await phone.page.getByRole("button", { name: "Use the server’s version" }).click();
   // Keeping the server's version throws this device's away, and the tray asks before it does.
   const confirm = phone.page.getByRole("dialog", { name: "Discard 1 change?" });
@@ -335,7 +335,7 @@ test("an account archived online offers Restore the account, and the movement go
   await expect(
     phone.page.getByText(/uses an account that was archived on another device/),
   ).toBeVisible();
-  expect((await new AxeBuilder({ page: phone.page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(phone.page);
 
   await phone.page.getByRole("button", { name: "Restore the account" }).click();
   await expect

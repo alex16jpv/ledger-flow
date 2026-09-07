@@ -1,11 +1,12 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
 test("registration needs the consent box, then lands on onboarding", async ({ page }) => {
   await page.goto("/register");
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
   const submit = page.getByRole("button", { name: "Create account" });
   await expect(submit).toBeDisabled();
   await page.getByRole("textbox", { name: "Name" }).fill("Register E2E");

@@ -111,8 +111,11 @@ test("the shell navigates with no network, filters included, and falls back on a
 
   await page.getByRole("link", { name: "Home" }).first().click();
   await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 });
-  // A failed RSC hop falls back to a full load, which would interrupt the next one.
+  // A failed RSC hop falls back to a full load, which would interrupt the next one — and so would
+  // the app's own start-up navigation, which only happens once the client has mounted. Waiting for
+  // the screen itself waits for both (F-45).
   await page.waitForLoadState("load");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 
   // F-48: a row nobody opened on this device before the network went — its detail comes from the
   // template entry, and the row itself from the mirror.

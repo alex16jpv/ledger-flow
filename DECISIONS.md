@@ -2151,3 +2151,22 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** the assertion is stronger than it was — a footer link has to answer the keyboard —
   and it is immune to the emulation's offset. Anything else that clicks near the bottom of a long
   page on the mobile project can fail the same way; that is worth remembering when reading F-45.
+
+## 2026-09-06 · The three intermittents of the suite, each with its own cause (F-45, F-11)
+
+- **Decision:** every full-page axe scan goes through `expectNoAxeViolations`, which waits for the
+  document's title before judging it; the account deletion of `settings.spec.ts` waits 30 s instead
+  of the default 5; and `offline-shell.spec.ts` waits for the screen after landing on `/home`, not
+  only for the load event.
+- **Why, one by one:** (a) the "43 violations" were one — `document-title` on `html` — and the page
+  had its title a moment later: Next sets it after a client navigation, and under eight workers axe
+  won the race. Reproduced three times out of three on `budgets.spec.ts`, not once when run alone.
+  (b) Deleting an account is a round trip, a vault purge and a navigation; 5 s is not enough under
+  load, and the ficha had already measured it. (c) "Navigation is interrupted by another navigation
+  to /home" was the app's own start-up navigation, which happens once the client mounts — after the
+  load event the test was waiting for.
+- **Consequence:** measured after the fixes, the four specs that used to fail passed **72 of 72** and
+  then **96 of 96** with `--repeat-each=3` and eight workers, and the full suite passed twice in a
+  row: **145 passed / 0 failed / 1 skipped**. That is the new baseline, and it is the first time the
+  suite has had no standing failure. F-11 is closed with F-45: the `document-title` half is this, and
+  the `ECONNRESET` half has not reappeared in any of these runs.

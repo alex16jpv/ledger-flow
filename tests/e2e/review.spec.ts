@@ -1,5 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -25,7 +26,7 @@ test("the inbox completes a quick expense in place and the pending counter drops
   await expect(page.getByRole("heading", { level: 1, name: /^To review · \d+$/ })).toBeVisible();
   const card = page.locator(`[data-transaction-id="${created.id}"]`);
   await expect(card).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   await card.getByRole("button", { name: "Coffee" }).click();
   await card.getByRole("textbox", { name: "Description" }).fill("E2E latte");

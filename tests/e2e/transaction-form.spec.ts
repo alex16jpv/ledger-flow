@@ -1,5 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -49,7 +50,7 @@ test("a transaction is created, edited and deleted from the full form", async ({
   await page.getByRole("dialog", { name: "Account" }).getByRole("option", { name: /Cash/ }).click();
   await page.getByRole("textbox", { name: /^Tags/ }).fill("e2e");
   await page.keyboard.press("Enter");
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
   await page.getByRole("button", { name: "Save transaction" }).click();
   await expect(page.getByText("Transaction saved")).toBeVisible();
 

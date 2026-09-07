@@ -1,4 +1,3 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import {
@@ -13,6 +12,7 @@ import {
   uniqueAmount,
   vaultState,
 } from "../offline";
+import { expectNoAxeViolations } from "./axe";
 
 const DAY_MS = 86_400_000;
 
@@ -216,7 +216,7 @@ test("the connection strip passes axe with no network and with a queue behind it
   await context.setOffline(true);
   await page.goto("/home");
   await expect(page.getByText("You’re offline.")).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   await addButton(page).click();
   const sheet = page.getByRole("dialog", { name: "Add expense" });
@@ -225,13 +225,13 @@ test("the connection strip passes axe with no network and with a queue behind it
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(sheet).toBeHidden();
   await expect(page.getByText(/1 change waiting/)).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   // And the same strip once it has something the user has to answer.
   await context.setOffline(false);
   await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
   await expect(page.getByText(/changes? waiting/)).toHaveCount(0);
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 });
 
 // F-64: the session dies while the app stays open. Nothing is reloaded, so whatever says so has to
