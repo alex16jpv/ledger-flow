@@ -23,7 +23,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "size-limit": "node tools/size-limit.mjs",
-    "lighthouse": "lhci autorun",
+    "lighthouse": "node tools/lighthouse.mjs",
     "gen:api-types": "node tools/gen-api-types.mjs",
     "fixtures:sync": "node tools/sync-fixtures.mjs",
     "gen:feature": "plop feature",

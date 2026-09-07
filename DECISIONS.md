@@ -2204,3 +2204,21 @@ cover` is set once in the root layout for the standalone display.
   from its first honest run.
 - **Consequence:** growth is caught from here on. Whether 240 kB is where the app should sit is a
   separate question, registered as its own finding.
+
+## 2026-09-06 · Lighthouse runs on a Linux browser with a profile outside the repo (F-12)
+
+- **Decision:** `npm run lighthouse` goes through `tools/lighthouse.mjs`, which passes
+  `--user-data-dir` under the system temp directory and, when nothing else names a browser, points
+  `CHROME_PATH` at the Linux Chromium Playwright already installs. The profile is removed when the run
+  ends.
+- **Why:** under WSL `chrome-launcher` reaches the Windows browser through `/mnt/c` and hands it a
+  Linux profile path it cannot translate, and the browser creates a directory literally named
+  `C:\Users\…` wherever the command was run — the repo root, one `git add .` away from a commit.
+- **Honest about the reproduction:** the stray directory could not be produced on this machine today,
+  because no Windows _Chrome_ is installed here any more (only Edge, which `chrome-launcher` does not
+  pick) — `npx lhci autorun` now fails outright with "Chrome installation not found". So the fix is
+  verified in what it does, not in the failure it prevents: with it, the run finds a browser, all four
+  URLs pass their assertions, and the repo root is untouched afterwards.
+- **Consequence:** the command works on a WSL checkout with no Chrome of its own, which it did not
+  before, and CI (which sets `CHROME_PATH` and has a real Chrome) is unaffected beyond the temp
+  profile.
