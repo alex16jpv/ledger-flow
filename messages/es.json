@@ -454,6 +454,17 @@
         "restore": "Restaurar la cuenta",
         "gone": "Este dispositivo ya no tiene esa cuenta, así que no hay nada que restaurar. Descarta el cambio o edita el movimiento para usar otra cuenta."
       },
+      "nameTaken": {
+        "title": "El nombre está tomado.",
+        "body": "Ya hay una {what} activa que se llama «{name}», así que el servidor no la va a recuperar. Restáurala con otro nombre o descarta el cambio.",
+        "server": "En el servidor · tiene el nombre",
+        "device": "En este dispositivo · se está restaurando",
+        "name": "Nombre nuevo",
+        "help": "Los nombres no distinguen mayúsculas.",
+        "suggestion": "{name} (antigua)",
+        "confirm": "Restaurar como «{name}»",
+        "noRetry": "Aquí no se ofrece «Reintentar»: el mismo nombre se volvería a rechazar."
+      },
       "noServerRow": "El servidor no dijo qué tiene. Si te quedas con la versión de este dispositivo, la sobrescribirás.",
       "server": "En el servidor",
       "device": "En este dispositivo",
@@ -514,8 +525,10 @@
       "kinds": {
         "conflict": "Cambiado en dos sitios",
         "failed": "Rechazado por el servidor",
-        "archived": "Cuenta archivada"
+        "archived": "Cuenta archivada",
+        "nameTaken": "Nombre tomado"
       },
+      "restoreWithName": "Restaurar con otro nombre",
       "compare": "Comparar versiones",
       "discardAll": "Descartar todo",
       "retryAll": "Reintentar todo",

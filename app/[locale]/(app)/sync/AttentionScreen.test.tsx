@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
@@ -225,5 +225,34 @@ describe("the Needs your attention tray", () => {
       "restore",
       "create",
     ]);
+  });
+
+  // F-60: the card offered "Try again", which would earn the same refusal for good.
+  it("offers a restore refused for its name a rename instead of a retry", async () => {
+    await vaultWith([
+      {
+        entity: "account",
+        entityId: "a1",
+        action: "restore",
+        payload: { body: {} },
+        lastError: "DUPLICATE",
+        serverRow: account({ id: "a7", name: "Cash", updatedAt: T1 }),
+        baseUpdatedAt: undefined,
+      },
+    ]);
+
+    render();
+
+    expect(await screen.findByText("Name taken")).toBeInTheDocument();
+    expect(screen.getByText(/is already named “Cash”/)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Discard this change" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Restore with another name" }));
+
+    // The rename lives inside the comparison sheet, not in a sheet of its own.
+    const sheet = await screen.findByRole("dialog");
+    expect(sheet).toHaveTextContent("The name is taken.");
+    expect(within(sheet).getByRole("textbox", { name: "New name" })).toHaveValue("Cash (old)");
   });
 });

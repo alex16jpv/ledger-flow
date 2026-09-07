@@ -1,7 +1,8 @@
 import type { OutboxEntity, OutboxOperation } from "../schema";
 import { restoreAccountWrite } from "./accounts";
-import { ownServerRow, serverStamp } from "./conflict";
+import { isNameTaken, ownServerRow, serverStamp } from "./conflict";
 import { forgetRollbacks, requestSync } from "./engine";
+import { operationPayload } from "./envelope";
 import { NotProjectableError } from "./projected";
 import { pendingOperations, type VaultDb, type WriteTransaction, writeTransaction } from "./queue";
 import { reconcileRow } from "./reconcile";
@@ -185,6 +186,36 @@ export async function restoreArchivedAccount(db: VaultDb, seq: number): Promise<
     await store.put(next);
     await reconcileResolved(tx, queued);
   }
+  await tx.done;
+  await refreshOutboxStatus(db);
+  await requestSync();
+  return true;
+}
+
+// The way out of a `DUPLICATE` on a restore (F-60): the same operation goes back in line with the
+// name the user chose, which the restore route already takes in its body. Nothing else about it
+// changes — it is the same restore, of the same row, asked for under a name the server will accept.
+export async function restoreWithName(db: VaultDb, seq: number, name: string): Promise<boolean> {
+  const operation = await db.get("outbox", seq);
+  if (!operation || !stuck(operation) || !isNameTaken(operation)) return false;
+
+  const payload = operationPayload(operation);
+  const body = typeof payload.body === "object" && payload.body !== null ? payload.body : {};
+  const tx = writeTransaction(db);
+  const store = tx.objectStore("outbox");
+  const next: OutboxOperation = {
+    ...operation,
+    payload: { ...payload, body: { ...body, name } },
+    status: "pending",
+    attempts: 0,
+    lastError: null,
+  };
+  // The refused row is somebody else's (`ownServerRow` refuses it as a baseline for good reason);
+  // dropping it also takes the sheet out of the "name taken" state.
+  delete next.serverRow;
+  await store.put(next);
+  // Written first, so the row the mirror shows carries the new name from now on.
+  await reconcileResolved(tx, next);
   await tx.done;
   await refreshOutboxStatus(db);
   await requestSync();

@@ -78,6 +78,17 @@ export function ownServerRow(operation: OutboxOperation): unknown {
   return row?.id === operation.entityId ? operation.serverRow : undefined;
 }
 
+// F-60: a restore the server refused because an active row already holds the name. It is the one
+// refusal trying again cannot fix — the same name would be refused again — and the one the route
+// itself can fix, because a restore takes a `name` in its body.
+export function isNameTaken(operation: OutboxOperation): boolean {
+  return (
+    operation.action === "restore" &&
+    (operation.entity === "account" || operation.entity === "category") &&
+    operation.lastError === "DUPLICATE"
+  );
+}
+
 // The stamp a retry has to guard against: the one the server answered the 409 with.
 export function serverStamp(operation: OutboxOperation): string | undefined {
   const row = ownServerRow(operation);

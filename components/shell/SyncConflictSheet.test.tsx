@@ -211,4 +211,89 @@ describe("the Resolve sync conflict sheet", () => {
     expect(restore).toMatchObject({ entity: "account", action: "restore", entityId: "a1" });
     expect(movement).toMatchObject({ status: "pending", dependsOn: ["a1"] });
   });
+
+  // F-60: the tray's "Try again" repeated the same refusal for good. The restore route takes a
+  // `name`, so the way through is asking for one.
+  it("offers restoring under another name when the name is taken", async () => {
+    const vault = await vaultWith([
+      {
+        entity: "account",
+        entityId: "a1",
+        action: "restore",
+        payload: { body: {} },
+        lastError: "DUPLICATE",
+        serverRow: account({ id: "a7", name: "Cash", updatedAt: T1 }),
+        baseUpdatedAt: undefined,
+      },
+    ]);
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ serverTime: T1, results: [] }), {
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    renderWithProviders(
+      <ToastProvider>
+        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+      </ToastProvider>,
+    );
+
+    expect(await screen.findByText("The name is taken.")).toBeInTheDocument();
+    const cards = screen.getAllByRole("heading", { level: 3 });
+    expect(cards.map((card) => card.textContent)).toEqual([
+      "On the server · has the name",
+      "On this device · being restored",
+    ]);
+    // Repeating the same name would be refused again, so it is not on offer, and the sheet says so.
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.getByText(/would be refused again/)).toBeInTheDocument();
+
+    const field = screen.getByRole("textbox", { name: "New name" });
+    expect(field).toHaveValue("Cash (old)");
+
+    await userEvent.click(screen.getByRole("button", { name: "Restore as “Cash (old)”" }));
+
+    await waitFor(async () => {
+      expect((await pendingOperations(vault.db))[0]).toMatchObject({ status: "pending" });
+    });
+    const [queued] = await pendingOperations(vault.db);
+    expect(queued?.payload).toMatchObject({ body: { name: "Cash (old)" } });
+    expect(queued?.serverRow).toBeUndefined();
+    // The mirror shows the name it is being restored under from the moment the user chose it.
+    expect((await vault.db.get("accounts", "a1"))?.row.name).toBe("Cash (old)");
+  });
+
+  it("takes the name the user typed over the one it suggested", async () => {
+    const vault = await vaultWith([
+      {
+        entity: "account",
+        entityId: "a1",
+        action: "restore",
+        payload: { body: {} },
+        lastError: "DUPLICATE",
+        serverRow: account({ id: "a7", name: "Cash", updatedAt: T1 }),
+        baseUpdatedAt: undefined,
+      },
+    ]);
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ serverTime: T1, results: [] }), {
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    renderWithProviders(
+      <ToastProvider>
+        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+      </ToastProvider>,
+    );
+
+    const field = await screen.findByRole("textbox", { name: "New name" });
+    await userEvent.clear(field);
+    await userEvent.type(field, "Petty cash");
+    await userEvent.click(screen.getByRole("button", { name: "Restore as “Petty cash”" }));
+
+    await waitFor(async () => {
+      expect((await pendingOperations(vault.db))[0]?.payload).toMatchObject({
+        body: { name: "Petty cash" },
+      });
+    });
+  });
 });

@@ -454,6 +454,17 @@
         "restore": "Restore the account",
         "gone": "This device no longer holds that account, so there is nothing to restore. Discard the change, or edit the movement to use another account."
       },
+      "nameTaken": {
+        "title": "The name is taken.",
+        "body": "An active {what} is already named “{name}”, so the server won’t take this one back. Restore it with another name, or discard the change.",
+        "server": "On the server · has the name",
+        "device": "On this device · being restored",
+        "name": "New name",
+        "help": "Names are case-insensitive.",
+        "suggestion": "{name} (old)",
+        "confirm": "Restore as “{name}”",
+        "noRetry": "“Try again” is not offered here: the same name would be refused again."
+      },
       "noServerRow": "The server didn’t say what it has. Keeping this device’s version will overwrite it.",
       "server": "On the server",
       "device": "On this device",
@@ -514,8 +525,10 @@
       "kinds": {
         "conflict": "Changed in two places",
         "failed": "Refused by the server",
-        "archived": "Account archived"
+        "archived": "Account archived",
+        "nameTaken": "Name taken"
       },
+      "restoreWithName": "Restore with another name",
       "compare": "Compare versions",
       "discardAll": "Discard all",
       "retryAll": "Try all again",

@@ -1975,3 +1975,26 @@ cover` is set once in the root layout for the standalone display.
   after the warm announces itself on the next visit rather than the current one; the fixed row is
   always right in the meantime. The "announced" flag is a single boolean in `localStorage`, per
   device and per origin, and a browser that refuses storage would say it again rather than never.
+
+## 2026-09-06 · A restore refused for its name is renamed where it is read (F-60)
+
+- **Decision:** an `account:restore` / `category:restore` the server refused with `DUPLICATE` gets
+  its own shape in both places: the tray card carries the badge "Name taken", the reason that names
+  who holds it, and **"Restore with another name"** as its primary way out; the conflict sheet shows
+  the two comparison cards ("On the server · has the name" from the `current` the backend answers
+  with since `9446bb5`, and "On this device · being restored") with the rename **embedded** —
+  a "New name" field pre-filled with "{name} (old)" and `Restore as “…”`. `restoreWithName` puts the
+  same operation back in line with `payload.body.name` changed. **"Try again" is not offered**, and
+  the sheet says why.
+- **Why:** the restore route already takes a `name`, so this is the one refusal the app can walk the
+  user out of; offering "Try again" spends a round trip to be told the same thing.
+- **Alternatives:** opening the rename sheet of §7.27 on top of the conflict sheet — two dialogs for
+  one decision, and the comparison that explains the rename disappears behind the second; renaming
+  the row first and retrying — that is two writes for what the route does in one, and the first
+  would be refused too while the row is still archived.
+- **Consequence:** the restore's body carries no fields, so the comparison is built for it from the
+  mirror's row and the refused row rather than from `conflictFields`. The refused row is dropped
+  from the operation when it goes back in line: it was never this row's baseline (`ownServerRow`
+  refuses it), and dropping it is what takes the sheet out of the "name taken" state. The mirror
+  shows the new name from the moment it is chosen, because the reprojection of `restore` merges the
+  body.

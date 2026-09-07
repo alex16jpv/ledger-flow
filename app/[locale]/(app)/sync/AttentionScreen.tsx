@@ -18,6 +18,7 @@ import { useToast } from "@/components/ui/Toast";
 import { ERROR_TABLE, isErrorCode } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
+import { isNameTaken } from "@/lib/local/outbox/conflict";
 import {
   discardImpact,
   discardOperations,
@@ -157,6 +158,14 @@ export function AttentionScreen() {
   function reason(operation: OutboxOperation): string {
     const what = t(`states.conflict.entities.${operation.entity}`);
     if (isArchivedAccount(operation)) return t("states.conflict.archived.body", { what });
+    // F-60: the code alone would say "the name is already taken" and leave the user to guess whose.
+    if (isNameTaken(operation)) {
+      const taken = (operation.serverRow as { name?: unknown } | null | undefined)?.name;
+      return t("states.conflict.nameTaken.body", {
+        what,
+        name: typeof taken === "string" ? taken : "",
+      });
+    }
     // A `conflict` the server explained with a code of its own — a name already taken, a reference
     // it will not take — never applied either, and the code is the reason. Only `STALE_UPDATE` is
     // the same row written in two places.
@@ -183,6 +192,7 @@ export function AttentionScreen() {
 
   function kind(operation: OutboxOperation): string {
     if (isArchivedAccount(operation)) return t("states.attention.kinds.archived");
+    if (isNameTaken(operation)) return t("states.attention.kinds.nameTaken");
     return t(
       operation.status === "failed"
         ? "states.attention.kinds.failed"
@@ -195,6 +205,9 @@ export function AttentionScreen() {
     const said = saidAbout(operation, what);
     const refused = operation.status === "failed";
     const archived = isArchivedAccount(operation);
+    // The same name would be refused again, so this card has no "Try again": what it offers instead
+    // is the rename, which lives inside the comparison sheet (F-60).
+    const taken = isNameTaken(operation);
     return (
       <Card key={operation.seq} className="flex flex-col gap-3 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -204,22 +217,38 @@ export function AttentionScreen() {
         {name && <p className="text-sm text-text-2">{said}</p>}
         <p className="text-sm text-text-2">{reason(operation)}</p>
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant={refused ? "dangerSolid" : "secondary"}
-            disabled={busy}
-            onClick={() => void askDiscard([operation.seq])}
-          >
-            {t(refused ? "states.conflict.discard" : "states.conflict.keepServer")}
-          </Button>
-          <Button
-            variant={refused ? "secondary" : "primary"}
-            disabled={busy}
-            onClick={() => (archived ? void restore(operation.seq) : void retry([operation.seq]))}
-          >
-            {archived
-              ? t("states.conflict.archived.restore")
-              : t(refused ? "states.conflict.retry" : "states.conflict.keepMine")}
-          </Button>
+          {taken ? (
+            <Button
+              variant="primary"
+              disabled={busy}
+              onClick={() => {
+                setComparing(operation.seq);
+              }}
+            >
+              {t("states.attention.restoreWithName")}
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant={refused ? "dangerSolid" : "secondary"}
+                disabled={busy}
+                onClick={() => void askDiscard([operation.seq])}
+              >
+                {t(refused ? "states.conflict.discard" : "states.conflict.keepServer")}
+              </Button>
+              <Button
+                variant={refused ? "secondary" : "primary"}
+                disabled={busy}
+                onClick={() =>
+                  archived ? void restore(operation.seq) : void retry([operation.seq])
+                }
+              >
+                {archived
+                  ? t("states.conflict.archived.restore")
+                  : t(refused ? "states.conflict.retry" : "states.conflict.keepMine")}
+              </Button>
+            </>
+          )}
           <Button
             variant="ghost"
             disabled={busy}
@@ -229,6 +258,15 @@ export function AttentionScreen() {
           >
             {t("states.attention.compare")}
           </Button>
+          {taken && (
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => void askDiscard([operation.seq])}
+            >
+              {t("states.conflict.discard")}
+            </Button>
+          )}
         </div>
       </Card>
     );
