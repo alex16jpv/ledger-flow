@@ -1,6 +1,6 @@
 import { MAX_AMOUNT } from "@/lib/format/money";
 import { COLOR_TOKENS } from "@/lib/theme/feature-color";
-import { z } from "@/lib/validation/zod";
+import { type Infer, z } from "@/lib/validation/zod";
 import type { components } from "@/types/api";
 
 export const ACCOUNT_TYPES = [
@@ -34,4 +34,4 @@ export const accountFormSchema = z.object({
   color: z.enum(COLOR_TOKENS, { error: "validation.required" }),
 });
 
-export type AccountFormValues = z.infer<typeof accountFormSchema>;
+export type AccountFormValues = Infer<typeof accountFormSchema>;

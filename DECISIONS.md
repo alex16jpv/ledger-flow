@@ -2383,3 +2383,48 @@ cover` is set once in the root layout for the standalone display.
   `NEXT_PUBLIC_APP_URL=http://localhost:3002` for exactly that reason (`ci.yml:84`).
 - **Consequence:** `lighthouse:app` is not in `npm run ci` — it needs the backend, the Docker Mongo
   and about 25 minutes. Wiring it into CI is registered as F-76.
+
+## 2026-09-07 · Zod comes in by name, because the namespace brought nineteen languages (F-70, W-38)
+
+- **Found, measuring where 240 kB gz per screen came from:** 83.7 kB gz of it (375 kB raw) was Zod,
+  in the same chunk on all 25 screens, and **149 kB of those 375 were locale catalogues** — Italian,
+  Japanese, Dutch, Russian, Turkish, Chinese, Korean… nineteen of the twenty Zod ships. The app
+  speaks two languages and never shows a Zod message: every schema passes its own `error` key.
+- **Why they were there:** `import { z } from "zod"` imports a namespace object (`export * as z`),
+  and everything reachable from it has to survive. Zod's own source says Rollup and Webpack shake it
+  — Turbopack, which is what `next build` uses here, does not.
+- **Decision:** `lib/validation/zod.ts` imports the ten builders the app actually uses **by name**
+  (`array`, `boolean`, `email`, `enum`, `literal`, `number`, `object`, `string`, `union`, `url`) and
+  re-exports them as a plain object still called `z`, so every schema reads the same as before. The
+  type `z.infer<T>` becomes `Infer<T>`, re-exported from the same module — nine lines across eight
+  files. An ESLint `no-restricted-imports` rule now refuses `from "zod"` anywhere but that file, so
+  the namespace cannot come back by habit.
+- **Measured:** the Zod chunk goes from 375 kB raw / 83.7 kB gz to **101 kB raw / 27.2 kB gz**, and
+  the heaviest `(app)` screen from **240.1 to 183.5 kB gz** — every screen, since they all shared it.
+  No foreign locale string survives in the build. `npm run ci` green (137 files, 777 tests) and
+  `npm run test:e2e` 149 passed / 0 failed / 1 skipped, unchanged.
+- **Alternatives:** (a) `zod/mini` — rewrites all eight schema files into the functional API for a
+  smaller extra win, with a real chance of changing a validation without noticing; (b) splitting the
+  modules that reach the schemas from the shell (`AppFrame` → `features/transactions/hooks` →
+  `filters`) and lazy-loading the forms — a wide refactor across features that would have saved the
+  remaining 27 kB on the screens with no form; (c) `optimizePackageImports: ["zod"]` — tried and
+  measured: **no change at all**. This one changes a single file and no behaviour.
+- **Consequence:** the `(app)` budget in `tools/size-limit.mjs` drops from 250 to **200 kB gz**, the
+  figure HANDOFF §3.11 asked for from W-01 and that the app had never met. F-70 is closed.
+
+## 2026-09-07 · A spinner that cannot spin closes into a ring (F-74, W-38)
+
+- **Decision:** under `prefers-reduced-motion` the loading `Button` draws a **complete** ring instead
+  of the three-quarter arc that spins: `motion-reduce:border-r-current motion-reduce:border-l-current`
+  on the two sides the arc leaves transparent.
+- **Why:** stopping the animation is what the design asks for (§2, "everything at 0"), but a stopped
+  arc reads as a broken circle, not as "waiting". Closing it keeps the shape deliberate without
+  inventing a new indicator or new text, and the button already says it properly where it counts:
+  `aria-busy` and disabled.
+- **Alternatives:** exempting the spinner from the reduced-motion rule, which is what Primer and
+  GOV.UK do for essential loading indicators — rejected because the owner asked for every animation
+  in `components/ui` and the shell to stop, and DESIGN.md §2 says the same; or replacing the ring
+  with a word, which is new UI and new message keys.
+- **Written in the design first** (D-36): `DESIGN.md` §2 and §7.1 carry the rule. Measured in the
+  browser by `tests/e2e/reduced-motion.spec.ts`: under `reduce` the three borders are one colour,
+  without the preference they are not.

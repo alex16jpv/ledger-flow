@@ -1,6 +1,6 @@
 import { dateTimeInstant, dateTimeParts } from "@/lib/format/dates";
 import { MAX_AMOUNT } from "@/lib/format/money";
-import { z } from "@/lib/validation/zod";
+import { type Infer, z } from "@/lib/validation/zod";
 import type {
   components,
   CreateTransactionInput,
@@ -60,7 +60,7 @@ export const transactionFormSchema = z
     }
   });
 
-export type TransactionFormValues = z.infer<typeof transactionFormSchema>;
+export type TransactionFormValues = Infer<typeof transactionFormSchema>;
 
 export function categoryAllowed(type: TransactionType): type is "EXPENSE" | "INCOME" {
   return type === "EXPENSE" || type === "INCOME";

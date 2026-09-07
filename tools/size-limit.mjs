@@ -9,11 +9,11 @@ import { gzipSync } from "node:zlib";
 // segment below it.
 const BUDGETS = [
   { name: "landing", route: /^(?:\/\(public\))?(?:\/\[locale\])?\/page$/, limitKb: 60 },
-  // `dev/` is the component playground, built but never linked from the app. The limit is the
-  // measured weight of the heaviest screen plus a little room: every `(app)` screen sits within
-  // 10 kB of every other, because they share the shell, the providers and the offline stack. The
-  // 200 kB written here from W-01 to F-10 was an aspiration nothing had ever been measured against.
-  { name: "app screen", route: /^(?:\/\[locale\])?\/\(app\)\/(?!dev\/).+\/page$/, limitKb: 250 },
+  // `dev/` is the component playground, built but never linked from the app. Every `(app)` screen
+  // sits within 10 kB of every other, because they share the shell, the providers and the offline
+  // stack; the heaviest measures 183.5 kB gz since F-70 took Zod's locales out of the bundle, so the
+  // 200 kB HANDOFF §3.11 always asked for is a real limit again and not an aspiration.
+  { name: "app screen", route: /^(?:\/\[locale\])?\/\(app\)\/(?!dev\/).+\/page$/, limitKb: 200 },
 ];
 
 // The gate builds into its own directory so it never overwrites the `.next` a running app serves (F-56).

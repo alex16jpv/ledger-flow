@@ -1,5 +1,5 @@
 import { MAX_AMOUNT } from "@/lib/format/money";
-import { z } from "@/lib/validation/zod";
+import { type Infer, z } from "@/lib/validation/zod";
 
 export const DESCRIPTION_MAX = 255;
 
@@ -13,7 +13,7 @@ export const quickAddSchema = z.object({
   description: z.string().trim().max(DESCRIPTION_MAX, { error: "validation.nameMax" }),
 });
 
-export type QuickAddValues = z.infer<typeof quickAddSchema>;
+export type QuickAddValues = Infer<typeof quickAddSchema>;
 
 export interface QuickAddDraft {
   amount: number | null;

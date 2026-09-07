@@ -1,4 +1,4 @@
-import { z } from "@/lib/validation/zod";
+import { type Infer, z } from "@/lib/validation/zod";
 
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 128;
@@ -9,7 +9,7 @@ export const loginSchema = z.object({
   password: z.string().min(1, { error: "validation.required" }),
 });
 
-export type LoginValues = z.infer<typeof loginSchema>;
+export type LoginValues = Infer<typeof loginSchema>;
 
 export const registerSchema = z.object({
   name: z
@@ -27,4 +27,4 @@ export const registerSchema = z.object({
   consent: z.boolean().refine((value) => value, { error: "validation.consent" }),
 });
 
-export type RegisterValues = z.infer<typeof registerSchema>;
+export type RegisterValues = Infer<typeof registerSchema>;
