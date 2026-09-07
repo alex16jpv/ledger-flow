@@ -2,7 +2,13 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
-import { refreshOutboxStatus, resetOutboxStatus, setBlockedOperations } from "@/lib/local/outbox";
+import {
+  refreshOutboxStatus,
+  resetOutboxStatus,
+  resetSynced,
+  setBlockedOperations,
+} from "@/lib/local/outbox";
+import { reportSynced } from "@/lib/local/outbox/synced";
 import { setCurrentVault } from "@/lib/local/repository/read";
 import type { OutboxOperation } from "@/lib/local/schema";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
@@ -45,6 +51,7 @@ async function queueOf(operations: OutboxOperation[]): Promise<void> {
 afterEach(async () => {
   push.mockReset();
   resetOutboxStatus();
+  resetSynced();
   connectivityStore.reset();
   setCurrentVault(null);
   await wipeVaults();
@@ -149,6 +156,37 @@ describe("ConnectionBanner", () => {
 
     reportOnline(false);
     expect(await screen.findByRole("status")).toHaveTextContent("You’re offline.");
+  });
+
+  // F-62: the text has existed in `messages/` since W-19 and the stripe never painted it, so the
+  // only sign the queue emptied was the amber one disappearing.
+  it("counts what the round drained on the green stripe", async () => {
+    await queueOf([]);
+    reportSynced(
+      new Map([
+        [1, { kind: "sent", result: null }],
+        [2, { kind: "absorbed", into: 1 }],
+      ]),
+    );
+    reportOnline(false);
+    reportOnline(true);
+    render();
+
+    const stripe = await screen.findByRole("status");
+    expect(stripe).toHaveTextContent("Back online.");
+    expect(stripe).toHaveTextContent("2 changes synced");
+  });
+
+  it("never says zero changes synced", async () => {
+    await queueOf([]);
+    reportSynced(new Map([[1, { kind: "cancelled" }]]));
+    reportOnline(false);
+    reportOnline(true);
+    render();
+
+    const stripe = await screen.findByRole("status");
+    expect(stripe).toHaveTextContent("Back online.");
+    expect(stripe).not.toHaveTextContent("synced");
   });
 
   it("also leads to the tray that lists every stuck operation", async () => {

@@ -88,6 +88,7 @@ export {
   resetOutboxStatus,
   setBlockedOperations,
 } from "./status";
+export { resetSynced, syncedStore } from "./synced";
 export { OUTBOX_SYNC_TAG } from "./tag";
 export {
   batchUpdateTransactions,

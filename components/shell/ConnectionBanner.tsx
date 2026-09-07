@@ -5,6 +5,7 @@ import { useState, useSyncExternalStore } from "react";
 
 import { Banner } from "@/components/ui/Banner";
 import { useRouter } from "@/lib/i18n/navigation";
+import { syncedStore } from "@/lib/local/outbox/synced";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { connectivityStore } from "@/lib/network/connectivity";
 
@@ -26,6 +27,11 @@ export function ConnectionBanner({ signedOut = false, onSignIn }: ConnectionBann
     connectivityStore.subscribe,
     connectivityStore.getSnapshot,
     connectivityStore.getServerSnapshot,
+  );
+  const synced = useSyncExternalStore(
+    syncedStore.subscribe,
+    syncedStore.getSnapshot,
+    syncedStore.getServerSnapshot,
   );
 
   // The order is DESIGN.md §8.12 and only one stripe is painted: with no network nothing can be
@@ -117,8 +123,17 @@ export function ConnectionBanner({ signedOut = false, onSignIn }: ConnectionBann
       />
     );
   }
-  // "n changes synced" needs an engine that knows what it flushed, which is O-F4 part 2; until then
-  // the green stripe says only that the network is back.
-  if (phase === "back-online") return <Banner variant="online" title={t("backOnline.title")} />;
+  // The green stripe closes the circle the amber one opened: "2 changes waiting" becomes "2 changes
+  // synced" (F-62). A round that drained nothing says only that the network is back — never
+  // "0 changes synced".
+  if (phase === "back-online") {
+    return (
+      <Banner
+        variant="online"
+        title={t("backOnline.title")}
+        body={synced > 0 ? t("backOnline.synced", { count: synced }) : undefined}
+      />
+    );
+  }
   return null;
 }

@@ -27,6 +27,7 @@ import { reconcileRemoval, reconcileRow } from "./reconcile";
 import { remint } from "./remint";
 import { routeFor, serverBaseline } from "./routes";
 import { outboxStatusStore, refreshOutboxStatus } from "./status";
+import { reportSynced, resetSynced } from "./synced";
 import { OUTBOX_SYNC_TAG } from "./tag";
 
 // The plan's numbers (§6 O-F4). The step doubles from a second to a minute; the jitter can only
@@ -816,6 +817,7 @@ async function pass(db: VaultDb): Promise<DrainReport> {
   }
   // Whatever the queue still holds is work for a wake-up the app may not be open for.
   if (outboxStatusStore.getSnapshot().pending > 0) void registerBackgroundSync();
+  reportSynced(report);
   return report;
 }
 
@@ -954,5 +956,6 @@ export function resetSyncEngine(): void {
   state.afterRound = null;
   state.random = Math.random;
   state.schedule = timeoutScheduler;
+  resetSynced();
   rollbacks.clear();
 }

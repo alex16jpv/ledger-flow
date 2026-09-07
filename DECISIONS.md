@@ -2043,3 +2043,17 @@ cover` is set once in the root layout for the standalone display.
   for the visit and stops asking — the operation stays for a future version that knows how to
   migrate it, which is what the button promises. Today nothing is ever blocked: `OUTBOX_MIGRATIONS`
   is empty and `OUTBOX_VERSION` is 1, so this is the screen the first bump will need.
+
+## 2026-09-06 · The green stripe counts what the round drained (F-62)
+
+- **Decision:** "Back online." carries a second line, "n changes synced", counting what the last
+  round actually settled with the server — `sent`, `landed`, `gone`, `merged` and `absorbed`. A round
+  that settled nothing paints no line: the stripe never says "0 changes synced".
+- **Why:** the amber stripe says "2 changes waiting", and until now the only sign the queue had
+  emptied was that stripe disappearing. The text has been in `messages/` since W-19 (owner's choice,
+  2026-09-06: variant B).
+- **Alternatives:** counting how much the queue shrank — a write undone before it left would count as
+  synced; leaving `absorbed` out — two edits to one row that travel as one request would say "1
+  change synced" after "2 changes waiting", which is the arithmetic the user cannot follow.
+- **Consequence:** the count is set by each round, never accumulated, so it is the last round's
+  answer and nothing older. `cancelled` is excluded on purpose: it never reached anyone.
