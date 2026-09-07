@@ -2133,3 +2133,21 @@ cover` is set once in the root layout for the standalone display.
   what was typed — the same thing that happens in Settings, and the reason the row shows the detected
   language, which is what most people will already want. The switch carries the query string with it,
   so a `?reauth=1&next=…` login does not lose its way back (§2.6).
+
+## 2026-09-06 · The landing's footer link is reached by keyboard, not by coordinates (F-37)
+
+- **Decision:** `public.spec.ts` asserts the footer's privacy link and then activates it with the
+  keyboard (`focus()` + Enter) instead of clicking it.
+- **Why:** the failure was neither an animated footer nor a flaky wait, which is what the ficha
+  assumed. Measured: the landing is 2370 px tall, Chromium's mobile emulation gives the page a layout
+  viewport of 935 px while Playwright measures in the 839 px visual viewport, and at the very bottom
+  of the page that ~96 px difference puts the computed click point inside `section#how` instead of on
+  the link — the browser's own `elementFromPoint` agrees with the interception message. Nothing moves
+  and nothing overlaps: the two sides simply hit-test in different coordinate spaces. Desktop, which
+  has no such split, never failed.
+- **Alternatives:** `click({ force: true })` (dispatches at the same wrong point, so the URL would
+  not change); asserting the `href` alone (it would stop proving the link works); making the footer
+  taller (a 96 px offset would still miss a 15 px link).
+- **Consequence:** the assertion is stronger than it was — a footer link has to answer the keyboard —
+  and it is immune to the emulation's offset. Anything else that clicks near the bottom of a long
+  page on the mobile project can fail the same way; that is worth remembering when reading F-45.

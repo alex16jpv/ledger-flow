@@ -43,7 +43,14 @@ test("the landing is static, bilingual and links to sign-up, sign-in and the leg
     "Mira a dónde se va tu dinero de verdad.",
   );
 
-  await page.getByRole("link", { name: "Política de privacidad" }).click();
+  // F-37: the footer sits at the very bottom of a page taller than the emulated phone's viewport,
+  // and Chromium's mobile emulation hit-tests a click there against a layout viewport ~96 px taller
+  // than the one Playwright measures in, so the click lands on the section above the footer. The
+  // keyboard reaches it without coordinates at all — and a footer link has to answer the keyboard.
+  const privacy = page.getByRole("link", { name: "Política de privacidad" });
+  await expect(privacy).toHaveAttribute("href", /\/es\/privacy$/);
+  await privacy.focus();
+  await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/es\/privacy$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Política de privacidad" }),
