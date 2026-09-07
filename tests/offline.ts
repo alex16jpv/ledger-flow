@@ -52,6 +52,18 @@ export interface Fixture extends Credentials {
 // count rows, compare balances and let two devices disagree about one row: on a shared user every
 // one of those assertions is a race with whatever else is running (F-45 is that lesson already).
 // Registration signs `request` in, so its cookies are this user's from here on.
+// F-11: a keep-alive socket the server is closing while the request context reuses it answers
+// `read ECONNRESET`, which has nothing to do with what the test is checking. One retry is enough:
+// the calls that go through here are a login, a registration and two reads.
+async function retryOnReset<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (error) {
+    if (!String(error).includes("ECONNRESET")) throw error;
+    return await call();
+  }
+}
+
 export interface FreshUserOptions {
   openingBalance?: number;
   // Left out, the backend's defaults — the same the app falls back to, which is what hides F-63.
@@ -66,22 +78,26 @@ export async function freshUser(
 ): Promise<Fixture> {
   const email = `e2e-${tag}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}@ledgerflow.test`;
   const password = "LedgerFlow!2026";
-  const registered = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: {
-      name: `Offline ${tag}`,
-      email,
-      password,
-      ...(currency ? { currency } : {}),
-      ...(timezone ? { timezone } : {}),
-    },
-  });
+  const registered = await retryOnReset(() =>
+    request.post("/api/auth/register", {
+      headers: { origin: APP },
+      data: {
+        name: `Offline ${tag}`,
+        email,
+        password,
+        ...(currency ? { currency } : {}),
+        ...(timezone ? { timezone } : {}),
+      },
+    }),
+  );
   expect(registered.ok(), await registered.text()).toBe(true);
   const accountName = "Cash";
-  const created = await request.post("/api/accounts", {
-    headers: { origin: APP },
-    data: { name: accountName, type: "CASH", balance: openingBalance },
-  });
+  const created = await retryOnReset(() =>
+    request.post("/api/accounts", {
+      headers: { origin: APP },
+      data: { name: accountName, type: "CASH", balance: openingBalance },
+    }),
+  );
   expect(created.ok(), await created.text()).toBe(true);
   const account = (await created.json()) as { id: string };
   return { email, password, accountId: account.id, accountName, openingBalance };
@@ -93,19 +109,23 @@ export async function signInAs(
   request: APIRequestContext,
   who: Credentials,
 ): Promise<void> {
-  const response = await request.post("/api/auth/login", { headers: { origin: APP }, data: who });
+  const response = await retryOnReset(() =>
+    request.post("/api/auth/login", { headers: { origin: APP }, data: who }),
+  );
   expect(response.ok()).toBe(true);
   await context.addCookies((await request.storageState()).cookies);
 }
 
 export async function listTransactions(request: APIRequestContext): Promise<Row[]> {
-  const response = await request.get("/api/transactions?limit=100");
+  const response = await retryOnReset(() => request.get("/api/transactions?limit=100"));
   expect(response.ok()).toBe(true);
   return ((await response.json()) as { data: Row[] }).data;
 }
 
 export async function listAccounts(request: APIRequestContext): Promise<AccountRow[]> {
-  const response = await request.get("/api/accounts?includeArchived=true&limit=100");
+  const response = await retryOnReset(() =>
+    request.get("/api/accounts?includeArchived=true&limit=100"),
+  );
   expect(response.ok()).toBe(true);
   return ((await response.json()) as { data: AccountRow[] }).data;
 }

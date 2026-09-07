@@ -2222,3 +2222,20 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** the command works on a WSL checkout with no Chrome of its own, which it did not
   before, and CI (which sets `CHROME_PATH` and has a real Chrome) is unaffected beyond the temp
   profile.
+
+## 2026-09-06 · The blocked `eval` was Zod's JIT probe, and it is turned off (F-67)
+
+- **Found:** `_next/static/chunks/…js`, line 2, column 3937 — `if (globalConfig.jitless || navigator
+.userAgent.includes("Cloudflare")) return false; try { new Function(""); return true } catch …`.
+  It is Zod v4's `allowsEval`, the probe it runs once to decide whether it can JIT-compile
+  validators. The throw is caught, but the browser files the `securitypolicyviolation` before the
+  catch runs, so every page load reported one: 229 in an e2e run, 8 in the demo.
+- **Decision:** `instrumentation-client.ts` calls `z.config({ jitless: true })`, which is the switch
+  Zod ships for exactly this. Validators take the interpreted path — which is the path they would
+  take anyway under a CSP without `unsafe-eval`.
+- **Measured after:** **zero** `csp-report` events in a full e2e run and zero in the demo, where there
+  were 229 and 8.
+- **Consequence:** the reason not to enforce the CSP is gone. `CSP_REPORT_ONLY` in `proxy.ts` is left
+  as it is: turning it off is a change to what production refuses to run, and the owner decides that.
+  With the report-only policy now silent across the whole suite, there is evidence that nothing else
+  in the app needs `unsafe-eval` or an unnonced script.
