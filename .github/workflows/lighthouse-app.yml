@@ -1,0 +1,49 @@
+# F-76: the authenticated audit needs the backend, a Mongo replica set and about half an hour, so it
+# does not belong in `ci.yml`, which runs on every push. It runs when someone asks for it, and it
+# fails out loud when a screen is under the threshold — which today is always, until F-78 is decided.
+name: lighthouse-app
+on:
+  workflow_dispatch:
+env:
+  API_URL: http://localhost:3200
+  NEXT_PUBLIC_APP_URL: http://localhost:3003
+  NEXT_PUBLIC_CONTACT_EMAIL: ledgerflow@alexpiral.com
+  NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
+  # Same branch the e2e job of ci.yml builds the backend from; move both together.
+  BACKEND_REF: feat/offline
+jobs:
+  lighthouse-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: alex16jpv/lag-money-manager
+          ref: ${{ env.BACKEND_REF }}
+          path: backend
+          token: ${{ secrets.BACKEND_REPO_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      # The backend needs a replica set for multi-document transactions; service containers cannot pass --replSet.
+      - run: |
+          docker run -d --name mongo -p 27017:27017 mongo:8 --replSet rs0 --bind_ip_all
+          for i in $(seq 1 30); do
+            docker exec mongo mongosh --quiet --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]})" && break
+            sleep 2
+          done
+      - run: npm ci --ignore-scripts
+      - run: npm ci
+        working-directory: backend
+      # tools/lighthouse.mjs starts the backend itself when nothing answers at :3200, seeds included.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run lighthouse:app
+        env:
+          E2E_BACKEND_DIR: backend
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-app
+          path: .lighthouseci
