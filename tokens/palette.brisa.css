@@ -1,0 +1,25 @@
+:root[data-palette="brisa"] {
+  --palette-name: "Brisa";
+  --seed-neutral: oklch(0.50 0.014 240);
+  --seed-brand:   oklch(0.48 0.120 190);
+  --seed-red:     oklch(0.62 0.190 20);
+  --seed-orange:  oklch(0.70 0.170 55);
+  --seed-amber:   oklch(0.76 0.150 80);
+  --seed-yellow:  oklch(0.84 0.150 98);
+  --seed-lime:    oklch(0.78 0.170 130);
+  --seed-green:   oklch(0.66 0.150 155);
+  --seed-teal:    oklch(0.68 0.120 185);
+  --seed-cyan:    oklch(0.72 0.120 215);
+  --seed-blue:    oklch(0.62 0.170 255);
+  --seed-indigo:  oklch(0.57 0.180 278);
+  --seed-purple:  oklch(0.60 0.180 305);
+  --seed-pink:    oklch(0.68 0.180 345);
+  --seed-rose:    oklch(0.64 0.180 12);
+  --seed-gray:    oklch(0.60 0.020 240);
+  --seed-brown:   oklch(0.54 0.070 55);
+  --seed-black:   oklch(0.28 0.012 240);
+  --seed-positive: var(--seed-green);
+  --seed-negative: var(--seed-red);
+  --seed-warning:  var(--seed-amber);
+  --seed-info:     var(--seed-blue);
+}

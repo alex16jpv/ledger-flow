@@ -1,0 +1,23 @@
+# Categories
+
+User-scoped categories for transactions and budgets. W-16 shipped the category picker: a
+searchable sheet filtered by the movement type, a "Recent" strip with the three categories used
+most often in the last 90 days (from `GET /stats/spending?groupBy=category`), and an inline
+"New category" form so the user never leaves the transaction they were writing.
+
+W-25 adds `CategoriesView` (`/categories?type=`): a segmented control per type with counts, a grid
+of tiles with the all-time usage of each category (three unbounded `stats/spending` calls, one per
+type), a dashed "New category" tile, a folded "Archived" list with Restore (409 opens
+`RestoreCategoryConflictSheet`) and the "restore defaults" alert (`POST /categories/restore-defaults`,
+toast with how many were recreated). `CategoryForm` is the single form: the picker uses it with a
+fixed type; the pages add the live preview, the type segment (locked with a `CATEGORY_TYPE_LOCKED`
+explanation when the category has history) and, on edit, "Archive category" with a confirmation.
+
+Reads go through `lib/local/repository`: since O-F2b `fetchCategories` and `fetchCategory` answer
+from the mirror whenever a pull has drained, network or not, and reach the server only where the
+mirror cannot answer. The usage counts come from `stats/spending` through `readSpending`, which derives
+them locally since O-F3 part 2 — the unbounded ones walk the whole `dateCursor` index, which is what
+"all-time" means. Writes go through `lib/local/outbox` (O-F4), except `restoreDefaultCategories`: the server mints
+those rows and their ids, so there is nothing the client could project — it asks for a pull once the
+server answers, because the list it feeds is the mirror's now — and it stays an online-only
+action (F-20).

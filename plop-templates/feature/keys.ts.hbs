@@ -1,0 +1,5 @@
+export const {{camelCase name}}Keys = {
+  all: ["{{kebabCase name}}"] as const,
+  list: () => [...{{camelCase name}}Keys.all, "list"] as const,
+  detail: (id: string) => [...{{camelCase name}}Keys.all, "detail", id] as const,
+};

@@ -1,19 +1,27 @@
-import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
-import { validateOrigin } from "@/lib/api/csrf";
+import type { NextRequest } from "next/server";
 
-export async function POST(req: Request) {
-  const originError = validateOrigin(req);
-  if (originError) return originError;
+import { backendFetch } from "@/lib/api/backend";
+import { REFRESH_COOKIE } from "@/lib/auth/cookies";
+import {
+  endSessionResponse,
+  forwardedRequestId,
+  untrustedOriginResponse,
+} from "@/lib/auth/handlers";
 
-  const cookieStore = await cookies();
-  cookieStore.set("token", "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-
-  return NextResponse.json({ data: null, status: 200, error: null });
+export async function POST(request: NextRequest) {
+  const denied = untrustedOriginResponse(request);
+  if (denied) return denied;
+  const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
+  if (refreshToken) {
+    try {
+      await backendFetch("/auth/logout", {
+        method: "POST",
+        body: { refreshToken },
+        requestId: forwardedRequestId(request),
+      });
+    } catch {
+      // The device session may outlive this request; the local cookies are cleared regardless.
+    }
+  }
+  return endSessionResponse();
 }

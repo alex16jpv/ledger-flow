@@ -1,0 +1,1412 @@
+{
+  "metadata": {
+    "title": "Ledger Flow",
+    "template": "%s · Ledger Flow",
+    "description": "Catch your small daily spending in three seconds and see where the month goes."
+  },
+  "common": {
+    "appName": "Ledger Flow",
+    "back": "Back",
+    "close": "Close",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "save": "Save",
+    "saveChanges": "Save changes",
+    "retry": "Retry",
+    "undo": "Undo",
+    "seeAll": "See all",
+    "more": "More",
+    "optional": "optional",
+    "soon": "soon",
+    "comingSoon": "Coming soon",
+    "loading": "Loading",
+    "skipToContent": "Skip to content",
+    "main": "Main",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "notNow": "Not now",
+    "default": "Default",
+    "search": "Search",
+    "noResults": "No results",
+    "selected": "Selected",
+    "date": "Date",
+    "time": "Time",
+    "recent": "Recent",
+    "backToList": "Back to the list",
+    "removeTag": "Remove tag {tag}",
+    "suggestions": "Suggestions",
+    "delete": "Delete",
+    "done": "Done",
+    "now": "Now",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "dayPeriod": "AM or PM",
+    "am": "AM",
+    "pm": "PM",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "savedInZone": "Saved in your time zone, {zone}."
+  },
+  "nav": {
+    "label": "Navigation",
+    "home": "Home",
+    "transactions": "Transactions",
+    "add": "Add",
+    "addExpense": "Add expense",
+    "budgets": "Budgets",
+    "accounts": "Accounts",
+    "stats": "Stats",
+    "categories": "Categories",
+    "settings": "Settings",
+    "search": "Search",
+    "pendingCount": "{count, plural, one {# to review} other {# to review}}"
+  },
+  "colors": {
+    "RED": "Red",
+    "ORANGE": "Orange",
+    "AMBER": "Amber",
+    "YELLOW": "Yellow",
+    "LIME": "Lime",
+    "GREEN": "Green",
+    "TEAL": "Teal",
+    "CYAN": "Cyan",
+    "BLUE": "Blue",
+    "INDIGO": "Indigo",
+    "PURPLE": "Purple",
+    "PINK": "Pink",
+    "ROSE": "Rose",
+    "GRAY": "Gray",
+    "BROWN": "Brown",
+    "BLACK": "Black"
+  },
+  "accountTypes": {
+    "CASH": "Cash",
+    "ACCOUNT": "Bank account",
+    "CARD": "Credit card",
+    "DEBIT_CARD": "Debit card",
+    "SAVINGS": "Savings",
+    "INVESTMENT": "Investment",
+    "OVERDRAFT": "Overdraft",
+    "LOAN": "Loan",
+    "OTHER": "Other"
+  },
+  "accountTypeDescriptions": {
+    "CASH": "Notes and coins you carry",
+    "ACCOUNT": "A checking or current account",
+    "CARD": "Spending you pay back later",
+    "DEBIT_CARD": "Tied to a bank account",
+    "SAVINGS": "Money you keep aside",
+    "INVESTMENT": "Funds, stocks, crypto",
+    "OVERDRAFT": "A negative balance you can use",
+    "LOAN": "Money you owe",
+    "OTHER": "Anything else"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to keep tracking your spending.",
+      "forgotPassword": "Forgot your password?",
+      "submit": "Sign in",
+      "newHere": "New here?",
+      "createAccount": "Create account",
+      "invalidCredentials": "Wrong email or password.",
+      "tooManyAttempts": "Too many attempts.",
+      "retryIn": "You can try again in {time}.",
+      "deleted": "Your account was deleted. Sign up again with the same email whenever you want to come back."
+    },
+    "register": {
+      "title": "Create account",
+      "subtitle": "Under a minute. No card needed.",
+      "name": "Name",
+      "passwordHelp": "Between 8 and 128 characters.",
+      "passwordPlaceholder": "At least 8 characters",
+      "language": "Language",
+      "languageDetected": "Detected from your device",
+      "languageHelp": "The language of your account. You can change it any time in Settings.",
+      "languageNote": "The whole screen changes right away. Dates and amounts follow this language, your currency and your time zone.",
+      "currency": "Currency",
+      "currencyDetected": "Detected from your region",
+      "currencyHelp": "Used for all your accounts. It locks once you create your first account.",
+      "timeZone": "Time zone",
+      "timeZoneDetected": "Detected from your device",
+      "consent": "I agree to the <privacy>Privacy policy</privacy> and to the processing of my personal data (Ley 1581).",
+      "submit": "Create account",
+      "alreadyHaveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "emailTaken": "This email already has an account.",
+      "maybeCreated": "Your account may already exist: try signing in before registering again.",
+      "reactivated": {
+        "title": "Welcome back.",
+        "body": "We restored your previous account with its full history; the currency is kept."
+      },
+      "currencyPicker": "Choose your currency",
+      "timeZonePicker": "Choose your time zone",
+      "signInLink": "Sign in",
+      "consentRequired": "You need to accept the privacy policy to continue."
+    }
+  },
+  "onboarding": {
+    "step": "Step {current} of {total}",
+    "account": {
+      "title": "Your first account",
+      "subtitle": "Quick expenses will come out of it. It becomes your main account; you can change that later.",
+      "submit": "Continue"
+    },
+    "budget": {
+      "title": "A ceiling for the month",
+      "subtitle": "A total monthly budget: it counts everything you spend, including what you log without a category.",
+      "submit": "Create budget",
+      "skip": "Not now"
+    }
+  },
+  "home": {
+    "greeting": "Hi, {name}",
+    "pendingReview": "{count, plural, one {# quick expense to review} other {# quick expenses to review}}",
+    "pendingTotal": "· {amount} in total",
+    "spending": "{month} spending",
+    "dayOf": "Day {day} of {total}",
+    "dailyAverage": "Daily average",
+    "yesterdaySpent": "Yesterday you spent {amount}",
+    "spendingPerDay": "Spending per day",
+    "budgetProgress": "{percent}% of monthly budget",
+    "createMonthlyBudget": "Create a monthly budget",
+    "totalBalance": "Total balance",
+    "accountsCount": "{count, plural, one {# account} other {# accounts}}",
+    "incomeThisMonth": "Income this month",
+    "estimatedSavings": "Estimated savings",
+    "incomeMinusSpending": "Income − spending",
+    "budgets": "Budgets",
+    "accounts": "Accounts",
+    "recent": "Recent transactions",
+    "quickExpense": "Quick expense",
+    "toReview": "To review",
+    "main": "Main",
+    "empty": {
+      "accounts": {
+        "title": "Create your first account",
+        "body": "Quick expenses need a main account to come out of.",
+        "cta": "Create account"
+      },
+      "month": {
+        "title": "Nothing spent this month yet",
+        "cta": "Add an expense"
+      }
+    },
+    "budgetLeft": "{amount} left · on track",
+    "budgetWarn": "At {percent}% with {days, plural, one {# day} other {# days}} left",
+    "budgetOver": "Over by {amount}",
+    "budgetOf": "/ {amount}"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile & security",
+    "lastSignIn": "Last sign-in {when}",
+    "preferences": "Preferences",
+    "language": {
+      "title": "Language",
+      "subtitle": "App language",
+      "followDevice": "Follow device",
+      "followDeviceHelp": "Uses your phone or browser language",
+      "en": "English",
+      "es": "Español",
+      "esHelp": "Spanish",
+      "note": "Dates and amounts follow your language, your currency ({currency}) and your time zone.",
+      "default": "Default"
+    },
+    "currency": {
+      "title": "Currency",
+      "locked": "Locked: you already have accounts",
+      "unlocked": "You can change it until you create your first account",
+      "sheetTitle": "Currency",
+      "lockedBody": "Your currency is {currency}. It’s locked because you already have accounts: every balance and movement is stored in it.",
+      "pickerHint": "Amounts and balances will use this currency.",
+      "saved": "Currency updated"
+    },
+    "timeZone": {
+      "title": "Time zone",
+      "subtitle": "Defines your days and periods",
+      "sheetTitle": "Time zone",
+      "pickerHint": "Days, months and budget periods start at your local midnight.",
+      "saved": "Time zone updated"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "subtitle": "Palette and mode",
+      "mode": "Mode",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "palette": "Palette",
+      "palettes": {
+        "tinta": {
+          "name": "Tinta",
+          "description": "Warm grays · indigo"
+        },
+        "brisa": {
+          "name": "Brisa",
+          "description": "Cool grays · teal"
+        }
+      },
+      "note": "Your account, category and budget colors adapt to the palette: a “red” always looks red.",
+      "preview": "Preview"
+    },
+    "categories": {
+      "title": "Categories",
+      "subtitle": "{active, plural, one {# active} other {# active}} · {archived, plural, one {# archived} other {# archived}}"
+    },
+    "security": "Security",
+    "credentials": {
+      "title": "Password & email",
+      "subtitle": "Requires your current password",
+      "pageTitle": "Profile & security",
+      "name": "Name",
+      "email": "Email",
+      "emailHelp": "Changing it signs out your other devices.",
+      "newPassword": "New password",
+      "newPasswordHelp": "At least 8 characters. Leave it empty to keep the current one.",
+      "currentPassword": "Current password",
+      "reauthNote": "To change your email or password, confirm your current password. For safety, your other devices will need to sign in again.",
+      "saved": "Profile updated",
+      "savedReauth": "Profile updated. Your other devices were signed out."
+    },
+    "sessions": {
+      "title": "Active sessions",
+      "subtitle": "Sign out devices you don’t recognize",
+      "intro": "Each device stays signed in for 30 days without activity. Sign out the ones you don’t recognize.",
+      "thisDevice": "This device",
+      "activeNow": "Active now",
+      "lastActive": "{when}",
+      "since": "since {date}",
+      "expires": "expires {date}",
+      "signOut": "Sign out",
+      "signOutDevice": "Sign out {device}",
+      "signedOut": "Device signed out",
+      "signOutOthers": "Sign out all other sessions",
+      "signOutOthersTitle": "Sign out every device?",
+      "signOutOthersBody": "This also signs out this device: you’ll need to sign in again here.",
+      "signOutOthersConfirm": "Sign out everywhere",
+      "unknownDevice": "Unknown device",
+      "empty": "No other sessions"
+    },
+    "data": "Data",
+    "export": "Export transactions",
+    "import": "Import from your bank",
+    "about": "About",
+    "version": "Ledger Flow · {version}",
+    "signOut": "Sign out",
+    "deleteAccount": "Delete my account",
+    "yourData": {
+      "title": "Your data",
+      "rights": "You can access, correct and delete your data, and withdraw your authorization at any time (Law 1581 of 2012).",
+      "contact": "Write to {email}",
+      "policy": "Privacy policy",
+      "policyVersion": "Policy accepted on sign-up ({date}) · v{version}"
+    },
+    "install": {
+      "title": "Install app",
+      "subtitle": "Add Ledger Flow to your home screen",
+      "installed": "Installed",
+      "durability": "Add Ledger Flow to your home screen so the browser doesn’t delete what you record offline"
+    },
+    "delete": {
+      "title": "Delete my account",
+      "body": "Your account and your financial history are kept for a while so you can come back: signing up again with the same email reactivates everything. You’ll be signed out now.",
+      "confirmLabel": "Type {word} to confirm",
+      "word": "DELETE",
+      "confirm": "Delete account",
+      "done": "Account deleted. Sign up again with the same email to come back."
+    },
+    "needsConnection": "Changing this needs a connection: it is saved on the server.",
+    "signOutOffline": "Signing out needs a connection: your session lives on the server.",
+    "signOutPending": {
+      "title": "You have unsent changes",
+      "body": "{count, plural, one {# change hasn’t reached the server yet} other {# changes haven’t reached the server yet}}. Keeping them means they go out next time you sign in on this device.",
+      "keep": "Sign out and keep them",
+      "discard": "Discard and sign out"
+    },
+    "sync": {
+      "title": "Sync status",
+      "subtitle": "What this device has, and what it still owes the server",
+      "session": {
+        "label": "Session",
+        "help": "Your session on the server",
+        "active": "Active",
+        "signedOut": "Signed out",
+        "signedOutHelp": "Signed out on this device, so nothing is syncing",
+        "signIn": "Sign in to sync"
+      },
+      "cursor": {
+        "label": "Sync cursor",
+        "help": "Where the next pull starts from",
+        "set": "Set",
+        "never": "Never synced"
+      },
+      "lastSync": {
+        "label": "Last full sync",
+        "never": "Never"
+      },
+      "offlineReady": {
+        "label": "Offline ready",
+        "help": "Your data and the app’s screens are on this device",
+        "ready": "Ready",
+        "preparing": "Preparing…",
+        "preparingHelp": "Copying your data and the app’s screens · {cached} of {expected} screens",
+        "incomplete": "Incomplete",
+        "incompleteHelp": "Paused: it needs a connection to finish",
+        "retry": "Retry"
+      },
+      "queue": {
+        "label": "Waiting to send"
+      },
+      "lastError": {
+        "label": "Last error: {code}"
+      },
+      "transport": {
+        "label": "Sending mode",
+        "help": "This server takes changes one at a time, not in one batch",
+        "routes": "One at a time"
+      },
+      "storage": {
+        "label": "Storage used",
+        "unknown": "Unknown"
+      },
+      "persisted": {
+        "label": "Persistent storage",
+        "help": "Stops the browser evicting your offline data",
+        "yes": "Granted",
+        "no": "Not granted",
+        "unsupported": "Unsupported"
+      },
+      "mode": {
+        "label": "Running as",
+        "installed": "Installed app",
+        "browser": "Browser tab"
+      },
+      "durability": {
+        "warning": "You’re in a browser tab. Install the app to keep what you record offline — a browser can delete it after a few days without opening the site."
+      },
+      "tray": {
+        "title": "Changes that need you",
+        "stuck": "{count, plural, one {# change is stuck} other {# changes are stuck}}",
+        "empty": "Nothing needs you"
+      },
+      "resync": {
+        "cta": "Force full resync",
+        "help": "Throws away the local copy and downloads it again. Anything waiting to send is kept.",
+        "confirmTitle": "Download everything again?",
+        "confirmBody": "{count, plural, =0 {The local copy is deleted and downloaded again.} one {The local copy is deleted and downloaded again. # change waiting to send is kept.} other {The local copy is deleted and downloaded again. # changes waiting to send are kept.}}",
+        "confirm": "Resync now",
+        "cancel": "Cancel",
+        "done": "Resynced",
+        "failed": "Could not resync",
+        "offline": "Needs a connection: it downloads the copy again."
+      },
+      "offlineReadyToast": {
+        "title": "Ready to use offline",
+        "action": "What this means"
+      },
+      "blocked": {
+        "alert": "{count, plural, one {# change can’t be sent after an app update.} other {# changes can’t be sent after an app update.}}",
+        "alertBody": "{count, plural, one {It was recorded with an older version of the app and this one can’t send it. Everything you record from now on syncs normally.} other {They were recorded with an older version of the app and this one can’t send them. Everything you record from now on syncs normally.}}",
+        "cta": "{count, plural, one {See the # change} other {See the # changes}}",
+        "queue": "{count, plural, other {# · blocked}}",
+        "queueMeta": "Blocked by an app update"
+      }
+    }
+  },
+  "states": {
+    "loading": "Loading…",
+    "error": {
+      "title": "We couldn’t load this",
+      "body": "The server didn’t respond. Your data is safe; try again in a few seconds.",
+      "reference": "Reference: {requestId}"
+    },
+    "offline": {
+      "title": "You’re offline.",
+      "body": "Changes are saved on this device and will sync when you’re back online.",
+      "waiting": "{count, plural, one {# change waiting} other {# changes waiting}}"
+    },
+    "backOnline": {
+      "title": "Back online.",
+      "synced": "{count, plural, one {# change synced} other {# changes synced}}"
+    },
+    "pending": {
+      "title": "Changes waiting to sync.",
+      "body": "They are saved on this device."
+    },
+    "signedOut": {
+      "title": "You’re signed out. Nothing is syncing.",
+      "body": "{count, plural, one {# change is saved on this device} other {# changes are saved on this device}}",
+      "cta": "Sign in to sync"
+    },
+    "blocked": {
+      "title": "{count, plural, one {An app update stopped # change from being sent.} other {An app update stopped # changes from being sent.}}",
+      "body": "They are still saved on this device.",
+      "cta": "See them"
+    },
+    "conflicts": {
+      "title": "Some changes need your attention.",
+      "body": "{count, plural, one {# change could not sync} other {# changes could not sync}}",
+      "review": "Review",
+      "seeAll": "See all"
+    },
+    "projected": "Includes changes not yet synced",
+    "sessionExpired": {
+      "eyebrow": "Session",
+      "title": "Your session ended",
+      "body": "It was signed out from another device, or it’s been more than 30 days. Sign in again to continue.",
+      "cta": "Sign in",
+      "localTitle": "Sign in to sync",
+      "localBody": "Your session ended, so nothing is syncing. The app keeps working on this device and your changes are saved here — sign in again to send them.",
+      "localCta": "Sign in to sync"
+    },
+    "notFound": {
+      "title": "Page not found",
+      "body": "Your money is where you left it.",
+      "cta": "Go home"
+    },
+    "conflict": {
+      "title": "Resolve sync conflict",
+      "loading": "Reading what’s waiting…",
+      "empty": {
+        "title": "Nothing left to resolve",
+        "body": "This change is no longer waiting to sync."
+      },
+      "stale": {
+        "title": "Changed in two places.",
+        "body": "This {what} changed somewhere else while this device was offline. Choose the version to keep."
+      },
+      "failed": {
+        "title": "The server refused this change.",
+        "body": "It was never applied, here or there. Reason: {reason}. Discarding it puts this {what} back to what the server has.",
+        "unknown": "unknown"
+      },
+      "archived": {
+        "title": "The account was archived somewhere else.",
+        "body": "This {what} uses an account that was archived on another device, so the server will not take it. Restore the account and it goes through in the same batch, or edit the {what} to use another account.",
+        "restore": "Restore the account",
+        "gone": "This device no longer holds that account, so there is nothing to restore. Discard the change, or edit the movement to use another account."
+      },
+      "nameTaken": {
+        "title": "The name is taken.",
+        "body": "An active {what} is already named “{name}”, so the server won’t take this one back. Restore it with another name, or discard the change.",
+        "server": "On the server · has the name",
+        "device": "On this device · being restored",
+        "name": "New name",
+        "help": "Names are case-insensitive.",
+        "suggestion": "{name} (old)",
+        "confirm": "Restore as “{name}”",
+        "noRetry": "“Try again” is not offered here: the same name would be refused again."
+      },
+      "futureDate": {
+        "title": "Fix the date",
+        "alert": "The server refused this date.",
+        "body": "{date} is more than 24 hours ahead of the server’s time ({serverDate}).",
+        "reason": "Its date, {date}, is more than 24 hours ahead of the server’s time.",
+        "skewDays": "{count, plural, one {This device’s clock is # day ahead.} other {This device’s clock is # days ahead.}}",
+        "skewHours": "{count, plural, one {This device’s clock is # hour ahead.} other {This device’s clock is # hours ahead.}}",
+        "was": "Was {date}",
+        "save": "Save and try again",
+        "waiting": "{count, plural, one {# more change is waiting behind this one.} other {# more changes are waiting behind this one.}}"
+      },
+      "noServerRow": "The server didn’t say what it has. Keeping this device’s version will overwrite it.",
+      "server": "On the server",
+      "device": "On this device",
+      "keepMine": "Keep this device’s version",
+      "keepServer": "Use the server’s version",
+      "discard": "Discard this change",
+      "retry": "Try again",
+      "none": "—",
+      "yes": "Yes",
+      "no": "No",
+      "entities": {
+        "account": "account",
+        "category": "category",
+        "transaction": "movement",
+        "budget": "budget"
+      },
+      "actions": {
+        "create": "This device asked to create this {what}.",
+        "quickAdd": "This device asked to capture this {what}.",
+        "update": "This device asked to edit this {what}.",
+        "delete": "This device asked to delete this {what}.",
+        "archive": "This device asked to archive this {what}.",
+        "restore": "This device asked to restore this {what}.",
+        "setDefault": "This device asked to make this {what} the default.",
+        "setOverride": "This device asked to change this {what}’s amount for one period.",
+        "clearOverride": "This device asked to remove this {what}’s amount for one period."
+      },
+      "fields": {
+        "name": "Name",
+        "type": "Type",
+        "color": "Color",
+        "icon": "Icon",
+        "currency": "Currency",
+        "initialBalance": "Initial balance",
+        "creditLimit": "Credit limit",
+        "amount": "Amount",
+        "date": "Date",
+        "description": "Description",
+        "note": "Note",
+        "tags": "Tags",
+        "categoryId": "Category",
+        "categoryIds": "Categories",
+        "fromAccountId": "From",
+        "toAccountId": "To",
+        "pendingDetails": "To review",
+        "effectiveFrom": "Effective from",
+        "periodType": "Period",
+        "periodStartDate": "Period starts",
+        "periodEndDate": "Period ends"
+      }
+    },
+    "attention": {
+      "title": "Needs your attention",
+      "titleCount": "{count, plural, one {# change needs you} other {# changes need you}}",
+      "loading": "Reading what’s waiting…",
+      "intro": "These changes are saved on this device and the server has not taken them. Nothing else in the queue is waiting for them.",
+      "onRow": "This {what} has a change the server hasn’t taken.",
+      "kinds": {
+        "conflict": "Changed in two places",
+        "failed": "Refused by the server",
+        "archived": "Account archived",
+        "nameTaken": "Name taken"
+      },
+      "restoreWithName": "Restore with another name",
+      "compare": "Compare versions",
+      "discardAll": "Discard all",
+      "retryAll": "Try all again",
+      "confirmTitle": "{count, plural, one {Discard # change?} other {Discard # changes?}}",
+      "confirmBody": "They will never reach the server, and this device goes back to what the server has.",
+      "confirmCascade": "{count, plural, one {# of them was made on top of something created here and goes with it.} other {# of them were made on top of something created here and go with them.}}",
+      "confirmCta": "Discard",
+      "discarded": "{count, plural, one {# change discarded} other {# changes discarded}}",
+      "retried": "{count, plural, one {# change back in the queue} other {# changes back in the queue}}",
+      "empty": {
+        "title": "Nothing needs you",
+        "body": "Every change on this device either synced or is still on its way.",
+        "cta": "Go home"
+      },
+      "blocked": {
+        "badge": "Blocked by an app update",
+        "alert": "{count, plural, one {# change can’t be sent after an app update.} other {# changes can’t be sent after an app update.}}",
+        "alertBody": "{count, plural, one {Everything you record from now on syncs normally; this one was recorded with an older version and stayed behind. Discarding it frees the queue.} other {Everything you record from now on syncs normally; these # were recorded with an older version and stayed behind. Discarding them frees the queue.}}",
+        "reason": "It was recorded with an older version of the app and this version can’t send it. It will never reach the server on its own.",
+        "keep": "Keep it here",
+        "kept": "Kept on this device.",
+        "discardAll": "{count, plural, one {Discard the # change} other {Discard the # changes}}",
+        "foot": "Nothing you record now waits behind these."
+      }
+    },
+    "pendingSync": "Pending sync",
+    "needsAttention": "Needs attention",
+    "savedHere": "Saved on this device"
+  },
+  "dev": {
+    "title": "Component catalog",
+    "subtitle": "The 22 components of DESIGN.md §7 on live tokens. Switch palette and mode to see everything repaint.",
+    "palette": "Palette",
+    "mode": "Mode",
+    "colors": "Feature colors",
+    "surfaces": "Surfaces",
+    "buttons": "Buttons",
+    "amounts": "Amounts and badges",
+    "rows": "Rows",
+    "forms": "Fields",
+    "segment": "Segment",
+    "progress": "Progress",
+    "feedback": "Alerts and toast",
+    "skeleton": "Skeleton",
+    "typography": "Typography",
+    "icons": "Category icons ({count})",
+    "chips": "Chips",
+    "pickers": "Picker and sheet",
+    "stats": "Stats and bars",
+    "accounts": "Account cards",
+    "period": "Period navigation",
+    "banner": "Connection banner",
+    "swatches": "Swatches",
+    "empty": "Empty state",
+    "openSheet": "Open sheet",
+    "showToast": "Show toast",
+    "sample": {
+      "coffee": "Pergamino Coffee",
+      "salary": "August salary",
+      "cash": "Cash",
+      "bank": "Bancolombia",
+      "fieldValue": "Value",
+      "focused": "Focused",
+      "withError": "With error",
+      "noDecimals": "Your currency (COP) has no decimals",
+      "field": "Field",
+      "expense": "Expense",
+      "income": "Income",
+      "transfer": "Transfer",
+      "adjustment": "Adjustment",
+      "mainAccount": "Bancolombia becomes your main account.",
+      "mainAccountBody": "Cash no longer is; quick expenses will go to Bancolombia.",
+      "saved": "Transaction saved",
+      "toReview": "To review",
+      "onTrack": "On track",
+      "overBudget": "Over budget",
+      "archived": "Archived",
+      "main": "Main",
+      "hi": "Hi, John",
+      "newTransaction": "New transaction",
+      "budgets": "Budgets",
+      "body": "Body copy and list rows.",
+      "meta": "Metadata, dates, source account.",
+      "eyebrow": "September spending",
+      "mono": "2026-09 · America/Bogota · COP",
+      "account": "Account",
+      "chooseAccount": "Choose an account",
+      "sheetTitle": "Pick a category",
+      "sheetBody": "Sheets use the native dialog element: focus trap, Escape and focus return come for free.",
+      "totalBalance": "Total balance",
+      "accountsCount": "4 accounts",
+      "spendingPerDay": "Spending per day",
+      "month": "September 2026",
+      "previous": "Previous month",
+      "next": "Next month",
+      "offline": "You’re offline.",
+      "offlineBody": "Changes are saved on this device and will sync when you’re back online.",
+      "emptyTitle": "No transactions yet",
+      "emptyBody": "Log your first expense with the center button. All you need is the amount.",
+      "emptyCta": "Add an expense",
+      "amount": "Amount",
+      "color": "Color",
+      "type": "Type",
+      "bankAccount": "Bank account",
+      "creditCard": "Credit card",
+      "primary": "Primary",
+      "secondary": "Secondary"
+    },
+    "pickersPlayground": {
+      "title": "Pickers",
+      "subtitle": "Category, account and date pickers wired to the real API. Development only.",
+      "type": "Movement type",
+      "from": "From",
+      "to": "To",
+      "selected": "Selected: {value}",
+      "nothing": "Nothing selected yet",
+      "instant": "Instant sent to the API: {value}"
+    }
+  },
+  "errors": {
+    "VALIDATION": "Some fields need attention.",
+    "INVALID_ID": "That item doesn’t exist.",
+    "DUPLICATE": "That name is already in use.",
+    "EMAIL_TAKEN": "This email already has an account.",
+    "NO_DEFAULT_ACCOUNT": "Choose an account: you don’t have a main one yet.",
+    "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED": "Your main account can’t be archived. Make another account the main one first.",
+    "ACCOUNT_LIMIT_REACHED": "You’ve reached the limit of 100 accounts.",
+    "CATEGORY_LIMIT_REACHED": "You’ve reached the limit of 200 categories.",
+    "CATEGORY_ARCHIVED": "That category is archived. Restore it or pick another.",
+    "CATEGORY_TYPE_MISMATCH": "That category doesn’t match this type of transaction.",
+    "CATEGORY_TYPE_LOCKED": "This category already has transactions, so its type can’t change. Create a new category instead.",
+    "RESOURCE_ARCHIVED": "This item is archived. Restore it first.",
+    "BUDGET_PERIOD_OVERLAP": "A budget for this period and category already exists.",
+    "CURRENCY_LOCKED": "Your currency is locked because you already have accounts.",
+    "CURRENCY_MISMATCH": "Both accounts must use the same currency.",
+    "AMOUNT_PRECISION": "Your currency doesn’t allow those decimals.",
+    "FUTURE_DATE": "The date can’t be in the future.",
+    "INVALID_CURSOR": "List refreshed.",
+    "IDEMPOTENCY_KEY_INVALID": "Something went wrong sending this. Try again.",
+    "IDEMPOTENCY_PAYLOAD_MISMATCH": "This request changed since the last try. Sending it again.",
+    "IDEMPOTENCY_ORIGINAL_DELETED": "The original entry was deleted. Save it again as a new one.",
+    "ID_TAKEN": "That entry was already saved with a different content. It will be saved again under a new reference.",
+    "STALE_UPDATE": "Someone changed this from another device. Reload it to see the latest version.",
+    "REFRESH_INVALID": "Your session ended. Sign in again.",
+    "REFRESH_REVOKED": "Your session ended. Sign in again.",
+    "CURRENT_PASSWORD_INVALID": "Your current password is wrong.",
+    "RATE_LIMITED": "Too many attempts. Try again in a moment.",
+    "DB_UNAVAILABLE": "The server didn’t respond. Your data is safe; try again in a few seconds.",
+    "INTERNAL": "Something went wrong on our side. Try again.",
+    "UNAUTHORIZED": "You need to sign in.",
+    "NOT_FOUND": "That item doesn’t exist.",
+    "TIMEOUT": "The request took too long. Check your connection and try again.",
+    "NETWORK": "You seem to be offline. Try again when you’re connected.",
+    "UNKNOWN": "Something unexpected happened. Try again.",
+    "BAD_REQUEST": "That request wasn’t valid.",
+    "MALFORMED_JSON": "The request was corrupted on the way. Try again.",
+    "PAYLOAD_TOO_LARGE": "That’s too much data for one request.",
+    "REQUEST_ABORTED": "The request was interrupted. Try again.",
+    "UNSUPPORTED_ENCODING": "The request used an unsupported format."
+  },
+  "validation": {
+    "required": "This field is required.",
+    "email": "Enter a valid email address.",
+    "passwordMin": "At least 8 characters.",
+    "passwordMax": "At most 128 characters.",
+    "nameMax": "At most 255 characters.",
+    "consent": "You need to accept the privacy policy to continue.",
+    "currency": "Choose a currency.",
+    "timeZone": "Choose a time zone.",
+    "amountPositive": "Enter an amount greater than zero.",
+    "amountDecimals": "Your currency doesn’t allow those decimals.",
+    "amountInvalid": "Enter a valid amount.",
+    "sameAccount": "Choose two different accounts.",
+    "futureDate": "That date is more than a day ahead.",
+    "invalid": "Check this value.",
+    "amountMax": "That amount is above the limit the app supports (10 trillion).",
+    "tooMany": "Too many items selected.",
+    "dateOrder": "The end must be after the start.",
+    "confirmWord": "Type the word exactly to confirm."
+  },
+  "accounts": {
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "My account",
+      "type": "Type",
+      "balance": "Current balance",
+      "balanceHelp": "Saved as the opening balance so you can reconcile the account later.",
+      "color": "Color",
+      "title": "New account",
+      "create": "Create account",
+      "editTitle": "Edit account",
+      "duplicate": "You already have an active account named “{name}”. Names are case-insensitive.",
+      "preview": "preview",
+      "previewName": "Account name",
+      "saved": "Changes saved",
+      "created": "Account created",
+      "balanceLocked": "The balance only changes through transactions or “Adjust balance”."
+    },
+    "picker": {
+      "title": "Account",
+      "label": "Account",
+      "placeholder": "Choose an account",
+      "note": "Archived accounts are not listed. Balances update as you save.",
+      "empty": "No accounts yet",
+      "new": "New account",
+      "newHint": "Create it without leaving this form"
+    },
+    "list": {
+      "title": "Accounts",
+      "new": "New account",
+      "totalBalance": "Total balance",
+      "counts": "{active, plural, one {# active account} other {# active accounts}} · {archived, plural, one {# archived} other {# archived}}",
+      "cardDebt": "Card debt",
+      "archived": "Archived",
+      "archivedBadge": "Archived",
+      "showArchived": "Archived · {count}",
+      "empty": {
+        "title": "Create your first account",
+        "body": "Quick expenses need a main account to come out of.",
+        "cta": "Create account"
+      }
+    },
+    "detail": {
+      "title": "Account",
+      "openingLine": "Opening balance {amount} · created {date} · {currency}",
+      "edit": "Edit",
+      "makeMain": "Main account",
+      "archive": "Archive",
+      "restore": "Restore",
+      "mainBlocked": "To archive this account, make another one your main account first: quick expenses need a destination.",
+      "archivedInfo": "This account is archived: it’s hidden from pickers and left out of totals. Its history is kept. Restore it to use it again.",
+      "transactions": "Transactions",
+      "openFiltered": "Open with filters",
+      "noTransactions": "No transactions in this account yet",
+      "notFound": "This account doesn’t exist.",
+      "adjust": "Adjust balance"
+    },
+    "main": {
+      "title": "Make {name} your main account?",
+      "body": "Quick expenses will come out of {name} from now on.",
+      "previous": "{previous} stops being the main account.",
+      "confirm": "Make main",
+      "done": "{name} is now your main account",
+      "undone": "{name} is your main account again"
+    },
+    "archive": {
+      "title": "Archive {name}?",
+      "body": "Its transactions stay in your history and its balance is kept, but it leaves pickers and totals, and its name becomes free. You can restore it anytime.",
+      "confirm": "Archive",
+      "done": "Account archived",
+      "restored": "Account restored"
+    },
+    "restoreConflict": {
+      "title": "That name is taken",
+      "body": "An active account is already named “{name}”. Choose another name to restore this one.",
+      "name": "New name",
+      "confirm": "Restore as “{name}”",
+      "confirmEmpty": "Restore"
+    },
+    "adjust": {
+      "title": "Adjust balance",
+      "actual": "Actual balance in {name}",
+      "sign": "Sign of the balance",
+      "positive": "Positive",
+      "negative": "Negative (debt)",
+      "recorded": "Recorded balance: {amount}",
+      "delta": "<b>An adjustment of {amount}</b> will be created to reconcile the account. It does not count as spending or in budgets.",
+      "noChange": "The recorded balance already matches. Nothing to adjust.",
+      "note": "Note",
+      "notePlaceholder": "August bank fee",
+      "save": "Save adjustment",
+      "saved": "Adjustment saved"
+    },
+    "typePicker": {
+      "title": "Account type"
+    }
+  },
+  "budgets": {
+    "global": {
+      "defaultName": "Monthly budget",
+      "amount": "Monthly amount",
+      "help": "You can adjust it any month without touching the base amount, and add per-category budgets whenever you like."
+    },
+    "periodTypes": {
+      "WEEKLY": "Weekly",
+      "BIWEEKLY": "Biweekly",
+      "MONTHLY": "Monthly",
+      "QUARTERLY": "Quarterly",
+      "YEARLY": "Yearly",
+      "CUSTOM": "Custom"
+    },
+    "list": {
+      "title": "Budgets",
+      "new": "New budget",
+      "past": "Past budgets",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "all": "All",
+      "globalBadge": "Global",
+      "createGlobal": "Create a total monthly budget",
+      "createGlobalHint": "It counts everything you spend, including what you log without a category.",
+      "of": "of {amount}",
+      "leftFor": "{amount} left for {days, plural, one {# day} other {# days}}",
+      "perDay": "≈ {amount}/day",
+      "adjusted": "Adjusted",
+      "archivedCategory": "Archived category",
+      "endsIn": "ends in {days, plural, one {# day} other {# days}}",
+      "ended": "Ended",
+      "periodRange": "{period} · {range}",
+      "status": {
+        "over": "Over by {amount}",
+        "fast": "{amount} left · fast pace",
+        "untouched": "{amount} left · nothing spent yet",
+        "ended": "{amount} left at the end",
+        "endedOver": "Over by {amount} at the end",
+        "ok": "{amount} left · {days, plural, one {# day left} other {# days left}}",
+        "custom": "{amount} left · ends in {days, plural, one {# day} other {# days}}"
+      },
+      "footnote": "Balance adjustments and transfers never count toward a budget.",
+      "empty": {
+        "title": "Put a ceiling on your small spending",
+        "body": "A total monthly budget shows how much is left before the month ends.",
+        "cta": "Create a monthly budget"
+      },
+      "noneForFilter": "No {period} budgets this month"
+    },
+    "past": {
+      "title": "Past budgets",
+      "ended": "Ended · {count}",
+      "archived": "Archived · {count}",
+      "endedBadge": "Ended",
+      "archivedBadge": "Archived",
+      "createAgain": "Create again",
+      "note": "Recurring budgets never end: to see a past month, change the period in the list.",
+      "emptyEnded": "No budget has ended yet",
+      "emptyArchived": "No archived budgets",
+      "restore": "Restore"
+    },
+    "detail": {
+      "title": "Budget",
+      "since": "since {month}",
+      "remaining": "Remaining",
+      "pace": "Pace",
+      "paceValue": "{amount}/day",
+      "left": "Left",
+      "leftDays": "{days, plural, one {# day} other {# days}}",
+      "endsIn": "Ends in {days, plural, one {# day} other {# days}}",
+      "ended": "Ended",
+      "periodAmount": "This period’s amount",
+      "base": "base {amount}",
+      "adjustedTo": "{period} is adjusted to {amount}. Other periods keep the base amount.",
+      "skipped": "This budget doesn’t apply in {period}. Other periods keep the base amount.",
+      "usesBase": "{period} uses the base amount.",
+      "change": "Change adjustment",
+      "skip": "Skip this period",
+      "remove": "Remove adjustment",
+      "overrideTitle": "Adjust this period",
+      "overrideLabel": "Amount for {period}",
+      "overrideHelp": "Only {period} changes; the base amount stays at {amount}.",
+      "overrideSave": "Save adjustment",
+      "overrideSaved": "Adjustment saved",
+      "overrideRemoved": "Adjustment removed",
+      "skippedToast": "Skipped for this period",
+      "categories": "Categories",
+      "allSpending": "All spending",
+      "archivedChip": "archived",
+      "note": "Note",
+      "transactions": "Transactions this period",
+      "seeAll": "See all",
+      "noTransactions": "No transactions in this period",
+      "edit": "Edit",
+      "archive": "Archive",
+      "archiveTitle": "Archive {name}?",
+      "archiveBody": "The budget leaves every period and stops tracking spending. You can restore it later from Past budgets.",
+      "archived": "Budget archived",
+      "archiveNote": "You can restore it later from Past budgets.",
+      "notFound": "This budget doesn’t exist.",
+      "archivedInfo": "This budget is archived and no longer tracks spending. Restore it to bring it back exactly as it was.",
+      "endedInfo": "This custom budget ended on {date}.",
+      "restore": "Restore",
+      "restored": "Budget restored"
+    },
+    "form": {
+      "newTitle": "New budget",
+      "editTitle": "Edit budget",
+      "name": "Name",
+      "namePlaceholder": "Food & groceries",
+      "scope": "Scope",
+      "global": "All spending",
+      "byCategory": "By category",
+      "scopeHelp": "“All spending” creates a global budget: it includes anything logged without a category. Only one per period type.",
+      "categories": "Categories",
+      "categoriesHelp": "One expense category per budget. Transfer categories can’t have a budget.",
+      "categoriesSearch": "Search categories",
+      "noCategories": "No expense categories yet",
+      "period": "Period",
+      "startDate": "Start",
+      "endDate": "End",
+      "periodChangeWarning": "Changing the period clears every per-period adjustment of this budget.",
+      "amount": "Amount",
+      "suggestionsFromSpending": "Based on last month’s spending",
+      "color": "Color",
+      "advanced": "Advanced options",
+      "effectiveFrom": "Effective from",
+      "effectiveFromHelp": "The budget won’t show up when browsing months before this date.",
+      "note": "Note",
+      "notePlaceholder": "What this budget is for",
+      "create": "Create budget",
+      "created": "Budget created",
+      "saved": "Changes saved",
+      "overlap": "Another {period} budget already covers this category.",
+      "overlapGlobal": "You already have a global {period} budget.",
+      "category": "Category"
+    },
+    "restoreConflict": {
+      "title": "Another budget is in the way",
+      "body": "“{name}” is active for the same {period} period and covers the same spending, so this one can’t come back as it was. Create a new budget instead.",
+      "bodyUnknown": "An active {period} budget already covers the same spending, so this one can’t come back as it was. Create a new budget instead.",
+      "open": "Open {name}"
+    },
+    "pace": {
+      "tooltip": "Day {day} of {days} · {percent}% expected",
+      "legend": "The mark is today’s pace: {percent}% of the period has passed (day {day} of {days})."
+    }
+  },
+  "categoryTypes": {
+    "EXPENSE": "Expense",
+    "INCOME": "Income",
+    "TRANSFER": "Transfer"
+  },
+  "categories": {
+    "picker": {
+      "title": "Category",
+      "label": "Category",
+      "placeholder": "Choose a category",
+      "search": "Search categories",
+      "new": "New category",
+      "newHint": "Create it without leaving this form",
+      "empty": "No categories for this type yet",
+      "noMatch": "No categories match “{query}”"
+    },
+    "form": {
+      "title": "New category",
+      "name": "Name",
+      "namePlaceholder": "Category name",
+      "icon": "Icon",
+      "iconSearch": "Search icons",
+      "color": "Color",
+      "create": "Create category",
+      "editTitle": "Edit category",
+      "type": "Type",
+      "preview": "preview",
+      "previewName": "Category name",
+      "saved": "Changes saved",
+      "created": "Category created",
+      "duplicate": "You already have an active category named “{name}”. Names are case-insensitive.",
+      "typeLocked": "<b>The type can’t be changed:</b> this category already has {count, plural, one {# transaction} other {# transactions}} and changing it would rewrite your stats. If you need another type, <link>create a new category</link>.",
+      "viewTransactions": "See its transactions",
+      "notFound": "This category doesn’t exist.",
+      "archivedInfo": "This category is archived: it can’t be picked for new movements or budgets. Its history is kept. Restore it to use it again."
+    },
+    "list": {
+      "title": "Categories",
+      "new": "New category",
+      "typeCount": "{label} · {count}",
+      "txns": "{count, plural, one {# transaction} other {# transactions}}",
+      "unused": "unused",
+      "archived": "Archived",
+      "archivedBadge": "Archived",
+      "restore": "Restore",
+      "empty": {
+        "title": "No categories of this type yet",
+        "body": "Create one to classify your movements."
+      },
+      "restoreDefaults": {
+        "body": "Missing one of the default categories? Recreate them without duplicating the ones you renamed.",
+        "cta": "Restore",
+        "created": "{count, plural, one {# category created} other {# categories created}}",
+        "none": "Nothing was missing",
+        "onlineOnly": "Needs a connection: the server creates these categories."
+      }
+    },
+    "archive": {
+      "action": "Archive category",
+      "title": "Archive {name}?",
+      "body": "Its movements and budgets keep pointing at it; it just leaves the pickers and its name becomes free. You can restore it anytime.",
+      "confirm": "Archive",
+      "done": "Category archived",
+      "restored": "Category restored"
+    },
+    "restoreConflict": {
+      "title": "That name is taken",
+      "body": "An active category is already named “{name}”. Choose another name to restore this one.",
+      "name": "New name",
+      "confirm": "Restore as “{name}”",
+      "confirmEmpty": "Restore"
+    }
+  },
+  "transactions": {
+    "quick": {
+      "title": "Add expense",
+      "amount": "Amount",
+      "category": "Category",
+      "categoryHint": "optional · you can add it later",
+      "fromMain": "From your main account",
+      "account": "Account",
+      "note": "Quick note (optional)",
+      "moreDetails": "More details",
+      "save": "Save",
+      "saved": "Transaction saved",
+      "savedWithoutNote": "Saved, but the note couldn’t be added",
+      "undone": "Transaction removed",
+      "undoFailed": "We couldn’t remove it. Try again from the list."
+    },
+    "form": {
+      "newTitle": "New transaction",
+      "editTitle": "Edit transaction",
+      "type": "Type",
+      "amount": "Amount",
+      "category": "Category",
+      "account": "Account",
+      "from": "From",
+      "to": "To",
+      "swap": "Swap accounts",
+      "direction": "Direction",
+      "increase": "Increase balance",
+      "decrease": "Decrease balance",
+      "adjustmentHint": "Adjustments fix a balance. They don’t count as spending or income.",
+      "description": "Description",
+      "descriptionPlaceholder": "What was it?",
+      "tags": "Tags",
+      "tagsPlaceholder": "Add…",
+      "note": "Note",
+      "notePlaceholder": "Anything you want to remember about this one",
+      "save": "Save transaction",
+      "saved": "Transaction saved",
+      "updated": "Changes saved",
+      "deleteTitle": "Delete this transaction?",
+      "deleteBody": "The account balances go back to what they were. This can’t be undone.",
+      "deleted": "Transaction deleted",
+      "notFound": "This transaction doesn’t exist or was deleted.",
+      "clockSkew": {
+        "days": "{count, plural, one {This device’s clock is # day ahead of the server.} other {This device’s clock is # days ahead of the server.}}",
+        "hours": "{count, plural, one {This device’s clock is # hour ahead of the server.} other {This device’s clock is # hours ahead of the server.}}",
+        "refused": "Dates more than 24 hours in the future will be refused."
+      },
+      "dateLimit": "Days after tomorrow are not available: the server refuses dates more than 24 hours ahead."
+    },
+    "list": {
+      "title": "Transactions",
+      "search": "Search description, note or tag",
+      "filters": "Filters",
+      "activeFilters": "{count} active filters",
+      "export": "Export",
+      "spentIn": "Spent in {period}",
+      "income": "Income",
+      "count": "Transactions",
+      "quickExpense": "Quick expense",
+      "toReview": "To review",
+      "toReviewCount": "To review · {count}",
+      "uncategorized": "Uncategorized",
+      "balanceAdjustment": "Balance adjustment",
+      "loadMore": "Load more",
+      "refreshed": "List refreshed",
+      "empty": {
+        "title": "Nothing recorded yet",
+        "body": "Your movements will show up here, grouped by day.",
+        "cta": "Add an expense"
+      },
+      "noMatch": {
+        "title": "No movements match",
+        "body": "Try another period or clear the filters.",
+        "cta": "Clear filters"
+      },
+      "offline": {
+        "title": "You’re offline",
+        "body": "The list will load when you’re back online."
+      },
+      "periods": {
+        "week": "This week",
+        "month": "This month",
+        "lastMonth": "Last month",
+        "year": "This year",
+        "custom": "Custom…",
+        "all": "All time"
+      },
+      "types": {
+        "ALL": "All",
+        "EXPENSE": "Expenses",
+        "INCOME": "Income",
+        "TRANSFER": "Transfers",
+        "ADJUSTMENT": "Adjustments"
+      },
+      "tagChip": "#{tag}"
+    },
+    "filters": {
+      "title": "Filters",
+      "period": "Period",
+      "type": "Type",
+      "account": "Account",
+      "category": "Category",
+      "tag": "Tag",
+      "tagPlaceholder": "#latte, #groceries…",
+      "pendingOnly": "Only quick expenses to review",
+      "quickOnly": "Only quick entries",
+      "clear": "Clear",
+      "show": "Show {count, plural, one {# transaction} other {# transactions}}",
+      "showCounting": "Show transactions",
+      "from": "From",
+      "to": "To"
+    },
+    "detail": {
+      "title": "Transaction",
+      "category": "Category",
+      "account": "Account",
+      "from": "From",
+      "to": "To",
+      "source": "Source",
+      "currency": "Currency",
+      "sources": {
+        "MANUAL": "Manual",
+        "QUICK": "Quick add",
+        "IMPORT": "Import"
+      },
+      "edit": "Edit",
+      "pendingBody": "This quick expense still needs a category and a description.",
+      "complete": "Complete",
+      "unknownAccount": "Unknown account",
+      "created": "Created {created}",
+      "createdEdited": "Created {created} · edited {edited}",
+      "dateTime": "{date} · {time}"
+    },
+    "review": {
+      "title": "To review",
+      "titleCount": "To review · {count}",
+      "intro": "Quick expenses already reduced your balance and already count toward your total budget. Here you just name and categorize them.",
+      "droppedCategory": "Its category had been archived, so the server saved it without one. Pick another.",
+      "when": "{day} {time} · {account}",
+      "other": "Other",
+      "descriptionPlaceholder": "Description (optional)",
+      "openFull": "Open full form",
+      "done": "Done",
+      "saved": "Details saved",
+      "empty": {
+        "title": "All reviewed",
+        "body": "Every quick expense has a category and a description.",
+        "cta": "Go home"
+      },
+      "saveAll": "Save all · {count}",
+      "confirmTitle": "Save {count, plural, one {# expense} other {# expenses}}?",
+      "confirmBody": "Each one keeps the category and description it has right now.",
+      "confirmSkipped": "{count, plural, one {# stays pending because it has no category yet.} other {# stay pending because they have no category yet.}}",
+      "confirmCta": "Save {count}",
+      "batchSaved": "{count, plural, one {# expense saved} other {# expenses saved}}",
+      "batchPartial": "{saved} saved · {failed} with errors"
+    }
+  },
+  "transactionTypes": {
+    "EXPENSE": "Expense",
+    "INCOME": "Income",
+    "TRANSFER": "Transfer",
+    "ADJUSTMENT": "Adjustment"
+  },
+  "stats": {
+    "title": "Stats",
+    "export": "Export",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "types": {
+      "EXPENSE": "Expenses",
+      "INCOME": "Income",
+      "TRANSFER": "Transfers",
+      "ADJUSTMENT": "Adjustments"
+    },
+    "groups": {
+      "category": "Categories",
+      "day": "Days",
+      "tag": "Tags"
+    },
+    "totals": {
+      "EXPENSE": "Total spent",
+      "INCOME": "Total income",
+      "TRANSFER": "Total transferred",
+      "ADJUSTMENT": "Total adjusted"
+    },
+    "summary": "{count, plural, one {# transaction} other {# transactions}} · average {average}",
+    "share": "{percent} %",
+    "txns": "{count, plural, one {# txn} other {# txns}}",
+    "uncategorized": "Uncategorized",
+    "archived": "archived",
+    "unknownCategory": "Unknown category",
+    "breakdown": "Share by category",
+    "perDay": "Per day",
+    "priciestDay": "Priciest day",
+    "biggestDay": "Biggest day",
+    "dailyAverage": "Daily average",
+    "noSpendDays": "No-spend days",
+    "quietDays": "Quiet days",
+    "highest": "{day} · highest",
+    "dayBar": "{day}: {amount}",
+    "tagsNote": "A transaction with several tags counts in each of them, so tag totals can add up to more than the total.",
+    "untagged": "{amount} has no tags.",
+    "tagRow": "#{tag}",
+    "transactionsCount": "{count, plural, one {# transaction} other {# transactions}}",
+    "empty": {
+      "title": "Nothing recorded in this period",
+      "body": "Try another month or another type of movement."
+    },
+    "adjustmentsNote": "Adjustments reconcile balances; they’re never counted as spending or income."
+  },
+  "public": {
+    "nav": {
+      "features": "Features",
+      "how": "How it works",
+      "privacy": "Privacy",
+      "signIn": "Sign in",
+      "getStarted": "Get started",
+      "language": "Language"
+    },
+    "footer": {
+      "copyright": "© {year} Ledger Flow",
+      "privacy": "Privacy policy",
+      "terms": "Terms",
+      "dataProcessing": "Data processing (Ley 1581)",
+      "contact": "Contact",
+      "english": "English",
+      "spanish": "Español"
+    },
+    "landing": {
+      "metaTitle": "Ledger Flow · See where your money actually goes",
+      "metaDescription": "Log an expense in three seconds, put a ceiling on the month and catch the small daily spending before it adds up. Free, bilingual, works offline.",
+      "badge": "Free · no card needed",
+      "title": "See where your money actually goes.",
+      "lede": "Log an expense in three seconds, put a ceiling on the month and catch the small daily spending that adds up before it does.",
+      "ctaPrimary": "Create your free account",
+      "ctaSecondary": "Sign in",
+      "trust": "Works offline · English & Español · Your data stays yours",
+      "whyEyebrow": "Why Ledger Flow",
+      "whyTitle": "Built for the small stuff",
+      "why1Title": "Three-second capture",
+      "why1Body": "Tap, type the amount, done. Add the category later from your review inbox: the expense already counts.",
+      "why2Title": "Budgets that talk back",
+      "why2Body": "A ceiling for the month plus per-category limits, with pace and days left in plain language, not just a bar.",
+      "why3Title": "Works without signal",
+      "why3Body": "Log on the bus or abroad. Everything syncs when you are back online, and nothing gets duplicated.",
+      "howEyebrow": "How it works",
+      "howTitle": "Up and running in a minute",
+      "step1Title": "Create your account",
+      "step1Body": "Pick your currency once. Email and password, nothing else.",
+      "step2Title": "Add your first account",
+      "step2Body": "Cash, bank or card, with today’s balance.",
+      "step3Title": "Set a monthly ceiling",
+      "step3Body": "Then log expenses as they happen. That is the whole habit.",
+      "ctaFinal": "Start now — it’s free",
+      "phoneLabel": "Preview of the home screen"
+    },
+    "mock": {
+      "date": "Tuesday, September 22",
+      "greeting": "Hi, John",
+      "initials": "JD",
+      "pending": "3 quick expenses to review · {amount} in total",
+      "spending": "September spending",
+      "dayOf": "Day 22 of 30",
+      "average": "Daily average {amount} · Yesterday you spent {yesterday}",
+      "progress": "64% of monthly budget",
+      "totalBalance": "Total balance",
+      "accounts": "4 accounts",
+      "income": "Income this month",
+      "sameAs": "Same as August",
+      "budgets": "Budgets",
+      "seeAll": "See all",
+      "food": "Food",
+      "transport": "Transport",
+      "foodStatus": "{amount} left · on track",
+      "transportStatus": "At 93% with 8 days left"
+    },
+    "legal": {
+      "eyebrow": "Legal · updated {date}",
+      "updated": "2026-09-01"
+    },
+    "privacy": {
+      "metaTitle": "Privacy policy",
+      "metaDescription": "What Ledger Flow stores, why, and how you control it. Also our data processing policy under Colombia’s Ley 1581 de 2012.",
+      "title": "Privacy policy",
+      "intro": "Ledger Flow stores the financial records you enter so you can see them on any device. This page explains what we keep, why, and how you control it. It also serves as our data processing policy under Colombia’s Ley 1581 de 2012.",
+      "storeTitle": "What we store",
+      "store1": "Your name, email, language, time zone and currency.",
+      "store2": "Accounts, categories, transactions and budgets you create, including notes and tags.",
+      "store3": "Device sessions (browser type, time of sign-in) so you can review and revoke them.",
+      "whyTitle": "Why",
+      "whyBody": "Only to run the service: showing your data back to you, keeping balances right and securing your account. We do not sell data and we do not use it for advertising.",
+      "rightsTitle": "Your rights",
+      "rightsBody": "You can read, correct and delete your data from Settings at any time, and withdraw your authorization by deleting your account. Deleting it keeps the records so you can reactivate later; ask us for permanent removal and we will do it within 15 business days.",
+      "processingTitle": "Data processing (Ley 1581 de 2012)",
+      "processingBody": "Ledger Flow is the controller of the data you enter. The purpose is exclusively to provide the service described above. You can exercise your rights of access, update, correction, deletion and revocation through Settings or by writing to the contact below; we answer within 15 business days.",
+      "contactTitle": "Contact",
+      "contactBody": "Write to <email>{address}</email> for any question about your data."
+    },
+    "terms": {
+      "metaTitle": "Terms of service",
+      "metaDescription": "The terms under which Ledger Flow is offered: a free personal finance tool, your account, acceptable use and availability.",
+      "title": "Terms of service",
+      "intro": "Ledger Flow is a free personal finance tool. By creating an account you agree to these terms.",
+      "serviceTitle": "The service",
+      "serviceBody": "Ledger Flow lets you record accounts, movements, categories and budgets and see summaries of them. It is not financial advice and it does not connect to your bank.",
+      "accountTitle": "Your account",
+      "accountBody": "You are responsible for keeping your password private and for what is recorded under your account. You can delete it at any time from Settings; the records are kept for a while so you can come back, and removed permanently on request.",
+      "useTitle": "Acceptable use",
+      "useBody": "Use the service for your own personal records. Do not try to access other people’s data, disrupt the service or automate abusive traffic.",
+      "availabilityTitle": "Availability",
+      "availabilityBody": "The service is offered free of charge and as is, without guarantee of uninterrupted availability. We may change or discontinue features; we will announce material changes in the app.",
+      "changesTitle": "Changes to these terms",
+      "changesBody": "We may update these terms. The date at the top tells you when. Continuing to use the service after a change means you accept it.",
+      "contactTitle": "Contact",
+      "contactBody": "Questions about these terms: <email>{address}</email>."
+    },
+    "notFound": {
+      "title": "Page not found",
+      "body": "The address may be wrong or the page may have moved. Your money is where you left it.",
+      "home": "Go to Home",
+      "back": "Back"
+    },
+    "error": {
+      "title": "Something went wrong",
+      "body": "The page could not load. Your data is safe; try again in a moment.",
+      "retry": "Try again"
+    }
+  },
+  "pwa": {
+    "updateAvailable": "New version available",
+    "reload": "Reload"
+  }
+}

@@ -1,0 +1,1412 @@
+{
+  "metadata": {
+    "title": "Ledger Flow",
+    "template": "%s · Ledger Flow",
+    "description": "Registra tu gasto hormiga en tres segundos y mira a dónde se va el mes."
+  },
+  "common": {
+    "appName": "Ledger Flow",
+    "back": "Volver",
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "continue": "Continuar",
+    "save": "Guardar",
+    "saveChanges": "Guardar cambios",
+    "retry": "Reintentar",
+    "undo": "Deshacer",
+    "seeAll": "Ver todo",
+    "more": "Más",
+    "optional": "opcional",
+    "soon": "pronto",
+    "comingSoon": "Próximamente",
+    "loading": "Cargando",
+    "skipToContent": "Ir al contenido",
+    "main": "Principal",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "notNow": "Ahora no",
+    "default": "Predeterminado",
+    "search": "Buscar",
+    "noResults": "Sin resultados",
+    "selected": "Seleccionado",
+    "date": "Fecha",
+    "time": "Hora",
+    "recent": "Recientes",
+    "backToList": "Volver a la lista",
+    "removeTag": "Quitar etiqueta {tag}",
+    "suggestions": "Sugerencias",
+    "delete": "Eliminar",
+    "done": "Listo",
+    "now": "Ahora",
+    "hours": "Horas",
+    "minutes": "Minutos",
+    "dayPeriod": "AM o PM",
+    "am": "AM",
+    "pm": "PM",
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "savedInZone": "Se guarda en tu zona horaria, {zone}."
+  },
+  "nav": {
+    "label": "Navegación",
+    "home": "Inicio",
+    "transactions": "Movimientos",
+    "add": "Registrar",
+    "addExpense": "Registrar gasto",
+    "budgets": "Presupuestos",
+    "accounts": "Cuentas",
+    "stats": "Estadísticas",
+    "categories": "Categorías",
+    "settings": "Ajustes",
+    "search": "Buscar",
+    "pendingCount": "{count, plural, one {# por revisar} other {# por revisar}}"
+  },
+  "colors": {
+    "RED": "Rojo",
+    "ORANGE": "Naranja",
+    "AMBER": "Ámbar",
+    "YELLOW": "Amarillo",
+    "LIME": "Lima",
+    "GREEN": "Verde",
+    "TEAL": "Verde azulado",
+    "CYAN": "Cian",
+    "BLUE": "Azul",
+    "INDIGO": "Índigo",
+    "PURPLE": "Morado",
+    "PINK": "Rosa",
+    "ROSE": "Rosado",
+    "GRAY": "Gris",
+    "BROWN": "Marrón",
+    "BLACK": "Negro"
+  },
+  "accountTypes": {
+    "CASH": "Efectivo",
+    "ACCOUNT": "Cuenta bancaria",
+    "CARD": "Tarjeta de crédito",
+    "DEBIT_CARD": "Tarjeta débito",
+    "SAVINGS": "Ahorros",
+    "INVESTMENT": "Inversión",
+    "OVERDRAFT": "Sobregiro",
+    "LOAN": "Préstamo",
+    "OTHER": "Otra"
+  },
+  "accountTypeDescriptions": {
+    "CASH": "Billetes y monedas que llevas encima",
+    "ACCOUNT": "Una cuenta corriente o de ahorros del banco",
+    "CARD": "Gasto que pagas después",
+    "DEBIT_CARD": "Ligada a una cuenta del banco",
+    "SAVINGS": "Dinero que apartas",
+    "INVESTMENT": "Fondos, acciones, cripto",
+    "OVERDRAFT": "Un saldo en negativo que puedes usar",
+    "LOAN": "Dinero que debes",
+    "OTHER": "Cualquier otra cosa"
+  },
+  "auth": {
+    "email": "Correo",
+    "password": "Contraseña",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "login": {
+      "title": "Hola de nuevo",
+      "subtitle": "Entra para seguir registrando tus gastos.",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "submit": "Entrar",
+      "newHere": "¿Eres nuevo?",
+      "createAccount": "Crear cuenta",
+      "invalidCredentials": "Correo o contraseña incorrectos.",
+      "tooManyAttempts": "Demasiados intentos.",
+      "retryIn": "Puedes intentarlo de nuevo en {time}.",
+      "deleted": "Tu cuenta fue eliminada. Regístrate de nuevo con el mismo correo cuando quieras volver."
+    },
+    "register": {
+      "title": "Crear cuenta",
+      "subtitle": "Menos de un minuto. Sin tarjeta.",
+      "name": "Nombre",
+      "passwordHelp": "Entre 8 y 128 caracteres.",
+      "passwordPlaceholder": "Mínimo 8 caracteres",
+      "language": "Idioma",
+      "languageDetected": "Detectado en tu dispositivo",
+      "languageHelp": "El idioma de tu cuenta. Lo puedes cambiar cuando quieras en Ajustes.",
+      "languageNote": "Toda la pantalla cambia al instante. Las fechas y los importes siguen este idioma, tu moneda y tu zona horaria.",
+      "currency": "Moneda",
+      "currencyDetected": "Detectada por tu región",
+      "currencyHelp": "Se usa en todas tus cuentas. Se bloquea al crear la primera.",
+      "timeZone": "Zona horaria",
+      "timeZoneDetected": "Detectada en tu dispositivo",
+      "consent": "Acepto la <privacy>Política de privacidad</privacy> y el tratamiento de mis datos personales (Ley 1581).",
+      "submit": "Crear cuenta",
+      "alreadyHaveAccount": "¿Ya tienes cuenta?",
+      "signIn": "Entrar",
+      "emailTaken": "Este correo ya tiene una cuenta.",
+      "maybeCreated": "Puede que tu cuenta ya se haya creado: intenta entrar antes de registrarte otra vez.",
+      "reactivated": {
+        "title": "Bienvenido de vuelta.",
+        "body": "Restauramos tu cuenta anterior con todo su historial; la moneda se conserva."
+      },
+      "currencyPicker": "Elige tu moneda",
+      "timeZonePicker": "Elige tu zona horaria",
+      "signInLink": "Entrar",
+      "consentRequired": "Debes aceptar la política de privacidad para continuar."
+    }
+  },
+  "onboarding": {
+    "step": "Paso {current} de {total}",
+    "account": {
+      "title": "Tu primera cuenta",
+      "subtitle": "Los gastos rápidos saldrán de ella. Será tu cuenta principal; puedes cambiarlo después.",
+      "submit": "Continuar"
+    },
+    "budget": {
+      "title": "Un techo para el mes",
+      "subtitle": "Un presupuesto mensual total: cuenta todo lo que gastas, incluido lo que registras sin categoría.",
+      "submit": "Crear presupuesto",
+      "skip": "Ahora no"
+    }
+  },
+  "home": {
+    "greeting": "Hola, {name}",
+    "pendingReview": "{count, plural, one {# gasto rápido por revisar} other {# gastos rápidos por revisar}}",
+    "pendingTotal": "· {amount} en total",
+    "spending": "Gasto de {month}",
+    "dayOf": "Día {day} de {total}",
+    "dailyAverage": "Promedio diario",
+    "yesterdaySpent": "Ayer gastaste {amount}",
+    "spendingPerDay": "Gasto por día",
+    "budgetProgress": "{percent}% del presupuesto mensual",
+    "createMonthlyBudget": "Crear presupuesto mensual",
+    "totalBalance": "Balance total",
+    "accountsCount": "{count, plural, one {# cuenta} other {# cuentas}}",
+    "incomeThisMonth": "Ingresos del mes",
+    "estimatedSavings": "Ahorro estimado",
+    "incomeMinusSpending": "Ingresos − gasto",
+    "budgets": "Presupuestos",
+    "accounts": "Cuentas",
+    "recent": "Movimientos recientes",
+    "quickExpense": "Gasto rápido",
+    "toReview": "Por revisar",
+    "main": "Principal",
+    "empty": {
+      "accounts": {
+        "title": "Crea tu primera cuenta",
+        "body": "Los gastos rápidos necesitan una cuenta principal de la que salir.",
+        "cta": "Crear cuenta"
+      },
+      "month": {
+        "title": "Aún no hay gastos este mes",
+        "cta": "Registrar un gasto"
+      }
+    },
+    "budgetLeft": "Quedan {amount} · vas bien",
+    "budgetWarn": "Al {percent}% con {days, plural, one {# día} other {# días}} por delante",
+    "budgetOver": "Excedido en {amount}",
+    "budgetOf": "/ {amount}"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "profile": "Perfil y seguridad",
+    "lastSignIn": "Último acceso {when}",
+    "preferences": "Preferencias",
+    "language": {
+      "title": "Idioma",
+      "subtitle": "Idioma de la app",
+      "followDevice": "Seguir el dispositivo",
+      "followDeviceHelp": "Usa el idioma de tu teléfono o navegador",
+      "en": "English",
+      "es": "Español",
+      "esHelp": "Español",
+      "note": "Las fechas y los importes siguen tu idioma, tu moneda ({currency}) y tu zona horaria.",
+      "default": "Predeterminado"
+    },
+    "currency": {
+      "title": "Moneda",
+      "locked": "Bloqueada: ya tienes cuentas",
+      "unlocked": "Puedes cambiarla hasta crear tu primera cuenta",
+      "sheetTitle": "Moneda",
+      "lockedBody": "Tu moneda es {currency}. Está bloqueada porque ya tienes cuentas: todos los saldos y movimientos están guardados en ella.",
+      "pickerHint": "Los importes y saldos usarán esta moneda.",
+      "saved": "Moneda actualizada"
+    },
+    "timeZone": {
+      "title": "Zona horaria",
+      "subtitle": "Define tus días y períodos",
+      "sheetTitle": "Zona horaria",
+      "pickerHint": "Los días, meses y períodos de presupuesto empiezan a tu medianoche local.",
+      "saved": "Zona horaria actualizada"
+    },
+    "appearance": {
+      "title": "Apariencia",
+      "subtitle": "Paleta y modo",
+      "mode": "Modo",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema",
+      "palette": "Paleta",
+      "palettes": {
+        "tinta": {
+          "name": "Tinta",
+          "description": "Grises cálidos · índigo"
+        },
+        "brisa": {
+          "name": "Brisa",
+          "description": "Grises fríos · verde azulado"
+        }
+      },
+      "note": "Los colores de tus cuentas, categorías y presupuestos se adaptan a la paleta: un «rojo» siempre se ve rojo.",
+      "preview": "Vista previa"
+    },
+    "categories": {
+      "title": "Categorías",
+      "subtitle": "{active, plural, one {# activa} other {# activas}} · {archived, plural, one {# archivada} other {# archivadas}}"
+    },
+    "security": "Seguridad",
+    "credentials": {
+      "title": "Contraseña y correo",
+      "subtitle": "Requiere tu contraseña actual",
+      "pageTitle": "Perfil y seguridad",
+      "name": "Nombre",
+      "email": "Correo",
+      "emailHelp": "Cambiarlo cierra la sesión en tus otros dispositivos.",
+      "newPassword": "Nueva contraseña",
+      "newPasswordHelp": "Mínimo 8 caracteres. Déjala vacía para conservar la actual.",
+      "currentPassword": "Contraseña actual",
+      "reauthNote": "Para cambiar tu correo o tu contraseña, confirma tu contraseña actual. Por seguridad, tus otros dispositivos tendrán que iniciar sesión de nuevo.",
+      "saved": "Perfil actualizado",
+      "savedReauth": "Perfil actualizado. Se cerró la sesión en tus otros dispositivos."
+    },
+    "sessions": {
+      "title": "Sesiones activas",
+      "subtitle": "Cierra los dispositivos que no reconozcas",
+      "intro": "Cada dispositivo sigue con sesión 30 días sin actividad. Cierra los que no reconozcas.",
+      "thisDevice": "Este dispositivo",
+      "activeNow": "Activo ahora",
+      "lastActive": "{when}",
+      "since": "desde {date}",
+      "expires": "vence {date}",
+      "signOut": "Cerrar",
+      "signOutDevice": "Cerrar sesión en {device}",
+      "signedOut": "Sesión cerrada",
+      "signOutOthers": "Cerrar todas las demás sesiones",
+      "signOutOthersTitle": "¿Cerrar sesión en todos los dispositivos?",
+      "signOutOthersBody": "También cierra este dispositivo: tendrás que iniciar sesión de nuevo aquí.",
+      "signOutOthersConfirm": "Cerrar en todos",
+      "unknownDevice": "Dispositivo desconocido",
+      "empty": "No hay otras sesiones"
+    },
+    "data": "Datos",
+    "export": "Exportar movimientos",
+    "import": "Importar desde tu banco",
+    "about": "Acerca de",
+    "version": "Ledger Flow · {version}",
+    "signOut": "Cerrar sesión",
+    "deleteAccount": "Eliminar mi cuenta",
+    "yourData": {
+      "title": "Tus datos",
+      "rights": "Puedes acceder, corregir y suprimir tus datos, y revocar tu autorización en cualquier momento (Ley 1581 de 2012).",
+      "contact": "Escribe a {email}",
+      "policy": "Política de privacidad",
+      "policyVersion": "Política aceptada al registrarte ({date}) · v{version}"
+    },
+    "install": {
+      "title": "Instalar app",
+      "subtitle": "Añade Ledger Flow a tu pantalla de inicio",
+      "installed": "Instalada",
+      "durability": "Añade Ledger Flow a tu pantalla de inicio para que el navegador no borre lo que registres sin conexión"
+    },
+    "delete": {
+      "title": "Eliminar mi cuenta",
+      "body": "Tu cuenta y tu historial financiero se conservan un tiempo para que puedas volver: registrarte de nuevo con el mismo correo lo reactiva todo. Se cerrará tu sesión ahora.",
+      "confirmLabel": "Escribe {word} para confirmar",
+      "word": "ELIMINAR",
+      "confirm": "Eliminar cuenta",
+      "done": "Cuenta eliminada. Regístrate de nuevo con el mismo correo para volver."
+    },
+    "needsConnection": "Cambiar esto necesita conexión: se guarda en el servidor.",
+    "signOutOffline": "Cerrar sesión necesita conexión: la sesión vive en el servidor.",
+    "signOutPending": {
+      "title": "Tienes cambios sin enviar",
+      "body": "{count, plural, one {# cambio no ha llegado al servidor todavía} other {# cambios no han llegado al servidor todavía}}. Si los conservas, se enviarán la próxima vez que inicies sesión en este dispositivo.",
+      "keep": "Cerrar sesión y conservarlos",
+      "discard": "Descartar y cerrar sesión"
+    },
+    "sync": {
+      "title": "Estado de sincronización",
+      "subtitle": "Qué tiene este dispositivo y qué le debe al servidor",
+      "session": {
+        "label": "Sesión",
+        "help": "Tu sesión en el servidor",
+        "active": "Activa",
+        "signedOut": "Cerrada",
+        "signedOutHelp": "Cerraste sesión en este dispositivo, así que no se sincroniza nada",
+        "signIn": "Iniciar sesión para sincronizar"
+      },
+      "cursor": {
+        "label": "Cursor de sincronización",
+        "help": "Desde dónde empieza el próximo tirón",
+        "set": "Establecido",
+        "never": "Nunca sincronizado"
+      },
+      "lastSync": {
+        "label": "Última sincronización completa",
+        "never": "Nunca"
+      },
+      "offlineReady": {
+        "label": "Listo sin conexión",
+        "help": "Tus datos y las pantallas de la app están en este dispositivo",
+        "ready": "Listo",
+        "preparing": "Preparando…",
+        "preparingHelp": "Copiando tus datos y las pantallas de la app · {cached} de {expected} pantallas",
+        "incomplete": "Incompleto",
+        "incompleteHelp": "En pausa: necesita conexión para terminar",
+        "retry": "Reintentar"
+      },
+      "queue": {
+        "label": "Esperando a enviarse"
+      },
+      "lastError": {
+        "label": "Último error: {code}"
+      },
+      "transport": {
+        "label": "Modo de envío",
+        "help": "Este servidor acepta los cambios de uno en uno, no en un lote",
+        "routes": "De uno en uno"
+      },
+      "storage": {
+        "label": "Almacenamiento usado",
+        "unknown": "Desconocido"
+      },
+      "persisted": {
+        "label": "Almacenamiento persistente",
+        "help": "Evita que el navegador borre tus datos sin conexión",
+        "yes": "Concedido",
+        "no": "No concedido",
+        "unsupported": "No disponible"
+      },
+      "mode": {
+        "label": "Se ejecuta como",
+        "installed": "App instalada",
+        "browser": "Pestaña del navegador"
+      },
+      "durability": {
+        "warning": "Estás en una pestaña del navegador. Instala la app para conservar lo que registres sin conexión: un navegador puede borrarlo tras unos días sin abrir el sitio."
+      },
+      "tray": {
+        "title": "Cambios que te necesitan",
+        "stuck": "{count, plural, one {# cambio atascado} other {# cambios atascados}}",
+        "empty": "No hay nada pendiente"
+      },
+      "resync": {
+        "cta": "Forzar sincronización completa",
+        "help": "Descarta la copia local y la vuelve a descargar. Lo que esté esperando a enviarse se conserva.",
+        "confirmTitle": "¿Descargar todo otra vez?",
+        "confirmBody": "{count, plural, =0 {Se borra la copia local y se descarga de nuevo.} one {Se borra la copia local y se descarga de nuevo. Se conserva # cambio pendiente de enviar.} other {Se borra la copia local y se descarga de nuevo. Se conservan # cambios pendientes de enviar.}}",
+        "confirm": "Sincronizar ahora",
+        "cancel": "Cancelar",
+        "done": "Sincronizado",
+        "failed": "No se pudo sincronizar",
+        "offline": "Necesita conexión: vuelve a descargar la copia."
+      },
+      "offlineReadyToast": {
+        "title": "Ya puedes usar la app sin conexión",
+        "action": "Qué significa"
+      },
+      "blocked": {
+        "alert": "{count, plural, one {# cambio no se puede enviar tras una actualización de la app.} other {# cambios no se pueden enviar tras una actualización de la app.}}",
+        "alertBody": "{count, plural, one {Se registró con una versión anterior de la app y esta no lo puede enviar. Todo lo que registres a partir de ahora se sincroniza con normalidad.} other {Se registraron con una versión anterior de la app y esta no los puede enviar. Todo lo que registres a partir de ahora se sincroniza con normalidad.}}",
+        "cta": "{count, plural, one {Ver el # cambio} other {Ver los # cambios}}",
+        "queue": "{count, plural, other {# · bloqueados}}",
+        "queueMeta": "Bloqueados por una actualización de la app"
+      }
+    }
+  },
+  "states": {
+    "loading": "Cargando…",
+    "error": {
+      "title": "No pudimos cargar esto",
+      "body": "El servidor no respondió. Tus datos están a salvo; inténtalo de nuevo en unos segundos.",
+      "reference": "Referencia: {requestId}"
+    },
+    "offline": {
+      "title": "Sin conexión.",
+      "body": "Los cambios se guardan en este dispositivo y se sincronizarán cuando vuelvas a estar en línea.",
+      "waiting": "{count, plural, one {# cambio pendiente} other {# cambios pendientes}}"
+    },
+    "backOnline": {
+      "title": "De vuelta en línea.",
+      "synced": "{count, plural, one {# cambio sincronizado} other {# cambios sincronizados}}"
+    },
+    "pending": {
+      "title": "Cambios pendientes de sincronizar.",
+      "body": "Están guardados en este dispositivo."
+    },
+    "signedOut": {
+      "title": "Cerraste sesión. No se está sincronizando.",
+      "body": "{count, plural, one {# cambio guardado en este dispositivo} other {# cambios guardados en este dispositivo}}",
+      "cta": "Iniciar sesión para sincronizar"
+    },
+    "blocked": {
+      "title": "{count, plural, one {Una actualización de la app dejó # cambio sin enviar.} other {Una actualización de la app dejó # cambios sin enviar.}}",
+      "body": "Siguen guardados en este dispositivo.",
+      "cta": "Verlos"
+    },
+    "conflicts": {
+      "title": "Algunos cambios necesitan tu atención.",
+      "body": "{count, plural, one {# cambio no se pudo sincronizar} other {# cambios no se pudieron sincronizar}}",
+      "review": "Revisar",
+      "seeAll": "Ver todo"
+    },
+    "projected": "Incluye cambios sin sincronizar",
+    "sessionExpired": {
+      "eyebrow": "Sesión",
+      "title": "Tu sesión terminó",
+      "body": "Se cerró desde otro dispositivo o pasaron más de 30 días. Entra de nuevo para continuar.",
+      "cta": "Entrar",
+      "localTitle": "Inicia sesión para sincronizar",
+      "localBody": "Tu sesión terminó, así que no se está sincronizando nada. La app sigue funcionando en este dispositivo y tus cambios se guardan aquí: inicia sesión otra vez para enviarlos.",
+      "localCta": "Iniciar sesión para sincronizar"
+    },
+    "notFound": {
+      "title": "Página no encontrada",
+      "body": "Tu dinero está donde lo dejaste.",
+      "cta": "Ir a Inicio"
+    },
+    "conflict": {
+      "title": "Resolver conflicto de sincronización",
+      "loading": "Leyendo lo que está esperando…",
+      "empty": {
+        "title": "No queda nada por resolver",
+        "body": "Este cambio ya no está esperando a sincronizarse."
+      },
+      "stale": {
+        "title": "Cambiado en dos sitios.",
+        "body": "Este {what} cambió en otro sitio mientras este dispositivo estaba sin conexión. Elige la versión que se queda."
+      },
+      "failed": {
+        "title": "El servidor rechazó este cambio.",
+        "body": "No se aplicó ni aquí ni allí. Motivo: {reason}. Al descartarlo, este {what} vuelve a lo que tiene el servidor.",
+        "unknown": "desconocido"
+      },
+      "archived": {
+        "title": "La cuenta se archivó en otro sitio.",
+        "body": "Este {what} usa una cuenta que se archivó en otro dispositivo, así que el servidor no lo acepta. Restaura la cuenta y sale en el mismo lote, o edita el {what} para usar otra cuenta.",
+        "restore": "Restaurar la cuenta",
+        "gone": "Este dispositivo ya no tiene esa cuenta, así que no hay nada que restaurar. Descarta el cambio o edita el movimiento para usar otra cuenta."
+      },
+      "nameTaken": {
+        "title": "El nombre está tomado.",
+        "body": "Ya hay una {what} activa que se llama «{name}», así que el servidor no la va a recuperar. Restáurala con otro nombre o descarta el cambio.",
+        "server": "En el servidor · tiene el nombre",
+        "device": "En este dispositivo · se está restaurando",
+        "name": "Nombre nuevo",
+        "help": "Los nombres no distinguen mayúsculas.",
+        "suggestion": "{name} (antigua)",
+        "confirm": "Restaurar como «{name}»",
+        "noRetry": "Aquí no se ofrece «Reintentar»: el mismo nombre se volvería a rechazar."
+      },
+      "futureDate": {
+        "title": "Corregir la fecha",
+        "alert": "El servidor rechazó esta fecha.",
+        "body": "{date} va más de 24 horas por delante de la hora del servidor ({serverDate}).",
+        "reason": "Su fecha, {date}, va más de 24 horas por delante de la hora del servidor.",
+        "skewDays": "{count, plural, one {El reloj de este dispositivo va # día adelantado.} other {El reloj de este dispositivo va # días adelantado.}}",
+        "skewHours": "{count, plural, one {El reloj de este dispositivo va # hora adelantado.} other {El reloj de este dispositivo va # horas adelantado.}}",
+        "was": "Era el {date}",
+        "save": "Guardar y reintentar",
+        "waiting": "{count, plural, one {# cambio más espera detrás de este.} other {# cambios más esperan detrás de este.}}"
+      },
+      "noServerRow": "El servidor no dijo qué tiene. Si te quedas con la versión de este dispositivo, la sobrescribirás.",
+      "server": "En el servidor",
+      "device": "En este dispositivo",
+      "keepMine": "Quedarme con lo de este dispositivo",
+      "keepServer": "Usar la versión del servidor",
+      "discard": "Descartar este cambio",
+      "retry": "Intentar de nuevo",
+      "none": "—",
+      "yes": "Sí",
+      "no": "No",
+      "entities": {
+        "account": "cuenta",
+        "category": "categoría",
+        "transaction": "movimiento",
+        "budget": "presupuesto"
+      },
+      "actions": {
+        "create": "Este dispositivo pidió crear este {what}.",
+        "quickAdd": "Este dispositivo pidió registrar este {what}.",
+        "update": "Este dispositivo pidió editar este {what}.",
+        "delete": "Este dispositivo pidió eliminar este {what}.",
+        "archive": "Este dispositivo pidió archivar este {what}.",
+        "restore": "Este dispositivo pidió restaurar este {what}.",
+        "setDefault": "Este dispositivo pidió hacer principal este {what}.",
+        "setOverride": "Este dispositivo pidió cambiar el importe de este {what} para un período.",
+        "clearOverride": "Este dispositivo pidió quitar el importe de este {what} para un período."
+      },
+      "fields": {
+        "name": "Nombre",
+        "type": "Tipo",
+        "color": "Color",
+        "icon": "Icono",
+        "currency": "Moneda",
+        "initialBalance": "Saldo inicial",
+        "creditLimit": "Cupo",
+        "amount": "Importe",
+        "date": "Fecha",
+        "description": "Descripción",
+        "note": "Nota",
+        "tags": "Etiquetas",
+        "categoryId": "Categoría",
+        "categoryIds": "Categorías",
+        "fromAccountId": "Desde",
+        "toAccountId": "Hasta",
+        "pendingDetails": "Por revisar",
+        "effectiveFrom": "Vigente desde",
+        "periodType": "Período",
+        "periodStartDate": "El período empieza",
+        "periodEndDate": "El período termina"
+      }
+    },
+    "attention": {
+      "title": "Necesitan tu atención",
+      "titleCount": "{count, plural, one {# cambio te necesita} other {# cambios te necesitan}}",
+      "loading": "Leyendo lo que está esperando…",
+      "intro": "Estos cambios están guardados en este dispositivo y el servidor no los ha aceptado. El resto de la cola no los está esperando.",
+      "onRow": "Este {what} tiene un cambio que el servidor no ha aceptado.",
+      "kinds": {
+        "conflict": "Cambiado en dos sitios",
+        "failed": "Rechazado por el servidor",
+        "archived": "Cuenta archivada",
+        "nameTaken": "Nombre tomado"
+      },
+      "restoreWithName": "Restaurar con otro nombre",
+      "compare": "Comparar versiones",
+      "discardAll": "Descartar todo",
+      "retryAll": "Reintentar todo",
+      "confirmTitle": "{count, plural, one {¿Descartar # cambio?} other {¿Descartar # cambios?}}",
+      "confirmBody": "No llegarán nunca al servidor, y este dispositivo vuelve a lo que el servidor tiene.",
+      "confirmCascade": "{count, plural, one {# de ellos se hizo sobre algo creado aquí y se va con él.} other {# de ellos se hicieron sobre algo creado aquí y se van con él.}}",
+      "confirmCta": "Descartar",
+      "discarded": "{count, plural, one {# cambio descartado} other {# cambios descartados}}",
+      "retried": "{count, plural, one {# cambio de vuelta en la cola} other {# cambios de vuelta en la cola}}",
+      "empty": {
+        "title": "Nada te necesita",
+        "body": "Todos los cambios de este dispositivo se sincronizaron o van de camino.",
+        "cta": "Ir al inicio"
+      },
+      "blocked": {
+        "badge": "Bloqueado por una actualización",
+        "alert": "{count, plural, one {# cambio no se puede enviar tras una actualización de la app.} other {# cambios no se pueden enviar tras una actualización de la app.}}",
+        "alertBody": "{count, plural, one {Todo lo que registres a partir de ahora se sincroniza con normalidad; este se registró con una versión anterior y se quedó atrás. Descartarlo libera la cola.} other {Todo lo que registres a partir de ahora se sincroniza con normalidad; estos # se registraron con una versión anterior y se quedaron atrás. Descartarlos libera la cola.}}",
+        "reason": "Se registró con una versión anterior de la app y esta no lo puede enviar. Nunca llegará al servidor por sí solo.",
+        "keep": "Dejarlo aquí",
+        "kept": "Se queda en este dispositivo.",
+        "discardAll": "{count, plural, one {Descartar el # cambio} other {Descartar los # cambios}}",
+        "foot": "Nada de lo que registres ahora espera detrás de estos."
+      }
+    },
+    "pendingSync": "Pendiente de sincronizar",
+    "needsAttention": "Necesita tu atención",
+    "savedHere": "Guardado en este dispositivo"
+  },
+  "dev": {
+    "title": "Catálogo de componentes",
+    "subtitle": "Los 22 componentes de DESIGN.md §7 sobre tokens vivos. Cambia paleta y modo para ver cómo se repinta todo.",
+    "palette": "Paleta",
+    "mode": "Modo",
+    "colors": "Colores de feature",
+    "surfaces": "Superficies",
+    "buttons": "Botones",
+    "amounts": "Importes e insignias",
+    "rows": "Filas",
+    "forms": "Campos",
+    "segment": "Segmentado",
+    "progress": "Progreso",
+    "feedback": "Alertas y toast",
+    "skeleton": "Esqueleto",
+    "typography": "Tipografía",
+    "icons": "Iconos de categoría ({count})",
+    "chips": "Chips",
+    "pickers": "Selector y hoja",
+    "stats": "Estadísticas y barras",
+    "accounts": "Tarjetas de cuenta",
+    "period": "Navegación de período",
+    "banner": "Franja de conexión",
+    "swatches": "Muestras de color",
+    "empty": "Estado vacío",
+    "openSheet": "Abrir hoja",
+    "showToast": "Mostrar toast",
+    "sample": {
+      "coffee": "Pergamino Coffee",
+      "salary": "Salario de agosto",
+      "cash": "Efectivo",
+      "bank": "Bancolombia",
+      "fieldValue": "Valor",
+      "focused": "Con foco",
+      "withError": "Con error",
+      "noDecimals": "Tu moneda (COP) no tiene decimales",
+      "field": "Campo",
+      "expense": "Gasto",
+      "income": "Ingreso",
+      "transfer": "Transferencia",
+      "adjustment": "Ajuste",
+      "mainAccount": "Bancolombia pasa a ser tu cuenta principal.",
+      "mainAccountBody": "Efectivo deja de serlo; los gastos rápidos irán a Bancolombia.",
+      "saved": "Movimiento guardado",
+      "toReview": "Por revisar",
+      "onTrack": "Vas bien",
+      "overBudget": "Excedido",
+      "archived": "Archivada",
+      "main": "Principal",
+      "hi": "Hola, John",
+      "newTransaction": "Nuevo movimiento",
+      "budgets": "Presupuestos",
+      "body": "Texto de cuerpo y filas de lista.",
+      "meta": "Metadatos, fechas, cuenta de origen.",
+      "eyebrow": "Gasto de septiembre",
+      "mono": "2026-09 · America/Bogota · COP",
+      "account": "Cuenta",
+      "chooseAccount": "Elige una cuenta",
+      "sheetTitle": "Elige una categoría",
+      "sheetBody": "Las hojas usan el elemento dialog nativo: foco atrapado, Escape y retorno de foco vienen gratis.",
+      "totalBalance": "Balance total",
+      "accountsCount": "4 cuentas",
+      "spendingPerDay": "Gasto por día",
+      "month": "Septiembre de 2026",
+      "previous": "Mes anterior",
+      "next": "Mes siguiente",
+      "offline": "Sin conexión.",
+      "offlineBody": "Los cambios se guardan en este dispositivo y se sincronizarán cuando vuelvas a estar en línea.",
+      "emptyTitle": "Aún no hay movimientos",
+      "emptyBody": "Registra tu primer gasto con el botón central. Solo necesitas el importe.",
+      "emptyCta": "Registrar un gasto",
+      "amount": "Importe",
+      "color": "Color",
+      "type": "Tipo",
+      "bankAccount": "Cuenta bancaria",
+      "creditCard": "Tarjeta de crédito",
+      "primary": "Primario",
+      "secondary": "Secundario"
+    },
+    "pickersPlayground": {
+      "title": "Selectores",
+      "subtitle": "Selectores de categoría, cuenta y fecha conectados al API real. Solo en desarrollo.",
+      "type": "Tipo de movimiento",
+      "from": "Desde",
+      "to": "Hacia",
+      "selected": "Seleccionado: {value}",
+      "nothing": "Nada seleccionado todavía",
+      "instant": "Instante que se envía al API: {value}"
+    }
+  },
+  "errors": {
+    "VALIDATION": "Revisa algunos campos.",
+    "INVALID_ID": "Ese elemento no existe.",
+    "DUPLICATE": "Ese nombre ya está en uso.",
+    "EMAIL_TAKEN": "Este correo ya tiene una cuenta.",
+    "NO_DEFAULT_ACCOUNT": "Elige una cuenta: aún no tienes una principal.",
+    "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED": "Tu cuenta principal no se puede archivar. Haz principal otra cuenta primero.",
+    "ACCOUNT_LIMIT_REACHED": "Llegaste al límite de 100 cuentas.",
+    "CATEGORY_LIMIT_REACHED": "Llegaste al límite de 200 categorías.",
+    "CATEGORY_ARCHIVED": "Esa categoría está archivada. Restáurala o elige otra.",
+    "CATEGORY_TYPE_MISMATCH": "Esa categoría no corresponde a este tipo de movimiento.",
+    "CATEGORY_TYPE_LOCKED": "Esta categoría ya tiene movimientos, así que su tipo no puede cambiar. Crea una categoría nueva.",
+    "RESOURCE_ARCHIVED": "Este elemento está archivado. Restáuralo primero.",
+    "BUDGET_PERIOD_OVERLAP": "Ya existe un presupuesto para este período y categoría.",
+    "CURRENCY_LOCKED": "Tu moneda está bloqueada porque ya tienes cuentas.",
+    "CURRENCY_MISMATCH": "Ambas cuentas deben usar la misma moneda.",
+    "AMOUNT_PRECISION": "Tu moneda no admite esos decimales.",
+    "FUTURE_DATE": "La fecha no puede ser futura.",
+    "INVALID_CURSOR": "Lista actualizada.",
+    "IDEMPOTENCY_KEY_INVALID": "Algo falló al enviar esto. Inténtalo de nuevo.",
+    "IDEMPOTENCY_PAYLOAD_MISMATCH": "Esta solicitud cambió desde el último intento. Enviándola de nuevo.",
+    "IDEMPOTENCY_ORIGINAL_DELETED": "El registro original fue eliminado. Guárdalo de nuevo como uno nuevo.",
+    "ID_TAKEN": "Ese registro ya se guardó con otro contenido. Se guardará de nuevo con una referencia nueva.",
+    "STALE_UPDATE": "Alguien cambió esto desde otro dispositivo. Vuelve a cargarlo para ver la versión más reciente.",
+    "REFRESH_INVALID": "Tu sesión terminó. Entra de nuevo.",
+    "REFRESH_REVOKED": "Tu sesión terminó. Entra de nuevo.",
+    "CURRENT_PASSWORD_INVALID": "Tu contraseña actual es incorrecta.",
+    "RATE_LIMITED": "Demasiados intentos. Inténtalo en un momento.",
+    "DB_UNAVAILABLE": "El servidor no respondió. Tus datos están a salvo; inténtalo en unos segundos.",
+    "INTERNAL": "Algo falló de nuestro lado. Inténtalo de nuevo.",
+    "UNAUTHORIZED": "Necesitas iniciar sesión.",
+    "NOT_FOUND": "Ese elemento no existe.",
+    "TIMEOUT": "La solicitud tardó demasiado. Revisa tu conexión e inténtalo de nuevo.",
+    "NETWORK": "Parece que estás sin conexión. Inténtalo cuando vuelvas a estar en línea.",
+    "UNKNOWN": "Ocurrió algo inesperado. Inténtalo de nuevo.",
+    "BAD_REQUEST": "Esa solicitud no era válida.",
+    "MALFORMED_JSON": "La solicitud llegó dañada. Inténtalo de nuevo.",
+    "PAYLOAD_TOO_LARGE": "Son demasiados datos para una sola solicitud.",
+    "REQUEST_ABORTED": "La solicitud se interrumpió. Inténtalo de nuevo.",
+    "UNSUPPORTED_ENCODING": "La solicitud usó un formato no admitido."
+  },
+  "validation": {
+    "required": "Este campo es obligatorio.",
+    "email": "Escribe un correo válido.",
+    "passwordMin": "Mínimo 8 caracteres.",
+    "passwordMax": "Máximo 128 caracteres.",
+    "nameMax": "Máximo 255 caracteres.",
+    "consent": "Debes aceptar la política de privacidad para continuar.",
+    "currency": "Elige una moneda.",
+    "timeZone": "Elige una zona horaria.",
+    "amountPositive": "Escribe un importe mayor que cero.",
+    "amountDecimals": "Tu moneda no admite esos decimales.",
+    "amountInvalid": "Escribe un importe válido.",
+    "sameAccount": "Elige dos cuentas distintas.",
+    "futureDate": "Esa fecha está a más de un día de distancia.",
+    "invalid": "Revisa este valor.",
+    "amountMax": "Ese monto supera el límite que admite la app (10 billones).",
+    "tooMany": "Has seleccionado demasiados elementos.",
+    "dateOrder": "El fin debe ser posterior al inicio.",
+    "confirmWord": "Escribe la palabra exacta para confirmar."
+  },
+  "accounts": {
+    "form": {
+      "name": "Nombre",
+      "namePlaceholder": "Mi cuenta",
+      "type": "Tipo",
+      "balance": "Saldo actual",
+      "balanceHelp": "Se guarda como saldo inicial para que puedas conciliar la cuenta después.",
+      "color": "Color",
+      "title": "Nueva cuenta",
+      "create": "Crear cuenta",
+      "editTitle": "Editar cuenta",
+      "duplicate": "Ya tienes una cuenta activa llamada «{name}». Los nombres no distinguen mayúsculas.",
+      "preview": "vista previa",
+      "previewName": "Nombre de la cuenta",
+      "saved": "Cambios guardados",
+      "created": "Cuenta creada",
+      "balanceLocked": "El saldo solo cambia con movimientos o con «Ajustar saldo»."
+    },
+    "picker": {
+      "title": "Cuenta",
+      "label": "Cuenta",
+      "placeholder": "Elige una cuenta",
+      "note": "Las cuentas archivadas no aparecen. Los saldos se actualizan al guardar.",
+      "empty": "Aún no hay cuentas",
+      "new": "Nueva cuenta",
+      "newHint": "Créala sin salir de este formulario"
+    },
+    "list": {
+      "title": "Cuentas",
+      "new": "Nueva cuenta",
+      "totalBalance": "Balance total",
+      "counts": "{active, plural, one {# cuenta activa} other {# cuentas activas}} · {archived, plural, one {# archivada} other {# archivadas}}",
+      "cardDebt": "Deuda en tarjetas",
+      "archived": "Archivadas",
+      "archivedBadge": "Archivada",
+      "showArchived": "Archivadas · {count}",
+      "empty": {
+        "title": "Crea tu primera cuenta",
+        "body": "Los gastos rápidos necesitan una cuenta principal de la que salir.",
+        "cta": "Crear cuenta"
+      }
+    },
+    "detail": {
+      "title": "Cuenta",
+      "openingLine": "Saldo inicial {amount} · creada el {date} · {currency}",
+      "edit": "Editar",
+      "makeMain": "Cuenta principal",
+      "archive": "Archivar",
+      "restore": "Restaurar",
+      "mainBlocked": "Para archivar esta cuenta, primero haz principal otra: los gastos rápidos necesitan un destino.",
+      "archivedInfo": "Esta cuenta está archivada: no aparece en los selectores ni cuenta en los totales. Su historial se conserva. Restáurala para volver a usarla.",
+      "transactions": "Movimientos",
+      "openFiltered": "Abrir con filtros",
+      "noTransactions": "Aún no hay movimientos en esta cuenta",
+      "notFound": "Esta cuenta no existe.",
+      "adjust": "Ajustar saldo"
+    },
+    "main": {
+      "title": "¿Hacer {name} tu cuenta principal?",
+      "body": "Desde ahora los gastos rápidos saldrán de {name}.",
+      "previous": "{previous} deja de ser la principal.",
+      "confirm": "Hacer principal",
+      "done": "{name} ya es tu cuenta principal",
+      "undone": "{name} vuelve a ser tu cuenta principal"
+    },
+    "archive": {
+      "title": "¿Archivar {name}?",
+      "body": "Sus movimientos siguen en tu historial y su saldo se conserva, pero sale de los selectores y de los totales, y su nombre queda libre. Puedes restaurarla cuando quieras.",
+      "confirm": "Archivar",
+      "done": "Cuenta archivada",
+      "restored": "Cuenta restaurada"
+    },
+    "restoreConflict": {
+      "title": "Ese nombre ya está en uso",
+      "body": "Ya hay una cuenta activa llamada «{name}». Elige otro nombre para restaurar esta.",
+      "name": "Nuevo nombre",
+      "confirm": "Restaurar como «{name}»",
+      "confirmEmpty": "Restaurar"
+    },
+    "adjust": {
+      "title": "Ajustar saldo",
+      "actual": "Saldo real en {name}",
+      "sign": "Signo del saldo",
+      "positive": "Positivo",
+      "negative": "Negativo (deuda)",
+      "recorded": "Saldo registrado: {amount}",
+      "delta": "<b>Se creará un ajuste de {amount}</b> para conciliar la cuenta. No cuenta como gasto ni en los presupuestos.",
+      "noChange": "El saldo registrado ya coincide. No hay nada que ajustar.",
+      "note": "Nota",
+      "notePlaceholder": "Comisión bancaria de agosto",
+      "save": "Registrar ajuste",
+      "saved": "Ajuste registrado"
+    },
+    "typePicker": {
+      "title": "Tipo de cuenta"
+    }
+  },
+  "budgets": {
+    "global": {
+      "defaultName": "Presupuesto mensual",
+      "amount": "Monto mensual",
+      "help": "Puedes ajustarlo cualquier mes sin tocar el monto base y añadir presupuestos por categoría cuando quieras."
+    },
+    "periodTypes": {
+      "WEEKLY": "Semanal",
+      "BIWEEKLY": "Quincenal",
+      "MONTHLY": "Mensual",
+      "QUARTERLY": "Trimestral",
+      "YEARLY": "Anual",
+      "CUSTOM": "Personalizado"
+    },
+    "list": {
+      "title": "Presupuestos",
+      "new": "Nuevo presupuesto",
+      "past": "Presupuestos pasados",
+      "previousMonth": "Mes anterior",
+      "nextMonth": "Mes siguiente",
+      "all": "Todos",
+      "globalBadge": "Global",
+      "createGlobal": "Crear presupuesto mensual total",
+      "createGlobalHint": "Cuenta todo lo que gastas, incluido lo que registras sin categoría.",
+      "of": "de {amount}",
+      "leftFor": "Quedan {amount} para {days, plural, one {# día} other {# días}}",
+      "perDay": "≈ {amount}/día",
+      "adjusted": "Ajustado",
+      "archivedCategory": "Categoría archivada",
+      "endsIn": "termina en {days, plural, one {# día} other {# días}}",
+      "ended": "Terminado",
+      "periodRange": "{period} · {range}",
+      "status": {
+        "over": "Excedido por {amount}",
+        "fast": "Quedan {amount} · ritmo alto",
+        "untouched": "Quedan {amount} · aún sin gastos",
+        "ended": "Quedaron {amount} al cierre",
+        "endedOver": "Excedido por {amount} al cierre",
+        "ok": "Quedan {amount} · {days, plural, one {# día} other {# días}}",
+        "custom": "Quedan {amount} · termina en {days, plural, one {# día} other {# días}}"
+      },
+      "footnote": "Los ajustes de saldo y las transferencias nunca cuentan en un presupuesto.",
+      "empty": {
+        "title": "Ponle un techo a tu gasto hormiga",
+        "body": "Un presupuesto mensual total te dice cuánto queda antes de que acabe el mes.",
+        "cta": "Crear presupuesto mensual"
+      },
+      "noneForFilter": "No hay presupuestos {period} este mes"
+    },
+    "past": {
+      "title": "Presupuestos pasados",
+      "ended": "Terminados · {count}",
+      "archived": "Archivados · {count}",
+      "endedBadge": "Terminado",
+      "archivedBadge": "Archivado",
+      "createAgain": "Crear de nuevo",
+      "note": "Los presupuestos recurrentes no terminan: para ver un mes pasado, cambia el período en la lista.",
+      "emptyEnded": "Ningún presupuesto ha terminado todavía",
+      "emptyArchived": "No hay presupuestos archivados",
+      "restore": "Restaurar"
+    },
+    "detail": {
+      "title": "Presupuesto",
+      "since": "desde {month}",
+      "remaining": "Restante",
+      "pace": "Ritmo",
+      "paceValue": "{amount}/día",
+      "left": "Quedan",
+      "leftDays": "{days, plural, one {# día} other {# días}}",
+      "endsIn": "Termina en {days, plural, one {# día} other {# días}}",
+      "ended": "Terminado",
+      "periodAmount": "Monto de este período",
+      "base": "base {amount}",
+      "adjustedTo": "{period} está ajustado a {amount}. Los demás períodos conservan el monto base.",
+      "skipped": "Este presupuesto no aplica en {period}. Los demás períodos conservan el monto base.",
+      "usesBase": "{period} usa el monto base.",
+      "change": "Cambiar ajuste",
+      "skip": "No aplica este período",
+      "remove": "Quitar ajuste",
+      "overrideTitle": "Ajustar este período",
+      "overrideLabel": "Monto para {period}",
+      "overrideHelp": "Solo cambia {period}; el monto base sigue en {amount}.",
+      "overrideSave": "Guardar ajuste",
+      "overrideSaved": "Ajuste guardado",
+      "overrideRemoved": "Ajuste quitado",
+      "skippedToast": "Omitido este período",
+      "categories": "Categorías",
+      "allSpending": "Todo el gasto",
+      "archivedChip": "archivada",
+      "note": "Nota",
+      "transactions": "Movimientos del período",
+      "seeAll": "Ver todos",
+      "noTransactions": "No hay movimientos en este período",
+      "edit": "Editar",
+      "archive": "Archivar",
+      "archiveTitle": "¿Archivar {name}?",
+      "archiveBody": "El presupuesto sale de todos los períodos y deja de seguir el gasto. Puedes restaurarlo después desde Presupuestos pasados.",
+      "archived": "Presupuesto archivado",
+      "archiveNote": "Puedes restaurarlo después desde Presupuestos pasados.",
+      "notFound": "Este presupuesto no existe.",
+      "archivedInfo": "Este presupuesto está archivado y ya no sigue el gasto. Restáuralo para recuperarlo tal como estaba.",
+      "endedInfo": "Este presupuesto personalizado terminó el {date}.",
+      "restore": "Restaurar",
+      "restored": "Presupuesto restaurado"
+    },
+    "form": {
+      "newTitle": "Nuevo presupuesto",
+      "editTitle": "Editar presupuesto",
+      "name": "Nombre",
+      "namePlaceholder": "Mercado y comida",
+      "scope": "Alcance",
+      "global": "Todo el gasto",
+      "byCategory": "Por categorías",
+      "scopeHelp": "«Todo el gasto» crea un presupuesto global: incluye lo que registras sin categoría. Solo uno por tipo de período.",
+      "categories": "Categorías",
+      "categoriesHelp": "Una categoría de gasto por presupuesto. Las de transferencia no pueden tener presupuesto.",
+      "categoriesSearch": "Buscar categorías",
+      "noCategories": "Aún no hay categorías de gasto",
+      "period": "Período",
+      "startDate": "Inicio",
+      "endDate": "Fin",
+      "periodChangeWarning": "Cambiar el período borra todos los ajustes por período de este presupuesto.",
+      "amount": "Monto",
+      "suggestionsFromSpending": "Según el gasto del mes pasado",
+      "color": "Color",
+      "advanced": "Opciones avanzadas",
+      "effectiveFrom": "Vigente desde",
+      "effectiveFromHelp": "El presupuesto no aparecerá al navegar meses anteriores a esta fecha.",
+      "note": "Nota",
+      "notePlaceholder": "Para qué es este presupuesto",
+      "create": "Crear presupuesto",
+      "created": "Presupuesto creado",
+      "saved": "Cambios guardados",
+      "overlap": "Otro presupuesto {period} ya cubre esta categoría.",
+      "overlapGlobal": "Ya tienes un presupuesto global {period}.",
+      "category": "Categoría"
+    },
+    "restoreConflict": {
+      "title": "Otro presupuesto lo impide",
+      "body": "«{name}» está activo para el mismo período {period} y cubre el mismo gasto, así que este no puede volver tal como estaba. Crea uno nuevo.",
+      "bodyUnknown": "Ya hay un presupuesto {period} activo que cubre el mismo gasto, así que este no puede volver tal como estaba. Crea uno nuevo.",
+      "open": "Abrir {name}"
+    },
+    "pace": {
+      "tooltip": "Día {day} de {days} · {percent} % esperado",
+      "legend": "La marca es el ritmo de hoy: ha pasado el {percent} % del período (día {day} de {days})."
+    }
+  },
+  "categoryTypes": {
+    "EXPENSE": "Gasto",
+    "INCOME": "Ingreso",
+    "TRANSFER": "Transferencia"
+  },
+  "categories": {
+    "picker": {
+      "title": "Categoría",
+      "label": "Categoría",
+      "placeholder": "Elige una categoría",
+      "search": "Buscar categorías",
+      "new": "Nueva categoría",
+      "newHint": "Créala sin salir de este formulario",
+      "empty": "Aún no hay categorías de este tipo",
+      "noMatch": "Ninguna categoría coincide con «{query}»"
+    },
+    "form": {
+      "title": "Nueva categoría",
+      "name": "Nombre",
+      "namePlaceholder": "Nombre de la categoría",
+      "icon": "Icono",
+      "iconSearch": "Buscar iconos",
+      "color": "Color",
+      "create": "Crear categoría",
+      "editTitle": "Editar categoría",
+      "type": "Tipo",
+      "preview": "vista previa",
+      "previewName": "Nombre de la categoría",
+      "saved": "Cambios guardados",
+      "created": "Categoría creada",
+      "duplicate": "Ya tienes una categoría activa llamada «{name}». Los nombres no distinguen mayúsculas.",
+      "typeLocked": "<b>El tipo no se puede cambiar:</b> esta categoría ya tiene {count, plural, one {# movimiento} other {# movimientos}} y cambiarlo reescribiría tus estadísticas. Si necesitas otro tipo, <link>crea una categoría nueva</link>.",
+      "viewTransactions": "Ver sus movimientos",
+      "notFound": "Esta categoría no existe.",
+      "archivedInfo": "Esta categoría está archivada: no se puede elegir en movimientos ni presupuestos nuevos. Su historial se conserva. Restáurala para volver a usarla."
+    },
+    "list": {
+      "title": "Categorías",
+      "new": "Nueva categoría",
+      "typeCount": "{label} · {count}",
+      "txns": "{count, plural, one {# movimiento} other {# movimientos}}",
+      "unused": "sin uso",
+      "archived": "Archivadas",
+      "archivedBadge": "Archivada",
+      "restore": "Restaurar",
+      "empty": {
+        "title": "Aún no hay categorías de este tipo",
+        "body": "Crea una para clasificar tus movimientos."
+      },
+      "restoreDefaults": {
+        "body": "¿Te falta alguna categoría predeterminada? Vuelve a crearlas sin duplicar las que renombraste.",
+        "cta": "Restaurar",
+        "created": "{count, plural, one {Se creó # categoría} other {Se crearon # categorías}}",
+        "none": "No faltaba ninguna",
+        "onlineOnly": "Necesita conexión: estas categorías las crea el servidor."
+      }
+    },
+    "archive": {
+      "action": "Archivar categoría",
+      "title": "¿Archivar {name}?",
+      "body": "Sus movimientos y presupuestos la siguen usando; solo sale de los selectores y su nombre queda libre. Puedes restaurarla cuando quieras.",
+      "confirm": "Archivar",
+      "done": "Categoría archivada",
+      "restored": "Categoría restaurada"
+    },
+    "restoreConflict": {
+      "title": "Ese nombre ya está en uso",
+      "body": "Ya hay una categoría activa llamada «{name}». Elige otro nombre para restaurar esta.",
+      "name": "Nuevo nombre",
+      "confirm": "Restaurar como «{name}»",
+      "confirmEmpty": "Restaurar"
+    }
+  },
+  "transactions": {
+    "quick": {
+      "title": "Añadir gasto",
+      "amount": "Importe",
+      "category": "Categoría",
+      "categoryHint": "opcional · puedes añadirla después",
+      "fromMain": "Desde tu cuenta principal",
+      "account": "Cuenta",
+      "note": "Nota rápida (opcional)",
+      "moreDetails": "Más detalles",
+      "save": "Guardar",
+      "saved": "Movimiento guardado",
+      "savedWithoutNote": "Guardado, pero no se pudo añadir la nota",
+      "undone": "Movimiento eliminado",
+      "undoFailed": "No se pudo eliminar. Inténtalo desde la lista."
+    },
+    "form": {
+      "newTitle": "Nuevo movimiento",
+      "editTitle": "Editar movimiento",
+      "type": "Tipo",
+      "amount": "Importe",
+      "category": "Categoría",
+      "account": "Cuenta",
+      "from": "Desde",
+      "to": "Hacia",
+      "swap": "Intercambiar cuentas",
+      "direction": "Dirección",
+      "increase": "Aumentar saldo",
+      "decrease": "Disminuir saldo",
+      "adjustmentHint": "Los ajustes corrigen un saldo. No cuentan como gasto ni ingreso.",
+      "description": "Descripción",
+      "descriptionPlaceholder": "¿Qué fue?",
+      "tags": "Etiquetas",
+      "tagsPlaceholder": "Añadir…",
+      "note": "Nota",
+      "notePlaceholder": "Lo que quieras recordar de este movimiento",
+      "save": "Guardar movimiento",
+      "saved": "Movimiento guardado",
+      "updated": "Cambios guardados",
+      "deleteTitle": "¿Eliminar este movimiento?",
+      "deleteBody": "Los saldos de las cuentas vuelven a lo que eran. No se puede deshacer.",
+      "deleted": "Movimiento eliminado",
+      "notFound": "Este movimiento no existe o fue eliminado.",
+      "clockSkew": {
+        "days": "{count, plural, one {El reloj de este dispositivo va # día adelantado respecto al servidor.} other {El reloj de este dispositivo va # días adelantado respecto al servidor.}}",
+        "hours": "{count, plural, one {El reloj de este dispositivo va # hora adelantado respecto al servidor.} other {El reloj de este dispositivo va # horas adelantado respecto al servidor.}}",
+        "refused": "Las fechas con más de 24 horas en el futuro se rechazan."
+      },
+      "dateLimit": "Los días posteriores a mañana no están disponibles: el servidor rechaza fechas con más de 24 horas de adelanto."
+    },
+    "list": {
+      "title": "Movimientos",
+      "search": "Buscar por descripción, nota o etiqueta",
+      "filters": "Filtros",
+      "activeFilters": "{count} filtros activos",
+      "export": "Exportar",
+      "spentIn": "Gastado en {period}",
+      "income": "Ingresos",
+      "count": "Movimientos",
+      "quickExpense": "Gasto rápido",
+      "toReview": "Por revisar",
+      "toReviewCount": "Por revisar · {count}",
+      "uncategorized": "Sin categoría",
+      "balanceAdjustment": "Ajuste de saldo",
+      "loadMore": "Cargar más",
+      "refreshed": "Lista actualizada",
+      "empty": {
+        "title": "Aún no hay movimientos",
+        "body": "Tus movimientos aparecerán aquí, agrupados por día.",
+        "cta": "Añadir un gasto"
+      },
+      "noMatch": {
+        "title": "Ningún movimiento coincide",
+        "body": "Prueba otro período o limpia los filtros.",
+        "cta": "Limpiar filtros"
+      },
+      "offline": {
+        "title": "Estás sin conexión",
+        "body": "La lista se cargará cuando vuelvas a tener conexión."
+      },
+      "periods": {
+        "week": "Esta semana",
+        "month": "Este mes",
+        "lastMonth": "Mes pasado",
+        "year": "Este año",
+        "custom": "Personalizado…",
+        "all": "Todo"
+      },
+      "types": {
+        "ALL": "Todos",
+        "EXPENSE": "Gastos",
+        "INCOME": "Ingresos",
+        "TRANSFER": "Transferencias",
+        "ADJUSTMENT": "Ajustes"
+      },
+      "tagChip": "#{tag}"
+    },
+    "filters": {
+      "title": "Filtros",
+      "period": "Período",
+      "type": "Tipo",
+      "account": "Cuenta",
+      "category": "Categoría",
+      "tag": "Etiqueta",
+      "tagPlaceholder": "#latte, #mercado…",
+      "pendingOnly": "Solo gastos rápidos por revisar",
+      "quickOnly": "Solo capturas rápidas",
+      "clear": "Limpiar",
+      "show": "Mostrar {count, plural, one {# movimiento} other {# movimientos}}",
+      "showCounting": "Mostrar movimientos",
+      "from": "Desde",
+      "to": "Hasta"
+    },
+    "detail": {
+      "title": "Movimiento",
+      "category": "Categoría",
+      "account": "Cuenta",
+      "from": "Desde",
+      "to": "Hacia",
+      "source": "Origen",
+      "currency": "Moneda",
+      "sources": {
+        "MANUAL": "Manual",
+        "QUICK": "Captura rápida",
+        "IMPORT": "Importado"
+      },
+      "edit": "Editar",
+      "pendingBody": "Este gasto rápido aún necesita categoría y descripción.",
+      "complete": "Completar",
+      "unknownAccount": "Cuenta desconocida",
+      "created": "Creado {created}",
+      "createdEdited": "Creado {created} · editado {edited}",
+      "dateTime": "{date} · {time}"
+    },
+    "review": {
+      "title": "Por revisar",
+      "titleCount": "Por revisar · {count}",
+      "intro": "Los gastos rápidos ya descontaron tu saldo y ya cuentan en tu presupuesto total. Aquí solo les pones nombre y categoría.",
+      "droppedCategory": "Su categoría estaba archivada, así que el servidor lo guardó sin ella. Elige otra.",
+      "when": "{day} {time} · {account}",
+      "other": "Otra",
+      "descriptionPlaceholder": "Descripción (opcional)",
+      "openFull": "Abrir formulario",
+      "done": "Listo",
+      "saved": "Detalles guardados",
+      "empty": {
+        "title": "Todo detallado",
+        "body": "Todos los gastos rápidos tienen categoría y descripción.",
+        "cta": "Ir al inicio"
+      },
+      "saveAll": "Guardar todo · {count}",
+      "confirmTitle": "¿Guardar {count, plural, one {# gasto} other {# gastos}}?",
+      "confirmBody": "Cada uno conserva la categoría y la descripción que tiene ahora.",
+      "confirmSkipped": "{count, plural, one {# queda pendiente porque aún no tiene categoría.} other {# quedan pendientes porque aún no tienen categoría.}}",
+      "confirmCta": "Guardar {count}",
+      "batchSaved": "{count, plural, one {# gasto guardado} other {# gastos guardados}}",
+      "batchPartial": "{saved} guardados · {failed} con error"
+    }
+  },
+  "transactionTypes": {
+    "EXPENSE": "Gasto",
+    "INCOME": "Ingreso",
+    "TRANSFER": "Transferencia",
+    "ADJUSTMENT": "Ajuste"
+  },
+  "stats": {
+    "title": "Estadísticas",
+    "export": "Exportar",
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "types": {
+      "EXPENSE": "Gastos",
+      "INCOME": "Ingresos",
+      "TRANSFER": "Transferencias",
+      "ADJUSTMENT": "Ajustes"
+    },
+    "groups": {
+      "category": "Categorías",
+      "day": "Días",
+      "tag": "Etiquetas"
+    },
+    "totals": {
+      "EXPENSE": "Gasto total",
+      "INCOME": "Ingresos totales",
+      "TRANSFER": "Total transferido",
+      "ADJUSTMENT": "Total ajustado"
+    },
+    "summary": "{count, plural, one {# movimiento} other {# movimientos}} · promedio {average}",
+    "share": "{percent} %",
+    "txns": "{count, plural, one {# mov.} other {# mov.}}",
+    "uncategorized": "Sin categoría",
+    "archived": "archivada",
+    "unknownCategory": "Categoría desconocida",
+    "breakdown": "Reparto por categoría",
+    "perDay": "Por día",
+    "priciestDay": "Día más caro",
+    "biggestDay": "Día más alto",
+    "dailyAverage": "Promedio diario",
+    "noSpendDays": "Días sin gasto",
+    "quietDays": "Días sin movimientos",
+    "highest": "{day} · el más alto",
+    "dayBar": "{day}: {amount}",
+    "tagsNote": "Un movimiento con varias etiquetas cuenta en cada una, así que los totales por etiqueta pueden sumar más que el total.",
+    "untagged": "{amount} no tiene etiquetas.",
+    "tagRow": "#{tag}",
+    "transactionsCount": "{count, plural, one {# movimiento} other {# movimientos}}",
+    "empty": {
+      "title": "Sin movimientos en este período",
+      "body": "Prueba otro mes u otro tipo de movimiento."
+    },
+    "adjustmentsNote": "Los ajustes concilian saldos; nunca cuentan como gasto ni ingreso."
+  },
+  "public": {
+    "nav": {
+      "features": "Funciones",
+      "how": "Cómo funciona",
+      "privacy": "Privacidad",
+      "signIn": "Iniciar sesión",
+      "getStarted": "Crear cuenta gratis",
+      "language": "Idioma"
+    },
+    "footer": {
+      "copyright": "© {year} Ledger Flow",
+      "privacy": "Política de privacidad",
+      "terms": "Términos",
+      "dataProcessing": "Tratamiento de datos (Ley 1581)",
+      "contact": "Contacto",
+      "english": "English",
+      "spanish": "Español"
+    },
+    "landing": {
+      "metaTitle": "Ledger Flow · Mira a dónde se va tu dinero",
+      "metaDescription": "Registra un gasto en tres segundos, ponle un techo al mes y atrapa el gasto hormiga antes de que sume. Gratis, bilingüe, funciona sin conexión.",
+      "badge": "Gratis · sin tarjeta",
+      "title": "Mira a dónde se va tu dinero de verdad.",
+      "lede": "Registra un gasto en tres segundos, ponle un techo al mes y atrapa el gasto hormiga antes de que sume.",
+      "ctaPrimary": "Crea tu cuenta gratis",
+      "ctaSecondary": "Iniciar sesión",
+      "trust": "Funciona sin conexión · English & Español · Tus datos son tuyos",
+      "whyEyebrow": "Por qué Ledger Flow",
+      "whyTitle": "Hecho para lo pequeño",
+      "why1Title": "Captura en tres segundos",
+      "why1Body": "Toca, escribe el importe, listo. Añade la categoría después desde la bandeja de revisión: el gasto ya cuenta.",
+      "why2Title": "Presupuestos que te hablan",
+      "why2Body": "Un techo para el mes y límites por categoría, con ritmo y días restantes en palabras, no solo una barra.",
+      "why3Title": "Funciona sin señal",
+      "why3Body": "Registra en el bus o de viaje. Todo se sincroniza al volver la conexión, sin duplicados.",
+      "howEyebrow": "Cómo funciona",
+      "howTitle": "Listo en un minuto",
+      "step1Title": "Crea tu cuenta",
+      "step1Body": "Elige tu moneda una vez. Correo y contraseña, nada más.",
+      "step2Title": "Añade tu primera cuenta",
+      "step2Body": "Efectivo, banco o tarjeta, con el saldo de hoy.",
+      "step3Title": "Ponle un techo al mes",
+      "step3Body": "Luego registra los gastos según ocurren. Ese es todo el hábito.",
+      "ctaFinal": "Empieza ahora, es gratis",
+      "phoneLabel": "Vista previa de la pantalla de inicio"
+    },
+    "mock": {
+      "date": "Martes, 22 de septiembre",
+      "greeting": "Hola, John",
+      "initials": "JD",
+      "pending": "3 gastos rápidos por revisar · {amount} en total",
+      "spending": "Gasto de septiembre",
+      "dayOf": "Día 22 de 30",
+      "average": "Promedio diario {amount} · Ayer gastaste {yesterday}",
+      "progress": "64 % del presupuesto mensual",
+      "totalBalance": "Balance total",
+      "accounts": "4 cuentas",
+      "income": "Ingresos del mes",
+      "sameAs": "Igual que en agosto",
+      "budgets": "Presupuestos",
+      "seeAll": "Ver todos",
+      "food": "Comida",
+      "transport": "Transporte",
+      "foodStatus": "Quedan {amount} · vas bien",
+      "transportStatus": "Al 93 % con 8 días por delante"
+    },
+    "legal": {
+      "eyebrow": "Legal · actualizado el {date}",
+      "updated": "2026-09-01"
+    },
+    "privacy": {
+      "metaTitle": "Política de privacidad",
+      "metaDescription": "Qué guarda Ledger Flow, por qué y cómo lo controlas. También es nuestra política de tratamiento de datos según la Ley 1581 de 2012.",
+      "title": "Política de privacidad",
+      "intro": "Ledger Flow guarda los registros financieros que introduces para que los veas en cualquier dispositivo. Esta página explica qué guardamos, por qué y cómo lo controlas. También es nuestra política de tratamiento de datos según la Ley 1581 de 2012 de Colombia.",
+      "storeTitle": "Qué guardamos",
+      "store1": "Tu nombre, correo, idioma, zona horaria y moneda.",
+      "store2": "Las cuentas, categorías, movimientos y presupuestos que creas, incluidas notas y etiquetas.",
+      "store3": "Las sesiones por dispositivo (tipo de navegador, hora de inicio de sesión) para que puedas revisarlas y cerrarlas.",
+      "whyTitle": "Por qué",
+      "whyBody": "Solo para prestar el servicio: mostrarte tus datos, mantener los saldos correctos y proteger tu cuenta. No vendemos datos ni los usamos para publicidad.",
+      "rightsTitle": "Tus derechos",
+      "rightsBody": "Puedes leer, corregir y suprimir tus datos desde Ajustes en cualquier momento, y revocar tu autorización eliminando tu cuenta. Al eliminarla se conservan los registros para que puedas reactivarla; pídenos la eliminación definitiva y la haremos en 15 días hábiles.",
+      "processingTitle": "Tratamiento de datos (Ley 1581 de 2012)",
+      "processingBody": "Ledger Flow es el responsable del tratamiento de los datos que introduces. La finalidad es exclusivamente prestar el servicio descrito arriba. Puedes ejercer tus derechos de acceso, actualización, rectificación, supresión y revocatoria desde Ajustes o escribiendo al contacto de abajo; respondemos en 15 días hábiles.",
+      "contactTitle": "Contacto",
+      "contactBody": "Escribe a <email>{address}</email> para cualquier pregunta sobre tus datos."
+    },
+    "terms": {
+      "metaTitle": "Términos del servicio",
+      "metaDescription": "Las condiciones en que se ofrece Ledger Flow: una herramienta gratuita de finanzas personales, tu cuenta, uso aceptable y disponibilidad.",
+      "title": "Términos del servicio",
+      "intro": "Ledger Flow es una herramienta gratuita de finanzas personales. Al crear una cuenta aceptas estos términos.",
+      "serviceTitle": "El servicio",
+      "serviceBody": "Ledger Flow te permite registrar cuentas, movimientos, categorías y presupuestos y ver resúmenes. No es asesoría financiera y no se conecta con tu banco.",
+      "accountTitle": "Tu cuenta",
+      "accountBody": "Eres responsable de mantener tu contraseña en privado y de lo que se registre en tu cuenta. Puedes eliminarla en cualquier momento desde Ajustes; los registros se conservan un tiempo para que puedas volver y se eliminan definitivamente si lo pides.",
+      "useTitle": "Uso aceptable",
+      "useBody": "Usa el servicio para tus propios registros. No intentes acceder a datos de otras personas, interrumpir el servicio ni automatizar tráfico abusivo.",
+      "availabilityTitle": "Disponibilidad",
+      "availabilityBody": "El servicio se ofrece gratis y tal cual, sin garantía de disponibilidad ininterrumpida. Podemos cambiar o retirar funciones; los cambios importantes se anuncian en la app.",
+      "changesTitle": "Cambios en estos términos",
+      "changesBody": "Podemos actualizar estos términos. La fecha de arriba indica cuándo. Seguir usando el servicio tras un cambio implica aceptarlo.",
+      "contactTitle": "Contacto",
+      "contactBody": "Preguntas sobre estos términos: <email>{address}</email>."
+    },
+    "notFound": {
+      "title": "Página no encontrada",
+      "body": "La dirección puede estar mal o la página se movió. Tu dinero está donde lo dejaste.",
+      "home": "Ir al inicio",
+      "back": "Atrás"
+    },
+    "error": {
+      "title": "Algo salió mal",
+      "body": "La página no pudo cargar. Tus datos están a salvo; inténtalo en un momento.",
+      "retry": "Reintentar"
+    }
+  },
+  "pwa": {
+    "updateAvailable": "Hay una versión nueva",
+    "reload": "Recargar"
+  }
+}

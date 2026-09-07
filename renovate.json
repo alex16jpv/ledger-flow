@@ -1,0 +1,31 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits", ":pinAllExceptPeerDependencies"],
+  "schedule": ["before 6am on monday"],
+  "timezone": "America/Bogota",
+  "rangeStrategy": "bump",
+  "commitMessageSuffix": "(W-01)",
+  "lockFileMaintenance": { "enabled": true, "schedule": ["before 6am on monday"] },
+  "packageRules": [
+    {
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<6",
+      "description": "typescript-eslint does not support TypeScript 7 yet (see DECISIONS.md)"
+    },
+    {
+      "matchPackageNames": ["@types/node"],
+      "allowedVersions": "<25",
+      "description": "Types follow the Node LTS in .nvmrc"
+    },
+    {
+      "groupName": "all non-major dependencies",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "matchPackageNames": ["*"]
+    },
+    {
+      "groupName": "all major dependencies",
+      "matchUpdateTypes": ["major"],
+      "matchPackageNames": ["*"]
+    }
+  ]
+}

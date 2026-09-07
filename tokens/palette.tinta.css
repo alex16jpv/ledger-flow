@@ -1,0 +1,30 @@
+:root,
+:root[data-palette="tinta"] {
+  --palette-name: "Tinta";
+
+  --seed-neutral: oklch(0.50 0.012 75);
+  --seed-brand:   oklch(0.46 0.160 278);
+
+  --seed-red:     oklch(0.60 0.200 25);
+  --seed-orange:  oklch(0.68 0.180 50);
+  --seed-amber:   oklch(0.74 0.160 75);
+  --seed-yellow:  oklch(0.82 0.160 95);
+  --seed-lime:    oklch(0.76 0.180 125);
+  --seed-green:   oklch(0.64 0.170 150);
+  --seed-teal:    oklch(0.66 0.130 180);
+  --seed-cyan:    oklch(0.70 0.130 210);
+  --seed-blue:    oklch(0.60 0.180 250);
+  --seed-indigo:  oklch(0.55 0.190 275);
+  --seed-purple:  oklch(0.58 0.200 300);
+  --seed-pink:    oklch(0.66 0.200 340);
+  --seed-rose:    oklch(0.62 0.200 10);
+  --seed-gray:    oklch(0.60 0.020 75);
+  --seed-brown:   oklch(0.52 0.080 55);
+  --seed-black:   oklch(0.28 0.010 75);
+
+  
+  --seed-positive: var(--seed-green);
+  --seed-negative: var(--seed-red);
+  --seed-warning:  var(--seed-amber);
+  --seed-info:     var(--seed-blue);
+}

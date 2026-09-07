@@ -1,42 +1,27 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env
-.env*.local
-
-# vercel
-.vercel
-
-# typescript
+node_modules/
+.next/
+.next-e2e/
+.next-gate/
+out/
+coverage/
+playwright-report/
+playwright-report-gate/
+test-results/
 *.tsbuildinfo
 next-env.d.ts
+.env
+.env*.local
+.vercel/
+.DS_Store
+npm-debug.log*
+.size-limit-report.json
+public/sw.js
+public/sw.js.map
+public/sw-e2e.js
+public/sw-e2e.js.map
+public/sw-gate.js
+public/sw-gate.js.map
+public/swe-worker-*.js
+
+# Lighthouse CI reports
+.lighthouseci/

@@ -1,0 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
+
+import { list{{pascalCase name}} } from "./api";
+import { {{camelCase name}}Keys } from "./keys";
+
+export function use{{pascalCase name}}Query() {
+  return useQuery({ queryKey: {{camelCase name}}Keys.list(), queryFn: list{{pascalCase name}} });
+}
