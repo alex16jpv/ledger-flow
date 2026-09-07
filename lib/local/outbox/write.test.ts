@@ -17,6 +17,7 @@ import { createCategory } from "./categories";
 import { requestSync } from "./engine";
 import { operationPayload } from "./envelope";
 import { pendingOperations } from "./queue";
+import { resetOutboxStatus, setBlockedOperations } from "./status";
 import { createTransaction, deleteTransaction, updateTransaction } from "./transactions";
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -66,6 +67,37 @@ describe("writing through the outbox", () => {
     const [operation] = await pendingOperations(vault.db);
     expect(operation).toMatchObject({ entity: "account", action: "create", status: "pending" });
     expect(await vault.db.get("accounts", created.id)).toBeDefined();
+  });
+
+  // F-65, the question the ficha left open and the design answered: blocking the record would be
+  // worse than not sending the old, and nothing new waits behind what is blocked.
+  it("keeps writing normally while an app update holds part of the queue back", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("outbox", {
+      seq: 0.5,
+      opId: "op-old",
+      opVersion: 1,
+      entity: "transaction",
+      entityId: "t-old",
+      action: "create",
+      occurredAt: "2026-09-01T10:00:00.000Z",
+      payload: {},
+      dependsOn: [],
+      status: "pending",
+      attempts: 0,
+      lastError: null,
+    });
+    setBlockedOperations([0.5]);
+    reportOnline(false);
+
+    const created = await createAccount({ name: "Wallet", type: "CASH", balance: 250 });
+
+    expect(created.name).toBe("Wallet");
+    const queued = await pendingOperations(vault.db);
+    expect(queued.map((operation) => operation.entity)).toEqual(["transaction", "account"]);
+    // The new one carries no dependency on the blocked one: it is not waiting for it.
+    expect(queued[1]?.dependsOn).toEqual([]);
+    resetOutboxStatus();
   });
 
   it("with network the operation leaves the queue and the server's row replaces the projection", async () => {

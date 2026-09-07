@@ -23,6 +23,7 @@ import { aheadOfServer, clockStore } from "@/lib/local/clock";
 import { isFutureDate, isNameTaken } from "@/lib/local/outbox/conflict";
 import { operationPayload } from "@/lib/local/outbox/envelope";
 import {
+  discardBlockedOperations,
   discardImpact,
   discardOperations,
   operationsNeedingAttention,
@@ -40,7 +41,12 @@ interface Item {
   name: string | null;
 }
 
-type View = { kind: "loading" } | { kind: "error" } | { kind: "ready"; items: Item[] };
+type View =
+  | { kind: "loading" }
+  | { kind: "error" }
+  // F-65 keeps its own list: an operation an app update left behind is `pending`, so it never turns
+  // up among the ones the server refused, and its way out is not theirs either.
+  | { kind: "ready"; items: Item[]; blocked: Item[] };
 
 // F-58: the account the operation names was archived online, so trying again as it is would earn the
 // same refusal. Its way out is restoring the account, which travels in the same batch.
@@ -60,20 +66,21 @@ async function nameOf(
   return (await db.get("budgets", entityId))?.row.name ?? null;
 }
 
-async function load(): Promise<View> {
+async function load(blockedSeqs: readonly number[]): Promise<View> {
   const vault = currentVault();
   // No vault means no queue: there is nothing on this device that could be stuck.
-  if (!vault) return { kind: "ready", items: [] };
+  if (!vault) return { kind: "ready", items: [], blocked: [] };
   try {
+    const named = (operation: OutboxOperation): Promise<Item> =>
+      nameOf(vault.db, operation).then((name) => ({ operation, name }));
     const operations = await operationsNeedingAttention(vault.db);
+    const blocked = (
+      await Promise.all(blockedSeqs.map((seq) => vault.db.get("outbox", seq)))
+    ).filter((operation): operation is OutboxOperation => operation !== undefined);
     return {
       kind: "ready",
-      items: await Promise.all(
-        operations.map(async (operation) => ({
-          operation,
-          name: await nameOf(vault.db, operation),
-        })),
-      ),
+      items: await Promise.all(operations.map(named)),
+      blocked: await Promise.all(blocked.map(named)),
     };
   } catch {
     return { kind: "error" };
@@ -91,6 +98,7 @@ export function AttentionScreen() {
   const [busy, setBusy] = useState(false);
   const [comparing, setComparing] = useState<number | null>(null);
   const [confirming, setConfirming] = useState<{ seqs: number[]; impact: number } | null>(null);
+  const [kept, setKept] = useState<number[]>([]);
   const offset = useSyncExternalStore(
     clockStore.subscribe,
     clockStore.getSnapshot,
@@ -99,7 +107,7 @@ export function AttentionScreen() {
 
   useEffect(() => {
     let live = true;
-    void load().then((next) => {
+    void load(outbox.blocked).then((next) => {
       if (live) setView(next);
     });
     return () => {
@@ -163,6 +171,54 @@ export function AttentionScreen() {
 
   const items = view.kind === "ready" ? view.items : [];
   const allSeqs = items.map((item) => item.operation.seq);
+  const blocked = view.kind === "ready" ? view.blocked : [];
+
+  const discardBlocked = (seqs: number[]) =>
+    act(async () => {
+      const vault = currentVault();
+      if (!vault) return;
+      const { discarded } = await discardBlockedOperations(vault.db, seqs);
+      toast.show({ message: t("states.attention.discarded", { count: discarded }) });
+    });
+
+  // "Keep it here" is the answer that changes nothing on the device: the operation stays, in case a
+  // future version knows how to migrate it, and the card stops asking for this visit.
+  function blockedCard({ operation, name }: Item) {
+    const what = t(`states.conflict.entities.${operation.entity}`);
+    const said = saidAbout(operation, what);
+    return (
+      <Card key={operation.seq} className="flex flex-col gap-3 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-md font-semibold">{name ?? said}</h2>
+          <Badge tone="danger">{t("states.attention.blocked.badge")}</Badge>
+        </div>
+        {name && <p className="text-sm text-text-2">{said}</p>}
+        <p className="text-sm text-text-2">{t("states.attention.blocked.reason")}</p>
+        {kept.includes(operation.seq) ? (
+          <p className="text-sm text-text-3">{t("states.attention.blocked.kept")}</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="dangerSolid"
+              disabled={busy}
+              onClick={() => void discardBlocked([operation.seq])}
+            >
+              {t("states.conflict.discard")}
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => {
+                setKept((seqs) => [...seqs, operation.seq]);
+              }}
+            >
+              {t("states.attention.blocked.keep")}
+            </Button>
+          </div>
+        )}
+      </Card>
+    );
+  }
 
   const moment = (at: Date): string => `${dates.formatDay(at)} ${dates.formatTime(at)}`;
 
@@ -312,8 +368,8 @@ export function AttentionScreen() {
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
       <PageHeader
         title={
-          items.length > 0
-            ? t("states.attention.titleCount", { count: items.length })
+          items.length + blocked.length > 0
+            ? t("states.attention.titleCount", { count: items.length + blocked.length })
             : t("states.attention.title")
         }
         onBack={() => {
@@ -341,7 +397,7 @@ export function AttentionScreen() {
             </Button>
           }
         />
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && blocked.length === 0 ? (
         <Empty
           icon={<CloudCheck {...iconProps("lg")} />}
           title={t("states.attention.empty.title")}
@@ -354,17 +410,46 @@ export function AttentionScreen() {
         />
       ) : (
         <>
-          <Alert tone="neutral">{t("states.attention.intro")}</Alert>
-          {items.map(card)}
-          {items.length > 1 && (
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" disabled={busy} onClick={() => void askDiscard(allSeqs)}>
-                {t("states.attention.discardAll")}
-              </Button>
-              <Button variant="secondary" disabled={busy} onClick={() => void retry(allSeqs)}>
-                {t("states.attention.retryAll")}
-              </Button>
-            </div>
+          {items.length > 0 && (
+            <>
+              <Alert tone="neutral">{t("states.attention.intro")}</Alert>
+              {items.map(card)}
+              {items.length > 1 && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => void askDiscard(allSeqs)}
+                  >
+                    {t("states.attention.discardAll")}
+                  </Button>
+                  <Button variant="secondary" disabled={busy} onClick={() => void retry(allSeqs)}>
+                    {t("states.attention.retryAll")}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+          {blocked.length > 0 && (
+            <>
+              <Alert
+                tone="danger"
+                title={t("states.attention.blocked.alert", { count: blocked.length })}
+              >
+                {t("states.attention.blocked.alertBody", { count: blocked.length })}
+              </Alert>
+              {blocked.map(blockedCard)}
+              {blocked.length > 1 && (
+                <Button
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => void discardBlocked(blocked.map((item) => item.operation.seq))}
+                >
+                  {t("states.attention.blocked.discardAll", { count: blocked.length })}
+                </Button>
+              )}
+              <p className="text-sm text-text-3">{t("states.attention.blocked.foot")}</p>
+            </>
           )}
         </>
       )}

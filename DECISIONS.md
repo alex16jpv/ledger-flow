@@ -2021,3 +2021,25 @@ cover` is set once in the root layout for the standalone display.
   line, so it stays the same creation, with the same `opId` and the same dependents behind it — the
   sheet says how many. A device that runs _behind_ the server is not warned: the dates it writes are
   in the past, which the server takes.
+
+## 2026-09-06 · A queue an app update left behind is visible, and the app keeps writing (F-65)
+
+- **Decision:** `openVault` already answered `outbox: "blocked"` and a count; it now also names the
+  operations, `startMirror` publishes them into the outbox status, and three screens read them: the
+  sixth stripe of §8.12 (`blocked`, red, `role="alert"`, "An app update stopped n changes from being
+  sent." with "See them"), an alert plus a `n · blocked` value on "Waiting to send" in Sync status,
+  and a section of its own in the tray with "Discard this change" / "Keep it here" and a batch
+  discard. **The app keeps writing normally**: nothing is queued behind a blocked operation, and
+  nothing new is refused because of one.
+- **Why:** the plan (§6 O-F1) promised "the schema upgrade is blocked until the queue drains **and
+  the user is told**", and only the first half existed. Blocking the record instead would punish the
+  user for an update they did not ask for, and the new work does not depend on the old.
+- **Alternatives:** discarding what cannot be migrated (invariant 7: unsent work is never thrown
+  away without the user saying so); folding them in with the refusals (they were never refused —
+  the server has not seen them — so "Try again" would be a lie).
+- **Consequence:** a blocked operation is `pending`, so `discardOperations` (which only admits what
+  the server refused) does not take it; `discardBlockedOperations` shares its machinery, cascade
+  included. "Keep it here" changes nothing on the device by design, so the card marks itself kept
+  for the visit and stops asking — the operation stays for a future version that knows how to
+  migrate it, which is what the button promises. Today nothing is ever blocked: `OUTBOX_MIGRATIONS`
+  is empty and `OUTBOX_VERSION` is 1, so this is the screen the first bump will need.

@@ -383,6 +383,13 @@
       "offlineReadyToast": {
         "title": "Ready to use offline",
         "action": "What this means"
+      },
+      "blocked": {
+        "alert": "{count, plural, one {# change can’t be sent after an app update.} other {# changes can’t be sent after an app update.}}",
+        "alertBody": "{count, plural, one {It was recorded with an older version of the app and this one can’t send it. Everything you record from now on syncs normally.} other {They were recorded with an older version of the app and this one can’t send them. Everything you record from now on syncs normally.}}",
+        "cta": "{count, plural, one {See the # change} other {See the # changes}}",
+        "queue": "{count, plural, other {# · blocked}}",
+        "queueMeta": "Blocked by an app update"
       }
     }
   },
@@ -410,6 +417,11 @@
       "title": "You’re signed out. Nothing is syncing.",
       "body": "{count, plural, one {# change is saved on this device} other {# changes are saved on this device}}",
       "cta": "Sign in to sync"
+    },
+    "blocked": {
+      "title": "{count, plural, one {An app update stopped # change from being sent.} other {An app update stopped # changes from being sent.}}",
+      "body": "They are still saved on this device.",
+      "cta": "See them"
     },
     "conflicts": {
       "title": "Some changes need your attention.",
@@ -553,6 +565,16 @@
         "title": "Nothing needs you",
         "body": "Every change on this device either synced or is still on its way.",
         "cta": "Go home"
+      },
+      "blocked": {
+        "badge": "Blocked by an app update",
+        "alert": "{count, plural, one {# change can’t be sent after an app update.} other {# changes can’t be sent after an app update.}}",
+        "alertBody": "{count, plural, one {Everything you record from now on syncs normally; this one was recorded with an older version and stayed behind. Discarding it frees the queue.} other {Everything you record from now on syncs normally; these # were recorded with an older version and stayed behind. Discarding them frees the queue.}}",
+        "reason": "It was recorded with an older version of the app and this version can’t send it. It will never reach the server on its own.",
+        "keep": "Keep it here",
+        "kept": "Kept on this device.",
+        "discardAll": "{count, plural, one {Discard the # change} other {Discard the # changes}}",
+        "foot": "Nothing you record now waits behind these."
       }
     },
     "pendingSync": "Pending sync",

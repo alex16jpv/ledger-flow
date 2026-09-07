@@ -2,7 +2,7 @@ import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
-import { refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
+import { refreshOutboxStatus, resetOutboxStatus, setBlockedOperations } from "@/lib/local/outbox";
 import { setCurrentVault } from "@/lib/local/repository";
 import { accountRecord, type OutboxOperation } from "@/lib/local/schema";
 import { reportOnline } from "@/lib/network/connectivity";
@@ -92,6 +92,29 @@ describe("Sync status", () => {
     expect(screen.getByText("Last error: NETWORK")).toBeInTheDocument();
     // §4.3 rule 3: the app says which mode it runs in, because on iOS they hold different data.
     expect(screen.getByText("Browser tab")).toBeInTheDocument();
+  });
+
+  // F-65: `openVault` said the queue was blocked and no screen said it.
+  it("says the queue is blocked by an app update, and where to see it", async () => {
+    const vault = await openTestVault("u1");
+    await vault.db.put("outbox", operation(1));
+    setCurrentVault(vault);
+    setBlockedOperations([1]);
+    await refreshOutboxStatus(vault.db);
+
+    view();
+
+    expect(
+      await screen.findByText("1 change can’t be sent after an app update."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See the 1 change" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/sync"),
+    );
+    // The queue row says why it is not moving instead of the last error.
+    expect(screen.getByText("1 · blocked")).toBeInTheDocument();
+    expect(screen.getByText("Blocked by an app update")).toBeInTheDocument();
+    expect(screen.queryByText("Last error: NETWORK")).not.toBeInTheDocument();
   });
 
   // F-54: nobody could tell when a device had finished preparing; "Last synced" only ever spoke

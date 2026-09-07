@@ -170,6 +170,8 @@ describe("outbox migrations", () => {
 
     expect(blocked.outbox).toBe("blocked");
     expect(blocked.blockedOperations).toBe(1);
+    // F-65: which one, so the tray can show it and the user can throw it away.
+    expect(blocked.blockedSeqs).toEqual([13]);
     const stored = await blocked.db.getAll("outbox");
     expect(stored).toHaveLength(20);
     expect(stored.every((op) => op.opVersion === 1)).toBe(true);

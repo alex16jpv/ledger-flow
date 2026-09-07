@@ -81,7 +81,29 @@ export async function discardOperations(
   seqs: readonly number[],
 ): Promise<DiscardResult> {
   const queue = await pendingOperations(db);
-  const seeds = seedsOf(queue, seqs);
+  return discardSeeds(db, queue, seedsOf(queue, seqs));
+}
+
+// An operation an app update left behind is `pending`, not stuck: the server never refused it, this
+// build simply cannot send it (F-65). Throwing it away is the same work with a different admission
+// test — anything queued on top of a discarded create still goes with it.
+export async function discardBlockedOperations(
+  db: VaultDb,
+  seqs: readonly number[],
+): Promise<DiscardResult> {
+  const queue = await pendingOperations(db);
+  return discardSeeds(
+    db,
+    queue,
+    queue.filter((operation) => seqs.includes(operation.seq)),
+  );
+}
+
+async function discardSeeds(
+  db: VaultDb,
+  queue: OutboxOperation[],
+  seeds: OutboxOperation[],
+): Promise<DiscardResult> {
   if (seeds.length === 0) return { discarded: 0 };
   const victims = victimsOf(queue, seeds);
 

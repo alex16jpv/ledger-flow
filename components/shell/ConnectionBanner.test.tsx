@@ -2,7 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
-import { refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
+import { refreshOutboxStatus, resetOutboxStatus, setBlockedOperations } from "@/lib/local/outbox";
 import { setCurrentVault } from "@/lib/local/repository/read";
 import type { OutboxOperation } from "@/lib/local/schema";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
@@ -128,6 +128,24 @@ describe("ConnectionBanner", () => {
     await queueOf([operation(1, { status: "conflict" })]);
     render({ signedOut: true, onSignIn: vi.fn() });
     expect(screen.getByRole("status")).toHaveTextContent("You’re signed out.");
+
+    reportOnline(false);
+    expect(await screen.findByRole("status")).toHaveTextContent("You’re offline.");
+  });
+
+  // F-65: `openVault` reported a blocked outbox and nobody read it, so a queue that could never go
+  // out looked exactly like one that had not gone out yet.
+  it("says an app update stopped changes from being sent, above everything but the network", async () => {
+    await queueOf([operation(1), operation(2, { status: "conflict" })]);
+    setBlockedOperations([1]);
+    render({ signedOut: true, onSignIn: vi.fn() });
+
+    const stripe = screen.getByRole("alert");
+    expect(stripe).toHaveTextContent("An app update stopped 1 change from being sent.");
+    expect(stripe).toHaveTextContent("They are still saved on this device.");
+
+    await userEvent.click(screen.getByRole("button", { name: "See them" }));
+    expect(push).toHaveBeenCalledWith("/sync");
 
     reportOnline(false);
     expect(await screen.findByRole("status")).toHaveTextContent("You’re offline.");

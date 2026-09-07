@@ -35,6 +35,9 @@ export interface VaultHandle {
   mirrorReset: boolean;
   outbox: OutboxState;
   blockedOperations: number;
+  // Which ones, so the tray can show them and the user can throw them away (F-65). Empty unless
+  // `outbox` is "blocked".
+  blockedSeqs: readonly number[];
   close: () => void;
 }
 
@@ -122,26 +125,26 @@ function migrateOperation(
 async function upgradeOutbox(
   db: IDBPDatabase<VaultSchema>,
   definition: VaultDefinition,
-): Promise<{ state: OutboxState; blocked: number }> {
+): Promise<{ state: OutboxState; blocked: readonly number[] }> {
   const stored = await readMetaNumber(db, "outboxVersion");
-  if (stored === definition.outboxVersion) return { state: "current", blocked: 0 };
+  if (stored === definition.outboxVersion) return { state: "current", blocked: [] };
 
   const pending = await db.getAll("outbox");
   const migrated: OutboxOperation[] = [];
-  let blocked = 0;
+  const blocked: number[] = [];
   for (const operation of pending) {
     const next = migrateOperation(operation, definition.outboxVersion, definition.outboxMigrations);
     if (next) migrated.push(next);
-    else blocked += 1;
+    else blocked.push(operation.seq);
   }
-  if (blocked > 0) return { state: "blocked", blocked };
+  if (blocked.length > 0) return { state: "blocked", blocked };
 
   const tx = db.transaction(["outbox", "meta"], "readwrite");
   const outbox = tx.objectStore("outbox");
   for (const operation of migrated) await outbox.put(operation);
   await tx.objectStore("meta").put({ key: "outboxVersion", value: definition.outboxVersion });
   await tx.done;
-  return { state: migrated.length > 0 ? "migrated" : "current", blocked: 0 };
+  return { state: migrated.length > 0 ? "migrated" : "current", blocked: [] };
 }
 
 export interface OpenVaultOptions {
@@ -181,7 +184,8 @@ export async function openVault(
     userId,
     mirrorReset,
     outbox: outbox.state,
-    blockedOperations: outbox.blocked,
+    blockedOperations: outbox.blocked.length,
+    blockedSeqs: outbox.blocked,
     close: () => {
       db.close();
     },

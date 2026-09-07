@@ -29,8 +29,8 @@ export function ConnectionBanner({ signedOut = false, onSignIn }: ConnectionBann
   );
 
   // The order is DESIGN.md §8.12 and only one stripe is painted: with no network nothing can be
-  // signed in or sent, so `offline` wins; with the session dead, resolving conflicts changes
-  // nothing until there is someone to send them to, so `signedout` comes before `error`.
+  // signed in or sent, so `offline` wins; with the queue blocked or the session dead, resolving
+  // conflicts changes nothing yet, so both come before `error`.
   if (phase === "offline") {
     return (
       <Banner
@@ -42,6 +42,23 @@ export function ConnectionBanner({ signedOut = false, onSignIn }: ConnectionBann
             {outbox.pending > 0 && ` ${t("offline.waiting", { count: outbox.pending })}`}
           </>
         }
+      />
+    );
+  }
+  // An update this build cannot migrate past left these behind (F-65): nothing the user does sends
+  // them, so it comes before the conflicts, which are still worth resolving.
+  if (outbox.blocked.length > 0) {
+    return (
+      <Banner
+        variant="blocked"
+        title={t("blocked.title", { count: outbox.blocked.length })}
+        body={t("blocked.body")}
+        action={{
+          label: t("blocked.cta"),
+          onClick: () => {
+            router.push("/sync");
+          },
+        }}
       />
     );
   }

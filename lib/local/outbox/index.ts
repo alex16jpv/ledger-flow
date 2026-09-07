@@ -69,6 +69,7 @@ export {
   willBeSent,
 } from "./reproject";
 export {
+  discardBlockedOperations,
   discardImpact,
   discardOperation,
   discardOperations,
@@ -85,6 +86,7 @@ export {
   outboxStatusStore,
   refreshOutboxStatus,
   resetOutboxStatus,
+  setBlockedOperations,
 } from "./status";
 export { OUTBOX_SYNC_TAG } from "./tag";
 export {

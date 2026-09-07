@@ -99,6 +99,7 @@ export function SyncStatusView() {
   // F-54: "offline ready" is two halves — the data the pull left in the vault, and the screens the
   // worker warmed. It is ready only when both are, and with no network what is missing stays
   // missing, which is a state of its own and not a slower "preparing".
+  const blocked = outbox.blocked.length;
   const shell = snapshot.shell;
   const offlineReady = Boolean(snapshot.syncedAt) && shell.cached >= shell.expected;
 
@@ -111,6 +112,18 @@ export function SyncStatusView() {
   return (
     <>
       <PageHeader title={t("title")} />
+
+      {/* F-65: an app update left these behind and nothing the user does from here sends them. */}
+      {blocked > 0 && (
+        <Alert tone="danger" title={t("blocked.alert", { count: blocked })}>
+          <span className="flex flex-col items-start gap-2">
+            {t("blocked.alertBody", { count: blocked })}
+            <Link href="/sync" className={buttonClasses({ variant: "secondary", size: "sm" })}>
+              {t("blocked.cta", { count: blocked })}
+            </Link>
+          </span>
+        </Alert>
+      )}
 
       {snapshot.mode === "browser" && <Alert tone="warning">{t("durability.warning")}</Alert>}
 
@@ -185,8 +198,14 @@ export function SyncStatusView() {
           <StatusRow
             icon={<CloudOff {...iconProps("sm")} />}
             title={t("queue.label")}
-            meta={outbox.lastError ? t("lastError.label", { code: outbox.lastError }) : undefined}
-            value={String(outbox.pending)}
+            meta={
+              blocked > 0
+                ? t("blocked.queueMeta")
+                : outbox.lastError
+                  ? t("lastError.label", { code: outbox.lastError })
+                  : undefined
+            }
+            value={blocked > 0 ? t("blocked.queue", { count: blocked }) : String(outbox.pending)}
           />
           {/* Only when it fell back: a server without `POST /sync` takes the queue one operation at
               a time, and support has no other way to see it. */}

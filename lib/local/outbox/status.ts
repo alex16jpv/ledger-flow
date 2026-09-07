@@ -25,6 +25,10 @@ export interface OutboxStatus {
   firstAttention: number | null;
   // The last thing the server (or the network) said no with, for Ajustes › Sync status.
   lastError: string | null;
+  // Operations an app update left behind: written by an older version of the app, and this one has
+  // no migration for them, so they will never reach the server on their own (F-65). Everything
+  // recorded from now on syncs normally — nothing waits behind these.
+  blocked: readonly number[];
   projected: OutboxProjection;
 }
 
@@ -38,6 +42,7 @@ export const EMPTY_OUTBOX: OutboxStatus = {
   attentionRows: NO_ATTENTION,
   firstAttention: null,
   lastError: null,
+  blocked: [],
   projected: { balances: false, spending: false, budgets: false },
 };
 
@@ -59,9 +64,14 @@ function projectionOf(operations: OutboxOperation[]): OutboxProjection {
   };
 }
 
+let blocked: readonly number[] = [];
+
 function summarise(operations: OutboxOperation[]): OutboxStatus {
   const stuck = operations.filter(needsAttention);
   return {
+    // Discarding one is the only thing that can take it off the list, and that is a change of the
+    // queue like any other.
+    blocked: blocked.filter((seq) => operations.some((operation) => operation.seq === seq)),
     pending: operations.length,
     attention: stuck.length,
     queuedRows: new Set(operations.map((operation) => operation.entityId)),
@@ -84,7 +94,11 @@ const sameAttention = (
   right: ReadonlyMap<string, number>,
 ): boolean => left.size === right.size && [...left].every(([id, seq]) => right.get(id) === seq);
 
+const sameBlocked = (left: readonly number[], right: readonly number[]): boolean =>
+  left.length === right.length && left.every((seq, index) => right[index] === seq);
+
 const same = (left: OutboxStatus, right: OutboxStatus): boolean =>
+  sameBlocked(left.blocked, right.blocked) &&
   left.pending === right.pending &&
   left.attention === right.attention &&
   left.firstAttention === right.firstAttention &&
@@ -112,7 +126,15 @@ export async function refreshOutboxStatus(db: VaultDb): Promise<OutboxStatus> {
   return status;
 }
 
+// What `openVault` found it could not migrate. Set once, when the vault opens, and cleared with the
+// status: nothing else in the app can turn an operation into a blocked one.
+export function setBlockedOperations(seqs: readonly number[]): void {
+  blocked = seqs;
+  publish({ ...status, blocked: seqs });
+}
+
 export function resetOutboxStatus(): void {
+  blocked = [];
   publish(EMPTY_OUTBOX);
 }
 

@@ -4,7 +4,13 @@ import { connectivityStore } from "@/lib/network/connectivity";
 import { loadClockOffset } from "./clock";
 import { isVaultSupported, openVault, VAULT, type VaultHandle } from "./db";
 import { noteVaultOpened, reportVaultEvictionIfAny } from "./evicted";
-import { refreshOutboxStatus, requestSync, resetOutboxStatus, startSyncEngine } from "./outbox";
+import {
+  refreshOutboxStatus,
+  requestSync,
+  resetOutboxStatus,
+  setBlockedOperations,
+  startSyncEngine,
+} from "./outbox";
 import { requestPersistentStorage } from "./persist";
 import { pullChanges, type PullOptions } from "./pull";
 import { purgeVault } from "./purge";
@@ -125,6 +131,10 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     handle = opened;
     noteVaultOpened();
     setCurrentVault(opened);
+    // An app update this build has no migration for left these behind (F-65). The app keeps writing
+    // normally — blocking the record would be worse than not sending the old — so all this does is
+    // make them visible, and the stripe and the tray take it from here.
+    setBlockedOperations(opened.blockedSeqs);
     // The queue survives reloads, so the banner and the marked figures have to know about it before
     // the first write of the session (invariant 7).
     await refreshOutboxStatus(opened.db);

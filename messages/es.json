@@ -383,6 +383,13 @@
       "offlineReadyToast": {
         "title": "Ya puedes usar la app sin conexión",
         "action": "Qué significa"
+      },
+      "blocked": {
+        "alert": "{count, plural, one {# cambio no se puede enviar tras una actualización de la app.} other {# cambios no se pueden enviar tras una actualización de la app.}}",
+        "alertBody": "{count, plural, one {Se registró con una versión anterior de la app y esta no lo puede enviar. Todo lo que registres a partir de ahora se sincroniza con normalidad.} other {Se registraron con una versión anterior de la app y esta no los puede enviar. Todo lo que registres a partir de ahora se sincroniza con normalidad.}}",
+        "cta": "{count, plural, one {Ver el # cambio} other {Ver los # cambios}}",
+        "queue": "{count, plural, other {# · bloqueados}}",
+        "queueMeta": "Bloqueados por una actualización de la app"
       }
     }
   },
@@ -410,6 +417,11 @@
       "title": "Cerraste sesión. No se está sincronizando.",
       "body": "{count, plural, one {# cambio guardado en este dispositivo} other {# cambios guardados en este dispositivo}}",
       "cta": "Iniciar sesión para sincronizar"
+    },
+    "blocked": {
+      "title": "{count, plural, one {Una actualización de la app dejó # cambio sin enviar.} other {Una actualización de la app dejó # cambios sin enviar.}}",
+      "body": "Siguen guardados en este dispositivo.",
+      "cta": "Verlos"
     },
     "conflicts": {
       "title": "Algunos cambios necesitan tu atención.",
@@ -553,6 +565,16 @@
         "title": "Nada te necesita",
         "body": "Todos los cambios de este dispositivo se sincronizaron o van de camino.",
         "cta": "Ir al inicio"
+      },
+      "blocked": {
+        "badge": "Bloqueado por una actualización",
+        "alert": "{count, plural, one {# cambio no se puede enviar tras una actualización de la app.} other {# cambios no se pueden enviar tras una actualización de la app.}}",
+        "alertBody": "{count, plural, one {Todo lo que registres a partir de ahora se sincroniza con normalidad; este se registró con una versión anterior y se quedó atrás. Descartarlo libera la cola.} other {Todo lo que registres a partir de ahora se sincroniza con normalidad; estos # se registraron con una versión anterior y se quedaron atrás. Descartarlos libera la cola.}}",
+        "reason": "Se registró con una versión anterior de la app y esta no lo puede enviar. Nunca llegará al servidor por sí solo.",
+        "keep": "Dejarlo aquí",
+        "kept": "Se queda en este dispositivo.",
+        "discardAll": "{count, plural, one {Descartar el # cambio} other {Descartar los # cambios}}",
+        "foot": "Nada de lo que registres ahora espera detrás de estos."
       }
     },
     "pendingSync": "Pendiente de sincronizar",

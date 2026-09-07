@@ -1,11 +1,11 @@
-import { CircleAlert, CloudCheck, LogIn, WifiOff } from "lucide-react";
+import { CircleAlert, CloudAlert, CloudCheck, LogIn, WifiOff } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { iconProps } from "@/lib/icons/sizes";
 
 import { cn } from "./cn";
 
-export type BannerVariant = "offline" | "online" | "error" | "signedout";
+export type BannerVariant = "offline" | "online" | "error" | "signedout" | "blocked";
 
 const VARIANT: Record<BannerVariant, string> = {
   offline:
@@ -14,6 +14,7 @@ const VARIANT: Record<BannerVariant, string> = {
   error: "bg-danger-soft text-danger",
   signedout:
     "bg-warning-soft text-warning border-b-[color-mix(in_oklab,var(--warning)_25%,transparent)]",
+  blocked: "bg-danger-soft text-danger",
 };
 
 const ICON: Record<BannerVariant, typeof WifiOff> = {
@@ -21,6 +22,7 @@ const ICON: Record<BannerVariant, typeof WifiOff> = {
   online: CloudCheck,
   error: CircleAlert,
   signedout: LogIn,
+  blocked: CloudAlert,
 };
 
 export interface BannerAction {
@@ -38,11 +40,13 @@ export interface BannerProps {
 
 export function Banner({ variant, title, body, action, className }: BannerProps) {
   const Icon = ICON[variant];
+  // What needs the user, not what is merely true: a refusal and a queue an update left behind.
+  const alerting = variant === "error" || variant === "blocked";
   const actions: readonly BannerAction[] = !action ? [] : Array.isArray(action) ? action : [action];
   return (
     <div
-      role={variant === "error" ? "alert" : "status"}
-      aria-live={variant === "error" ? undefined : "polite"}
+      role={alerting ? "alert" : "status"}
+      aria-live={alerting ? undefined : "polite"}
       className={cn(
         "sticky top-0 z-30 flex items-center gap-3 border-b border-transparent px-4 py-2.5 text-sm font-medium transition-[background,color] duration-(--dur-3) ease-(--ease) md:px-8",
         VARIANT[variant],

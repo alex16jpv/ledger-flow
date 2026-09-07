@@ -8,6 +8,7 @@ import {
   refreshOutboxStatus,
   resetOutboxStatus,
   resetSyncEngine,
+  setBlockedOperations,
 } from "@/lib/local/outbox";
 import { setCurrentVault } from "@/lib/local/repository/read";
 import {
@@ -294,5 +295,44 @@ describe("the Needs your attention tray", () => {
     await userEvent.click(screen.getByRole("button", { name: "Fix the date" }));
     expect(await screen.findByRole("dialog")).toHaveTextContent("The server refused this date.");
     resetClockOffset();
+  });
+
+  // F-65: `openVault` reported them and nothing listed them, so the only way out was invisible.
+  it("gives the changes an app update left behind their own section and their own way out", async () => {
+    const vault = await vaultWith([
+      { action: "create", payload: { body: { id: "t1", amount: 15 } }, status: "pending" },
+    ]);
+    setBlockedOperations([1]);
+    await refreshOutboxStatus(vault.db);
+
+    render();
+
+    expect(await screen.findByText("Blocked by an app update")).toBeInTheDocument();
+    expect(screen.getByText(/1 change can’t be sent after an app update/)).toBeVisible();
+    expect(screen.getByText(/It will never reach the server on its own/)).toBeVisible();
+    expect(screen.getByText("Nothing you record now waits behind these.")).toBeVisible();
+    // Nothing the server refused: it never saw them, so none of the conflict answers apply.
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Keep it here" }));
+    expect(await screen.findByText("Kept on this device.")).toBeInTheDocument();
+    expect(await pendingOperations(vault.db)).toHaveLength(1);
+  });
+
+  it("throws a blocked change away when asked, without a confirmation it cannot undo", async () => {
+    const vault = await vaultWith([
+      { action: "create", payload: { body: { id: "t1", amount: 15 } }, status: "pending" },
+    ]);
+    setBlockedOperations([1]);
+    await refreshOutboxStatus(vault.db);
+
+    render();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Discard this change" }));
+
+    await waitFor(async () => {
+      expect(await pendingOperations(vault.db)).toHaveLength(0);
+    });
+    expect(screen.getByText("1 change discarded")).toBeInTheDocument();
   });
 });
