@@ -36,6 +36,13 @@ test("with reduced motion every transition and animation of the catalog is off",
   const skeleton = page.locator(SKELETON).first();
   await expect(skeleton).toBeVisible();
   expect(await skeleton.evaluate((node) => getComputedStyle(node).animationName)).toBe("none");
+
+  // F-74: a spinner that cannot spin is a broken arc, so the ring closes instead.
+  const ring = await spinner.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return [style.borderTopColor, style.borderRightColor, style.borderLeftColor];
+  });
+  expect(new Set(ring).size).toBe(1);
 });
 
 test("without the preference the same elements do move", async ({ page }) => {
@@ -51,4 +58,10 @@ test("without the preference the same elements do move", async ({ page }) => {
   const skeleton = page.locator(SKELETON).first();
   await expect(skeleton).toBeVisible();
   expect(await skeleton.evaluate((node) => getComputedStyle(node).animationName)).toBe("shimmer");
+
+  const ring = await spinner.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return [style.borderTopColor, style.borderRightColor];
+  });
+  expect(ring[0]).not.toBe(ring[1]);
 });
