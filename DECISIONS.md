@@ -2080,3 +2080,20 @@ cover` is set once in the root layout for the standalone display.
   changed shape: the far-future date of `transaction-form.spec.ts` cannot be typed any more, so the
   test asserts the calendar refuses it, and the inverted budget window of `BudgetForm.test.tsx` is
   now a day the picker does not offer.
+
+## 2026-09-06 · The account type is one row and a sheet that explains the nine (F-03)
+
+- **Decision:** the grid of nine chips is replaced by a `picker` row — "Type · Bank account · a
+  checking or current account" — that opens a sheet listing the nine types, each with the line that
+  says what it is. The same control serves the account form and the onboarding, which reach it
+  through the same `AccountForm`. Variant C, chosen by the owner on 2026-09-06.
+- **Why:** the grid broke into three lines and took half the screen, and it had nowhere to say what
+  an Overdraft is — which is the thing nobody could work out. A row is one line whatever the type,
+  and it scales if a tenth type ever appears.
+- **Alternatives, both drawn in `preview/13-variaciones.html` with the reason they lost:** a single
+  scrollable line of nine chips (dragging with a mouse is awkward and the last types are never
+  discovered); five essentials plus "More" (the four odd types hide behind a button, in a sheet
+  different from the rest of the form).
+- **Consequence:** the description is written once, capitalised, and the row lowercases its first
+  letter to read as a clause. Two e2e tests and two component tests choose the type through the sheet
+  now.

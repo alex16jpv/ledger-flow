@@ -90,6 +90,17 @@
     "LOAN": "Préstamo",
     "OTHER": "Otra"
   },
+  "accountTypeDescriptions": {
+    "CASH": "Billetes y monedas que llevas encima",
+    "ACCOUNT": "Una cuenta corriente o de ahorros del banco",
+    "CARD": "Gasto que pagas después",
+    "DEBIT_CARD": "Ligada a una cuenta del banco",
+    "SAVINGS": "Dinero que apartas",
+    "INVESTMENT": "Fondos, acciones, cripto",
+    "OVERDRAFT": "Un saldo en negativo que puedes usar",
+    "LOAN": "Dinero que debes",
+    "OTHER": "Cualquier otra cosa"
+  },
   "auth": {
     "email": "Correo",
     "password": "Contraseña",
@@ -834,6 +845,9 @@
       "notePlaceholder": "Comisión bancaria de agosto",
       "save": "Registrar ajuste",
       "saved": "Ajuste registrado"
+    },
+    "typePicker": {
+      "title": "Tipo de cuenta"
     }
   },
   "budgets": {

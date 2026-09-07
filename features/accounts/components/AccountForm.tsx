@@ -12,18 +12,17 @@ import { Amount } from "@/components/ui/Amount";
 import { AmountInput } from "@/components/ui/AmountInput";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Chip, ChipRow } from "@/components/ui/Chip";
 import { Field, Input } from "@/components/ui/Field";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
 import { changedOnly, nothingChanged } from "@/lib/form/changes";
 import { validationMessage } from "@/lib/i18n/validation";
-import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { iconProps } from "@/lib/icons/sizes";
 import type { Account } from "@/types/api";
 
 import { useCreateAccount, useUpdateAccount } from "../hooks";
-import { ACCOUNT_TYPES, accountFormSchema, type AccountFormValues } from "../schemas";
+import { accountFormSchema, type AccountFormValues } from "../schemas";
+import { AccountTypePicker } from "./AccountTypePicker";
 
 interface AccountFormProps {
   account?: Account;
@@ -113,32 +112,12 @@ export function AccountForm({
           control={form.control}
           name="type"
           render={({ field }) => (
-            <Field
+            <AccountTypePicker
+              value={field.value}
+              onChange={field.onChange}
               label={t("accounts.form.type")}
               error={validationMessage(t, errors.type?.message)}
-            >
-              <ChipRow
-                role="group"
-                aria-label={t("accounts.form.type")}
-                className="flex-wrap overflow-visible"
-              >
-                {ACCOUNT_TYPES.map((option) => {
-                  const Icon = accountTypeIcon(option);
-                  return (
-                    <Chip
-                      key={option}
-                      selected={field.value === option}
-                      icon={<Icon {...iconProps("sm")} />}
-                      onClick={() => {
-                        field.onChange(option);
-                      }}
-                    >
-                      {t(`accountTypes.${option}`)}
-                    </Chip>
-                  );
-                })}
-              </ChipRow>
-            </Field>
+            />
           )}
         />
         <Controller

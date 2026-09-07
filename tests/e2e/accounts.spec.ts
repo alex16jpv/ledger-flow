@@ -77,7 +77,12 @@ test("a new user creates, edits, promotes, archives and restores accounts, with 
   await page.getByRole("link", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/accounts\/new$/);
   await page.getByRole("textbox", { name: "Name" }).fill("Wallet");
-  await page.getByRole("button", { name: "Cash", exact: true }).click();
+  // F-03: the nine types live in a sheet now, one row that explains each of them.
+  await page.getByRole("button", { name: /^Type/ }).click();
+  await page
+    .getByRole("dialog", { name: "Account type" })
+    .getByRole("option", { name: /^Cash/ })
+    .click();
   await expect(page.getByText("Cash · preview")).toBeVisible();
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByText("Account created")).toBeVisible();

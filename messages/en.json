@@ -90,6 +90,17 @@
     "LOAN": "Loan",
     "OTHER": "Other"
   },
+  "accountTypeDescriptions": {
+    "CASH": "Notes and coins you carry",
+    "ACCOUNT": "A checking or current account",
+    "CARD": "Spending you pay back later",
+    "DEBIT_CARD": "Tied to a bank account",
+    "SAVINGS": "Money you keep aside",
+    "INVESTMENT": "Funds, stocks, crypto",
+    "OVERDRAFT": "A negative balance you can use",
+    "LOAN": "Money you owe",
+    "OTHER": "Anything else"
+  },
   "auth": {
     "email": "Email",
     "password": "Password",
@@ -834,6 +845,9 @@
       "notePlaceholder": "August bank fee",
       "save": "Save adjustment",
       "saved": "Adjustment saved"
+    },
+    "typePicker": {
+      "title": "Account type"
     }
   },
   "budgets": {

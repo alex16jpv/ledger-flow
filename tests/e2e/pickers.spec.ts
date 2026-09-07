@@ -165,7 +165,11 @@ test("a new account can be created inline from the picker", async ({ page, reque
     .click();
   const form = page.getByRole("dialog", { name: "New account" });
   await form.getByLabel("Name").fill(name);
-  await form.getByRole("button", { name: "Savings" }).click();
+  await form.getByRole("button", { name: /^Type/ }).click();
+  await page
+    .getByRole("dialog", { name: "Account type" })
+    .getByRole("option", { name: /^Savings/ })
+    .click();
   await form.getByRole("button", { name: "Create account" }).click();
   await expect(form).toBeHidden();
   await expect(result(page, "account-result")).toHaveText(`Selected: ${name}`);
