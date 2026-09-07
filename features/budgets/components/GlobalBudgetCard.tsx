@@ -24,6 +24,7 @@ export interface GlobalBudgetCardProps {
 
 export function GlobalBudgetCard({ budget, now, href }: GlobalBudgetCardProps) {
   const t = useTranslations("budgets.list");
+  const pace = useTranslations("budgets.pace");
   const outbox = useOutbox();
   const money = useMoney();
   const statusText = useBudgetStatusText();
@@ -57,6 +58,11 @@ export function GlobalBudgetCard({ budget, now, href }: GlobalBudgetCardProps) {
           value={budget.spent}
           max={budget.amount}
           marker={progress.elapsed}
+          markerLabel={pace("tooltip", {
+            day: progress.day,
+            days: progress.days,
+            percent: Math.round(progress.elapsed * 100),
+          })}
           color={budget.color}
           label={budget.name}
           className="flex-1"

@@ -37,6 +37,7 @@ export function HeroCard({
   onCreateBudget,
 }: HeroCardProps) {
   const t = useTranslations("home");
+  const pace = useTranslations("budgets.pace");
   const outbox = useOutbox();
   const money = useMoney();
   const dates = useDates();
@@ -92,6 +93,11 @@ export function HeroCard({
               value={globalBudget.spent}
               max={globalBudget.amount}
               marker={month.dayOfMonth / month.daysInMonth}
+              markerLabel={pace("tooltip", {
+                day: month.dayOfMonth,
+                days: month.daysInMonth,
+                percent: Math.round((month.dayOfMonth / month.daysInMonth) * 100),
+              })}
               color={globalBudget.color}
               label={globalBudget.name}
               className="flex-1"

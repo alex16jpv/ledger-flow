@@ -33,6 +33,11 @@ export function BudgetHero({ budget, icon, now }: BudgetHeroProps) {
   const money = useMoney();
   const dates = useDates();
   const progress = budgetProgress(budget, now);
+  const paceMark = {
+    day: progress.day,
+    days: progress.days,
+    percent: Math.round(progress.elapsed * 100),
+  };
   const from = new Date(budget.periodFrom);
   const to = new Date(budget.periodTo);
   const range = dates.formatRange(from, new Date(to.getTime() - 1));
@@ -79,11 +84,14 @@ export function BudgetHero({ budget, icon, now }: BudgetHeroProps) {
           value={budget.spent}
           max={budget.amount}
           marker={progress.elapsed}
+          markerLabel={t("pace.tooltip", paceMark)}
           color={budget.color}
           label={budget.name}
           className="flex-1"
         />
       </Projected>
+      {/* Only here: the detail has room for it, and a tooltip does not exist for a finger (F-08). */}
+      <p className="text-sm text-text-3">{t("pace.legend", paceMark)}</p>
       <div className="grid grid-cols-3 gap-3 pt-1">
         <Stat
           label={t("detail.remaining")}

@@ -992,6 +992,10 @@
       "body": "“{name}” is active for the same {period} period and covers the same spending, so this one can’t come back as it was. Create a new budget instead.",
       "bodyUnknown": "An active {period} budget already covers the same spending, so this one can’t come back as it was. Create a new budget instead.",
       "open": "Open {name}"
+    },
+    "pace": {
+      "tooltip": "Day {day} of {days} · {percent}% expected",
+      "legend": "The mark is today’s pace: {percent}% of the period has passed (day {day} of {days})."
     }
   },
   "categoryTypes": {

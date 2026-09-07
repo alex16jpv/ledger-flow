@@ -992,6 +992,10 @@
       "body": "«{name}» está activo para el mismo período {period} y cubre el mismo gasto, así que este no puede volver tal como estaba. Crea uno nuevo.",
       "bodyUnknown": "Ya hay un presupuesto {period} activo que cubre el mismo gasto, así que este no puede volver tal como estaba. Crea uno nuevo.",
       "open": "Abrir {name}"
+    },
+    "pace": {
+      "tooltip": "Día {day} de {days} · {percent} % esperado",
+      "legend": "La marca es el ritmo de hoy: ha pasado el {percent} % del período (día {day} de {days})."
     }
   },
   "categoryTypes": {

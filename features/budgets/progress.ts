@@ -17,6 +17,9 @@ export interface BudgetProgress {
   ratio: number;
   remaining: number;
   elapsed: number;
+  // Which day of the period today is, and how many it has: what the pace mark says out loud (F-08).
+  day: number;
+  days: number;
   daysLeft: number;
   perDay: number | null;
   status: BudgetStatusKind;
@@ -34,6 +37,8 @@ export function budgetProgress(
   const ratio = budget.amount > 0 ? budget.spent / budget.amount : budget.spent > 0 ? Infinity : 0;
   const remaining = budget.amount - budget.spent;
   const elapsed = to > from ? Math.min(1, Math.max(0, (now.getTime() - from) / (to - from))) : 1;
+  const days = Math.max(1, Math.round((to - from) / DAY_MS));
+  const day = Math.min(days, Math.max(1, Math.ceil((now.getTime() - from) / DAY_MS)));
   const daysLeft = Math.max(0, Math.ceil((to - now.getTime()) / DAY_MS));
   const ended = now.getTime() >= to;
   const perDay = !ended && daysLeft > 0 && remaining > 0 ? remaining / daysLeft : null;
@@ -47,7 +52,7 @@ export function budgetProgress(
           : ratio >= 0.8
             ? "fast"
             : "ok";
-  return { ratio, remaining, elapsed, daysLeft, perDay, status };
+  return { ratio, remaining, elapsed, day, days, daysLeft, perDay, status };
 }
 
 export function isGlobalBudget(budget: Pick<Budget, "categoryIds">): boolean {

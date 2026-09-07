@@ -2097,3 +2097,19 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** the description is written once, capitalised, and the row lowercases its first
   letter to read as a clause. Two e2e tests and two component tests choose the type through the sheet
   now.
+
+## 2026-09-06 · The pace mark says what it marks, and explains itself once (F-08)
+
+- **Decision:** the vertical line on a progress bar becomes a focusable `button` carrying its own
+  `aria-label` and a tooltip — "Day 22 of 30 · 73% expected" — wherever the mark is drawn: the Home
+  hero, the global budget card and the budget detail. **Only the detail** repeats it as a fixed line
+  under the bar ("The mark is today's pace: …"). Variant B, chosen by the owner on 2026-09-06.
+- **Why:** the line had no label at all, so it was decoration to anyone who had not been told. The
+  tooltip does not exist for a finger, which is why the one screen with room says it in text; on the
+  list and the hero the same line would repeat on every card.
+- **Alternatives:** the tooltip alone (variant A: a phone never sees it); a legend everywhere (noise
+  on every card, and it does not fit).
+- **Consequence:** `Progress` no longer clips the mark: the bar keeps its own `overflow-hidden` for
+  the fill, and the mark and its bubble sit outside it, so the tooltip is not cut off by the element
+  it explains. A mark with no label stays a decorative line — that is what the landing's mock uses.
+  `budgetProgress` gained `day` and `days`, which is what the text says out loud.
