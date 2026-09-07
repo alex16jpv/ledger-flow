@@ -50,13 +50,26 @@ test("a clock days ahead earns a refusal the queue keeps, and says why", async (
   });
   await page.goto("/sync");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/change needs you/);
-  await expect(page.getByText("The date can’t be in the future.")).toBeVisible();
+  // F-66: the card names the date it refused and how far this device's clock is from the server's.
+  await expect(page.getByText(/is more than 24 hours ahead of the server’s time/)).toBeVisible();
+  await expect(page.getByText(/clock is 3 days ahead/)).toBeVisible();
 
   // Invariant 7: refused is not discarded. The movement is still on the device and still in the
   // queue, and the server never took it.
   expect((await outbox(page))[0]).toMatchObject({ status: "failed", lastError: "FUTURE_DATE" });
   expect(await listTransactions(request)).toEqual([]);
   expect((await vaultState(page))?.pending).toBe(1);
+
+  // F-66, the way out: the date is corrected to the server's own clock and the same movement goes.
+  await page.getByRole("button", { name: "Fix the date" }).click();
+  const sheet = page.getByRole("dialog", { name: "Fix the date" });
+  await expect(sheet.getByText("The server refused this date.")).toBeVisible();
+  await sheet.getByRole("button", { name: "Save and try again" }).click();
+
+  await expect
+    .poll(async () => (await listTransactions(request)).length, { timeout: 60_000 })
+    .toBe(1);
+  await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 60_000 }).toBe(0);
 });
 
 // §1 example 2 seen from the other side: the request never reaches the server. Nothing is applied,
