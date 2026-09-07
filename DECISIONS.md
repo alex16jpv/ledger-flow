@@ -2186,3 +2186,21 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** the two fichas close on evidence rather than on a change, and the numbers are
   written down so the next person does not have to guess. The cap remains the answer if a real device
   ever says otherwise — and it is UI, so it would go through design first (D-36).
+
+## 2026-09-06 · The authenticated app gets a budget that matches a real route (F-10)
+
+- **Decision:** `tools/size-limit.mjs` budgets **every** `(app)` screen against one limit, reports the
+  heaviest, and fails when a budget matches no route at all. The `(app)` limit is **250 kB gz**, the
+  measured weight of the heaviest screen plus room.
+- **Why:** the old pattern was `/(app)/page`, and the group has no `page.tsx` of its own — every
+  screen is a segment below it — so it matched nothing, printed nothing and watched nothing from W-01
+  until now. A budget that can silently match nothing is worse than no budget, which is why matching
+  nothing is now a failure.
+- **Measured:** the 25 screens sit between **230.5 and 239.9 kB gz** of route-owned JS, on top of a
+  131.2 kB framework runtime that is reported separately. They are all within 10 kB of each other
+  because they share the shell, the providers, the message catalogue and the offline stack. The
+  200 kB the file carried was an aspiration nothing had ever been measured against; **the app has
+  never been under it**, and pretending otherwise by keeping the number would leave the check red
+  from its first honest run.
+- **Consequence:** growth is caught from here on. Whether 240 kB is where the app should sit is a
+  separate question, registered as its own finding.
