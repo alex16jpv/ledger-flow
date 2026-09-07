@@ -2230,9 +2230,15 @@ cover` is set once in the root layout for the standalone display.
   It is Zod v4's `allowsEval`, the probe it runs once to decide whether it can JIT-compile
   validators. The throw is caught, but the browser files the `securitypolicyviolation` before the
   catch runs, so every page load reported one: 229 in an e2e run, 8 in the demo.
-- **Decision:** `instrumentation-client.ts` calls `z.config({ jitless: true })`, which is the switch
-  Zod ships for exactly this. Validators take the interpreted path — which is the path they would
-  take anyway under a CSP without `unsafe-eval`.
+- **Decision:** `lib/validation/zod.ts` calls `z.config({ jitless: true })` and re-exports `z`; every
+  schema in the app imports `z` from there, so the switch is set before the first schema is built.
+  Validators take the interpreted path — the path they would take anyway under a CSP without
+  `unsafe-eval`.
+- **Where it is not:** `instrumentation-client.ts`. Configuring it there works, and measured: it puts
+  the whole of Zod in the bundle every page loads, which moved 84 kB gz from the app screens into the
+  framework runtime — that is, onto the landing, which validates nothing. From the schemas it costs
+  the landing nothing. `lib/env.ts` imports it relatively, because `next.config.ts` loads that file
+  through a transpiler that does not resolve the `@/` alias.
 - **Measured after:** **zero** `csp-report` events in a full e2e run and zero in the demo, where there
   were 229 and 8.
 - **Consequence:** the reason not to enforce the CSP is gone. `CSP_REPORT_ONLY` in `proxy.ts` is left

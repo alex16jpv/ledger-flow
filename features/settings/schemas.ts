@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/lib/validation/zod";
 
 export const NAME_MAX = 255;
 export const PASSWORD_MIN = 8;

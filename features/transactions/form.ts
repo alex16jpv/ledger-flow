@@ -1,7 +1,6 @@
-import { z } from "zod";
-
 import { dateTimeInstant, dateTimeParts } from "@/lib/format/dates";
 import { MAX_AMOUNT } from "@/lib/format/money";
+import { z } from "@/lib/validation/zod";
 import type {
   components,
   CreateTransactionInput,

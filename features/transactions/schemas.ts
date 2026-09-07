@@ -1,6 +1,5 @@
-import { z } from "zod";
-
 import { MAX_AMOUNT } from "@/lib/format/money";
+import { z } from "@/lib/validation/zod";
 
 export const DESCRIPTION_MAX = 255;
 
