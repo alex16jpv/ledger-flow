@@ -446,7 +446,10 @@ Where they are resolved:
   in `seq` order, each with its reason in plain language and the same two ways out, plus "Discard
   all" and "Try all again". It has a route of its own rather than a place in Settings because
   Ajustes › Sync status is O-F6's, and the stripe has to be able to reach this list today. Nothing
-  here blocks the rest of the queue: only what named a stuck row waits with it.
+  here blocks the rest of the queue: only what named a stuck row waits with it. Like every other
+  screen of `(app)` it needs the marker cookie (F-75): a device whose session died still has it —
+  which is the case the tray exists for — and one that signed out is sent to the login, where it
+  would have found an empty tray anyway, because without a marker there is no vault.
 - **The movement's own detail screen** (F-29). `outboxStatus.attentionRows` maps a row id to the
   `seq` of the first stuck operation on it, so the screen showing a movement can open the sheet for
   it. The list row cannot: it is a `RowButton`, and a button inside a button is not HTML.
