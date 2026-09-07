@@ -2245,3 +2245,15 @@ cover` is set once in the root layout for the standalone display.
   as it is: turning it off is a change to what production refuses to run, and the owner decides that.
   With the report-only policy now silent across the whole suite, there is evidence that nothing else
   in the app needs `unsafe-eval` or an unnonced script.
+
+## 2026-09-06 · The hydration errors are gone, checked in the traces (F-53)
+
+- **Checked, not fixed:** both traces of `npm run demo:offline` — the run that moves the client's
+  clock three days and reads screens full of relative time, which is what produced them — carry **no
+  `React #418` and no hydration message at all**. What the console still holds is what an offline run
+  is expected to hold: `ERR_FAILED` for the requests made with the network cut, the RSC payload
+  fallbacks of D-28, and the mirror's own "pulling failed" warning.
+- **Why:** D-29 (R-3b) made the `(app)` screens render on the client only, so there is no server HTML
+  for the client's first render to disagree with. The ficha suspected as much; this is the evidence.
+- **Consequence:** the ficha closes on the check. Nothing was excluded from the error collector, so a
+  real hydration mismatch would still reach it.
