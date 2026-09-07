@@ -85,7 +85,12 @@ const serwist: Serwist = new Serwist({
 serwist.addEventListeners();
 
 // The other half of Background Sync: the engine registers this tag when a pass ends with the queue
-// still full, and the drain itself lives in the page (F-24).
+// still full, and the drain itself lives in the page (F-24). **The tag only brings the drain
+// forward while a tab is alive** (F-39, owner's decision 2026-09-06): woken with no clients,
+// `matchAll` answers an empty list and the queue waits for the next time the app is opened, which
+// costs the user nothing — nothing is lost, it is sent later. Draining from here would mean a second
+// copy of the engine, its routes and its access to the vault, which is the most delicate code in the
+// app and the last place to duplicate it.
 self.addEventListener("sync", (event) => {
   if (event.tag !== OUTBOX_SYNC_TAG) return;
   event.waitUntil(

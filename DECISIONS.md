@@ -2257,3 +2257,17 @@ cover` is set once in the root layout for the standalone display.
   for the client's first render to disagree with. The ficha suspected as much; this is the evidence.
 - **Consequence:** the ficha closes on the check. Nothing was excluded from the error collector, so a
   real hydration mismatch would still reach it.
+
+## 2026-09-06 · Background Sync brings the drain forward, it does not replace it (F-39)
+
+- **Decision (owner, 2026-09-06):** the `ledger-flow-outbox` tag stays as it is — the worker wakes,
+  posts to its clients, and the drain happens in the page. Woken with no tab open, `matchAll` answers
+  an empty list and the queue waits for the next time the app is opened. This is written down rather
+  than fixed.
+- **Why:** what the queue owes is never lost, only sent later, and a user who has work waiting opens
+  the app. The alternative was a second copy of the send path inside the worker — the engine, the
+  routes, the coalescing, the reconciliation and its own access to the vault — which is the most
+  delicate code in the app and the last place to have two of.
+- **Consequence:** a device that never reopens the app never syncs, which is the same as before the
+  tag existed; the tag only shortens the wait when a tab is alive. `app/sw.ts` says so where the
+  handler is, so the next person does not read the empty `matchAll` as a bug.
