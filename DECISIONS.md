@@ -2170,3 +2170,19 @@ cover` is set once in the root layout for the standalone display.
   row: **145 passed / 0 failed / 1 skipped**. That is the new baseline, and it is the first time the
   suite has had no standing failure. F-11 is closed with F-45: the `document-title` half is this, and
   the `ECONNRESET` half has not reappeared in any of these runs.
+
+## 2026-09-06 · Neither the tray nor the subscribed rows need the cap they were offered (F-35, F-36)
+
+- **Measured in Chromium, before touching anything, with the vault seeded through IndexedDB and the
+  app offline** (desktop project of the e2e suite; the spec was temporary and is not kept):
+  - **F-35 — 200 stuck operations in `/sync`:** 200 cards, three buttons each, painted and
+    interactive **304 ms** after the navigation, with **no long task** in the following 1.5 s.
+  - **F-36 — 300 rows subscribed to `useOutbox()`:** with one page of rows on screen a write costs
+    **599 ms** end to end; with all ten pages — 300 rows in the DOM — the same write costs **627 ms**,
+    and again **no long task**. The 5 % difference is inside the noise of opening a sheet, typing and
+    saving.
+- **Decision:** neither the 50-card cap with "n more" of F-35 nor the memoisation of F-36 is built.
+  Both were offered as "measure first", and the measurement says the user cannot tell.
+- **Consequence:** the two fichas close on evidence rather than on a change, and the numbers are
+  written down so the next person does not have to guess. The cap remains the answer if a real device
+  ever says otherwise — and it is UI, so it would go through design first (D-36).
