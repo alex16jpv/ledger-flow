@@ -12,6 +12,15 @@ test("protected routes redirect guests to the localized login with a next parame
   expect(new URL(es.headers().location ?? "", APP).href).toBe(`${APP}/es/login?next=%2Fsettings`);
 });
 
+// F-75: `/sync` was the one `(app)` screen missing from APP_PREFIXES, so it opened without a session
+// and never carried the noindex header the rest of the app does.
+test("the attention screen is protected like the rest of the app", async ({ request }) => {
+  const response = await request.get("/sync", { maxRedirects: 0 });
+  expect(response.status()).toBe(307);
+  expect(new URL(response.headers().location ?? "", APP).href).toBe(`${APP}/login?next=%2Fsync`);
+  expect(response.headers()["x-robots-tag"]).toBe("noindex, nofollow");
+});
+
 test("the BFF refuses cross-origin session calls", async ({ request }) => {
   const response = await request.post("/api/auth/login", {
     headers: { origin: "https://evil.example", "content-type": "application/json" },

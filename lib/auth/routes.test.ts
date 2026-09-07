@@ -1,4 +1,16 @@
-import { isGuestOnlyPath, isPublicPath, safeNextPath, stripLocale } from "./routes";
+import { readdirSync } from "node:fs";
+
+import {
+  isGuestOnlyPath,
+  isProtectedPath,
+  isPublicPath,
+  safeNextPath,
+  stripLocale,
+} from "./routes";
+
+// `dev/pickers` is the pickers bench: it lives in the group for the app frame, and what switches it
+// off is the componentCatalog flag, not a session (tools/check-dev-routes.mjs measures that).
+const FLAG_GUARDED = new Set(["dev"]);
 
 describe("route rules", () => {
   it("strips the locale prefix", () => {
@@ -15,6 +27,20 @@ describe("route rules", () => {
     expect(isPublicPath("/home")).toBe(false);
     expect(isPublicPath("/transactions/abc")).toBe(false);
     expect(isGuestOnlyPath("/register")).toBe(true);
+  });
+
+  it("asks for a session on every screen of the app group", () => {
+    const screens = readdirSync("app/[locale]/(app)", { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && !FLAG_GUARDED.has(entry.name))
+      .map((entry) => `/${entry.name}`);
+    expect(screens).toContain("/sync");
+    for (const screen of screens) {
+      expect(isProtectedPath(screen)).toBe(true);
+      expect(isProtectedPath(`${screen}/anything`)).toBe(true);
+    }
+    expect(isProtectedPath("/dev/pickers")).toBe(false);
+    expect(isProtectedPath("/login")).toBe(false);
+    expect(isProtectedPath("/homely")).toBe(false);
   });
 
   it("only follows same-origin next paths", () => {
