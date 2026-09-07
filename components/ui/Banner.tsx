@@ -1,23 +1,26 @@
-import { CircleAlert, CloudCheck, WifiOff } from "lucide-react";
+import { CircleAlert, CloudCheck, LogIn, WifiOff } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { iconProps } from "@/lib/icons/sizes";
 
 import { cn } from "./cn";
 
-export type BannerVariant = "offline" | "online" | "error";
+export type BannerVariant = "offline" | "online" | "error" | "signedout";
 
 const VARIANT: Record<BannerVariant, string> = {
   offline:
     "bg-warning-soft text-warning border-b-[color-mix(in_oklab,var(--warning)_25%,transparent)]",
   online: "bg-success-soft text-success",
   error: "bg-danger-soft text-danger",
+  signedout:
+    "bg-warning-soft text-warning border-b-[color-mix(in_oklab,var(--warning)_25%,transparent)]",
 };
 
 const ICON: Record<BannerVariant, typeof WifiOff> = {
   offline: WifiOff,
   online: CloudCheck,
   error: CircleAlert,
+  signedout: LogIn,
 };
 
 export interface BannerAction {

@@ -1932,3 +1932,25 @@ cover` is set once in the root layout for the standalone display.
   everything that waits on the phase: the strip, React Query's `onlineManager`, the outbox engine and
   the sign-in sheet. `tests/e2e/offline-hardening.spec.ts` asserts the sheet inside 15 s — well under
   the tick — so a regression cannot hide behind the interval again.
+
+## 2026-09-06 · A dead session has a stripe of its own, and the sheet closes for good (F-41)
+
+- **Decision:** the connection stripe gains a fifth state, `signedout` (amber, `log-in`, permanent
+  while it lasts): "You're signed out. Nothing is syncing." with the count of what is saved here and
+  "Sign in to sync" → `/login?reauth=1`. Ajustes › Sync status gains a fixed first row, **Session**,
+  that says `Active` or `Signed out` and carries the same way back. `SessionExpiredSheet` takes an
+  `onClose` that really closes: in local mode the X, `Escape` and the scrim dismiss the sheet and
+  leave the stripe behind, instead of walking to the login as `onClose = onSignIn` made them.
+- **Why:** with a vault on the device a dead session is not a wall — the app reads and queues — but
+  once the sheet was dismissed the only route back to the login was "Sign out", which is exactly what
+  must not be done with a queue on the device. The stripe warns without being looked for; the row
+  answers whoever went to look, and a screen that lists what this device owes the server cannot stay
+  quiet about there being nobody to say it to.
+- **Alternatives:** only the stripe (Sync status would keep lying by omission); only the row (nobody
+  opens Settings to discover a problem they have not been told about); keeping the sheet
+  undismissable (D-7: the app has to keep working).
+- **Consequence:** `ConnectionBanner` takes `signedOut` and `onSignIn` from the frame that already
+  knows both, so it stays testable without a session provider. **The stripe now follows the priority
+  DESIGN.md §8.12 declares** — `offline` → `signedout` → `error` → `pending` → `online` — which moves
+  `error` below `offline`: with no network nothing can be signed in or sent, and resolving a conflict
+  changes nothing until there is a session to send it with.

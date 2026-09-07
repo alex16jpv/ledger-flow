@@ -50,6 +50,9 @@ function Frame({ children }: { children: ReactNode }) {
     open: false,
     chain: false,
   });
+  // Closing the sheet in local mode closes it for good (F-41); the `signedout` stripe is what stays
+  // behind, and a session that comes back remounts this frame with the flag clear.
+  const [sheetDismissed, setSheetDismissed] = useState(false);
   useEffect(() => startHeartbeat(), []);
   const userId = session.user?.id;
   const sessionStatus = session.status;
@@ -107,7 +110,7 @@ function Frame({ children }: { children: ReactNode }) {
         onAdd={({ chain }) => {
           setQuickAdd({ open: true, chain });
         }}
-        banner={<ConnectionBanner />}
+        banner={<ConnectionBanner signedOut={sessionStatus === "expired"} onSignIn={goToLogin} />}
       >
         {mounted ? children : null}
       </AppShell>
@@ -122,9 +125,12 @@ function Frame({ children }: { children: ReactNode }) {
         }}
       />
       <SessionExpiredSheet
-        open={session.status === "expired"}
+        open={sessionStatus === "expired" && !sheetDismissed}
         localMode={localUserId !== undefined}
         onSignIn={goToLogin}
+        onClose={() => {
+          setSheetDismissed(true);
+        }}
       />
     </FormatSettingsProvider>
   );

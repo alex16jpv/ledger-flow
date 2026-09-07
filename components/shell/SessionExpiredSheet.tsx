@@ -14,12 +14,16 @@ interface SessionExpiredSheetProps {
   // not a wall (§2.6). Without a vault an expired session really is the end of the road.
   localMode?: boolean;
   onSignIn: () => void;
+  // Closing closes (F-41): in local mode the sheet is an offer, and the `signedout` stripe stays
+  // behind it as the way back. Without a vault it is a wall and there is nothing to close.
+  onClose?: () => void;
 }
 
 export function SessionExpiredSheet({
   open,
   localMode = false,
   onSignIn,
+  onClose,
 }: SessionExpiredSheetProps) {
   const t = useTranslations("states.sessionExpired");
   const phase = useSyncExternalStore(
@@ -35,7 +39,7 @@ export function SessionExpiredSheet({
   return (
     <Sheet
       open={open}
-      onClose={onSignIn}
+      onClose={dismissible && onClose ? onClose : onSignIn}
       dismissible={dismissible}
       title={localMode ? t("localTitle") : t("title")}
       footer={

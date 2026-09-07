@@ -306,6 +306,14 @@
     "sync": {
       "title": "Sync status",
       "subtitle": "What this device has, and what it still owes the server",
+      "session": {
+        "label": "Session",
+        "help": "Your session on the server",
+        "active": "Active",
+        "signedOut": "Signed out",
+        "signedOutHelp": "Signed out on this device, so nothing is syncing",
+        "signIn": "Sign in to sync"
+      },
       "cursor": {
         "label": "Sync cursor",
         "help": "Where the next pull starts from",
@@ -383,6 +391,11 @@
     "pending": {
       "title": "Changes waiting to sync.",
       "body": "They are saved on this device."
+    },
+    "signedOut": {
+      "title": "You’re signed out. Nothing is syncing.",
+      "body": "{count, plural, one {# change is saved on this device} other {# changes are saved on this device}}",
+      "cta": "Sign in to sync"
     },
     "conflicts": {
       "title": "Some changes need your attention.",

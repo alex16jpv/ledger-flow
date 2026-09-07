@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
@@ -7,6 +7,8 @@ import { setCurrentVault } from "@/lib/local/repository";
 import { accountRecord, type OutboxOperation } from "@/lib/local/schema";
 import { reportOnline } from "@/lib/network/connectivity";
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { tabChannel } from "@/lib/session/channel";
+import { SessionProvider } from "@/lib/session/SessionProvider";
 import { renderWithProviders } from "@/lib/testing/render";
 import { account, openTestVault, wipeVaults } from "@/lib/testing/vault";
 
@@ -27,18 +29,33 @@ const operation = (seq: number): OutboxOperation => ({
   lastError: "NETWORK",
 });
 
+const fetchMock = vi.fn<typeof fetch>();
+
+beforeEach(() => {
+  fetchMock.mockReset();
+  fetchMock.mockResolvedValue(
+    new Response(JSON.stringify({ user: { id: "u1", name: "John", locale: "en" } }), {
+      headers: { "content-type": "application/json" },
+    }),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+});
+
 afterEach(async () => {
   setCurrentVault(null);
   resetOutboxStatus();
+  vi.unstubAllGlobals();
   await wipeVaults();
 });
 
 const view = () =>
   renderWithProviders(
     <QueryProvider>
-      <ToastProvider>
-        <SyncStatusView />
-      </ToastProvider>
+      <SessionProvider onSignedOut={vi.fn()}>
+        <ToastProvider>
+          <SyncStatusView />
+        </ToastProvider>
+      </SessionProvider>
     </QueryProvider>,
   );
 
@@ -60,6 +77,38 @@ describe("Sync status", () => {
     expect(screen.getByText("Last error: NETWORK")).toBeInTheDocument();
     // §4.3 rule 3: the app says which mode it runs in, because on iOS they hold different data.
     expect(screen.getByText("Browser tab")).toBeInTheDocument();
+  });
+
+  // F-41: without a session nothing below this row reaches the server, so the screen says so and
+  // offers the way back instead of leaving "Sign out" as the only door.
+  it("says the session is gone and offers to sign in again", async () => {
+    const vault = await openTestVault("u1");
+    setCurrentVault(vault);
+
+    view();
+    expect(await screen.findByText("Active")).toBeInTheDocument();
+    act(() => {
+      tabChannel.emitLocal({ type: "session:expired" });
+    });
+
+    expect(await screen.findByText("Signed out")).toBeInTheDocument();
+    expect(
+      screen.getByText("Signed out on this device, so nothing is syncing"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sign in to sync" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/login?reauth=1"),
+    );
+  });
+
+  it("says the session is alive when it is", async () => {
+    const vault = await openTestVault("u1");
+    setCurrentVault(vault);
+
+    view();
+
+    expect(await screen.findByText("Active")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Sign in to sync" })).not.toBeInTheDocument();
   });
 
   // F-30: the tray got its own route in O-F5a part 2 and nothing linked to it from Settings.

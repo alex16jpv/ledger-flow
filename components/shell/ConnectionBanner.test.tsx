@@ -50,10 +50,10 @@ afterEach(async () => {
   await wipeVaults();
 });
 
-const render = () =>
+const render = (props: { signedOut?: boolean; onSignIn?: () => void } = {}) =>
   renderWithProviders(
     <ToastProvider>
-      <ConnectionBanner />
+      <ConnectionBanner {...props} />
     </ToastProvider>,
   );
 
@@ -101,6 +101,36 @@ describe("ConnectionBanner", () => {
     await waitFor(() => {
       expect(screen.getByRole("dialog")).toHaveTextContent("Resolve sync conflict");
     });
+  });
+
+  // F-41: with the session dead the stripe is the only way back to the login once the sheet is
+  // closed, and §8.12 puts it above `error` — resolving conflicts changes nothing until there is a
+  // session to send them with.
+  it("says the session is gone and offers the way back", async () => {
+    await queueOf([operation(1)]);
+    const onSignIn = vi.fn();
+    render({ signedOut: true, onSignIn });
+
+    expect(screen.getByRole("status")).toHaveTextContent("You’re signed out. Nothing is syncing.");
+    expect(screen.getByRole("status")).toHaveTextContent("1 change is saved on this device");
+
+    await userEvent.click(screen.getByRole("button", { name: "Sign in to sync" }));
+    expect(onSignIn).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not count a queue that is empty", async () => {
+    await queueOf([]);
+    render({ signedOut: true, onSignIn: vi.fn() });
+    expect(screen.getByRole("status")).not.toHaveTextContent("saved on this device");
+  });
+
+  it("wins over the conflicts, and loses to having no network (§8.12)", async () => {
+    await queueOf([operation(1, { status: "conflict" })]);
+    render({ signedOut: true, onSignIn: vi.fn() });
+    expect(screen.getByRole("status")).toHaveTextContent("You’re signed out.");
+
+    reportOnline(false);
+    expect(await screen.findByRole("status")).toHaveTextContent("You’re offline.");
   });
 
   it("also leads to the tray that lists every stuck operation", async () => {

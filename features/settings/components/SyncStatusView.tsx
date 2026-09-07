@@ -4,6 +4,7 @@ import {
   CloudOff,
   Database,
   HardDrive,
+  LogIn,
   MonitorSmartphone,
   RefreshCw,
   ShieldCheck,
@@ -14,18 +15,21 @@ import { useState, useSyncExternalStore } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Alert } from "@/components/ui/Alert";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { List, Row, RowBody, RowLink, RowMeta, RowTitle } from "@/components/ui/Row";
 import { Sheet } from "@/components/ui/Sheet";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
+import { LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
+import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 import { forceFullResync } from "@/lib/local/mirror";
 import { syncTransport } from "@/lib/local/outbox/engine";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { connectivityStore } from "@/lib/network/connectivity";
+import { useSession } from "@/lib/session";
 
 import { useSyncSnapshot } from "../sync";
 
@@ -34,11 +38,13 @@ function StatusRow({
   title,
   value,
   meta,
+  action,
 }: {
   icon: React.ReactNode;
   title: string;
   value: string;
   meta?: string;
+  action?: React.ReactNode;
 }) {
   return (
     <Row className="min-h-14">
@@ -52,6 +58,7 @@ function StatusRow({
         {meta && <RowMeta items={[meta]} />}
       </RowBody>
       <span className="text-sm text-text-2">{value}</span>
+      {action}
     </Row>
   );
 }
@@ -66,6 +73,7 @@ export function SyncStatusView() {
   const dates = useDates();
   const outbox = useOutbox();
   const toast = useToast();
+  const session = useSession();
   const { snapshot, reload } = useSyncSnapshot();
   const [confirming, setConfirming] = useState(false);
   const [resyncing, setResyncing] = useState(false);
@@ -81,6 +89,10 @@ export function SyncStatusView() {
       connectivityStore.getServerSnapshot,
     ) === "offline";
 
+  // F-41: a screen that says what this device owes the server cannot stay quiet about there being
+  // nobody to say it to. The stripe warns; this row answers whoever came to look.
+  const signedOut = session.status === "expired";
+
   const persisted = !storage?.supported
     ? t("persisted.unsupported")
     : storage.persisted
@@ -95,6 +107,24 @@ export function SyncStatusView() {
 
       <Card flush>
         <List>
+          <StatusRow
+            icon={<LogIn {...iconProps("sm")} />}
+            title={t("session.label")}
+            meta={signedOut ? t("session.signedOutHelp") : t("session.help")}
+            value={signedOut ? t("session.signedOut") : t("session.active")}
+            action={
+              signedOut ? (
+                // `reauth` is what gets a device with a live marker past the proxy and onto the
+                // login (§2.6).
+                <Link
+                  href={`${LOGIN_PATH}?${REAUTH_PARAM}=1`}
+                  className={buttonClasses({ variant: "secondary", size: "sm" })}
+                >
+                  {t("session.signIn")}
+                </Link>
+              ) : undefined
+            }
+          />
           <StatusRow
             icon={<Database {...iconProps("sm")} />}
             title={t("cursor.label")}

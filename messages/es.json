@@ -306,6 +306,14 @@
     "sync": {
       "title": "Estado de sincronización",
       "subtitle": "Qué tiene este dispositivo y qué le debe al servidor",
+      "session": {
+        "label": "Sesión",
+        "help": "Tu sesión en el servidor",
+        "active": "Activa",
+        "signedOut": "Cerrada",
+        "signedOutHelp": "Cerraste sesión en este dispositivo, así que no se sincroniza nada",
+        "signIn": "Iniciar sesión para sincronizar"
+      },
       "cursor": {
         "label": "Cursor de sincronización",
         "help": "Desde dónde empieza el próximo tirón",
@@ -383,6 +391,11 @@
     "pending": {
       "title": "Cambios pendientes de sincronizar.",
       "body": "Están guardados en este dispositivo."
+    },
+    "signedOut": {
+      "title": "Cerraste sesión. No se está sincronizando.",
+      "body": "{count, plural, one {# cambio guardado en este dispositivo} other {# cambios guardados en este dispositivo}}",
+      "cta": "Iniciar sesión para sincronizar"
     },
     "conflicts": {
       "title": "Algunos cambios necesitan tu atención.",
