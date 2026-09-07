@@ -1,6 +1,7 @@
 import { api } from "@/lib/api/client";
 import type { SyncChangesResponse } from "@/types/api";
 
+import { rememberServerTime } from "./clock";
 import type { VaultHandle } from "./db";
 import { writeTransaction } from "./outbox/queue";
 import { reconcileContext, reconcileRow } from "./outbox/reconcile";
@@ -104,6 +105,9 @@ export async function pullChanges(
 
   for (;;) {
     const page = await fetchPage({ cursor, limit });
+    // Every answer carries the server's clock, and the form of §8.2 has to warn before there is a
+    // refusal to explain (F-66).
+    await rememberServerTime(handle.db, page.serverTime);
     // Rows are applied by id with put, so the deliberate 60-second overlap of D-14 costs nothing.
     changed = (await applyPage(handle, page)) || changed;
     pages += 1;

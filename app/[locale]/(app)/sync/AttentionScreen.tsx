@@ -3,7 +3,7 @@
 import type { IDBPDatabase } from "idb";
 import { CircleAlert, CloudCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
 import { SyncConflictSheet } from "@/components/shell/SyncConflictSheet";
@@ -17,8 +17,11 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { ERROR_TABLE, isErrorCode } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
+import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
-import { isNameTaken } from "@/lib/local/outbox/conflict";
+import { aheadOfServer, clockStore } from "@/lib/local/clock";
+import { isFutureDate, isNameTaken } from "@/lib/local/outbox/conflict";
+import { operationPayload } from "@/lib/local/outbox/envelope";
 import {
   discardImpact,
   discardOperations,
@@ -79,6 +82,7 @@ async function load(): Promise<View> {
 
 export function AttentionScreen() {
   const t = useTranslations();
+  const dates = useDates();
   const back = useBackNavigation();
   const toast = useToast();
   const outbox = useOutbox();
@@ -87,6 +91,11 @@ export function AttentionScreen() {
   const [busy, setBusy] = useState(false);
   const [comparing, setComparing] = useState<number | null>(null);
   const [confirming, setConfirming] = useState<{ seqs: number[]; impact: number } | null>(null);
+  const offset = useSyncExternalStore(
+    clockStore.subscribe,
+    clockStore.getSnapshot,
+    clockStore.getServerSnapshot,
+  );
 
   useEffect(() => {
     let live = true;
@@ -155,6 +164,8 @@ export function AttentionScreen() {
   const items = view.kind === "ready" ? view.items : [];
   const allSeqs = items.map((item) => item.operation.seq);
 
+  const moment = (at: Date): string => `${dates.formatDay(at)} ${dates.formatTime(at)}`;
+
   function reason(operation: OutboxOperation): string {
     const what = t(`states.conflict.entities.${operation.entity}`);
     if (isArchivedAccount(operation)) return t("states.conflict.archived.body", { what });
@@ -165,6 +176,21 @@ export function AttentionScreen() {
         what,
         name: typeof taken === "string" ? taken : "",
       });
+    }
+    // F-66: "the date can't be in the future" left the user to work out which date and how far.
+    if (isFutureDate(operation)) {
+      const date = (operationPayload(operation).body as { date?: unknown } | undefined)?.date;
+      const skew = aheadOfServer(offset);
+      const line = t("states.conflict.futureDate.reason", {
+        date: typeof date === "string" ? moment(new Date(date)) : "",
+      });
+      if (!skew) return line;
+      return `${line} ${t(
+        skew.unit === "days"
+          ? "states.conflict.futureDate.skewDays"
+          : "states.conflict.futureDate.skewHours",
+        { count: skew.count },
+      )}`;
     }
     // A `conflict` the server explained with a code of its own — a name already taken, a reference
     // it will not take — never applied either, and the code is the reason. Only `STALE_UPDATE` is
@@ -208,6 +234,9 @@ export function AttentionScreen() {
     // The same name would be refused again, so this card has no "Try again": what it offers instead
     // is the rename, which lives inside the comparison sheet (F-60).
     const taken = isNameTaken(operation);
+    // The date is what the server refused, so the card leads with correcting it; "Try again" stays,
+    // last, for the case where the clock was put right in the meantime (§8.14).
+    const badDate = isFutureDate(operation);
     return (
       <Card key={operation.seq} className="flex flex-col gap-3 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -217,7 +246,7 @@ export function AttentionScreen() {
         {name && <p className="text-sm text-text-2">{said}</p>}
         <p className="text-sm text-text-2">{reason(operation)}</p>
         <div className="flex flex-wrap gap-2">
-          {taken ? (
+          {taken || badDate ? (
             <Button
               variant="primary"
               disabled={busy}
@@ -225,7 +254,9 @@ export function AttentionScreen() {
                 setComparing(operation.seq);
               }}
             >
-              {t("states.attention.restoreWithName")}
+              {taken
+                ? t("states.attention.restoreWithName")
+                : t("states.conflict.futureDate.title")}
             </Button>
           ) : (
             <>
@@ -258,13 +289,18 @@ export function AttentionScreen() {
           >
             {t("states.attention.compare")}
           </Button>
-          {taken && (
+          {(taken || badDate) && (
             <Button
               variant="ghost"
               disabled={busy}
               onClick={() => void askDiscard([operation.seq])}
             >
               {t("states.conflict.discard")}
+            </Button>
+          )}
+          {badDate && (
+            <Button variant="ghost" disabled={busy} onClick={() => void retry([operation.seq])}>
+              {t("states.conflict.retry")}
             </Button>
           )}
         </div>

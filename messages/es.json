@@ -465,6 +465,17 @@
         "confirm": "Restaurar como «{name}»",
         "noRetry": "Aquí no se ofrece «Reintentar»: el mismo nombre se volvería a rechazar."
       },
+      "futureDate": {
+        "title": "Corregir la fecha",
+        "alert": "El servidor rechazó esta fecha.",
+        "body": "{date} va más de 24 horas por delante de la hora del servidor ({serverDate}).",
+        "reason": "Su fecha, {date}, va más de 24 horas por delante de la hora del servidor.",
+        "skewDays": "{count, plural, one {El reloj de este dispositivo va # día adelantado.} other {El reloj de este dispositivo va # días adelantado.}}",
+        "skewHours": "{count, plural, one {El reloj de este dispositivo va # hora adelantado.} other {El reloj de este dispositivo va # horas adelantado.}}",
+        "was": "Era el {date}",
+        "save": "Guardar y reintentar",
+        "waiting": "{count, plural, one {# cambio más espera detrás de este.} other {# cambios más esperan detrás de este.}}"
+      },
       "noServerRow": "El servidor no dijo qué tiene. Si te quedas con la versión de este dispositivo, la sobrescribirás.",
       "server": "En el servidor",
       "device": "En este dispositivo",
@@ -1052,7 +1063,12 @@
       "deleteTitle": "¿Eliminar este movimiento?",
       "deleteBody": "Los saldos de las cuentas vuelven a lo que eran. No se puede deshacer.",
       "deleted": "Movimiento eliminado",
-      "notFound": "Este movimiento no existe o fue eliminado."
+      "notFound": "Este movimiento no existe o fue eliminado.",
+      "clockSkew": {
+        "days": "{count, plural, one {El reloj de este dispositivo va # día adelantado respecto al servidor.} other {El reloj de este dispositivo va # días adelantado respecto al servidor.}}",
+        "hours": "{count, plural, one {El reloj de este dispositivo va # hora adelantado respecto al servidor.} other {El reloj de este dispositivo va # horas adelantado respecto al servidor.}}",
+        "refused": "Las fechas con más de 24 horas en el futuro se rechazan."
+      }
     },
     "list": {
       "title": "Movimientos",

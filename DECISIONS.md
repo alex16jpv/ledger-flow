@@ -1998,3 +1998,26 @@ cover` is set once in the root layout for the standalone display.
   refuses it), and dropping it is what takes the sheet out of the "name taken" state. The mirror
   shows the new name from the moment it is chosen, because the reprojection of `restore` merges the
   body.
+
+## 2026-09-06 · The device learns how far its clock runs from the server's (F-66)
+
+- **Decision:** every answer that carries a `serverTime` — `POST /sync` and each page of
+  `GET /sync/changes` — teaches the device the distance between the two clocks. It lives in a store
+  the screens subscribe to and, over a minute of movement, in the vault's `meta`, which is what makes
+  it readable on the next cold start. Two screens use it: the movement form warns above the date when
+  the device runs more than an hour ahead (the preventive half of trap 7.4), and a `FUTURE_DATE`
+  refusal turns the conflict sheet into **"Fix the date"**, prefilled with the server's own time and
+  saying which date was refused, with **"Save and try again"** as the way out. The tray card leads
+  with "Fix the date" and keeps "Try again" last.
+- **Why:** the form's guard runs on the only clock it has, so a device three days ahead accepts what
+  the server refuses and says so only once the queue is stuck. And a refused creation cannot be
+  edited from the list — the row exists nowhere else — so the sheet was the only place left to
+  correct it. Both halves were in the plan (trap 7.4); only the offset half had been built.
+- **Alternatives:** correcting the date to the device's own clock — the same clock that caused the
+  refusal; sending the offset with the write so the server could fix it — the server refuses, it does
+  not negotiate, and D-32 keeps validation whole; keeping the offset in memory only — it is needed
+  exactly when there is no network to learn it again.
+- **Consequence:** `retryWithDate` rewrites `payload.body.date` and puts the same operation back in
+  line, so it stays the same creation, with the same `opId` and the same dependents behind it — the
+  sheet says how many. A device that runs _behind_ the server is not warned: the dates it writes are
+  in the past, which the server takes.

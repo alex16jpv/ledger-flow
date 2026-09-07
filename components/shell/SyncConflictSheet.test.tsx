@@ -2,6 +2,8 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { dayKey } from "@/lib/format/dates";
+import { rememberServerTime, resetClockOffset } from "@/lib/local/clock";
 import { pendingOperations, refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
 import { setCurrentVault } from "@/lib/local/repository/read";
 import {
@@ -23,6 +25,7 @@ import {
 
 import { SyncConflictSheet } from "./SyncConflictSheet";
 
+const DAY = 24 * 60 * 60 * 1000;
 const T0 = "2026-08-01T10:00:00.000Z";
 const T1 = "2026-09-04T12:00:00.000Z";
 
@@ -295,5 +298,55 @@ describe("the Resolve sync conflict sheet", () => {
         body: { name: "Petty cash" },
       });
     });
+  });
+
+  // F-66: the card and the sheet could only discard or repeat a refusal the date itself caused.
+  it("corrects the date the server refused and sends the same movement again", async () => {
+    const vault = await vaultWith([
+      {
+        action: "create",
+        payload: { body: { id: "t1", amount: 15, date: "2026-09-25T18:10:00.000Z" } },
+        status: "failed",
+        lastError: "FUTURE_DATE",
+        serverRow: undefined,
+        baseUpdatedAt: undefined,
+      },
+    ]);
+    await rememberServerTime(
+      vault.db,
+      "2026-09-22T18:12:00.000Z",
+      Date.parse("2026-09-25T18:12:00.000Z"),
+    );
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ serverTime: T1, results: [] }), {
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    renderWithProviders(
+      <ToastProvider>
+        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+      </ToastProvider>,
+    );
+
+    // The sheet stops being a comparison and becomes a correction.
+    expect(await screen.findByText("Fix the date")).toBeInTheDocument();
+    expect(screen.getByText(/more than 24 hours ahead of the server’s time/)).toBeInTheDocument();
+    expect(screen.getByText(/clock is 3 days ahead/)).toBeInTheDocument();
+    expect(screen.getByText("Was Sep 25 1:10 PM")).toBeInTheDocument();
+    // Prefilled with the server's own clock — three days behind this device's — and never with the
+    // date that was refused.
+    const onTheServer = dayKey(new Date(Date.now() - 3 * DAY), "America/Bogota");
+    expect(screen.getByLabelText("Date")).toHaveValue(onTheServer);
+    expect(screen.getByLabelText("Date")).not.toHaveValue("2026-09-25");
+
+    await userEvent.click(screen.getByRole("button", { name: "Save and try again" }));
+
+    await waitFor(async () => {
+      expect((await pendingOperations(vault.db))[0]).toMatchObject({ status: "pending" });
+    });
+    const [queued] = await pendingOperations(vault.db);
+    const sent = (queued?.payload as { body: { date: string } }).body.date;
+    expect(dayKey(new Date(sent), "America/Bogota")).toBe(onTheServer);
+    resetClockOffset();
   });
 });

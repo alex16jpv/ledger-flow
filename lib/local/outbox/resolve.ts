@@ -1,6 +1,6 @@
 import type { OutboxEntity, OutboxOperation } from "../schema";
 import { restoreAccountWrite } from "./accounts";
-import { isNameTaken, ownServerRow, serverStamp } from "./conflict";
+import { isFutureDate, isNameTaken, ownServerRow, serverStamp } from "./conflict";
 import { forgetRollbacks, requestSync } from "./engine";
 import { operationPayload } from "./envelope";
 import { NotProjectableError } from "./projected";
@@ -215,6 +215,33 @@ export async function restoreWithName(db: VaultDb, seq: number, name: string): P
   delete next.serverRow;
   await store.put(next);
   // Written first, so the row the mirror shows carries the new name from now on.
+  await reconcileResolved(tx, next);
+  await tx.done;
+  await refreshOutboxStatus(db);
+  await requestSync();
+  return true;
+}
+
+// The way out of a `FUTURE_DATE` (F-66): the same movement goes back in line with the date the user
+// corrected. Editing it from the list is not an option — it is a creation the server never took, so
+// the row only exists here — and trying again unchanged earns the same refusal.
+export async function retryWithDate(db: VaultDb, seq: number, date: string): Promise<boolean> {
+  const operation = await db.get("outbox", seq);
+  if (!operation || !stuck(operation) || !isFutureDate(operation)) return false;
+
+  const payload = operationPayload(operation);
+  const body = typeof payload.body === "object" && payload.body !== null ? payload.body : {};
+  const tx = writeTransaction(db);
+  const store = tx.objectStore("outbox");
+  const next: OutboxOperation = {
+    ...operation,
+    payload: { ...payload, body: { ...body, date } },
+    status: "pending",
+    attempts: 0,
+    lastError: null,
+  };
+  delete next.serverRow;
+  await store.put(next);
   await reconcileResolved(tx, next);
   await tx.done;
   await refreshOutboxStatus(db);

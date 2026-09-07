@@ -28,7 +28,10 @@ export type MetaKey =
   | "outboxSeq"
   // What `POST /sync` warned about the writes that landed degraded, as JSON: a store of its own
   // would cost a mirror version bump (D-24) for a handful of notices the next pull cannot rebuild.
-  | "syncNotices";
+  | "syncNotices"
+  // How far this device's clock runs from the server's, learned from the `serverTime` of every
+  // answer: the form needs it when there is no network left to ask again (F-66).
+  | "clockOffsetMs";
 
 export interface MetaRecord {
   key: MetaKey;

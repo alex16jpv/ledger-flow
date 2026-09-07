@@ -4,6 +4,7 @@ import { connectivityStore } from "@/lib/network/connectivity";
 import { reportError } from "@/lib/observability/reporter";
 import type { Account, SyncBatchResponse } from "@/types/api";
 
+import { rememberServerTime } from "../clock";
 import { currentVault } from "../repository/read";
 import type { OutboxOperation } from "../schema";
 import { batchBody, chunkBatch, postBatch } from "./batch";
@@ -681,6 +682,9 @@ async function sendBatch(
       return result;
     }
     result.answered = true;
+    // The server's own clock, which is what the form of §8.2 warns against and the "Fix the date"
+    // sheet prefills with (F-66).
+    await rememberServerTime(db, response.serverTime);
     await applyAnswers(run, sent, response);
     // A guard moved or an id was re-minted: the batches behind this one describe a queue that has
     // changed, and the pass builds the plan again.

@@ -465,6 +465,17 @@
         "confirm": "Restore as “{name}”",
         "noRetry": "“Try again” is not offered here: the same name would be refused again."
       },
+      "futureDate": {
+        "title": "Fix the date",
+        "alert": "The server refused this date.",
+        "body": "{date} is more than 24 hours ahead of the server’s time ({serverDate}).",
+        "reason": "Its date, {date}, is more than 24 hours ahead of the server’s time.",
+        "skewDays": "{count, plural, one {This device’s clock is # day ahead.} other {This device’s clock is # days ahead.}}",
+        "skewHours": "{count, plural, one {This device’s clock is # hour ahead.} other {This device’s clock is # hours ahead.}}",
+        "was": "Was {date}",
+        "save": "Save and try again",
+        "waiting": "{count, plural, one {# more change is waiting behind this one.} other {# more changes are waiting behind this one.}}"
+      },
       "noServerRow": "The server didn’t say what it has. Keeping this device’s version will overwrite it.",
       "server": "On the server",
       "device": "On this device",
@@ -1052,7 +1063,12 @@
       "deleteTitle": "Delete this transaction?",
       "deleteBody": "The account balances go back to what they were. This can’t be undone.",
       "deleted": "Transaction deleted",
-      "notFound": "This transaction doesn’t exist or was deleted."
+      "notFound": "This transaction doesn’t exist or was deleted.",
+      "clockSkew": {
+        "days": "{count, plural, one {This device’s clock is # day ahead of the server.} other {This device’s clock is # days ahead of the server.}}",
+        "hours": "{count, plural, one {This device’s clock is # hour ahead of the server.} other {This device’s clock is # hours ahead of the server.}}",
+        "refused": "Dates more than 24 hours in the future will be refused."
+      }
     },
     "list": {
       "title": "Transactions",

@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowUpDown, PencilLine } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { Alert } from "@/components/ui/Alert";
@@ -33,6 +33,7 @@ import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
+import { aheadOfServer, clockStore } from "@/lib/local/clock";
 import type { CreateTransactionInput, UpdateTransactionInput } from "@/types/api";
 
 const TYPE_TONE = {
@@ -67,6 +68,16 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const t = useTranslations();
   const { timeZone } = useFormatSettings();
+  // F-66, the preventive half: the form's own guard uses this device's clock, so a device that runs
+  // ahead accepts a date the server will refuse. The distance is only knowable from the server, and
+  // the vault keeps it for exactly this moment.
+  const skew = aheadOfServer(
+    useSyncExternalStore(
+      clockStore.subscribe,
+      clockStore.getSnapshot,
+      clockStore.getServerSnapshot,
+    ),
+  );
   const tags = useTagsQuery();
   const keyring = useRef(new IdempotencyKeyring());
   const amountInput = useRef<HTMLInputElement>(null);
@@ -291,6 +302,17 @@ export function TransactionForm({
             />
           )}
         </div>
+      )}
+      {skew && (
+        <Alert tone="warning">
+          {t(
+            skew.unit === "days"
+              ? "transactions.form.clockSkew.days"
+              : "transactions.form.clockSkew.hours",
+            { count: skew.count },
+          )}{" "}
+          {t("transactions.form.clockSkew.refused")}
+        </Alert>
       )}
       <Controller
         control={form.control}

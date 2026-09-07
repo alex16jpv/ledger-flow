@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { rememberServerTime, resetClockOffset } from "@/lib/local/clock";
 import {
   pendingOperations,
   refreshOutboxStatus,
@@ -254,5 +255,44 @@ describe("the Needs your attention tray", () => {
     const sheet = await screen.findByRole("dialog");
     expect(sheet).toHaveTextContent("The name is taken.");
     expect(within(sheet).getByRole("textbox", { name: "New name" })).toHaveValue("Cash (old)");
+  });
+
+  // F-66: the reason said "The date can’t be in the future" and the only ways out repeated the
+  // refusal or threw the movement away.
+  it("says which date the server refused and leads with correcting it", async () => {
+    const vault = await vaultWith([
+      {
+        action: "create",
+        payload: { body: { id: "t1", amount: 15, date: "2026-09-25T18:10:00.000Z" } },
+        status: "failed",
+        lastError: "FUTURE_DATE",
+        baseUpdatedAt: undefined,
+      },
+    ]);
+    await rememberServerTime(
+      vault.db,
+      "2026-09-22T18:12:00.000Z",
+      Date.parse("2026-09-25T18:12:00.000Z"),
+    );
+
+    render();
+
+    expect(await screen.findByText(/Its date, Sep 25 1:10 PM/)).toBeInTheDocument();
+    expect(screen.getByText(/clock is 3 days ahead/)).toBeInTheDocument();
+    // Correcting it leads; trying again stays, last, for a clock that has since been put right.
+    const actions = screen
+      .getAllByRole("button")
+      .map((button) => button.textContent)
+      .filter(Boolean);
+    expect(actions).toEqual([
+      "Fix the date",
+      "Compare versions",
+      "Discard this change",
+      "Try again",
+    ]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Fix the date" }));
+    expect(await screen.findByRole("dialog")).toHaveTextContent("The server refused this date.");
+    resetClockOffset();
   });
 });

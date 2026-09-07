@@ -1,26 +1,34 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
 import { Button } from "@/components/ui/Button";
+import { DateTimeField, type DateTimeValue } from "@/components/ui/DateTimeField";
 import { Field, Input } from "@/components/ui/Field";
 import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
+import { dateTimeInstant, dateTimeParts } from "@/lib/format/dates";
+import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useDates } from "@/lib/i18n/useDates";
+import { aheadOfServer, clockStore, serverNow } from "@/lib/local/clock";
 import {
   type ConflictField,
   conflictFields,
+  isFutureDate,
   isNameTaken,
   ownServerRow,
 } from "@/lib/local/outbox/conflict";
+import { operationPayload } from "@/lib/local/outbox/envelope";
 import {
+  discardImpact,
   discardOperation,
   restoreArchivedAccount,
   restoreWithName,
   retryOperation,
+  retryWithDate,
 } from "@/lib/local/outbox/resolve";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { currentVault } from "@/lib/local/repository/read";
@@ -32,6 +40,9 @@ interface Loaded {
   operation: OutboxOperation;
   fields: ConflictField[];
   names: Names;
+  // What discarding this one would take with it, minus itself: a creation the server refused holds
+  // back everything queued on top of it, and the sheet says so before asking (§8.12 I7).
+  waiting: number;
 }
 
 type View = { kind: "loading" } | { kind: "empty" } | ({ kind: "resolve" } & Loaded);
@@ -67,6 +78,7 @@ async function load(seq: number): Promise<View> {
     operation,
     fields: conflictFields(operation, operation.serverRow),
     names,
+    waiting: Math.max(0, (await discardImpact(vault.db, [seq])) - 1),
   };
 }
 
@@ -87,6 +99,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
   const common = useTranslations("common");
   const toast = useToast();
   const dates = useDates();
+  const { timeZone } = useFormatSettings();
   const outbox = useOutbox();
   const [loaded, setLoaded] = useState<{ seq: number; view: View } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -95,6 +108,14 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
   // someone types over it.
   const [renamed, setRenamed] = useState<{ seq: number; name: string } | null>(null);
   const renameTo = renamed?.seq === seq ? renamed.name : null;
+  // The date the user is correcting (F-66), tagged with its operation for the same reason.
+  const [corrected, setCorrected] = useState<{ seq: number; value: DateTimeValue } | null>(null);
+  const correctedTo = corrected?.seq === seq ? corrected.value : null;
+  const offset = useSyncExternalStore(
+    clockStore.subscribe,
+    clockStore.getSnapshot,
+    clockStore.getServerSnapshot,
+  );
 
   useEffect(() => {
     if (!open || seq === null) return;
@@ -207,6 +228,20 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
   const suggestedName = (loaded: Loaded): string =>
     t("nameTaken.suggestion", { name: restoredName(loaded) });
 
+  // The date the movement carries, and the one the server would accept: its own clock (F-66).
+  const refusedDate = (loaded: Loaded): string | null => {
+    const date = (operationPayload(loaded.operation).body as { date?: unknown } | undefined)?.date;
+    return typeof date === "string" ? date : null;
+  };
+  const serverInstant = (): Date => new Date(serverNow());
+  const skewLine = (): string | null => {
+    const skew = aheadOfServer(offset);
+    if (!skew) return null;
+    return skew.unit === "days"
+      ? t("futureDate.skewDays", { count: skew.count })
+      : t("futureDate.skewHours", { count: skew.count });
+  };
+
   function body() {
     if (view.kind === "loading") return <p className="text-sm text-text-2">{t("loading")}</p>;
     if (view.kind === "empty") {
@@ -218,6 +253,39 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
     }
     const { operation, fields } = view;
     const what = t(`entities.${operation.entity}`);
+    if (isFutureDate(operation)) {
+      const was = refusedDate(view);
+      const server = serverInstant();
+      const value = correctedTo ?? dateTimeParts(server, timeZone);
+      return (
+        <div className="flex flex-col gap-3">
+          <Alert tone="danger" title={t("futureDate.alert")}>
+            {t("futureDate.body", {
+              date: was ? moment(was) : t("none"),
+              serverDate: moment(server.toISOString()),
+            })}
+            {skewLine() && ` ${skewLine() ?? ""}`}
+          </Alert>
+          {fields.length > 0 && card(t("device"), "mine", view)}
+          <DateTimeField
+            value={value}
+            onChange={(next) => {
+              setCorrected({ seq: operation.seq, value: next });
+            }}
+            dateLabel={t("fields.date")}
+            timeLabel={common("time")}
+          />
+          {was && (
+            <p className="text-sm text-text-3">{t("futureDate.was", { date: moment(was) })}</p>
+          )}
+          {view.waiting > 0 && (
+            <p className="text-sm text-text-3">
+              {t("futureDate.waiting", { count: view.waiting })}
+            </p>
+          )}
+        </div>
+      );
+    }
     if (isNameTaken(operation)) {
       const comparison = nameComparison(view);
       const typed = renameTo ?? suggestedName(view);
@@ -286,6 +354,13 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
     );
   }
 
+  // Only the refused date renames the sheet: it stopped being a comparison and became a correction.
+  function sheetTitle(): string {
+    return view.kind === "resolve" && isFutureDate(view.operation)
+      ? t("futureDate.title")
+      : t("title");
+  }
+
   function footer() {
     if (view.kind !== "resolve") {
       return (
@@ -320,6 +395,33 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
         {discardFirst ? t("retry") : t("keepMine")}
       </Button>
     );
+    // The date is the whole refusal, and the movement cannot be edited from the list: it is a
+    // creation the server never took, so this sheet is the only place it can be corrected.
+    if (isFutureDate(operation)) {
+      const value = correctedTo ?? dateTimeParts(serverInstant(), timeZone);
+      return (
+        <>
+          <Button
+            size="lg"
+            block
+            variant="primary"
+            disabled={busy}
+            onClick={() =>
+              void resolve((db) =>
+                retryWithDate(
+                  db,
+                  operation.seq,
+                  dateTimeInstant(value, timeZone, serverInstant()).toISOString(),
+                ),
+              )
+            }
+          >
+            {t("futureDate.save")}
+          </Button>
+          {discard}
+        </>
+      );
+    }
     // The name is the whole refusal, so the way out is a different one. "Try again" is not offered:
     // the same name would be refused again, and the body of the sheet says so.
     if (isNameTaken(operation)) {
@@ -377,7 +479,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={t("title")} footer={footer()}>
+    <Sheet open={open} onClose={onClose} title={sheetTitle()} footer={footer()}>
       {body()}
     </Sheet>
   );

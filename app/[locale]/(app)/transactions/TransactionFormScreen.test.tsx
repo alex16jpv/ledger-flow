@@ -2,9 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { rememberServerTime, resetClockOffset } from "@/lib/local/clock";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
+import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 
 import { EditTransactionScreen, NewTransactionScreen } from "./TransactionFormScreen";
 
@@ -93,6 +95,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  resetClockOffset();
 });
 
 function render(ui: React.ReactElement) {
@@ -165,6 +168,28 @@ describe("NewTransactionScreen", () => {
       fromAccountId: "a2",
       toAccountId: "a1",
     });
+  });
+
+  // F-66, the preventive half: the form's guard runs on this device's clock, so a device that runs
+  // ahead accepts a date the server will refuse and only says so after the queue is stuck.
+  it("warns when this device's clock runs ahead of the server's", async () => {
+    const vault = await openTestVault("u1");
+    await rememberServerTime(
+      vault.db,
+      "2026-09-22T18:12:00.000Z",
+      Date.parse("2026-09-25T18:12:00.000Z"),
+    );
+    render(<NewTransactionScreen />);
+
+    const warning = await screen.findByText(/clock is 3 days ahead of the server/);
+    expect(warning).toHaveTextContent("Dates more than 24 hours in the future will be refused.");
+    await wipeVaults();
+  });
+
+  it("says nothing when the two clocks agree", async () => {
+    render(<NewTransactionScreen />);
+    expect(await screen.findByLabelText("Date")).toBeInTheDocument();
+    expect(screen.queryByText(/clock is/)).not.toBeInTheDocument();
   });
 
   it("shows server field errors next to the responsible field", async () => {

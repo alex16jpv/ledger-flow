@@ -89,6 +89,12 @@ export function isNameTaken(operation: OutboxOperation): boolean {
   );
 }
 
+// F-66: the server refused the date, and the device's own clock is why the form let it through.
+// Trying again unchanged repeats the refusal; the way out is the date itself.
+export function isFutureDate(operation: OutboxOperation): boolean {
+  return operation.entity === "transaction" && operation.lastError === "FUTURE_DATE";
+}
+
 // The stamp a retry has to guard against: the one the server answered the 409 with.
 export function serverStamp(operation: OutboxOperation): string | undefined {
   const row = ownServerRow(operation);
