@@ -10,6 +10,8 @@ const withNextIntl = createNextIntlPlugin("./lib/i18n/request.ts");
 const isProduction = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
+  // The e2e build points this elsewhere so it never overwrites the `.next` a running app is serving (F-56).
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,

@@ -13,6 +13,8 @@ import {
 
 import { setUnauthorizedHandler } from "@/lib/api/client";
 import { noteRefreshedElsewhere, refreshSession } from "@/lib/api/refresh";
+import { resumeSyncEngine } from "@/lib/local/outbox/engine";
+import { purgeVault } from "@/lib/local/purge";
 import { purgePersistedCaches } from "@/lib/query/purge";
 import { themeStore } from "@/lib/theme/store";
 import type { User } from "@/types/api";
@@ -27,10 +29,15 @@ interface SessionContextValue {
   status: SessionStatus;
   user: User | null;
   expired: boolean;
-  logout: () => Promise<void>;
-  logoutAll: () => Promise<void>;
+  logout: (options?: SignOutOptions) => Promise<void>;
+  logoutAll: (options?: SignOutOptions) => Promise<void>;
   refetch: () => Promise<unknown>;
   setUser: (user: User) => void;
+}
+
+export interface SignOutOptions {
+  // The user's answer to the sheet of F-34. Left out, the queue survives the logout.
+  discardPendingWork?: boolean;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -66,10 +73,20 @@ export function SessionProvider({
     };
   }, []);
 
-  const endLocalSession = useCallback(async () => {
-    queryClient.clear();
-    await purgePersistedCaches();
-  }, [queryClient]);
+  const userId = query.data?.user.id ?? null;
+
+  // Explicit logout only: an expired session leaves the vault alone, because the app keeps working
+  // offline and its queue outlives the session (D-7, invariant 7). The mirror always goes, so the
+  // next user on this device sees nothing; the queue only goes if the user said so (F-34).
+  const endLocalSession = useCallback(
+    async ({ discardPendingWork = false }: SignOutOptions = {}) => {
+      queryClient.clear();
+      await purgePersistedCaches();
+      if (!userId) return;
+      await purgeVault(userId, { discardPendingWork });
+    },
+    [queryClient, userId],
+  );
 
   useEffect(() => {
     return tabChannel.subscribe((message) => {
@@ -78,10 +95,12 @@ export function SessionProvider({
           setExpired(true);
           break;
         case "session:logout":
-          void endLocalSession().then(onSignedOut);
+          // The tab that ran the logout already applied the user's choice to the shared vault.
+          void endLocalSession({ discardPendingWork: false }).then(onSignedOut);
           break;
         case "session:refreshed":
           noteRefreshedElsewhere(message.at);
+          resumeSyncEngine();
           break;
         case "theme":
           themeStore.set(
@@ -101,18 +120,19 @@ export function SessionProvider({
   }, [endLocalSession, onSignedOut, onLocaleChanged]);
 
   const logoutMutation = useMutation({
-    mutationFn: requestLogout,
-    onSettled: async () => {
-      await endLocalSession();
+    mutationFn: ({ options }: { options: SignOutOptions }) => requestLogout().then(() => options),
+    onSettled: async (_data, _error, variables) => {
+      await endLocalSession(variables.options);
       tabChannel.post({ type: "session:logout" });
       onSignedOut();
     },
   });
 
   const logoutAllMutation = useMutation({
-    mutationFn: requestLogoutAll,
-    onSettled: async () => {
-      await endLocalSession();
+    mutationFn: ({ options }: { options: SignOutOptions }) =>
+      requestLogoutAll().then(() => options),
+    onSettled: async (_data, _error, variables) => {
+      await endLocalSession(variables.options);
       tabChannel.post({ type: "session:logout" });
       onSignedOut();
     },
@@ -125,11 +145,14 @@ export function SessionProvider({
     [queryClient],
   );
 
+  // React Query drops an error back to pending when a query with no data refetches, so a session
+  // that failed offline would read as "loading" again the moment the network returns — and whatever
+  // hangs on the answer (the vault of §2.6) would be torn down and rebuilt in the gap (R-3b).
   const status: SessionStatus = expired
     ? "expired"
     : query.data
       ? "authenticated"
-      : query.isError
+      : query.isError || query.isFetched
         ? "error"
         : "loading";
 
@@ -138,11 +161,11 @@ export function SessionProvider({
       status,
       user: query.data?.user ?? null,
       expired,
-      logout: async () => {
-        await logoutMutation.mutateAsync().catch(() => undefined);
+      logout: async (options = {}) => {
+        await logoutMutation.mutateAsync({ options }).catch(() => undefined);
       },
-      logoutAll: async () => {
-        await logoutAllMutation.mutateAsync().catch(() => undefined);
+      logoutAll: async (options = {}) => {
+        await logoutAllMutation.mutateAsync({ options }).catch(() => undefined);
       },
       refetch: query.refetch,
       setUser,

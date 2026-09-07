@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 import type { Category } from "@/types/api";
 
@@ -58,6 +59,7 @@ describe("CategoryForm", () => {
     const [, init] = fetchMock.mock.calls[0] ?? [];
     expect(init?.method).toBe("POST");
     expect(JSON.parse(init?.body as string)).toEqual({
+      id: expect.stringMatching(UUID),
       name: "Gym",
       icon: "tag",
       color: "BLUE",
@@ -87,11 +89,18 @@ describe("CategoryForm", () => {
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("/api/categories/food");
     expect(init?.method).toBe("PUT");
-    expect(JSON.parse(init?.body as string)).toEqual({
-      name: "Groceries",
-      icon: "utensils",
-      color: "ORANGE",
+    // The icon and the colour were not touched, so they do not travel (§1 example 3).
+    expect(JSON.parse(init?.body as string)).toEqual({ name: "Groceries" });
+  });
+
+  // R-5 §A: the API refuses an empty PUT, and offline it would sit in the attention tray.
+  it("saving an untouched edit sends nothing and hands back the category as it was", async () => {
+    const onSaved = renderForm({ category: food });
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledWith(food);
     });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("lets an unused category change type and shows the server lock if the API disagrees", async () => {

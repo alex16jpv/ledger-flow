@@ -9,10 +9,12 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/cn";
 import { Progress } from "@/components/ui/Progress";
+import { Projected } from "@/components/ui/Projected";
 import { Tile } from "@/components/ui/Tile";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import type { Budget } from "@/types/api";
 
 import { budgetProgress } from "../progress";
@@ -51,6 +53,7 @@ export function useBudgetStatusText() {
 
 export function BudgetCard({ budget, icon, now, href, footer, statusBadge }: BudgetCardProps) {
   const t = useTranslations("budgets");
+  const outbox = useOutbox();
   const money = useMoney();
   const dates = useDates();
   const statusText = useBudgetStatusText();
@@ -97,12 +100,22 @@ export function BudgetCard({ budget, icon, now, href, footer, statusBadge }: Bud
         </div>
       </div>
       <div className="flex items-baseline justify-between gap-3">
-        <Amount value={budget.spent} signed={false} size="lg" />
+        <Projected when={outbox.projected.budgets}>
+          <Amount value={budget.spent} signed={false} size="lg" />
+        </Projected>
         <span className="text-sm text-text-3">
           {t("list.of", { amount: money.format(budget.amount) })}
         </span>
       </div>
-      <Progress value={budget.spent} max={budget.amount} color={budget.color} label={budget.name} />
+      <Projected when={outbox.projected.budgets} align="center" className="w-full">
+        <Progress
+          value={budget.spent}
+          max={budget.amount}
+          color={budget.color}
+          label={budget.name}
+          className="flex-1"
+        />
+      </Projected>
       {footer ?? (
         <span className={cn("text-sm", progress.status === "over" ? "text-danger" : "text-text-2")}>
           {statusText(budget, now)}

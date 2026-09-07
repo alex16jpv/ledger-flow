@@ -1,7 +1,6 @@
-import { z } from "zod";
-
 import { MAX_AMOUNT } from "@/lib/format/money";
 import { COLOR_TOKENS } from "@/lib/theme/feature-color";
+import { z } from "@/lib/validation/zod";
 import type { components } from "@/types/api";
 
 export const ACCOUNT_TYPES = [

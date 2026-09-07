@@ -1,5 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -49,7 +50,7 @@ test("a transaction is created, edited and deleted from the full form", async ({
   await page.getByRole("dialog", { name: "Account" }).getByRole("option", { name: /Cash/ }).click();
   await page.getByRole("textbox", { name: /^Tags/ }).fill("e2e");
   await page.keyboard.press("Enter");
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
   await page.getByRole("button", { name: "Save transaction" }).click();
   await expect(page.getByText("Transaction saved")).toBeVisible();
 
@@ -104,7 +105,7 @@ test("a transfer refuses the same account on both sides and swaps them", async (
   await request.delete(`/api/transactions/${created?.id}`, { headers: { origin: APP } });
 });
 
-test("an adjustment sends only the chosen side and a far-future date is refused inline", async ({
+test("an adjustment sends only the chosen side, and a far-future date cannot be chosen at all", async ({
   page,
   request,
 }) => {
@@ -117,12 +118,16 @@ test("an adjustment sends only the chosen side and a far-future date is refused 
   await page.getByRole("button", { name: /^Account/ }).click();
   await page.getByRole("dialog", { name: "Account" }).getByRole("option", { name: /Cash/ }).click();
   await page.getByRole("button", { name: "Decrease balance" }).click();
-  await page.getByRole("textbox", { name: "Date" }).fill("2031-01-01");
-  await page.getByRole("button", { name: "Save transaction" }).click();
+  // F-05: a date the server would refuse is no longer reachable — the calendar stops at tomorrow
+  // and says why, so the error this test used to provoke cannot be produced from the form.
+  await page.getByRole("button", { name: /^Date/ }).click();
+  const calendar = page.getByRole("dialog", { name: "Date" });
+  await expect(calendar.getByRole("button", { name: "Next month" })).toBeDisabled();
   await expect(
-    page.getByRole("alert").filter({ hasText: "That date is more than a day ahead." }),
+    calendar.getByText("Days after tomorrow are not available:", { exact: false }),
   ).toBeVisible();
-  await page.getByRole("textbox", { name: "Date" }).fill("2026-09-01");
+  await calendar.getByRole("button", { name: "Yesterday" }).click();
+  await calendar.getByRole("button", { name: "Done" }).click();
   await page.getByRole("button", { name: "Save transaction" }).click();
   await expect(page.getByText("Transaction saved")).toBeVisible();
   const created = await findByAmount(request, amount);

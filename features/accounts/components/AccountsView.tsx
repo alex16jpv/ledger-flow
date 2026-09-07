@@ -13,9 +13,11 @@ import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/cn";
 import { Empty } from "@/components/ui/Empty";
 import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
+import { Projected } from "@/components/ui/Projected";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Link } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import type { Account } from "@/types/api";
 
 import { useAccountsQuery } from "../hooks";
@@ -26,6 +28,7 @@ const GRID = "grid gap-3 sm:grid-cols-2 lg:grid-cols-3";
 
 function AccountLink({ account, archived = false }: { account: Account; archived?: boolean }) {
   const t = useTranslations();
+  const outbox = useOutbox();
   return (
     <Link
       href={`/accounts/${account.id}`}
@@ -34,7 +37,11 @@ function AccountLink({ account, archived = false }: { account: Account; archived
       <AccountCard
         name={account.name}
         typeLabel={t(`accountTypes.${account.type}`)}
-        balance={<Amount value={account.balance} signed={false} size="lg" />}
+        balance={
+          <Projected when={outbox.projected.balances}>
+            <Amount value={account.balance} signed={false} size="lg" />
+          </Projected>
+        }
         color={account.color}
         mainLabel={account.isDefault ? t("common.main") : undefined}
         archivedLabel={archived ? t("accounts.list.archivedBadge") : undefined}
@@ -46,6 +53,7 @@ function AccountLink({ account, archived = false }: { account: Account; archived
 
 export function AccountsView() {
   const t = useTranslations();
+  const outbox = useOutbox();
   const accounts = useAccountsQuery(true);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const archivedId = useId();
@@ -126,7 +134,9 @@ export function AccountsView() {
               <span className="text-xs font-medium text-text-3">
                 {t("accounts.list.totalBalance")}
               </span>
-              <Amount value={summary.totalBalance} signed={false} size="hero" />
+              <Projected when={outbox.projected.balances}>
+                <Amount value={summary.totalBalance} signed={false} size="hero" />
+              </Projected>
               <span className="text-sm text-text-3">
                 {t("accounts.list.counts", {
                   active: summary.active.length,
@@ -139,7 +149,9 @@ export function AccountsView() {
                 <span className="text-xs font-medium text-text-3">
                   {t("accounts.list.cardDebt")}
                 </span>
-                <Amount value={summary.cardDebt} size="lg" />
+                <Projected when={outbox.projected.balances}>
+                  <Amount value={summary.cardDebt} size="lg" />
+                </Projected>
               </div>
             )}
           </Card>

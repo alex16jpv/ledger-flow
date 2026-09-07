@@ -2,8 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { rememberServerTime, resetClockOffset } from "@/lib/local/clock";
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
+import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 
 import { EditTransactionScreen, NewTransactionScreen } from "./TransactionFormScreen";
 
@@ -92,6 +95,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  resetClockOffset();
 });
 
 function render(ui: React.ReactElement) {
@@ -117,6 +121,7 @@ describe("NewTransactionScreen", () => {
     });
     const [post] = calls("POST");
     expect(JSON.parse(post?.[1]?.body as string)).toMatchObject({
+      id: expect.stringMatching(UUID),
       type: "EXPENSE",
       amount: 4500,
       fromAccountId: "a1",
@@ -126,7 +131,7 @@ describe("NewTransactionScreen", () => {
       tags: ["travel"],
       note: null,
     });
-    expect(new Headers(post?.[1]?.headers).get("Idempotency-Key")).toMatch(/^[0-9a-f-]{36}$/);
+    expect(new Headers(post?.[1]?.headers).get("Idempotency-Key")).toBeNull();
     expect(await screen.findByText("Transaction saved")).toBeVisible();
   });
 
@@ -163,6 +168,28 @@ describe("NewTransactionScreen", () => {
       fromAccountId: "a2",
       toAccountId: "a1",
     });
+  });
+
+  // F-66, the preventive half: the form's guard runs on this device's clock, so a device that runs
+  // ahead accepts a date the server will refuse and only says so after the queue is stuck.
+  it("warns when this device's clock runs ahead of the server's", async () => {
+    const vault = await openTestVault("u1");
+    await rememberServerTime(
+      vault.db,
+      "2026-09-22T18:12:00.000Z",
+      Date.parse("2026-09-25T18:12:00.000Z"),
+    );
+    render(<NewTransactionScreen />);
+
+    const warning = await screen.findByText(/clock is 3 days ahead of the server/);
+    expect(warning).toHaveTextContent("Dates more than 24 hours in the future will be refused.");
+    await wipeVaults();
+  });
+
+  it("says nothing when the two clocks agree", async () => {
+    render(<NewTransactionScreen />);
+    expect(await screen.findByRole("button", { name: /^Date/ })).toBeInTheDocument();
+    expect(screen.queryByText(/clock is/)).not.toBeInTheDocument();
   });
 
   it("shows server field errors next to the responsible field", async () => {
@@ -203,12 +230,9 @@ describe("EditTransactionScreen", () => {
     await waitFor(() => {
       expect(calls("PUT")).toHaveLength(1);
     });
-    expect(JSON.parse(calls("PUT")[0]?.[1]?.body as string)).toMatchObject({
-      description: "Taxi",
-      categoryId: "c1",
-      fromAccountId: "a1",
-      toAccountId: null,
-    });
+    // Only what was touched travels: a body that also named the amount and the date would make the
+    // queue treat every two-device disagreement about this row as a money conflict (§1 example 3).
+    expect(JSON.parse(calls("PUT")[0]?.[1]?.body as string)).toEqual({ description: "Taxi" });
     expect(push).toHaveBeenCalledWith("/transactions");
 
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
@@ -218,6 +242,54 @@ describe("EditTransactionScreen", () => {
       expect(calls("DELETE")).toHaveLength(1);
     });
     expect(await screen.findByText("Transaction deleted")).toBeVisible();
+  });
+
+  // Owner report after R-3b: a quick capture edited through the full form, category included, kept
+  // its "To review" badge. The form applies the inbox's rule (P-17).
+  it("completes a quick capture when the full form saves it with a category", async () => {
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/transactions/t1") && method === "GET")
+        return Promise.resolve(json({ ...stored, pendingDetails: true, source: "QUICK" }));
+      if (url.endsWith("/api/transactions/t1") && method === "PUT")
+        return Promise.resolve(json(stored));
+      if (url.includes("/api/accounts"))
+        return Promise.resolve(json({ data: accounts, pagination }));
+      if (url.includes("/api/categories"))
+        return Promise.resolve(json({ data: categories, pagination }));
+      if (url.includes("/api/stats/spending"))
+        return Promise.resolve(json({ groupBy: "category", total: 0, buckets: [] }));
+      if (url.endsWith("/api/transactions/tags")) return Promise.resolve(json({ data: ["work"] }));
+      return Promise.resolve(json({ code: "INTERNAL", message: url }, { status: 500 }));
+    });
+    render(<EditTransactionScreen id="t1" />);
+    expect(await screen.findByRole("textbox", { name: /^Description/ })).toHaveValue(
+      "Uber to work",
+    );
+    await userEvent.clear(screen.getByRole("textbox", { name: /^Description/ }));
+    await userEvent.type(screen.getByRole("textbox", { name: /^Description/ }), "Latte");
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(calls("PUT")).toHaveLength(1);
+    });
+    expect(JSON.parse(calls("PUT")[0]?.[1]?.body as string)).toEqual({
+      description: "Latte",
+      pendingDetails: false,
+    });
+  });
+
+  // R-5 §A: the API refuses an empty PUT, and offline it would sit in the attention tray.
+  it("saving an untouched edit sends nothing and leaves the form", async () => {
+    render(<EditTransactionScreen id="t1" />);
+    expect(await screen.findByRole("textbox", { name: /^Description/ })).toHaveValue(
+      "Uber to work",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/transactions");
+    });
+    expect(calls("PUT")).toHaveLength(0);
   });
 
   it("shows the not-found state for a missing id", async () => {

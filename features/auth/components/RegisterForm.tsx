@@ -1,16 +1,19 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User } from "lucide-react";
+import { Globe, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
+import { LanguageChoiceSheet, useDetectedLocale } from "@/components/shell/LanguageChoice";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CurrencyPicker } from "@/components/ui/CurrencyPicker";
 import { Field, Input } from "@/components/ui/Field";
+import { Picker } from "@/components/ui/Picker";
+import { Tile } from "@/components/ui/Tile";
 import { TimeZonePicker } from "@/components/ui/TimeZonePicker";
 import { ApiError, presentError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
@@ -35,6 +38,8 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
   const registerMutation = useRegister();
   const defaults = useDeviceDefaults();
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const detected = useDetectedLocale();
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -135,6 +140,26 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
             {...form.register("password")}
           />
         </Field>
+        <Field label={t("auth.register.language")} help={t("auth.register.languageHelp")}>
+          {/* The same value as the chip in the frame (F-02): both are the language the screen is
+              being read in, and that is the `locale` the account is created with. */}
+          <Picker
+            label={
+              detected === locale
+                ? t("auth.register.languageDetected")
+                : t("auth.register.language")
+            }
+            value={t(`settings.language.${locale}`)}
+            onClick={() => {
+              setLanguageOpen(true);
+            }}
+            leading={
+              <Tile size="sm" color="BLUE">
+                <Globe {...iconProps("sm")} />
+              </Tile>
+            }
+          />
+        </Field>
         <Field
           label={t("auth.register.currency")}
           help={t("auth.register.currencyHelp")}
@@ -189,6 +214,12 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
       >
         {t("auth.register.submit")}
       </Button>
+      <LanguageChoiceSheet
+        open={languageOpen}
+        onClose={() => {
+          setLanguageOpen(false);
+        }}
+      />
     </form>
   );
 }

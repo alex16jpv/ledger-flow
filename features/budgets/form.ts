@@ -1,8 +1,7 @@
-import { z } from "zod";
-
 import { dayKey, daysWindow, localDateTime } from "@/lib/format/dates";
 import { MAX_AMOUNT } from "@/lib/format/money";
 import { COLOR_TOKENS } from "@/lib/theme/feature-color";
+import { z } from "@/lib/validation/zod";
 import type { Budget, CreateBudgetInput, UpdateBudgetInput } from "@/types/api";
 
 import { BUDGET_PERIOD_TYPES } from "./progress";

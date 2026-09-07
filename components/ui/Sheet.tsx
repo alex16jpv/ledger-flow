@@ -9,12 +9,16 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
 } from "react";
 
 import { iconProps } from "@/lib/icons/sizes";
 
 import { Button } from "./Button";
 import { cn } from "./cn";
+
+const FOCUSABLE =
+  'a[href],button,input,select,textarea,summary,[contenteditable],[tabindex]:not([tabindex="-1"])';
 
 export interface SheetProps {
   open: boolean;
@@ -23,6 +27,8 @@ export interface SheetProps {
   children: ReactNode;
   footer?: ReactNode;
   dismissible?: boolean;
+  // The calendar and the wheel of 7.28 are 360 px wide from `sm` up; everything else is 520.
+  width?: "md" | "sm";
   className?: string;
 }
 
@@ -33,11 +39,14 @@ export function Sheet({
   children,
   footer,
   dismissible = true,
+  width = "md",
   className,
 }: SheetProps) {
   const t = useTranslations("common");
   const ref = useRef<HTMLDialogElement>(null);
+  const body = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const [bodyNeedsFocus, setBodyNeedsFocus] = useState(false);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -45,6 +54,14 @@ export function Sheet({
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
   }, [open]);
+
+  // axe's `scrollable-region-focusable`: a region that scrolls has to be reachable by keyboard. It
+  // needs a tab stop of its own only when nothing inside it can take one — a sheet whose body is
+  // reading matter and whose buttons live in the footer, like "Resolve sync conflict". Giving every
+  // sheet one would put a stop in front of the search box of every picker.
+  useEffect(() => {
+    setBodyNeedsFocus(open && body.current?.querySelector(FOCUSABLE) == null);
+  }, [open, children]);
 
   // React re-dispatches the non-bubbling dialog events up the tree: ignore those of a nested sheet.
   function handleCancel(event: SyntheticEvent<HTMLDialogElement>) {
@@ -79,7 +96,8 @@ export function Sheet({
         <div
           className={cn(
             "flex max-h-[92%] w-full flex-col gap-4 rounded-t-2xl bg-surface px-4 pt-2 pb-[calc(var(--sp-4)+env(safe-area-inset-bottom))] text-text shadow-3",
-            "sm:w-[min(520px,92%)] sm:rounded-xl sm:pb-5",
+            width === "sm" ? "sm:w-[min(360px,92%)]" : "sm:w-[min(520px,92%)]",
+            "sm:rounded-xl sm:pb-5",
           )}
         >
           <span
@@ -101,7 +119,13 @@ export function Sheet({
               <X {...iconProps("sm")} />
             </Button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+          <div
+            ref={body}
+            tabIndex={bodyNeedsFocus ? 0 : undefined}
+            className="min-h-0 flex-1 overflow-y-auto"
+          >
+            {children}
+          </div>
           {footer && <div className="flex flex-col gap-2">{footer}</div>}
         </div>
       </div>

@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
 
@@ -35,6 +36,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  connectivityStore.reset();
 });
 
 describe("SessionsView", () => {
@@ -71,5 +73,22 @@ describe("SessionsView", () => {
     expect(dialog).toHaveTextContent(/also signs out this device/);
     await userEvent.click(within(dialog).getByRole("button", { name: "Sign out everywhere" }));
     expect(onSignOutAll).toHaveBeenCalled();
+  });
+
+  // R-3b §C: with no network the request cannot reach the server, so the sign-out would only clear
+  // this device and leave the account signed in. It waits, and says why.
+  it("does not offer to sign out every device while offline", async () => {
+    fetchMock.mockResolvedValue(json({ data: sessions }));
+    reportOnline(false);
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <SessionsView onSignOutAll={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    await screen.findAllByRole("button", { name: /^Sign out (Android|Windows)/ });
+    expect(screen.getByRole("button", { name: "Sign out all other sessions" })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent(/needs a connection/);
   });
 });

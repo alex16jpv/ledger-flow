@@ -9,10 +9,12 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/cn";
 import { Progress } from "@/components/ui/Progress";
+import { Projected } from "@/components/ui/Projected";
 import { Stat } from "@/components/ui/Stat";
 import { Tile } from "@/components/ui/Tile";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import type { Budget } from "@/types/api";
 
 import { budgetProgress } from "../progress";
@@ -27,9 +29,15 @@ export interface BudgetHeroProps {
 
 export function BudgetHero({ budget, icon, now }: BudgetHeroProps) {
   const t = useTranslations("budgets");
+  const outbox = useOutbox();
   const money = useMoney();
   const dates = useDates();
   const progress = budgetProgress(budget, now);
+  const paceMark = {
+    day: progress.day,
+    days: progress.days,
+    percent: Math.round(progress.elapsed * 100),
+  };
   const from = new Date(budget.periodFrom);
   const to = new Date(budget.periodTo);
   const range = dates.formatRange(from, new Date(to.getTime() - 1));
@@ -64,28 +72,38 @@ export function BudgetHero({ budget, icon, now }: BudgetHeroProps) {
         </div>
       </div>
       <div className="flex items-baseline justify-between gap-3">
-        <Amount value={budget.spent} signed={false} size="hero" />
+        <Projected when={outbox.projected.budgets}>
+          <Amount value={budget.spent} signed={false} size="hero" />
+        </Projected>
         <span className="text-sm text-text-3">
           {t("list.of", { amount: money.format(budget.amount) })}
         </span>
       </div>
-      <Progress
-        value={budget.spent}
-        max={budget.amount}
-        marker={progress.elapsed}
-        color={budget.color}
-        label={budget.name}
-      />
+      <Projected when={outbox.projected.budgets} align="center" className="w-full">
+        <Progress
+          value={budget.spent}
+          max={budget.amount}
+          marker={progress.elapsed}
+          markerLabel={t("pace.tooltip", paceMark)}
+          color={budget.color}
+          label={budget.name}
+          className="flex-1"
+        />
+      </Projected>
+      {/* Only here: the detail has room for it, and a tooltip does not exist for a finger (F-08). */}
+      <p className="text-sm text-text-3">{t("pace.legend", paceMark)}</p>
       <div className="grid grid-cols-3 gap-3 pt-1">
         <Stat
           label={t("detail.remaining")}
           value={
-            <Amount
-              value={progress.remaining}
-              signed={false}
-              size="base"
-              className={cn("text-xl font-semibold", progress.remaining < 0 && "text-danger")}
-            />
+            <Projected when={outbox.projected.budgets}>
+              <Amount
+                value={progress.remaining}
+                signed={false}
+                size="base"
+                className={cn("text-xl font-semibold", progress.remaining < 0 && "text-danger")}
+              />
+            </Projected>
           }
         />
         <Stat

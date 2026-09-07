@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { backendFetch, readBackendJson } from "@/lib/api/backend";
 import { REFRESH_COOKIE } from "@/lib/auth/cookies";
 import {
-  endSessionResponse,
+  endExpiredSessionResponse,
   forwardedRequestId,
   passThroughError,
   sessionResponse,
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   if (denied) return denied;
   const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
   if (!refreshToken) {
-    const response = endSessionResponse(401);
+    const response = endExpiredSessionResponse();
     return NextResponse.json(
       { error: "Unauthorized", message: "No session", code: "REFRESH_INVALID" },
       { status: 401, headers: response.headers },
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     });
     if (upstream.status === 401) {
       const error = await passThroughError(upstream, requestId);
-      const ended = endSessionResponse(401);
+      const ended = endExpiredSessionResponse();
       ended.headers.forEach((value, key) => {
         if (key.toLowerCase() === "set-cookie") error.headers.append(key, value);
         else error.headers.set(key, value);

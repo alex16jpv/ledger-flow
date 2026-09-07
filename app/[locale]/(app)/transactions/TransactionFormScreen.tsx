@@ -25,6 +25,7 @@ import {
   useUpdateTransaction,
 } from "@/features/transactions/hooks";
 import { ApiError, presentError } from "@/lib/api/errors";
+import { nothingChanged } from "@/lib/form/changes";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
@@ -138,8 +139,11 @@ export function EditTransactionScreen({ id }: { id: string }) {
           submitLabel={t("common.saveChanges")}
           pending={update.isPending}
           error={update.error}
-          onSubmit={async (input) => {
-            await update.mutateAsync(input);
+          onSubmit={async (input, _key, changes) => {
+            // The same rule as the inbox (P-17): a category is what completes a quick capture.
+            const completes = transaction.data.pendingDetails && input.categoryId != null;
+            if (completes || !nothingChanged(changes))
+              await update.mutateAsync(completes ? { ...changes, pendingDetails: false } : changes);
             toast.show({ message: t("transactions.form.updated") });
             router.push(AFTER_SAVE_PATH);
           }}

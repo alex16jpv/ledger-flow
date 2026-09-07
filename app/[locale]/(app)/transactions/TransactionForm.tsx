@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowUpDown, PencilLine } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { Alert } from "@/components/ui/Alert";
@@ -20,6 +20,7 @@ import {
   type AdjustmentDirection,
   categoryAllowed,
   isTooFarAhead,
+  toTransactionChanges,
   toTransactionInput,
   TRANSACTION_TYPES,
   transactionFormSchema,
@@ -29,10 +30,12 @@ import {
 import { useTagsQuery } from "@/features/transactions/hooks";
 import { fieldErrors, presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
+import { dayKey, shiftDayKey } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
-import type { CreateTransactionInput } from "@/types/api";
+import { aheadOfServer, clockStore } from "@/lib/local/clock";
+import type { CreateTransactionInput, UpdateTransactionInput } from "@/types/api";
 
 const TYPE_TONE = {
   EXPENSE: "default",
@@ -46,7 +49,13 @@ export interface TransactionFormProps {
   submitLabel: string;
   pending: boolean;
   error: unknown;
-  onSubmit: (input: CreateTransactionInput, idempotencyKey: string) => Promise<unknown>;
+  // `changes` is the same input narrowed to the fields the user touched: an edit sends that, so a
+  // note typed on one device does not travel as a new amount and a new date too (§1 example 3).
+  onSubmit: (
+    input: CreateTransactionInput,
+    idempotencyKey: string,
+    changes: UpdateTransactionInput,
+  ) => Promise<unknown>;
   secondaryAction?: React.ReactNode;
 }
 
@@ -60,6 +69,18 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const t = useTranslations();
   const { timeZone } = useFormatSettings();
+  // F-66, the preventive half: the form's own guard uses this device's clock, so a device that runs
+  // ahead accepts a date the server will refuse. The distance is only knowable from the server, and
+  // the vault keeps it for exactly this moment.
+  // The server refuses anything more than 24 h ahead, so the calendar stops there (7.28).
+  const tomorrow = shiftDayKey(dayKey(new Date(), timeZone), 1);
+  const skew = aheadOfServer(
+    useSyncExternalStore(
+      clockStore.subscribe,
+      clockStore.getSnapshot,
+      clockStore.getServerSnapshot,
+    ),
+  );
   const tags = useTagsQuery();
   const keyring = useRef(new IdempotencyKeyring());
   const amountInput = useRef<HTMLInputElement>(null);
@@ -67,7 +88,10 @@ export function TransactionForm({
     resolver: zodResolver(transactionFormSchema),
     defaultValues,
   });
-  const { errors } = form.formState;
+  // `dirtyFields` is read during render on purpose: React Hook Form's formState is a Proxy that only
+  // tracks what the component subscribed to, and reading it for the first time inside the submit
+  // handler would answer with an empty object.
+  const { errors, dirtyFields } = form.formState;
   const type = useWatch({ control: form.control, name: "type" });
 
   // The amount is the first thing to type on entering the form and after every type switch (owner request P-22).
@@ -99,15 +123,21 @@ export function TransactionForm({
     }
     const input = toTransactionInput(values, timeZone);
     try {
-      await onSubmit(input, keyring.current.keyFor(input));
+      await onSubmit(
+        input,
+        keyring.current.keyFor(input),
+        toTransactionChanges(input, dirtyFields),
+      );
     } catch {
       return;
     }
   }
 
   function changeType(next: TransactionType) {
-    form.setValue("type", next);
-    if (!categoryAllowed(next)) form.setValue("categoryId", null);
+    // `shouldDirty` because an edit only sends what is dirty: a value the screen sets on the user's
+    // behalf is still the user's change.
+    form.setValue("type", next, { shouldDirty: true });
+    if (!categoryAllowed(next)) form.setValue("categoryId", null, { shouldDirty: true });
     form.clearErrors();
   }
 
@@ -209,8 +239,8 @@ export function TransactionForm({
               round
               aria-label={t("transactions.form.swap")}
               onClick={() => {
-                form.setValue("fromAccountId", toAccountId);
-                form.setValue("toAccountId", fromAccountId);
+                form.setValue("fromAccountId", toAccountId, { shouldDirty: true });
+                form.setValue("toAccountId", fromAccountId, { shouldDirty: true });
               }}
             >
               <ArrowUpDown {...iconProps("sm")} />
@@ -276,6 +306,17 @@ export function TransactionForm({
           )}
         </div>
       )}
+      {skew && (
+        <Alert tone="warning">
+          {t(
+            skew.unit === "days"
+              ? "transactions.form.clockSkew.days"
+              : "transactions.form.clockSkew.hours",
+            { count: skew.count },
+          )}{" "}
+          {t("transactions.form.clockSkew.refused")}
+        </Alert>
+      )}
       <Controller
         control={form.control}
         name="date"
@@ -293,6 +334,8 @@ export function TransactionForm({
                 }}
                 dateLabel={t("common.date")}
                 timeLabel={t("common.time")}
+                max={tomorrow}
+                dateNote={t("transactions.form.dateLimit")}
                 dateError={validationMessage(t, errors.date?.message ?? serverFields.date)}
               />
             )}

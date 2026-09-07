@@ -1,6 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { SessionProvider } from "@/lib/session/SessionProvider";
 import { renderWithProviders } from "@/lib/testing/render";
@@ -62,6 +63,34 @@ describe("LanguageSheet", () => {
     const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
     expect(put?.[1]?.body).toBe(JSON.stringify({ locale: "es" }));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  // Owner report after R-3b: offline, choosing a language did nothing and said nothing.
+  it("says the change needs a connection while offline, and keeps the options off", async () => {
+    fetchMock.mockImplementation((input) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (url === "/api/auth/me") {
+        return Promise.resolve(json({ user: { id: "u1", name: "John", locale: "en" } }));
+      }
+      return Promise.reject(new TypeError("Failed to fetch"));
+    });
+    reportOnline(false);
+    renderWithProviders(
+      <QueryProvider>
+        <SessionProvider onSignedOut={vi.fn()}>
+          <LanguageSheet open onClose={vi.fn()} />
+        </SessionProvider>
+      </QueryProvider>,
+    );
+    expect(await screen.findByText(/needs a connection/)).toBeVisible();
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: /English/ })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    });
+    expect(screen.getByRole("option", { name: /Español/ })).toBeDisabled();
+    connectivityStore.reset();
   });
 
   it("stores the device mode without calling the API when the device already matches", async () => {

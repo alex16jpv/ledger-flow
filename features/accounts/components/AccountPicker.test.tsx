@@ -105,7 +105,9 @@ describe("AccountPicker", () => {
       json(account("nu", "Nu", { type: "SAVINGS", balance: 0 }), { status: 201 }),
     );
     await userEvent.type(screen.getByLabelText("Name"), "Nu");
-    await userEvent.click(screen.getByRole("button", { name: "Savings", pressed: false }));
+    await userEvent.click(screen.getByRole("button", { name: /^Type/ }));
+    const types = screen.getByRole("dialog", { name: "Account type" });
+    await userEvent.click(within(types).getByRole("option", { name: /^Savings/ }));
     await userEvent.click(screen.getByRole("button", { name: "Create account" }));
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: "nu" }));

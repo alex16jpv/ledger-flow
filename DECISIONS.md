@@ -973,3 +973,1349 @@ cover` is set once in the root layout for the standalone display.
 - **Not automated:** GitHub branch protection, the Vercel environment variables, the Sentry
   project and the `BACKEND_REPO_TOKEN`/`SENTRY_AUTH_TOKEN` secrets are console settings for the
   owner; the checklist lives in `auditoria/front/puertas/F5/README.md`.
+
+## 2026-09-03 · One database per user holds both the mirror and the outbox (O-F1)
+
+- **Decision:** the vault is a single IndexedDB database per user, `lf-vault-<userId>`, holding the
+  five mirror stores, the `outbox` and `meta` together.
+- **Alternatives:** two databases (`lf-vault-*` for the mirror, `lf-outbox-*` for the queue), which
+  would make "dropping the mirror never drops the outbox" structurally impossible to get wrong.
+  Rejected because **IndexedDB transactions cannot span two databases**, and O-F4 requires writing
+  the entity and its operation in one transaction (plan §4.1) — that is the difference between a
+  ghost movement and a saved one. Atomicity is a platform constraint; separation is a discipline we
+  can enforce with code and tests, so the discipline gives way.
+- **Consequence:** invariant 7 is protected by code, not by structure: nothing ever calls
+  `deleteDatabase` on a vault, the mirror reset transaction deliberately does not include the
+  `outbox` store, and both rules have a test that fails when they are broken.
+
+## 2026-09-03 · Three version numbers, because the two halves migrate by opposite rules (O-F1)
+
+- **Decision:** `VAULT_SCHEMA_VERSION` is the physical IndexedDB version and only ever creates
+  stores and indexes. `MIRROR_VERSION` and `OUTBOX_VERSION` are logical, live in `meta`, and are
+  reconciled on every open. Bumping the mirror clears it and drops the cursor, so the next pull is a
+  full snapshot. Bumping the outbox runs an explicit migration per operation; if any operation
+  cannot be carried forward, **nothing is written**, the vault reports `outbox: "blocked"` and the
+  version stays where it was until the queue drains.
+- **Alternatives:** doing both inside `upgradeneeded`. Rejected: a `versionchange` transaction
+  cannot await outside work, and aborting it to "block" the upgrade leaves the database in a state
+  that is far harder to reason about than simply not bumping a number in `meta`. A single version
+  for everything was also rejected: the two halves have opposite policies, so one number would force
+  the safe one to follow the disposable one.
+- **Consequence:** a logical bump needs no structural bump and vice versa. `migrateOperation` only
+  walks forward, so a queue written by a newer build blocks an older one instead of being
+  reinterpreted with fields it does not know.
+
+## 2026-09-03 · The mirror stores the feed row verbatim, with index keys alongside it (O-F1)
+
+- **Decision:** every mirror record is `{ id, row, updatedAt, …index keys }`, where `row` is exactly
+  what `GET /sync/changes` sent. Booleans and nulls are **not valid IndexedDB keys**, so flags are
+  stored as `0`/`1` (`archived`, `deleted`) and anything the index must skip is _omitted_:
+  `liveDate` is absent on tombstones, `pendingReview` is present only on live rows that need review,
+  and null foreign keys are left out rather than stored as null.
+- **Alternatives:** spreading the index keys flat onto the row. Rejected: `lib/local/derive` (O-F3)
+  is verified against `auditoria/offline-fixtures/`, and it has to receive the server's shape
+  untouched for that comparison to mean anything.
+- **Consequence:** reads unwrap `record.row`. The compound `dateCursor` index is `["liveDate", "id"]`
+  — IndexedDB skips a record when any part of a compound key path is missing, which is what keeps
+  the transaction list cursor from ever walking a tombstone, and the `id` half is what breaks ties
+  between two transactions on the same date.
+
+## 2026-09-03 · `idb` as a direct dependency (O-F1)
+
+- **Decision:** `idb@8.0.3` (exact), as recommended by the plan §6. It was already in the tree as a
+  transitive dependency of `serwist`, so it dedupes and costs ~1.2 kB gz.
+- **Alternatives:** a hand-written promise wrapper (~150 lines). Rejected: it is code we would own
+  and test for no gain, and `idb` gives a typed schema (`DBSchema`) plus the transaction handling
+  that O-F4's atomic mirror+outbox write depends on.
+- **Consequence:** `fake-indexeddb` joins as a devDependency, wired in `vitest.setup.ts`: jsdom has
+  no IndexedDB, and the migration tests this item requires have to run inside `npm run ci`.
+
+## 2026-09-03 · Purging is never automatic, and the outbox outlives the session (O-F1)
+
+- **Decision:** `lib/query/purge.ts` changes contract. `purgePersistedCaches()` runs on an explicit
+  logout and nowhere else, and never matches the `lf-vault-` prefix. The vault has its own
+  `purgeVault(userId, { discardPendingWork })`: the mirror is cleared every time, because it is
+  disposable and the next user on the device must not see it; unsent operations are kept unless the
+  caller says otherwise, and the outcome reports how many were kept or discarded.
+- **Alternatives:** refusing to purge anything while the queue is non-empty. Rejected: on a shared
+  device that would leave one user's data readable by the next one.
+- **Consequence:** an expired session touches nothing (D-7, invariant 7) — the app keeps reading the
+  mirror and queueing writes. `SessionProvider` passes the safe default and warns when it keeps a
+  queue; **the confirmation dialog that would pass `discardPendingWork: true` belongs to O-F5a/O-F6
+  and does not exist yet**, so today unsent work always survives a logout.
+
+## 2026-09-03 · The mirror only answers when the network is gone, and the seam is one constant (O-F2a)
+
+- **Decision:** `features/*/api.ts` reads through `lib/local/repository`, whose `read()` calls the
+  server whenever the app has network and the mirror only when it does not. `READ_SOURCE` in
+  `repository/read.ts` is the single constant O-F2b flips to put the mirror in front always.
+- **Alternatives:** promoting the mirror to the primary path in this same item. Rejected by plan §6:
+  the two-step delivery is the safety mechanism of the whole offline stage, and the promotion is
+  conditioned on the 113+ Playwright specs and every screen test passing with the mirror in front.
+  Falling back on a `NetworkError` from the server instead of on the connectivity phase was also
+  rejected: it would serve stale rows during a real outage while the UI still claimed to be online.
+- **Consequence:** the online path is unchanged, so this item cannot break a screen that has network.
+  The mirror-backed code only runs offline, which is exactly the code whose failures are discovered
+  late — hence the tests that read the same data both ways and compare.
+
+## 2026-09-03 · A mirror that cannot answer says so, and the read falls through to the server (O-F2a)
+
+- **Decision:** a mirror reader returns `undefined` for "I cannot answer this", and `read()` then
+  asks the server. That covers an id the mirror never saw and a vault whose first snapshot never
+  finished (`meta.syncedAt` is written only by the page that drains the feed).
+- **Alternatives:** throwing a locally built `ApiError(404)` or `NetworkError`. Rejected: a
+  fabricated `requestId` is a lie in the one field support uses to trace a request, and a 404 for an
+  id we simply do not have locally is not true. Returning an empty list was rejected for the same
+  reason — a fresh device would render "no accounts yet" instead of an offline error.
+- **Consequence:** offline, the fall-through hits the network and fails with the real error the app
+  already knows how to present. Online, it is a normal request.
+
+## 2026-09-03 · Mirror-backed query domains fetch while offline (O-F2a)
+
+- **Decision:** `createQueryClient` gives `QUERY_DOMAINS.accounts` and `.categories`
+  `networkMode: "offlineFirst"` through `setQueryDefaults`. `MIRROR_BACKED_DOMAINS` in
+  `lib/query/domains.ts` is the list; O-F2b adds each domain as it starts reading locally.
+- **Alternatives:** changing the global default. Rejected: the transactions screen tells "offline
+  with nothing cached" apart by `fetchStatus === "paused"`, and that domain still reads from the
+  server. Per-hook options were rejected too — the item must not touch the hooks.
+- **Consequence:** without this the whole fallback would be dead code: React Query pauses a query
+  while `onlineManager` says offline, and a paused query never reaches its `queryFn`.
+
+## 2026-09-03 · The pull is scheduled by events, never by a timer (O-F2a)
+
+- **Decision:** `startMirror` pulls when the app opens, when it regains focus and the copy is older
+  than `PULL_STALE_MS` (5 min), and when the network comes back. `AppFrame` starts it for the
+  signed-in user, which is also where `requestPersistentStorage()` is finally called.
+- **Alternatives:** a background interval. Rejected by plan §4.2: a 30-second poll is 2 880 requests
+  a day per device even when nothing changes — worse than the traffic local-first exists to remove.
+- **Consequence:** freshness is bounded by user activity, which is the intended trade. Pulling right
+  after each push arrives with the outbox (O-F4).
+
+## 2026-09-03 · The transaction cursor is resolved locally as a keyset, not as an offset (O-F2a)
+
+- **Decision:** `repository/transactions.ts` walks the `dateCursor` index (`["liveDate", "id"]`)
+  backwards and treats the cursor the way the API does: the id of the last row served, whose own date
+  is read back from the row it names to bracket the next page at `(date, id) <` that pivot.
+- **Alternatives:** remembering how many rows were already served and skipping that many. Rejected:
+  a pull between two pages inserts rows above the one the reader is on, and an offset then silently
+  skips exactly as many rows as arrived — the bug infinite scroll is famous for. Materialising the
+  filtered set once and finding the cursor's position in it was rejected for a subtler version of the
+  same thing: a row edited out of the filter between two pages would no longer be in the list, and
+  the page would restart. The server does not have that problem because it only ever reads the
+  pivot's date, so the mirror does the same.
+- **Consequence:** the local list survives a pull mid-scroll, and a tombstone can never be served:
+  a deleted row has no `liveDate`, and IndexedDB skips a record when part of a compound key path is
+  missing. It still works as a pivot, which is what keeps deleting the last row of a page from
+  restarting the list.
+
+## 2026-09-03 · Filters the index does not cover are applied while walking, not given an index (O-F2a)
+
+- **Decision:** only the period brackets the index walk. Type, account, category, "uncategorized",
+  tag, pending and quick-only are evaluated per row as the walk goes, and a query carrying any
+  parameter the mirror does not implement is declined so the read goes to the server.
+- **Alternatives:** an index per filter, or a composite index per combination. Rejected: the screen
+  offers eight filters that combine freely, IndexedDB picks one index per query anyway, and every
+  index that only half-answers a combination is a way for the local list to disagree with the API.
+  Ignoring an unknown parameter was rejected outright — it answers a different question than the one
+  asked, which is worse than not answering.
+- **Consequence:** a filtered page costs a walk of the period's rows rather than a lookup. That is
+  the same order of work the list already does to produce `total`, which the API counts over the
+  whole filtered set on every page.
+
+## 2026-09-03 · The list's own `summary` is summed locally; `/stats/spending` is not (O-F2a)
+
+- **Decision:** `includeSummary=true` is answered from the mirror, adding the amounts as integer
+  minor units (`Math.round(amount * 100)`, summed, divided at the end) exactly as the server stores
+  and `$sum`s them. `fetchDailyStats` stays a server call.
+- **Alternatives:** declining the summary and letting the pending tray fall through to the server.
+  Rejected: it is the only field that read needs beyond the count, so the whole tray would stop
+  working offline. Summing in floats was rejected by the fixtures' own example: `0.10 + 0.20` is not
+  `0.30` in binary floating point.
+- **Consequence:** the pending tray works offline. This is a plain sum over the same filtered set,
+  not a derivation — day buckets, balances and `spent` need a time zone and a period and belong to
+  `lib/local/derive` (O-F3), which is checked against `auditoria/offline-fixtures/`. When O-F3 lands,
+  the pending summary moves there with the rest and gets the same fixture check.
+
+## 2026-09-03 · Budgets decline offline instead of answering the view without `spent` (O-F2a)
+
+- **Decision:** the mirror declines the budget list and the budget detail while there is no network,
+  so both reads go to the server and fail honestly. `QUERY_DOMAINS.budgets` therefore stays out of
+  `MIRROR_BACKED_DOMAINS`: unpausing a domain that cannot answer only turns a paused skeleton into a
+  failed request. The seam is in place (`lib/local/repository/budgets.ts`) for O-F3 to fill.
+- **Alternatives:** serving the view with `spent` derived locally — forbidden here, that is O-F3 and
+  it is checked against `auditoria/offline-fixtures/`. Serving the half of the view that is not
+  money — rejected because no budget surface can paint without the figure: `BudgetCard`,
+  `GlobalBudgetCard`, `BudgetHero`, Home's `BudgetsSection` and `HeroCard`, the ordering in
+  `BudgetsView` and `topBudgets`, `budgetProgress` and `budgetStatus` all read `budget.spent`, and
+  `Budget` declares it required. Making it optional means changing five components and their tests,
+  which this item excludes, to ship a degraded screen that O-F3 would revert two items later.
+  Answering `spent: 0` was never on the table: invariant 2 forbids showing a figure nobody computed.
+  Confirmed with the owner before implementing.
+- **Consequence:** Budgets is exactly as offline-capable as it was — no better, no worse — until
+  O-F3. Verified against the running backend that the stored shape is what forces this: of the view's
+  fields, `archivedCategoryIds`, `periodKey`, `periodFrom`, `periodTo`, `baseAmount`, `spent`,
+  `hasOverride` and `expired` are absent from `SyncBudget`, and over the ten seeded budgets
+  everything but `spent` and the recurring period window derives from the stored row plus the
+  categories mirror with zero mismatches. Only `spent` needs the transactions, and one seeded budget
+  carries a non-zero one.
+
+## 2026-09-03 · Home and stats keep their server reads and stay paused offline (O-F2a)
+
+- **Decision:** Home's accounts, categories and pending tray now read through the repository and are
+  answered by the mirror; its month spending and its budgets stay server calls. `features/stats`
+  is not routed at all — it is `/stats/spending` and nothing else. Neither `QUERY_DOMAINS.home` nor
+  `QUERY_DOMAINS.stats` joins `MIRROR_BACKED_DOMAINS`.
+- **Alternatives:** unpausing `home` so the three local reads answer offline. Rejected after reading
+  `HomeView`: it renders the error card when any of spending/accounts/budgets/income errors and
+  returns the skeleton while `!data.spending.data`, so unpausing would replace today's offline
+  skeleton with an error card and still show no data. Splitting the home keys into per-domain
+  prefixes was rejected for the reason `domains.ts` exists: two files would then own the key shape.
+- **Consequence:** nothing changes on screen yet; O-F3 adds the derived spending and the budget view
+  and flips both domains at once. The plumbing is already verified: against the running backend,
+  `/accounts?limit=100`, `/categories?includeArchived=true&limit=100` and the pending tray with
+  `includeSummary` are byte-identical to what the mirror answers, envelope included.
+
+## 2026-09-04 · Money derivations are pure functions with the fixtures vendored (O-F3 part 1)
+
+- **Decision:** `lib/local/derive` takes arrays and returns figures, with no IndexedDB inside, so the
+  very rows the backend verified against a real mongod are the rows the test feeds it. Balances and
+  the pending summary land first; `spent` and the day buckets are part 2. The parity fixtures are
+  copied verbatim into `lib/local/derive/fixtures/` and committed.
+- **Alternatives:** reading `auditoria/offline-fixtures/` from the test. Rejected because that folder
+  is in no repository and CI checks out only this one, so the parity test would never run where it
+  matters. A test that skips when the folder is missing would have been green in CI while proving
+  nothing. The vendored copy is guarded instead: on a machine that has the source folder, the test
+  compares the two byte for byte and fails on drift; in CI it skips with that reason in its name.
+- **Consequence:** `repository/transactions.ts` no longer does arithmetic — `includeSummary` calls
+  `sumAmounts`, the same adder every figure uses. Nothing paints a derived balance yet, and nothing
+  may until the projection is marked (invariant 2). Refreshing the fixtures now means copying them
+  into this repo as well; asked of the generator in `BACKEND-DESDE-FRONT.md`.
+
+## 2026-09-04 · The pending tray has one path, and a derived balance is an oracle, not the screen's recipe (O-F3 review)
+
+- **Decision:** `derivePendingSummary` is removed. The repository already answers the quick-add tray
+  (`pendingDetails=true&includeSummary=true`) and Home and Transactions read it there; the parity
+  test now feeds the fixture rows into a test vault and checks that path against `expected.pending`.
+  `deriveBalances` stays as the parity oracle for the balance rule, but what Accounts will paint once
+  the outbox exists is the server's `balance` from the mirror plus the effect of the unsent
+  operations, and O-F4 has to prove the two agree whenever the outbox is empty.
+- **Alternatives:** keeping both derivations "because the plan listed the pending summary under
+  `derive`". Rejected: two paths for one figure inside one repo is the drift the fixtures exist to
+  prevent, and the second one was only ever executed by its own test. Deriving the shown balance from
+  `openingBalance` plus the whole history. Rejected: it walks every transaction on the main thread for
+  a figure the feed already carries, and the plan (§6) describes the mirror-plus-outbox projection.
+- **Consequence:** the fixtures declare `pending.transactionIds` a set (the API's tray order is
+  `date DESC`, which the old derivation did not follow either). Part 2 derives `spent` and the buckets
+  over the rows the `dateCursor` index selects for the window, never over `getAll`.
+
+## 2026-09-04 · The parity fixtures are vendored from the backend repo, not from a folder outside git (O-F3 review)
+
+- **Decision:** `lib/local/derive/fixtures/` is refreshed with `npm run fixtures:sync` from the
+  backend's committed `fixtures/offline/`, and `parity.test.ts` guards against that copy. The old
+  `auditoria/offline-fixtures/` is no longer read by anyone.
+- **Alternatives:** the previous arrangement (see the 2026-09-04 O-F3 part 1 entry above), where the
+  source of the copy was a folder in no repository. Rejected once the backend committed the files:
+  the contract can now be worked on from any machine, and the backend's CI fails when its generator
+  and its files disagree, so every link of generator → backend files → this copy has a guard.
+- **Consequence:** the chain is only as good as the sync step. Refreshing the fixtures is one command
+  and the test says which file drifted.
+
+## 2026-09-04 · Derive states the rule, the repository chooses the rows (O-F3 part 2)
+
+- **Decision:** `deriveSpending` and `deriveBudgetView` re-apply their own window and type filters
+  instead of trusting the caller to have pre-filtered, and `repository/window.ts` narrows the rows
+  with the `dateCursor` index before handing them over. The two overlap on purpose: the pure
+  function is the single written statement of the aggregation rule, checked against the fixtures the
+  backend validated on a real mongod, and the index is how the device avoids walking rows it already
+  knows are outside the window (D-18).
+- **Alternatives:** letting the repository be the only filter and making `derive` a plain grouper.
+  Rejected: the parity test would then have to pre-filter the fixture rows itself, which is a second
+  implementation of the very rule the fixture exists to pin down, in the test rather than in the
+  code. The other way round — no index, `getAll` and filter in the function — is what D-18 forbids.
+- **Consequence:** a window is expressed twice, as an `IDBKeyRange` and as a comparison, and the two
+  have to agree. `liveRowsInWindow` normalises each bound to the feed's UTC stamp before using it as
+  a key, because the index compares the stamps as strings: a bound written with an offset
+  (`2025-12-01T00:00:00-05:00`) sorts below every row of its own last day and would drop them
+  silently. The comparison inside `derive` uses `Date.parse` and never had that problem.
+
+## 2026-09-04 · The six `/stats/spending` call sites share one seam (O-F3 part 2)
+
+- **Decision:** `lib/local/repository/stats.ts` exposes one `readSpending`, and all six call sites
+  use it: `home.fetchSpending`, `budgets.fetchSpendingTotal`, `stats.fetchStats`,
+  `transactions.fetchDailyStats`, `categories.fetchCategoryUsage`, `categories.fetchCategoryCounts`.
+  It stamps the defaults `StatsController` stamps — `groupBy` `category`, `type` **EXPENSE** — which
+  is not the service's "everything but ADJUSTMENT": that query exists only below HTTP, so only a
+  fixture can ask for it and only `deriveSpending` implements it.
+- **Alternatives:** routing the three the plan named and leaving the three inside `categories` and
+  `transactions`. Rejected: those three live in domains that were already in
+  `MIRROR_BACKED_DOMAINS`, so they were failing quietly offline, and splitting the derivation across
+  six call sites is how the same figure starts disagreeing with itself.
+- **Consequence:** `budgets`, `home` and `stats` enter `MIRROR_BACKED_DOMAINS` together, and every
+  domain is now in it. `features/budgets/api.ts` lost `fetchBudgetsPage`, a dead export nobody
+  imported (F-09): the design backlog plans no screen that reads a single batch of budgets, and it
+  was the one budget read that never went through the repository.
+
+## 2026-09-04 · Writes queue through `lib/local/outbox`, and the projection answers the screen (O-F4 part 1)
+
+- **Decision:** every entity write moves out of `features/*/api.ts` into `lib/local/outbox`, the
+  mirror image of `lib/local/repository`. `queueWrite` writes the projected row and its operation in
+  **one** IndexedDB transaction and aborts explicitly on any failure; `write()` answers the caller
+  from that projection and then sends once, inline. Only the transport policy is deferred: single
+  flight, backoff, coalescing and retries are O-F4 part 2.
+- **Alternatives:** keeping the mirror as the server's copy and replaying the queue at read time.
+  Rejected: the plan says the row is written optimistically, and replaying a queue on every list
+  read is the cost the mirror exists to avoid. Writing the row and the operation in two transactions
+  was never on the table — that is the phantom movement the item exists to prevent, and it is why
+  both stores share one database (O-F1).
+- **Consequence:** each money operation carries what it replaced and what it left, because after the
+  optimistic write the mirror no longer holds the row the server has. Those deltas telescope, so a
+  second operation on the same row records what the first one left and their sum is still the
+  distance between the server's row and the screen. `projectBalances` is the mirror's `balance` plus
+  that sum, and it borrows the movement rule from `deriveBalances` instead of restating it: with an
+  empty queue the two agree by construction, and with a queue the projection equals the oracle over
+  the optimistic rows. Four kinds of server answer are told apart by hand: retryable (network, 5xx,
+  429, 401) keeps the operation, `409 STALE_UPDATE` marks it `conflict`, a 404 on a removal **is**
+  the desired state, and any other 4xx undoes the mirror write and rethrows.
+
+## 2026-09-04 · The idempotency key becomes the row's id (O-F4 part 1)
+
+- **Decision:** creates carry a client-minted UUID v7 and stop sending `Idempotency-Key`, which O-B1
+  makes redundant. Where a form already had an `IdempotencyKeyring` — the transaction form, quick
+  capture, adjust balance — the key it produces **is** the id, so a retried submit still names one
+  row. `PATCH /transactions/batch` keeps its header: it has no single id to carry.
+- **Alternatives:** dropping the keyrings and minting an id per call. Rejected: it would duplicate a
+  row on a double submit, which is exactly what the keyring was there to prevent.
+- **Consequence:** `POST /transactions/batch` and `POST /categories/restore-defaults` are the two
+  writes still going straight to the server (F-20). Verified against the real API: the server keeps
+  a v7 id (zod 4's `.uuid()` accepts it, zod 3's would not), replays the same id with 200, and
+  answers `409 STALE_UPDATE` to a stale `If-Match` and 404 to a second delete.
+
+## 2026-09-04 · What the marking of projected figures covers now, and what waits for O-F5a (F-16)
+
+- **Decision:** `components/ui/Projected` puts the amber `cloud-off` mark of DESIGN §8.12 next to a
+  figure whose family the queue can move, driven by `outboxStatusStore`. It covers the balances
+  (list, detail, Home, the total and the card debt), `spent` with its progress bars in every budget
+  surface, Home's month figure and day bars, Statistics' headline total and its day bars, and
+  Movements' period summary. The `ConnectionBanner` counts what is waiting and turns red on a
+  conflict.
+- **Alternatives:** marking every row of the Statistics breakdown and every category usage count.
+  Rejected: twenty cloud icons in one list is noise, and those rows sit under a headline that is
+  already marked on the same screen.
+- **Consequence:** what stays open in F-16 is O-F5a's: the per-row "Pending sync" badge on a movement
+  saved locally, and the red banner's "Review" action with the conflict sheet behind it.
+
+## 2026-09-04 · One description of each request, shared by the write and the replay (O-F4 part 2)
+
+- **Decision:** `lib/local/outbox/routes.ts` holds one entry per route — how to build the request and
+  what to write back on success — and both callers use it: the write that queues the operation and
+  the engine that replays it later. The entity modules keep only their projection, their guard and
+  what the screen reads back.
+- **Alternatives:** leaving `send`/`confirm` in each entity module and giving the engine its own
+  replay table. Rejected: two descriptions of the same request drift, and the one the engine uses is
+  the one nobody exercises in a screen test.
+- **Consequence:** an operation replayed after a reload rebuilds its request from `payload.body` and
+  `payload.query`, which is why the envelope stores the body verbatim instead of re-deriving it from
+  the mirror. A route missing from the table is a typecheck error, not a runtime one.
+
+## 2026-09-04 · What the queue may fold, and what it may not (O-F4 part 2)
+
+- **Decision:** `coalesce.ts` folds only where the second operation states the whole of what the
+  first one did: `update` + `update`, `update` folded into an unsent `create`, two `setOverride` for
+  the **same** budget period, and `create` + `delete` of a movement, which cancels both and drops the
+  row from the mirror. Nothing folds across an operation the server has already been asked about
+  (dispatched, `sending`, or in conflict), and the `effect.before` that survives is the **first**
+  one's.
+- **Alternatives:** folding `create` + `archive` to nothing, the way `create` + `delete` folds.
+  Rejected: archiving is a state, not a removal — an archived account is still the user's row and can
+  be restored, so dropping it would lose data the user still has on screen. Also rejected: folding an
+  `update` into a later `archive`, which would silently throw away edits a restore would then show
+  stale.
+- **Consequence:** ten edits offline leave as one request and a created-then-deleted movement leaves
+  as none, verified against the real API. `effect.before` is what keeps the balance projection right:
+  the mirror stopped holding the server's row at the first write, so keeping the second `before`
+  would count that first move twice.
+
+## 2026-09-04 · The batch of movements is queued expanded, not sent as a batch (F-20)
+
+- **Decision:** `batchUpdateTransactions` queues one `transaction:update` per row and drains them in
+  a single pass, instead of calling `PATCH /transactions/batch`. The screen still reads
+  `{ updated, failed }`; the rows that fail are the ones the server refused.
+- **Alternatives:** an envelope action `batch`. Rejected: the envelope carries one `entityId` and one
+  `If-Match`, so a batch operation is one the engine cannot retry, guard or conflict-resolve per row.
+- **Consequence:** online this is N requests where it used to be one, which is the price of a
+  per-row guard and of the review tray working with no network at all. The `Idempotency-Key` the
+  screen minted is gone: each row is addressed by its own id.
+
+## 2026-09-04 · A rejection nobody is left to hear stays in the queue (O-F4 part 2)
+
+- **Decision:** the rollback a write registers lives in memory. When the server refuses an operation
+  for good and that rollback is still there, the engine undoes the mirror write and the error reaches
+  the form. When it is not — the operation outlived the tab that made it — the operation stays queued
+  as `failed` instead of disappearing.
+- **Alternatives:** dropping it and letting the next pull overwrite the row. Rejected: the server
+  never received the write, so no pull would ever correct the mirror, and the user would keep a row
+  that silently never syncs.
+- **Consequence:** a `failed` operation holds its own row and its dependents, and keeps the amber
+  mark on. The tray that lets the user see and resolve it is O-F5a.
+
+## 2026-09-04 · A chain of guarded operations on one row is rebased as it lands (R-2 review)
+
+- **Decision:** when an operation lands and the server answers a row, the engine rewrites the
+  `baseUpdatedAt` of the operations still queued on that row that share the landed one's guard, to
+  the `updatedAt` the server answered with, inside the transaction that settles it. A queued guard
+  that differs was moved by a pull and is left alone. The archive routes keep the row when the
+  answer carries one, so a restore queued behind an archive is rebased the day the backend answers
+  it (F-22).
+- **Alternatives:** reading the guard from the mirror at send time. Rejected: the mirror's
+  `updatedAt` also moves when a pull brings another device's edit, and sending that stamp would
+  silently overwrite it — the frozen guard is what makes the 409 honest. Dropping the guard on the
+  second operation of a chain. Rejected: it is the window in which another device can write.
+- **Consequence:** an edit followed by a delete, or an archive followed by a restore, no longer ends
+  in a `409 STALE_UPDATE` the user never caused — verified against the real API for the edit-then-
+  delete case; the archive case still waits for F-22. Without the rebase every unfolded chain on one
+  row conflicted, because the client never writes `updatedAt` (invariant 2) and both operations read
+  the same stamp when they were queued.
+
+## 2026-09-04 · A fold never crosses the create it depends on, and a half-undoable fold stays (R-2 review)
+
+- **Decision:** `coalesce` does not fold an edit into an earlier operation when the edit names, in
+  `dependsOn`, a row whose create sits between the two; the edit starts a run of its own. The engine
+  also holds any operation whose `dependsOn` names a create still ahead in the pass. And a refused
+  fold is undone only when every operation in it still has its rollback; otherwise the whole run is
+  kept as `failed`.
+- **Alternatives:** trusting `seq` alone for dependency order. Rejected: a fold moves the second
+  operation to the first one's place, and against the real API that put a movement's move to a new
+  account ahead of the account's `POST` — a `404` the engine took for a definitive refusal, undoing
+  both edits. Undoing the rollbacks a fold still has. Rejected: it leaves the mirror at the first
+  edit with no operation behind it, the phantom the `failed` state exists to prevent.
+- **Consequence:** `dependsOn` is an order as well as a hold. Re-minting an account now also rewrites
+  the `effect` rows of the movements queued against it, so the projected balance of the new id keeps
+  them.
+
+## 2026-09-04 · A text-only conflict merges itself; money and structure ask (O-F5a part 1)
+
+- **Decision:** the field classification of the offline plan (§6 O-F5a) lives in
+  `lib/local/outbox/conflict.ts` and looks at the **operation**, not at the diff: an `update` whose
+  body carries only `description`, `note`, `tags`, `name`, `color` or `icon` is text, and on a
+  `409 STALE_UPDATE` the engine rewrites its guard to the stamp the server answered with and puts it
+  back in line without a word to the user. Anything else — money, a category, a date, a create, a
+  removal — becomes `conflict` and waits for the sheet. The merge gives up after
+  `AUTO_MERGE_ATTEMPTS` (5) and never retries against a stamp that did not move.
+- **Why it is safe:** every `PUT` of the API takes each field as optional, so a body of text fields
+  is a partial update: retrying it over the new stamp keeps whatever the other device wrote in the
+  other fields. Verified against the real backend — an offline `description` and another device's
+  `amount` both survive.
+- **Alternatives:** classifying the diff (a text field that happens to match would stop being a
+  conflict, which is right, but a money field that matches would silently merge too — and the
+  server's row is exactly what the user has to see before that happens); putting the list in the
+  backend (two copies in two repos, and `POST /sync` would have to grow a vocabulary it does not
+  need).
+- **Consequence:** the common two-device case — renaming a category, fixing a description — never
+  reaches the user, and the sheet only ever opens on a decision that is genuinely one.
+
+## 2026-09-04 · The 409's `current` travels in the envelope, not in the mirror (O-F5a part 1)
+
+- **Decision:** `ApiError` carries `current` (the row the backend puts in a `409 STALE_UPDATE`, O-B2)
+  and the engine stores it on the operation as `serverRow`. The sheet reads the two versions from
+  the envelope alone: `payload.body` is what this device wanted, `serverRow` is what the server had.
+- **Alternatives:** re-reading the row after a pull. Rejected: the mirror holds **this device's**
+  projection of that row, so it can only answer for one of the two sides, and a pull that had not
+  run yet would leave the sheet with nothing to show. It also costs a request per conflict.
+- **Consequence:** `current` is not in the OpenAPI schema, so the client reads it as an untyped field
+  of the error body. If the backend ever stops sending it the sheet still opens, warns that the
+  server's version is unknown, and offers the same two ways out.
+
+## 2026-09-04 · Discarding a create takes its dependents with it (O-F5a part 1)
+
+- **Decision:** `discardOperation` settles the operation without sending it and puts `serverRow`
+  back in the mirror. When what is discarded is a **create**, everything that names that row in
+  `dependsOn` goes too, transitively, and the row leaves the mirror.
+- **Why:** the server never saw that id, so no pull would ever correct the mirror, and an operation
+  addressing it would ask about a row nobody has — it would sit held forever, keeping the amber on.
+- **Consequence:** discarding one refused create can remove several queued operations. The result
+  says how many, and the tray of part 2 is where that number is shown before the user confirms.
+
+## 2026-09-04 · Resolving one operation does not rebase the others on its row (O-F5a part 1)
+
+- **Decision:** neither discarding nor retrying moves the guard of the operations queued behind it on
+  the same row. Each earns its own 409 and its own resolution.
+- **Alternatives:** applying the user's choice to the whole chain. Rejected: D-22 rebases only what
+  an answer from the server has just proved, and "keep my amount" is not "keep my category". The
+  common case costs nothing anyway, because a text-only follow-up merges itself.
+- **Consequence:** a chain of structural edits on one row can open the sheet more than once. That is
+  the honest number of decisions, not a defect.
+
+## 2026-09-04 · The pull reprojects what the queue has not sent (O-F5a part 2, D-23)
+
+- **Decision:** `applyPage` writes the row the feed sent and then projects back on top of it, in
+  `seq` order, the `payload.body` of every operation on that row still `pending` or `sending`. The
+  table of rules is `lib/local/outbox/reproject.ts`, one entry per route. A row whose operations are
+  `conflict` or `failed` shows the **server's** version: those will never be sent, and the user's
+  version lives in the sheet, which is its only home.
+- **Why:** without it the 60-second overlap of D-14, or any edit from the other device, reverts a
+  change made with no network — and a movement deleted offline reappears alive.
+- **Alternatives:** skipping any row with a queue (hides the new `balance` of an account and
+  everything the other device touched); letting the server win (the resurrection above). Both were
+  rejected by the owner on 2026-09-04, who delegated the choice.
+- **Consequence:** `applyPage` needs `outbox` in its transaction scope, and every new route needs a
+  reprojection rule or its offline write is lost on the next pull. A **create** deliberately has no
+  rule: a create in the feed is one whose answer was lost, so the server's row is the newer of the
+  two. `updatedAt` is never rewritten, so the guard the next write reads is still the server's stamp.
+
+## 2026-09-04 · The tray has a route of its own, not a place in Settings (O-F5a part 2)
+
+- **Decision:** "Needs your attention" lives at `/sync`, not under Ajustes › Sync status.
+- **Why:** Sync status is O-F6's, and the red stripe needs somewhere to send the user today. A page
+  of its own is also what the stripe, the sheet and (later) Sync status can all link to.
+- **Consequence:** O-F6 links to `/sync` from Sync status instead of rebuilding the list. The route
+  is not in the nav: it is reached from the stripe, and it says so when there is nothing to show.
+
+## 2026-09-04 · The mirror keeps the server's row aside while a row has a queue (R-3, D-24)
+
+- **Decision:** every mirror record carries `server?`, the row as the server last sent it, present
+  only while the outbox holds operations on that row. One function, `reconcileRow`, restates
+  `row = server + what the queue will still send` and is the only way a row changes when something
+  new is known about it: a page of the feed, a write's answer, a 409's `current`, a definitive
+  refusal, a discard, a retry. The projected balance uses only operations that will still be sent,
+  and each queued movement's money `effect` is restated from the server's row on every pull.
+- **Why:** D-23 promised that a row whose operation is in `conflict` or `failed` shows the server's
+  version, and only the pull kept that promise. Reproduced against the real API in R-3: after a
+  `409`, what the row showed depended on whether the pull or the drain ran first on coming back
+  online (two runs of the same sequence gave both answers), the balance still carried the effect of
+  an operation that would never be sent, and discarding a `failed` write left the refused projection
+  in the mirror for good — the server's stamp never moved, so no pull ever brought the row back.
+- **Alternatives:** fetching the row when a `failed` write is discarded (needs network to resolve
+  something the tray offers to resolve without it, and fixes one of four moments); reprojecting from
+  the operation's own `serverRow` (a 409 has one, a 400 does not); storing the pre-projection row on
+  each operation (stale the moment a pull brings a newer server row).
+- **Consequence:** `MIRROR_VERSION` goes to 2 — the mirror is re-pulled, the outbox untouched.
+  `Route.confirm` receives the operation, so a removal confirmed without a row (F-22) can move the
+  baseline the way it asked. A resolution acts only on operations still stuck. `pendingDetails`
+  joins the text fields: the PUT behind every quick capture no longer asks the user when the other
+  device touched the row.
+
+## 2026-09-04 · The offline shell caches a route by its path, not by its URL (O-F6, F-06)
+
+- **Decision:** the worker keeps two runtime caches of its own for the `(app)` routes, `app-shell`
+  (documents) and `app-shell-rsc` (RSC payloads), both keyed on origin + pathname and matched with
+  `ignoreVary`. When the app has a session it posts the list of routes and the worker fetches the
+  ones it does not already hold. A navigation that neither the network nor the cache can answer
+  falls back to `public/offline.html` (or `.es.html`), precached with a revision of its own.
+- **Why:** `defaultCache` keys on the whole URL, so `/transactions?type=EXPENSE&_rsc=…` never
+  matched the entry stored for `/transactions` and changing a filter with no network showed the
+  browser's error page (F-06, reproduced against the previous worker). None of these pages reads
+  `searchParams` on the server, so one entry per route is the right key. Warming is what makes a
+  route the user never opened answer at all: without it the first visit offline has nothing.
+- **Alternatives:** precaching at install (the worker installs before there is a session, so every
+  route would be the login redirect); one cached document for the whole group (it would show Home at
+  `/budgets`); leaving the RSC hop to fail (Next falls back to a full load, which the document cache
+  can answer, but the hop is a second of nothing first).
+- **Consequence:** a new worker deletes both caches on `activate`, because its build ships new
+  chunks and the documents the old one warmed point at files that are gone. The fallback documents
+  are static, so their text lives in `public/` and not in `messages/` — one file per locale.
+
+## 2026-09-04 · A read waits for the vault the frame is about to open (O-F6, F-31)
+
+- **Decision:** `repository/read.ts` holds a gate that `AppFrame` raises while it renders and that
+  `startMirror` lowers with the handle, or with null when no vault opens. `read()` waits for it
+  before choosing a source.
+- **Why:** the screens render, and query, before the frame's effects run: `read()` saw no vault and
+  went to the server with a full mirror sitting there. Measured with `READ_SOURCE="mirror"`: opening
+  Home cost 12 reads with the gate missing and **0** with it.
+- **Alternatives:** raising the gate in the effect that opens the vault (child effects run first, so
+  it is already too late); a deadline (a timer that hides the ordering instead of fixing it).
+- **Consequence:** the gate is raised in a render, which is why it is one-shot and idempotent. When
+  the session settles without a user, the frame lowers it: nothing is going to open a vault, and a
+  read that waited forever would spin a screen instead of failing.
+
+## 2026-09-05 · The session marker stops being authority, and outlives the session (O-F6, §2.6)
+
+- **Decision:** `__Host-session` changes meaning. It carries `<userId>.<issuedAt>`, lasts 400 days
+  instead of 30, and is readable by scripts. It says "this device holds a vault for this user" and
+  nothing else; the API is what says whether a session is valid. `proxy.ts` uses it to let `(app)`
+  through, and `AppFrame` uses it to know whose vault to open when the session cannot be resolved.
+- **Why:** the refresh token lasts 30 days and the offline vault is meant to last indefinitely. At
+  day 31 the proxy sent the user to `/login` and the app they could still have used offline became
+  unreachable — with their unsent queue inside it.
+- **Alternatives:** lengthening the refresh token (D-15 keeps it at 30 days, and a long-lived
+  credential is a different risk); passing the id down from the server layout (the app-shell cache
+  of O-F6 part 1 would serve a document with a stale id after a user change); a second cookie for
+  liveness (a cookie the proxy cannot even see, since the refresh one is scoped to `/api/auth`).
+- **Consequence:** three things follow. A 400-day marker would bounce a dead session off `/login`
+  forever, so `?reauth=1` is the declared way past `isGuestOnlyPath`. The id is no longer secret to
+  scripts — it is an opaque id, never a credential, and an XSS that could read it already has the
+  API. And the engine compares the marker against the open vault before sending, so a second user
+  signing in on the device cannot get the first one's queue filed under their session.
+
+## 2026-09-05 · A dead refresh no longer clears site data (O-F6, invariant 7)
+
+- **Decision:** `endSessionResponse` splits in two. An explicit logout clears the three cookies and
+  asks for `Clear-Site-Data: "cache"`; a dead refresh token (`/api/auth/refresh` answering 401)
+  clears only the access and refresh cookies and asks for nothing.
+- **Why:** the old response sent `"cache", "storage"` on both paths. `"storage"` deletes IndexedDB,
+  so the moment a refresh token expired the browser threw away the vault, the unsent outbox and the
+  offline shell — the exact scenario local mode exists for, and a direct breach of invariant 7.
+- **Alternatives:** keeping `"storage"` on logout only (it still decides for the user what F-34 is
+  supposed to ask them); scoping the header (it has no per-store granularity).
+- **Consequence:** what leaves on a logout is now decided in one place, `purgeVault`, which already
+  knew how to drop the mirror and keep the queue. Losing `"storage"` on logout means non-vault
+  origin storage is no longer wiped by the header; the mirror goes through `purgeVault` and the
+  React Query caches through `purgePersistedCaches`, which is what actually held per-user data.
+
+## 2026-09-05 · The mirror is the read path, and the server is what it falls back to (O-F2b)
+
+- **Decision:** `READ_SOURCE` in `lib/local/repository/read.ts` is `"mirror"`. Every read of the six
+  mirror-backed domains is answered from IndexedDB whenever a pull has drained at least once, with
+  network or without it. The server answers a read only where the mirror says it cannot: no vault, no
+  finished snapshot, an id it never saw, a query it cannot apply, or a derivation with no profile to
+  take the zone from.
+- **Why:** plan decision 12.2. One read path is one set of bugs, one set of tests, and a feature
+  written once. A permanent fallback is code that only runs when the user has no network, so its
+  failures are found late and without logs — and the screens stop paying a request for data they
+  already hold (plan §4.2).
+- **Alternatives:** keeping the fallback of O-F2a. Rejected as above. Reading the mirror first and
+  reconciling against the server behind it: two answers per read, and the second one is exactly what
+  the pull already brings.
+- **Consequence:** setting the constant back to `"server"` is the whole way back, which is why it is
+  one constant and not a spread of branches. `/stats/spending` and the listing endpoints are no
+  longer on any screen's path — the backend keeps them: they are the oracle every parity test
+  compares against, and other clients read them. A device's first load still goes to the server, so a
+  new sign-in is not a blank app while the snapshot arrives.
+
+## 2026-09-05 · A pull that brought news invalidates every mirror-backed domain (O-F2b, F-38)
+
+- **Decision:** `pullChanges` answers whether any row it applied carried an `updatedAt` the mirror did
+  not already hold; `startMirror` reports that through `onChanged`, and `AppFrame` invalidates all six
+  mirror-backed domains at once.
+- **Why:** with the mirror in front, the pull writes where React Query cannot see it, so a change made
+  on another device landed in IndexedDB and the screen went on showing what it had read until a
+  reload. It is what made `budgets.spec.ts:89` fail 6 of 6 with the mirror primary.
+- **Alternatives:** mapping each entity to the domains that show it — rejected: the failure mode of a
+  wrong map is a screen that lies in silence, and the map drifts the first time a screen joins one
+  more domain. Publishing a snapshot the screens subscribe to — a second cache next to React Query's,
+  for a re-read that already costs nothing. Invalidating on every pull, news or not — the feed
+  overlaps 60 seconds on purpose (D-14), so that is a wave of refetches after every single push, and
+  with `READ_SOURCE` back at `"server"` those would be requests.
+- **Consequence:** an invalidation is a re-read of IndexedDB, not a request, so the granularity is
+  affordable; the same code with `"server"` would cost one refetch per active query, which is the
+  reason the news test exists and is asserted in `mirror.test.ts`.
+
+## 2026-09-05 · The transaction list counts with the index when nothing is asked of each row (O-F2b, F-15)
+
+- **Decision:** `queryMirror` takes `total` from `index.count(range)` and stops walking once the page
+  is full, but only when the query carries no per-row filter and no summary. A filtered query still
+  walks the whole set, as before.
+- **Why:** the endpoint counts the whole filtered set on every page and so must the mirror, but the
+  walk deserialises every record to do it. Measured in Chromium over 10 000 live rows: 141 ms per page
+  walking, 31 ms counting plus 1,4 ms walking — and that cost was paid again on every page of an
+  infinite scroll, on the main thread.
+- **Alternatives:** caching `total` per filter across pages (the cheapest, and the one the ficha
+  proposed) — it needs invalidation of its own and would answer a stale count after a pull; an index
+  per filter combination — that is how a local list starts disagreeing with the API.
+- **Consequence:** both requests are issued before the first `await`, so they share one read
+  transaction and cannot see two states. A filtered list is still O(n) per page; nothing measured says
+  it needs more than this yet.
+
+## 2026-09-05 · Writes run with no network instead of being paused (Puerta O-A)
+
+- **Decision:** mutations default to `networkMode: "offlineFirst"`, and `shouldRetryQuery` refuses a
+  retry while the connectivity store says the app is offline.
+- **Why:** the gate demo found that no write worked with no network. React Query pauses a mutation
+  while `onlineManager` is offline, so the `mutationFn` — and with it `lib/local/outbox/write` and the
+  whole queue of O-F4 — was never reached: the form spun for ever and nothing was saved, not even
+  locally. With the mutation running, a second pause appeared behind it: `offlineFirst` fires the
+  first fetch and pauses the retry, so the invalidation a write awaits on success never resolved when
+  the read it re-ran was one the mirror cannot answer (a deleted row's detail, F-46).
+- **Alternatives:** setting the mode per mutation — the same trap for the next feature, and §11's
+  checklist cannot enforce a default; keeping the retry and having the invalidation not be awaited —
+  it is the awaited invalidation that keeps a screen from painting a stale figure after a save.
+- **Consequence:** a write that has no vault to queue into now fails visibly with no network instead
+  of hanging, which is what §6 of `CLAUDE.md` asks for; a read that misses the mirror offline shows
+  its error state after one attempt instead of never settling.
+
+## 2026-09-05 · Every static route is in the shell, and a detail route is cached once, by template (R-3b, F-47, F-48)
+
+- **Decision:** `SHELL_PATHS` lists every static route of `(app)` — eighteen, not nine — and
+  `shell.test.ts` compares the list with the `page.tsx` files, so a screen added without an entry
+  fails the build. The dynamic routes (`/<entity>/[id]` and `/[id]/edit`, seven) are cached **once
+  per template**: `shellCacheKey` folds a UUID segment into `[id]`, the warm-up fetches each template
+  with a placeholder id, and the seven pages render a client wrapper that reads the id from the URL
+  (`useDetailRouteId`) instead of passing `params.id` down.
+- **Why:** the R-3b probe found that with no network the app could not create an account, a category
+  or a budget — not because the queue failed, but because their forms were not in the shell and
+  answered `offline.html`; and that saving an account or a budget navigated to a detail route no
+  cache entry had ever been made for. F-48 as written (a movement created offline cannot be opened)
+  was the smallest face of it: **no detail route opened offline unless that exact row had been
+  visited before with network.**
+- **Alternatives:** opening details as a sheet over the list (a Next route still fetches its RSC
+  payload, so it only works with the id in the query string — a URL change for four entities);
+  rewriting `/<entity>/<uuid>` to a static route in `proxy.ts` (cleaner router state, but a rewrite
+  per entity plus moved files for the same result); serving the list's document for a detail URL
+  (the router would render the list).
+- **Consequence:** the document and the RSC payload of a detail route carry no id, which is why the
+  screens render nothing until the client has mounted (`useSyncExternalStore` with a false server
+  snapshot): server HTML that named a row would hydrate against a different URL. `useParams()` must
+  not be used on these routes — the router tree can name the row the cache entry was made for. A
+  detail request always tries the network first, so with network nothing changes.
+
+## 2026-09-05 · The mirror answers 404 for a deleted row itself (R-3b, F-46)
+
+- **Decision:** `readTransaction` throws the API's 404 (`mirrorNotFound`) when the record is a
+  tombstone, instead of returning `undefined` and letting `read()` ask the server.
+- **Why:** it was the one data read that left the device with no network in the whole gate demo, and
+  the root of the sheet that spun for ever on delete: the invalidation a write awaits re-read a
+  detail the mirror refused to settle, and the retry paused. `shouldRetryQuery` refusing a retry
+  offline (the demo's fix) closes the symptom; this closes the cause, and it is what makes awaiting an
+  invalidation safe — no mirror-backed read goes to the server while offline.
+- **Alternatives:** keeping "only the server can say 404" — true for an id the mirror never saw,
+  which still goes to the server; not awaiting invalidations — a saved screen could paint a stale
+  figure.
+- **Consequence:** `MirrorReader` has two ways to decline: `undefined` means "ask the server", a
+  thrown `ApiError` means "this is the answer". The detail of a row just deleted shows its not-found
+  state for a frame before the screen leaves for the list, which is what the server path did too.
+
+## 2026-09-05 · Signing out needs a connection (R-3b)
+
+- **Decision:** «Sign out» in Settings and «Sign out all other sessions» are disabled while the
+  connectivity store says offline, with a line saying why. `useOffline` is the shared hook, also used
+  by F-20's restore-defaults.
+- **Why:** with mutations on `offlineFirst` the logout request runs and fails offline, `onSettled`
+  purges the device anyway, and the HttpOnly cookies — the session — stay: the probe ended on the
+  browser's error page (`/login` is not a shell route), `GET /api/auth/me` answered 200 when the
+  network came back and `/home` opened signed in. Before, the mutation paused and the button spun
+  until the network returned; that was slow, this was a lie.
+- **Alternatives:** `networkMode: "online"` for the two logout mutations (back to the infinite
+  spinner); clearing the device and leaving the server session for later (a shared device stays
+  signed in for whoever comes next).
+- **Consequence:** sign-out is the one action in `(app)` besides restore-defaults that says it needs
+  the network, in line with plan §13 (session flows are not offline features).
+
+## 2026-09-05 · A new worker re-warms the shell it replaces, and local mode warms it too (R-3b)
+
+- **Decision:** on `install` the new worker fetches every key of the current shell caches again into
+  a staging cache (through the same `NetworkFirst` strategies, so the key rules hold), and on
+  `activate` it swaps staging for live instead of only deleting. `AppFrame` asks for the warm-up
+  whenever it has a vault to open (`localUserId`), not only when the session is `authenticated`.
+- **Why:** deleting on `activate` left the shell empty until the next open with a live session. A
+  worker activates when the last tab closes, so "deploy, open once online, close, open offline" showed
+  `offline.html`; and in local mode (dead session) the warm-up never ran again, so one deploy ended
+  offline use for good. Install is the one moment a new build is certain to have the network.
+- **Alternatives:** keeping the old documents (they point at chunks the precache cleanup removes);
+  versioned cache names (the worker has no build id to name them by).
+- **Consequence:** a route the install cannot fetch is dropped and warmed again by the app on its
+  next open; nothing stale survives an update. Not exercised end to end — Playwright cannot ship a
+  second worker build in one run — so this rests on the worker's code and on the shell tests.
+
+## 2026-09-05 · The worker serves documents from its cache, never RSC payloads (R-3b, F-51)
+
+- **Decision:** the `app-shell-rsc` cache is gone. A client-side navigation's RSC request is
+  network-only; with no network it fails, the router falls back to loading the document, and the
+  document cache (keyed by route template) answers that.
+- **Why:** the router reads the URL and the rewrite headers of the response it gets. A payload served
+  from a cache keyed by path carries the URL it was stored under — without the query, and for a
+  template entry with another row's id in `x-nextjs-rewritten-path` — so Next concluded the server had
+  rewritten the request: on desktop it chased the rewrite and reloaded anyway (the toast after a save
+  vanished), on mobile the month change in Budgets never changed the URL at all. Reproduced in
+  isolation on `feabe7f` too: it predates this review.
+- **Alternatives:** re-pointing the rewrite headers on the cached response (a new `Response` loses
+  `url`, which the router also reads, and the fix would track Next's internals release by release);
+  keying RSC entries by path plus query (soft navigations only for exact matches, the rest still
+  reload — the same behaviour with more code).
+- **Consequence:** with no network every navigation is a full document load from the cache: slower
+  than a soft navigation, and a toast shown just before it does not survive. With network nothing
+  changes. The gate demo asserts the outcome of a save on the destination screen, not on the toast.
+
+## 2026-09-05 · The (app) screens render on the client only (R-3b, D-29)
+
+- **Decision:** `AppFrame` renders the page's children only once the client owns the page
+  (`useMounted`); the shell around them — navigation, banner, sheets — still comes from the server.
+- **Why:** with the worker serving one cached document per route template (D-28), the HTML a page
+  hydrates against may have been rendered for another URL: another query, another row. React keeps the
+  server's attributes when they do not match the client's, so a filter chip or a segment stayed on the
+  server's choice after an offline reload — Stats showed the first type and the first grouping as
+  selected whatever the URL said — and every text that depends on the URL or the clock raised a
+  hydration error (F-53). The screens are data-driven client work already; the server HTML they lost
+  was a skeleton.
+- **Alternatives:** gating each URL-dependent control by hand (the next one is forgotten); rendering
+  documents per URL (that is the cache-by-id problem F-48 removed); `suppressHydrationWarning` (it
+  hides the warning and keeps the wrong attribute).
+- **Consequence:** the first paint of an `(app)` page shows the shell and an empty content area for
+  one frame, then the screen with its own loading state. `useDetailRouteId` reuses the same hook.
+  Screens outside `(app)` — the landing, login, legal pages — are untouched and still render on the
+  server.
+
+## 2026-09-05 · Server-side preferences say they need a connection (R-3b)
+
+- **Decision:** language, currency, time zone, the profile form and deleting the account show
+  «Changing this needs a connection» and keep their action disabled while the connectivity store says
+  offline, the way restore-defaults (F-20) and sign-out already do.
+- **Why:** offline, choosing a language did nothing and said nothing (the options were silently
+  disabled because the session could not be resolved), and saving a time zone failed with «Something
+  unexpected happened» — the mutation threw its own "No session" error before any request. Plan §13
+  keeps these out of the offline scope; the app has to say so instead of failing oddly.
+- **Alternatives:** queueing profile changes in the outbox (the profile is not an entity the queue
+  projects, and a locale change also moves the route; a design of its own); switching the UI locale
+  locally and saving later (two sources of truth for one preference).
+- **Consequence:** one message key, `settings.needsConnection`, and the `useOffline` hook in the five
+  places. Nothing changes with network.
+
+## 2026-09-05 · Hover hints on the projected mark and the stats bar (R-3b)
+
+- **Decision:** the cloud that marks a projected figure (`Projected`) and each colour of the Stats
+  category bar (`StackBar`) show a hint on hover and focus with the existing `Tooltip`: the mark says
+  «Includes changes not yet synced», the bar segment names its category.
+- **Why:** the owner's manual test: the mark alone, without the badge's text, said nothing to a
+  pointer, and the bar's colours could not be told apart from the list below without matching them by
+  eye.
+- **Alternatives:** `title` attributes (no styling, no keyboard); a legend under the bar (the list
+  below is the legend; the hint answers the question where the eye is).
+- **Consequence:** `Tooltip` accepts a `style`, because a stacked bar sizes its segments by
+  percentage and the wrapper has to carry that width.
+
+## 2026-09-06 · The queue leaves in one request, and the routes stay as the fallback (O-F5b)
+
+- **Decision:** the engine sends the whole outbox to `POST /sync` as one batch (1–200 operations,
+  body under a megabyte, cut in `batch.ts`) and spreads the six statuses of the answer over the queue
+  transitions that already existed. If `POST /sync` answers `404` or `501` — a server older than this
+  front — the queue keeps leaving by the ordinary per-operation routes for the rest of the session; a
+  `400` or `413` on the envelope sends that one pass by the routes too, and keeps the batch.
+- **Why:** N requests deduced each operation's fate from N error codes, and three of the six outcomes
+  the contract now answers (`merged`, `duplicate`, `blocked`) have no HTTP code to deduce them from.
+  The owner asked for the fallback (2026-09-06): front and backend deploy apart, and a `404` with no
+  fallback strands every queued write on the device until the backend catches up. `routes.ts` cannot
+  be deleted in any case — `sendDirect`, the write with no vault, still goes through it.
+- **Alternatives:** batch only, no fallback (one transport, less code; a bad deploy order stalls
+  every device's queue); keeping the routes for conflicts and the batch for the rest (two paths for
+  the same operation, which is the duplication trap 7.8 warns about).
+- **Consequence:** two transports and two suites. `syncTransport()` says which one is in use, for
+  Ajustes › Sync status (O-F6) to report.
+
+## 2026-09-06 · `seq` on the wire is the rank inside the batch (O-F5b)
+
+- **Decision:** each operation travels with its position in the batch as `seq`, not with the device's
+  counter. Locally, a resolution that has to be applied **before** the operation it unblocks is
+  queued with a fractional `seq` between its target and whatever precedes it (F-58).
+- **Why:** the server takes `seq` as `z.number().int()` and uses it for one thing, the order it
+  applies the batch in; the local queue needs to insert **before** an existing operation, and the
+  counter only goes up. Renumbering the queue instead would move an operation past a later edit of
+  the same row, and moving the target later would break the chain it belongs to.
+- **Alternatives:** integer gaps reserved up front (does nothing for a queue already numbered);
+  renumbering on insert (`seq` is the primary key of the store, the rollback map's key and what the
+  tray and the sheet address an operation by).
+- **Consequence:** results are matched back by `opId`, never by `seq`, and nothing local reads `seq`
+  as anything but an order.
+
+## 2026-09-06 · Inside one batch, only the first operation of a row is guarded (O-F5b)
+
+- **Decision:** when a batch carries several operations of the same row, only the first one sends
+  `baseUpdatedAt`; the rest travel unconditional.
+- **Why:** they were all queued against the stamp the first one is about to replace (D-22), and a
+  batch has no gap in which to rebase them — they would earn a `conflict` `STALE_UPDATE` that means
+  nothing. Unguarded they are still safe: `POST /sync` blocks by entity id, so if the first one
+  conflicts or is refused, the rest come back `blocked` without being applied (D-30).
+- **Alternatives:** one operation per row per batch (splits the queue into more requests in exactly
+  the case the batch existed to fix); guessing the stamp the previous operation will produce (the
+  client does not write `updatedAt`, invariant 2).
+- **Consequence:** the owner approved it on 2026-09-06. Across batches the old rebase still applies.
+
+## 2026-09-06 · An answer the queue cannot act on belongs to the form that is waiting for it (O-F5b, D-35)
+
+- **Decision:** a `conflict` that is not `STALE_UPDATE` — a name already taken, a reference the server
+  will not take, an id of another user — and a `merged` are handed to the form that is still waiting
+  for the write, as the 4xx its route would have answered (`code`, `message`, `current`); only when
+  nobody is waiting do they go to the tray as `conflict`. `STALE_UPDATE` on money or structure goes to
+  the sheet even with a form open (D-23). What decides is the undo the write registered: `write()`
+  keeps it while it waits for the drain and drops it the moment it answers the screen from the
+  projection, so a refusal that arrives in a later drain leaves the operation `failed` in the tray
+  instead of undoing a write nobody is looking at (F-23, which until now covered only the dead tab).
+- **Why:** `test:e2e` found it — with the batch, a `409 DUPLICATE` that used to reach the form became a
+  `conflict` in a tray the user had not opened, and the form believed the row was saved. A taken name
+  is fixed by typing another one, where the user is. And the undo is already the exact signal: `write()`
+  awaits the whole pass, so "an undo is registered" is "`write()` has not returned yet".
+- **Alternatives:** a flag in the envelope saying a form waits (a field the server does not use, to
+  tell the queue what it already knows); always the tray (the form lies about a save it did not make);
+  always the form (a refusal after a reload has no form, and undoing then would erase a write the
+  user thinks is saved).
+- **Consequence:** `awaited(seq)` in the engine reads the rollback map; `write()` and `writeAll()` call
+  `forgetRollbacks` before answering from the projection. Reviewed and confirmed in R-4.
+
+## 2026-09-06 · A warning lives with the row it explains, in `meta` (F-57)
+
+- **Decision:** `warnings: ["CATEGORY_ARCHIVED_DROPPED"]` on a landed operation is kept as one notice
+  per row in `meta.syncNotices` (JSON), and the **review screen** reads them and prunes what no longer
+  needs a review.
+- **Why:** the write landed, so there is nothing to resolve in the sync tray — and with an empty queue
+  the tray is not even reachable. The user meets the movement where the missing category has to be
+  filled in, and that is where the reason belongs.
+- **Alternatives:** an object store of its own (a mirror version bump, and a re-pull, for a handful of
+  notices); a toast (a drain can happen with no tab open); a field on the mirror row (the next pull
+  replaces the row, and inventing a server field would be a lie).
+- **Consequence:** one more `MetaKey`. A notice outlives its row by nothing: `pruneNotices` drops it
+  as soon as the movement is reviewed, deleted or gone from the mirror.
+
+## 2026-09-06 · The browser suite builds into its own directory and its own worker (F-56, O-F7)
+
+- **Decision:** `next.config.ts` reads `distDir` from `NEXT_DIST_DIR`, `serwist.config.mjs` reads
+  `swDest` from `SERWIST_SW_DEST`, and the app registers `env.NEXT_PUBLIC_SW_PATH`. `playwright.config.ts`
+  sets the three to `.next-e2e`, `public/sw-e2e.js` and `/sw-e2e.js`, so `npm run test:e2e` and
+  `npm run demo:offline` never write the `.next` or the `public/sw.js` that a `next start` is serving.
+- **Why:** on 2026-09-05 four Playwright runs rebuilt `.next` under the owner's running app and his
+  screen broke apart (tabs that stopped reacting, chunks that no longer existed); and the e2e worker,
+  built with `NEXT_PUBLIC_APP_ENV=test` and other hashes, stayed in `public/sw.js` and made his browser
+  precache another build's URLs.
+- **Alternatives:** a separate checkout (`git worktree`) for the suite — a second `node_modules` and a
+  second install to keep in step; telling every session not to run the suite while the app is up (the
+  rule that was in force, and it depends on remembering it).
+- **Consequence:** three defaulted environment variables, and the worker path is public env instead of a
+  literal. `npm run ci` builds through `build:gate` (`.next-gate`, `public/sw-gate.js`), so `.next` and
+  `public/sw.js` are written only by a plain `npm run build` — the owner's. `globIgnores` drops
+  `public/sw*.js` from the precache manifest, so no build precaches another's worker. `next build`
+  rewrites `next-env.d.ts` to point at whichever `distDir` it used; both files are git-ignored and
+  `npm run ci` runs `next typegen` first, which puts it back.
+
+## 2026-09-06 · An edit sends what the user changed, and nothing else (O-F7)
+
+- **Decision:** the three edit forms (transaction, account, category) send only the fields the user
+  touched. `lib/form/changes.ts` (`changedOnly`) does it where the form field and the request field
+  are the same name; `toTransactionChanges` does it for the transaction form, where they are not
+  (`date` + `time` → `date`, the type and the account pickers → both account sides). Every
+  `form.setValue` the screens make on the user's behalf now passes `{ shouldDirty: true }`.
+- **Why:** the queue classifies a conflict by the fields the operation carries (§6 O-F5a): text-only
+  edits rebase themselves, anything with money or shape is asked about. A body that always named the
+  amount and the date made **every** disagreement between two devices a money question, and the
+  winner overwrote fields the other device had changed — the exact opposite of §1 example 3 of the
+  offline plan, where a rename on the tablet and a note on the phone combine without a word. Found by
+  `tests/e2e/offline-two-devices.spec.ts`, which failed until this.
+- **Alternatives:** diffing the built request against the row that was loaded — the date does not
+  survive the round trip through the form's day and time fields, so it would always look changed;
+  classifying by "field present but equal to the server's" in the queue — the server's version is
+  exactly what a stale operation does not have.
+- **Consequence:** an untouched form has nothing to send, and sends nothing (`nothingChanged`): every
+  `PUT` of the API refuses an empty body with `400` "At least one field must be provided", so `{}`
+  would fail online and, offline, sit in the attention tray for having changed nothing (R-5 §A).
+  `dirtyFields` is read during render because React Hook Form's `formState` is a Proxy that only
+  tracks what the component subscribed to — reading it first inside the submit handler answers `{}`.
+
+## 2026-09-06 · A sheet's body can be scrolled with the keyboard (O-F7)
+
+- **Decision:** the scrollable body of `components/ui/Sheet` takes a tab stop **only when nothing
+  inside it can take one**, measured on open and again whenever its children change.
+- **Why:** axe's `scrollable-region-focusable` (serious) on the "Resolve sync conflict" sheet, whose
+  body is two cards with no control in them: its footer buttons are outside the scroll area, so a
+  keyboard could not reach the content at all. Every sheet shares the container; the ones whose body
+  holds a form passed only because their fields happened to be focusable.
+- **Alternatives:** a tab stop on every sheet — it lands in front of the search box of every picker,
+  and `pickers.spec.ts` said so; a prop each sheet sets by hand — the same question answered again in
+  every call site, and wrongly the day a body changes.
+- **Consequence:** one `querySelector` per open. The axe check in
+  `tests/e2e/offline-two-devices.spec.ts` is what keeps it.
+
+## 2026-09-06 · An answered request is proof of a network; the heartbeat still decides (F-64)
+
+- **Decision:** `lib/api/client` reports every response it receives — any status — to
+  `reportNetworkAnswer()`, and while the connectivity store believes the app is offline that report
+  asks the heartbeat for a health check **now** instead of waiting for its next 30 s tick. Online,
+  the call returns immediately and costs nothing.
+- **Why:** a session that died with the app open announced itself only after the store learned the
+  network was back, and the store learned it from the heartbeat (or the browser's `online` event,
+  which does not always fire). Measured in the browser: the first request after the network returned
+  was answered at **36 ms** with a `401`, and the sheet that says "Sign in to sync" appeared at
+  **30 058 ms** — one whole tick later, with the strip still saying "You're offline." and the queue
+  stopped with no explanation. The 401 plumbing was never the problem (F-64 suspected it was): the
+  app simply did not know it was online. With the report, the same run announces in ~3 s.
+- **Alternatives:** letting a response set the phase directly — a response can come from the service
+  worker's cache, and the store's rule since W-19 is that only `/api/health` decides; a shorter
+  heartbeat while offline — more requests for every device that is really offline, which is the case
+  the interval exists for; announcing the dead session without a network — asking someone with no
+  connection to sign in, which is what `SessionExpiredSheet` deliberately refuses to do.
+- **Consequence:** the worst case goes from one heartbeat interval to one health request, for
+  everything that waits on the phase: the strip, React Query's `onlineManager`, the outbox engine and
+  the sign-in sheet. `tests/e2e/offline-hardening.spec.ts` asserts the sheet inside 15 s — well under
+  the tick — so a regression cannot hide behind the interval again.
+
+## 2026-09-06 · A dead session has a stripe of its own, and the sheet closes for good (F-41)
+
+- **Decision:** the connection stripe gains a fifth state, `signedout` (amber, `log-in`, permanent
+  while it lasts): "You're signed out. Nothing is syncing." with the count of what is saved here and
+  "Sign in to sync" → `/login?reauth=1`. Ajustes › Sync status gains a fixed first row, **Session**,
+  that says `Active` or `Signed out` and carries the same way back. `SessionExpiredSheet` takes an
+  `onClose` that really closes: in local mode the X, `Escape` and the scrim dismiss the sheet and
+  leave the stripe behind, instead of walking to the login as `onClose = onSignIn` made them.
+- **Why:** with a vault on the device a dead session is not a wall — the app reads and queues — but
+  once the sheet was dismissed the only route back to the login was "Sign out", which is exactly what
+  must not be done with a queue on the device. The stripe warns without being looked for; the row
+  answers whoever went to look, and a screen that lists what this device owes the server cannot stay
+  quiet about there being nobody to say it to.
+- **Alternatives:** only the stripe (Sync status would keep lying by omission); only the row (nobody
+  opens Settings to discover a problem they have not been told about); keeping the sheet
+  undismissable (D-7: the app has to keep working).
+- **Consequence:** `ConnectionBanner` takes `signedOut` and `onSignIn` from the frame that already
+  knows both, so it stays testable without a session provider. **The stripe now follows the priority
+  DESIGN.md §8.12 declares** — `offline` → `signedout` → `error` → `pending` → `online` — which moves
+  `error` below `offline`: with no network nothing can be signed in or sent, and resolving a conflict
+  changes nothing until there is a session to send it with.
+
+## 2026-09-06 · "Offline ready" is two halves, and the page counts them itself (F-54)
+
+- **Decision:** Ajustes › Sync status gains a fixed **Offline ready** row — `Ready` /
+  `Preparing… · n of 25 screens` / `Incomplete` with a `Retry` — and a device announces itself once,
+  ever, with a toast ("Ready to use offline" · "What this means" → Sync status). Ready means both
+  halves: the pull wrote `syncedAt` into the vault **and** the worker's `app-shell` cache holds all
+  25 screens of `shellUrls()` for the language in use.
+- **Why:** the copy and the screens are fetched in the background on the way in and nothing said
+  when they landed; "Last synced" spoke for the data alone. Counting the keys the warm should have
+  left answers the same question a message to the worker would, without a protocol to keep in step,
+  and it is locale-aware on purpose: a device warmed only in Spanish is not ready for English.
+- **Alternatives:** a state of the connection stripe — rejected in design, the stripe is for what is
+  going wrong and its green is already "Back online"; polling readiness on a timer — §4.2 has no
+  periodic anything, so the worker now answers `SHELL_WARMED_MESSAGE` when it has been through the
+  list and the page checks on that and on mount.
+- **Consequence:** `warmAppShell` gained a reply, and the shell knows how many screens it owes
+  (`SHELL_SCREENS`). The two halves can land in either order, so a device that finishes its pull
+  after the warm announces itself on the next visit rather than the current one; the fixed row is
+  always right in the meantime. The "announced" flag is a single boolean in `localStorage`, per
+  device and per origin, and a browser that refuses storage would say it again rather than never.
+
+## 2026-09-06 · A restore refused for its name is renamed where it is read (F-60)
+
+- **Decision:** an `account:restore` / `category:restore` the server refused with `DUPLICATE` gets
+  its own shape in both places: the tray card carries the badge "Name taken", the reason that names
+  who holds it, and **"Restore with another name"** as its primary way out; the conflict sheet shows
+  the two comparison cards ("On the server · has the name" from the `current` the backend answers
+  with since `9446bb5`, and "On this device · being restored") with the rename **embedded** —
+  a "New name" field pre-filled with "{name} (old)" and `Restore as “…”`. `restoreWithName` puts the
+  same operation back in line with `payload.body.name` changed. **"Try again" is not offered**, and
+  the sheet says why.
+- **Why:** the restore route already takes a `name`, so this is the one refusal the app can walk the
+  user out of; offering "Try again" spends a round trip to be told the same thing.
+- **Alternatives:** opening the rename sheet of §7.27 on top of the conflict sheet — two dialogs for
+  one decision, and the comparison that explains the rename disappears behind the second; renaming
+  the row first and retrying — that is two writes for what the route does in one, and the first
+  would be refused too while the row is still archived.
+- **Consequence:** the restore's body carries no fields, so the comparison is built for it from the
+  mirror's row and the refused row rather than from `conflictFields`. The refused row is dropped
+  from the operation when it goes back in line: it was never this row's baseline (`ownServerRow`
+  refuses it), and dropping it is what takes the sheet out of the "name taken" state. The mirror
+  shows the new name from the moment it is chosen, because the reprojection of `restore` merges the
+  body.
+
+## 2026-09-06 · The device learns how far its clock runs from the server's (F-66)
+
+- **Decision:** every answer that carries a `serverTime` — `POST /sync` and each page of
+  `GET /sync/changes` — teaches the device the distance between the two clocks. It lives in a store
+  the screens subscribe to and, over a minute of movement, in the vault's `meta`, which is what makes
+  it readable on the next cold start. Two screens use it: the movement form warns above the date when
+  the device runs more than an hour ahead (the preventive half of trap 7.4), and a `FUTURE_DATE`
+  refusal turns the conflict sheet into **"Fix the date"**, prefilled with the server's own time and
+  saying which date was refused, with **"Save and try again"** as the way out. The tray card leads
+  with "Fix the date" and keeps "Try again" last.
+- **Why:** the form's guard runs on the only clock it has, so a device three days ahead accepts what
+  the server refuses and says so only once the queue is stuck. And a refused creation cannot be
+  edited from the list — the row exists nowhere else — so the sheet was the only place left to
+  correct it. Both halves were in the plan (trap 7.4); only the offset half had been built.
+- **Alternatives:** correcting the date to the device's own clock — the same clock that caused the
+  refusal; sending the offset with the write so the server could fix it — the server refuses, it does
+  not negotiate, and D-32 keeps validation whole; keeping the offset in memory only — it is needed
+  exactly when there is no network to learn it again.
+- **Consequence:** `retryWithDate` rewrites `payload.body.date` and puts the same operation back in
+  line, so it stays the same creation, with the same `opId` and the same dependents behind it — the
+  sheet says how many. A device that runs _behind_ the server is not warned: the dates it writes are
+  in the past, which the server takes.
+
+## 2026-09-06 · A queue an app update left behind is visible, and the app keeps writing (F-65)
+
+- **Decision:** `openVault` already answered `outbox: "blocked"` and a count; it now also names the
+  operations, `startMirror` publishes them into the outbox status, and three screens read them: the
+  sixth stripe of §8.12 (`blocked`, red, `role="alert"`, "An app update stopped n changes from being
+  sent." with "See them"), an alert plus a `n · blocked` value on "Waiting to send" in Sync status,
+  and a section of its own in the tray with "Discard this change" / "Keep it here" and a batch
+  discard. **The app keeps writing normally**: nothing is queued behind a blocked operation, and
+  nothing new is refused because of one.
+- **Why:** the plan (§6 O-F1) promised "the schema upgrade is blocked until the queue drains **and
+  the user is told**", and only the first half existed. Blocking the record instead would punish the
+  user for an update they did not ask for, and the new work does not depend on the old.
+- **Alternatives:** discarding what cannot be migrated (invariant 7: unsent work is never thrown
+  away without the user saying so); folding them in with the refusals (they were never refused —
+  the server has not seen them — so "Try again" would be a lie).
+- **Consequence:** a blocked operation is `pending`, so `discardOperations` (which only admits what
+  the server refused) does not take it; `discardBlockedOperations` shares its machinery, cascade
+  included. "Keep it here" changes nothing on the device by design, so the card marks itself kept
+  for the visit and stops asking — the operation stays for a future version that knows how to
+  migrate it, which is what the button promises. Today nothing is ever blocked: `OUTBOX_MIGRATIONS`
+  is empty and `OUTBOX_VERSION` is 1, so this is the screen the first bump will need.
+
+## 2026-09-06 · The green stripe counts what the round drained (F-62)
+
+- **Decision:** "Back online." carries a second line, "n changes synced", counting what the last
+  round actually settled with the server — `sent`, `landed`, `gone`, `merged` and `absorbed`. A round
+  that settled nothing paints no line: the stripe never says "0 changes synced".
+- **Why:** the amber stripe says "2 changes waiting", and until now the only sign the queue had
+  emptied was that stripe disappearing. The text has been in `messages/` since W-19 (owner's choice,
+  2026-09-06: variant B).
+- **Alternatives:** counting how much the queue shrank — a write undone before it left would count as
+  synced; leaving `absorbed` out — two edits to one row that travel as one request would say "1
+  change synced" after "2 changes waiting", which is the arithmetic the user cannot follow.
+- **Consequence:** the count is set by each round, never accumulated, so it is the last round's
+  answer and nothing older. `cancelled` is excluded on purpose: it never reached anyone.
+
+## 2026-09-06 · Dates and times are the app's own controls, not the browser's (F-05)
+
+- **Decision:** `DateTimeField` stops rendering `<input type="date">` and `<input type="time">`. Each
+  half is an opener drawn like the input it replaces, and it opens a sheet of 7.28: a 7×n calendar
+  with "Today" / "Yesterday" chips, the month's neighbours at 55 %, keyboard movement (arrows a day,
+  `PageUp`/`PageDown` a month) and the days past the ceiling disabled; and a wheel of hours and
+  minutes (in fives) with "Now", plus an AM/PM column where the language reads time that way. A new
+  `DateField` serves the places that ask for a day alone: the range of the filters sheet (§8.5) and
+  the budget's dates (§8.8). This reverses the decision of 2026-09-01 that date and time were the one
+  place native controls were allowed.
+- **Why:** the browser's widgets follow neither the tokens nor the app's language, and — the reason
+  that decided it — they cannot grey out what the server refuses. The transaction form passes
+  `max` = tomorrow, so a date more than 24 h ahead is no longer reachable from the form at all; the
+  budget's period, which is legitimately in the future, passes no ceiling.
+- **Alternatives:** styling the native control (nothing in it can be styled past the border);
+  validating after the fact (which is what F-66 exists to clean up afterwards).
+- **Consequence:** every day the calendar shows carries its whole date as its accessible name, so a
+  screen reader hears "Wednesday, September 30, 2026" and the neighbour months are told apart. The
+  sheets are remounted on each open, which is what makes "Cancel" leave nothing behind. Two e2e tests
+  changed shape: the far-future date of `transaction-form.spec.ts` cannot be typed any more, so the
+  test asserts the calendar refuses it, and the inverted budget window of `BudgetForm.test.tsx` is
+  now a day the picker does not offer.
+
+## 2026-09-06 · The account type is one row and a sheet that explains the nine (F-03)
+
+- **Decision:** the grid of nine chips is replaced by a `picker` row — "Type · Bank account · a
+  checking or current account" — that opens a sheet listing the nine types, each with the line that
+  says what it is. The same control serves the account form and the onboarding, which reach it
+  through the same `AccountForm`. Variant C, chosen by the owner on 2026-09-06.
+- **Why:** the grid broke into three lines and took half the screen, and it had nowhere to say what
+  an Overdraft is — which is the thing nobody could work out. A row is one line whatever the type,
+  and it scales if a tenth type ever appears.
+- **Alternatives, both drawn in `preview/13-variaciones.html` with the reason they lost:** a single
+  scrollable line of nine chips (dragging with a mouse is awkward and the last types are never
+  discovered); five essentials plus "More" (the four odd types hide behind a button, in a sheet
+  different from the rest of the form).
+- **Consequence:** the description is written once, capitalised, and the row lowercases its first
+  letter to read as a clause. Two e2e tests and two component tests choose the type through the sheet
+  now.
+
+## 2026-09-06 · The pace mark says what it marks, and explains itself once (F-08)
+
+- **Decision:** the vertical line on a progress bar becomes a focusable `button` carrying its own
+  `aria-label` and a tooltip — "Day 22 of 30 · 73% expected" — wherever the mark is drawn: the Home
+  hero, the global budget card and the budget detail. **Only the detail** repeats it as a fixed line
+  under the bar ("The mark is today's pace: …"). Variant B, chosen by the owner on 2026-09-06.
+- **Why:** the line had no label at all, so it was decoration to anyone who had not been told. The
+  tooltip does not exist for a finger, which is why the one screen with room says it in text; on the
+  list and the hero the same line would repeat on every card.
+- **Alternatives:** the tooltip alone (variant A: a phone never sees it); a legend everywhere (noise
+  on every card, and it does not fit).
+- **Consequence:** `Progress` no longer clips the mark: the bar keeps its own `overflow-hidden` for
+  the fill, and the mark and its bubble sit outside it, so the tooltip is not cut off by the element
+  it explains. A mark with no label stays a decorative line — that is what the landing's mock uses.
+  `budgetProgress` gained `day` and `days`, which is what the text says out loud.
+
+## 2026-09-06 · The language is chosen before the account exists (F-02)
+
+- **Decision:** the access frame gains a language chip (globe + `EN` / `ES`) beside the brand on
+  login, register and onboarding, and the register form a **Language** row. Both open the same sheet
+  — English and Español, the device's own marked "Detected from your device" — and both do the same
+  thing: navigate to the same page in the other language. There is no third value to keep in step,
+  because the language of the screen **is** the `locale` the account is created with. No "Follow
+  device" here: that is a local mode of Settings, not a value the contract takes.
+- **Why:** `locale` was whatever the URL happened to carry, and nothing on the screen said so or
+  offered to change it. Someone who lands on `/en/register` from a shared link had to know to edit
+  the address bar.
+- **Alternatives:** swapping the messages in place without navigating — the URL would still say
+  `/en`, so every `Link` on the page and the onboarding it hands over to would carry the wrong
+  language; keeping a separate `locale` field in the form — two values saying the same thing, and the
+  screen would still be in the other language while the user filled it in.
+- **Consequence:** switching on the register screen reloads it in the other language, which empties
+  what was typed — the same thing that happens in Settings, and the reason the row shows the detected
+  language, which is what most people will already want. The switch carries the query string with it,
+  so a `?reauth=1&next=…` login does not lose its way back (§2.6).
+
+## 2026-09-06 · The landing's footer link is reached by keyboard, not by coordinates (F-37)
+
+- **Decision:** `public.spec.ts` asserts the footer's privacy link and then activates it with the
+  keyboard (`focus()` + Enter) instead of clicking it.
+- **Why:** the failure was neither an animated footer nor a flaky wait, which is what the ficha
+  assumed. Measured: the landing is 2370 px tall, Chromium's mobile emulation gives the page a layout
+  viewport of 935 px while Playwright measures in the 839 px visual viewport, and at the very bottom
+  of the page that ~96 px difference puts the computed click point inside `section#how` instead of on
+  the link — the browser's own `elementFromPoint` agrees with the interception message. Nothing moves
+  and nothing overlaps: the two sides simply hit-test in different coordinate spaces. Desktop, which
+  has no such split, never failed.
+- **Alternatives:** `click({ force: true })` (dispatches at the same wrong point, so the URL would
+  not change); asserting the `href` alone (it would stop proving the link works); making the footer
+  taller (a 96 px offset would still miss a 15 px link).
+- **Consequence:** the assertion is stronger than it was — a footer link has to answer the keyboard —
+  and it is immune to the emulation's offset. Anything else that clicks near the bottom of a long
+  page on the mobile project can fail the same way; that is worth remembering when reading F-45.
+
+## 2026-09-06 · The three intermittents of the suite, each with its own cause (F-45, F-11)
+
+- **Decision:** every full-page axe scan goes through `expectNoAxeViolations`, which waits for the
+  document's title before judging it; the account deletion of `settings.spec.ts` waits 30 s instead
+  of the default 5; and `offline-shell.spec.ts` waits for the screen after landing on `/home`, not
+  only for the load event.
+- **Why, one by one:** (a) the "43 violations" were one — `document-title` on `html` — and the page
+  had its title a moment later: Next sets it after a client navigation, and under eight workers axe
+  won the race. Reproduced three times out of three on `budgets.spec.ts`, not once when run alone.
+  (b) Deleting an account is a round trip, a vault purge and a navigation; 5 s is not enough under
+  load, and the ficha had already measured it. (c) "Navigation is interrupted by another navigation
+  to /home" was the app's own start-up navigation, which happens once the client mounts — after the
+  load event the test was waiting for.
+- **Consequence:** measured after the fixes, the four specs that used to fail passed **72 of 72** and
+  then **96 of 96** with `--repeat-each=3` and eight workers, and the full suite passed twice in a
+  row: **145 passed / 0 failed / 1 skipped**. That is the new baseline, and it is the first time the
+  suite has had no standing failure. F-11 is closed with F-45: the `document-title` half is this, and
+  the `ECONNRESET` half has not reappeared in any of these runs.
+
+## 2026-09-06 · Neither the tray nor the subscribed rows need the cap they were offered (F-35, F-36)
+
+- **Measured in Chromium, before touching anything, with the vault seeded through IndexedDB and the
+  app offline** (desktop project of the e2e suite; the spec was temporary and is not kept):
+  - **F-35 — 200 stuck operations in `/sync`:** 200 cards, three buttons each, painted and
+    interactive **304 ms** after the navigation, with **no long task** in the following 1.5 s.
+  - **F-36 — 300 rows subscribed to `useOutbox()`:** with one page of rows on screen a write costs
+    **599 ms** end to end; with all ten pages — 300 rows in the DOM — the same write costs **627 ms**,
+    and again **no long task**. The 5 % difference is inside the noise of opening a sheet, typing and
+    saving.
+- **Decision:** neither the 50-card cap with "n more" of F-35 nor the memoisation of F-36 is built.
+  Both were offered as "measure first", and the measurement says the user cannot tell.
+- **Consequence:** the two fichas close on evidence rather than on a change, and the numbers are
+  written down so the next person does not have to guess. The cap remains the answer if a real device
+  ever says otherwise — and it is UI, so it would go through design first (D-36).
+
+## 2026-09-06 · The authenticated app gets a budget that matches a real route (F-10)
+
+- **Decision:** `tools/size-limit.mjs` budgets **every** `(app)` screen against one limit, reports the
+  heaviest, and fails when a budget matches no route at all. The `(app)` limit is **250 kB gz**, the
+  measured weight of the heaviest screen plus room.
+- **Why:** the old pattern was `/(app)/page`, and the group has no `page.tsx` of its own — every
+  screen is a segment below it — so it matched nothing, printed nothing and watched nothing from W-01
+  until now. A budget that can silently match nothing is worse than no budget, which is why matching
+  nothing is now a failure.
+- **Measured:** the 25 screens sit between **230.5 and 239.9 kB gz** of route-owned JS, on top of a
+  131.2 kB framework runtime that is reported separately. They are all within 10 kB of each other
+  because they share the shell, the providers, the message catalogue and the offline stack. The
+  200 kB the file carried was an aspiration nothing had ever been measured against; **the app has
+  never been under it**, and pretending otherwise by keeping the number would leave the check red
+  from its first honest run.
+- **Consequence:** growth is caught from here on. Whether 240 kB is where the app should sit is a
+  separate question, registered as its own finding.
+
+## 2026-09-06 · Lighthouse runs on a Linux browser with a profile outside the repo (F-12)
+
+- **Decision:** `npm run lighthouse` goes through `tools/lighthouse.mjs`, which passes
+  `--user-data-dir` under the system temp directory and, when nothing else names a browser, points
+  `CHROME_PATH` at the Linux Chromium Playwright already installs. The profile is removed when the run
+  ends.
+- **Why:** under WSL `chrome-launcher` reaches the Windows browser through `/mnt/c` and hands it a
+  Linux profile path it cannot translate, and the browser creates a directory literally named
+  `C:\Users\…` wherever the command was run — the repo root, one `git add .` away from a commit.
+- **Honest about the reproduction:** the stray directory could not be produced on this machine today,
+  because no Windows _Chrome_ is installed here any more (only Edge, which `chrome-launcher` does not
+  pick) — `npx lhci autorun` now fails outright with "Chrome installation not found". So the fix is
+  verified in what it does, not in the failure it prevents: with it, the run finds a browser, all four
+  URLs pass their assertions, and the repo root is untouched afterwards.
+- **Consequence:** the command works on a WSL checkout with no Chrome of its own, which it did not
+  before, and CI (which sets `CHROME_PATH` and has a real Chrome) is unaffected beyond the temp
+  profile.
+
+## 2026-09-06 · The blocked `eval` was Zod's JIT probe, and it is turned off (F-67)
+
+- **Found:** `_next/static/chunks/…js`, line 2, column 3937 — `if (globalConfig.jitless || navigator
+.userAgent.includes("Cloudflare")) return false; try { new Function(""); return true } catch …`.
+  It is Zod v4's `allowsEval`, the probe it runs once to decide whether it can JIT-compile
+  validators. The throw is caught, but the browser files the `securitypolicyviolation` before the
+  catch runs, so every page load reported one: 229 in an e2e run, 8 in the demo.
+- **Decision:** `lib/validation/zod.ts` calls `z.config({ jitless: true })` and re-exports `z`; every
+  schema in the app imports `z` from there, so the switch is set before the first schema is built.
+  Validators take the interpreted path — the path they would take anyway under a CSP without
+  `unsafe-eval`.
+- **Where it is not:** `instrumentation-client.ts`. Configuring it there works, and measured: it puts
+  the whole of Zod in the bundle every page loads, which moved 84 kB gz from the app screens into the
+  framework runtime — that is, onto the landing, which validates nothing. From the schemas it costs
+  the landing nothing. `lib/env.ts` imports it relatively, because `next.config.ts` loads that file
+  through a transpiler that does not resolve the `@/` alias.
+- **Measured after:** **zero** `csp-report` events in a full e2e run and zero in the demo, where there
+  were 229 and 8.
+- **Consequence:** the reason not to enforce the CSP is gone. `CSP_REPORT_ONLY` in `proxy.ts` is left
+  as it is: turning it off is a change to what production refuses to run, and the owner decides that.
+  With the report-only policy now silent across the whole suite, there is evidence that nothing else
+  in the app needs `unsafe-eval` or an unnonced script.
+
+## 2026-09-06 · The hydration errors are gone, checked in the traces (F-53)
+
+- **Checked, not fixed:** both traces of `npm run demo:offline` — the run that moves the client's
+  clock three days and reads screens full of relative time, which is what produced them — carry **no
+  `React #418` and no hydration message at all**. What the console still holds is what an offline run
+  is expected to hold: `ERR_FAILED` for the requests made with the network cut, the RSC payload
+  fallbacks of D-28, and the mirror's own "pulling failed" warning.
+- **Why:** D-29 (R-3b) made the `(app)` screens render on the client only, so there is no server HTML
+  for the client's first render to disagree with. The ficha suspected as much; this is the evidence.
+- **Consequence:** the ficha closes on the check. Nothing was excluded from the error collector, so a
+  real hydration mismatch would still reach it.
+
+## 2026-09-06 · Background Sync brings the drain forward, it does not replace it (F-39)
+
+- **Decision (owner, 2026-09-06):** the `ledger-flow-outbox` tag stays as it is — the worker wakes,
+  posts to its clients, and the drain happens in the page. Woken with no tab open, `matchAll` answers
+  an empty list and the queue waits for the next time the app is opened. This is written down rather
+  than fixed.
+- **Why:** what the queue owes is never lost, only sent later, and a user who has work waiting opens
+  the app. The alternative was a second copy of the send path inside the worker — the engine, the
+  routes, the coalescing, the reconciliation and its own access to the vault — which is the most
+  delicate code in the app and the last place to have two of.
+- **Consequence:** a device that never reopens the app never syncs, which is the same as before the
+  tag existed; the tag only shortens the wait when a tab is alive. `app/sw.ts` says so where the
+  handler is, so the next person does not read the empty `matchAll` as a bug.
+
+## 2026-09-06 · The CSP is enforced, and the upgrade directive stays off loopback (F-71)
+
+- **Decision:** `CSP_REPORT_ONLY` in `proxy.ts` is `false`. The policy that has been reported for
+  weeks is now the policy the browser applies: `default-src 'self'`, `script-src 'self'
+'nonce-…' 'strict-dynamic'`, `connect-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`.
+  `report-uri` stays, so anything the enforced policy blocks still reaches `/api/csp-report`.
+- **What made it safe:** F-67 removed the only violation the app produced (Zod's JIT probe). Measured
+  again with the policy enforced: **zero `csp-report` events** in two full e2e runs and in both
+  offline demos, where the report-only policy used to log 229 and 8.
+- **Found while enforcing:** `upgrade-insecure-requests` ships only when the policy is enforced, and
+  it upgraded the service worker's shell warm — `http://localhost:3002/es/home`, built from
+  `window.location.origin` — to `https`, which on a plain `next start` dies with
+  `ERR_SSL_PROTOCOL_ERROR`. The warm is a sequential loop, so it stopped at its first URL and the
+  device never became ready to run offline. `settings.spec.ts:29` caught it, being the one test that
+  asserts an empty console.
+- **Fix:** `buildCsp` takes `loopback`, and the proxy sets it when the request is `http:` on
+  `localhost`/`127.0.0.0/8`/`::1`. An http loopback origin has nothing to upgrade to, so the
+  directive there can only break the requests it rewrites. The condition is the host, not the
+  environment, so production can never drop the directive by accident.
+- **Alternatives:** dropping `upgrade-insecure-requests` outright (loses a real protection on the
+  deployed origin), or serving the e2e build over https (a certificate and a proxy to maintain for a
+  directive that is a no-op on an origin that is already https).
+- **Consequence:** what the browser refused to run in report-only, it now refuses for real. If a
+  dependency ever needs `eval` again it fails visibly instead of logging — which is the point — and
+  the `csp-report` log is where it will say so.
+
+## 2026-09-06 · The "changes waiting" stripe waits a second before saying anything (F-72)
+
+- **Measured first** (`npm run measure:banner`): with a network the queue drains in ~30 ms, so the
+  stripe was painted 70 ms after Save and gone 16-33 ms later — one or two frames — and the content
+  under it moved 55.3 px down and back up. With 250 ms added to `POST /sync` it lived 270-280 ms,
+  still unreadable. It was a false positive: nothing was waiting, that was the round trip.
+- **Decision (owner, 2026-09-06, chosen from three):** `pending` is not painted until the queue has
+  been undrained for `PENDING_GRACE_MS` (1 s, a constant in `ConnectionBanner.tsx` so it can be
+  raised or lowered without redesigning anything). A queue whose last round came back with an error
+  paints at once, whatever the clock says: the grace exists for a round trip nobody is waiting on.
+- **What did NOT change, on the owner's instruction:** every write still goes through the queue with
+  a network, in the same order, through the same engine. `lib/local/outbox/` is untouched. This is
+  presentation only — the only thing that moved is _when_ the stripe is painted.
+- **Alternatives:** (a) hide `pending` while the engine has a batch in flight — the truest reading,
+  but the engine refreshes the status store _before_ it marks operations `sending`, so it would mean
+  editing `engine.ts`, and a slow three-second send would then say nothing at all; (c) reserve the
+  stripe's height so it never pushes the content — removes the jump but not the false positive, and
+  leaves an empty band at the top of every screen.
+- **Consequence:** the offline stripe, the conflict stripe, the blocked stripe and the signed-out
+  stripe are unaffected — they never went through this branch. `DESIGN.md` §8.12 carries the rule,
+  because when a drawn state appears is a design decision (D-36).

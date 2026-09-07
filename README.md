@@ -23,36 +23,43 @@ npm run dev          # http://localhost:3001
 Validated at build time by `lib/env.ts` (`@t3-oss/env-nextjs` + Zod); a missing variable fails
 the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no environment.
 
-| Variable                                            | Scope  | Purpose                                                                                            |
-| --------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
-| `API_URL`                                           | server | Backend base URL. Only the BFF knows it.                                                           |
-| `API_SECRET`                                        | server | Shared secret sent as `x-api-secret` on every backend call; the backend requires it in production. |
-| `NEXT_PUBLIC_APP_URL`                               | public | Base URL of this deployment (metadata, sitemap, manifest).                                         |
-| `NEXT_PUBLIC_CONTACT_EMAIL`                         | public | Contact, support and privacy mailbox.                                                              |
-| `NEXT_PUBLIC_APP_VERSION`                           | public | Tag or commit SHA shown in Settings › About.                                                       |
-| `NEXT_PUBLIC_APP_ENV`                               | public | Optional feature-flag environment when it differs from `NODE_ENV` (the e2e build uses `test`).     |
-| `NEXT_PUBLIC_SENTRY_DSN`                            | public | Optional. Enables Sentry error tracking (client, server and edge); unset keeps the SDK disabled.   |
-| `NEXT_PUBLIC_VERCEL_ENV`                            | public | Set by Vercel (`production`, `preview`, `development`); used as the Sentry environment.            |
-| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | build  | Deploy pipeline only: source-map upload during `next build`. Absent locally, the build skips it.   |
+| Variable                                            | Scope  | Purpose                                                                                             |
+| --------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------- |
+| `API_URL`                                           | server | Backend base URL. Only the BFF knows it.                                                            |
+| `API_SECRET`                                        | server | Shared secret sent as `x-api-secret` on every backend call; the backend requires it in production.  |
+| `NEXT_PUBLIC_APP_URL`                               | public | Base URL of this deployment (metadata, sitemap, manifest).                                          |
+| `NEXT_PUBLIC_CONTACT_EMAIL`                         | public | Contact, support and privacy mailbox.                                                               |
+| `NEXT_PUBLIC_APP_VERSION`                           | public | Tag or commit SHA shown in Settings › About.                                                        |
+| `NEXT_PUBLIC_APP_ENV`                               | public | Optional feature-flag environment when it differs from `NODE_ENV` (the e2e build uses `test`).      |
+| `NEXT_PUBLIC_SW_PATH`                               | public | Worker the app registers; defaults to `/sw.js`. The e2e build uses `/sw-e2e.js` (F-56).             |
+| `NEXT_DIST_DIR`                                     | build  | Where `next build` writes; defaults to `.next`. e2e uses `.next-e2e`, the gate `.next-gate` (F-56). |
+| `SERWIST_SW_DEST`                                   | build  | Where `serwist build` writes the worker; defaults to `public/sw.js`.                                |
+| `NEXT_PUBLIC_SENTRY_DSN`                            | public | Optional. Enables Sentry error tracking (client, server and edge); unset keeps the SDK disabled.    |
+| `NEXT_PUBLIC_VERCEL_ENV`                            | public | Set by Vercel (`production`, `preview`, `development`); used as the Sentry environment.             |
+| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | build  | Deploy pipeline only: source-map upload during `next build`. Absent locally, the build skips it.    |
 
 ## Scripts
 
-| Script                    | What it does                                                                                    |
-| ------------------------- | ----------------------------------------------------------------------------------------------- |
-| `npm run dev`             | Next dev server on port 3001                                                                    |
-| `npm run build` / `start` | Production build (`next build` + `serwist build` → `public/sw.js`, git-ignored) / server        |
-| `npm run ci`              | Full gate: typecheck, lint, format:check, check-tokens, contrast-check, test, build, size-limit |
-| `npm run typecheck`       | `tsc --noEmit`                                                                                  |
-| `npm run lint`            | ESLint with zero warnings allowed                                                               |
-| `npm run format`          | Prettier (`format:check` verifies)                                                              |
-| `npm run check-tokens`    | Fails on hex, raw color functions or Tailwind palette classes                                   |
-| `npm run contrast-check`  | WCAG AA over every `tokens/palette.*.css` in light and dark                                     |
-| `npm run test`            | Vitest + Testing Library (`test:watch`, `test:coverage`)                                        |
-| `npm run test:e2e`        | Playwright smoke tests against the local backend                                                |
-| `npm run size-limit`      | Route JS budgets over the production build                                                      |
-| `npm run lighthouse`      | Lighthouse CI against a production build with the thresholds in `lighthouserc.json`             |
-| `npm run gen:api-types`   | Regenerates `types/api.d.ts` from the backend OpenAPI                                           |
-| `npm run gen:feature`     | Scaffolds `features/<name>/{api,keys,hooks,schemas,components}`                                 |
+| Script                    | What it does                                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------------- |
+| `npm run dev`             | Next dev server on port 3001                                                                   |
+| `npm run build` / `start` | Production build (`next build` + `serwist build` → `public/sw.js`, git-ignored) / server       |
+| `npm run ci`              | Full gate: typecheck, lint, format:check, check-tokens, contrast-check, test, `build:gate`     |
+| `npm run build:gate`      | The gate's build: `.next-gate` and `public/sw-gate.js`, so it never overwrites a running app's |
+| `npm run typecheck`       | `tsc --noEmit`                                                                                 |
+| `npm run lint`            | ESLint with zero warnings allowed                                                              |
+| `npm run format`          | Prettier (`format:check` verifies)                                                             |
+| `npm run check-tokens`    | Fails on hex, raw color functions or Tailwind palette classes                                  |
+| `npm run contrast-check`  | WCAG AA over every `tokens/palette.*.css` in light and dark                                    |
+| `npm run test`            | Vitest + Testing Library (`test:watch`, `test:coverage`)                                       |
+| `npm run test:e2e`        | Playwright smoke tests against the local backend                                               |
+| `npm run demo:offline`    | The demo of gate O-A: three days with no network and one clean drain (`tests/gate/`)           |
+| `demo:offline:watch`      | The same demo, headed and slowed down, so it can be watched as it happens                      |
+| `demo:offline:report`     | Opens the demo's report: one video per cold start, and a trace with every request              |
+| `npm run size-limit`      | Route JS budgets over the production build                                                     |
+| `npm run lighthouse`      | Lighthouse CI against a production build with the thresholds in `lighthouserc.json`            |
+| `npm run gen:api-types`   | Regenerates `types/api.d.ts` from the backend OpenAPI                                          |
+| `npm run gen:feature`     | Scaffolds `features/<name>/{api,keys,hooks,schemas,components}`                                |
 
 ## Deploy
 
@@ -96,6 +103,8 @@ components/shell/    AppShell, Sidebar, TabBar, Fab, PageHeader, ConnectionBanne
 features/<domain>/   api.ts · keys.ts · hooks.ts · schemas.ts · components/ · README.md
 lib/api              HTTP client, ApiError, error taxonomy, idempotency, single-flight refresh
 lib/query            QueryClient defaults and persistence
+lib/local            offline vault: IndexedDB schema, migrations, storage grant, vault purge
+lib/pwa              service worker registration, the (app) routes it caches and the offline fallback
 lib/i18n             next-intl config, money and date formatting
 lib/theme            palette and mode
 lib/icons            curated Lucide map and CategoryIcon
@@ -114,34 +123,35 @@ shared code moves up to `lib` or `components/ui`. ESLint enforces it.
 
 English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`).
 
-| Route                                                          | Screen                                                                                         |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `/`                                                            | Public landing (static)                                                                        |
-| `/login`, `/register`, `/onboarding`                           | Access and first-run flow                                                                      |
-| `/home`                                                        | Authenticated home                                                                             |
-| `/settings`, `/settings/appearance`                            | Settings hub (language, currency, time zone, your data, install, about, delete) and appearance |
-| `/settings/profile`, `/settings/sessions`                      | Profile & security (name, email, password with re-authentication) and active sessions          |
-| `/transactions`                                                | Transactions list: filters in the URL, day groups, infinite scroll                             |
-| `/transactions/new`, `/transactions/[id]/edit`                 | Transaction form: create (optional quick-add draft in the query string) and edit with delete   |
-| `/transactions/[id]`                                           | Transaction detail with edit and delete                                                        |
-| `/transactions/review`                                         | Inbox of quick expenses to complete (`?focus=<id>` scrolls to one)                             |
-| `/accounts`                                                    | Accounts list: summary, active grid, folded archived section                                   |
-| `/accounts/new`, `/accounts/[id]/edit`                         | Account form: create (with opening balance) and edit                                           |
-| `/accounts/[id]`                                               | Account detail: hero, make main, archive/restore, its transactions                             |
-| `/categories`                                                  | Categories grid by type (`?type=`), usage counts, archived list, restore defaults              |
-| `/categories/new`, `/categories/[id]/edit`                     | Category form: create (`?type=`) and edit with locked type and archive                         |
-| `/budgets`                                                     | Budgets list for a month (`?reference=YYYY-MM&period=`), global card featured                  |
-| `/budgets/[id]`                                                | Budget detail per month: hero, period override, categories, transactions, archive              |
-| `/budgets/new`, `/budgets/[id]/edit`                           | Budget form: scope, categories, six period types, amount, color, advanced options              |
-| `/budgets/past`                                                | Ended and archived budgets with "Create again"                                                 |
-| `/stats`                                                       | Monthly stats by category, day or tag (`?reference&type&groupBy`) with drill-down              |
-| `/privacy`, `/terms`                                           | Privacy policy and terms of service (static, legal drafts pending the owner's review)          |
-| `/dev/ui`                                                      | Component catalog (development only)                                                           |
-| `/dev/pickers`                                                 | Category, account and date pickers against the real API (development only)                     |
-| `/dev/frame?w=390&url=…`, `/api/dev/login?email&password&next` | Screenshot helpers (development only)                                                          |
-| `/api/auth/*`                                                  | Session BFF (httpOnly cookies)                                                                 |
-| `/api/[...path]`                                               | Generic proxy to the backend; logs one JSON line per call with the `requestId`                 |
-| `/monitoring`                                                  | Sentry tunnel (rewrite to the ingest host) so CSP keeps `connect-src 'self'`                   |
+| Route                                                          | Screen                                                                                                                |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `/`                                                            | Public landing (static)                                                                                               |
+| `/login`, `/register`, `/onboarding`                           | Access and first-run flow                                                                                             |
+| `/home`                                                        | Authenticated home                                                                                                    |
+| `/settings`, `/settings/appearance`                            | Settings hub (language, currency, time zone, your data, install, about, delete) and appearance                        |
+| `/settings/profile`, `/settings/sessions`                      | Profile & security (name, email, password with re-authentication) and active sessions                                 |
+| `/settings/sync`                                               | Sync status: cursor, queue size, last error, storage use and grant, display mode, link to the tray, force full resync |
+| `/transactions`                                                | Transactions list: filters in the URL, day groups, infinite scroll                                                    |
+| `/transactions/new`, `/transactions/[id]/edit`                 | Transaction form: create (optional quick-add draft in the query string) and edit with delete                          |
+| `/transactions/[id]`                                           | Transaction detail with edit and delete                                                                               |
+| `/transactions/review`                                         | Inbox of quick expenses to complete (`?focus=<id>` scrolls to one)                                                    |
+| `/accounts`                                                    | Accounts list: summary, active grid, folded archived section                                                          |
+| `/accounts/new`, `/accounts/[id]/edit`                         | Account form: create (with opening balance) and edit                                                                  |
+| `/accounts/[id]`                                               | Account detail: hero, make main, archive/restore, its transactions                                                    |
+| `/categories`                                                  | Categories grid by type (`?type=`), usage counts, archived list, restore defaults                                     |
+| `/categories/new`, `/categories/[id]/edit`                     | Category form: create (`?type=`) and edit with locked type and archive                                                |
+| `/budgets`                                                     | Budgets list for a month (`?reference=YYYY-MM&period=`), global card featured                                         |
+| `/budgets/[id]`                                                | Budget detail per month: hero, period override, categories, transactions, archive                                     |
+| `/budgets/new`, `/budgets/[id]/edit`                           | Budget form: scope, categories, six period types, amount, color, advanced options                                     |
+| `/budgets/past`                                                | Ended and archived budgets with "Create again"                                                                        |
+| `/stats`                                                       | Monthly stats by category, day or tag (`?reference&type&groupBy`) with drill-down                                     |
+| `/privacy`, `/terms`                                           | Privacy policy and terms of service (static, legal drafts pending the owner's review)                                 |
+| `/dev/ui`                                                      | Component catalog (development only)                                                                                  |
+| `/dev/pickers`                                                 | Category, account and date pickers against the real API (development only)                                            |
+| `/dev/frame?w=390&url=…`, `/api/dev/login?email&password&next` | Screenshot helpers (development only)                                                                                 |
+| `/api/auth/*`                                                  | Session BFF (httpOnly cookies)                                                                                        |
+| `/api/[...path]`                                               | Generic proxy to the backend; logs one JSON line per call with the `requestId`                                        |
+| `/monitoring`                                                  | Sentry tunnel (rewrite to the ingest host) so CSP keeps `connect-src 'self'`                                          |
 
 ## How to
 

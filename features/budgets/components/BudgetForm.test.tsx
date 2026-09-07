@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ApiError } from "@/lib/api/errors";
@@ -83,20 +83,34 @@ describe("BudgetForm", () => {
     });
   });
 
+  // The dates are chosen in the calendar of 7.28 now, not typed into the browser's control (F-05).
+  async function pickDay(label: string, month: string, day: number) {
+    await userEvent.click(screen.getByRole("button", { name: new RegExp(`^${label}`) }));
+    const sheet = screen.getByRole("dialog", { name: label });
+    const wanted = new RegExp(`${month} ${day}, 2026`);
+    for (let hops = 0; hops < 24; hops += 1) {
+      if (within(sheet).queryAllByRole("gridcell", { name: wanted }).length > 0) break;
+      await userEvent.click(within(sheet).getByRole("button", { name: "Next month" }));
+    }
+    await userEvent.click(within(sheet).getAllByRole("gridcell", { name: wanted })[0]!);
+    await userEvent.click(within(sheet).getByRole("button", { name: "Done" }));
+  }
+
   it("requires a category for a category budget and the dates for a custom period", async () => {
     const onSubmit = renderForm();
     await userEvent.type(screen.getByLabelText("Name"), "Trip");
     await userEvent.click(screen.getByRole("button", { name: "Custom" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "100");
-    const start = screen.getByLabelText("Start");
-    const end = screen.getByLabelText("End");
-    await userEvent.clear(start);
-    await userEvent.type(start, "2026-10-10");
-    await userEvent.clear(end);
-    await userEvent.type(end, "2026-10-01");
+    await pickDay("Start", "October", 10);
+    // The calendar will not offer a day before the start, so the window cannot be inverted at all
+    // (F-05); the rule the form used to catch afterwards is now a day nobody can choose.
+    await userEvent.click(screen.getByRole("button", { name: /^End/ }));
+    const end = screen.getByRole("dialog", { name: "End" });
+    expect(within(end).getByRole("gridcell", { name: /October 1, 2026/ })).toBeDisabled();
+    await userEvent.click(within(end).getByRole("button", { name: "Cancel" }));
+
     await userEvent.click(screen.getByRole("button", { name: "Create budget" }));
     expect(await screen.findByText("This field is required.")).toBeInTheDocument();
-    expect(screen.getByText("The end must be after the start.")).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -105,12 +119,8 @@ describe("BudgetForm", () => {
     await userEvent.type(screen.getByLabelText("Name"), "Trip");
     await userEvent.click(screen.getByRole("button", { name: "All spending" }));
     await userEvent.click(screen.getByRole("button", { name: "Custom" }));
-    const start = screen.getByLabelText("Start");
-    const end = screen.getByLabelText("End");
-    await userEvent.clear(start);
-    await userEvent.type(start, "2026-10-01");
-    await userEvent.clear(end);
-    await userEvent.type(end, "2026-10-15");
+    await pickDay("Start", "October", 1);
+    await pickDay("End", "October", 15);
     await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "2500000");
     await userEvent.click(screen.getByRole("button", { name: "Advanced options" }));
     await userEvent.type(screen.getByLabelText(/^Note/), "Beach week");

@@ -1,4 +1,4 @@
-import { reportNetworkFailure } from "@/lib/network/connectivity";
+import { reportNetworkAnswer, reportNetworkFailure } from "@/lib/network/connectivity";
 import { isReportable, reportError } from "@/lib/observability/reporter";
 import type { ErrorResponse } from "@/types/api";
 
@@ -61,7 +61,7 @@ async function readJson(response: Response): Promise<unknown> {
 }
 
 function toApiError(response: Response, payload: unknown, requestId: string): ApiError {
-  const body = (payload ?? {}) as Partial<ErrorResponse>;
+  const body = (payload ?? {}) as Partial<ErrorResponse> & { current?: unknown };
   return new ApiError({
     status: response.status,
     code: isErrorCode(body.code) ? body.code : null,
@@ -69,6 +69,9 @@ function toApiError(response: Response, payload: unknown, requestId: string): Ap
     details: body.details,
     requestId: response.headers.get(REQUEST_ID_HEADER) ?? requestId,
     retryAfterSeconds: parseRetryAfter(response.headers.get("retry-after")),
+    // Only `STALE_UPDATE` carries it, and it is not in the OpenAPI schema: the resolution sheet
+    // needs the server's own row, and this is the response that already has it (O-B2).
+    current: body.current,
   });
 }
 
@@ -88,7 +91,10 @@ async function send(path: string, request: ApiRequest, requestId: string): Promi
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   };
   try {
-    return await fetch(`${API_PREFIX}${path}${toQueryString(query)}`, init);
+    const response = await fetch(`${API_PREFIX}${path}${toQueryString(query)}`, init);
+    // Whatever it says, it came from the other side: the app can stop believing it is offline.
+    reportNetworkAnswer();
+    return response;
   } catch (cause) {
     const timedOut = cause instanceof DOMException && cause.name === "TimeoutError";
     if (cause instanceof DOMException && cause.name === "AbortError" && signal?.aborted)

@@ -1,5 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -20,7 +21,7 @@ test("the list groups last month's seed by day, filters from the URL and survive
   await expect(page.getByRole("heading", { level: 1, name: "Transactions" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Quick expense/ }).first()).toBeVisible();
   await expect(page.getByText("Spent in Last month")).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   await page.getByRole("button", { name: "Expenses" }).click();
   await expect(page).toHaveURL(/period=lastMonth/);
@@ -103,7 +104,7 @@ test("a row opens its detail, which edits and deletes the transaction", async ({
     page.getByText("This quick expense still needs a category and a description."),
   ).toBeVisible();
   await expect(page.getByText("Quick add")).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   await page.getByRole("link", { name: "Edit" }).click();
   await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}/edit$`));

@@ -3,7 +3,7 @@
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Alert } from "@/components/ui/Alert";
@@ -23,9 +23,10 @@ import {
   useTransactionsInfinite,
 } from "@/features/transactions/hooks";
 import { ERROR_TABLE, type ErrorMessageKey, isErrorCode, presentError } from "@/lib/api/errors";
-import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { Link } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
+import { pruneNotices } from "@/lib/local/outbox/notices";
+import { currentVault } from "@/lib/local/repository/read";
 import { useBackNavigation } from "@/lib/navigation/history";
 import type { Transaction } from "@/types/api";
 
@@ -58,7 +59,21 @@ export function ReviewScreen() {
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
   const [failures, setFailures] = useState<Record<string, ErrorMessageKey>>({});
   const [confirming, setConfirming] = useState(false);
-  const keyring = useRef(new IdempotencyKeyring());
+  // What `POST /sync` warned about the movements that landed without their category (F-57). Read
+  // once per visit and pruned there: a notice outlives its row by nothing.
+  const [dropped, setDropped] = useState<ReadonlySet<string>>(new Set());
+
+  useEffect(() => {
+    const vault = currentVault();
+    if (!vault) return;
+    let live = true;
+    void pruneNotices(vault.db).then((notices) => {
+      if (live) setDropped(new Set(notices.map((notice) => notice.id)));
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
   const lookups = useMemo<TransactionLookups>(
     () => ({
       accounts: new Map((accounts.data ?? []).map((account) => [account.id, account])),
@@ -84,10 +99,7 @@ export function ReviewScreen() {
       }),
     };
     try {
-      const result = await batch.mutateAsync({
-        input,
-        idempotencyKey: keyring.current.keyFor(input),
-      });
+      const result = await batch.mutateAsync(input);
       setConfirming(false);
       setFailures(
         Object.fromEntries(
@@ -190,6 +202,7 @@ export function ReviewScreen() {
               recent={recent}
               focused={transaction.id === focus}
               errorKey={failures[transaction.id] ?? null}
+              droppedCategory={dropped.has(transaction.id)}
             />
           ))}
           {list.hasNextPage && (

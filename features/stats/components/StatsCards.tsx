@@ -8,11 +8,14 @@ import { Amount, type AmountKind } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/cn";
+import { Projected } from "@/components/ui/Projected";
 import { List, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Tile } from "@/components/ui/Tile";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { type ColorToken, featureColorStyle } from "@/lib/theme/feature-color";
 import type { Category } from "@/types/api";
 
@@ -39,12 +42,15 @@ export function TotalCard({
 }) {
   const t = useTranslations("stats");
   const money = useMoney();
+  const outbox = useOutbox();
   return (
     <Card className="flex flex-col gap-1">
       <span className="text-xs font-medium tracking-caps text-text-3 uppercase">
         {t(`totals.${type}`)}
       </span>
-      <Amount value={total} signed={false} size="hero" kind={AMOUNT_KIND[type]} />
+      <Projected when={outbox.projected.spending}>
+        <Amount value={total} signed={false} size="hero" kind={AMOUNT_KIND[type]} />
+      </Projected>
       <span className="text-sm text-text-3">
         {t("summary", { count, average: money.format(money.round(average)) })}
       </span>
@@ -55,28 +61,32 @@ export function TotalCard({
 export function StackBar({
   shares,
   colors,
+  names,
   label,
 }: {
   shares: readonly Share[];
   colors: (key: string) => ColorToken | null;
+  names: (key: string) => string;
   label: string;
 }) {
   return (
     <Card className="p-3">
-      <div
-        role="img"
-        aria-label={label}
-        className="flex h-2.5 gap-0.5 overflow-hidden rounded-full"
-      >
+      <div role="img" aria-label={label} className="flex h-2.5 gap-0.5 rounded-full">
         {shares.map((share) => (
-          <span
+          <Tooltip
             key={share.key}
-            className={cn(
-              "block h-full rounded-[2px]",
-              colors(share.key) ? "bg-(--f)" : "bg-surface-3",
-            )}
-            style={{ width: `${share.share * 100}%`, ...featureColorStyle(colors(share.key)) }}
-          />
+            label={names(share.key)}
+            className="h-full min-w-0"
+            style={{ width: `${share.share * 100}%` }}
+          >
+            <span
+              className={cn(
+                "block h-full w-full rounded-[2px]",
+                colors(share.key) ? "bg-(--f)" : "bg-surface-3",
+              )}
+              style={featureColorStyle(colors(share.key))}
+            />
+          </Tooltip>
         ))}
       </div>
     </Card>

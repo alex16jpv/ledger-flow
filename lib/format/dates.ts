@@ -98,6 +98,14 @@ export function trailingDaysWindow(reference: Date, days: number, timeZone: stri
   };
 }
 
+// Day arithmetic on the key itself. A calendar day has no zone of its own, so moving one must not
+// go through an instant: "the day after 2026-09-30" is 2026-10-01 wherever the user is.
+export function shiftDayKey(day: string, days: number): string {
+  const [year = 0, month = 1, date = 1] = day.split("-").map(Number);
+  const moved = new Date(Date.UTC(year, month - 1, date + days));
+  return `${moved.getUTCFullYear()}-${pad(moved.getUTCMonth() + 1)}-${pad(moved.getUTCDate())}`;
+}
+
 export function dayKey(instant: Date, timeZone: string): string {
   const local = toZonedTime(instant, timeZone);
   return `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}`;

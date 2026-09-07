@@ -1,6 +1,11 @@
 import { onlineManager } from "@tanstack/react-query";
 
-import { connectivityStore, reportNetworkFailure, reportOnline } from "./connectivity";
+import {
+  connectivityStore,
+  reportNetworkAnswer,
+  reportNetworkFailure,
+  reportOnline,
+} from "./connectivity";
 import { HEARTBEAT_INTERVAL_MS, startHeartbeat } from "./heartbeat";
 
 describe("heartbeat", () => {
@@ -29,6 +34,29 @@ describe("heartbeat", () => {
     expect(check).toHaveBeenCalledTimes(2);
     expect(connectivityStore.getSnapshot()).toBe("back-online");
     expect(onlineManager.isOnline()).toBe(true);
+    stop();
+  });
+
+  // F-64: a request that came back is proof the network is there, and waiting for the next tick to
+  // act on it left the app silent for up to 30 s with its queue stopped and nothing on screen.
+  it("comes back online as soon as a request is answered, without waiting for the tick", async () => {
+    const check = vi.fn<() => Promise<boolean>>().mockResolvedValue(false);
+    const stop = startHeartbeat(check);
+    reportNetworkFailure();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(connectivityStore.getSnapshot()).toBe("offline");
+
+    check.mockResolvedValue(true);
+    reportNetworkAnswer();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(check).toHaveBeenCalledTimes(2);
+    expect(connectivityStore.getSnapshot()).toBe("back-online");
+    expect(onlineManager.isOnline()).toBe(true);
+
+    // And with the phase settled it costs nothing: every answer after this one is free.
+    reportNetworkAnswer();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(check).toHaveBeenCalledTimes(2);
     stop();
   });
 

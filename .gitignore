@@ -1,8 +1,11 @@
 node_modules/
 .next/
+.next-e2e/
+.next-gate/
 out/
 coverage/
 playwright-report/
+playwright-report-gate/
 test-results/
 *.tsbuildinfo
 next-env.d.ts
@@ -14,6 +17,10 @@ npm-debug.log*
 .size-limit-report.json
 public/sw.js
 public/sw.js.map
+public/sw-e2e.js
+public/sw-e2e.js.map
+public/sw-gate.js
+public/sw-gate.js.map
 public/swe-worker-*.js
 
 # Lighthouse CI reports

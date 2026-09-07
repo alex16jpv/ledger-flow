@@ -1,7 +1,8 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 
 import { AccountForm } from "./AccountForm";
@@ -28,6 +29,13 @@ function renderForm(onSaved = vi.fn()) {
   return onSaved;
 }
 
+// The type is a row that opens a sheet now (F-03), not a chip in a grid.
+async function chooseType(label: string) {
+  await userEvent.click(screen.getByRole("button", { name: /^Type/ }));
+  const sheet = screen.getByRole("dialog", { name: "Account type" });
+  await userEvent.click(within(sheet).getByRole("option", { name: new RegExp(`^${label}`) }));
+}
+
 describe("AccountForm", () => {
   it("creates the account with the chosen type, color and a zero balance when left empty", async () => {
     fetchMock.mockResolvedValue(
@@ -35,7 +43,7 @@ describe("AccountForm", () => {
     );
     const onSaved = renderForm();
     await userEvent.type(screen.getByLabelText("Name"), "Bancolombia");
-    await userEvent.click(screen.getByRole("button", { name: "Cash", pressed: false }));
+    await chooseType("Cash");
     await userEvent.click(screen.getByRole("button", { name: "Teal" }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => {
@@ -45,7 +53,14 @@ describe("AccountForm", () => {
       string,
       unknown
     >;
-    expect(body).toEqual({ name: "Bancolombia", type: "CASH", color: "TEAL", balance: 0 });
+    // The create carries the client-minted id (O-B1), which is what makes it idempotent.
+    expect(body).toEqual({
+      id: expect.stringMatching(UUID),
+      name: "Bancolombia",
+      type: "CASH",
+      color: "TEAL",
+      balance: 0,
+    });
   });
 
   it("sends the typed opening balance", async () => {
@@ -117,27 +132,63 @@ describe("AccountForm", () => {
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("/api/accounts/a1");
     expect(init?.method).toBe("PUT");
-    expect(JSON.parse(init?.body as string)).toEqual({
-      name: "Nu Bank",
-      type: "SAVINGS",
-      color: "PURPLE",
-    });
+    // Only the name was touched, so only the name travels: a body naming the type and the colour
+    // too would make a rename on another device a conflict the user has to answer (§1 example 3).
+    expect(JSON.parse(init?.body as string)).toEqual({ name: "Nu Bank" });
   });
 
-  it("offers all nine account types as chips", () => {
+  // F-03, variant C: one row, and a sheet with room to say what each of the nine types is — which
+  // is what the grid of chips could not do.
+  it("offers all nine account types in a sheet, each with the line that explains it", async () => {
     renderForm();
-    for (const label of [
-      "Cash",
-      "Bank account",
-      "Credit card",
-      "Debit card",
-      "Savings",
-      "Investment",
-      "Overdraft",
-      "Loan",
-      "Other",
+    await userEvent.click(screen.getByRole("button", { name: /^Type/ }));
+    const sheet = screen.getByRole("dialog", { name: "Account type" });
+    for (const [label, description] of [
+      ["Cash", "Notes and coins you carry"],
+      ["Bank account", "A checking or current account"],
+      ["Credit card", "Spending you pay back later"],
+      ["Debit card", "Tied to a bank account"],
+      ["Savings", "Money you keep aside"],
+      ["Investment", "Funds, stocks, crypto"],
+      ["Overdraft", "A negative balance you can use"],
+      ["Loan", "Money you owe"],
+      ["Other", "Anything else"],
     ]) {
-      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+      const option = within(sheet).getByRole("option", { name: new RegExp(`^${label}`) });
+      expect(option).toHaveTextContent(description!);
     }
+    // The row shows the chosen one with its description, so the choice reads without opening it.
+    expect(screen.getByRole("button", { name: /^Type/ })).toHaveTextContent(
+      "Bank account · a checking or current account",
+    );
+  });
+
+  // R-5 §A: the API refuses an empty PUT, and offline it would sit in the attention tray.
+  it("saving an untouched edit sends nothing and hands back the account as it was", async () => {
+    const account = {
+      id: "a1",
+      name: "Nu",
+      type: "SAVINGS" as const,
+      balance: 250_000,
+      openingBalance: 0,
+      color: "PURPLE" as const,
+      userId: "u1",
+      isDefault: true,
+      currency: "COP",
+      archivedAt: null,
+      createdAt: "",
+      updatedAt: "",
+    };
+    const onSaved = vi.fn();
+    renderWithProviders(
+      <QueryProvider>
+        <AccountForm account={account} submitLabel="Save changes" onSaved={onSaved} />
+      </QueryProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledWith(account);
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

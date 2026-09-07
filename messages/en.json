@@ -35,7 +35,17 @@
     "backToList": "Back to the list",
     "removeTag": "Remove tag {tag}",
     "suggestions": "Suggestions",
-    "delete": "Delete"
+    "delete": "Delete",
+    "done": "Done",
+    "now": "Now",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "dayPeriod": "AM or PM",
+    "am": "AM",
+    "pm": "PM",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "savedInZone": "Saved in your time zone, {zone}."
   },
   "nav": {
     "label": "Navigation",
@@ -80,6 +90,17 @@
     "LOAN": "Loan",
     "OTHER": "Other"
   },
+  "accountTypeDescriptions": {
+    "CASH": "Notes and coins you carry",
+    "ACCOUNT": "A checking or current account",
+    "CARD": "Spending you pay back later",
+    "DEBIT_CARD": "Tied to a bank account",
+    "SAVINGS": "Money you keep aside",
+    "INVESTMENT": "Funds, stocks, crypto",
+    "OVERDRAFT": "A negative balance you can use",
+    "LOAN": "Money you owe",
+    "OTHER": "Anything else"
+  },
   "auth": {
     "email": "Email",
     "password": "Password",
@@ -103,6 +124,10 @@
       "name": "Name",
       "passwordHelp": "Between 8 and 128 characters.",
       "passwordPlaceholder": "At least 8 characters",
+      "language": "Language",
+      "languageDetected": "Detected from your device",
+      "languageHelp": "The language of your account. You can change it any time in Settings.",
+      "languageNote": "The whole screen changes right away. Dates and amounts follow this language, your currency and your time zone.",
       "currency": "Currency",
       "currencyDetected": "Detected from your region",
       "currencyHelp": "Used for all your accounts. It locks once you create your first account.",
@@ -284,7 +309,8 @@
     "install": {
       "title": "Install app",
       "subtitle": "Add Ledger Flow to your home screen",
-      "installed": "Installed"
+      "installed": "Installed",
+      "durability": "Add Ledger Flow to your home screen so the browser doesn’t delete what you record offline"
     },
     "delete": {
       "title": "Delete my account",
@@ -293,6 +319,103 @@
       "word": "DELETE",
       "confirm": "Delete account",
       "done": "Account deleted. Sign up again with the same email to come back."
+    },
+    "needsConnection": "Changing this needs a connection: it is saved on the server.",
+    "signOutOffline": "Signing out needs a connection: your session lives on the server.",
+    "signOutPending": {
+      "title": "You have unsent changes",
+      "body": "{count, plural, one {# change hasn’t reached the server yet} other {# changes haven’t reached the server yet}}. Keeping them means they go out next time you sign in on this device.",
+      "keep": "Sign out and keep them",
+      "discard": "Discard and sign out"
+    },
+    "sync": {
+      "title": "Sync status",
+      "subtitle": "What this device has, and what it still owes the server",
+      "session": {
+        "label": "Session",
+        "help": "Your session on the server",
+        "active": "Active",
+        "signedOut": "Signed out",
+        "signedOutHelp": "Signed out on this device, so nothing is syncing",
+        "signIn": "Sign in to sync"
+      },
+      "cursor": {
+        "label": "Sync cursor",
+        "help": "Where the next pull starts from",
+        "set": "Set",
+        "never": "Never synced"
+      },
+      "lastSync": {
+        "label": "Last full sync",
+        "never": "Never"
+      },
+      "offlineReady": {
+        "label": "Offline ready",
+        "help": "Your data and the app’s screens are on this device",
+        "ready": "Ready",
+        "preparing": "Preparing…",
+        "preparingHelp": "Copying your data and the app’s screens · {cached} of {expected} screens",
+        "incomplete": "Incomplete",
+        "incompleteHelp": "Paused: it needs a connection to finish",
+        "retry": "Retry"
+      },
+      "queue": {
+        "label": "Waiting to send"
+      },
+      "lastError": {
+        "label": "Last error: {code}"
+      },
+      "transport": {
+        "label": "Sending mode",
+        "help": "This server takes changes one at a time, not in one batch",
+        "routes": "One at a time"
+      },
+      "storage": {
+        "label": "Storage used",
+        "unknown": "Unknown"
+      },
+      "persisted": {
+        "label": "Persistent storage",
+        "help": "Stops the browser evicting your offline data",
+        "yes": "Granted",
+        "no": "Not granted",
+        "unsupported": "Unsupported"
+      },
+      "mode": {
+        "label": "Running as",
+        "installed": "Installed app",
+        "browser": "Browser tab"
+      },
+      "durability": {
+        "warning": "You’re in a browser tab. Install the app to keep what you record offline — a browser can delete it after a few days without opening the site."
+      },
+      "tray": {
+        "title": "Changes that need you",
+        "stuck": "{count, plural, one {# change is stuck} other {# changes are stuck}}",
+        "empty": "Nothing needs you"
+      },
+      "resync": {
+        "cta": "Force full resync",
+        "help": "Throws away the local copy and downloads it again. Anything waiting to send is kept.",
+        "confirmTitle": "Download everything again?",
+        "confirmBody": "{count, plural, =0 {The local copy is deleted and downloaded again.} one {The local copy is deleted and downloaded again. # change waiting to send is kept.} other {The local copy is deleted and downloaded again. # changes waiting to send are kept.}}",
+        "confirm": "Resync now",
+        "cancel": "Cancel",
+        "done": "Resynced",
+        "failed": "Could not resync",
+        "offline": "Needs a connection: it downloads the copy again."
+      },
+      "offlineReadyToast": {
+        "title": "Ready to use offline",
+        "action": "What this means"
+      },
+      "blocked": {
+        "alert": "{count, plural, one {# change can’t be sent after an app update.} other {# changes can’t be sent after an app update.}}",
+        "alertBody": "{count, plural, one {It was recorded with an older version of the app and this one can’t send it. Everything you record from now on syncs normally.} other {They were recorded with an older version of the app and this one can’t send them. Everything you record from now on syncs normally.}}",
+        "cta": "{count, plural, one {See the # change} other {See the # changes}}",
+        "queue": "{count, plural, other {# · blocked}}",
+        "queueMeta": "Blocked by an app update"
+      }
     }
   },
   "states": {
@@ -311,17 +434,177 @@
       "title": "Back online.",
       "synced": "{count, plural, one {# change synced} other {# changes synced}}"
     },
+    "pending": {
+      "title": "Changes waiting to sync.",
+      "body": "They are saved on this device."
+    },
+    "signedOut": {
+      "title": "You’re signed out. Nothing is syncing.",
+      "body": "{count, plural, one {# change is saved on this device} other {# changes are saved on this device}}",
+      "cta": "Sign in to sync"
+    },
+    "blocked": {
+      "title": "{count, plural, one {An app update stopped # change from being sent.} other {An app update stopped # changes from being sent.}}",
+      "body": "They are still saved on this device.",
+      "cta": "See them"
+    },
+    "conflicts": {
+      "title": "Some changes need your attention.",
+      "body": "{count, plural, one {# change could not sync} other {# changes could not sync}}",
+      "review": "Review",
+      "seeAll": "See all"
+    },
+    "projected": "Includes changes not yet synced",
     "sessionExpired": {
       "eyebrow": "Session",
       "title": "Your session ended",
       "body": "It was signed out from another device, or it’s been more than 30 days. Sign in again to continue.",
-      "cta": "Sign in"
+      "cta": "Sign in",
+      "localTitle": "Sign in to sync",
+      "localBody": "Your session ended, so nothing is syncing. The app keeps working on this device and your changes are saved here — sign in again to send them.",
+      "localCta": "Sign in to sync"
     },
     "notFound": {
       "title": "Page not found",
       "body": "Your money is where you left it.",
       "cta": "Go home"
-    }
+    },
+    "conflict": {
+      "title": "Resolve sync conflict",
+      "loading": "Reading what’s waiting…",
+      "empty": {
+        "title": "Nothing left to resolve",
+        "body": "This change is no longer waiting to sync."
+      },
+      "stale": {
+        "title": "Changed in two places.",
+        "body": "This {what} changed somewhere else while this device was offline. Choose the version to keep."
+      },
+      "failed": {
+        "title": "The server refused this change.",
+        "body": "It was never applied, here or there. Reason: {reason}. Discarding it puts this {what} back to what the server has.",
+        "unknown": "unknown"
+      },
+      "archived": {
+        "title": "The account was archived somewhere else.",
+        "body": "This {what} uses an account that was archived on another device, so the server will not take it. Restore the account and it goes through in the same batch, or edit the {what} to use another account.",
+        "restore": "Restore the account",
+        "gone": "This device no longer holds that account, so there is nothing to restore. Discard the change, or edit the movement to use another account."
+      },
+      "nameTaken": {
+        "title": "The name is taken.",
+        "body": "An active {what} is already named “{name}”, so the server won’t take this one back. Restore it with another name, or discard the change.",
+        "server": "On the server · has the name",
+        "device": "On this device · being restored",
+        "name": "New name",
+        "help": "Names are case-insensitive.",
+        "suggestion": "{name} (old)",
+        "confirm": "Restore as “{name}”",
+        "noRetry": "“Try again” is not offered here: the same name would be refused again."
+      },
+      "futureDate": {
+        "title": "Fix the date",
+        "alert": "The server refused this date.",
+        "body": "{date} is more than 24 hours ahead of the server’s time ({serverDate}).",
+        "reason": "Its date, {date}, is more than 24 hours ahead of the server’s time.",
+        "skewDays": "{count, plural, one {This device’s clock is # day ahead.} other {This device’s clock is # days ahead.}}",
+        "skewHours": "{count, plural, one {This device’s clock is # hour ahead.} other {This device’s clock is # hours ahead.}}",
+        "was": "Was {date}",
+        "save": "Save and try again",
+        "waiting": "{count, plural, one {# more change is waiting behind this one.} other {# more changes are waiting behind this one.}}"
+      },
+      "noServerRow": "The server didn’t say what it has. Keeping this device’s version will overwrite it.",
+      "server": "On the server",
+      "device": "On this device",
+      "keepMine": "Keep this device’s version",
+      "keepServer": "Use the server’s version",
+      "discard": "Discard this change",
+      "retry": "Try again",
+      "none": "—",
+      "yes": "Yes",
+      "no": "No",
+      "entities": {
+        "account": "account",
+        "category": "category",
+        "transaction": "movement",
+        "budget": "budget"
+      },
+      "actions": {
+        "create": "This device asked to create this {what}.",
+        "quickAdd": "This device asked to capture this {what}.",
+        "update": "This device asked to edit this {what}.",
+        "delete": "This device asked to delete this {what}.",
+        "archive": "This device asked to archive this {what}.",
+        "restore": "This device asked to restore this {what}.",
+        "setDefault": "This device asked to make this {what} the default.",
+        "setOverride": "This device asked to change this {what}’s amount for one period.",
+        "clearOverride": "This device asked to remove this {what}’s amount for one period."
+      },
+      "fields": {
+        "name": "Name",
+        "type": "Type",
+        "color": "Color",
+        "icon": "Icon",
+        "currency": "Currency",
+        "initialBalance": "Initial balance",
+        "creditLimit": "Credit limit",
+        "amount": "Amount",
+        "date": "Date",
+        "description": "Description",
+        "note": "Note",
+        "tags": "Tags",
+        "categoryId": "Category",
+        "categoryIds": "Categories",
+        "fromAccountId": "From",
+        "toAccountId": "To",
+        "pendingDetails": "To review",
+        "effectiveFrom": "Effective from",
+        "periodType": "Period",
+        "periodStartDate": "Period starts",
+        "periodEndDate": "Period ends"
+      }
+    },
+    "attention": {
+      "title": "Needs your attention",
+      "titleCount": "{count, plural, one {# change needs you} other {# changes need you}}",
+      "loading": "Reading what’s waiting…",
+      "intro": "These changes are saved on this device and the server has not taken them. Nothing else in the queue is waiting for them.",
+      "onRow": "This {what} has a change the server hasn’t taken.",
+      "kinds": {
+        "conflict": "Changed in two places",
+        "failed": "Refused by the server",
+        "archived": "Account archived",
+        "nameTaken": "Name taken"
+      },
+      "restoreWithName": "Restore with another name",
+      "compare": "Compare versions",
+      "discardAll": "Discard all",
+      "retryAll": "Try all again",
+      "confirmTitle": "{count, plural, one {Discard # change?} other {Discard # changes?}}",
+      "confirmBody": "They will never reach the server, and this device goes back to what the server has.",
+      "confirmCascade": "{count, plural, one {# of them was made on top of something created here and goes with it.} other {# of them were made on top of something created here and go with them.}}",
+      "confirmCta": "Discard",
+      "discarded": "{count, plural, one {# change discarded} other {# changes discarded}}",
+      "retried": "{count, plural, one {# change back in the queue} other {# changes back in the queue}}",
+      "empty": {
+        "title": "Nothing needs you",
+        "body": "Every change on this device either synced or is still on its way.",
+        "cta": "Go home"
+      },
+      "blocked": {
+        "badge": "Blocked by an app update",
+        "alert": "{count, plural, one {# change can’t be sent after an app update.} other {# changes can’t be sent after an app update.}}",
+        "alertBody": "{count, plural, one {Everything you record from now on syncs normally; this one was recorded with an older version and stayed behind. Discarding it frees the queue.} other {Everything you record from now on syncs normally; these # were recorded with an older version and stayed behind. Discarding them frees the queue.}}",
+        "reason": "It was recorded with an older version of the app and this version can’t send it. It will never reach the server on its own.",
+        "keep": "Keep it here",
+        "kept": "Kept on this device.",
+        "discardAll": "{count, plural, one {Discard the # change} other {Discard the # changes}}",
+        "foot": "Nothing you record now waits behind these."
+      }
+    },
+    "pendingSync": "Pending sync",
+    "needsAttention": "Needs attention",
+    "savedHere": "Saved on this device"
   },
   "dev": {
     "title": "Component catalog",
@@ -435,6 +718,8 @@
     "IDEMPOTENCY_KEY_INVALID": "Something went wrong sending this. Try again.",
     "IDEMPOTENCY_PAYLOAD_MISMATCH": "This request changed since the last try. Sending it again.",
     "IDEMPOTENCY_ORIGINAL_DELETED": "The original entry was deleted. Save it again as a new one.",
+    "ID_TAKEN": "That entry was already saved with a different content. It will be saved again under a new reference.",
+    "STALE_UPDATE": "Someone changed this from another device. Reload it to see the latest version.",
     "REFRESH_INVALID": "Your session ended. Sign in again.",
     "REFRESH_REVOKED": "Your session ended. Sign in again.",
     "CURRENT_PASSWORD_INVALID": "Your current password is wrong.",
@@ -564,6 +849,9 @@
       "notePlaceholder": "August bank fee",
       "save": "Save adjustment",
       "saved": "Adjustment saved"
+    },
+    "typePicker": {
+      "title": "Account type"
     }
   },
   "budgets": {
@@ -708,6 +996,10 @@
       "body": "“{name}” is active for the same {period} period and covers the same spending, so this one can’t come back as it was. Create a new budget instead.",
       "bodyUnknown": "An active {period} budget already covers the same spending, so this one can’t come back as it was. Create a new budget instead.",
       "open": "Open {name}"
+    },
+    "pace": {
+      "tooltip": "Day {day} of {days} · {percent}% expected",
+      "legend": "The mark is today’s pace: {percent}% of the period has passed (day {day} of {days})."
     }
   },
   "categoryTypes": {
@@ -763,7 +1055,8 @@
         "body": "Missing one of the default categories? Recreate them without duplicating the ones you renamed.",
         "cta": "Restore",
         "created": "{count, plural, one {# category created} other {# categories created}}",
-        "none": "Nothing was missing"
+        "none": "Nothing was missing",
+        "onlineOnly": "Needs a connection: the server creates these categories."
       }
     },
     "archive": {
@@ -824,7 +1117,13 @@
       "deleteTitle": "Delete this transaction?",
       "deleteBody": "The account balances go back to what they were. This can’t be undone.",
       "deleted": "Transaction deleted",
-      "notFound": "This transaction doesn’t exist or was deleted."
+      "notFound": "This transaction doesn’t exist or was deleted.",
+      "clockSkew": {
+        "days": "{count, plural, one {This device’s clock is # day ahead of the server.} other {This device’s clock is # days ahead of the server.}}",
+        "hours": "{count, plural, one {This device’s clock is # hour ahead of the server.} other {This device’s clock is # hours ahead of the server.}}",
+        "refused": "Dates more than 24 hours in the future will be refused."
+      },
+      "dateLimit": "Days after tomorrow are not available: the server refuses dates more than 24 hours ahead."
     },
     "list": {
       "title": "Transactions",
@@ -914,6 +1213,7 @@
       "title": "To review",
       "titleCount": "To review · {count}",
       "intro": "Quick expenses already reduced your balance and already count toward your total budget. Here you just name and categorize them.",
+      "droppedCategory": "Its category had been archived, so the server saved it without one. Pick another.",
       "when": "{day} {time} · {account}",
       "other": "Other",
       "descriptionPlaceholder": "Description (optional)",

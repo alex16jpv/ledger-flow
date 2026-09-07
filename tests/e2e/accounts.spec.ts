@@ -1,5 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -47,7 +48,7 @@ test("the list sums the seed accounts, folds the archived one and opens the main
   await expect(page.getByText("Card debt")).toBeVisible();
   await expect(page.getByRole("link", { name: /Bancolombia.*Main/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Nequi/ })).toBeHidden();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   await page.getByRole("button", { name: /^Archived/ }).click();
   await expect(page.getByRole("link", { name: /Nequi.*Archived/ })).toBeVisible();
@@ -60,7 +61,7 @@ test("the list sums the seed accounts, folds the archived one and opens the main
   await expect(page.getByRole("button", { name: "Archive" })).toBeDisabled();
   await expect(page.getByText(/make another one your main account first/)).toBeVisible();
   await expect(page.getByRole("button", { name: /Quick expense/ }).first()).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
   await expect(page.getByRole("link", { name: "Open with filters" })).toHaveAttribute(
     "href",
     new RegExp(`/transactions\\?account=${BANCOLOMBIA}&period=all$`),
@@ -77,7 +78,12 @@ test("a new user creates, edits, promotes, archives and restores accounts, with 
   await page.getByRole("link", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/accounts\/new$/);
   await page.getByRole("textbox", { name: "Name" }).fill("Wallet");
-  await page.getByRole("button", { name: "Cash", exact: true }).click();
+  // F-03: the nine types live in a sheet now, one row that explains each of them.
+  await page.getByRole("button", { name: /^Type/ }).click();
+  await page
+    .getByRole("dialog", { name: "Account type" })
+    .getByRole("option", { name: /^Cash/ })
+    .click();
   await expect(page.getByText("Cash · preview")).toBeVisible();
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByText("Account created")).toBeVisible();

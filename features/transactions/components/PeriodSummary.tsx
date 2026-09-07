@@ -4,7 +4,9 @@ import { useTranslations } from "next-intl";
 
 import { Amount } from "@/components/ui/Amount";
 import { Card } from "@/components/ui/Card";
+import { Projected } from "@/components/ui/Projected";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 
 export interface PeriodSummaryProps {
   periodLabel: string;
@@ -15,6 +17,7 @@ export interface PeriodSummaryProps {
 
 export function PeriodSummary({ periodLabel, spent, income, count }: PeriodSummaryProps) {
   const t = useTranslations("transactions.list");
+  const outbox = useOutbox();
   return (
     <Card className="flex items-center justify-between gap-4 px-4 py-3">
       <div className="flex min-w-0 flex-col gap-0.5">
@@ -24,7 +27,9 @@ export function PeriodSummary({ periodLabel, spent, income, count }: PeriodSumma
         {spent === null ? (
           <Skeleton className="h-6 w-28" />
         ) : (
-          <Amount value={spent} signed={false} size="lg" className="text-xl" />
+          <Projected when={outbox.projected.spending}>
+            <Amount value={spent} signed={false} size="lg" className="text-xl" />
+          </Projected>
         )}
       </div>
       <div className="flex flex-col items-end gap-0.5 text-right">
@@ -34,7 +39,9 @@ export function PeriodSummary({ periodLabel, spent, income, count }: PeriodSumma
         {income === null ? (
           <Skeleton className="h-5 w-20" />
         ) : (
-          <Amount value={income} kind="income" size="sm" />
+          <Projected when={outbox.projected.spending}>
+            <Amount value={income} kind="income" size="sm" />
+          </Projected>
         )}
       </div>
       <div className="flex flex-col items-end gap-0.5 text-right">
@@ -44,7 +51,9 @@ export function PeriodSummary({ periodLabel, spent, income, count }: PeriodSumma
         {count === null ? (
           <Skeleton className="h-5 w-8" />
         ) : (
-          <span className="text-sm font-semibold tabular-nums">{count}</span>
+          <Projected when={outbox.projected.spending}>
+            <span className="text-sm font-semibold tabular-nums">{count}</span>
+          </Projected>
         )}
       </div>
     </Card>

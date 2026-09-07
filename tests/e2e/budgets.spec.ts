@@ -1,5 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -40,7 +41,7 @@ test("the list features the global budget, filters by period, navigates months a
     "href",
     /\/budgets\/[0-9a-f-]{36}\?reference=\d{4}-\d{2}$/,
   );
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   await page.getByRole("button", { name: "Weekly", exact: true }).click();
   await expect(page).toHaveURL(/period=WEEKLY/);
@@ -66,7 +67,7 @@ test("the list features the global budget, filters by period, navigates months a
   await page.getByRole("button", { name: /^Archived · \d+$/ }).click();
   await expect(page).toHaveURL(/tab=archived/);
   await expect(page.getByText("Archived", { exact: true }).first()).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 });
 
 test("a new user sees the empty state and creates the global budget from it", async ({
@@ -110,7 +111,7 @@ test("the detail adjusts, skips and removes the period amount, then archives the
   await expect(page.getByText("Snacks", { exact: true })).toBeVisible();
   await expect(page.getByText(/uses the base amount/)).toBeVisible();
   await expect(page.getByRole("button", { name: "All spending" })).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   await page.getByRole("button", { name: "Change adjustment" }).click();
   const sheet = page.getByRole("dialog", { name: "Adjust this period" });
@@ -187,7 +188,7 @@ test("the form creates a category budget, refuses a second global one, edits it 
   await expect(page.getByRole("button", { name: "Housing", pressed: false })).toBeVisible();
   await page.getByRole("textbox", { name: "Amount" }).fill("650000");
   await page.getByRole("button", { name: "Teal" }).click();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
   await page.getByRole("button", { name: "Create budget" }).click();
   await expect(page.getByText("Budget created")).toBeVisible();
   await expect(page).toHaveURL(/\/budgets\/[0-9a-f-]{36}$/);
@@ -246,7 +247,8 @@ test("the form creates a category budget, refuses a second global one, edits it 
   await expect(page).toHaveURL(/\/budgets\/new\?from=/);
   await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue("Old trip");
   await expect(page.getByRole("button", { name: "Custom", pressed: true })).toBeVisible();
-  await expect(page.getByLabel("Start")).not.toHaveValue("2026-07-01");
+  // The dates are openers now (F-05), so what they show is the day, not an input value.
+  await expect(page.getByRole("button", { name: /^Start/ })).not.toContainText("Jul 1");
 });
 
 // Owner report P-24: a user west of the server's zone saw an empty list while the create call said "overlap".

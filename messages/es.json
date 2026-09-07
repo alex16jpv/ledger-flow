@@ -35,7 +35,17 @@
     "backToList": "Volver a la lista",
     "removeTag": "Quitar etiqueta {tag}",
     "suggestions": "Sugerencias",
-    "delete": "Eliminar"
+    "delete": "Eliminar",
+    "done": "Listo",
+    "now": "Ahora",
+    "hours": "Horas",
+    "minutes": "Minutos",
+    "dayPeriod": "AM o PM",
+    "am": "AM",
+    "pm": "PM",
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "savedInZone": "Se guarda en tu zona horaria, {zone}."
   },
   "nav": {
     "label": "Navegación",
@@ -80,6 +90,17 @@
     "LOAN": "Préstamo",
     "OTHER": "Otra"
   },
+  "accountTypeDescriptions": {
+    "CASH": "Billetes y monedas que llevas encima",
+    "ACCOUNT": "Una cuenta corriente o de ahorros del banco",
+    "CARD": "Gasto que pagas después",
+    "DEBIT_CARD": "Ligada a una cuenta del banco",
+    "SAVINGS": "Dinero que apartas",
+    "INVESTMENT": "Fondos, acciones, cripto",
+    "OVERDRAFT": "Un saldo en negativo que puedes usar",
+    "LOAN": "Dinero que debes",
+    "OTHER": "Cualquier otra cosa"
+  },
   "auth": {
     "email": "Correo",
     "password": "Contraseña",
@@ -103,6 +124,10 @@
       "name": "Nombre",
       "passwordHelp": "Entre 8 y 128 caracteres.",
       "passwordPlaceholder": "Mínimo 8 caracteres",
+      "language": "Idioma",
+      "languageDetected": "Detectado en tu dispositivo",
+      "languageHelp": "El idioma de tu cuenta. Lo puedes cambiar cuando quieras en Ajustes.",
+      "languageNote": "Toda la pantalla cambia al instante. Las fechas y los importes siguen este idioma, tu moneda y tu zona horaria.",
       "currency": "Moneda",
       "currencyDetected": "Detectada por tu región",
       "currencyHelp": "Se usa en todas tus cuentas. Se bloquea al crear la primera.",
@@ -284,7 +309,8 @@
     "install": {
       "title": "Instalar app",
       "subtitle": "Añade Ledger Flow a tu pantalla de inicio",
-      "installed": "Instalada"
+      "installed": "Instalada",
+      "durability": "Añade Ledger Flow a tu pantalla de inicio para que el navegador no borre lo que registres sin conexión"
     },
     "delete": {
       "title": "Eliminar mi cuenta",
@@ -293,6 +319,103 @@
       "word": "ELIMINAR",
       "confirm": "Eliminar cuenta",
       "done": "Cuenta eliminada. Regístrate de nuevo con el mismo correo para volver."
+    },
+    "needsConnection": "Cambiar esto necesita conexión: se guarda en el servidor.",
+    "signOutOffline": "Cerrar sesión necesita conexión: la sesión vive en el servidor.",
+    "signOutPending": {
+      "title": "Tienes cambios sin enviar",
+      "body": "{count, plural, one {# cambio no ha llegado al servidor todavía} other {# cambios no han llegado al servidor todavía}}. Si los conservas, se enviarán la próxima vez que inicies sesión en este dispositivo.",
+      "keep": "Cerrar sesión y conservarlos",
+      "discard": "Descartar y cerrar sesión"
+    },
+    "sync": {
+      "title": "Estado de sincronización",
+      "subtitle": "Qué tiene este dispositivo y qué le debe al servidor",
+      "session": {
+        "label": "Sesión",
+        "help": "Tu sesión en el servidor",
+        "active": "Activa",
+        "signedOut": "Cerrada",
+        "signedOutHelp": "Cerraste sesión en este dispositivo, así que no se sincroniza nada",
+        "signIn": "Iniciar sesión para sincronizar"
+      },
+      "cursor": {
+        "label": "Cursor de sincronización",
+        "help": "Desde dónde empieza el próximo tirón",
+        "set": "Establecido",
+        "never": "Nunca sincronizado"
+      },
+      "lastSync": {
+        "label": "Última sincronización completa",
+        "never": "Nunca"
+      },
+      "offlineReady": {
+        "label": "Listo sin conexión",
+        "help": "Tus datos y las pantallas de la app están en este dispositivo",
+        "ready": "Listo",
+        "preparing": "Preparando…",
+        "preparingHelp": "Copiando tus datos y las pantallas de la app · {cached} de {expected} pantallas",
+        "incomplete": "Incompleto",
+        "incompleteHelp": "En pausa: necesita conexión para terminar",
+        "retry": "Reintentar"
+      },
+      "queue": {
+        "label": "Esperando a enviarse"
+      },
+      "lastError": {
+        "label": "Último error: {code}"
+      },
+      "transport": {
+        "label": "Modo de envío",
+        "help": "Este servidor acepta los cambios de uno en uno, no en un lote",
+        "routes": "De uno en uno"
+      },
+      "storage": {
+        "label": "Almacenamiento usado",
+        "unknown": "Desconocido"
+      },
+      "persisted": {
+        "label": "Almacenamiento persistente",
+        "help": "Evita que el navegador borre tus datos sin conexión",
+        "yes": "Concedido",
+        "no": "No concedido",
+        "unsupported": "No disponible"
+      },
+      "mode": {
+        "label": "Se ejecuta como",
+        "installed": "App instalada",
+        "browser": "Pestaña del navegador"
+      },
+      "durability": {
+        "warning": "Estás en una pestaña del navegador. Instala la app para conservar lo que registres sin conexión: un navegador puede borrarlo tras unos días sin abrir el sitio."
+      },
+      "tray": {
+        "title": "Cambios que te necesitan",
+        "stuck": "{count, plural, one {# cambio atascado} other {# cambios atascados}}",
+        "empty": "No hay nada pendiente"
+      },
+      "resync": {
+        "cta": "Forzar sincronización completa",
+        "help": "Descarta la copia local y la vuelve a descargar. Lo que esté esperando a enviarse se conserva.",
+        "confirmTitle": "¿Descargar todo otra vez?",
+        "confirmBody": "{count, plural, =0 {Se borra la copia local y se descarga de nuevo.} one {Se borra la copia local y se descarga de nuevo. Se conserva # cambio pendiente de enviar.} other {Se borra la copia local y se descarga de nuevo. Se conservan # cambios pendientes de enviar.}}",
+        "confirm": "Sincronizar ahora",
+        "cancel": "Cancelar",
+        "done": "Sincronizado",
+        "failed": "No se pudo sincronizar",
+        "offline": "Necesita conexión: vuelve a descargar la copia."
+      },
+      "offlineReadyToast": {
+        "title": "Ya puedes usar la app sin conexión",
+        "action": "Qué significa"
+      },
+      "blocked": {
+        "alert": "{count, plural, one {# cambio no se puede enviar tras una actualización de la app.} other {# cambios no se pueden enviar tras una actualización de la app.}}",
+        "alertBody": "{count, plural, one {Se registró con una versión anterior de la app y esta no lo puede enviar. Todo lo que registres a partir de ahora se sincroniza con normalidad.} other {Se registraron con una versión anterior de la app y esta no los puede enviar. Todo lo que registres a partir de ahora se sincroniza con normalidad.}}",
+        "cta": "{count, plural, one {Ver el # cambio} other {Ver los # cambios}}",
+        "queue": "{count, plural, other {# · bloqueados}}",
+        "queueMeta": "Bloqueados por una actualización de la app"
+      }
     }
   },
   "states": {
@@ -311,17 +434,177 @@
       "title": "De vuelta en línea.",
       "synced": "{count, plural, one {# cambio sincronizado} other {# cambios sincronizados}}"
     },
+    "pending": {
+      "title": "Cambios pendientes de sincronizar.",
+      "body": "Están guardados en este dispositivo."
+    },
+    "signedOut": {
+      "title": "Cerraste sesión. No se está sincronizando.",
+      "body": "{count, plural, one {# cambio guardado en este dispositivo} other {# cambios guardados en este dispositivo}}",
+      "cta": "Iniciar sesión para sincronizar"
+    },
+    "blocked": {
+      "title": "{count, plural, one {Una actualización de la app dejó # cambio sin enviar.} other {Una actualización de la app dejó # cambios sin enviar.}}",
+      "body": "Siguen guardados en este dispositivo.",
+      "cta": "Verlos"
+    },
+    "conflicts": {
+      "title": "Algunos cambios necesitan tu atención.",
+      "body": "{count, plural, one {# cambio no se pudo sincronizar} other {# cambios no se pudieron sincronizar}}",
+      "review": "Revisar",
+      "seeAll": "Ver todo"
+    },
+    "projected": "Incluye cambios sin sincronizar",
     "sessionExpired": {
       "eyebrow": "Sesión",
       "title": "Tu sesión terminó",
       "body": "Se cerró desde otro dispositivo o pasaron más de 30 días. Entra de nuevo para continuar.",
-      "cta": "Entrar"
+      "cta": "Entrar",
+      "localTitle": "Inicia sesión para sincronizar",
+      "localBody": "Tu sesión terminó, así que no se está sincronizando nada. La app sigue funcionando en este dispositivo y tus cambios se guardan aquí: inicia sesión otra vez para enviarlos.",
+      "localCta": "Iniciar sesión para sincronizar"
     },
     "notFound": {
       "title": "Página no encontrada",
       "body": "Tu dinero está donde lo dejaste.",
       "cta": "Ir a Inicio"
-    }
+    },
+    "conflict": {
+      "title": "Resolver conflicto de sincronización",
+      "loading": "Leyendo lo que está esperando…",
+      "empty": {
+        "title": "No queda nada por resolver",
+        "body": "Este cambio ya no está esperando a sincronizarse."
+      },
+      "stale": {
+        "title": "Cambiado en dos sitios.",
+        "body": "Este {what} cambió en otro sitio mientras este dispositivo estaba sin conexión. Elige la versión que se queda."
+      },
+      "failed": {
+        "title": "El servidor rechazó este cambio.",
+        "body": "No se aplicó ni aquí ni allí. Motivo: {reason}. Al descartarlo, este {what} vuelve a lo que tiene el servidor.",
+        "unknown": "desconocido"
+      },
+      "archived": {
+        "title": "La cuenta se archivó en otro sitio.",
+        "body": "Este {what} usa una cuenta que se archivó en otro dispositivo, así que el servidor no lo acepta. Restaura la cuenta y sale en el mismo lote, o edita el {what} para usar otra cuenta.",
+        "restore": "Restaurar la cuenta",
+        "gone": "Este dispositivo ya no tiene esa cuenta, así que no hay nada que restaurar. Descarta el cambio o edita el movimiento para usar otra cuenta."
+      },
+      "nameTaken": {
+        "title": "El nombre está tomado.",
+        "body": "Ya hay una {what} activa que se llama «{name}», así que el servidor no la va a recuperar. Restáurala con otro nombre o descarta el cambio.",
+        "server": "En el servidor · tiene el nombre",
+        "device": "En este dispositivo · se está restaurando",
+        "name": "Nombre nuevo",
+        "help": "Los nombres no distinguen mayúsculas.",
+        "suggestion": "{name} (antigua)",
+        "confirm": "Restaurar como «{name}»",
+        "noRetry": "Aquí no se ofrece «Reintentar»: el mismo nombre se volvería a rechazar."
+      },
+      "futureDate": {
+        "title": "Corregir la fecha",
+        "alert": "El servidor rechazó esta fecha.",
+        "body": "{date} va más de 24 horas por delante de la hora del servidor ({serverDate}).",
+        "reason": "Su fecha, {date}, va más de 24 horas por delante de la hora del servidor.",
+        "skewDays": "{count, plural, one {El reloj de este dispositivo va # día adelantado.} other {El reloj de este dispositivo va # días adelantado.}}",
+        "skewHours": "{count, plural, one {El reloj de este dispositivo va # hora adelantado.} other {El reloj de este dispositivo va # horas adelantado.}}",
+        "was": "Era el {date}",
+        "save": "Guardar y reintentar",
+        "waiting": "{count, plural, one {# cambio más espera detrás de este.} other {# cambios más esperan detrás de este.}}"
+      },
+      "noServerRow": "El servidor no dijo qué tiene. Si te quedas con la versión de este dispositivo, la sobrescribirás.",
+      "server": "En el servidor",
+      "device": "En este dispositivo",
+      "keepMine": "Quedarme con lo de este dispositivo",
+      "keepServer": "Usar la versión del servidor",
+      "discard": "Descartar este cambio",
+      "retry": "Intentar de nuevo",
+      "none": "—",
+      "yes": "Sí",
+      "no": "No",
+      "entities": {
+        "account": "cuenta",
+        "category": "categoría",
+        "transaction": "movimiento",
+        "budget": "presupuesto"
+      },
+      "actions": {
+        "create": "Este dispositivo pidió crear este {what}.",
+        "quickAdd": "Este dispositivo pidió registrar este {what}.",
+        "update": "Este dispositivo pidió editar este {what}.",
+        "delete": "Este dispositivo pidió eliminar este {what}.",
+        "archive": "Este dispositivo pidió archivar este {what}.",
+        "restore": "Este dispositivo pidió restaurar este {what}.",
+        "setDefault": "Este dispositivo pidió hacer principal este {what}.",
+        "setOverride": "Este dispositivo pidió cambiar el importe de este {what} para un período.",
+        "clearOverride": "Este dispositivo pidió quitar el importe de este {what} para un período."
+      },
+      "fields": {
+        "name": "Nombre",
+        "type": "Tipo",
+        "color": "Color",
+        "icon": "Icono",
+        "currency": "Moneda",
+        "initialBalance": "Saldo inicial",
+        "creditLimit": "Cupo",
+        "amount": "Importe",
+        "date": "Fecha",
+        "description": "Descripción",
+        "note": "Nota",
+        "tags": "Etiquetas",
+        "categoryId": "Categoría",
+        "categoryIds": "Categorías",
+        "fromAccountId": "Desde",
+        "toAccountId": "Hasta",
+        "pendingDetails": "Por revisar",
+        "effectiveFrom": "Vigente desde",
+        "periodType": "Período",
+        "periodStartDate": "El período empieza",
+        "periodEndDate": "El período termina"
+      }
+    },
+    "attention": {
+      "title": "Necesitan tu atención",
+      "titleCount": "{count, plural, one {# cambio te necesita} other {# cambios te necesitan}}",
+      "loading": "Leyendo lo que está esperando…",
+      "intro": "Estos cambios están guardados en este dispositivo y el servidor no los ha aceptado. El resto de la cola no los está esperando.",
+      "onRow": "Este {what} tiene un cambio que el servidor no ha aceptado.",
+      "kinds": {
+        "conflict": "Cambiado en dos sitios",
+        "failed": "Rechazado por el servidor",
+        "archived": "Cuenta archivada",
+        "nameTaken": "Nombre tomado"
+      },
+      "restoreWithName": "Restaurar con otro nombre",
+      "compare": "Comparar versiones",
+      "discardAll": "Descartar todo",
+      "retryAll": "Reintentar todo",
+      "confirmTitle": "{count, plural, one {¿Descartar # cambio?} other {¿Descartar # cambios?}}",
+      "confirmBody": "No llegarán nunca al servidor, y este dispositivo vuelve a lo que el servidor tiene.",
+      "confirmCascade": "{count, plural, one {# de ellos se hizo sobre algo creado aquí y se va con él.} other {# de ellos se hicieron sobre algo creado aquí y se van con él.}}",
+      "confirmCta": "Descartar",
+      "discarded": "{count, plural, one {# cambio descartado} other {# cambios descartados}}",
+      "retried": "{count, plural, one {# cambio de vuelta en la cola} other {# cambios de vuelta en la cola}}",
+      "empty": {
+        "title": "Nada te necesita",
+        "body": "Todos los cambios de este dispositivo se sincronizaron o van de camino.",
+        "cta": "Ir al inicio"
+      },
+      "blocked": {
+        "badge": "Bloqueado por una actualización",
+        "alert": "{count, plural, one {# cambio no se puede enviar tras una actualización de la app.} other {# cambios no se pueden enviar tras una actualización de la app.}}",
+        "alertBody": "{count, plural, one {Todo lo que registres a partir de ahora se sincroniza con normalidad; este se registró con una versión anterior y se quedó atrás. Descartarlo libera la cola.} other {Todo lo que registres a partir de ahora se sincroniza con normalidad; estos # se registraron con una versión anterior y se quedaron atrás. Descartarlos libera la cola.}}",
+        "reason": "Se registró con una versión anterior de la app y esta no lo puede enviar. Nunca llegará al servidor por sí solo.",
+        "keep": "Dejarlo aquí",
+        "kept": "Se queda en este dispositivo.",
+        "discardAll": "{count, plural, one {Descartar el # cambio} other {Descartar los # cambios}}",
+        "foot": "Nada de lo que registres ahora espera detrás de estos."
+      }
+    },
+    "pendingSync": "Pendiente de sincronizar",
+    "needsAttention": "Necesita tu atención",
+    "savedHere": "Guardado en este dispositivo"
   },
   "dev": {
     "title": "Catálogo de componentes",
@@ -435,6 +718,8 @@
     "IDEMPOTENCY_KEY_INVALID": "Algo falló al enviar esto. Inténtalo de nuevo.",
     "IDEMPOTENCY_PAYLOAD_MISMATCH": "Esta solicitud cambió desde el último intento. Enviándola de nuevo.",
     "IDEMPOTENCY_ORIGINAL_DELETED": "El registro original fue eliminado. Guárdalo de nuevo como uno nuevo.",
+    "ID_TAKEN": "Ese registro ya se guardó con otro contenido. Se guardará de nuevo con una referencia nueva.",
+    "STALE_UPDATE": "Alguien cambió esto desde otro dispositivo. Vuelve a cargarlo para ver la versión más reciente.",
     "REFRESH_INVALID": "Tu sesión terminó. Entra de nuevo.",
     "REFRESH_REVOKED": "Tu sesión terminó. Entra de nuevo.",
     "CURRENT_PASSWORD_INVALID": "Tu contraseña actual es incorrecta.",
@@ -564,6 +849,9 @@
       "notePlaceholder": "Comisión bancaria de agosto",
       "save": "Registrar ajuste",
       "saved": "Ajuste registrado"
+    },
+    "typePicker": {
+      "title": "Tipo de cuenta"
     }
   },
   "budgets": {
@@ -708,6 +996,10 @@
       "body": "«{name}» está activo para el mismo período {period} y cubre el mismo gasto, así que este no puede volver tal como estaba. Crea uno nuevo.",
       "bodyUnknown": "Ya hay un presupuesto {period} activo que cubre el mismo gasto, así que este no puede volver tal como estaba. Crea uno nuevo.",
       "open": "Abrir {name}"
+    },
+    "pace": {
+      "tooltip": "Día {day} de {days} · {percent} % esperado",
+      "legend": "La marca es el ritmo de hoy: ha pasado el {percent} % del período (día {day} de {days})."
     }
   },
   "categoryTypes": {
@@ -763,7 +1055,8 @@
         "body": "¿Te falta alguna categoría predeterminada? Vuelve a crearlas sin duplicar las que renombraste.",
         "cta": "Restaurar",
         "created": "{count, plural, one {Se creó # categoría} other {Se crearon # categorías}}",
-        "none": "No faltaba ninguna"
+        "none": "No faltaba ninguna",
+        "onlineOnly": "Necesita conexión: estas categorías las crea el servidor."
       }
     },
     "archive": {
@@ -824,7 +1117,13 @@
       "deleteTitle": "¿Eliminar este movimiento?",
       "deleteBody": "Los saldos de las cuentas vuelven a lo que eran. No se puede deshacer.",
       "deleted": "Movimiento eliminado",
-      "notFound": "Este movimiento no existe o fue eliminado."
+      "notFound": "Este movimiento no existe o fue eliminado.",
+      "clockSkew": {
+        "days": "{count, plural, one {El reloj de este dispositivo va # día adelantado respecto al servidor.} other {El reloj de este dispositivo va # días adelantado respecto al servidor.}}",
+        "hours": "{count, plural, one {El reloj de este dispositivo va # hora adelantado respecto al servidor.} other {El reloj de este dispositivo va # horas adelantado respecto al servidor.}}",
+        "refused": "Las fechas con más de 24 horas en el futuro se rechazan."
+      },
+      "dateLimit": "Los días posteriores a mañana no están disponibles: el servidor rechaza fechas con más de 24 horas de adelanto."
     },
     "list": {
       "title": "Movimientos",
@@ -914,6 +1213,7 @@
       "title": "Por revisar",
       "titleCount": "Por revisar · {count}",
       "intro": "Los gastos rápidos ya descontaron tu saldo y ya cuentan en tu presupuesto total. Aquí solo les pones nombre y categoría.",
+      "droppedCategory": "Su categoría estaba archivada, así que el servidor lo guardó sin ella. Elige otra.",
       "when": "{day} {time} · {account}",
       "other": "Otra",
       "descriptionPlaceholder": "Descripción (opcional)",

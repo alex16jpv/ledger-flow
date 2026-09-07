@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { CategoryChip, Chip, ChipRow } from "@/components/ui/Chip";
+import { DateField } from "@/components/ui/DateTimeField";
 import { Field, Input, Switch } from "@/components/ui/Field";
 import { Sheet } from "@/components/ui/Sheet";
 import { useAccountsQuery } from "@/features/accounts/hooks";
@@ -36,6 +37,7 @@ export function FiltersSheet({ open, filters, onClose, onApply }: FiltersSheetPr
   const t = useTranslations("transactions");
   const tc = useTranslations("common");
   const { timeZone } = useFormatSettings();
+  const today = dayKey(new Date(), timeZone);
   const [draft, setDraft] = useState<TransactionFilters>(filters);
   const [pickerOpen, setPickerOpen] = useState(false);
   const accounts = useAccountsQuery();
@@ -55,7 +57,6 @@ export function FiltersSheet({ open, filters, onClose, onApply }: FiltersSheetPr
 
   function choosePeriod(period: TransactionFilters["period"]) {
     if (period === "custom" && (!draft.from || !draft.to)) {
-      const today = dayKey(new Date(), timeZone);
       patch({ period, from: today.slice(0, 8) + "01", to: today });
       return;
     }
@@ -112,25 +113,21 @@ export function FiltersSheet({ open, filters, onClose, onApply }: FiltersSheetPr
           </Field>
           {draft.period === "custom" && (
             <div className="grid grid-cols-2 gap-3">
-              <Field label={t("filters.from")}>
-                <Input
-                  type="date"
-                  value={draft.from ?? ""}
-                  onChange={(event) => {
-                    if (event.target.value) patch({ from: event.target.value });
-                  }}
-                />
-              </Field>
-              <Field label={t("filters.to")}>
-                <Input
-                  type="date"
-                  value={draft.to ?? ""}
-                  min={draft.from ?? undefined}
-                  onChange={(event) => {
-                    if (event.target.value) patch({ to: event.target.value });
-                  }}
-                />
-              </Field>
+              <DateField
+                label={t("filters.from")}
+                value={draft.from ?? today}
+                onChange={(from) => {
+                  patch({ from });
+                }}
+              />
+              <DateField
+                label={t("filters.to")}
+                value={draft.to ?? today}
+                min={draft.from ?? undefined}
+                onChange={(to) => {
+                  patch({ to });
+                }}
+              />
             </div>
           )}
           <Field label={t("filters.type")}>

@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { SW_PATH } from "../sw-path";
+
 test("the app is installable: manifest, icons and the service worker are served", async ({
   request,
 }) => {
@@ -26,7 +28,7 @@ test("the app is installable: manifest, icons and the service worker are served"
   expect(html).toContain('rel="manifest"');
   expect(html).toContain('rel="apple-touch-icon"');
 
-  const worker = await request.get("/sw.js");
+  const worker = await request.get(SW_PATH);
   expect(worker.status()).toBe(200);
   expect(await worker.text()).toContain("precache");
 });

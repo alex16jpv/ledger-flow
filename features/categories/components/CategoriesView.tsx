@@ -22,6 +22,7 @@ import { ApiError, presentError } from "@/lib/api/errors";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
+import { useOffline } from "@/lib/network/useOffline";
 import type { Category } from "@/types/api";
 
 import type { CategoryType } from "../api";
@@ -59,6 +60,9 @@ export function CategoriesView() {
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [conflict, setConflict] = useState<Category | null>(null);
   const archivedId = useId();
+  // F-20: the server mints these ids, so there is nothing the queue could project. It is the one
+  // action on this screen that needs the network, and it says so instead of failing.
+  const offline = useOffline();
 
   const active = useMemo(
     () => (categories.data ?? []).filter((category) => !category.archivedAt),
@@ -283,21 +287,25 @@ export function CategoriesView() {
           )}
           <Alert
             tone="neutral"
+            // The server mints these rows, so this write cannot be queued: no network, no button.
             action={
-              <Button
-                variant="secondary"
-                size="sm"
-                loading={restoreDefaults.isPending}
-                onClick={() => {
-                  void recreateDefaults();
-                }}
-              >
-                <RotateCcw {...iconProps("sm")} />
-                {t("categories.list.restoreDefaults.cta")}
-              </Button>
+              offline ? undefined : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={restoreDefaults.isPending}
+                  onClick={() => {
+                    void recreateDefaults();
+                  }}
+                >
+                  <RotateCcw {...iconProps("sm")} />
+                  {t("categories.list.restoreDefaults.cta")}
+                </Button>
+              )
             }
           >
-            {t("categories.list.restoreDefaults.body")}
+            {t("categories.list.restoreDefaults.body")}{" "}
+            {t("categories.list.restoreDefaults.onlineOnly")}
           </Alert>
           {conflict && (
             <RestoreCategoryConflictSheet

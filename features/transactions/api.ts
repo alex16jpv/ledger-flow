@@ -1,39 +1,43 @@
-import { api } from "@/lib/api/client";
 import type { QueryValue } from "@/lib/api/query";
-import type {
-  BatchUpdateResult,
-  BatchUpdateTransactionsInput,
-  CreateTransactionInput,
-  QuickAddTransactionInput,
-  StatsResponse,
-  TagList,
-  Transaction,
-  TransactionList,
-  UpdateTransactionInput,
-} from "@/types/api";
+import {
+  readSpending,
+  readTransaction,
+  readTransactions,
+  readTransactionTags,
+} from "@/lib/local/repository";
+import type { StatsResponse, TagList, Transaction, TransactionList } from "@/types/api";
 
 export const LIST_PAGE_SIZE = 30;
+
+// Reads go through the repository, which falls back to the offline mirror; writes go through the
+// outbox, which queues the operation with the row and answers from the projection (O-F4). The batch
+// is queued expanded into one operation per row, because one `If-Match` cannot guard N of them.
+export {
+  batchUpdateTransactions,
+  createTransaction,
+  deleteTransaction,
+  quickAddTransaction,
+  updateTransaction,
+} from "@/lib/local/outbox";
 
 export function fetchTransactionsPage(
   query: Record<string, QueryValue>,
   cursor?: string,
 ): Promise<TransactionList> {
-  return api<TransactionList>("/transactions", {
-    query: { ...query, limit: LIST_PAGE_SIZE, cursor },
-  });
+  return readTransactions({ ...query, limit: LIST_PAGE_SIZE, cursor });
 }
 
 export function fetchLatestTransactions(
   query: Record<string, QueryValue>,
   limit: number,
 ): Promise<TransactionList> {
-  return api<TransactionList>("/transactions", { query: { ...query, limit } });
+  return readTransactions({ ...query, limit });
 }
 
 export function fetchTransactionsCount(
   query: Record<string, QueryValue>,
 ): Promise<TransactionList> {
-  return api<TransactionList>("/transactions", { query: { ...query, limit: 1 } });
+  return readTransactions({ ...query, limit: 1 });
 }
 
 export interface DailyStatsParams {
@@ -43,52 +47,17 @@ export interface DailyStatsParams {
 }
 
 export function fetchDailyStats({ type, from, to }: DailyStatsParams): Promise<StatsResponse> {
-  return api<StatsResponse>("/stats/spending", { query: { groupBy: "day", type, from, to } });
+  return readSpending({ groupBy: "day", type, from, to });
 }
 
 export function fetchPendingCount(): Promise<TransactionList> {
-  return api<TransactionList>("/transactions", {
-    query: { pendingDetails: true, limit: 1, includeSummary: true },
-  });
+  return readTransactions({ pendingDetails: true, limit: 1, includeSummary: true });
 }
 
 export function fetchTransaction(id: string): Promise<Transaction> {
-  return api<Transaction>(`/transactions/${id}`);
+  return readTransaction(id);
 }
 
 export function fetchTags(): Promise<TagList> {
-  return api<TagList>("/transactions/tags");
-}
-
-export function createTransaction(
-  input: CreateTransactionInput,
-  idempotencyKey: string,
-): Promise<Transaction> {
-  return api<Transaction>("/transactions", { method: "POST", body: input, idempotencyKey });
-}
-
-export function quickAddTransaction(
-  input: QuickAddTransactionInput,
-  idempotencyKey: string,
-): Promise<Transaction> {
-  return api<Transaction>("/transactions/quick", { method: "POST", body: input, idempotencyKey });
-}
-
-export function updateTransaction(id: string, input: UpdateTransactionInput): Promise<Transaction> {
-  return api<Transaction>(`/transactions/${id}`, { method: "PUT", body: input });
-}
-
-export function batchUpdateTransactions(
-  input: BatchUpdateTransactionsInput,
-  idempotencyKey: string,
-): Promise<BatchUpdateResult> {
-  return api<BatchUpdateResult>("/transactions/batch", {
-    method: "PATCH",
-    body: input,
-    idempotencyKey,
-  });
-}
-
-export function deleteTransaction(id: string): Promise<unknown> {
-  return api<unknown>(`/transactions/${id}`, { method: "DELETE" });
+  return readTransactionTags();
 }

@@ -1,4 +1,6 @@
 import { api } from "@/lib/api/client";
+import { pullAfterDirectSend } from "@/lib/local/outbox";
+import { readAccounts, readCategoriesPage } from "@/lib/local/repository";
 import type {
   AccountList,
   AuthTokens,
@@ -8,20 +10,27 @@ import type {
   User,
 } from "@/types/api";
 
-export function updateUser(id: string, input: UpdateUserInput): Promise<User> {
-  return api<User>(`/users/${id}`, { method: "PUT", body: input });
+export async function updateUser(id: string, input: UpdateUserInput): Promise<User> {
+  const answer = await api<User>(`/users/${id}`, { method: "PUT", body: input });
+  // The profile row lives in the mirror too, and the zone `lib/local/derive` buckets by comes from
+  // it: without a pull the figures would keep being cut on the old day boundary.
+  await pullAfterDirectSend();
+  return answer;
 }
 
 export function deleteUser(id: string): Promise<unknown> {
   return api<unknown>(`/users/${id}`, { method: "DELETE" });
 }
 
+// Through the repository, like every other read: these were the last two screens in `(app)` still
+// asking the server, so Settings cost two requests with a full mirror and its two figures were the
+// only ones that went blank with no network (F-43).
 export function fetchCategorySummary(): Promise<CategoryList> {
-  return api<CategoryList>("/categories", { query: { includeArchived: "true", limit: 100 } });
+  return readCategoriesPage({ includeArchived: true, limit: 100 });
 }
 
 export function fetchAccountCount(): Promise<AccountList> {
-  return api<AccountList>("/accounts", { query: { limit: 1 } });
+  return readAccounts({ limit: 1 });
 }
 
 export function fetchSessions(): Promise<{ data: Session[] }> {

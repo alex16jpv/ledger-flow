@@ -16,7 +16,12 @@ test("onboarding creates the first account and the global budget, then lands on 
   await page.goto("/onboarding");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your first account");
   await page.getByRole("textbox", { name: "Name" }).fill("Bancolombia");
-  await page.getByRole("button", { name: "Bank account" }).click();
+  // F-03: the onboarding chooses the type the same way the account form does, in a sheet.
+  await page.getByRole("button", { name: /^Type/ }).click();
+  await page
+    .getByRole("dialog", { name: "Account type" })
+    .getByRole("option", { name: /^Bank account/ })
+    .click();
   await page.getByRole("button", { name: "Continue" }).click();
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("A ceiling for the month");

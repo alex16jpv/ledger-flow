@@ -134,10 +134,25 @@ test("the account picker lists balances with the main badge and excludes the oth
 
 test("the date field sends the current time until a time is chosen", async ({ page, request }) => {
   await signInAsSeed(page, request);
-  await page.getByRole("textbox", { name: "Date" }).fill("2026-09-22");
-  await expect(result(page, "instant-result")).toContainText(/2026-09-2[23]T\d\d:\d\d:00\.000Z/);
-  await page.getByRole("textbox", { name: /Time/ }).fill("18:10");
-  await expect(result(page, "instant-result")).toContainText("2026-09-22T23:10:00.000Z");
+  // F-05: the calendar and the wheel are the app's own now, so the day is chosen and confirmed.
+  await page.getByRole("button", { name: /^Date/ }).click();
+  const calendar = page.getByRole("dialog", { name: "Date" });
+  await calendar.getByRole("button", { name: "Yesterday" }).click();
+  await calendar.getByRole("button", { name: "Done" }).click();
+  // With no time chosen the instant carries the current one, whatever it is.
+  await expect(result(page, "instant-result")).toContainText(/T\d\d:\d\d:00\.000Z/);
+
+  await page.getByRole("button", { name: /^Time/ }).click();
+  const wheel = page.getByRole("dialog", { name: "Time" });
+  await wheel.getByRole("listbox", { name: "Hours" }).getByRole("option", { name: "6" }).click();
+  await wheel.getByRole("listbox", { name: "Minutes" }).getByRole("option", { name: "10" }).click();
+  await wheel
+    .getByRole("listbox", { name: "AM or PM" })
+    .getByRole("option", { name: "PM" })
+    .click();
+  await wheel.getByRole("button", { name: "Done" }).click();
+  // 18:10 in America/Bogota is 23:10 UTC.
+  await expect(result(page, "instant-result")).toContainText(/T23:10:00\.000Z/);
 });
 
 test("a new account can be created inline from the picker", async ({ page, request }) => {
@@ -150,7 +165,11 @@ test("a new account can be created inline from the picker", async ({ page, reque
     .click();
   const form = page.getByRole("dialog", { name: "New account" });
   await form.getByLabel("Name").fill(name);
-  await form.getByRole("button", { name: "Savings" }).click();
+  await form.getByRole("button", { name: /^Type/ }).click();
+  await page
+    .getByRole("dialog", { name: "Account type" })
+    .getByRole("option", { name: /^Savings/ })
+    .click();
   await form.getByRole("button", { name: "Create account" }).click();
   await expect(form).toBeHidden();
   await expect(result(page, "account-result")).toHaveText(`Selected: ${name}`);

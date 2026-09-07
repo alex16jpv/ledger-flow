@@ -204,13 +204,8 @@ export function useUpdateTransaction(id: string) {
 export function useBatchComplete() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      input,
-      idempotencyKey,
-    }: {
-      input: BatchUpdateTransactionsInput;
-      idempotencyKey: string;
-    }) => batchUpdateTransactions(input, idempotencyKey),
+    // No idempotency key: each row enters the queue as its own operation, addressed by its own id.
+    mutationFn: (input: BatchUpdateTransactionsInput) => batchUpdateTransactions(input),
     onSuccess: () => invalidateMoneyMovement(queryClient),
   });
 }

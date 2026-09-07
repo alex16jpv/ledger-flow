@@ -13,10 +13,13 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CategoryChip, Chip, ChipRow } from "@/components/ui/Chip";
 import { cn } from "@/components/ui/cn";
+import { DateField } from "@/components/ui/DateTimeField";
 import { Field, FieldGroup, Input, Textarea } from "@/components/ui/Field";
 import { Segment } from "@/components/ui/Segment";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
+import { dayKey } from "@/lib/format/dates";
+import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { validationMessage } from "@/lib/i18n/validation";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
@@ -58,6 +61,8 @@ export function BudgetForm({
   secondaryAction,
 }: BudgetFormProps) {
   const t = useTranslations();
+  const { timeZone } = useFormatSettings();
+  const today = dayKey(new Date(), timeZone);
   const form = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetFormSchema),
     defaultValues,
@@ -240,18 +245,31 @@ export function BudgetForm({
         />
         {periodType === "CUSTOM" && (
           <FieldGroup>
-            <Field
-              label={t("budgets.form.startDate")}
-              error={validationMessage(t, errors.periodStartDate?.message)}
-            >
-              <Input type="date" {...form.register("periodStartDate")} />
-            </Field>
-            <Field
-              label={t("budgets.form.endDate")}
-              error={validationMessage(t, errors.periodEndDate?.message)}
-            >
-              <Input type="date" min={periodStartDate} {...form.register("periodEndDate")} />
-            </Field>
+            <Controller
+              control={form.control}
+              name="periodStartDate"
+              render={({ field }) => (
+                <DateField
+                  label={t("budgets.form.startDate")}
+                  value={field.value || today}
+                  onChange={field.onChange}
+                  error={validationMessage(t, errors.periodStartDate?.message)}
+                />
+              )}
+            />
+            <Controller
+              control={form.control}
+              name="periodEndDate"
+              render={({ field }) => (
+                <DateField
+                  label={t("budgets.form.endDate")}
+                  value={field.value || today}
+                  onChange={field.onChange}
+                  min={periodStartDate}
+                  error={validationMessage(t, errors.periodEndDate?.message)}
+                />
+              )}
+            />
           </FieldGroup>
         )}
         {periodChanged && <Alert tone="warning">{t("budgets.form.periodChangeWarning")}</Alert>}
@@ -312,13 +330,18 @@ export function BudgetForm({
             />
           </button>
           <div hidden={!advancedOpen} className="flex flex-col gap-4 border-t border-border p-4">
-            <Field
-              label={t("budgets.form.effectiveFrom")}
-              help={t("budgets.form.effectiveFromHelp")}
-              error={validationMessage(t, errors.effectiveFrom?.message)}
-            >
-              <Input type="date" {...form.register("effectiveFrom")} />
-            </Field>
+            <Controller
+              control={form.control}
+              name="effectiveFrom"
+              render={({ field }) => (
+                <DateField
+                  label={t("budgets.form.effectiveFrom")}
+                  value={field.value || today}
+                  onChange={field.onChange}
+                  error={validationMessage(t, errors.effectiveFrom?.message)}
+                />
+              )}
+            />
             <Field
               label={t("budgets.form.note")}
               optional

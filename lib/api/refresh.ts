@@ -1,3 +1,4 @@
+import { resumeSyncEngine } from "@/lib/local/outbox/engine";
 import { tabChannel } from "@/lib/session/channel";
 
 import { API_PREFIX } from "./client";
@@ -21,6 +22,8 @@ async function requestRefresh(): Promise<boolean> {
   if (response.ok) {
     lastRefreshAt = Date.now();
     tabChannel.post({ type: "session:refreshed", at: lastRefreshAt });
+    // Whatever the queue stopped on when the session died can go out again (F-26).
+    resumeSyncEngine();
     return true;
   }
   if (response.status === 401) {

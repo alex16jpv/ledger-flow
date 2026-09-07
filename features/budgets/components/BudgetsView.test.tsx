@@ -159,6 +159,10 @@ describe("BudgetsView", () => {
       "/budgets/food?reference=2026-09",
     );
     expect(screen.getByText(/never count toward a budget/)).toBeInTheDocument();
+    // F-08: the mark answers on the global card too, but the legend under it belongs to the detail
+    // alone — here it would be noise on every card.
+    expect(screen.getByRole("button", { name: /Day \d+ of 30/ })).toBeInTheDocument();
+    expect(screen.queryByText(/The mark is today’s pace/)).not.toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "Next month" })).toBeDisabled();
     await userEvent.click(screen.getByRole("button", { name: "Previous month" }));

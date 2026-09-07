@@ -22,9 +22,12 @@ const allowTo = (...types) => types.map((type) => ({ to: { element: { type } } }
 export default defineConfig([
   globalIgnores([
     ".next/**",
+    ".next-e2e/**",
+    ".next-gate/**",
     "node_modules/**",
     "coverage/**",
     "playwright-report/**",
+    "playwright-report-gate/**",
     "test-results/**",
     "next-env.d.ts",
     "types/api.d.ts",

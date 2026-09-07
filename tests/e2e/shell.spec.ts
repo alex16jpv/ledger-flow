@@ -1,5 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
@@ -25,8 +26,7 @@ test("the app shell shows navigation, greeting and passes axe", async ({ page, r
     "aria-current",
     "page",
   );
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations).toEqual([]);
+  await expectNoAxeViolations(page);
 });
 
 test("unknown routes answer a real 404", async ({ page, request }) => {

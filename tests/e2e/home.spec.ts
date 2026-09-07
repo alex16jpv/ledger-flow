@@ -1,5 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -31,7 +32,7 @@ test("home shows the pending alert, the day bars, the top budgets and the latest
   const recent = page.getByRole("region", { name: "Recent transactions" });
   await expect(recent.getByRole("button").first()).toContainText("To review");
   expect(await recent.getByRole("button").count()).toBe(5);
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   await alert.click();
   await expect(page).toHaveURL(/\/transactions\/review$/);

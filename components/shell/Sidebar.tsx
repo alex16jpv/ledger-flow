@@ -79,13 +79,17 @@ export function Sidebar({ userName, pendingCount, onAdd }: SidebarProps) {
       </nav>
       <div className="mt-auto flex flex-col gap-1">
         <SidebarLink item={SETTINGS_ITEM} active={isActive(pathname, SETTINGS_ITEM.href)} />
-        <Link
-          href={SETTINGS_ITEM.href}
-          className="flex items-center gap-3 rounded-md px-3 py-[9px] text-base font-medium text-text-2 hover:bg-surface-2 hover:text-text"
-        >
-          <Avatar name={userName} size="sm" />
-          <span className="truncate">{userName}</span>
-        </Link>
+        {/* No name, no row: the avatar is decorative, so with an empty name the link had nothing a
+            screen reader could announce. The session is unknown after an offline cold start (F-63). */}
+        {userName !== "" && (
+          <Link
+            href={SETTINGS_ITEM.href}
+            className="flex items-center gap-3 rounded-md px-3 py-[9px] text-base font-medium text-text-2 hover:bg-surface-2 hover:text-text"
+          >
+            <Avatar name={userName} size="sm" />
+            <span className="truncate">{userName}</span>
+          </Link>
+        )}
       </div>
     </aside>
   );

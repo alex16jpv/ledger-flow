@@ -1,5 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -23,14 +24,14 @@ test("stats show the seed month by category, by day and by tag, and drill into t
   await expect(page.getByRole("img", { name: "Share by category" })).toBeVisible();
   const food = page.getByRole("button", { name: /^Food/ });
   await expect(food).toContainText(/\d+ %/);
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   await page.getByRole("button", { name: "Days" }).click();
   await expect(page).toHaveURL(/groupBy=day/);
   await expect(page.getByRole("group", { name: "Per day" })).toBeVisible();
   await expect(page.getByText("Priciest day")).toBeVisible();
   await expect(page.getByRole("heading", { name: /· highest$/ })).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   await page.getByRole("button", { name: "Tags" }).click();
   await expect(page).toHaveURL(/groupBy=tag/);

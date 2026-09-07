@@ -46,6 +46,16 @@ export function reportNetworkFailure(): void {
   for (const listener of suspectListeners) listener();
 }
 
+// The other hint, and the one that was missing: a request that came back with an answer proves the
+// network is there. Without it the app could stay offline in its own mind for a whole heartbeat
+// after the network returned, and everything that waits on the phase — the strip, the queue, the
+// sheet that asks for a sign-in — waited with it (F-64). The heartbeat still decides; it just
+// decides now instead of in 30 s.
+export function reportNetworkAnswer(): void {
+  if (phase !== "offline") return;
+  for (const listener of suspectListeners) listener();
+}
+
 export function onNetworkFailure(listener: Listener): () => void {
   suspectListeners.add(listener);
   return () => {

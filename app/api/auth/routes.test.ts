@@ -65,9 +65,16 @@ describe("login handler", () => {
     expect(
       cookies.some((c) => c.startsWith("__Secure-refresh=ref") && /Path=\/api\/auth/i.test(c)),
     ).toBe(true);
-    expect(cookies.some((c) => c.startsWith("__Host-session=1") && /SameSite=lax/i.test(c))).toBe(
-      true,
-    );
+    // The marker carries the user id and outlives the refresh token: §2.6 local mode reads it.
+    expect(
+      cookies.some(
+        (c) =>
+          c.startsWith(`__Host-session=${tokens.user.id}.`) &&
+          /SameSite=lax/i.test(c) &&
+          /Max-Age=34560000/i.test(c) &&
+          !/HttpOnly/i.test(c),
+      ),
+    ).toBe(true);
     expect(cookies.some((c) => c.startsWith("lf_locale=es"))).toBe(true);
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("http://backend.test/auth/login");
@@ -104,7 +111,7 @@ describe("refresh handler", () => {
     expect(setCookies(response).some((c) => c.startsWith("__Secure-refresh=ref2"))).toBe(true);
   });
 
-  it("clears the session when the backend revokes it", async () => {
+  it("clears the tokens but keeps the marker when the backend revokes the session", async () => {
     fetchMock.mockResolvedValue(
       json({ error: "Unauthorized", message: "x", code: "REFRESH_REVOKED" }, { status: 401 }),
     );
@@ -115,12 +122,12 @@ describe("refresh handler", () => {
     const response = await refresh(request);
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toMatchObject({ code: "REFRESH_REVOKED" });
-    expect(
-      setCookies(response).some(
-        (c) => c.startsWith("__Host-session=;") || c.startsWith("__Host-session=; "),
-      ),
-    ).toBe(true);
-    expect(response.headers.get("clear-site-data")).toContain("storage");
+    const cookies = setCookies(response);
+    // A dead refresh is not a logout: taking the marker or the storage would take the vault with
+    // it, and the app is supposed to keep working locally (§2.6, invariant 7).
+    expect(cookies.some((c) => c.startsWith("__Host-session="))).toBe(false);
+    expect(cookies.filter((c) => /Max-Age=0/i.test(c))).toHaveLength(2);
+    expect(response.headers.get("clear-site-data")).toBeNull();
   });
 
   it("answers 401 without a refresh cookie", async () => {
@@ -144,7 +151,9 @@ describe("logout handler", () => {
     const response = await logout(request);
     expect(response.status).toBe(200);
     expect(fetchMock.mock.calls[0]?.[0]).toBe("http://backend.test/auth/logout");
-    expect(response.headers.get("clear-site-data")).toBe('"cache", "storage"');
+    // Only the app shell: whether the unsent queue goes is the user's answer to the sheet of
+    // F-34, and `purgeVault` applies it. `"storage"` here would decide it for them.
+    expect(response.headers.get("clear-site-data")).toBe('"cache"');
     const cookies = setCookies(response);
     expect(cookies.filter((c) => /Max-Age=0/i.test(c))).toHaveLength(3);
   });

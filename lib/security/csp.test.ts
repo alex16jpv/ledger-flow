@@ -33,7 +33,19 @@ describe("buildCsp", () => {
     ).not.toContain("upgrade-insecure-requests");
   });
 
-  it("names the report-only header during the rollout", () => {
+  it("omits upgrade-insecure-requests on an http loopback origin, where it only breaks fetches", () => {
+    expect(
+      buildCsp({
+        nonce: "n",
+        isDevelopment: false,
+        reportOnly: false,
+        reportUri: "/r",
+        loopback: true,
+      }),
+    ).not.toContain("upgrade-insecure-requests");
+  });
+
+  it("names the header each mode asks for", () => {
     expect(cspHeaderName(true)).toBe("Content-Security-Policy-Report-Only");
     expect(cspHeaderName(false)).toBe("Content-Security-Policy");
     expect(newNonce()).toMatch(/^[A-Za-z0-9+/]+=*$/);

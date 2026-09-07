@@ -1,7 +1,6 @@
-import { z } from "zod";
-
 import { CATEGORY_ICON_KEYS } from "@/lib/icons/category-icons";
 import { COLOR_TOKENS } from "@/lib/theme/feature-color";
+import { z } from "@/lib/validation/zod";
 import type { components } from "@/types/api";
 
 export const CATEGORY_TYPES = [

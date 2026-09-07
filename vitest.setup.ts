@@ -1,4 +1,6 @@
 import "@testing-library/jest-dom/vitest";
+// jsdom ships no IndexedDB; the offline vault and its migrations are tested against a real one.
+import "fake-indexeddb/auto";
 
 // jsdom does not implement scrollIntoView; IconGrid uses it to reveal the selected icon.
 if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {

@@ -14,6 +14,7 @@ import { Segment } from "@/components/ui/Segment";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { Tile } from "@/components/ui/Tile";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
+import { changedOnly, nothingChanged } from "@/lib/form/changes";
 import { Link } from "@/lib/i18n/navigation";
 import { validationMessage } from "@/lib/i18n/validation";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
@@ -65,7 +66,8 @@ export function CategoryForm({
         }
       : { name: initialName, icon: "tag", color: "BLUE", type },
   });
-  const { errors } = form.formState;
+  // Read during render: `formState` is a Proxy that only tracks what the component subscribed to.
+  const { errors, dirtyFields } = form.formState;
   const serverFields = fieldErrors(mutation.error);
   const failure = mutation.error;
   const code = failure instanceof ApiError ? failure.code : null;
@@ -84,16 +86,20 @@ export function CategoryForm({
 
   const submit = form.handleSubmit(async (values) => {
     try {
-      onSaved(
-        category
-          ? await update.mutateAsync({
-              name: values.name,
-              icon: values.icon,
-              color: values.color,
-              ...(locked ? {} : { type: values.type }),
-            })
-          : await create.mutateAsync(values),
-      );
+      if (category) {
+        const changes = changedOnly(
+          {
+            name: values.name,
+            icon: values.icon,
+            color: values.color,
+            ...(locked ? {} : { type: values.type }),
+          },
+          dirtyFields,
+        );
+        onSaved(nothingChanged(changes) ? category : await update.mutateAsync(changes));
+        return;
+      }
+      onSaved(await create.mutateAsync(values));
     } catch {
       return;
     }

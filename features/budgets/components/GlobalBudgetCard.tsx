@@ -7,8 +7,10 @@ import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Progress } from "@/components/ui/Progress";
+import { Projected } from "@/components/ui/Projected";
 import { Link } from "@/lib/i18n/navigation";
 import { useMoney } from "@/lib/i18n/useMoney";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import type { Budget } from "@/types/api";
 
 import { budgetProgress } from "../progress";
@@ -22,6 +24,8 @@ export interface GlobalBudgetCardProps {
 
 export function GlobalBudgetCard({ budget, now, href }: GlobalBudgetCardProps) {
   const t = useTranslations("budgets.list");
+  const pace = useTranslations("budgets.pace");
+  const outbox = useOutbox();
   const money = useMoney();
   const statusText = useBudgetStatusText();
   const progress = budgetProgress(budget, now);
@@ -42,18 +46,28 @@ export function GlobalBudgetCard({ budget, now, href }: GlobalBudgetCardProps) {
         </Badge>
       </div>
       <div className="flex items-baseline justify-between gap-3">
-        <Amount value={budget.spent} signed={false} size="hero" />
+        <Projected when={outbox.projected.budgets}>
+          <Amount value={budget.spent} signed={false} size="hero" />
+        </Projected>
         <span className="text-sm text-text-3">
           {t("of", { amount: money.format(budget.amount) })}
         </span>
       </div>
-      <Progress
-        value={budget.spent}
-        max={budget.amount}
-        marker={progress.elapsed}
-        color={budget.color}
-        label={budget.name}
-      />
+      <Projected when={outbox.projected.budgets} align="center" className="w-full">
+        <Progress
+          value={budget.spent}
+          max={budget.amount}
+          marker={progress.elapsed}
+          markerLabel={pace("tooltip", {
+            day: progress.day,
+            days: progress.days,
+            percent: Math.round(progress.elapsed * 100),
+          })}
+          color={budget.color}
+          label={budget.name}
+          className="flex-1"
+        />
+      </Projected>
       <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
         <span className={progress.status === "over" ? "text-danger" : "text-text-2"}>
           {onTrack && progress.daysLeft > 0

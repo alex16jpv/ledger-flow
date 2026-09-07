@@ -1,8 +1,11 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { countPendingOperations } from "@/lib/local/db";
+import { accountRecord, type OutboxOperation } from "@/lib/local/schema";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
+import { account, openTestVault, wipeVaults } from "@/lib/testing/vault";
 
 import { tabChannel } from "./channel";
 import { SessionProvider, useSession } from "./SessionProvider";
@@ -13,13 +16,18 @@ const fetchMock = vi.fn<typeof fetch>();
 const urlOf = (input: string | URL | Request) =>
   typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
 
+const statuses: string[] = [];
+
 function Probe() {
   const session = useSession();
+  statuses.push(session.status);
   return (
     <div>
       <output data-testid="status">{session.status}</output>
+      <button onClick={() => void session.refetch()}>refetch</button>
       <output data-testid="name">{session.user?.name ?? ""}</output>
       <button onClick={() => void session.logout()}>logout</button>
+      <button onClick={() => void session.logout({ discardPendingWork: true })}>discard</button>
     </div>
   );
 }
@@ -30,9 +38,32 @@ beforeEach(() => {
   tabChannel.reset();
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
+  await wipeVaults();
 });
+
+const operation = (seq: number): OutboxOperation => ({
+  seq,
+  opId: `op-${seq}`,
+  opVersion: 1,
+  entity: "transaction",
+  entityId: `t${seq}`,
+  action: "create",
+  occurredAt: "2026-08-01T10:00:00.000Z",
+  payload: {},
+  dependsOn: [],
+  status: "pending",
+  attempts: 0,
+  lastError: null,
+});
+
+async function fillVault(userId: string, pending: number) {
+  const vault = await openTestVault(userId);
+  await vault.db.put("accounts", accountRecord(account({ id: "a1" })));
+  for (let seq = 1; seq <= pending; seq += 1) await vault.db.put("outbox", operation(seq));
+  vault.close();
+}
 
 function renderSession(onSignedOut = vi.fn()) {
   renderWithProviders(
@@ -54,6 +85,26 @@ describe("SessionProvider", () => {
     });
     expect(screen.getByTestId("name")).toHaveTextContent("John");
     expect(urlOf(fetchMock.mock.calls[0]?.[0] ?? "")).toBe("/api/auth/me");
+  });
+
+  // R-3b: React Query drops an errored query with no data back to pending when it refetches; the
+  // vault of §2.6 hangs on this status and must not be torn down while the network comes back.
+  it("does not fall back to loading when a failed session is fetched again", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    statuses.length = 0;
+    renderWithProviders(
+      <QueryProvider>
+        <SessionProvider onSignedOut={vi.fn()}>
+          <Probe />
+        </SessionProvider>
+      </QueryProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("error"));
+    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "Ada" } }));
+    await userEvent.click(screen.getByRole("button", { name: "refetch" }));
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"));
+    const afterError = statuses.slice(statuses.indexOf("error"));
+    expect(afterError).not.toContain("loading");
   });
 
   it("logs out, tells the other tabs and calls onSignedOut", async () => {
@@ -80,5 +131,63 @@ describe("SessionProvider", () => {
       tabChannel.emitLocal({ type: "session:expired" });
     });
     expect(screen.getByTestId("status")).toHaveTextContent("expired");
+  });
+
+  it("leaves the vault untouched when the session expires", async () => {
+    await fillVault("u1", 4);
+    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "A" } }));
+    renderSession();
+    await waitFor(() => {
+      expect(screen.getByTestId("status")).toHaveTextContent("authenticated");
+    });
+
+    act(() => {
+      tabChannel.emitLocal({ type: "session:expired" });
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("status")).toHaveTextContent("expired");
+    });
+
+    expect(await countPendingOperations("u1")).toBe(4);
+    const vault = await openTestVault("u1");
+    expect(await vault.db.count("accounts")).toBe(1);
+  });
+
+  it("drops the mirror on an explicit logout but keeps the unsent queue", async () => {
+    await fillVault("u1", 4);
+    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "A" } }));
+    const onSignedOut = renderSession();
+    await waitFor(() => {
+      expect(screen.getByTestId("status")).toHaveTextContent("authenticated");
+    });
+
+    fetchMock.mockResolvedValue(json({ ok: true }));
+    await userEvent.click(screen.getByRole("button", { name: "logout" }));
+    await waitFor(() => {
+      expect(onSignedOut).toHaveBeenCalled();
+    });
+
+    const vault = await openTestVault("u1");
+    expect(await vault.db.count("accounts")).toBe(0);
+    expect(await countPendingOperations("u1")).toBe(4);
+  });
+
+  // F-34: the other half of the sheet. Keeping is the default; discarding only happens when the
+  // user was shown what they were throwing away and said so.
+  it("discards the queue on logout when the user chose to", async () => {
+    await fillVault("u1", 4);
+    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "A" } }));
+    const onSignedOut = renderSession();
+    await waitFor(() => {
+      expect(screen.getByTestId("status")).toHaveTextContent("authenticated");
+    });
+
+    fetchMock.mockResolvedValue(json({ ok: true }));
+    await userEvent.click(screen.getByRole("button", { name: "discard" }));
+    await waitFor(() => {
+      expect(onSignedOut).toHaveBeenCalled();
+    });
+
+    expect(await countPendingOperations("u1")).toBe(0);
   });
 });

@@ -43,7 +43,10 @@ A change is not done until all of these hold. If one does not apply, say so and 
 - **No `fetch` outside `lib/api`**. No `any`. No `!` without a one-line justification.
 - **No tokens or personal data in `localStorage`**: session lives in httpOnly cookies set by the
   BFF; per-user caches are partitioned and purged on logout.
-- **No money math in the client**: balances, totals and `spent` come from the API; amounts are
+- **No money math in the client, with one declared exception**: balances, totals and `spent` come
+  from the API. The exception is `lib/local/derive`, which projects them offline (plan D-5): pure
+  functions, added in minor units, checked against the backend's parity fixtures (vendored in `lib/local/derive/fixtures/`, refreshed with `npm run fixtures:sync`), and whatever
+  paints a projection marks it as one — never as a figure the server sent (invariant 2). Amounts are
   formatted with `Intl`, never parsed from formatted strings.
 - **Never duplicate what can be derived**: enums, error codes and DTOs come from
   `types/api.d.ts` (generated from the backend OpenAPI) and from `lib/api/errors.ts`. A
@@ -75,14 +78,15 @@ features/b`; shared code moves up.
 
 ## 4. Documentation you must update
 
-| You changed                        | Update                                                                                       |
-| ---------------------------------- | -------------------------------------------------------------------------------------------- |
-| A route, layout or navigation item | `README.md` route map                                                                        |
-| A feature's behaviour              | `features/<x>/README.md` (one paragraph, what and why)                                       |
-| An architectural or library choice | `DECISIONS.md` (date, decision, alternatives, consequence)                                   |
-| Environment variables              | `lib/env.ts`, `.env.example`, `README.md`                                                    |
-| A message key                      | Both `messages/en.json` and `messages/es.json`                                               |
-| Something the backend must change  | `../auditoria/front/BACKEND-DESDE-FRONT.md` (report it; do not change the backend from here) |
+| You changed                           | Update                                                                                       |
+| ------------------------------------- | -------------------------------------------------------------------------------------------- |
+| A route, layout or navigation item    | `README.md` route map                                                                        |
+| A feature's behaviour                 | `features/<x>/README.md` (one paragraph, what and why)                                       |
+| An architectural or library choice    | `DECISIONS.md` (date, decision, alternatives, consequence)                                   |
+| Environment variables                 | `lib/env.ts`, `.env.example`, `README.md`                                                    |
+| A message key                         | Both `messages/en.json` and `messages/es.json`                                               |
+| Something the backend must change     | `../auditoria/front/BACKEND-DESDE-FRONT.md` (report it; do not change the backend from here) |
+| Anything you found and are not fixing | `../auditoria/front/PROGRESO.md` § "Tareas futuras y hallazgos registrados": one `F-nn` row  |
 
 ---
 
@@ -111,9 +115,16 @@ that never reached the server must show its pending badge).
 - Are both message files updated? Is `DECISIONS.md` updated?
 - Any leftover `console.log`, debug flag, commented code or TODO?
 - Does the commit message describe only what you actually did?
+- Is every finding you are **not** fixing registered as a row, not just mentioned? (see below)
 
-If you find a problem outside the requested scope, report it; do not fix it silently. If
-something in your change is incomplete or doubtful, say so.
+If you find a problem outside the requested scope, do not fix it silently — and do not merely
+mention it either. **Register it**: an `F-nn` row in `../auditoria/front/PROGRESO.md` §
+"Tareas futuras y hallazgos registrados", or a row in `BACKEND-DESDE-FRONT.md` if the backend owns
+it. This covers bugs, dead code, missing guards, rough edges and ideas alike, whether or not the
+owner asked for them. Writing it only in a session summary, a handover note or a gate document does
+not count: those are diaries, nobody reads them looking for work, and a finding that lives only
+there gets copied forward forever and never done. The row may say "not now"; it may not be absent.
+If something in your change is incomplete or doubtful, say so.
 
 ---
 

@@ -1,10 +1,16 @@
 import { defineRouting } from "next-intl/routing";
 
-export const LOCALES = ["en", "es"] as const;
-export type AppLocale = (typeof LOCALES)[number];
-export const DEFAULT_LOCALE: AppLocale = "en";
+import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALES } from "./locales";
 
-export const LOCALE_COOKIE = "lf_locale";
+export {
+  type AppLocale,
+  DEFAULT_LOCALE,
+  isAppLocale,
+  LOCALE_COOKIE,
+  localeOf,
+  localePrefix,
+  LOCALES,
+} from "./locales";
 
 export const routing = defineRouting({
   locales: LOCALES,
@@ -12,7 +18,3 @@ export const routing = defineRouting({
   localePrefix: "as-needed",
   localeCookie: { name: LOCALE_COOKIE, sameSite: "lax" },
 });
-
-export function isAppLocale(value: unknown): value is AppLocale {
-  return typeof value === "string" && (LOCALES as readonly string[]).includes(value);
-}

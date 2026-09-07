@@ -8,7 +8,13 @@ import { env } from "@/lib/env";
 import { LOCALE_COOKIE } from "@/lib/i18n/routing";
 import type { AuthTokens, ErrorResponse, User } from "@/types/api";
 
-import { type CookieSpec, expiredSessionCookies, localeCookie, sessionCookies } from "./cookies";
+import {
+  type CookieSpec,
+  expiredAuthCookies,
+  expiredSessionCookies,
+  localeCookie,
+  sessionCookies,
+} from "./cookies";
 import { isTrustedOrigin } from "./origin";
 
 export const AUTH_JSON_LIMIT_BYTES = 10_000;
@@ -92,19 +98,30 @@ export function sessionResponse(
   requestId: string | null,
 ): NextResponse {
   const response = NextResponse.json(user ? { user } : {}, { status });
-  applyCookies(response, sessionCookies(tokens));
+  applyCookies(response, sessionCookies(tokens, user?.id));
   if (user?.locale) applyCookies(response, [localeCookie(LOCALE_COOKIE, user.locale)]);
   if (requestId) response.headers.set(REQUEST_ID_HEADER, requestId);
   return response;
 }
 
+// Explicit logout. `Clear-Site-Data` no longer asks for `"storage"`: it would take the vault with
+// it, and whether the unsent queue goes is the user's answer to the sheet of F-34, applied precisely
+// by `purgeVault`. Only the app-shell caches go, because the next user gets their own.
 export function endSessionResponse(status = 200): NextResponse {
   const response =
     status === 204
       ? new NextResponse(null, { status })
       : NextResponse.json({ ok: true }, { status });
   applyCookies(response, expiredSessionCookies());
-  response.headers.set("Clear-Site-Data", '"cache", "storage"');
+  response.headers.set("Clear-Site-Data", '"cache"');
+  return response;
+}
+
+// The refresh token died. The session is over, the vault is not (§2.6, invariant 7): the marker
+// stays, nothing is cleared, and the app opens in local mode until the user signs in to sync.
+export function endExpiredSessionResponse(status = 401): NextResponse {
+  const response = NextResponse.json({ ok: false }, { status });
+  applyCookies(response, expiredAuthCookies());
   return response;
 }
 

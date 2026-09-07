@@ -1,5 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -25,7 +26,7 @@ test("the inbox completes a quick expense in place and the pending counter drops
   await expect(page.getByRole("heading", { level: 1, name: /^To review · \d+$/ })).toBeVisible();
   const card = page.locator(`[data-transaction-id="${created.id}"]`);
   await expect(card).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   await card.getByRole("button", { name: "Coffee" }).click();
   await card.getByRole("textbox", { name: "Description" }).fill("E2E latte");
@@ -56,7 +57,10 @@ test("the Complete link on a pending detail lands on its card", async ({ page, r
   await request.delete(`/api/transactions/${created.id}`, { headers: { origin: APP } });
 });
 
-test("Save all completes the categorized cards in one request", async ({ page, request }) => {
+test("Save all completes the categorized cards, one guarded operation per row", async ({
+  page,
+  request,
+}) => {
   // A fresh user: the batch sweeps every categorized card of the inbox, so sharing the seed inbox
   // with the other specs would let it swallow their rows mid-flight.
   const email = `e2e-saveall-${Date.now()}-${Math.random().toString(16).slice(2)}@ledgerflow.test`;
@@ -90,16 +94,34 @@ test("Save all completes the categorized cards in one request", async ({ page, r
   }
   await cards[1]!.getByRole("textbox", { name: "Description" }).fill("E2E batch");
 
-  const patches: string[] = [];
+  // F-20 with O-F5b: the lot leaves the outbox expanded into one operation per row — each with its
+  // own guard and its own outcome — and the queue travels as one `POST /sync`, never as the API's
+  // own `PATCH /transactions/batch`.
+  const sentUrls: string[] = [];
+  const batches: { entity: string; action: string; id: string; baseUpdatedAt?: string }[][] = [];
   page.on("request", (sent) => {
-    if (sent.method() === "PATCH") patches.push(sent.url());
+    if (sent.method() === "PUT" || sent.method() === "PATCH") sentUrls.push(sent.url());
+    if (sent.method() === "POST" && sent.url().endsWith("/api/sync")) {
+      const body = sent.postDataJSON() as {
+        operations: { entity: string; action: string; id: string; baseUpdatedAt?: string }[];
+      };
+      batches.push(body.operations);
+    }
   });
   await page.getByRole("button", { name: "Save all · 2" }).click();
   const dialog = page.getByRole("dialog", { name: "Save 2 expenses?" });
   await dialog.getByRole("button", { name: "Save 2" }).click();
   await expect(page.getByText("2 expenses saved")).toBeVisible();
   await expect(page.getByRole("heading", { name: "All reviewed" })).toBeVisible();
-  expect(patches.filter((url) => url.endsWith("/api/transactions/batch"))).toHaveLength(1);
+  expect(sentUrls.filter((url) => url.endsWith("/api/transactions/batch"))).toHaveLength(0);
+  expect(batches).toHaveLength(1);
+  const operations = batches[0]!;
+  expect(operations.map((operation) => `${operation.entity}:${operation.action}`)).toEqual([
+    "transaction:update",
+    "transaction:update",
+  ]);
+  expect(operations.map((operation) => operation.id).sort()).toEqual([...ids].sort());
+  expect(operations.every((operation) => typeof operation.baseUpdatedAt === "string")).toBe(true);
 
   for (const id of ids) {
     const row = (await (await request.get(`/api/transactions/${id}`)).json()) as {

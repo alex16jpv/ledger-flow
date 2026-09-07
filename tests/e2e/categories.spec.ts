@@ -1,5 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+
+import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -37,7 +38,7 @@ test("the grid groups the seed by type with usage counts and the edit form locks
   const food = page.getByRole("link", { name: /^Food/ });
   await expect(food).toContainText(/\d+ transactions/);
   await expect(page.getByRole("link", { name: /^Salary/ })).toHaveCount(0);
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 
   await page.getByRole("button", { name: /^Income · \d+$/ }).click();
   await expect(page).toHaveURL(/type=INCOME/);
@@ -58,7 +59,7 @@ test("the grid groups the seed by type with usage counts and the edit form locks
     "href",
     new RegExp(`/transactions\\?category=${FOOD}&period=all$`),
   );
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expectNoAxeViolations(page);
 });
 
 test("a new user creates, retypes, archives and restores categories, and restores the defaults", async ({

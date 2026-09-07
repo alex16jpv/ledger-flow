@@ -1,4 +1,10 @@
-import { BACK_ONLINE_VISIBLE_MS, connectivityStore, reportOnline } from "./connectivity";
+import {
+  BACK_ONLINE_VISIBLE_MS,
+  connectivityStore,
+  onNetworkFailure,
+  reportNetworkAnswer,
+  reportOnline,
+} from "./connectivity";
 
 describe("connectivityStore", () => {
   beforeEach(() => {
@@ -20,6 +26,17 @@ describe("connectivityStore", () => {
     vi.advanceTimersByTime(BACK_ONLINE_VISIBLE_MS);
     expect(connectivityStore.getSnapshot()).toBe("online");
     expect(listener).toHaveBeenCalledTimes(3);
+  });
+
+  it("asks for a check when a request is answered, and only while it believes it is offline", () => {
+    const check = vi.fn();
+    const stop = onNetworkFailure(check);
+    reportNetworkAnswer();
+    expect(check).not.toHaveBeenCalled();
+    reportOnline(false);
+    reportNetworkAnswer();
+    expect(check).toHaveBeenCalledTimes(1);
+    stop();
   });
 
   it("ignores redundant online reports", () => {

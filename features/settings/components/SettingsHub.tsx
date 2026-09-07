@@ -12,6 +12,7 @@ import {
   LogOut,
   MonitorSmartphone,
   Palette as PaletteIcon,
+  RefreshCw,
   ShieldCheck,
   Smartphone,
   Tags,
@@ -35,6 +36,8 @@ import { Link } from "@/lib/i18n/navigation";
 import { useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
+import { useOffline } from "@/lib/network/useOffline";
 import { useInstallPrompt } from "@/lib/pwa/install";
 import { useSession } from "@/lib/session/SessionProvider";
 import { useTheme } from "@/lib/theme";
@@ -49,7 +52,7 @@ import {
   useUpdateTimeZone,
 } from "../hooks";
 import { LanguageSheet } from "./LanguageSheet";
-import { CurrencySheet, DeleteAccountSheet, TimeZoneSheet } from "./SettingsSheets";
+import { CurrencySheet, DeleteAccountSheet, SignOutSheet, TimeZoneSheet } from "./SettingsSheets";
 
 interface SettingsRowProps {
   icon: ReactNode;
@@ -62,6 +65,7 @@ interface SettingsRowProps {
     | "/categories"
     | "/settings/profile"
     | "/settings/sessions"
+    | "/settings/sync"
     | "/privacy";
   onClick?: () => void;
 }
@@ -126,9 +130,15 @@ export function SettingsHub() {
   const updateTimeZone = useUpdateTimeZone();
   const deleteAccount = useDeleteAccount();
   const install = useInstallPrompt();
+  const outbox = useOutbox();
+  // The session lives on the server: with no network a sign-out could only clear this device and
+  // leave the cookies — and the account — signed in. It waits and says so (R-3b §C).
+  const offline = useOffline();
   const router = useRouter();
   const toast = useToast();
-  const [sheet, setSheet] = useState<"language" | "currency" | "timeZone" | "delete" | null>(null);
+  const [sheet, setSheet] = useState<
+    "language" | "currency" | "timeZone" | "delete" | "signOut" | null
+  >(null);
   const user = session.user;
   const currencyLocked = hasAccounts.data !== false;
 
@@ -251,6 +261,14 @@ export function SettingsHub() {
 
       <Section title={t("settings.data")}>
         <SettingsRow
+          icon={<RefreshCw {...iconProps("sm")} />}
+          color="TEAL"
+          title={t("settings.sync.title")}
+          meta={t("settings.sync.subtitle")}
+          right={outbox.pending > 0 ? <Badge>{outbox.pending}</Badge> : undefined}
+          href="/settings/sync"
+        />
+        <SettingsRow
           icon={<Download {...iconProps("sm")} />}
           title={t("settings.export")}
           meta={t("common.comingSoon")}
@@ -273,7 +291,7 @@ export function SettingsHub() {
             meta={
               install.state === "installed"
                 ? t("settings.install.installed")
-                : t("settings.install.subtitle")
+                : t("settings.install.durability")
             }
             onClick={
               install.state === "available"
@@ -296,13 +314,23 @@ export function SettingsHub() {
         <Button
           variant="secondary"
           block
+          disabled={offline}
           onClick={() => {
+            if (outbox.pending > 0) {
+              setSheet("signOut");
+              return;
+            }
             void session.logout();
           }}
         >
           <LogOut {...iconProps("sm")} />
           {t("settings.signOut")}
         </Button>
+        {offline && (
+          <p className="text-center text-sm text-text-3" role="status">
+            {t("settings.signOutOffline")}
+          </p>
+        )}
         <Button
           variant="ghost"
           block
@@ -327,6 +355,7 @@ export function SettingsHub() {
         open={sheet === "currency"}
         currency={currency}
         locked={currencyLocked}
+        offline={offline}
         pending={updateCurrency.isPending}
         error={updateCurrency.error}
         onSave={(next) => {
@@ -346,6 +375,7 @@ export function SettingsHub() {
         key={`timezone-${sheet === "timeZone" ? "open" : "closed"}`}
         open={sheet === "timeZone"}
         timeZone={timeZone}
+        offline={offline}
         pending={updateTimeZone.isPending}
         error={updateTimeZone.error}
         onSave={(next) => {
@@ -363,6 +393,7 @@ export function SettingsHub() {
       />
       <DeleteAccountSheet
         open={sheet === "delete"}
+        offline={offline}
         pending={deleteAccount.isPending}
         error={deleteAccount.error}
         onConfirm={() => {
@@ -373,6 +404,21 @@ export function SettingsHub() {
               router.replace({ pathname: LOGIN_PATH, query: { deleted: "1" } });
             })
             .catch(() => undefined);
+        }}
+        onClose={() => {
+          setSheet(null);
+        }}
+      />
+      <SignOutSheet
+        open={sheet === "signOut"}
+        pending={outbox.pending}
+        onKeep={() => {
+          setSheet(null);
+          void session.logout({ discardPendingWork: false });
+        }}
+        onDiscard={() => {
+          setSheet(null);
+          void session.logout({ discardPendingWork: true });
         }}
         onClose={() => {
           setSheet(null);

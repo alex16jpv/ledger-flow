@@ -18,6 +18,8 @@ export const ERROR_CODES = [
   "CATEGORY_TYPE_LOCKED",
   "RESOURCE_ARCHIVED",
   "BUDGET_PERIOD_OVERLAP",
+  "ID_TAKEN",
+  "STALE_UPDATE",
   "CURRENCY_LOCKED",
   "CURRENCY_MISMATCH",
   "AMOUNT_PRECISION",
@@ -83,6 +85,9 @@ export const ERROR_TABLE: Readonly<Record<ErrorCode, ErrorPresentation>> = {
   },
   RESOURCE_ARCHIVED: { scope: "form", messageKey: "errors.RESOURCE_ARCHIVED" },
   BUDGET_PERIOD_OVERLAP: { scope: "form", messageKey: "errors.BUDGET_PERIOD_OVERLAP" },
+  // The outbox answers ID_TAKEN by minting a new id and retrying (O-F4); this is the fallback for the online path.
+  ID_TAKEN: { scope: "toast", messageKey: "errors.ID_TAKEN" },
+  STALE_UPDATE: { scope: "form", messageKey: "errors.STALE_UPDATE" },
   CURRENCY_LOCKED: { scope: "field", field: "currency", messageKey: "errors.CURRENCY_LOCKED" },
   CURRENCY_MISMATCH: {
     scope: "field",
@@ -129,6 +134,7 @@ export interface ApiErrorInit {
   details?: ErrorResponse["details"];
   requestId: string;
   retryAfterSeconds?: number;
+  current?: unknown;
 }
 
 export class ApiError extends Error {
@@ -137,6 +143,9 @@ export class ApiError extends Error {
   readonly details: NonNullable<ErrorResponse["details"]>;
   readonly requestId: string;
   readonly retryAfterSeconds: number | undefined;
+  // What `409 STALE_UPDATE` carries: the row as the server has it, so a conflict can be shown
+  // without a second request (O-B2). Absent on every other error.
+  readonly current: unknown;
 
   constructor(init: ApiErrorInit) {
     super(init.message);
@@ -146,6 +155,7 @@ export class ApiError extends Error {
     this.details = init.details ?? [];
     this.requestId = init.requestId;
     this.retryAfterSeconds = init.retryAfterSeconds;
+    this.current = init.current;
   }
 }
 

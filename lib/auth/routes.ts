@@ -4,6 +4,10 @@ export const HOME_PATH = "/";
 export const APP_HOME_PATH = "/home";
 export const ONBOARDING_PATH = "/onboarding";
 
+// Says "I know I have a marker, let me at the login anyway": the app links here when the session is
+// dead and the queue still has to go up (§2.6).
+export const REAUTH_PARAM = "reauth";
+
 const PUBLIC_EXACT = new Set(["/", "/login", "/register", "/privacy", "/terms", "/contact"]);
 const PUBLIC_PREFIXES = ["/dev/"];
 const GUEST_ONLY = new Set(["/login", "/register"]);

@@ -33,8 +33,37 @@ expense with the recent category chips, "Other" for the full picker, a descripti
 which `PUT`s `categoryId`, `description` and `pendingDetails: false`; the pending count in the shell
 follows because the mutation invalidates the transactions domain.
 
+O-F5b adds one line to a card, when there is one to add: a movement the server saved **without** its
+category — archived on another device while this one had no network — says so, because that warning
+(`CATEGORY_ARCHIVED_DROPPED`) is the only place the reason exists. `pruneNotices` reads them off the
+vault when the screen opens and drops what no longer needs a review (F-57).
+
 F-07 adds "Save all" to the inbox: the card drafts live in the screen, a sticky button counts the
 cards that already have a category, a sheet confirms how many save and how many stay pending, and
-`useBatchComplete` sends one `PATCH /transactions/batch` with an `Idempotency-Key`. The response is
-per item: saved cards leave the list, failed ones stay with their error, and the individual "Done"
-keeps working.
+`useBatchComplete` saves them. Since O-F4 part 2 the lot goes through the outbox expanded into one
+operation per row rather than one `PATCH /transactions/batch`, so it works with no network too; the
+result is still per item, saved cards leave the list, failed ones stay with their error, and the
+individual "Done" keeps working.
+
+Reads go through `lib/local/repository`: since O-F2b the paged list, the detail, the counts, the
+pending tray and the tag list answer from the mirror whenever a pull has drained, network or not, and
+reach the server only where the mirror cannot answer. The mirror resolves the cursor as a keyset over
+`(date, id)` — the same one the API uses — so infinite scroll and every filter work without network;
+a filter the mirror does not know how to apply makes it decline and the read goes to the server.
+`fetchDailyStats` goes through the stats seam and answers offline since O-F3 part 2: its buckets are
+the user's local calendar days, derived over the window's rows. Writes go through `lib/local/outbox` (O-F4): the
+movement and its operation land in one transaction and the screen is answered from the projection,
+so capture works the same with and without network. The idempotency key is the row's id now, and
+each money operation records what it replaced so the balance projection knows what the server still
+has. `batchUpdateTransactions` queues one `transaction:update` per row and drains them in a single
+pass: one `If-Match` cannot guard N rows, so each row carries its own guard and its own outcome
+(F-20). Online that is N requests where it used to be one. Since O-F5a a row whose own write is
+still queued says so: the amber "Pending sync" badge and the "saved on this device" meta, turning
+red ("Needs attention") once the server refused that write — the resolution sheet itself opens from
+the connection banner's "Review".
+
+Date and time are the app's own controls since F-05, not the browser's: a calendar with "Today" /
+"Yesterday" chips and the days past the ceiling disabled, and a wheel of hours and minutes. The form
+passes tomorrow as that ceiling, so a date the server would refuse cannot be picked at all — and,
+the other half of F-66, when the device's clock runs more than an hour ahead of the `serverTime` the
+sync answers with, the form says so above the date instead of waiting for the refusal.

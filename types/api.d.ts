@@ -65,6 +65,7 @@ export type paths = {
         /**
          * Create a new account
          * @description The first account is marked default automatically. Currency is stamped from the user (mono-currency mode). Active account names are unique per user, case-insensitively ("Efectivo" = "efectivo"; accents still distinct) and trimmed; archiving an account frees its name.
+         *     Accepts an optional client-minted `id` (UUID). An id the user already owns replays with 200 and the stored resource, whatever the payload says now (the row may have been edited elsewhere since); an id that belongs to another user is rejected with 409 ID_TAKEN.
          */
         post: {
             parameters: {
@@ -79,6 +80,15 @@ export type paths = {
                 };
             };
             responses: {
+                /** @description Replay of a create already made with this client-minted id */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Account"];
+                    };
+                };
                 /** @description Account created */
                 201: {
                     headers: {
@@ -106,7 +116,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description An active account with this name already exists (code DUPLICATE, case-insensitive) */
+                /** @description An active account with this name already exists (code DUPLICATE, case-insensitive), or the client-minted id is already in use (code ID_TAKEN) */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -188,7 +198,10 @@ export type paths = {
         put: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Account ID */
                     id: string;
@@ -237,13 +250,13 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Another active account already uses this name (code DUPLICATE, case-insensitive) */
+                /** @description Another active account already uses this name (code DUPLICATE, case-insensitive), or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
                 409: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        "application/json": components["schemas"]["AccountConflict"];
                     };
                 };
             };
@@ -256,7 +269,10 @@ export type paths = {
         delete: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Account ID */
                     id: string;
@@ -265,13 +281,13 @@ export type paths = {
             };
             requestBody?: never;
             responses: {
-                /** @description Account archived */
+                /** @description The archived account (also when it was already archived), with its new `updatedAt` */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Message"];
+                        "application/json": components["schemas"]["Account"];
                     };
                 };
                 /** @description Invalid ID format (code VALIDATION) or account is the default (code DEFAULT_ACCOUNT_ARCHIVE_BLOCKED, set another default first) */
@@ -301,6 +317,15 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountConflict"];
+                    };
+                };
             };
         };
         options?: never;
@@ -324,7 +349,10 @@ export type paths = {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Account ID */
                     id: string;
@@ -373,13 +401,13 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description An active account took this name while it was archived (code DUPLICATE) — rename that one first */
+                /** @description An active account took this name while it was archived (code DUPLICATE) — rename that one first, or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
                 409: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        "application/json": components["schemas"]["AccountConflict"];
                     };
                 };
             };
@@ -406,7 +434,10 @@ export type paths = {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Account ID */
                     id: string;
@@ -449,6 +480,15 @@ export type paths = {
                     };
                     content: {
                         "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountConflict"];
                     };
                 };
             };
@@ -794,7 +834,10 @@ export type paths = {
             path?: never;
             cookie?: never;
         };
-        /** List the user's active device sessions */
+        /**
+         * List the user's active device sessions
+         * @description One row per device login. `current` is true for the row the requesting access token belongs to; tokens issued before this claim existed mark none until renewed.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -975,6 +1018,11 @@ export type paths = {
          *     (uncategorized and quick-adds included); only one global budget per period type
          *     can exist. `periodStartDate`/`periodEndDate` are required with `periodType=CUSTOM`
          *     and rejected for any other period type. `currency` is stamped from the user.
+         *
+         *     Accepts an optional client-minted `id` (UUID). An id the user already
+         *     owns replays with 200 and the stored budget, whatever the payload
+         *     says now (the row may have been edited elsewhere since); an id that
+         *     belongs to another user is rejected with 409 ID_TAKEN.
          */
         post: {
             parameters: {
@@ -992,6 +1040,15 @@ export type paths = {
                 };
             };
             responses: {
+                /** @description Replay of a create already made with this client-minted id */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Budget"];
+                    };
+                };
                 /** @description Budget created (view resolved for the reference period) */
                 201: {
                     headers: {
@@ -1001,7 +1058,7 @@ export type paths = {
                         "application/json": components["schemas"]["Budget"];
                     };
                 };
-                /** @description Validation error. Codes include BUDGET_PERIOD_OVERLAP (a budget for this category and period type already exists), CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH. */
+                /** @description Validation error. Codes include BUDGET_PERIOD_OVERLAP (a budget for this category and period type already exists; CUSTOM budgets only conflict when their date windows intersect), CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH. */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1024,7 +1081,7 @@ export type paths = {
                     };
                     content?: never;
                 };
-                /** @description Concurrent duplicate creation lost the race to the unique index (code DUPLICATE) */
+                /** @description Concurrent duplicate creation lost the race to the unique index (code DUPLICATE), or the client-minted id is already in use (code ID_TAKEN) */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1112,7 +1169,10 @@ export type paths = {
                     /** @description Period to resolve amount/spent in the response (default: now) */
                     reference?: string;
                 };
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Budget ID */
                     id: string;
@@ -1157,22 +1217,34 @@ export type paths = {
                     };
                     content?: never;
                 };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BudgetConflict"];
+                    };
+                };
             };
         };
         post?: never;
         /**
          * Archive a budget
          * @description Soft delete; the budget stays readable via GET /budgets/{id}. Idempotent —
-         *     archiving an already-archived budget is a no-op success. There is no restore
-         *     endpoint: to recover, create a new budget.
+         *     archiving an already-archived budget is a no-op success. Reversible with
+         *     POST /budgets/{id}/restore.
          */
         delete: {
             parameters: {
                 query?: {
-                    /** @description Accepted for uniformity; not used by this operation */
+                    /** @description Resolves the period of the archived view answered (default: now) */
                     reference?: string;
                 };
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Budget ID */
                     id: string;
@@ -1181,13 +1253,13 @@ export type paths = {
             };
             requestBody?: never;
             responses: {
-                /** @description Budget archived (or already archived) */
+                /** @description The archived budget view (also when it was already archived), with its new `updatedAt` */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Message"];
+                        "application/json": components["schemas"]["Budget"];
                     };
                 };
                 /** @description Invalid ID or reference */
@@ -1210,6 +1282,15 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BudgetConflict"];
+                    };
                 };
             };
         };
@@ -1236,7 +1317,8 @@ export type paths = {
          *
          *     Idempotent — restoring an active budget returns it unchanged. It takes
          *     no body: if another active budget of the same type and period already
-         *     covers one of its categories the restore is refused with **400
+         *     covers one of its categories (for CUSTOM, one whose date window
+         *     intersects) the restore is refused with **400
          *     `BUDGET_PERIOD_OVERLAP`**, because changing its categories or period
          *     would make it a different budget; create a new one instead.
          */
@@ -1246,7 +1328,10 @@ export type paths = {
                     /** @description Any instant inside the period to resolve (default: now) */
                     reference?: string;
                 };
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Budget ID */
                     id: string;
@@ -1289,13 +1374,13 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description A concurrent restore won the race against the unique index (code DUPLICATE) */
+                /** @description A concurrent restore won the race against the unique index (code DUPLICATE), or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
                 409: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        "application/json": components["schemas"]["BudgetConflict"];
                     };
                 };
             };
@@ -1329,7 +1414,10 @@ export type paths = {
                     /** @description Any instant inside the period to override (default: now) */
                     reference?: string;
                 };
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Budget ID */
                     id: string;
@@ -1374,6 +1462,15 @@ export type paths = {
                     };
                     content?: never;
                 };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BudgetConflict"];
+                    };
+                };
             };
         };
         post?: never;
@@ -1389,7 +1486,10 @@ export type paths = {
                     /** @description Any instant inside the period whose override is removed (default: now) */
                     reference?: string;
                 };
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Budget ID */
                     id: string;
@@ -1429,6 +1529,15 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BudgetConflict"];
+                    };
                 };
             };
         };
@@ -1503,6 +1612,7 @@ export type paths = {
         /**
          * Create a new category
          * @description Active category names are unique per user, case-insensitively ("Comida" = "comida"; accents still distinct).
+         *     Accepts an optional client-minted `id` (UUID). An id the user already owns replays with 200 and the stored resource, whatever the payload says now (the row may have been edited elsewhere since); an id that belongs to another user is rejected with 409 ID_TAKEN.
          */
         post: {
             parameters: {
@@ -1517,6 +1627,15 @@ export type paths = {
                 };
             };
             responses: {
+                /** @description Replay of a create already made with this client-minted id */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Category"];
+                    };
+                };
                 /** @description Category created */
                 201: {
                     headers: {
@@ -1544,7 +1663,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description An active category with this name already exists (code DUPLICATE, case-insensitive) */
+                /** @description An active category with this name already exists (code DUPLICATE, case-insensitive), or the client-minted id is already in use (code ID_TAKEN) */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1677,7 +1796,10 @@ export type paths = {
         put: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Category ID */
                     id: string;
@@ -1726,13 +1848,13 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Another active category already uses this name (code DUPLICATE, case-insensitive) */
+                /** @description Another active category already uses this name (code DUPLICATE, case-insensitive), or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
                 409: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        "application/json": components["schemas"]["CategoryConflict"];
                     };
                 };
             };
@@ -1745,7 +1867,10 @@ export type paths = {
         delete: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Category ID */
                     id: string;
@@ -1754,13 +1879,13 @@ export type paths = {
             };
             requestBody?: never;
             responses: {
-                /** @description Category archived (or already archived) */
+                /** @description The archived category (also when it was already archived), with its new `updatedAt` */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Message"];
+                        "application/json": components["schemas"]["Category"];
                     };
                 };
                 /** @description Invalid ID format (code VALIDATION) */
@@ -1790,6 +1915,15 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CategoryConflict"];
+                    };
+                };
             };
         };
         options?: never;
@@ -1813,7 +1947,10 @@ export type paths = {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Category ID */
                     id: string;
@@ -1862,13 +1999,13 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description An active category already uses this name (code DUPLICATE) */
+                /** @description An active category already uses this name (code DUPLICATE), or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
                 409: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        "application/json": components["schemas"]["CategoryConflict"];
                     };
                 };
             };
@@ -1950,6 +2087,216 @@ export type paths = {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sync/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything that changed for the user, for the offline mirror
+         * @description One feed for the four entities and the user, ordered by
+         *     `(updatedAt, _id)` and paginated with an opaque cursor. **Archived and
+         *     deleted rows are included** — they are the only way a client that is
+         *     holding a local copy learns that something disappeared. Deleted
+         *     transactions arrive with `deletedAt` set; archived accounts,
+         *     categories and budgets with `archivedAt`.
+         *
+         *     **No `since` and no `cursor` is a full snapshot**, down the same code
+         *     path: there is no separate snapshot endpoint to drift from this one.
+         *
+         *     **Budgets come as stored, not as the view `GET /budgets` returns.**
+         *     The view's `spent`, `periodKey` and `periodFrom`/`periodTo` are derived
+         *     from a reference date and from the transactions, so they are not state
+         *     to mirror; the client derives them locally from what it already has.
+         *
+         *     **How to page.** Send the previous response's `nextCursor` back
+         *     verbatim, until `hasMore` is false. The cursor of a finished run is
+         *     deliberately **60 seconds behind `serverTime`**: `updatedAt` is stamped
+         *     by the application server, not by MongoDB, so instances with drifted
+         *     clocks can confirm writes out of order. Rows in that overlap arrive
+         *     twice; applying by `id` with an upsert makes that free, and it is what
+         *     stops a write from being missed forever.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /**
+                     * @description Lower bound on `updatedAt`, EXCLUSIVE (ISO 8601 with a time and an
+                     *     offset). Ignored when `cursor` is also sent — the cursor is the
+                     *     more precise position of the two.
+                     */
+                    since?: string;
+                    /**
+                     * @description Opaque; the `nextCursor` of a previous response, verbatim. A
+                     *     malformed one is `400 INVALID_CURSOR`, never a silent page one.
+                     */
+                    cursor?: string;
+                    /** @description Rows per page across ALL entities together, not per entity. */
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description One page of changes */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SyncChangesResponse"];
+                    };
+                };
+                /**
+                 * @description Invalid query parameters (code VALIDATION) or an unreadable cursor
+                 *     (code INVALID_CURSOR)
+                 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Push the offline outbox as one batch
+         * @description Applies up to 200 queued write operations in `seq` order, each one
+         *     through **the same service the matching HTTP route calls** — no rule
+         *     lives here that the routes do not enforce — and answers **one result
+         *     per operation**. The batch is not a transaction: the response is
+         *     `200` whenever the envelope is valid, and each operation's `status`
+         *     says what happened to it.
+         *
+         *     | status | meaning | what the client does |
+         *     |---|---|---|
+         *     | `applied` | landed now; `result` is what the route would have answered | drop the operation, keep `result` |
+         *     | `duplicate` | already landed: a resent `opId`, or a create whose `id` the user already owns (`result` carries the row in that case) | drop the operation |
+         *     | `conflict` | the route would have answered 409 (`STALE_UPDATE` with `current`, `DUPLICATE`, `ID_TAKEN`), or a row the server has explains it: a `DUPLICATE` whose name an active row holds, and `RESOURCE_ARCHIVED` for an account archived online. `current` carries that row | keep it; resolve |
+         *     | `rejected` | the route would have answered another 4xx (`VALIDATION`, `NOT_FOUND`, `CATEGORY_ARCHIVED`, `BUDGET_PERIOD_OVERLAP`, `FUTURE_DATE`…) | keep it; the user fixes or discards |
+         *     | `blocked` | a row it names (`dependsOn`, or its own `id`) had an operation fail earlier in this batch; `blockedBy` is that opId | keep it; resend once the blocker is resolved |
+         *     | `merged` | a category create whose name and type an active category already has: it landed on that row, named by `mergedInto`, and the rest of the batch was redirected to it | drop it; point the local row at `mergedInto` |
+         *
+         *     **Reconciliation (per entity).** A category create whose name (case
+         *     folded, like the unique index) and type match an ACTIVE category comes
+         *     back `merged`; same name, another type stays a conflict. Accounts never
+         *     merge — it would rewrite balances — so a taken name is a conflict with
+         *     the server's account in `current`. A movement whose category was
+         *     archived online is saved WITHOUT it, flagged `pendingDetails`, with
+         *     `warnings: ["CATEGORY_ARCHIVED_DROPPED"]`; a budget's category is never
+         *     dropped (no categories means a global budget). A movement whose account
+         *     was archived online is a `conflict` `RESOURCE_ARCHIVED` and is never
+         *     lost. Archiving an already-archived row lands, and deleting a movement
+         *     another device deleted answers `duplicate`.
+         *
+         *     **Actions per entity:** account: create, update, archive, restore,
+         *     setDefault · category: create, update, archive, restore · transaction:
+         *     create, quickAdd, update, delete · budget: create, update, archive,
+         *     restore, setOverride, clearOverride. `payload.body` is the body the
+         *     matching route takes, validated with the same rules (a bad body
+         *     rejects that operation only); `payload.query.reference` is the budget
+         *     routes' `reference`; `baseUpdatedAt` is the route's `If-Match`. A
+         *     create's `payload.body.id`, if sent, must equal `id`.
+         *
+         *     **Idempotency:** every landed `opId` is remembered for 30 days; sending
+         *     it again answers `duplicate` without applying anything. A conflict or
+         *     a rejection is not remembered — the operation is still pending on the
+         *     device, which may resend it once fixed.
+         *
+         *     **Limits:** 1–200 operations, body up to 1 MB, `opVersion` 1.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SyncBatchInput"];
+                };
+            };
+            responses: {
+                /** @description One result per operation, in `seq` order */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SyncBatchResponse"];
+                    };
+                };
+                /**
+                 * @description The envelope is invalid (code VALIDATION): empty or too long, a
+                 *     repeated opId, a malformed field. Nothing was applied.
+                 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Body over 1 MB (code PAYLOAD_TOO_LARGE) */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -2044,6 +2391,11 @@ export type paths = {
          *     - **ADJUSTMENT**: Balance reconciliation; exactly one of `fromAccountId` (decrease) or `toAccountId` (increase), no `categoryId`. Excluded from spending stats and budgets.
          *
          *     The server stamps `currency` (from the involved account) and `source`; client-sent values are ignored.
+         *
+         *     Accepts an optional client-minted `id` (UUID). An id the user already
+         *     owns replays with 200 and the stored transaction, whatever the
+         *     payload says now (the row may have been edited elsewhere since); an
+         *     id that belongs to another user is rejected with 409 ID_TAKEN.
          */
         post: {
             parameters: {
@@ -2065,6 +2417,15 @@ export type paths = {
                 };
             };
             responses: {
+                /** @description Replay of a create already made with this client-minted id */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Transaction"];
+                    };
+                };
                 /** @description Transaction created */
                 201: {
                     headers: {
@@ -2099,7 +2460,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description The transaction originally created with this Idempotency-Key was deleted; retry with a new key (code IDEMPOTENCY_ORIGINAL_DELETED) */
+                /** @description The transaction originally created with this Idempotency-Key was deleted (code IDEMPOTENCY_ORIGINAL_DELETED), or the client-minted id is already in use (code ID_TAKEN) */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2140,6 +2501,11 @@ export type paths = {
          *     `date` = now, and the missing side account = the user's default account.
          *     The created transaction is flagged `pendingDetails: true` and `source: QUICK`
          *     so the client can list it for later detailing. ADJUSTMENT is not allowed here.
+         *
+         *     Accepts an optional client-minted `id` (UUID). An id the user already
+         *     owns replays with 200 and the stored transaction, whatever the
+         *     payload says now (the row may have been edited elsewhere since); an
+         *     id that belongs to another user is rejected with 409 ID_TAKEN.
          */
         post: {
             parameters: {
@@ -2161,6 +2527,15 @@ export type paths = {
                 };
             };
             responses: {
+                /** @description Replay of a create already made with this client-minted id */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Transaction"];
+                    };
+                };
                 /** @description Transaction created (pendingDetails=true, source=QUICK) */
                 201: {
                     headers: {
@@ -2195,7 +2570,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description The transaction originally created with this Idempotency-Key was deleted; retry with a new key (code IDEMPOTENCY_ORIGINAL_DELETED) */
+                /** @description The transaction originally created with this Idempotency-Key was deleted (code IDEMPOTENCY_ORIGINAL_DELETED), or the client-minted id is already in use (code ID_TAKEN) */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2401,7 +2776,10 @@ export type paths = {
         put: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Transaction ID */
                     id: string;
@@ -2446,6 +2824,15 @@ export type paths = {
                     };
                     content?: never;
                 };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TransactionConflict"];
+                    };
+                };
             };
         };
         post?: never;
@@ -2456,7 +2843,10 @@ export type paths = {
         delete: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
                 path: {
                     /** @description Transaction ID */
                     id: string;
@@ -2494,6 +2884,15 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TransactionConflict"];
+                    };
                 };
             };
         };
@@ -2721,6 +3120,8 @@ export type components = {
             locale?: "en" | "es";
         };
         CreateAccountInput: {
+            /** Format: uuid */
+            id?: string;
             name: string;
             /** @enum {string} */
             type: "CASH" | "ACCOUNT" | "CARD" | "DEBIT_CARD" | "SAVINGS" | "INVESTMENT" | "OVERDRAFT" | "LOAN" | "OTHER";
@@ -2737,6 +3138,8 @@ export type components = {
             color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
         };
         CreateCategoryInput: {
+            /** Format: uuid */
+            id?: string;
             name: string;
             /** @enum {string} */
             icon?: "apple" | "arrow-left-right" | "baby" | "banknote" | "bath" | "battery" | "bed" | "beer" | "bike" | "book-open" | "briefcase" | "building-2" | "bus" | "cake" | "calculator" | "camera" | "car" | "carrot" | "cat" | "church" | "circle-plus" | "coffee" | "coins" | "cookie" | "credit-card" | "croissant" | "crown" | "dog" | "droplets" | "dumbbell" | "film" | "flame" | "footprints" | "fuel" | "gamepad-2" | "gem" | "gift" | "glasses" | "graduation-cap" | "hammer" | "hand-coins" | "hash" | "headphones" | "heart" | "house" | "ice-cream-cone" | "key" | "landmark" | "laptop" | "layers" | "leaf" | "lightbulb" | "martini" | "medal" | "mountain" | "music" | "package" | "paint-bucket" | "paintbrush" | "percent" | "phone" | "piggy-bank" | "pill" | "pizza" | "plane" | "plug" | "popcorn" | "radio" | "receipt" | "repeat" | "sandwich" | "scale" | "scissors" | "shield" | "ship" | "shirt" | "shopping-bag" | "shopping-basket" | "shopping-cart" | "sofa" | "speaker" | "sprout" | "star" | "stethoscope" | "store" | "tag" | "target" | "tent" | "ticket" | "train-front" | "trees" | "trending-down" | "trending-up" | "trophy" | "truck" | "tv" | "umbrella" | "utensils" | "wallet" | "washing-machine" | "watch" | "wifi" | "wine" | "wrench" | "zap";
@@ -2755,6 +3158,8 @@ export type components = {
             type?: "INCOME" | "EXPENSE" | "TRANSFER" | null;
         };
         CreateTransactionInput: {
+            /** Format: uuid */
+            id?: string;
             /** @enum {string} */
             type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
             amount: number;
@@ -2788,6 +3193,8 @@ export type components = {
             pendingDetails?: boolean;
         };
         QuickAddTransactionInput: {
+            /** Format: uuid */
+            id?: string;
             amount: number;
             /** @enum {string} */
             type?: "INCOME" | "EXPENSE" | "TRANSFER";
@@ -2815,6 +3222,8 @@ export type components = {
             name?: string;
         };
         CreateBudgetInput: {
+            /** Format: uuid */
+            id?: string;
             name: string;
             /** @enum {string} */
             color: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
@@ -2853,6 +3262,36 @@ export type components = {
         BudgetAmountOverrideInput: {
             amount: number;
         };
+        SyncBatchInput: {
+            operations: {
+                /** Format: uuid */
+                opId: string;
+                seq: number;
+                /** Format: date-time */
+                occurredAt: string;
+                /** @enum {string} */
+                entity: "account" | "category" | "transaction" | "budget";
+                /** @description Per entity — account: create, update, archive, restore, setDefault; category: create, update, archive, restore; transaction: create, quickAdd, update, delete; budget: create, update, archive, restore, setOverride, clearOverride */
+                action: string;
+                /** Format: uuid */
+                id: string;
+                /** @default {} */
+                payload: {
+                    body?: {
+                        [key: string]: unknown;
+                    };
+                    query?: {
+                        /** Format: date-time */
+                        reference?: string;
+                    };
+                };
+                /** Format: date-time */
+                baseUpdatedAt?: string;
+                /** @default [] */
+                dependsOn: string[];
+                opVersion: number;
+            }[];
+        };
         ErrorResponse: {
             /** @example NotFoundError */
             error: string;
@@ -2861,7 +3300,7 @@ export type components = {
              * @description Stable machine-readable code. Branch on this, never on message.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             details?: {
                 field?: string;
                 message?: string;
@@ -2918,6 +3357,8 @@ export type components = {
             /** Format: date-time */
             expiresAt: string;
             userAgent?: string;
+            /** @description True for the session the requesting access token belongs to (this device). */
+            current: boolean;
         };
         Account: {
             /** Format: uuid */
@@ -3040,7 +3481,7 @@ export type components = {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message: string;
         };
         /** @description Per-item outcome. The status is 200 even when some items failed: read `failed`. */
@@ -3061,6 +3502,153 @@ export type components = {
             buckets: components["schemas"]["StatsBucket"][];
             /** @description Real total without double counting (multi-tag buckets can sum higher). */
             total: number;
+        };
+        /** @description A transaction in the change feed: the usual shape plus the tombstone. */
+        SyncTransaction: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
+            amount: number;
+            /** Format: date-time */
+            date: string;
+            /** Format: uuid */
+            categoryId: string | null;
+            description: string | null;
+            /** Format: uuid */
+            fromAccountId: string | null;
+            /** Format: uuid */
+            toAccountId: string | null;
+            /** Format: uuid */
+            userId: string;
+            tags: string[];
+            note: string | null;
+            pendingDetails: boolean;
+            /**
+             * @description Server-derived; quick-add stamps QUICK.
+             * @enum {string}
+             */
+            source: "MANUAL" | "QUICK" | "IMPORT";
+            /** @example COP */
+            currency: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /**
+             * Format: date-time
+             * @description Set when the transaction was deleted. Only the sync feed reports it: everywhere else a deleted transaction simply stops existing.
+             */
+            deletedAt: string | null;
+        };
+        /** @description A budget as STORED, not the view GET /budgets returns: no periodKey, no window and no spent. Those depend on a reference date and on the transactions, so the client derives them from what it already holds. */
+        SyncBudget: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            color: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
+            /** @description Empty array = global budget (all spending counts). */
+            categoryIds: string[];
+            /** @enum {string} */
+            type: "EXPENSE" | "INCOME";
+            /** @example COP */
+            currency: string;
+            /** @description Base amount, before any override. */
+            amount: number;
+            /** @description Period key (e.g. "2026-12") to the amount for it. */
+            amountOverrides: {
+                [key: string]: number;
+            };
+            /** @enum {string} */
+            periodType: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+            /** Format: date-time */
+            periodStartDate: string | null;
+            /** Format: date-time */
+            periodEndDate: string | null;
+            /** Format: date-time */
+            effectiveFrom: string | null;
+            note: string | null;
+            /** Format: uuid */
+            userId: string;
+            /** Format: date-time */
+            archivedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SyncChangesResponse: {
+            /**
+             * Format: date-time
+             * @description The server's clock when the page was read.
+             */
+            serverTime: string;
+            changes: {
+                /** @description Null when the profile did not change in this page. */
+                user: components["schemas"]["User"] | null;
+                accounts: components["schemas"]["Account"][];
+                categories: components["schemas"]["Category"][];
+                transactions: components["schemas"]["SyncTransaction"][];
+                budgets: components["schemas"]["SyncBudget"][];
+            };
+            pagination: {
+                limit: number;
+                /** @description Rows in this page, all entities together. */
+                count: number;
+                hasMore: boolean;
+                /** @description Opaque. Send it back verbatim: as `cursor` to keep paging while `hasMore`, and as the starting `cursor` of the next pull once it is false. */
+                nextCursor: string;
+            };
+        };
+        SyncOpResult: {
+            /** Format: uuid */
+            opId: string;
+            seq: number;
+            /** @enum {string} */
+            entity: "account" | "category" | "transaction" | "budget";
+            /**
+             * Format: uuid
+             * @description The entity the operation was about.
+             */
+            id: string;
+            /** @enum {string} */
+            status: "applied" | "merged" | "duplicate" | "conflict" | "rejected" | "blocked";
+            /**
+             * @description conflict / rejected: the code the matching route would have answered.
+             * @enum {string}
+             */
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            message?: string;
+            details?: {
+                field?: string;
+                message?: string;
+            }[];
+            /** @description The row as the server has it, like the HTTP 409: STALE_UPDATE, a DUPLICATE whose name an active row holds, and RESOURCE_ARCHIVED. */
+            current?: components["schemas"]["Account"] | components["schemas"]["Category"] | components["schemas"]["Transaction"] | components["schemas"]["Budget"];
+            /** @description applied, merged, and duplicate by client-minted id: what the route would have answered. Absent for transaction:delete and for a duplicate opId. */
+            result?: components["schemas"]["Account"] | components["schemas"]["Category"] | components["schemas"]["Transaction"] | components["schemas"]["Budget"];
+            /**
+             * Format: uuid
+             * @description blocked only: the opId, in this batch, whose failure blocks this one.
+             */
+            blockedBy?: string;
+            /**
+             * Format: uuid
+             * @description merged (and a resent merged opId): the server row this operation landed on instead of `id`. Later operations of the same batch that name `id` are applied against it.
+             */
+            mergedInto?: string;
+            /** @description The write landed, but not as it was sent: CATEGORY_ARCHIVED_DROPPED — the category was archived online, so the movement was saved without it and flagged pendingDetails. */
+            warnings?: "CATEGORY_ARCHIVED_DROPPED"[];
+        };
+        SyncBatchResponse: {
+            /**
+             * Format: date-time
+             * @description The server's clock when the batch started.
+             */
+            serverTime: string;
+            /** @description One per operation, in `seq` order. */
+            results: components["schemas"]["SyncOpResult"][];
         };
         AccountList: {
             data: components["schemas"]["Account"][];
@@ -3091,9 +3679,24 @@ export type components = {
         RestoreDefaultsResponse: {
             data: components["schemas"]["Category"][];
         };
+        AccountConflict: components["schemas"]["ErrorResponse"] & {
+            current?: components["schemas"]["Account"];
+        };
+        CategoryConflict: components["schemas"]["ErrorResponse"] & {
+            current?: components["schemas"]["Category"];
+        };
+        TransactionConflict: components["schemas"]["ErrorResponse"] & {
+            current?: components["schemas"]["Transaction"];
+        };
+        BudgetConflict: components["schemas"]["ErrorResponse"] & {
+            current?: components["schemas"]["Budget"];
+        };
     };
     responses: never;
-    parameters: never;
+    parameters: {
+        /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+        IfMatch: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -3114,6 +3717,7 @@ export type RestoreInput = components['schemas']['RestoreInput'];
 export type CreateBudgetInput = components['schemas']['CreateBudgetInput'];
 export type UpdateBudgetInput = components['schemas']['UpdateBudgetInput'];
 export type BudgetAmountOverrideInput = components['schemas']['BudgetAmountOverrideInput'];
+export type SyncBatchInput = components['schemas']['SyncBatchInput'];
 export type ErrorResponse = components['schemas']['ErrorResponse'];
 export type Message = components['schemas']['Message'];
 export type Pagination = components['schemas']['Pagination'];
@@ -3128,6 +3732,11 @@ export type BatchUpdateFailure = components['schemas']['BatchUpdateFailure'];
 export type BatchUpdateResult = components['schemas']['BatchUpdateResult'];
 export type StatsBucket = components['schemas']['StatsBucket'];
 export type StatsResponse = components['schemas']['StatsResponse'];
+export type SyncTransaction = components['schemas']['SyncTransaction'];
+export type SyncBudget = components['schemas']['SyncBudget'];
+export type SyncChangesResponse = components['schemas']['SyncChangesResponse'];
+export type SyncOpResult = components['schemas']['SyncOpResult'];
+export type SyncBatchResponse = components['schemas']['SyncBatchResponse'];
 export type AccountList = components['schemas']['AccountList'];
 export type CategoryList = components['schemas']['CategoryList'];
 export type TransactionList = components['schemas']['TransactionList'];
@@ -3135,5 +3744,10 @@ export type BudgetList = components['schemas']['BudgetList'];
 export type SessionList = components['schemas']['SessionList'];
 export type TagList = components['schemas']['TagList'];
 export type RestoreDefaultsResponse = components['schemas']['RestoreDefaultsResponse'];
+export type AccountConflict = components['schemas']['AccountConflict'];
+export type CategoryConflict = components['schemas']['CategoryConflict'];
+export type TransactionConflict = components['schemas']['TransactionConflict'];
+export type BudgetConflict = components['schemas']['BudgetConflict'];
+export type ParameterIfMatch = components['parameters']['IfMatch'];
 export type $defs = Record<string, never>;
 export type operations = Record<string, never>;
