@@ -333,6 +333,87 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/accounts/{id}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark an account as the user's default
+         * @description The previous default account is unmarked automatically.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Account ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default account set */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Account"];
+                    };
+                };
+                /** @description Invalid ID format (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Account not found (uniform for missing, not owned, and archived) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountConflict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/accounts/{id}/restore": {
         parameters: {
             query?: never;
@@ -418,157 +499,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/accounts/{id}/default": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Mark an account as the user's default
-         * @description The previous default account is unmarked automatically.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: {
-                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
-                    "If-Match"?: components["parameters"]["IfMatch"];
-                };
-                path: {
-                    /** @description Account ID */
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Default account set */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Account"];
-                    };
-                };
-                /** @description Invalid ID format (code VALIDATION) */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Account not found (uniform for missing, not owned, and archived) */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AccountConflict"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/register": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Register a new user
-         * @description Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored). On a 500 the user may still have been created: try login before retrying register.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["RegisterInput"];
-                };
-            };
-            responses: {
-                /** @description User registered and logged in */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AuthTokens"];
-                    };
-                };
-                /** @description Validation error (code VALIDATION) */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Email is already registered (code DUPLICATE from the unique index, or EMAIL_TAKEN when a concurrent register reactivated the same soft-deleted account) */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Too many attempts from this IP (code RATE_LIMITED) */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -614,76 +544,6 @@ export type paths = {
                     };
                 };
                 /** @description Invalid email or password */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Too many attempts (code RATE_LIMITED) */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Exchange a refresh token for a new access + refresh token pair
-         * @description True rotation: the presented refresh token is invalidated and a new pair is issued (the response carries no `user`). Always store the new token — replaying an already-rotated one is treated as theft and revokes the whole device session family (401 REFRESH_REVOKED, re-login required). Rotation never extends the session past its original absolute expiry.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["RefreshInput"];
-                };
-            };
-            responses: {
-                /** @description New token pair issued */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AuthTokens"];
-                    };
-                };
-                /** @description Validation error (code VALIDATION) */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Invalid or expired refresh token (code REFRESH_INVALID), or token revoked — reuse of a rotated token, password/email change, or logout-all (code REFRESH_REVOKED) */
                 401: {
                     headers: {
                         [name: string]: unknown;
@@ -812,6 +672,146 @@ export type paths = {
                 };
                 /** @description Missing, invalid or expired access token */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange a refresh token for a new access + refresh token pair
+         * @description True rotation: the presented refresh token is invalidated and a new pair is issued (the response carries no `user`). Always store the new token — replaying an already-rotated one is treated as theft and revokes the whole device session family (401 REFRESH_REVOKED, re-login required). Rotation never extends the session past its original absolute expiry.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RefreshInput"];
+                };
+            };
+            responses: {
+                /** @description New token pair issued */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuthTokens"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Invalid or expired refresh token (code REFRESH_INVALID), or token revoked — reuse of a rotated token, password/email change, or logout-all (code REFRESH_REVOKED) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many attempts (code RATE_LIMITED) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register a new user
+         * @description Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored). On a 500 the user may still have been created: try login before retrying register.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RegisterInput"];
+                };
+            };
+            responses: {
+                /** @description User registered and logged in */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuthTokens"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Email is already registered (code DUPLICATE from the unique index, or EMAIL_TAKEN when a concurrent register reactivated the same soft-deleted account) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many attempts from this IP (code RATE_LIMITED) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1299,98 +1299,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/budgets/{id}/restore": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Restore an archived budget
-         * @description Brings an archived budget back exactly as it was: its overrides,
-         *     `effectiveFrom`, note, colour and `categoryIds` are untouched, archived
-         *     categories included, and a finished CUSTOM one returns with
-         *     `expired: true`.
-         *
-         *     Idempotent — restoring an active budget returns it unchanged. It takes
-         *     no body: if another active budget of the same type and period already
-         *     covers one of its categories (for CUSTOM, one whose date window
-         *     intersects) the restore is refused with **400
-         *     `BUDGET_PERIOD_OVERLAP`**, because changing its categories or period
-         *     would make it a different budget; create a new one instead.
-         */
-        post: {
-            parameters: {
-                query?: {
-                    /** @description Any instant inside the period to resolve (default: now) */
-                    reference?: string;
-                };
-                header?: {
-                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
-                    "If-Match"?: components["parameters"]["IfMatch"];
-                };
-                path: {
-                    /** @description Budget ID */
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Budget restored (view resolved for the reference period) */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Budget"];
-                    };
-                };
-                /** @description Another active budget already covers these categories for this period (code BUDGET_PERIOD_OVERLAP) */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Budget not found (uniform for missing and not owned) */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description A concurrent restore won the race against the unique index (code DUPLICATE), or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["BudgetConflict"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/budgets/{id}/amount": {
         parameters: {
             query?: never;
@@ -1546,6 +1454,98 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/budgets/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore an archived budget
+         * @description Brings an archived budget back exactly as it was: its overrides,
+         *     `effectiveFrom`, note, colour and `categoryIds` are untouched, archived
+         *     categories included, and a finished CUSTOM one returns with
+         *     `expired: true`.
+         *
+         *     Idempotent — restoring an active budget returns it unchanged. It takes
+         *     no body: if another active budget of the same type and period already
+         *     covers one of its categories (for CUSTOM, one whose date window
+         *     intersects) the restore is refused with **400
+         *     `BUDGET_PERIOD_OVERLAP`**, because changing its categories or period
+         *     would make it a different budget; create a new one instead.
+         */
+        post: {
+            parameters: {
+                query?: {
+                    /** @description Any instant inside the period to resolve (default: now) */
+                    reference?: string;
+                };
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Budget ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Budget restored (view resolved for the reference period) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Budget"];
+                    };
+                };
+                /** @description Another active budget already covers these categories for this period (code BUDGET_PERIOD_OVERLAP) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Budget not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A concurrent restore won the race against the unique index (code DUPLICATE), or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BudgetConflict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/categories": {
         parameters: {
             query?: never;
@@ -1665,54 +1665,6 @@ export type paths = {
                 };
                 /** @description An active category with this name already exists (code DUPLICATE, case-insensitive), or the client-minted id is already in use (code ID_TAKEN) */
                 409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/categories/restore-defaults": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Recreate the missing default categories (idempotent by seedKey)
-         * @description Creates only the missing defaults. Archived seed categories count as present and renamed ones keep their seedKey, so neither is duplicated.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Newly created defaults (empty array when none were missing) */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["RestoreDefaultsResponse"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2016,6 +1968,54 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/categories/restore-defaults": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recreate the missing default categories (idempotent by seedKey)
+         * @description Creates only the missing defaults. Archived seed categories count as present and renamed ones keep their seedKey, so neither is duplicated.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Newly created defaults (empty array when none were missing) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RestoreDefaultsResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/stats/spending": {
         parameters: {
             query?: never;
@@ -2066,101 +2066,6 @@ export type paths = {
                     };
                 };
                 /** @description Invalid query parameters, including from later than to (code VALIDATION) */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sync/changes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Everything that changed for the user, for the offline mirror
-         * @description One feed for the four entities and the user, ordered by
-         *     `(updatedAt, _id)` and paginated with an opaque cursor. **Archived and
-         *     deleted rows are included** — they are the only way a client that is
-         *     holding a local copy learns that something disappeared. Deleted
-         *     transactions arrive with `deletedAt` set; archived accounts,
-         *     categories and budgets with `archivedAt`.
-         *
-         *     **No `since` and no `cursor` is a full snapshot**, down the same code
-         *     path: there is no separate snapshot endpoint to drift from this one.
-         *
-         *     **Budgets come as stored, not as the view `GET /budgets` returns.**
-         *     The view's `spent`, `periodKey` and `periodFrom`/`periodTo` are derived
-         *     from a reference date and from the transactions, so they are not state
-         *     to mirror; the client derives them locally from what it already has.
-         *
-         *     **How to page.** Send the previous response's `nextCursor` back
-         *     verbatim, until `hasMore` is false. The cursor of a finished run is
-         *     deliberately **60 seconds behind `serverTime`**: `updatedAt` is stamped
-         *     by the application server, not by MongoDB, so instances with drifted
-         *     clocks can confirm writes out of order. Rows in that overlap arrive
-         *     twice; applying by `id` with an upsert makes that free, and it is what
-         *     stops a write from being missed forever.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /**
-                     * @description Lower bound on `updatedAt`, EXCLUSIVE (ISO 8601 with a time and an
-                     *     offset). Ignored when `cursor` is also sent — the cursor is the
-                     *     more precise position of the two.
-                     */
-                    since?: string;
-                    /**
-                     * @description Opaque; the `nextCursor` of a previous response, verbatim. A
-                     *     malformed one is `400 INVALID_CURSOR`, never a silent page one.
-                     */
-                    cursor?: string;
-                    /** @description Rows per page across ALL entities together, not per entity. */
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description One page of changes */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SyncChangesResponse"];
-                    };
-                };
-                /**
-                 * @description Invalid query parameters (code VALIDATION) or an unreadable cursor
-                 *     (code INVALID_CURSOR)
-                 */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2297,6 +2202,101 @@ export type paths = {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sync/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything that changed for the user, for the offline mirror
+         * @description One feed for the four entities and the user, ordered by
+         *     `(updatedAt, _id)` and paginated with an opaque cursor. **Archived and
+         *     deleted rows are included** — they are the only way a client that is
+         *     holding a local copy learns that something disappeared. Deleted
+         *     transactions arrive with `deletedAt` set; archived accounts,
+         *     categories and budgets with `archivedAt`.
+         *
+         *     **No `since` and no `cursor` is a full snapshot**, down the same code
+         *     path: there is no separate snapshot endpoint to drift from this one.
+         *
+         *     **Budgets come as stored, not as the view `GET /budgets` returns.**
+         *     The view's `spent`, `periodKey` and `periodFrom`/`periodTo` are derived
+         *     from a reference date and from the transactions, so they are not state
+         *     to mirror; the client derives them locally from what it already has.
+         *
+         *     **How to page.** Send the previous response's `nextCursor` back
+         *     verbatim, until `hasMore` is false. The cursor of a finished run is
+         *     deliberately **60 seconds behind `serverTime`**: `updatedAt` is stamped
+         *     by the application server, not by MongoDB, so instances with drifted
+         *     clocks can confirm writes out of order. Rows in that overlap arrive
+         *     twice; applying by `id` with an upsert makes that free, and it is what
+         *     stops a write from being missed forever.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /**
+                     * @description Lower bound on `updatedAt`, EXCLUSIVE (ISO 8601 with a time and an
+                     *     offset). Ignored when `cursor` is also sent — the cursor is the
+                     *     more precise position of the two.
+                     */
+                    since?: string;
+                    /**
+                     * @description Opaque; the `nextCursor` of a previous response, verbatim. A
+                     *     malformed one is `400 INVALID_CURSOR`, never a silent page one.
+                     */
+                    cursor?: string;
+                    /** @description Rows per page across ALL entities together, not per entity. */
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description One page of changes */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SyncChangesResponse"];
+                    };
+                };
+                /**
+                 * @description Invalid query parameters (code VALIDATION) or an unreadable cursor
+                 *     (code INVALID_CURSOR)
+                 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2486,235 +2486,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/transactions/quick": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Quick-add a transaction (amount only; other fields defaulted)
-         * @description Low-friction capture: only `amount` is required. Defaults: `type` = EXPENSE,
-         *     `date` = now, and the missing side account = the user's default account.
-         *     The created transaction is flagged `pendingDetails: true` and `source: QUICK`
-         *     so the client can list it for later detailing. ADJUSTMENT is not allowed here.
-         *
-         *     Accepts an optional client-minted `id` (UUID). An id the user already
-         *     owns replays with 200 and the stored transaction, whatever the
-         *     payload says now (the row may have been edited elsewhere since); an
-         *     id that belongs to another user is rejected with 409 ID_TAKEN.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: {
-                    /**
-                     * @description Optional retry-safety key (1-200 chars of [A-Za-z0-9_-]). Retrying with the
-                     *     same key and payload returns the already-created transaction instead of a
-                     *     duplicate. Keys expire after 24 hours.
-                     */
-                    "Idempotency-Key"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["QuickAddTransactionInput"];
-                };
-            };
-            responses: {
-                /** @description Replay of a create already made with this client-minted id */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Transaction"];
-                    };
-                };
-                /** @description Transaction created (pendingDetails=true, source=QUICK) */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Transaction"];
-                    };
-                };
-                /** @description Validation error. Codes include NO_DEFAULT_ACCOUNT (no account id given and no default account set), FUTURE_DATE, CURRENCY_MISMATCH, CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH, IDEMPOTENCY_KEY_INVALID. */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Referenced category or account not found (or not owned by the user) */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description The transaction originally created with this Idempotency-Key was deleted (code IDEMPOTENCY_ORIGINAL_DELETED), or the client-minted id is already in use (code ID_TAKEN) */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Idempotency-Key was already used with a different payload (code IDEMPOTENCY_PAYLOAD_MISMATCH) */
-                422: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/transactions/tags": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Distinct tags used by the user (autocomplete source) */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Sorted list of the user's distinct tags (stored trimmed and lowercased) */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["TagList"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/transactions/batch": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Complete several quick-adds in one request
-         * @description Saves the detail of up to 100 transactions at once — the review inbox
-         *     clearing its cards. Only detail fields are accepted (`categoryId`,
-         *     `description`, `pendingDetails`), so nothing here can move a balance.
-         *
-         *     **Items are independent.** Each is validated and saved on its own, and
-         *     a failure leaves only that item unsaved: the response returns the ones
-         *     that were saved in `updated` and the rest in `failed`, each with the
-         *     machine-readable `code` of why. The status is **200** even when some
-         *     items failed — read `failed`, not the status.
-         *
-         *     Accepts `Idempotency-Key` (validated, 400 `IDEMPOTENCY_KEY_INVALID` if
-         *     malformed). Nothing is stored against it: the request sets fields to
-         *     given values, so retrying it lands on the same state.
-         */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: {
-                    /** @description Optional; 1-200 characters of [A-Za-z0-9_-] */
-                    "Idempotency-Key"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["BatchUpdateTransactionsInput"];
-                };
-            };
-            responses: {
-                /** @description Per-item outcome; some items may have failed */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["BatchUpdateResult"];
-                    };
-                };
-                /** @description Validation error — empty list, over 100 items, a repeated id, an item that changes nothing, or a malformed Idempotency-Key */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
     "/transactions/{id}": {
         parameters: {
             query?: never;
@@ -2896,6 +2667,235 @@ export type paths = {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transactions/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Complete several quick-adds in one request
+         * @description Saves the detail of up to 100 transactions at once — the review inbox
+         *     clearing its cards. Only detail fields are accepted (`categoryId`,
+         *     `description`, `pendingDetails`), so nothing here can move a balance.
+         *
+         *     **Items are independent.** Each is validated and saved on its own, and
+         *     a failure leaves only that item unsaved: the response returns the ones
+         *     that were saved in `updated` and the rest in `failed`, each with the
+         *     machine-readable `code` of why. The status is **200** even when some
+         *     items failed — read `failed`, not the status.
+         *
+         *     Accepts `Idempotency-Key` (validated, 400 `IDEMPOTENCY_KEY_INVALID` if
+         *     malformed). Nothing is stored against it: the request sets fields to
+         *     given values, so retrying it lands on the same state.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optional; 1-200 characters of [A-Za-z0-9_-] */
+                    "Idempotency-Key"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchUpdateTransactionsInput"];
+                };
+            };
+            responses: {
+                /** @description Per-item outcome; some items may have failed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchUpdateResult"];
+                    };
+                };
+                /** @description Validation error — empty list, over 100 items, a repeated id, an item that changes nothing, or a malformed Idempotency-Key */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/transactions/quick": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Quick-add a transaction (amount only; other fields defaulted)
+         * @description Low-friction capture: only `amount` is required. Defaults: `type` = EXPENSE,
+         *     `date` = now, and the missing side account = the user's default account.
+         *     The created transaction is flagged `pendingDetails: true` and `source: QUICK`
+         *     so the client can list it for later detailing. ADJUSTMENT is not allowed here.
+         *
+         *     Accepts an optional client-minted `id` (UUID). An id the user already
+         *     owns replays with 200 and the stored transaction, whatever the
+         *     payload says now (the row may have been edited elsewhere since); an
+         *     id that belongs to another user is rejected with 409 ID_TAKEN.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /**
+                     * @description Optional retry-safety key (1-200 chars of [A-Za-z0-9_-]). Retrying with the
+                     *     same key and payload returns the already-created transaction instead of a
+                     *     duplicate. Keys expire after 24 hours.
+                     */
+                    "Idempotency-Key"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["QuickAddTransactionInput"];
+                };
+            };
+            responses: {
+                /** @description Replay of a create already made with this client-minted id */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Transaction"];
+                    };
+                };
+                /** @description Transaction created (pendingDetails=true, source=QUICK) */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Transaction"];
+                    };
+                };
+                /** @description Validation error. Codes include NO_DEFAULT_ACCOUNT (no account id given and no default account set), FUTURE_DATE, CURRENCY_MISMATCH, CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH, IDEMPOTENCY_KEY_INVALID. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Referenced category or account not found (or not owned by the user) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The transaction originally created with this Idempotency-Key was deleted (code IDEMPOTENCY_ORIGINAL_DELETED), or the client-minted id is already in use (code ID_TAKEN) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Idempotency-Key was already used with a different payload (code IDEMPOTENCY_PAYLOAD_MISMATCH) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transactions/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Distinct tags used by the user (autocomplete source) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sorted list of the user's distinct tags (stored trimmed and lowercased) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TagList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3090,276 +3090,6 @@ export type paths = {
 export type webhooks = Record<string, never>;
 export type components = {
     schemas: {
-        RegisterInput: {
-            name: string;
-            /** Format: email */
-            email: string;
-            password: string;
-            timezone?: string;
-            currency?: string;
-            /** @enum {string} */
-            locale?: "en" | "es";
-        };
-        LoginInput: {
-            /** Format: email */
-            email: string;
-            password: string;
-        };
-        RefreshInput: {
-            refreshToken: string;
-        };
-        UpdateUserInput: {
-            name?: string;
-            /** Format: email */
-            email?: string;
-            password?: string;
-            currentPassword?: string;
-            timezone?: string;
-            currency?: string;
-            /** @enum {string} */
-            locale?: "en" | "es";
-        };
-        CreateAccountInput: {
-            /** Format: uuid */
-            id?: string;
-            name: string;
-            /** @enum {string} */
-            type: "CASH" | "ACCOUNT" | "CARD" | "DEBIT_CARD" | "SAVINGS" | "INVESTMENT" | "OVERDRAFT" | "LOAN" | "OTHER";
-            /** @default 0 */
-            balance: number;
-            /** @enum {string} */
-            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
-        };
-        UpdateAccountInput: {
-            name?: string;
-            /** @enum {string} */
-            type?: "CASH" | "ACCOUNT" | "CARD" | "DEBIT_CARD" | "SAVINGS" | "INVESTMENT" | "OVERDRAFT" | "LOAN" | "OTHER";
-            /** @enum {string|null} */
-            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
-        };
-        CreateCategoryInput: {
-            /** Format: uuid */
-            id?: string;
-            name: string;
-            /** @enum {string} */
-            icon?: "apple" | "arrow-left-right" | "baby" | "banknote" | "bath" | "battery" | "bed" | "beer" | "bike" | "book-open" | "briefcase" | "building-2" | "bus" | "cake" | "calculator" | "camera" | "car" | "carrot" | "cat" | "church" | "circle-plus" | "coffee" | "coins" | "cookie" | "credit-card" | "croissant" | "crown" | "dog" | "droplets" | "dumbbell" | "film" | "flame" | "footprints" | "fuel" | "gamepad-2" | "gem" | "gift" | "glasses" | "graduation-cap" | "hammer" | "hand-coins" | "hash" | "headphones" | "heart" | "house" | "ice-cream-cone" | "key" | "landmark" | "laptop" | "layers" | "leaf" | "lightbulb" | "martini" | "medal" | "mountain" | "music" | "package" | "paint-bucket" | "paintbrush" | "percent" | "phone" | "piggy-bank" | "pill" | "pizza" | "plane" | "plug" | "popcorn" | "radio" | "receipt" | "repeat" | "sandwich" | "scale" | "scissors" | "shield" | "ship" | "shirt" | "shopping-bag" | "shopping-basket" | "shopping-cart" | "sofa" | "speaker" | "sprout" | "star" | "stethoscope" | "store" | "tag" | "target" | "tent" | "ticket" | "train-front" | "trees" | "trending-down" | "trending-up" | "trophy" | "truck" | "tv" | "umbrella" | "utensils" | "wallet" | "washing-machine" | "watch" | "wifi" | "wine" | "wrench" | "zap";
-            /** @enum {string} */
-            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
-            /** @enum {string} */
-            type?: "INCOME" | "EXPENSE" | "TRANSFER";
-        };
-        UpdateCategoryInput: {
-            name?: string;
-            /** @enum {string|null} */
-            icon?: "apple" | "arrow-left-right" | "baby" | "banknote" | "bath" | "battery" | "bed" | "beer" | "bike" | "book-open" | "briefcase" | "building-2" | "bus" | "cake" | "calculator" | "camera" | "car" | "carrot" | "cat" | "church" | "circle-plus" | "coffee" | "coins" | "cookie" | "credit-card" | "croissant" | "crown" | "dog" | "droplets" | "dumbbell" | "film" | "flame" | "footprints" | "fuel" | "gamepad-2" | "gem" | "gift" | "glasses" | "graduation-cap" | "hammer" | "hand-coins" | "hash" | "headphones" | "heart" | "house" | "ice-cream-cone" | "key" | "landmark" | "laptop" | "layers" | "leaf" | "lightbulb" | "martini" | "medal" | "mountain" | "music" | "package" | "paint-bucket" | "paintbrush" | "percent" | "phone" | "piggy-bank" | "pill" | "pizza" | "plane" | "plug" | "popcorn" | "radio" | "receipt" | "repeat" | "sandwich" | "scale" | "scissors" | "shield" | "ship" | "shirt" | "shopping-bag" | "shopping-basket" | "shopping-cart" | "sofa" | "speaker" | "sprout" | "star" | "stethoscope" | "store" | "tag" | "target" | "tent" | "ticket" | "train-front" | "trees" | "trending-down" | "trending-up" | "trophy" | "truck" | "tv" | "umbrella" | "utensils" | "wallet" | "washing-machine" | "watch" | "wifi" | "wine" | "wrench" | "zap" | null;
-            /** @enum {string|null} */
-            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
-            /** @enum {string|null} */
-            type?: "INCOME" | "EXPENSE" | "TRANSFER" | null;
-        };
-        CreateTransactionInput: {
-            /** Format: uuid */
-            id?: string;
-            /** @enum {string} */
-            type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
-            amount: number;
-            /** Format: date-time */
-            date: string;
-            /** Format: uuid */
-            categoryId?: string | null;
-            description?: string | null;
-            /** Format: uuid */
-            fromAccountId?: string | null;
-            /** Format: uuid */
-            toAccountId?: string | null;
-            tags?: string[];
-            note?: string | null;
-        };
-        UpdateTransactionInput: {
-            /** @enum {string} */
-            type?: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
-            amount?: number;
-            /** Format: date-time */
-            date?: string;
-            /** Format: uuid */
-            categoryId?: string | null;
-            description?: string | null;
-            /** Format: uuid */
-            fromAccountId?: string | null;
-            /** Format: uuid */
-            toAccountId?: string | null;
-            tags?: string[];
-            note?: string | null;
-            pendingDetails?: boolean;
-        };
-        QuickAddTransactionInput: {
-            /** Format: uuid */
-            id?: string;
-            amount: number;
-            /** @enum {string} */
-            type?: "INCOME" | "EXPENSE" | "TRANSFER";
-            /** Format: date-time */
-            date?: string;
-            /** Format: uuid */
-            categoryId?: string;
-            /** Format: uuid */
-            fromAccountId?: string;
-            /** Format: uuid */
-            toAccountId?: string;
-        };
-        BatchUpdateTransactionsInput: {
-            items: {
-                /** Format: uuid */
-                id: string;
-                /** Format: uuid */
-                categoryId?: string | null;
-                description?: string | null;
-                pendingDetails?: boolean;
-            }[];
-        };
-        /** @default {} */
-        RestoreInput: {
-            name?: string;
-        };
-        CreateBudgetInput: {
-            /** Format: uuid */
-            id?: string;
-            name: string;
-            /** @enum {string} */
-            color: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
-            categoryIds: string[];
-            /** @enum {string} */
-            type?: "EXPENSE" | "INCOME";
-            amount: number;
-            /** @enum {string} */
-            periodType: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
-            /** Format: date-time */
-            periodStartDate?: string;
-            /** Format: date-time */
-            periodEndDate?: string;
-            /** Format: date-time */
-            effectiveFrom?: string;
-            note?: string | null;
-        };
-        UpdateBudgetInput: {
-            name?: string;
-            /** @enum {string} */
-            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
-            categoryIds?: string[];
-            /** @enum {string} */
-            type?: "EXPENSE" | "INCOME";
-            amount?: number;
-            /** @enum {string} */
-            periodType?: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
-            /** Format: date-time */
-            periodStartDate?: string;
-            /** Format: date-time */
-            periodEndDate?: string;
-            /** Format: date-time */
-            effectiveFrom?: string | null;
-            note?: string | null;
-        };
-        BudgetAmountOverrideInput: {
-            amount: number;
-        };
-        SyncBatchInput: {
-            operations: {
-                /** Format: uuid */
-                opId: string;
-                seq: number;
-                /** Format: date-time */
-                occurredAt: string;
-                /** @enum {string} */
-                entity: "account" | "category" | "transaction" | "budget";
-                /** @description Per entity — account: create, update, archive, restore, setDefault; category: create, update, archive, restore; transaction: create, quickAdd, update, delete; budget: create, update, archive, restore, setOverride, clearOverride */
-                action: string;
-                /** Format: uuid */
-                id: string;
-                /** @default {} */
-                payload: {
-                    body?: {
-                        [key: string]: unknown;
-                    };
-                    query?: {
-                        /** Format: date-time */
-                        reference?: string;
-                    };
-                };
-                /** Format: date-time */
-                baseUpdatedAt?: string;
-                /** @default [] */
-                dependsOn: string[];
-                opVersion: number;
-            }[];
-        };
-        ErrorResponse: {
-            /** @example NotFoundError */
-            error: string;
-            message: string;
-            /**
-             * @description Stable machine-readable code. Branch on this, never on message.
-             * @enum {string}
-             */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
-            details?: {
-                field?: string;
-                message?: string;
-            }[];
-        };
-        Message: {
-            message: string;
-        };
-        Pagination: {
-            limit: number;
-            offset: number;
-            total: number;
-            hasMore: boolean;
-            /** Format: uuid */
-            nextCursor: string | null;
-        };
-        User: {
-            /** Format: uuid */
-            id: string;
-            name: string;
-            /** Format: email */
-            email: string;
-            /** @example America/Bogota */
-            timezone: string;
-            /** @example COP */
-            currency: string;
-            /**
-             * @example en
-             * @enum {string}
-             */
-            locale: "en" | "es";
-            /** Format: date-time */
-            lastLoginAt: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-            /** @description Present (true) only when register revived a soft-deleted account. */
-            reactivated?: boolean;
-        };
-        AuthTokens: {
-            accessToken: string;
-            refreshToken: string;
-            user?: components["schemas"]["User"];
-        };
-        /** @description One logged-in device (refresh-token rotation family). */
-        Session: {
-            /** Format: uuid */
-            id: string;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            lastUsedAt: string;
-            /** Format: date-time */
-            expiresAt: string;
-            userAgent?: string;
-            /** @description True for the session the requesting access token belongs to (this device). */
-            current: boolean;
-        };
         Account: {
             /** Format: uuid */
             id: string;
@@ -3382,62 +3112,39 @@ export type components = {
             /** Format: date-time */
             updatedAt: string;
         };
-        Category: {
-            /** Format: uuid */
-            id: string;
-            name: string;
-            /**
-             * @description Lucide icon key from the curated set
-             * @example utensils
-             * @enum {string|null}
-             */
-            icon: "apple" | "arrow-left-right" | "baby" | "banknote" | "bath" | "battery" | "bed" | "beer" | "bike" | "book-open" | "briefcase" | "building-2" | "bus" | "cake" | "calculator" | "camera" | "car" | "carrot" | "cat" | "church" | "circle-plus" | "coffee" | "coins" | "cookie" | "credit-card" | "croissant" | "crown" | "dog" | "droplets" | "dumbbell" | "film" | "flame" | "footprints" | "fuel" | "gamepad-2" | "gem" | "gift" | "glasses" | "graduation-cap" | "hammer" | "hand-coins" | "hash" | "headphones" | "heart" | "house" | "ice-cream-cone" | "key" | "landmark" | "laptop" | "layers" | "leaf" | "lightbulb" | "martini" | "medal" | "mountain" | "music" | "package" | "paint-bucket" | "paintbrush" | "percent" | "phone" | "piggy-bank" | "pill" | "pizza" | "plane" | "plug" | "popcorn" | "radio" | "receipt" | "repeat" | "sandwich" | "scale" | "scissors" | "shield" | "ship" | "shirt" | "shopping-bag" | "shopping-basket" | "shopping-cart" | "sofa" | "speaker" | "sprout" | "star" | "stethoscope" | "store" | "tag" | "target" | "tent" | "ticket" | "train-front" | "trees" | "trending-down" | "trending-up" | "trophy" | "truck" | "tv" | "umbrella" | "utensils" | "wallet" | "washing-machine" | "watch" | "wifi" | "wine" | "wrench" | "zap" | null;
-            /** @enum {string|null} */
-            color: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
-            /** @enum {string|null} */
-            type: "INCOME" | "EXPENSE" | "TRANSFER" | null;
-            /** Format: uuid */
-            userId: string;
-            /** @description Stable identity of a seeded default category. */
-            seedKey?: string;
-            /** Format: date-time */
-            archivedAt: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
+        AccountConflict: components["schemas"]["ErrorResponse"] & {
+            current?: components["schemas"]["Account"];
         };
-        Transaction: {
+        AccountList: {
+            data: components["schemas"]["Account"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        AuthTokens: {
+            accessToken: string;
+            refreshToken: string;
+            user?: components["schemas"]["User"];
+        };
+        BatchUpdateFailure: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
-            amount: number;
-            /** Format: date-time */
-            date: string;
-            /** Format: uuid */
-            categoryId: string | null;
-            description: string | null;
-            /** Format: uuid */
-            fromAccountId: string | null;
-            /** Format: uuid */
-            toAccountId: string | null;
-            /** Format: uuid */
-            userId: string;
-            tags: string[];
-            note: string | null;
-            pendingDetails: boolean;
-            /**
-             * @description Server-derived; quick-add stamps QUICK.
-             * @enum {string}
-             */
-            source: "MANUAL" | "QUICK" | "IMPORT";
-            /** @example COP */
-            currency: string;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
+            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            message: string;
+        };
+        /** @description Per-item outcome. The status is 200 even when some items failed: read `failed`. */
+        BatchUpdateResult: {
+            updated: components["schemas"]["Transaction"][];
+            failed: components["schemas"]["BatchUpdateFailure"][];
+        };
+        BatchUpdateTransactionsInput: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                categoryId?: string | null;
+                description?: string | null;
+                pendingDetails?: boolean;
+            }[];
         };
         Budget: {
             /** Format: uuid */
@@ -3477,17 +3184,189 @@ export type components = {
             /** Format: date-time */
             updatedAt: string;
         };
-        BatchUpdateFailure: {
+        BudgetAmountOverrideInput: {
+            amount: number;
+        };
+        BudgetConflict: components["schemas"]["ErrorResponse"] & {
+            current?: components["schemas"]["Budget"];
+        };
+        BudgetList: {
+            data: components["schemas"]["Budget"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        Category: {
             /** Format: uuid */
             id: string;
+            name: string;
+            /**
+             * @description Lucide icon key from the curated set
+             * @example utensils
+             * @enum {string|null}
+             */
+            icon: "apple" | "arrow-left-right" | "baby" | "banknote" | "bath" | "battery" | "bed" | "beer" | "bike" | "book-open" | "briefcase" | "building-2" | "bus" | "cake" | "calculator" | "camera" | "car" | "carrot" | "cat" | "church" | "circle-plus" | "coffee" | "coins" | "cookie" | "credit-card" | "croissant" | "crown" | "dog" | "droplets" | "dumbbell" | "film" | "flame" | "footprints" | "fuel" | "gamepad-2" | "gem" | "gift" | "glasses" | "graduation-cap" | "hammer" | "hand-coins" | "hash" | "headphones" | "heart" | "house" | "ice-cream-cone" | "key" | "landmark" | "laptop" | "layers" | "leaf" | "lightbulb" | "martini" | "medal" | "mountain" | "music" | "package" | "paint-bucket" | "paintbrush" | "percent" | "phone" | "piggy-bank" | "pill" | "pizza" | "plane" | "plug" | "popcorn" | "radio" | "receipt" | "repeat" | "sandwich" | "scale" | "scissors" | "shield" | "ship" | "shirt" | "shopping-bag" | "shopping-basket" | "shopping-cart" | "sofa" | "speaker" | "sprout" | "star" | "stethoscope" | "store" | "tag" | "target" | "tent" | "ticket" | "train-front" | "trees" | "trending-down" | "trending-up" | "trophy" | "truck" | "tv" | "umbrella" | "utensils" | "wallet" | "washing-machine" | "watch" | "wifi" | "wine" | "wrench" | "zap" | null;
+            /** @enum {string|null} */
+            color: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
+            /** @enum {string|null} */
+            type: "INCOME" | "EXPENSE" | "TRANSFER" | null;
+            /** Format: uuid */
+            userId: string;
+            /** @description Stable identity of a seeded default category. */
+            seedKey?: string;
+            /** Format: date-time */
+            archivedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CategoryConflict: components["schemas"]["ErrorResponse"] & {
+            current?: components["schemas"]["Category"];
+        };
+        CategoryList: {
+            data: components["schemas"]["Category"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        CreateAccountInput: {
+            /** Format: uuid */
+            id?: string;
+            name: string;
             /** @enum {string} */
-            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            type: "CASH" | "ACCOUNT" | "CARD" | "DEBIT_CARD" | "SAVINGS" | "INVESTMENT" | "OVERDRAFT" | "LOAN" | "OTHER";
+            /** @default 0 */
+            balance: number;
+            /** @enum {string} */
+            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
+        };
+        CreateBudgetInput: {
+            /** Format: uuid */
+            id?: string;
+            name: string;
+            /** @enum {string} */
+            color: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
+            categoryIds: string[];
+            /** @enum {string} */
+            type?: "EXPENSE" | "INCOME";
+            amount: number;
+            /** @enum {string} */
+            periodType: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+            /** Format: date-time */
+            periodStartDate?: string;
+            /** Format: date-time */
+            periodEndDate?: string;
+            /** Format: date-time */
+            effectiveFrom?: string;
+            note?: string | null;
+        };
+        CreateCategoryInput: {
+            /** Format: uuid */
+            id?: string;
+            name: string;
+            /** @enum {string} */
+            icon?: "apple" | "arrow-left-right" | "baby" | "banknote" | "bath" | "battery" | "bed" | "beer" | "bike" | "book-open" | "briefcase" | "building-2" | "bus" | "cake" | "calculator" | "camera" | "car" | "carrot" | "cat" | "church" | "circle-plus" | "coffee" | "coins" | "cookie" | "credit-card" | "croissant" | "crown" | "dog" | "droplets" | "dumbbell" | "film" | "flame" | "footprints" | "fuel" | "gamepad-2" | "gem" | "gift" | "glasses" | "graduation-cap" | "hammer" | "hand-coins" | "hash" | "headphones" | "heart" | "house" | "ice-cream-cone" | "key" | "landmark" | "laptop" | "layers" | "leaf" | "lightbulb" | "martini" | "medal" | "mountain" | "music" | "package" | "paint-bucket" | "paintbrush" | "percent" | "phone" | "piggy-bank" | "pill" | "pizza" | "plane" | "plug" | "popcorn" | "radio" | "receipt" | "repeat" | "sandwich" | "scale" | "scissors" | "shield" | "ship" | "shirt" | "shopping-bag" | "shopping-basket" | "shopping-cart" | "sofa" | "speaker" | "sprout" | "star" | "stethoscope" | "store" | "tag" | "target" | "tent" | "ticket" | "train-front" | "trees" | "trending-down" | "trending-up" | "trophy" | "truck" | "tv" | "umbrella" | "utensils" | "wallet" | "washing-machine" | "watch" | "wifi" | "wine" | "wrench" | "zap";
+            /** @enum {string} */
+            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
+            /** @enum {string} */
+            type?: "INCOME" | "EXPENSE" | "TRANSFER";
+        };
+        CreateTransactionInput: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
+            amount: number;
+            /** Format: date-time */
+            date: string;
+            /** Format: uuid */
+            categoryId?: string | null;
+            description?: string | null;
+            /** Format: uuid */
+            fromAccountId?: string | null;
+            /** Format: uuid */
+            toAccountId?: string | null;
+            tags?: string[];
+            note?: string | null;
+        };
+        ErrorResponse: {
+            /** @example NotFoundError */
+            error: string;
+            message: string;
+            /**
+             * @description Stable machine-readable code. Branch on this, never on message.
+             * @enum {string}
+             */
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            details?: {
+                field?: string;
+                message?: string;
+            }[];
+        };
+        LoginInput: {
+            /** Format: email */
+            email: string;
+            password: string;
+        };
+        Message: {
             message: string;
         };
-        /** @description Per-item outcome. The status is 200 even when some items failed: read `failed`. */
-        BatchUpdateResult: {
-            updated: components["schemas"]["Transaction"][];
-            failed: components["schemas"]["BatchUpdateFailure"][];
+        Pagination: {
+            limit: number;
+            offset: number;
+            total: number;
+            hasMore: boolean;
+            /** Format: uuid */
+            nextCursor: string | null;
+        };
+        QuickAddTransactionInput: {
+            /** Format: uuid */
+            id?: string;
+            amount: number;
+            /** @enum {string} */
+            type?: "INCOME" | "EXPENSE" | "TRANSFER";
+            /** Format: date-time */
+            date?: string;
+            /** Format: uuid */
+            categoryId?: string;
+            /** Format: uuid */
+            fromAccountId?: string;
+            /** Format: uuid */
+            toAccountId?: string;
+        };
+        RefreshInput: {
+            refreshToken: string;
+        };
+        RegisterInput: {
+            name: string;
+            /** Format: email */
+            email: string;
+            password: string;
+            timezone?: string;
+            currency?: string;
+            /** @enum {string} */
+            locale?: "en" | "es";
+        };
+        RestoreDefaultsResponse: {
+            data: components["schemas"]["Category"][];
+        };
+        /** @default {} */
+        RestoreInput: {
+            name?: string;
+        };
+        /** @description One logged-in device (refresh-token rotation family). */
+        Session: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastUsedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            userAgent?: string;
+            /** @description True for the session the requesting access token belongs to (this device). */
+            current: boolean;
+        };
+        SessionList: {
+            data: components["schemas"]["Session"][];
         };
         StatsBucket: {
             /** @description Category id, day (YYYY-MM-DD) or tag; 'uncategorized'/'untagged' for the catch-all buckets. */
@@ -3503,43 +3382,44 @@ export type components = {
             /** @description Real total without double counting (multi-tag buckets can sum higher). */
             total: number;
         };
-        /** @description A transaction in the change feed: the usual shape plus the tombstone. */
-        SyncTransaction: {
-            /** Format: uuid */
-            id: string;
-            /** @enum {string} */
-            type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
-            amount: number;
-            /** Format: date-time */
-            date: string;
-            /** Format: uuid */
-            categoryId: string | null;
-            description: string | null;
-            /** Format: uuid */
-            fromAccountId: string | null;
-            /** Format: uuid */
-            toAccountId: string | null;
-            /** Format: uuid */
-            userId: string;
-            tags: string[];
-            note: string | null;
-            pendingDetails: boolean;
-            /**
-             * @description Server-derived; quick-add stamps QUICK.
-             * @enum {string}
-             */
-            source: "MANUAL" | "QUICK" | "IMPORT";
-            /** @example COP */
-            currency: string;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
+        SyncBatchInput: {
+            operations: {
+                /** Format: uuid */
+                opId: string;
+                seq: number;
+                /** Format: date-time */
+                occurredAt: string;
+                /** @enum {string} */
+                entity: "account" | "category" | "transaction" | "budget";
+                /** @description Per entity — account: create, update, archive, restore, setDefault; category: create, update, archive, restore; transaction: create, quickAdd, update, delete; budget: create, update, archive, restore, setOverride, clearOverride */
+                action: string;
+                /** Format: uuid */
+                id: string;
+                /** @default {} */
+                payload: {
+                    body?: {
+                        [key: string]: unknown;
+                    };
+                    query?: {
+                        /** Format: date-time */
+                        reference?: string;
+                    };
+                };
+                /** Format: date-time */
+                baseUpdatedAt?: string;
+                /** @default [] */
+                dependsOn: string[];
+                opVersion: number;
+            }[];
+        };
+        SyncBatchResponse: {
             /**
              * Format: date-time
-             * @description Set when the transaction was deleted. Only the sync feed reports it: everywhere else a deleted transaction simply stops existing.
+             * @description The server's clock when the batch started.
              */
-            deletedAt: string | null;
+            serverTime: string;
+            /** @description One per operation, in `seq` order. */
+            results: components["schemas"]["SyncOpResult"][];
         };
         /** @description A budget as STORED, not the view GET /budgets returns: no periodKey, no window and no spent. Those depend on a reference date and on the transactions, so the client derives them from what it already holds. */
         SyncBudget: {
@@ -3641,22 +3521,81 @@ export type components = {
             /** @description The write landed, but not as it was sent: CATEGORY_ARCHIVED_DROPPED — the category was archived online, so the movement was saved without it and flagged pendingDetails. */
             warnings?: "CATEGORY_ARCHIVED_DROPPED"[];
         };
-        SyncBatchResponse: {
+        /** @description A transaction in the change feed: the usual shape plus the tombstone. */
+        SyncTransaction: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
+            amount: number;
+            /** Format: date-time */
+            date: string;
+            /** Format: uuid */
+            categoryId: string | null;
+            description: string | null;
+            /** Format: uuid */
+            fromAccountId: string | null;
+            /** Format: uuid */
+            toAccountId: string | null;
+            /** Format: uuid */
+            userId: string;
+            tags: string[];
+            note: string | null;
+            pendingDetails: boolean;
+            /**
+             * @description Server-derived; quick-add stamps QUICK.
+             * @enum {string}
+             */
+            source: "MANUAL" | "QUICK" | "IMPORT";
+            /** @example COP */
+            currency: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
             /**
              * Format: date-time
-             * @description The server's clock when the batch started.
+             * @description Set when the transaction was deleted. Only the sync feed reports it: everywhere else a deleted transaction simply stops existing.
              */
-            serverTime: string;
-            /** @description One per operation, in `seq` order. */
-            results: components["schemas"]["SyncOpResult"][];
+            deletedAt: string | null;
         };
-        AccountList: {
-            data: components["schemas"]["Account"][];
-            pagination: components["schemas"]["Pagination"];
+        TagList: {
+            data: string[];
         };
-        CategoryList: {
-            data: components["schemas"]["Category"][];
-            pagination: components["schemas"]["Pagination"];
+        Transaction: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
+            amount: number;
+            /** Format: date-time */
+            date: string;
+            /** Format: uuid */
+            categoryId: string | null;
+            description: string | null;
+            /** Format: uuid */
+            fromAccountId: string | null;
+            /** Format: uuid */
+            toAccountId: string | null;
+            /** Format: uuid */
+            userId: string;
+            tags: string[];
+            note: string | null;
+            pendingDetails: boolean;
+            /**
+             * @description Server-derived; quick-add stamps QUICK.
+             * @enum {string}
+             */
+            source: "MANUAL" | "QUICK" | "IMPORT";
+            /** @example COP */
+            currency: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        TransactionConflict: components["schemas"]["ErrorResponse"] & {
+            current?: components["schemas"]["Transaction"];
         };
         TransactionList: {
             data: components["schemas"]["Transaction"][];
@@ -3666,30 +3605,91 @@ export type components = {
                 totalAmount: number;
             };
         };
-        BudgetList: {
-            data: components["schemas"]["Budget"][];
-            pagination: components["schemas"]["Pagination"];
+        UpdateAccountInput: {
+            name?: string;
+            /** @enum {string} */
+            type?: "CASH" | "ACCOUNT" | "CARD" | "DEBIT_CARD" | "SAVINGS" | "INVESTMENT" | "OVERDRAFT" | "LOAN" | "OTHER";
+            /** @enum {string|null} */
+            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
         };
-        SessionList: {
-            data: components["schemas"]["Session"][];
+        UpdateBudgetInput: {
+            name?: string;
+            /** @enum {string} */
+            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
+            categoryIds?: string[];
+            /** @enum {string} */
+            type?: "EXPENSE" | "INCOME";
+            amount?: number;
+            /** @enum {string} */
+            periodType?: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+            /** Format: date-time */
+            periodStartDate?: string;
+            /** Format: date-time */
+            periodEndDate?: string;
+            /** Format: date-time */
+            effectiveFrom?: string | null;
+            note?: string | null;
         };
-        TagList: {
-            data: string[];
+        UpdateCategoryInput: {
+            name?: string;
+            /** @enum {string|null} */
+            icon?: "apple" | "arrow-left-right" | "baby" | "banknote" | "bath" | "battery" | "bed" | "beer" | "bike" | "book-open" | "briefcase" | "building-2" | "bus" | "cake" | "calculator" | "camera" | "car" | "carrot" | "cat" | "church" | "circle-plus" | "coffee" | "coins" | "cookie" | "credit-card" | "croissant" | "crown" | "dog" | "droplets" | "dumbbell" | "film" | "flame" | "footprints" | "fuel" | "gamepad-2" | "gem" | "gift" | "glasses" | "graduation-cap" | "hammer" | "hand-coins" | "hash" | "headphones" | "heart" | "house" | "ice-cream-cone" | "key" | "landmark" | "laptop" | "layers" | "leaf" | "lightbulb" | "martini" | "medal" | "mountain" | "music" | "package" | "paint-bucket" | "paintbrush" | "percent" | "phone" | "piggy-bank" | "pill" | "pizza" | "plane" | "plug" | "popcorn" | "radio" | "receipt" | "repeat" | "sandwich" | "scale" | "scissors" | "shield" | "ship" | "shirt" | "shopping-bag" | "shopping-basket" | "shopping-cart" | "sofa" | "speaker" | "sprout" | "star" | "stethoscope" | "store" | "tag" | "target" | "tent" | "ticket" | "train-front" | "trees" | "trending-down" | "trending-up" | "trophy" | "truck" | "tv" | "umbrella" | "utensils" | "wallet" | "washing-machine" | "watch" | "wifi" | "wine" | "wrench" | "zap" | null;
+            /** @enum {string|null} */
+            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
+            /** @enum {string|null} */
+            type?: "INCOME" | "EXPENSE" | "TRANSFER" | null;
         };
-        RestoreDefaultsResponse: {
-            data: components["schemas"]["Category"][];
+        UpdateTransactionInput: {
+            /** @enum {string} */
+            type?: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
+            amount?: number;
+            /** Format: date-time */
+            date?: string;
+            /** Format: uuid */
+            categoryId?: string | null;
+            description?: string | null;
+            /** Format: uuid */
+            fromAccountId?: string | null;
+            /** Format: uuid */
+            toAccountId?: string | null;
+            tags?: string[];
+            note?: string | null;
+            pendingDetails?: boolean;
         };
-        AccountConflict: components["schemas"]["ErrorResponse"] & {
-            current?: components["schemas"]["Account"];
+        UpdateUserInput: {
+            name?: string;
+            /** Format: email */
+            email?: string;
+            password?: string;
+            currentPassword?: string;
+            timezone?: string;
+            currency?: string;
+            /** @enum {string} */
+            locale?: "en" | "es";
         };
-        CategoryConflict: components["schemas"]["ErrorResponse"] & {
-            current?: components["schemas"]["Category"];
-        };
-        TransactionConflict: components["schemas"]["ErrorResponse"] & {
-            current?: components["schemas"]["Transaction"];
-        };
-        BudgetConflict: components["schemas"]["ErrorResponse"] & {
-            current?: components["schemas"]["Budget"];
+        User: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: email */
+            email: string;
+            /** @example America/Bogota */
+            timezone: string;
+            /** @example COP */
+            currency: string;
+            /**
+             * @example en
+             * @enum {string}
+             */
+            locale: "en" | "es";
+            /** Format: date-time */
+            lastLoginAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** @description Present (true) only when register revived a soft-deleted account. */
+            reactivated?: boolean;
         };
     };
     responses: never;
@@ -3701,53 +3701,53 @@ export type components = {
     headers: never;
     pathItems: never;
 };
-export type RegisterInput = components['schemas']['RegisterInput'];
-export type LoginInput = components['schemas']['LoginInput'];
-export type RefreshInput = components['schemas']['RefreshInput'];
-export type UpdateUserInput = components['schemas']['UpdateUserInput'];
-export type CreateAccountInput = components['schemas']['CreateAccountInput'];
-export type UpdateAccountInput = components['schemas']['UpdateAccountInput'];
-export type CreateCategoryInput = components['schemas']['CreateCategoryInput'];
-export type UpdateCategoryInput = components['schemas']['UpdateCategoryInput'];
-export type CreateTransactionInput = components['schemas']['CreateTransactionInput'];
-export type UpdateTransactionInput = components['schemas']['UpdateTransactionInput'];
-export type QuickAddTransactionInput = components['schemas']['QuickAddTransactionInput'];
-export type BatchUpdateTransactionsInput = components['schemas']['BatchUpdateTransactionsInput'];
-export type RestoreInput = components['schemas']['RestoreInput'];
-export type CreateBudgetInput = components['schemas']['CreateBudgetInput'];
-export type UpdateBudgetInput = components['schemas']['UpdateBudgetInput'];
-export type BudgetAmountOverrideInput = components['schemas']['BudgetAmountOverrideInput'];
-export type SyncBatchInput = components['schemas']['SyncBatchInput'];
-export type ErrorResponse = components['schemas']['ErrorResponse'];
-export type Message = components['schemas']['Message'];
-export type Pagination = components['schemas']['Pagination'];
-export type User = components['schemas']['User'];
-export type AuthTokens = components['schemas']['AuthTokens'];
-export type Session = components['schemas']['Session'];
 export type Account = components['schemas']['Account'];
-export type Category = components['schemas']['Category'];
-export type Transaction = components['schemas']['Transaction'];
-export type Budget = components['schemas']['Budget'];
+export type AccountConflict = components['schemas']['AccountConflict'];
+export type AccountList = components['schemas']['AccountList'];
+export type AuthTokens = components['schemas']['AuthTokens'];
 export type BatchUpdateFailure = components['schemas']['BatchUpdateFailure'];
 export type BatchUpdateResult = components['schemas']['BatchUpdateResult'];
+export type BatchUpdateTransactionsInput = components['schemas']['BatchUpdateTransactionsInput'];
+export type Budget = components['schemas']['Budget'];
+export type BudgetAmountOverrideInput = components['schemas']['BudgetAmountOverrideInput'];
+export type BudgetConflict = components['schemas']['BudgetConflict'];
+export type BudgetList = components['schemas']['BudgetList'];
+export type Category = components['schemas']['Category'];
+export type CategoryConflict = components['schemas']['CategoryConflict'];
+export type CategoryList = components['schemas']['CategoryList'];
+export type CreateAccountInput = components['schemas']['CreateAccountInput'];
+export type CreateBudgetInput = components['schemas']['CreateBudgetInput'];
+export type CreateCategoryInput = components['schemas']['CreateCategoryInput'];
+export type CreateTransactionInput = components['schemas']['CreateTransactionInput'];
+export type ErrorResponse = components['schemas']['ErrorResponse'];
+export type LoginInput = components['schemas']['LoginInput'];
+export type Message = components['schemas']['Message'];
+export type Pagination = components['schemas']['Pagination'];
+export type QuickAddTransactionInput = components['schemas']['QuickAddTransactionInput'];
+export type RefreshInput = components['schemas']['RefreshInput'];
+export type RegisterInput = components['schemas']['RegisterInput'];
+export type RestoreDefaultsResponse = components['schemas']['RestoreDefaultsResponse'];
+export type RestoreInput = components['schemas']['RestoreInput'];
+export type Session = components['schemas']['Session'];
+export type SessionList = components['schemas']['SessionList'];
 export type StatsBucket = components['schemas']['StatsBucket'];
 export type StatsResponse = components['schemas']['StatsResponse'];
-export type SyncTransaction = components['schemas']['SyncTransaction'];
+export type SyncBatchInput = components['schemas']['SyncBatchInput'];
+export type SyncBatchResponse = components['schemas']['SyncBatchResponse'];
 export type SyncBudget = components['schemas']['SyncBudget'];
 export type SyncChangesResponse = components['schemas']['SyncChangesResponse'];
 export type SyncOpResult = components['schemas']['SyncOpResult'];
-export type SyncBatchResponse = components['schemas']['SyncBatchResponse'];
-export type AccountList = components['schemas']['AccountList'];
-export type CategoryList = components['schemas']['CategoryList'];
-export type TransactionList = components['schemas']['TransactionList'];
-export type BudgetList = components['schemas']['BudgetList'];
-export type SessionList = components['schemas']['SessionList'];
+export type SyncTransaction = components['schemas']['SyncTransaction'];
 export type TagList = components['schemas']['TagList'];
-export type RestoreDefaultsResponse = components['schemas']['RestoreDefaultsResponse'];
-export type AccountConflict = components['schemas']['AccountConflict'];
-export type CategoryConflict = components['schemas']['CategoryConflict'];
+export type Transaction = components['schemas']['Transaction'];
 export type TransactionConflict = components['schemas']['TransactionConflict'];
-export type BudgetConflict = components['schemas']['BudgetConflict'];
+export type TransactionList = components['schemas']['TransactionList'];
+export type UpdateAccountInput = components['schemas']['UpdateAccountInput'];
+export type UpdateBudgetInput = components['schemas']['UpdateBudgetInput'];
+export type UpdateCategoryInput = components['schemas']['UpdateCategoryInput'];
+export type UpdateTransactionInput = components['schemas']['UpdateTransactionInput'];
+export type UpdateUserInput = components['schemas']['UpdateUserInput'];
+export type User = components['schemas']['User'];
 export type ParameterIfMatch = components['parameters']['IfMatch'];
 export type $defs = Record<string, never>;
 export type operations = Record<string, never>;

@@ -1,4 +1,4 @@
-import { z } from "@/lib/validation/zod";
+import { type Infer, z } from "@/lib/validation/zod";
 
 export const budgetAmountSchema = z.object({
   amount: z
@@ -6,4 +6,4 @@ export const budgetAmountSchema = z.object({
     .positive({ error: "validation.amountPositive" }),
 });
 
-export type BudgetAmountValues = z.infer<typeof budgetAmountSchema>;
+export type BudgetAmountValues = Infer<typeof budgetAmountSchema>;

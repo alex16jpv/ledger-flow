@@ -40,34 +40,41 @@ the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no envir
 
 ## Scripts
 
-| Script                    | What it does                                                                                   |
-| ------------------------- | ---------------------------------------------------------------------------------------------- |
-| `npm run dev`             | Next dev server on port 3001                                                                   |
-| `npm run build` / `start` | Production build (`next build` + `serwist build` → `public/sw.js`, git-ignored) / server       |
-| `npm run ci`              | Full gate: typecheck, lint, format:check, check-tokens, contrast-check, test, `build:gate`     |
-| `npm run build:gate`      | The gate's build: `.next-gate` and `public/sw-gate.js`, so it never overwrites a running app's |
-| `npm run typecheck`       | `tsc --noEmit`                                                                                 |
-| `npm run lint`            | ESLint with zero warnings allowed                                                              |
-| `npm run format`          | Prettier (`format:check` verifies)                                                             |
-| `npm run check-tokens`    | Fails on hex, raw color functions or Tailwind palette classes                                  |
-| `npm run contrast-check`  | WCAG AA over every `tokens/palette.*.css` in light and dark                                    |
-| `npm run test`            | Vitest + Testing Library (`test:watch`, `test:coverage`)                                       |
-| `npm run test:e2e`        | Playwright smoke tests against the local backend                                               |
-| `npm run demo:offline`    | The demo of gate O-A: three days with no network and one clean drain (`tests/gate/`)           |
-| `demo:offline:watch`      | The same demo, headed and slowed down, so it can be watched as it happens                      |
-| `demo:offline:report`     | Opens the demo's report: one video per cold start, and a trace with every request              |
-| `npm run size-limit`      | Route JS budgets over the production build                                                     |
-| `npm run lighthouse`      | Lighthouse CI against a production build with the thresholds in `lighthouserc.json`            |
-| `npm run gen:api-types`   | Regenerates `types/api.d.ts` from the backend OpenAPI                                          |
-| `npm run gen:feature`     | Scaffolds `features/<name>/{api,keys,hooks,schemas,components}`                                |
+| Script                     | What it does                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------------- |
+| `npm run dev`              | Next dev server on port 3001                                                                   |
+| `npm run build` / `start`  | Production build (`next build` + `serwist build` → `public/sw.js`, git-ignored) / server       |
+| `npm run ci`               | Full gate: typecheck, lint, format:check, check-tokens, contrast-check, test, `build:gate`     |
+| `npm run build:gate`       | The gate's build (`.next-gate`, `public/sw-gate.js`), then `size-limit` and `check-dev-routes` |
+| `npm run check-dev-routes` | Starts the gate build on port 3004 and proves the dev-only URLs answer 404 (W-39)              |
+| `npm run typecheck`        | `tsc --noEmit`                                                                                 |
+| `npm run lint`             | ESLint with zero warnings allowed                                                              |
+| `npm run format`           | Prettier (`format:check` verifies)                                                             |
+| `npm run check-tokens`     | Fails on hex, raw color functions or Tailwind palette classes                                  |
+| `npm run contrast-check`   | WCAG AA over every `tokens/palette.*.css` in light and dark                                    |
+| `npm run test`             | Vitest + Testing Library (`test:watch`, `test:coverage`)                                       |
+| `npm run test:e2e`         | Playwright smoke tests against the local backend                                               |
+| `npm run e2e:backend`      | Starts the sibling backend on port 3200 against the Docker Mongo `lag_money_test`, seeded      |
+| `npm run demo:offline`     | The demo of gate O-A: three days with no network and one clean drain (`tests/gate/`)           |
+| `npm run demo:offline:b`   | The demo of gate O-B: two devices, a conflict and the tray that resolves it                    |
+| `demo:offline:watch`       | The same demos, headed and slowed down, so they can be watched as they happen (`:b:watch`)     |
+| `demo:offline:report`      | Opens the demo's report: one video per cold start, and a trace with every request              |
+| `npm run measure:banner`   | Times the pending stripe against a slow network (`tests/measure/`, F-72)                       |
+| `npm run size-limit`       | Route JS budgets over the production build                                                     |
+| `npm run lighthouse`       | Lighthouse CI against a production build with the thresholds in `lighthouserc.json`            |
+| `npm run lighthouse:app`   | The same, over the 25 authenticated screens with a real session (`lighthouserc.app.json`)      |
+| `npm run gen:api-types`    | Regenerates `types/api.d.ts` and `endpoints.md` from the backend OpenAPI                       |
+| `npm run fixtures:sync`    | Refreshes the backend's parity fixtures under `lib/local/derive/fixtures/`                     |
+| `npm run gen:feature`      | Scaffolds `features/<name>/{api,keys,hooks,schemas,components}`                                |
 
 ## Deploy
 
 Three environments: `development` (local backend), `preview` (one per PR) and `production`, all on
 Vercel from this repo (Node from `.nvmrc`, `npm run build` runs `next build` and the Serwist step).
-`main` is protected (PR + green CI) and deploys production; `redesign/fase-2` gets previews until
-the F5 gate. Production is cut from a tag: bump `version` in `package.json`, move the `Unreleased`
-notes in `CHANGELOG.md` under the version, `git tag -a vX.Y.Z` and push the tag.
+`main` is protected (PR + green CI) and deploys production; every pull request gets its own preview,
+and `ci.yml` also runs on pushes to `feat/**`. Production is cut from a tag: bump `version` in
+`package.json`, move the `Unreleased` notes in `CHANGELOG.md` under the version, `git tag -a vX.Y.Z`
+and push the tag.
 
 Variables per environment (Vercel › Settings › Environment Variables):
 
@@ -92,7 +99,11 @@ CI (`.github/workflows/ci.yml`): `quality` (typecheck, lint, format, tokens, con
 build, size budgets, `npm audit`), `security` (gitleaks, osv-scanner), `e2e` (Playwright against
 the backend repo on an ephemeral Mongo replica set; needs the `BACKEND_REPO_TOKEN` secret) and
 `lighthouse` (`lighthouserc.json`: performance ≥ 90, accessibility ≥ 95, best practices ≥ 90,
-SEO ≥ 95 on the public pages; the report is uploaded as an artifact).
+SEO ≥ 95 on the public pages; the report is uploaded as an artifact). The 25 authenticated screens
+have a workflow of their own, `lighthouse-app.yml`: it checks out both repos, brings up the replica
+set and runs `npm run lighthouse:app` with a real session. It is `workflow_dispatch` and not
+nightly on purpose — the audit fails by design while F-78 is open (performance 78–86, accessibility
+100 on all 25), and a job that goes red every night is a job everyone learns to ignore.
 
 ## Structure
 
@@ -109,11 +120,16 @@ lib/i18n             next-intl config, money and date formatting
 lib/theme            palette and mode
 lib/icons            curated Lucide map and CategoryIcon
 lib/format           money and date windows in the user's timezone
+lib/network          connectivity, the /api/health heartbeat and the offline hook
+lib/session          the session context, its keys and the multi-tab channel
+app/sw.ts            the Serwist service worker: precache, app-shell routes, Background Sync
 messages/            en.json, es.json (the only place with user-visible text)
 tokens/              design tokens, copied from auditoria/front/diseno/tokens
-types/api.d.ts       generated from the backend OpenAPI
+types/api.d.ts       generated from the backend OpenAPI (endpoints.md sits in the repo root)
 tests/e2e            Playwright; unit tests sit next to the code (*.test.ts)
-tools/               check-tokens, contrast-check, size-limit, gen-api-types
+tests/gate           the recorded offline demos of gates O-A and O-B (npm run demo:offline)
+tools/               check-tokens, contrast-check, size-limit, gen-api-types, lighthouse,
+                     check-dev-routes, e2e-backend, sync-fixtures
 ```
 
 Dependency direction: `app → features → components/ui | lib`. Never `features/a → features/b`;
@@ -131,6 +147,7 @@ English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`)
 | `/settings`, `/settings/appearance`                            | Settings hub (language, currency, time zone, your data, install, about, delete) and appearance                        |
 | `/settings/profile`, `/settings/sessions`                      | Profile & security (name, email, password with re-authentication) and active sessions                                 |
 | `/settings/sync`                                               | Sync status: cursor, queue size, last error, storage use and grant, display mode, link to the tray, force full resync |
+| `/sync`                                                        | "Needs your attention": the queued changes the server refused, one card each, and the conflict sheet                  |
 | `/transactions`                                                | Transactions list: filters in the URL, day groups, infinite scroll                                                    |
 | `/transactions/new`, `/transactions/[id]/edit`                 | Transaction form: create (optional quick-add draft in the query string) and edit with delete                          |
 | `/transactions/[id]`                                           | Transaction detail with edit and delete                                                                               |
@@ -152,6 +169,14 @@ English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`)
 | `/api/auth/*`                                                  | Session BFF (httpOnly cookies)                                                                                        |
 | `/api/[...path]`                                               | Generic proxy to the backend; logs one JSON line per call with the `requestId`                                        |
 | `/monitoring`                                                  | Sentry tunnel (rewrite to the ingest host) so CSP keeps `connect-src 'self'`                                          |
+| `/api/health`                                                  | Liveness the connectivity heartbeat polls (`lib/network`)                                                             |
+| `/api/csp-report`                                              | Where the Content-Security-Policy reports land                                                                        |
+| `/theme-init.js`, `/install-init.js`                           | Head scripts: palette and mode before first paint, and the install offer before the app hydrates (F-87)               |
+
+Every screen of the app needs a session: `lib/auth/routes.ts` lists them and a unit test reads the
+folders of `app/[locale]/(app)` to make sure none is missing (F-75). The development-only routes are
+switched off by the `componentCatalog` and `devLogin` flags, and in a production build the proxy
+answers 404 before anything renders — `npm run check-dev-routes` proves it on the build itself.
 
 ## How to
 

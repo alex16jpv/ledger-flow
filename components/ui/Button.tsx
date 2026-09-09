@@ -94,7 +94,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {loading && (
         <span
           aria-hidden="true"
-          className="absolute size-4 animate-spin rounded-full border-2 border-current border-r-transparent border-l-transparent"
+          className="absolute size-4 animate-spin rounded-full border-2 border-current border-r-transparent border-l-transparent motion-reduce:border-r-current motion-reduce:border-l-current"
         />
       )}
     </button>

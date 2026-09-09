@@ -1,4 +1,4 @@
-import { z } from "@/lib/validation/zod";
+import { type Infer, z } from "@/lib/validation/zod";
 
 export const NAME_MAX = 255;
 export const PASSWORD_MIN = 8;
@@ -36,7 +36,7 @@ export function profileSchema(currentEmail: string) {
     });
 }
 
-export type ProfileValues = z.infer<ReturnType<typeof profileSchema>>;
+export type ProfileValues = Infer<ReturnType<typeof profileSchema>>;
 
 export function deleteConfirmationSchema(word: string) {
   return z.object({

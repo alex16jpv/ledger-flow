@@ -2319,3 +2319,262 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** the offline stripe, the conflict stripe, the blocked stripe and the signed-out
   stripe are unaffected — they never went through this branch. `DESIGN.md` §8.12 carries the rule,
   because when a drawn state appears is a design decision (D-36).
+
+## 2026-09-08 · The install offer is caught in the head, not in Settings (F-87)
+
+- **Found, in production and reported by the owner:** «Install app» never appeared on his phone, the
+  browser never offered to install either, and nothing in the app explained how to do it by hand.
+- **Measured, not assumed.** The live deployment serves everything installability needs: the manifest
+  answers 200 with name, `start_url`, `display: standalone` and 192/512 icons in both `any` and
+  `maskable`, `/sw.js` is 48 kB of precache, `worker-src 'self'` is in the enforced CSP, and
+  `/dev/ui` answers 404, which proves `appEnvironment` really is `production` there. On a local
+  production build the worker registers, activates and **controls** the page, with zero CSP
+  violations. So nothing in the environment explains it.
+- **The bug was ours, and it is a timing one.** `useInstallPrompt` attached its
+  `beforeinstallprompt` listener from a React effect **inside the Settings hub**, the only screen
+  that used it. The browser fires that event **once per page load**, on whatever screen the user
+  landed on — `/home`, or the login — and it never fires again for a client-side navigation. So by
+  the time Settings mounted the event was long gone and unrecoverable: nobody had called
+  `preventDefault()` and nobody had kept the object. Reproduced on a production build: with the
+  event fired on `/home` the row is **absent** in Settings; fired while Settings is already open it
+  is **present**.
+- **Decision:** the capture moves to a script in the `<head>`, `/install-init.js`, the same pattern
+  the theme already uses (`lib/theme/init-script.ts`): dependency-free, ES5-safe and nonce'd, it
+  keeps the event on `window.__lfInstall` and calls `preventDefault()` so the app still owns the
+  invitation. `useInstallPrompt` becomes a `useSyncExternalStore` reader over that object, so a row
+  that mounts minutes later still finds the offer.
+- **Why not a listener at module scope, or in the root layout's effects:** both run during
+  hydration, and on a slow phone the event can arrive before that. The head script is the only place
+  that cannot be too late — which is the whole point of the fix.
+- **Alternatives:** letting the browser's own mini-infobar through (dropping `preventDefault`) —
+  that is a product call and is left to the owner, who now has a working row to compare against;
+  and polling `getInstalledRelatedApps()`, which answers a different question.
+- **Consequence:** six unit tests over the head script plus the hook, the first of which is the
+  regression (an offer captured before the hook ever mounted), and an e2e that fires the browser's
+  event shape on `/home` and finds the row in Settings. What the row _says_ where the browser never
+  offers to install — iOS above all — is designed in `DESIGN.md` §8.10 (F-87) and is not in this
+  commit.
+
+## 2026-09-07 · Reduced motion is switched off at the sheet, not component by component (W-38)
+
+- **Found:** the duration tokens already went to 0 under `prefers-reduced-motion` (`tokens/base.css`),
+  and every `transition-*` in the app names one (`duration-(--dur-1|2|3)`), so transitions were
+  covered. Animations were not: `Skeleton`'s shimmer was guarded with `motion-safe:`, and the
+  spinner of a loading `Button` (`animate-spin`) was not — it kept turning, once per second, for a
+  user who asked the system for less motion.
+- **Decision:** `app/globals.css` ends with an unlayered
+  `@media (prefers-reduced-motion: reduce)` block that takes every element's animation and transition
+  duration to 0.01 ms, its delay to 0, its iteration count to 1 and its scroll behaviour to `auto`,
+  with `!important`. `DESIGN.md` §2 already says "everything at 0 with `prefers-reduced-motion`":
+  this is that sentence, once, where nothing can miss it.
+- **Alternatives:** adding `motion-safe:` to the spinner and to whatever comes next. Rejected: it is
+  the rule the tokens already failed to enforce once, it only covers the code we remember to mark,
+  and it cannot reach a stylesheet the app does not own.
+- **Why `!important` and outside every layer:** Tailwind's utilities are normal declarations, so an
+  important one beats them wherever it sits; unlayered keeps it out of the way of the `@theme` and
+  `base` layers.
+- **What it does not change:** the loading `Button` still draws the same arc, now still. Whether a
+  static three-quarter ring is the right way to say "busy" is a design question, not a CSS one, and
+  it is registered as F-74.
+- **Consequence:** `tests/e2e/reduced-motion.spec.ts` measures it in the browser on `/en/dev/ui` —
+  under `reduce` a button's transition and the spinner's animation are 0 s and the shimmer's
+  `animation-name` is `none`; under `no-preference` all three move. Two tests, both projects.
+
+## 2026-09-07 · Lighthouse measures the screens the product lives on, with a session (W-38)
+
+- **Decision:** `npm run lighthouse:app` audits the **25 authenticated screens** of `(app)` on mobile
+  (Lighthouse's default emulation). `tools/lighthouse.mjs --app` builds into `.next-lh`, starts the
+  test backend when nothing answers at `:3200`, serves the build on `:3003`, signs in, resolves the
+  `[id]` screens from the API, collects one run per screen and asserts against
+  `lighthouserc.app.json`: performance ≥ 0.9, accessibility ≥ 0.95, best practices ≥ 0.9. It exits 1
+  when a screen misses, and prints a table of the 25 before the failures.
+- **Why the real login and not `/api/dev/login`:** that route is behind the `devLogin` flag, which is
+  only on in `development`, and a build with dev flags on is not the build that ships. `POST
+/api/auth/login` is the BFF's own route, works in a production build, and is what the e2e suite
+  uses.
+- **Why the URLs carry no locale prefix — measured:** `en` is the default locale, so next-intl
+  redirects `/en/home` to `/home`, and **Lighthouse's `extraHeaders` do not survive that redirect**.
+  The first full run took the prefixed URLs and measured 24 of the 25 screens at `/login`; the
+  twenty-fifth was `/sync`, which turned out to be the one `(app)` screen that opens without a
+  session (F-75).
+- **Why five screens per sign-in:** the access cookie lives 15 minutes and a screen takes about a
+  minute, so the run signs in again every five.
+- **Why no SEO assertion here:** every `(app)` screen answers `x-robots-tag: noindex`, and the SEO
+  category scores that as blocked from indexing — correctly. The public run keeps its SEO ≥ 0.95.
+- **Measured on this machine (2026-09-07):** performance **77–83**, accessibility **100** on all 25,
+  best practices 93–96 — the deduction is two 404s, `/_vercel/insights` and `/_vercel/speed-insights`,
+  which only exist on Vercel. `/home` is the worst at 77: FCP 0.9 s, **LCP 5.2 s**, **TBT 220 ms**,
+  CLS 0, 598 KiB transferred, 91 KiB of unused JS. **No authenticated screen reaches 90**, and the
+  threshold stays at 90 so the command keeps saying so. What is between 83 and 90 is F-70.
+- **F-12, reproduced at last and finished:** the run left three directories literally named
+  `C:\Users\ultima\AppData\Local\lighthouse.<n>` in the repo root, and the next Turbopack build died
+  reading `.../SingletonSocket` ("No such device or address"). `--user-data-dir` was never enough:
+  under WSL `chrome-launcher` builds a profile of its own from `TEMP`, and `TEMP` there is a Windows
+  path, so `mkdir` writes it relative to the working directory. The tool now points `TEMP` at its own
+  temporary profile **with a trailing slash**, so the `\lighthouse.n` it appends stays inside it, and
+  both modes are covered. Verified: a full `npm run lighthouse` leaves the repo root clean.
+- **Local caveat, unchanged:** `npm run lighthouse` (public) serves whatever is in `.next`, so on a
+  checkout built for another origin the `canonical` audit fails and SEO lands at 0.92. CI builds with
+  `NEXT_PUBLIC_APP_URL=http://localhost:3002` for exactly that reason (`ci.yml:84`).
+- **Consequence:** `lighthouse:app` is not in `npm run ci` — it needs the backend, the Docker Mongo
+  and about 25 minutes. Wiring it into CI is registered as F-76.
+
+## 2026-09-07 · Zod comes in by name, because the namespace brought nineteen languages (F-70, W-38)
+
+- **Found, measuring where 240 kB gz per screen came from:** 83.7 kB gz of it (375 kB raw) was Zod,
+  in the same chunk on all 25 screens, and **149 kB of those 375 were locale catalogues** — Italian,
+  Japanese, Dutch, Russian, Turkish, Chinese, Korean… nineteen of the twenty Zod ships. The app
+  speaks two languages and never shows a Zod message: every schema passes its own `error` key.
+- **Why they were there:** `import { z } from "zod"` imports a namespace object (`export * as z`),
+  and everything reachable from it has to survive. Zod's own source says Rollup and Webpack shake it
+  — Turbopack, which is what `next build` uses here, does not.
+- **Decision:** `lib/validation/zod.ts` imports the ten builders the app actually uses **by name**
+  (`array`, `boolean`, `email`, `enum`, `literal`, `number`, `object`, `string`, `union`, `url`) and
+  re-exports them as a plain object still called `z`, so every schema reads the same as before. The
+  type `z.infer<T>` becomes `Infer<T>`, re-exported from the same module — nine lines across eight
+  files. An ESLint `no-restricted-imports` rule now refuses `from "zod"` anywhere but that file, so
+  the namespace cannot come back by habit.
+- **Measured:** the Zod chunk goes from 375 kB raw / 83.7 kB gz to **101 kB raw / 27.2 kB gz**, and
+  the heaviest `(app)` screen from **240.1 to 183.5 kB gz** — every screen, since they all shared it.
+  No foreign locale string survives in the build. `npm run ci` green (137 files, 777 tests) and
+  `npm run test:e2e` 149 passed / 0 failed / 1 skipped, unchanged.
+- **Alternatives:** (a) `zod/mini` — rewrites all eight schema files into the functional API for a
+  smaller extra win, with a real chance of changing a validation without noticing; (b) splitting the
+  modules that reach the schemas from the shell (`AppFrame` → `features/transactions/hooks` →
+  `filters`) and lazy-loading the forms — a wide refactor across features that would have saved the
+  remaining 27 kB on the screens with no form; (c) `optimizePackageImports: ["zod"]` — tried and
+  measured: **no change at all**. This one changes a single file and no behaviour.
+- **Consequence:** the `(app)` budget in `tools/size-limit.mjs` drops from 250 to **200 kB gz**, the
+  figure HANDOFF §3.11 asked for from W-01 and that the app had never met. F-70 is closed.
+
+## 2026-09-07 · A spinner that cannot spin closes into a ring (F-74, W-38)
+
+- **Decision:** under `prefers-reduced-motion` the loading `Button` draws a **complete** ring instead
+  of the three-quarter arc that spins: `motion-reduce:border-r-current motion-reduce:border-l-current`
+  on the two sides the arc leaves transparent.
+- **Why:** stopping the animation is what the design asks for (§2, "everything at 0"), but a stopped
+  arc reads as a broken circle, not as "waiting". Closing it keeps the shape deliberate without
+  inventing a new indicator or new text, and the button already says it properly where it counts:
+  `aria-busy` and disabled.
+- **Alternatives:** exempting the spinner from the reduced-motion rule, which is what Primer and
+  GOV.UK do for essential loading indicators — rejected because the owner asked for every animation
+  in `components/ui` and the shell to stop, and DESIGN.md §2 says the same; or replacing the ring
+  with a word, which is new UI and new message keys.
+- **Written in the design first** (D-36): `DESIGN.md` §2 and §7.1 carry the rule. Measured in the
+  browser by `tests/e2e/reduced-motion.spec.ts`: under `reduce` the three borders are one colour,
+  without the preference they are not.
+
+## 2026-09-07 · The generated API files are sorted, and endpoints.md is generated too (W-39)
+
+- **Found, regenerating `types/api.d.ts` for the closing item:** the file came back with **1197 lines
+  changed and 1197 lines added**, and not one of them was a change to the contract. Sorting the old
+  file and the new one and diffing them gives **zero lines apart**: the backend lists its paths in
+  registration order, that order differs between processes, and `openapi-typescript` writes them in
+  the order it is given.
+- **Decision:** `tools/gen-api-types.mjs` sorts the spec before it generates — paths alphabetically,
+  the methods inside a path in HTTP order, `components.schemas` alphabetically. A regeneration now
+  only shows what really moved. This commit carries the one-time reordering.
+- **Why it matters beyond the noise:** the `e2e` job of `ci.yml` regenerates the types and runs
+  `git diff --exit-code` on them, so before this the job could fail on a rebuilt backend that had not
+  changed a single endpoint — and, worse, a real change would have been invisible inside 2394 lines.
+- **`endpoints.md` comes back, generated.** W-39 asked for it "regenerated"; the one the old front
+  carried was written by hand and `FASE-2-CONTRATO-FRONTEND.md` already called it stale. The same
+  tool now writes it from the same spec: 43 operations in eight groups, each with its parameters,
+  body schema and responses, plus the note that the client never calls those URLs directly — every
+  request goes through the BFF under `/api/*`. It is Prettier-formatted by the generator so
+  `format:check` keeps watching it, and CI diffs it next to the types.
+- **Consequence:** running the generator twice leaves both files byte for byte identical. Descriptions
+  keep their own markdown (the `POST /sync` one is a table), so they are written as blocks, not
+  flattened into a cell.
+
+## 2026-09-07 · The development screens are proved gone from a production build (W-39)
+
+- **Decision:** `npm run ci` ends by starting the gate build it just made — with `NEXT_PUBLIC_APP_ENV`
+  deleted so nothing reopens the flags — and asking it for the seven development-only URLs
+  (`/dev/ui` in both locales, `/dev/frame`, `/dev/pickers`, `/api/dev/login`) plus `/login` in both
+  locales. The public pair is the control: a server that answered 404 to everything would otherwise
+  pass a check made only of 404s. `tools/check-dev-routes.mjs`, wired into `build:gate`.
+- **Verified the other way round too:** the same build served with `NEXT_PUBLIC_APP_ENV=test` answers
+  200 on all three screens, so the 404s come from the flag and not from a route that was never built.
+- **It found one.** `/dev/pickers` answered **200 with the not-found page inside it**. It is the only
+  development screen inside the `(app)` group, that group has a `loading.tsx`, and a segment with a
+  loading boundary starts streaming before the page runs: by the time `notFound()` arrives the status
+  line is already sent. Guarding `generateMetadata` as well changes nothing — measured.
+- **Decision:** the proxy answers 404 for any `/dev/` path when `componentCatalog` is off, before
+  anything renders, and the per-page `notFound()` guards stay. The flag is a routing fact, not a
+  rendering one, and this also covers the next development route somebody adds without a guard.
+- **Alternatives:** moving `dev/pickers` out of `(app)` — it would lose the app frame it is a bench
+  for; rewriting to the catch-all route to keep the pretty 404 page — a magic path for a URL that
+  must not exist. `/api/dev/login` already answered a bare 404, so this matches what the repo does.
+- **Consequence:** the check refuses to run when something already answers on its port and stops the
+  server by process group. Killing `npx` alone leaves the server listening, and the run that found
+  the `/dev/pickers` bug had in fact measured a stale server from an earlier probe — the check now
+  cannot lie that way.
+
+## 2026-09-07 · The attention screen needs a session like the rest (F-75)
+
+- **Found:** `/sync` was the one screen of `(app)` missing from `APP_PREFIXES`, so a browser with no
+  marker cookie got 200 and the "Needs your attention" screen instead of the login, and the path
+  never carried the `x-robots-tag: noindex` every other app path does.
+- **Decision:** it joins the list. The exemption protected nobody: the redirect only fires when the
+  marker cookie is absent, and a device whose session died still has it (400 days), which is exactly
+  the case the screen exists for. A browser without the marker has no vault, so the screen it was
+  being shown was empty by construction.
+- **The list is checked now, not trusted:** `lib/auth/routes.test.ts` reads the folders of
+  `app/[locale]/(app)` and fails when one of them is not protected, with `dev/` declared as the
+  exception the `componentCatalog` flag guards instead. Removing `/sync` again fails that test.
+  In the browser, `auth.spec.ts` asserts the 307 to `/login?next=%2Fsync` and the noindex header.
+- **Consequence:** a device with a queue and a dead session still opens `/sync` — it has the marker.
+  A signed-out device is sent to the login, like everywhere else.
+
+## 2026-09-07 · The intermittents get room, not guesses (F-73, F-77)
+
+- **Measured first:** six full runs of the unit suite, 137 files and 778 tests each, all green.
+  Neither of F-73's two intermittents reproduced. That is the number, and it is written here because
+  "did not reproduce" is a result, not a reason to change nothing.
+- **Decision, two changes, each a better wait and not a weaker assertion:** the discard test read its
+  toast with `getByText` right after waiting for a different condition, so it now waits for the toast
+  itself; and Testing Library's async utilities move from their default one second to five
+  (`asyncUtilTimeout`), the same reasoning that made F-19 raise the test timeout to 15 s — with 137
+  files across eight workers a render that normally settles in milliseconds can miss a second, and
+  the failure then says the element does not exist rather than that the machine was busy.
+- **F-77, in the browser suite:** the Save all spec asserted the length of the intercepted `POST
+/sync` batches right after the toast appeared, and once Playwright had not yet delivered the request
+  event. It polls for the batch now, and the negative assertion — nothing went to
+  `PATCH /transactions/batch` — moves after it so both are judged on the same window.
+- **Consequence:** a passing test still passes just as fast; only a failing one takes longer to say
+  so.
+
+## 2026-09-07 · The authenticated audit runs when asked, not every night (F-76)
+
+- **Decision:** `.github/workflows/lighthouse-app.yml` checks out both repositories, brings up the
+  Mongo replica set, lets `tools/lighthouse.mjs` start and seed the backend the way it does locally,
+  runs `npm run lighthouse:app` over the 25 screens and uploads `.lighthouseci` whatever the outcome.
+  `workflow_dispatch`, with a 60-minute limit.
+- **Why not nightly, and not in `ci.yml`:** the run needs the backend, the replica set and about half
+  an hour, so it cannot ride on every push; and while **F-78** is open the audit fails by design
+  (performance 78–86 against a threshold of 90). A job that goes red every night is a job everyone
+  learns to ignore. Once F-78 is decided, adding a `schedule` is one line.
+- **Alternative:** a subset of four or five screens on every pull request. Rejected for the same
+  reason — it would fail on every pull request until F-78 is decided.
+
+## 2026-09-07 · No branch is retired (W-39)
+
+- **Decision:** nothing is deleted. W-39 lists "retire the old branch" and the owner was asked
+  explicitly on 2026-09-07: the answer was to leave every branch alone and write down what there is.
+- **What there is:** `audit/fase-2-frontend` (the front as it was before the redesign, local only,
+  never pushed), `redesign/fase-2` and `feat/offline` (both merged into `main` through pull requests
+  #4 and #6, local and remote), `demo`, and the remotes `improvements` and `updateCache`. Deleting a
+  remote branch would need a push, which the owner's rules forbid anyway.
+- **Consequence:** `ci.yml` no longer runs on pushes to `redesign/fase-2`, which is merged; it runs
+  on `main`, on `feat/**` and on every pull request. The branches stay until the owner says otherwise.
+
+## 2026-09-07 · CI builds the backend from main again (W-39)
+
+- **Decision:** `BACKEND_REF` goes from `feat/offline` back to `main` in `ci.yml` and in the new
+  `lighthouse-app.yml`. This was the single line the offline plan left for the end of the merge
+  dance, backend first.
+- **Verified, not assumed:** `origin/feat/offline` is an ancestor of `origin/main` in
+  `lag-money-manager` (pull request #7), the sync routes are on `main`, and the types regenerated
+  today came from a backend running `main` — sorted, they are identical to the ones the branch
+  produced, so the contract the e2e job diffs against has not moved.

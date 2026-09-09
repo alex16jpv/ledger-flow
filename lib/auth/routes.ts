@@ -11,7 +11,9 @@ export const REAUTH_PARAM = "reauth";
 const PUBLIC_EXACT = new Set(["/", "/login", "/register", "/privacy", "/terms", "/contact"]);
 const PUBLIC_PREFIXES = ["/dev/"];
 const GUEST_ONLY = new Set(["/login", "/register"]);
-// Only these need a session; anything else unknown must reach the real 404, not the login.
+// One line per screen folder of `app/[locale]/(app)`, minus `dev/`, which the componentCatalog flag
+// guards instead; anything else unknown must reach the real 404, not the login. `routes.test.ts`
+// reads the folder and fails when a screen is missing here — F-75 was `/sync` missing for a month.
 const APP_PREFIXES = [
   "/home",
   "/onboarding",
@@ -20,6 +22,7 @@ const APP_PREFIXES = [
   "/categories",
   "/budgets",
   "/stats",
+  "/sync",
   "/settings",
 ];
 

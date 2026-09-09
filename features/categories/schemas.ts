@@ -1,6 +1,6 @@
 import { CATEGORY_ICON_KEYS } from "@/lib/icons/category-icons";
 import { COLOR_TOKENS } from "@/lib/theme/feature-color";
-import { z } from "@/lib/validation/zod";
+import { type Infer, z } from "@/lib/validation/zod";
 import type { components } from "@/types/api";
 
 export const CATEGORY_TYPES = [
@@ -22,4 +22,4 @@ export const categoryFormSchema = z.object({
   type: z.enum(CATEGORY_TYPES, { error: "validation.required" }),
 });
 
-export type CategoryFormValues = z.infer<typeof categoryFormSchema>;
+export type CategoryFormValues = Infer<typeof categoryFormSchema>;

@@ -11,6 +11,7 @@ import {
   safeNextPath,
   stripLocale,
 } from "@/lib/auth/routes";
+import { isEnabled } from "@/lib/flags";
 import { routing } from "@/lib/i18n/routing";
 import { buildCsp, cspHeaderName, newNonce } from "@/lib/security/csp";
 
@@ -37,6 +38,15 @@ export default function proxy(request: NextRequest) {
   // ...which is why it cannot bounce anyone off the login: with a 400-day marker and a dead session
   // that would be a device locked out of its own account.
   const reauthenticating = request.nextUrl.searchParams.has(REAUTH_PARAM);
+
+  // W-39: every `/dev/` screen guards itself with `notFound()`, but `/dev/pickers` sits inside the
+  // `(app)` group, whose `loading.tsx` starts streaming before the page runs, so its 404 arrived as a
+  // 200 with the not-found body inside. The flag is a routing fact: decided here, nothing renders.
+  if (path.startsWith("/dev/") && !isEnabled("componentCatalog")) {
+    const gone = new NextResponse(null, { status: 404 });
+    gone.headers.set("x-robots-tag", "noindex, nofollow");
+    return gone;
+  }
 
   // Previews must never be indexed, whatever the path (Vercel only adds the header on *.vercel.app).
   const noindex =

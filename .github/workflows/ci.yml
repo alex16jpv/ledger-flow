@@ -2,15 +2,15 @@ name: ci
 on:
   pull_request:
   push:
-    branches: [main, redesign/fase-2, "feat/**"]
+    branches: [main, "feat/**"]
 env:
   API_URL: http://localhost:3000
   NEXT_PUBLIC_APP_URL: http://localhost:3001
   NEXT_PUBLIC_CONTACT_EMAIL: ledgerflow@alexpiral.com
   NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
-  # The backend branch the e2e job builds and regenerates types/api.d.ts against. This branch needs
-  # the sync endpoints of feat/offline; move it back to main once both repos merge (backend first).
-  BACKEND_REF: feat/offline
+  # The backend branch the e2e job builds and regenerates types/api.d.ts against. Back on main since
+  # 2026-09-07: the backend merged feat/offline in its pull request #7, and the front in #6.
+  BACKEND_REF: main
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -66,7 +66,7 @@ jobs:
           JWT_SECRET: ci-only-secret
           CORS_ORIGIN: http://localhost:3001
           NODE_ENV: test
-      - run: npm run gen:api-types && git diff --exit-code -- types/api.d.ts
+      - run: npm run gen:api-types && git diff --exit-code -- types/api.d.ts endpoints.md
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
         env:

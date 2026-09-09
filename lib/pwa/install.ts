@@ -1,57 +1,70 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
+
+import { INSTALL_STATE_GLOBAL } from "./install-script";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-export type InstallState = "unavailable" | "available" | "installed";
+interface InstallState {
+  event: BeforeInstallPromptEvent | null;
+  installed: boolean;
+  notify: (() => void) | null;
+}
 
-// Chromium fires beforeinstallprompt when the app is installable; Safari never does, so the row hides there.
+export type InstallPromptState = "unavailable" | "available" | "installed";
+
+// Chromium fires beforeinstallprompt when the app is installable; Safari never does, so the row
+// falls back to the manual steps instead of hiding (F-87).
 const STANDALONE = "(display-mode: standalone)";
 
-function subscribeStandalone(onChange: () => void) {
+function store(): InstallState | null {
+  if (typeof window === "undefined") return null;
+  return (
+    (window as unknown as Record<string, InstallState | undefined>)[INSTALL_STATE_GLOBAL] ?? null
+  );
+}
+
+// The head script owns the capture; this only relays its changes to React.
+function subscribe(onChange: () => void): () => void {
+  const state = store();
+  if (state) state.notify = onChange;
   const media = window.matchMedia(STANDALONE);
   media.addEventListener("change", onChange);
   window.addEventListener("appinstalled", onChange);
   return () => {
+    if (state?.notify === onChange) state.notify = null;
     media.removeEventListener("change", onChange);
     window.removeEventListener("appinstalled", onChange);
   };
 }
 
-export function useInstallPrompt(): { state: InstallState; install: () => Promise<void> } {
-  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const installed = useSyncExternalStore(
-    subscribeStandalone,
-    () => window.matchMedia(STANDALONE).matches,
-    () => false,
-  );
+function snapshot(): InstallPromptState {
+  const state = store();
+  if (window.matchMedia(STANDALONE).matches || state?.installed) return "installed";
+  return state?.event ? "available" : "unavailable";
+}
 
-  useEffect(() => {
-    const onPrompt = (event: Event) => {
-      event.preventDefault();
-      setPrompt(event as BeforeInstallPromptEvent);
-    };
-    const onInstalled = () => {
-      setPrompt(null);
-    };
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    window.addEventListener("appinstalled", onInstalled);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
-      window.removeEventListener("appinstalled", onInstalled);
-    };
-  }, []);
+export function useInstallPrompt(): {
+  state: InstallPromptState;
+  install: () => Promise<void>;
+} {
+  const state = useSyncExternalStore(subscribe, snapshot, () => "unavailable" as const);
 
   const install = useCallback(async () => {
-    if (!prompt) return;
-    await prompt.prompt();
-    const choice = await prompt.userChoice;
-    if (choice.outcome === "accepted") setPrompt(null);
-  }, [prompt]);
+    const captured = store();
+    const event = captured?.event;
+    if (!captured || !event) return;
+    await event.prompt();
+    const choice = await event.userChoice;
+    if (choice.outcome === "accepted") {
+      captured.event = null;
+      captured.notify?.();
+    }
+  }, []);
 
-  return { state: installed ? "installed" : prompt ? "available" : "unavailable", install };
+  return { state, install };
 }

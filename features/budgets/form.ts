@@ -1,7 +1,7 @@
 import { dayKey, daysWindow, localDateTime } from "@/lib/format/dates";
 import { MAX_AMOUNT } from "@/lib/format/money";
 import { COLOR_TOKENS } from "@/lib/theme/feature-color";
-import { z } from "@/lib/validation/zod";
+import { type Infer, z } from "@/lib/validation/zod";
 import type { Budget, CreateBudgetInput, UpdateBudgetInput } from "@/types/api";
 
 import { BUDGET_PERIOD_TYPES } from "./progress";
@@ -67,7 +67,7 @@ export const budgetFormSchema = z
       context.addIssue({ code: "custom", path: ["effectiveFrom"], message: "validation.invalid" });
   });
 
-export type BudgetFormValues = z.infer<typeof budgetFormSchema>;
+export type BudgetFormValues = Infer<typeof budgetFormSchema>;
 
 export function defaultBudgetValues(now: Date, timeZone: string): BudgetFormValues {
   const start = dayKey(now, timeZone);

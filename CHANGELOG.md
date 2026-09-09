@@ -49,6 +49,17 @@ the network comes back. 70 commits since 0.1.0.
   Content-Security-Policy is now enforced instead of only reported (F-71).
 - The size budget watches the authenticated app, which it had never matched (F-10), and Lighthouse
   no longer leaves a browser profile in the repository (F-12).
+- "Needs your attention" asks for a session like every other screen of the app, and is no longer the
+  one that opened without one (F-75).
+- The development-only screens are proved gone from a production build, not assumed: `/dev/pickers`
+  was answering 200 with the not-found page inside it (W-39).
+- Nothing moves when the system asks for less motion, and the loading ring closes instead of standing
+  still as a broken arc (W-38, F-74).
+
+### Security
+
+- The Content-Security-Policy is enforced, not only reported (F-71), and every development route
+  answers 404 in production before it renders anything (W-39).
 
 ## [0.1.0] - 2026-09-02
 

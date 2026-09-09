@@ -21,9 +21,7 @@ const allowTo = (...types) => types.map((type) => ({ to: { element: { type } } }
 
 export default defineConfig([
   globalIgnores([
-    ".next/**",
-    ".next-e2e/**",
-    ".next-gate/**",
+    ".next*/**",
     "node_modules/**",
     "coverage/**",
     "playwright-report/**",
@@ -42,6 +40,18 @@ export default defineConfig([
       "simple-import-sort/exports": "error",
       "no-console": ["error", { allow: ["warn", "error"] }],
       "no-restricted-globals": ["error", { name: "fetch", message: "Use lib/api." }],
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "zod",
+              message:
+                "Import z from lib/validation/zod: the namespace drags every locale into the bundle (F-70).",
+            },
+          ],
+        },
+      ],
       "no-restricted-properties": [
         "error",
         { object: "window", property: "fetch", message: "Use lib/api." },
@@ -73,6 +83,10 @@ export default defineConfig([
   {
     files: ["lib/api/**/*.ts", "app/api/**/*.ts"],
     rules: { "no-restricted-globals": "off", "no-restricted-properties": "off" },
+  },
+  {
+    files: ["lib/validation/zod.ts"],
+    rules: { "no-restricted-imports": "off" },
   },
   {
     files: SOURCE_FILES,
