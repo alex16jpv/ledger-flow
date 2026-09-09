@@ -1,0 +1,228 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title> · Ledger Flow diseño</title>
+<link rel="stylesheet" href="../../tokens/palette.tinta.css"><link rel="stylesheet" href="../../tokens/palette.brisa.css">
+<link rel="stylesheet" href="../../tokens/semantic.css"><link rel="stylesheet" href="../../tokens/base.css">
+<link rel="stylesheet" href="assets/ui.css"><link rel="stylesheet" href="assets/shell.css">
+<script defer src="assets/icons.js"></script><script defer src="assets/shell.js"></script></head><body><div class="pv-stage"><div class="pv-note"><b>Inicio.</b> <b>Añadido el 2026-09-08 (P-34):</b> la lámina B lleva el aviso de instalar, que es el mismo aviso del almacenamiento persistente — aparece cuando el dispositivo ya tiene algo que perder y corre en pestaña de navegador, con «Install» donde el navegador lo ofrece y «How» donde no (iOS). El número protagonista es el gasto del mes (la app existe para ver el gasto hormiga), con barras por día y avance contra el presupuesto global. La franja ámbar es la bandeja de gastos rápidos sin detallar. En escritorio el mismo contenido se reparte en dos columnas.</div><div class="pv-grid"><div class="pv-item"><div class="pv-title">A · Inicio</div><div class="device "><div class="app"><div class="shell"><aside class="sidebar">
+<div class="brand"><span class="logo"><svg class="icon sm" aria-hidden="true"><use href="#i-layers"/></svg></span>Ledger Flow</div>
+<button class="btn primary block cta"><svg class="icon sm" aria-hidden="true"><use href="#i-plus"/></svg> Add</button>
+<a class="navlink active" href="#"><svg class="icon " aria-hidden="true"><use href="#i-house"/></svg><span>Home</span></a><a class="navlink" href="#"><svg class="icon " aria-hidden="true"><use href="#i-list"/></svg><span>Transactions</span><span class="count">3</span></a>
+<a class="navlink" href="#"><svg class="icon " aria-hidden="true"><use href="#i-chart-pie"/></svg><span>Budgets</span></a><a class="navlink" href="#"><svg class="icon " aria-hidden="true"><use href="#i-wallet"/></svg><span>Accounts</span></a>
+<a class="navlink" href="#"><svg class="icon " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Stats</span></a><a class="navlink" href="#"><svg class="icon " aria-hidden="true"><use href="#i-tags"/></svg><span>Categories</span></a>
+<div class="footer"><a class="navlink" href="#"><svg class="icon " aria-hidden="true"><use href="#i-settings"/></svg><span>Settings</span></a>
+<a class="navlink" href="#"><span class="avatar" style="width:28px;height:28px;font-size:11px">AV</span><span class="truncate">Andrés Valencia</span></a></div></aside><main class="main">
+<div class="page mobile-only"><header class="page-header"><div class="title"><span class="eyebrow">Tuesday, September 22</span><h1 class="h1">Hi, Andrés</h1></div>
+<div class="actions"><button class="btn ghost icon-only round desktop-only" aria-label="Search"><svg class="icon " aria-hidden="true"><use href="#i-search"/></svg></button><a class="avatar" href="#" aria-label="Settings">AV</a></div></header><a class="alert warning" href="#" style="align-items:center"><svg class="icon " aria-hidden="true"><use href="#i-inbox"/></svg><span style="flex:1"><b>3 quick expenses to review</b> · $47,900 in total</span><svg class="icon sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><section class="card">
+<div class="card-head"><span class="eyebrow">September spending</span><span class="badge outline"><svg class="icon " aria-hidden="true"><use href="#i-calendar"/></svg>Day 22 of 30</span></div>
+<div class="amount-hero"><span class="cur">$</span>1,284,300</div>
+<p class="small muted" style="margin:6px 0 14px">Daily average <b class="amount"><span class="cur">$</span>42,800</b> · <span class="faint">Yesterday you spent $38,500</span></p>
+<div class="bars" aria-label="Spending per day"><i style="height:30%" class=""></i><i style="height:55%" class=""></i><i style="height:20%" class=""></i><i style="height:65%" class=""></i><i style="height:40%" class=""></i><i style="height:15%" class="nil"></i><i style="height:70%" class=""></i><i style="height:45%" class=""></i><i style="height:90%" class="hi"></i><i style="height:35%" class=""></i><i style="height:25%" class=""></i><i style="height:50%" class=""></i><i style="height:60%" class=""></i><i style="height:15%" class="nil"></i><i style="height:30%" class=""></i><i style="height:75%" class=""></i><i style="height:40%" class=""></i><i style="height:55%" class=""></i><i style="height:20%" class=""></i><i style="height:45%" class=""></i><i style="height:85%" class="hi"></i><i style="height:30%" class=""></i><i style="height:40%" class=""></i><i style="height:60%" class=""></i><i style="height:35%" class=""></i><i style="height:50%" class=""></i><i style="height:25%" class=""></i><i style="height:65%" class=""></i><i style="height:45%" class=""></i><i style="height:38%" class="today"></i><i style="height:0%" class="nil"></i></div>
+<div class="hstack" style="margin-top:14px;gap:12px">
+<div class="progress color-INDIGO" style="flex:1"><span class="fill" style="width:64%"></span><button class="mark tooltip" style="left:73%" aria-label="Day 22 of 30 · 73% expected"><span class="tip">Day 22 of 30 · 73% expected</span></button></div>
+<span class="small muted" style="white-space:nowrap">64% of monthly budget</span></div>
+</section><section class="stats">
+<div class="card stat"><span class="k">Total balance</span><span class="v amount"><span class="cur">$</span>11,258,600</span><span class="d faint">4 accounts</span></div>
+<div class="card stat"><span class="k">Income this month</span><span class="v amount income">+<span class="cur">$</span>4,200,000</span><span class="d up"><svg class="icon sm" aria-hidden="true"><use href="#i-trending-up"/></svg>Same as August</span></div>
+<div class="card stat desktop-only"><span class="k">Estimated savings</span><span class="v amount"><span class="cur">$</span>2,915,700</span><span class="d faint">Income − spending</span></div>
+</section><section class="card">
+<div class="card-head"><h3 class="h3">Budgets</h3><a class="link small" href="#" style="color:var(--brand-text);font-weight:500">See all</a></div>
+<div class="stack-sm" style="padding:10px 0">
+<div class="hstack"><span class="tile sm color-ORANGE"><svg class="icon " aria-hidden="true"><use href="#i-utensils"/></svg></span><span style="font-weight:500;flex:1">Food</span><span class="small muted amount"><span class="cur">$</span>412,000 <span class="faint">/ <span class="cur">$</span>600,000</span></span></div>
+<div class="progress thin color-ORANGE "><span class="fill" style="width:69%"></span></div>
+<span class="xs faint">$188,000 left · on track</span></div><div class="stack-sm" style="padding:10px 0">
+<div class="hstack"><span class="tile sm color-BLUE"><svg class="icon " aria-hidden="true"><use href="#i-car"/></svg></span><span style="font-weight:500;flex:1">Transport</span><span class="small muted amount"><span class="cur">$</span>185,500 <span class="faint">/ <span class="cur">$</span>200,000</span></span></div>
+<div class="progress thin color-BLUE warn"><span class="fill" style="width:93%"></span></div>
+<span class="xs faint">At 93% with 8 days left</span></div><div class="stack-sm" style="padding:10px 0">
+<div class="hstack"><span class="tile sm color-PINK"><svg class="icon " aria-hidden="true"><use href="#i-shopping-bag"/></svg></span><span style="font-weight:500;flex:1">Lifestyle</span><span class="small muted amount"><span class="cur">$</span>356,000 <span class="faint">/ <span class="cur">$</span>300,000</span></span></div>
+<div class="progress thin color-PINK over"><span class="fill" style="width:100%"></span></div>
+<span class="xs faint">Over by $56,000</span></div>
+</section><section class="stack-sm"><div class="section-head"><h3 class="h3">Accounts</h3><a class="link" href="#">See all</a></div>
+<div class="hscroll"><a class="account-card color-BLUE" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Bancolombia</span><span class="badge brand"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg>Main</span></div>
+<div><div class="amount-lg amount"><span class="cur">$</span>3,420,500</div><div class="type">Bank account</div></div></a><a class="account-card color-GRAY" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Cash</span></div>
+<div><div class="amount-lg amount"><span class="cur">$</span>184,000</div><div class="type">Cash</div></div></a><a class="account-card color-PURPLE" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Visa Gold</span></div>
+<div><div class="amount-lg amount">−<span class="cur">$</span>1,245,900</div><div class="type">Credit card</div></div></a><a class="account-card color-GREEN" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Savings</span></div>
+<div><div class="amount-lg amount"><span class="cur">$</span>8,900,000</div><div class="type">Savings</div></div></a></div></section><section class="stack-sm"><div class="section-head"><h3 class="h3">Recent transactions</h3><a class="link" href="#">See all</a></div>
+<div class="list card flush">
+<a class="row pending" href="#"><span class="tile  color-NONE"><svg class="icon " aria-hidden="true"><use href="#i-hash"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Quick expense</span><span class="badge warning">To review</span></span><span class="meta">Today 8:42 · Bancolombia</span></span>
+<span class="right"><span class="amount expense ">−<span class="cur">$</span>12,500</span></span></a>
+<a class="row" href="#"><span class="tile  color-BROWN"><svg class="icon " aria-hidden="true"><use href="#i-coffee"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Pergamino Coffee</span></span><span class="meta">Today 7:55 · Cash</span></span>
+<span class="right"><span class="amount expense ">−<span class="cur">$</span>9,800</span><span class="sub">#coffee</span></span></a>
+<a class="row" href="#"><span class="tile  color-GREEN"><svg class="icon " aria-hidden="true"><use href="#i-briefcase"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">August salary</span></span><span class="meta">Yesterday · Bancolombia</span></span>
+<span class="right"><span class="amount income ">+<span class="cur">$</span>4,200,000</span></span></a>
+<a class="row" href="#"><span class="tile  color-GRAY"><svg class="icon " aria-hidden="true"><use href="#i-repeat"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Bancolombia → Savings</span></span><span class="meta">Yesterday · Transfer</span></span>
+<span class="right"><span class="amount transfer "><span class="cur">$</span>1,000,000</span></span></a>
+<a class="row" href="#"><span class="tile  color-BLUE"><svg class="icon " aria-hidden="true"><use href="#i-car"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Uber to work</span></span><span class="meta">Yesterday 18:10 · Visa Gold</span></span>
+<span class="right"><span class="amount expense ">−<span class="cur">$</span>18,400</span></span></a>
+</div></section></div><div class="page desktop-only"><header class="page-header"><div class="title"><span class="eyebrow">Tuesday, September 22</span><h1 class="h1">Hi, Andrés</h1></div>
+<div class="actions"><button class="btn ghost icon-only round desktop-only" aria-label="Search"><svg class="icon " aria-hidden="true"><use href="#i-search"/></svg></button><a class="avatar" href="#" aria-label="Settings">AV</a></div></header><a class="alert warning" href="#" style="align-items:center"><svg class="icon " aria-hidden="true"><use href="#i-inbox"/></svg><span style="flex:1"><b>3 quick expenses to review</b> · $47,900 in total</span><svg class="icon sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><div class="grid-main"><div class="stack" style="gap:20px"><section class="card">
+<div class="card-head"><span class="eyebrow">September spending</span><span class="badge outline"><svg class="icon " aria-hidden="true"><use href="#i-calendar"/></svg>Day 22 of 30</span></div>
+<div class="amount-hero"><span class="cur">$</span>1,284,300</div>
+<p class="small muted" style="margin:6px 0 14px">Daily average <b class="amount"><span class="cur">$</span>42,800</b> · <span class="faint">Yesterday you spent $38,500</span></p>
+<div class="bars" aria-label="Spending per day"><i style="height:30%" class=""></i><i style="height:55%" class=""></i><i style="height:20%" class=""></i><i style="height:65%" class=""></i><i style="height:40%" class=""></i><i style="height:15%" class="nil"></i><i style="height:70%" class=""></i><i style="height:45%" class=""></i><i style="height:90%" class="hi"></i><i style="height:35%" class=""></i><i style="height:25%" class=""></i><i style="height:50%" class=""></i><i style="height:60%" class=""></i><i style="height:15%" class="nil"></i><i style="height:30%" class=""></i><i style="height:75%" class=""></i><i style="height:40%" class=""></i><i style="height:55%" class=""></i><i style="height:20%" class=""></i><i style="height:45%" class=""></i><i style="height:85%" class="hi"></i><i style="height:30%" class=""></i><i style="height:40%" class=""></i><i style="height:60%" class=""></i><i style="height:35%" class=""></i><i style="height:50%" class=""></i><i style="height:25%" class=""></i><i style="height:65%" class=""></i><i style="height:45%" class=""></i><i style="height:38%" class="today"></i><i style="height:0%" class="nil"></i></div>
+<div class="hstack" style="margin-top:14px;gap:12px">
+<div class="progress color-INDIGO" style="flex:1"><span class="fill" style="width:64%"></span><button class="mark tooltip" style="left:73%" aria-label="Day 22 of 30 · 73% expected"><span class="tip">Day 22 of 30 · 73% expected</span></button></div>
+<span class="small muted" style="white-space:nowrap">64% of monthly budget</span></div>
+</section><section class="stats">
+<div class="card stat"><span class="k">Total balance</span><span class="v amount"><span class="cur">$</span>11,258,600</span><span class="d faint">4 accounts</span></div>
+<div class="card stat"><span class="k">Income this month</span><span class="v amount income">+<span class="cur">$</span>4,200,000</span><span class="d up"><svg class="icon sm" aria-hidden="true"><use href="#i-trending-up"/></svg>Same as August</span></div>
+<div class="card stat desktop-only"><span class="k">Estimated savings</span><span class="v amount"><span class="cur">$</span>2,915,700</span><span class="d faint">Income − spending</span></div>
+</section><section class="stack-sm"><div class="section-head"><h3 class="h3">Recent transactions</h3><a class="link" href="#">See all</a></div>
+<div class="list card flush">
+<a class="row pending" href="#"><span class="tile  color-NONE"><svg class="icon " aria-hidden="true"><use href="#i-hash"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Quick expense</span><span class="badge warning">To review</span></span><span class="meta">Today 8:42 · Bancolombia</span></span>
+<span class="right"><span class="amount expense ">−<span class="cur">$</span>12,500</span></span></a>
+<a class="row" href="#"><span class="tile  color-BROWN"><svg class="icon " aria-hidden="true"><use href="#i-coffee"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Pergamino Coffee</span></span><span class="meta">Today 7:55 · Cash</span></span>
+<span class="right"><span class="amount expense ">−<span class="cur">$</span>9,800</span><span class="sub">#coffee</span></span></a>
+<a class="row" href="#"><span class="tile  color-GREEN"><svg class="icon " aria-hidden="true"><use href="#i-briefcase"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">August salary</span></span><span class="meta">Yesterday · Bancolombia</span></span>
+<span class="right"><span class="amount income ">+<span class="cur">$</span>4,200,000</span></span></a>
+<a class="row" href="#"><span class="tile  color-GRAY"><svg class="icon " aria-hidden="true"><use href="#i-repeat"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Bancolombia → Savings</span></span><span class="meta">Yesterday · Transfer</span></span>
+<span class="right"><span class="amount transfer "><span class="cur">$</span>1,000,000</span></span></a>
+<a class="row" href="#"><span class="tile  color-BLUE"><svg class="icon " aria-hidden="true"><use href="#i-car"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Uber to work</span></span><span class="meta">Yesterday 18:10 · Visa Gold</span></span>
+<span class="right"><span class="amount expense ">−<span class="cur">$</span>18,400</span></span></a>
+</div></section></div><div class="stack" style="gap:20px"><section class="card">
+<div class="card-head"><h3 class="h3">Budgets</h3><a class="link small" href="#" style="color:var(--brand-text);font-weight:500">See all</a></div>
+<div class="stack-sm" style="padding:10px 0">
+<div class="hstack"><span class="tile sm color-ORANGE"><svg class="icon " aria-hidden="true"><use href="#i-utensils"/></svg></span><span style="font-weight:500;flex:1">Food</span><span class="small muted amount"><span class="cur">$</span>412,000 <span class="faint">/ <span class="cur">$</span>600,000</span></span></div>
+<div class="progress thin color-ORANGE "><span class="fill" style="width:69%"></span></div>
+<span class="xs faint">$188,000 left · on track</span></div><div class="stack-sm" style="padding:10px 0">
+<div class="hstack"><span class="tile sm color-BLUE"><svg class="icon " aria-hidden="true"><use href="#i-car"/></svg></span><span style="font-weight:500;flex:1">Transport</span><span class="small muted amount"><span class="cur">$</span>185,500 <span class="faint">/ <span class="cur">$</span>200,000</span></span></div>
+<div class="progress thin color-BLUE warn"><span class="fill" style="width:93%"></span></div>
+<span class="xs faint">At 93% with 8 days left</span></div><div class="stack-sm" style="padding:10px 0">
+<div class="hstack"><span class="tile sm color-PINK"><svg class="icon " aria-hidden="true"><use href="#i-shopping-bag"/></svg></span><span style="font-weight:500;flex:1">Lifestyle</span><span class="small muted amount"><span class="cur">$</span>356,000 <span class="faint">/ <span class="cur">$</span>300,000</span></span></div>
+<div class="progress thin color-PINK over"><span class="fill" style="width:100%"></span></div>
+<span class="xs faint">Over by $56,000</span></div>
+</section><section class="stack-sm"><div class="section-head"><h3 class="h3">Accounts</h3><a class="link" href="#">See all</a></div>
+<div class="hscroll"><a class="account-card color-BLUE" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Bancolombia</span><span class="badge brand"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg>Main</span></div>
+<div><div class="amount-lg amount"><span class="cur">$</span>3,420,500</div><div class="type">Bank account</div></div></a><a class="account-card color-GRAY" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Cash</span></div>
+<div><div class="amount-lg amount"><span class="cur">$</span>184,000</div><div class="type">Cash</div></div></a><a class="account-card color-PURPLE" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Visa Gold</span></div>
+<div><div class="amount-lg amount">−<span class="cur">$</span>1,245,900</div><div class="type">Credit card</div></div></a><a class="account-card color-GREEN" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Savings</span></div>
+<div><div class="amount-lg amount"><span class="cur">$</span>8,900,000</div><div class="type">Savings</div></div></a></div></section></div></div></div>
+</main><nav class="tabbar" aria-label="Navegación">
+<a class="tab active" href="#"><svg class="icon " aria-hidden="true"><use href="#i-house"/></svg><span>Home</span></a><a class="tab" href="#"><svg class="icon " aria-hidden="true"><use href="#i-list"/></svg><span>Transactions</span><i class=dot></i></a>
+<div class="fab-slot"><button class="fab" aria-label="Add expense"><svg class="icon " aria-hidden="true"><use href="#i-plus"/></svg></button></div>
+<a class="tab" href="#"><svg class="icon " aria-hidden="true"><use href="#i-chart-pie"/></svg><span>Budgets</span></a><a class="tab" href="#"><svg class="icon " aria-hidden="true"><use href="#i-wallet"/></svg><span>Accounts</span></a></nav></div></div></div></div><div class="pv-item"><div class="pv-title">B · Con el aviso de instalar y durabilidad (P-34)</div><div class="device "><div class="app"><div class="shell"><aside class="sidebar">
+<div class="brand"><span class="logo"><svg class="icon sm" aria-hidden="true"><use href="#i-layers"/></svg></span>Ledger Flow</div>
+<button class="btn primary block cta"><svg class="icon sm" aria-hidden="true"><use href="#i-plus"/></svg> Add</button>
+<a class="navlink active" href="#"><svg class="icon " aria-hidden="true"><use href="#i-house"/></svg><span>Home</span></a><a class="navlink" href="#"><svg class="icon " aria-hidden="true"><use href="#i-list"/></svg><span>Transactions</span><span class="count">3</span></a>
+<a class="navlink" href="#"><svg class="icon " aria-hidden="true"><use href="#i-chart-pie"/></svg><span>Budgets</span></a><a class="navlink" href="#"><svg class="icon " aria-hidden="true"><use href="#i-wallet"/></svg><span>Accounts</span></a>
+<a class="navlink" href="#"><svg class="icon " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Stats</span></a><a class="navlink" href="#"><svg class="icon " aria-hidden="true"><use href="#i-tags"/></svg><span>Categories</span></a>
+<div class="footer"><a class="navlink" href="#"><svg class="icon " aria-hidden="true"><use href="#i-settings"/></svg><span>Settings</span></a>
+<a class="navlink" href="#"><span class="avatar" style="width:28px;height:28px;font-size:11px">AV</span><span class="truncate">Andrés Valencia</span></a></div></aside><main class="main">
+<div class="page mobile-only"><header class="page-header"><div class="title"><span class="eyebrow">Tuesday, September 22</span><h1 class="h1">Hi, Andrés</h1></div>
+<div class="actions"><button class="btn ghost icon-only round desktop-only" aria-label="Search"><svg class="icon " aria-hidden="true"><use href="#i-search"/></svg></button><a class="avatar" href="#" aria-label="Settings">AV</a></div></header><a class="alert warning" href="#" style="align-items:center"><svg class="icon " aria-hidden="true"><use href="#i-inbox"/></svg><span style="flex:1"><b>3 quick expenses to review</b> · $47,900 in total</span><svg class="icon sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><section class="card hstack" style="gap:12px;align-items:flex-start"><span class="tile  color-AMBER"><svg class="icon " aria-hidden="true"><use href="#i-monitor-smartphone"/></svg></span>
+<span class="body" style="flex:1;display:flex;flex-direction:column;gap:6px">
+<span class="h3">Keep your data on this phone</span>
+<span class="small muted">This browser can delete what you record offline after a few days without opening the site. Installing the app stops that.</span>
+<span class="hstack" style="gap:8px;margin-top:4px"><button class="btn primary sm"><svg class="icon sm" aria-hidden="true"><use href="#i-download"/></svg>Install</button><button class="btn secondary sm">How</button><button class="btn ghost sm">Not now</button></span>
+</span></section><section class="card">
+<div class="card-head"><span class="eyebrow">September spending</span><span class="badge outline"><svg class="icon " aria-hidden="true"><use href="#i-calendar"/></svg>Day 22 of 30</span></div>
+<div class="amount-hero"><span class="cur">$</span>1,284,300</div>
+<p class="small muted" style="margin:6px 0 14px">Daily average <b class="amount"><span class="cur">$</span>42,800</b> · <span class="faint">Yesterday you spent $38,500</span></p>
+<div class="bars" aria-label="Spending per day"><i style="height:30%" class=""></i><i style="height:55%" class=""></i><i style="height:20%" class=""></i><i style="height:65%" class=""></i><i style="height:40%" class=""></i><i style="height:15%" class="nil"></i><i style="height:70%" class=""></i><i style="height:45%" class=""></i><i style="height:90%" class="hi"></i><i style="height:35%" class=""></i><i style="height:25%" class=""></i><i style="height:50%" class=""></i><i style="height:60%" class=""></i><i style="height:15%" class="nil"></i><i style="height:30%" class=""></i><i style="height:75%" class=""></i><i style="height:40%" class=""></i><i style="height:55%" class=""></i><i style="height:20%" class=""></i><i style="height:45%" class=""></i><i style="height:85%" class="hi"></i><i style="height:30%" class=""></i><i style="height:40%" class=""></i><i style="height:60%" class=""></i><i style="height:35%" class=""></i><i style="height:50%" class=""></i><i style="height:25%" class=""></i><i style="height:65%" class=""></i><i style="height:45%" class=""></i><i style="height:38%" class="today"></i><i style="height:0%" class="nil"></i></div>
+<div class="hstack" style="margin-top:14px;gap:12px">
+<div class="progress color-INDIGO" style="flex:1"><span class="fill" style="width:64%"></span><button class="mark tooltip" style="left:73%" aria-label="Day 22 of 30 · 73% expected"><span class="tip">Day 22 of 30 · 73% expected</span></button></div>
+<span class="small muted" style="white-space:nowrap">64% of monthly budget</span></div>
+</section><section class="stats">
+<div class="card stat"><span class="k">Total balance</span><span class="v amount"><span class="cur">$</span>11,258,600</span><span class="d faint">4 accounts</span></div>
+<div class="card stat"><span class="k">Income this month</span><span class="v amount income">+<span class="cur">$</span>4,200,000</span><span class="d up"><svg class="icon sm" aria-hidden="true"><use href="#i-trending-up"/></svg>Same as August</span></div>
+<div class="card stat desktop-only"><span class="k">Estimated savings</span><span class="v amount"><span class="cur">$</span>2,915,700</span><span class="d faint">Income − spending</span></div>
+</section><section class="card">
+<div class="card-head"><h3 class="h3">Budgets</h3><a class="link small" href="#" style="color:var(--brand-text);font-weight:500">See all</a></div>
+<div class="stack-sm" style="padding:10px 0">
+<div class="hstack"><span class="tile sm color-ORANGE"><svg class="icon " aria-hidden="true"><use href="#i-utensils"/></svg></span><span style="font-weight:500;flex:1">Food</span><span class="small muted amount"><span class="cur">$</span>412,000 <span class="faint">/ <span class="cur">$</span>600,000</span></span></div>
+<div class="progress thin color-ORANGE "><span class="fill" style="width:69%"></span></div>
+<span class="xs faint">$188,000 left · on track</span></div><div class="stack-sm" style="padding:10px 0">
+<div class="hstack"><span class="tile sm color-BLUE"><svg class="icon " aria-hidden="true"><use href="#i-car"/></svg></span><span style="font-weight:500;flex:1">Transport</span><span class="small muted amount"><span class="cur">$</span>185,500 <span class="faint">/ <span class="cur">$</span>200,000</span></span></div>
+<div class="progress thin color-BLUE warn"><span class="fill" style="width:93%"></span></div>
+<span class="xs faint">At 93% with 8 days left</span></div><div class="stack-sm" style="padding:10px 0">
+<div class="hstack"><span class="tile sm color-PINK"><svg class="icon " aria-hidden="true"><use href="#i-shopping-bag"/></svg></span><span style="font-weight:500;flex:1">Lifestyle</span><span class="small muted amount"><span class="cur">$</span>356,000 <span class="faint">/ <span class="cur">$</span>300,000</span></span></div>
+<div class="progress thin color-PINK over"><span class="fill" style="width:100%"></span></div>
+<span class="xs faint">Over by $56,000</span></div>
+</section><section class="stack-sm"><div class="section-head"><h3 class="h3">Accounts</h3><a class="link" href="#">See all</a></div>
+<div class="hscroll"><a class="account-card color-BLUE" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Bancolombia</span><span class="badge brand"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg>Main</span></div>
+<div><div class="amount-lg amount"><span class="cur">$</span>3,420,500</div><div class="type">Bank account</div></div></a><a class="account-card color-GRAY" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Cash</span></div>
+<div><div class="amount-lg amount"><span class="cur">$</span>184,000</div><div class="type">Cash</div></div></a><a class="account-card color-PURPLE" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Visa Gold</span></div>
+<div><div class="amount-lg amount">−<span class="cur">$</span>1,245,900</div><div class="type">Credit card</div></div></a><a class="account-card color-GREEN" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Savings</span></div>
+<div><div class="amount-lg amount"><span class="cur">$</span>8,900,000</div><div class="type">Savings</div></div></a></div></section><section class="stack-sm"><div class="section-head"><h3 class="h3">Recent transactions</h3><a class="link" href="#">See all</a></div>
+<div class="list card flush">
+<a class="row pending" href="#"><span class="tile  color-NONE"><svg class="icon " aria-hidden="true"><use href="#i-hash"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Quick expense</span><span class="badge warning">To review</span></span><span class="meta">Today 8:42 · Bancolombia</span></span>
+<span class="right"><span class="amount expense ">−<span class="cur">$</span>12,500</span></span></a>
+<a class="row" href="#"><span class="tile  color-BROWN"><svg class="icon " aria-hidden="true"><use href="#i-coffee"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Pergamino Coffee</span></span><span class="meta">Today 7:55 · Cash</span></span>
+<span class="right"><span class="amount expense ">−<span class="cur">$</span>9,800</span><span class="sub">#coffee</span></span></a>
+<a class="row" href="#"><span class="tile  color-GREEN"><svg class="icon " aria-hidden="true"><use href="#i-briefcase"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">August salary</span></span><span class="meta">Yesterday · Bancolombia</span></span>
+<span class="right"><span class="amount income ">+<span class="cur">$</span>4,200,000</span></span></a>
+<a class="row" href="#"><span class="tile  color-GRAY"><svg class="icon " aria-hidden="true"><use href="#i-repeat"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Bancolombia → Savings</span></span><span class="meta">Yesterday · Transfer</span></span>
+<span class="right"><span class="amount transfer "><span class="cur">$</span>1,000,000</span></span></a>
+<a class="row" href="#"><span class="tile  color-BLUE"><svg class="icon " aria-hidden="true"><use href="#i-car"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Uber to work</span></span><span class="meta">Yesterday 18:10 · Visa Gold</span></span>
+<span class="right"><span class="amount expense ">−<span class="cur">$</span>18,400</span></span></a>
+</div></section></div><div class="page desktop-only"><header class="page-header"><div class="title"><span class="eyebrow">Tuesday, September 22</span><h1 class="h1">Hi, Andrés</h1></div>
+<div class="actions"><button class="btn ghost icon-only round desktop-only" aria-label="Search"><svg class="icon " aria-hidden="true"><use href="#i-search"/></svg></button><a class="avatar" href="#" aria-label="Settings">AV</a></div></header><a class="alert warning" href="#" style="align-items:center"><svg class="icon " aria-hidden="true"><use href="#i-inbox"/></svg><span style="flex:1"><b>3 quick expenses to review</b> · $47,900 in total</span><svg class="icon sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><section class="card hstack" style="gap:12px;align-items:flex-start"><span class="tile  color-AMBER"><svg class="icon " aria-hidden="true"><use href="#i-monitor-smartphone"/></svg></span>
+<span class="body" style="flex:1;display:flex;flex-direction:column;gap:6px">
+<span class="h3">Keep your data on this phone</span>
+<span class="small muted">This browser can delete what you record offline after a few days without opening the site. Installing the app stops that.</span>
+<span class="hstack" style="gap:8px;margin-top:4px"><button class="btn primary sm"><svg class="icon sm" aria-hidden="true"><use href="#i-download"/></svg>Install</button><button class="btn secondary sm">How</button><button class="btn ghost sm">Not now</button></span>
+</span></section><div class="grid-main"><div class="stack" style="gap:20px"><section class="card">
+<div class="card-head"><span class="eyebrow">September spending</span><span class="badge outline"><svg class="icon " aria-hidden="true"><use href="#i-calendar"/></svg>Day 22 of 30</span></div>
+<div class="amount-hero"><span class="cur">$</span>1,284,300</div>
+<p class="small muted" style="margin:6px 0 14px">Daily average <b class="amount"><span class="cur">$</span>42,800</b> · <span class="faint">Yesterday you spent $38,500</span></p>
+<div class="bars" aria-label="Spending per day"><i style="height:30%" class=""></i><i style="height:55%" class=""></i><i style="height:20%" class=""></i><i style="height:65%" class=""></i><i style="height:40%" class=""></i><i style="height:15%" class="nil"></i><i style="height:70%" class=""></i><i style="height:45%" class=""></i><i style="height:90%" class="hi"></i><i style="height:35%" class=""></i><i style="height:25%" class=""></i><i style="height:50%" class=""></i><i style="height:60%" class=""></i><i style="height:15%" class="nil"></i><i style="height:30%" class=""></i><i style="height:75%" class=""></i><i style="height:40%" class=""></i><i style="height:55%" class=""></i><i style="height:20%" class=""></i><i style="height:45%" class=""></i><i style="height:85%" class="hi"></i><i style="height:30%" class=""></i><i style="height:40%" class=""></i><i style="height:60%" class=""></i><i style="height:35%" class=""></i><i style="height:50%" class=""></i><i style="height:25%" class=""></i><i style="height:65%" class=""></i><i style="height:45%" class=""></i><i style="height:38%" class="today"></i><i style="height:0%" class="nil"></i></div>
+<div class="hstack" style="margin-top:14px;gap:12px">
+<div class="progress color-INDIGO" style="flex:1"><span class="fill" style="width:64%"></span><button class="mark tooltip" style="left:73%" aria-label="Day 22 of 30 · 73% expected"><span class="tip">Day 22 of 30 · 73% expected</span></button></div>
+<span class="small muted" style="white-space:nowrap">64% of monthly budget</span></div>
+</section><section class="stats">
+<div class="card stat"><span class="k">Total balance</span><span class="v amount"><span class="cur">$</span>11,258,600</span><span class="d faint">4 accounts</span></div>
+<div class="card stat"><span class="k">Income this month</span><span class="v amount income">+<span class="cur">$</span>4,200,000</span><span class="d up"><svg class="icon sm" aria-hidden="true"><use href="#i-trending-up"/></svg>Same as August</span></div>
+<div class="card stat desktop-only"><span class="k">Estimated savings</span><span class="v amount"><span class="cur">$</span>2,915,700</span><span class="d faint">Income − spending</span></div>
+</section><section class="stack-sm"><div class="section-head"><h3 class="h3">Recent transactions</h3><a class="link" href="#">See all</a></div>
+<div class="list card flush">
+<a class="row pending" href="#"><span class="tile  color-NONE"><svg class="icon " aria-hidden="true"><use href="#i-hash"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Quick expense</span><span class="badge warning">To review</span></span><span class="meta">Today 8:42 · Bancolombia</span></span>
+<span class="right"><span class="amount expense ">−<span class="cur">$</span>12,500</span></span></a>
+<a class="row" href="#"><span class="tile  color-BROWN"><svg class="icon " aria-hidden="true"><use href="#i-coffee"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Pergamino Coffee</span></span><span class="meta">Today 7:55 · Cash</span></span>
+<span class="right"><span class="amount expense ">−<span class="cur">$</span>9,800</span><span class="sub">#coffee</span></span></a>
+<a class="row" href="#"><span class="tile  color-GREEN"><svg class="icon " aria-hidden="true"><use href="#i-briefcase"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">August salary</span></span><span class="meta">Yesterday · Bancolombia</span></span>
+<span class="right"><span class="amount income ">+<span class="cur">$</span>4,200,000</span></span></a>
+<a class="row" href="#"><span class="tile  color-GRAY"><svg class="icon " aria-hidden="true"><use href="#i-repeat"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Bancolombia → Savings</span></span><span class="meta">Yesterday · Transfer</span></span>
+<span class="right"><span class="amount transfer "><span class="cur">$</span>1,000,000</span></span></a>
+<a class="row" href="#"><span class="tile  color-BLUE"><svg class="icon " aria-hidden="true"><use href="#i-car"/></svg></span>
+<span class="body"><span class="title"><span class="truncate">Uber to work</span></span><span class="meta">Yesterday 18:10 · Visa Gold</span></span>
+<span class="right"><span class="amount expense ">−<span class="cur">$</span>18,400</span></span></a>
+</div></section></div><div class="stack" style="gap:20px"><section class="card">
+<div class="card-head"><h3 class="h3">Budgets</h3><a class="link small" href="#" style="color:var(--brand-text);font-weight:500">See all</a></div>
+<div class="stack-sm" style="padding:10px 0">
+<div class="hstack"><span class="tile sm color-ORANGE"><svg class="icon " aria-hidden="true"><use href="#i-utensils"/></svg></span><span style="font-weight:500;flex:1">Food</span><span class="small muted amount"><span class="cur">$</span>412,000 <span class="faint">/ <span class="cur">$</span>600,000</span></span></div>
+<div class="progress thin color-ORANGE "><span class="fill" style="width:69%"></span></div>
+<span class="xs faint">$188,000 left · on track</span></div><div class="stack-sm" style="padding:10px 0">
+<div class="hstack"><span class="tile sm color-BLUE"><svg class="icon " aria-hidden="true"><use href="#i-car"/></svg></span><span style="font-weight:500;flex:1">Transport</span><span class="small muted amount"><span class="cur">$</span>185,500 <span class="faint">/ <span class="cur">$</span>200,000</span></span></div>
+<div class="progress thin color-BLUE warn"><span class="fill" style="width:93%"></span></div>
+<span class="xs faint">At 93% with 8 days left</span></div><div class="stack-sm" style="padding:10px 0">
+<div class="hstack"><span class="tile sm color-PINK"><svg class="icon " aria-hidden="true"><use href="#i-shopping-bag"/></svg></span><span style="font-weight:500;flex:1">Lifestyle</span><span class="small muted amount"><span class="cur">$</span>356,000 <span class="faint">/ <span class="cur">$</span>300,000</span></span></div>
+<div class="progress thin color-PINK over"><span class="fill" style="width:100%"></span></div>
+<span class="xs faint">Over by $56,000</span></div>
+</section><section class="stack-sm"><div class="section-head"><h3 class="h3">Accounts</h3><a class="link" href="#">See all</a></div>
+<div class="hscroll"><a class="account-card color-BLUE" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Bancolombia</span><span class="badge brand"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg>Main</span></div>
+<div><div class="amount-lg amount"><span class="cur">$</span>3,420,500</div><div class="type">Bank account</div></div></a><a class="account-card color-GRAY" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Cash</span></div>
+<div><div class="amount-lg amount"><span class="cur">$</span>184,000</div><div class="type">Cash</div></div></a><a class="account-card color-PURPLE" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Visa Gold</span></div>
+<div><div class="amount-lg amount">−<span class="cur">$</span>1,245,900</div><div class="type">Credit card</div></div></a><a class="account-card color-GREEN" href="#"><div class="top"><span class="dot"></span><span class="name truncate">Savings</span></div>
+<div><div class="amount-lg amount"><span class="cur">$</span>8,900,000</div><div class="type">Savings</div></div></a></div></section></div></div></div>
+</main><nav class="tabbar" aria-label="Navegación">
+<a class="tab active" href="#"><svg class="icon " aria-hidden="true"><use href="#i-house"/></svg><span>Home</span></a><a class="tab" href="#"><svg class="icon " aria-hidden="true"><use href="#i-list"/></svg><span>Transactions</span><i class=dot></i></a>
+<div class="fab-slot"><button class="fab" aria-label="Add expense"><svg class="icon " aria-hidden="true"><use href="#i-plus"/></svg></button></div>
+<a class="tab" href="#"><svg class="icon " aria-hidden="true"><use href="#i-chart-pie"/></svg><span>Budgets</span></a><a class="tab" href="#"><svg class="icon " aria-hidden="true"><use href="#i-wallet"/></svg><span>Accounts</span></a></nav></div></div></div></div></div></div></body></html>

@@ -30,6 +30,7 @@ export default defineConfig([
     "next-env.d.ts",
     "types/api.d.ts",
     "public/**",
+    "design/preview/assets/**",
   ]),
   ...nextVitals,
   ...nextTs,
@@ -73,7 +74,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["tools/**/*.mjs", "scripts/**/*.mjs"],
+    files: ["tools/**/*.mjs", "scripts/**/*.mjs", "design/**/*.mjs"],
     rules: { "no-console": "off", "no-restricted-globals": "off" },
   },
   {

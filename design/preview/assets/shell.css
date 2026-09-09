@@ -1,0 +1,30 @@
+/* Estilos del visor de previews (barra + marco). Fuera del sistema de diseño a propósito. */
+html, body { margin: 0; height: 100%; }
+body { background: #1c1c1e; color: #e6e6e8; font-family: "Geist", system-ui, sans-serif; font-size: 13px; min-height: 100%; padding: 58px 0 40px; }
+.pv-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; height: 46px; display: flex; align-items: center; gap: 18px; padding: 0 16px; background: #111113; border-bottom: 1px solid #2a2a2e; overflow-x: auto; white-space: nowrap; }
+.pv-group { display: flex; align-items: center; gap: 6px; }
+.pv-nav a { color: #9a9aa3; padding: 6px 8px; border-radius: 6px; text-decoration: none; font-weight: 500; }
+.pv-nav a.on, .pv-nav a:hover { color: #fff; background: #26262b; }
+.pv-bar label { color: #9a9aa3; display: flex; gap: 6px; align-items: center; }
+.pv-bar select { background: #26262b; color: #fff; border: 1px solid #3a3a40; border-radius: 6px; padding: 4px 8px; font: inherit; }
+.pv-seg { background: #26262b; border-radius: 7px; padding: 2px; gap: 2px; }
+.pv-seg button { background: transparent; border: 0; color: #9a9aa3; font: inherit; font-weight: 500; padding: 4px 10px; border-radius: 5px; cursor: pointer; }
+.pv-seg button[aria-pressed="true"] { background: #3d3d44; color: #fff; }
+.pv-stage { display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 0 16px; }
+.pv-title { color: #9a9aa3; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; align-self: flex-start; max-width: 1280px; width: 100%; margin: 0 auto; }
+.device { width: 390px; max-width: 100%; background: var(--bg); border-radius: 22px; overflow: hidden; box-shadow: 0 30px 80px -20px rgba(0,0,0,.7), 0 0 0 1px #34343a; position: relative; transition: width .25s ease; }
+.device[data-device="mobile"] { height: 844px; }
+.device[data-device="tablet"] { height: 1100px; border-radius: 14px; }
+.device[data-device="desktop"] { height: 900px; border-radius: 14px; }
+.device.tall { height: auto !important; min-height: 844px; }   /* ?frame=tall: sin límite de alto (capturas) */
+.device .app { height: 100%; }
+.device.tall .app { height: auto; min-height: 844px; }
+.device.tall .main { overflow: visible; }
+.pv-item { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; min-width: 0; }
+.pv-item .pv-title { margin: 0; }
+.pv-note { max-width: 1280px; width: 100%; margin: 0 auto; color: #9a9aa3; line-height: 1.5; border-left: 2px solid #3a3a40; padding-left: 12px; }
+.pv-note b { color: #e6e6e8; }
+.pv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 28px; width: 100%; max-width: 1280px; }
+
+body[data-device="tablet"] .pv-grid, body[data-device="desktop"] .pv-grid { grid-template-columns: 1fr; }
+body[data-device="tablet"] .pv-item, body[data-device="desktop"] .pv-item { width: 100%; }
