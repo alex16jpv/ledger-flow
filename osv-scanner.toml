@@ -1,0 +1,13 @@
+# What the security job scans (`.github/workflows/ci.yml`), and the two advisories it must not fail
+# on. Everything with a fixed version is pinned in package.json `overrides` instead of ignored here:
+# the production gate is `npm audit --omit=dev --audit-level=high`, which reports zero.
+
+[[IgnoredVulns]]
+id = "GHSA-7pqw-9j4j-h8q3"
+ignoreUntil = 2026-12-08
+reason = "extract-zip 2.0.1 has no fixed version. It is a development dependency only, three levels under @lhci/cli (lighthouse → puppeteer-core → @puppeteer/browsers), used to unpack the browser Lighthouse drives on this machine and in the lighthouse job. It never ships: `npm audit --omit=dev` reports zero. Review when @puppeteer/browsers moves off it or a fix lands."
+
+[[IgnoredVulns]]
+id = "GHSA-jmr9-qjv8-65gv"
+ignoreUntil = 2026-12-08
+reason = "Same package and same reason as GHSA-7pqw-9j4j-h8q3: extract-zip 2.0.1, development only, no fixed version published."

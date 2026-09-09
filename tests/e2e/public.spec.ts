@@ -70,3 +70,29 @@ test("an unknown public address answers a real 404 inside the public frame", asy
   await expect(page.getByRole("link", { name: "Go to Home" })).toHaveAttribute("href", /\/home$/);
   await expect(page.getByRole("link", { name: "Get started" })).toBeVisible();
 });
+
+// P-33 (owner, 2026-09-08): the root is the app's door for a device that already signed in, so the
+// pitch is for visitors only.
+test("the root opens the app for a device that carries the session marker", async ({
+  page,
+  request,
+}) => {
+  const email = `e2e-root-${Date.now()}-${Math.random().toString(16).slice(2)}@ledgerflow.test`;
+  await request.post("/api/auth/register", {
+    headers: { origin: process.env.E2E_APP_URL ?? "http://localhost:3002" },
+    data: { name: "Root E2E", email, password: "LedgerFlow!2026", locale: "en" },
+  });
+  await page.context().addCookies((await request.storageState()).cookies);
+
+  await page.goto("/");
+
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Hi,/);
+});
+
+test("the root still shows the landing to a visitor with no marker", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+});

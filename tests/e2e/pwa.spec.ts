@@ -51,7 +51,7 @@ test("an install offer made before Settings opens is still there when it does", 
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
   // Chromium only fires the real event under its own heuristics, so the event is the browser's
   // shape and the capture path is the app's.
-  const prevented = await page.evaluate(() => {
+  const notPrevented = await page.evaluate(() => {
     const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
       prompt: () => Promise<void>;
       userChoice: Promise<{ outcome: string }>;
@@ -59,9 +59,10 @@ test("an install offer made before Settings opens is still there when it does", 
     event.prompt = () => Promise.resolve();
     event.userChoice = Promise.resolve({ outcome: "dismissed" });
     window.dispatchEvent(event);
-    return event.defaultPrevented;
+    // Not cancelled on purpose: the browser's own invitation has to survive (owner, 2026-09-08).
+    return !event.defaultPrevented;
   });
-  expect(prevented).toBe(true);
+  expect(notPrevented).toBe(true);
 
   await page.getByRole("link", { name: "Settings" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();

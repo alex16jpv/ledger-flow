@@ -18,7 +18,8 @@ interface InstallState {
 export type InstallPromptState = "unavailable" | "available" | "installed";
 
 // Chromium fires beforeinstallprompt when the app is installable; Safari never does, so the row
-// falls back to the manual steps instead of hiding (F-87).
+// falls back to the manual steps instead of hiding (F-87). The event is not cancelled, so the
+// browser's own invitation still appears and this row is the second way in, not the only one.
 const STANDALONE = "(display-mode: standalone)";
 
 function store(): InstallState | null {

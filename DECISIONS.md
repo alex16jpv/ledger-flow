@@ -2320,6 +2320,51 @@ cover` is set once in the root layout for the standalone display.
   stripe are unaffected — they never went through this branch. `DESIGN.md` §8.12 carries the rule,
   because when a drawn state appears is a design decision (D-36).
 
+## 2026-09-08 · The root is the app's door for a device that already holds it (P-33, F-89)
+
+- **The owner's item:** with a session open, the root URL must open the app instead of the public
+  pitch, and the same must happen with no network on a device that already holds its data.
+- **Online, the proxy:** the landing joins `GUEST_ONLY`, so the branch that already sent a
+  signed-in device away from `/login` now covers `/` too. A visitor with no marker still gets the
+  landing, and a crawler never carries one, so nothing about SEO or the indexable surface changes.
+  The `reauth` escape hatch keeps working, because that condition was already there.
+- **With no network, the worker — and this is where the first attempt was wrong.** The plan was to
+  let the worker answer the landing from cache and have the page redirect. Measured while writing
+  the test: **a signed-in device never has the landing in cache**, because online the proxy
+  redirects that request too, so with no network it fell to the offline document. The worker now
+  answers the redirect itself for a navigation to `/`: it reads the marker through the Cookie Store
+  API — inside a worker there is no other way — and where that API is missing (Safari, Firefox) it
+  behaves as before.
+- **Why the marker and not the vault:** the marker is the documented signal for exactly this
+  question (§2.6, "this device holds a vault for this user"), it survives a dead session, and
+  reading IndexedDB from the worker to answer a navigation would put the most delicate code in the
+  app on the critical path of opening it.
+- **Consequence:** `start_url: "/"` stops being a wart (F-89): the installed app opens the root and
+  the root sends it to the app. Three e2e cover it — root with a marker, root without one, and root
+  with no network, which lands on `/home` in 2.5 s — plus unit tests for the route list and the
+  redirect component.
+
+## 2026-09-08 · What has a fix gets pinned, what does not gets declared (F-90)
+
+- **Found:** the `security` job had been failing. `npm audit --omit=dev --audit-level=high` reported
+  two highs in `browserslist@4.28.6`, which only survived as a nested copy under `@serwist/next`
+  (everything else in the tree was already on 4.28.9), and npm's own suggestion was
+  `npm audit fix --force`, which **downgrades `@serwist/next` to 9.4.1** — a breaking change to fix
+  a patch-level advisory. `osv-scanner` reported twelve advisories over seven packages, ten of them
+  in development-only tooling under `@lhci/cli`.
+- **Decision:** `overrides` for everything with a published fix — `browserslist ^4.28.8`,
+  `qs ^6.16.0`, `tmp ^0.2.6`, `uuid ^11.1.1` **scoped to `@lhci/cli`** (above it uuid is a direct
+  dependency at 14, so a global override would have been a downgrade) and `js-yaml ^4.3.2` with an
+  exception for `@lhci/utils`, which needs 3.x. `npm audit --omit=dev --audit-level=high` reports
+  zero.
+- **And one declaration, not a silence:** `extract-zip@2.0.1` has no fixed version published. It is
+  development-only, three levels under `@lhci/cli` (lighthouse → puppeteer-core →
+  @puppeteer/browsers), and never ships. Its two advisories go in a new `osv-scanner.toml` with the
+  reason written out and a **review date**, so the next person sees why and when to look again.
+- **Verified with the CI's own image**, not by reading the docs: `ghcr.io/google/osv-scanner:v2.5.1`
+  over the lockfile answers "No issues found" and prints why those two are filtered. `lhci`, `plop`
+  and `openapi-typescript` still start after the overrides.
+
 ## 2026-09-08 · The install offer is caught in the head, not in Settings (F-87)
 
 - **Found, in production and reported by the owner:** «Install app» never appeared on his phone, the
@@ -2340,15 +2385,15 @@ cover` is set once in the root layout for the standalone display.
   is **present**.
 - **Decision:** the capture moves to a script in the `<head>`, `/install-init.js`, the same pattern
   the theme already uses (`lib/theme/init-script.ts`): dependency-free, ES5-safe and nonce'd, it
-  keeps the event on `window.__lfInstall` and calls `preventDefault()` so the app still owns the
-  invitation. `useInstallPrompt` becomes a `useSyncExternalStore` reader over that object, so a row
+  keeps the event on `window.__lfInstall`. **It does not cancel the event** — the first version did,
+  and the owner reversed it the same day: «sí o sí se le da el aviso al usuario», so the browser's
+  own invitation stays and the app's row is a second way in, not a replacement. `useInstallPrompt` becomes a `useSyncExternalStore` reader over that object, so a row
   that mounts minutes later still finds the offer.
 - **Why not a listener at module scope, or in the root layout's effects:** both run during
   hydration, and on a slow phone the event can arrive before that. The head script is the only place
   that cannot be too late — which is the whole point of the fix.
-- **Alternatives:** letting the browser's own mini-infobar through (dropping `preventDefault`) —
-  that is a product call and is left to the owner, who now has a working row to compare against;
-  and polling `getInstalledRelatedApps()`, which answers a different question.
+- **Alternatives:** keeping `preventDefault()` so only the app invites — rejected by the owner, for
+  the reason above; and polling `getInstalledRelatedApps()`, which answers a different question.
 - **Consequence:** six unit tests over the head script plus the hook, the first of which is the
   regression (an offer captured before the hook ever mounted), and an e2e that fires the browser's
   event shape on `/home` and finds the row in Settings. What the row _says_ where the browser never

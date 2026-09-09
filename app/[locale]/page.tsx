@@ -2,6 +2,7 @@ import { ChartPie, Sparkles, WifiOff, Zap } from "lucide-react";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { GoToAppIfSignedIn } from "@/components/public/GoToAppIfSignedIn";
 import { JsonLd } from "@/components/public/JsonLd";
 import { PhoneMock } from "@/components/public/PhoneMock";
 import { PublicFrame } from "@/components/public/PublicFrame";
@@ -40,6 +41,7 @@ export default async function LandingPage() {
   ];
   return (
     <PublicFrame>
+      <GoToAppIfSignedIn />
       <JsonLd
         locale={locale}
         name={t("metaTitle").split(" · ")[0] ?? ""}
