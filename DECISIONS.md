@@ -2320,6 +2320,66 @@ cover` is set once in the root layout for the standalone display.
   stripe are unaffected — they never went through this branch. `DESIGN.md` §8.12 carries the rule,
   because when a drawn state appears is a design decision (D-36).
 
+## 2026-09-08 · A device with data and no session gets a decision, not an invitation (P-32)
+
+- **The owner's item, designed first** (`DESIGN.md` §8.17, approved the same day): sign in, keep
+  working here, or delete what this device holds. The sheet cannot be closed without answering —
+  the only one in the app — because closing it puts the user back in the state P-32 removes.
+- **"Continue on this device only" is a choice that sticks.** It lives in local storage beside the
+  palette, since it is a fact about the device and not about the account, and the app then behaves
+  exactly as it does with no network: reads come from the mirror, writes go to the queue, nothing
+  reaches `/api`. That reuse is deliberate — every offline path is already built and tested, and the
+  only thing that changes is what the stripe says.
+- **Three things had to learn about the mode, and each was found by measuring, not by reading:**
+  (1) `connectivity.start()` set the phase from `navigator.onLine`, so a reload in the mode came up
+  online and the next write went to the server — exactly what the mode promises not to do; (2) the
+  session query would sit **paused** for ever, and every screen that waits on the answer waited with
+  it (the category picker came up empty, which is how it was found), so in this mode the app does not
+  ask who the user is and reports the session as ended; (3) the mirror's pull is a request like any
+  other and now skips while the mode lasts. An e2e counts every `/api` call during a save in the mode
+  and expects **none**.
+- **"Delete everything on this device" is the exit that did not exist.** Purging the vault only ever
+  happened on an explicit logout (invariant 7), so a device whose account the server no longer has
+  was stuck: the marker lives 400 days and kept sending it back to the same sheet. It drops the vault
+  databases, the persisted caches and the marker, and then **loads the login with a full
+  navigation**, because after a wipe nothing in memory — providers, caches, the vault handle — may
+  survive into the next screen. It asks first, with the number of unsent changes in the sentence,
+  which is the only way the app is allowed to throw work away.
+- **Where the exits live afterwards:** the stripe gains its seventh state, in neutral wording because
+  it was a decision and not a failure, ordered before `signedout`; and Sync status carries the two
+  that need no network for good — the Session row reads "This device only" with the way back, and
+  "Delete local data" sits under the resync with the same confirmation sheet. The sheet itself stays
+  hidden with no network, the rule §8.15 already had: two of its three exits need a connection, and a
+  question whose main answer cannot be given is a wall.
+- **Consequence:** `commitlint` learns the `P-nn` prefix, because three commits in two days exist
+  only because the owner asked for them and the header had nothing true to point at.
+
+## 2026-09-08 · Sync status stops guessing, and the install offer gets a way in (F-85, F-86, F-87, P-34, F-82)
+
+- **F-85, the one the owner saw in production:** the screen read the vault once, in a mount effect,
+  and `startMirror` opens it with a promise — so at that moment the handle was null and three rows
+  said "Never synced", "Never" and "Preparing…" on a device that had synced minutes before. The
+  snapshot waits on the vault gate every other read already waits on (F-31), re-reads when the worker
+  says the shell warmed, and draws a **skeleton** until it has read anything: "Never" now means the
+  vault was read and is empty. Where the app registers no worker on purpose, "Offline ready" says
+  **"Not available"** instead of promising a wait that never ends.
+- **F-86:** the row explains itself instead of offering a button that cannot work. The app asks for
+  durable storage once, when it opens the vault, and **no browser has a dialog for it** — Chrome
+  decides in silence — so the help says what is true of each answer and the row leads to the one thing
+  that changes it.
+- **F-87:** the Install row stops hiding itself where the browser never offered, which is exactly
+  where somebody has to be told how, and both rows open one sheet: the browser's prompt where it
+  exists, the steps of the browser in use where it does not. Never the steps of another browser.
+- **P-34, the card on Home:** the owner asked that the user be told no matter what. The browser's own
+  invitation is back, but iOS has no such event and durable storage has no dialog anywhere, so the app
+  says it too — as a card, not a modal, only once the device has something to lose, never in the
+  installed app, hidden for a week on "Not now" and gone for good the third time.
+- **F-82:** the greeting and the initials read the session, which says nothing with no network, so
+  Home greeted "Hi," with an empty avatar while the name sat in the mirror. `useAppUser` prefers the
+  session and falls back to the profile the pull stored; with neither, the greeting drops the comma and
+  the avatar draws the person icon. **No text of the app shows the punctuation of a piece of data that
+  is missing.**
+
 ## 2026-09-08 · The install offer is caught in the head, not in Settings (F-87)
 
 - **Found, in production and reported by the owner:** «Install app» never appeared on his phone, the
