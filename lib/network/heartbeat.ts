@@ -3,12 +3,15 @@ import { onlineManager } from "@tanstack/react-query";
 import { checkHealth } from "@/lib/api/health";
 
 import { connectivityStore, onNetworkFailure, reportOnline } from "./connectivity";
+import { isLocalOnly } from "./local-only";
 
 export const HEARTBEAT_INTERVAL_MS = 30_000;
 
 let pinging: Promise<boolean> | null = null;
 
 export function ping(check: () => Promise<boolean> = checkHealth): Promise<boolean> {
+  // P-32: the heartbeat is a request to `/api/health`, and in "this device only" nothing goes out.
+  if (isLocalOnly()) return Promise.resolve(false);
   pinging ??= check()
     .then((ok) => {
       reportOnline(ok);

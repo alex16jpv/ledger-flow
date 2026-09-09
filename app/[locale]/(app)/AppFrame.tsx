@@ -9,6 +9,7 @@ import {
   type AddOptions,
   AppShell,
   ConnectionBanner,
+  NoSessionChoiceSheet,
   OfflineReadyAnnouncement,
   SessionExpiredSheet,
 } from "@/components/shell";
@@ -17,13 +18,18 @@ import { usePendingCount } from "@/features/transactions/hooks";
 import { readSessionMarker, vaultUserFor } from "@/lib/auth/marker";
 import { LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
 import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
+import { localePrefix } from "@/lib/i18n/locales";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
 import { noMirror, startMirror } from "@/lib/local/mirror";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { expectVault } from "@/lib/local/repository";
 import { useMirrorProfile } from "@/lib/local/useMirrorProfile";
+import { wipeThisDevice } from "@/lib/local/wipe";
 import { HistoryTracker } from "@/lib/navigation/history";
+import { reportOnline } from "@/lib/network/connectivity";
 import { startHeartbeat } from "@/lib/network/heartbeat";
+import { setLocalOnly } from "@/lib/network/local-only";
 import { warmAppShell } from "@/lib/pwa/service-worker";
 import { invalidateMirrorBacked } from "@/lib/query/domains";
 import { useMounted } from "@/lib/react/useMounted";
@@ -47,6 +53,7 @@ function Frame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const pendingCount = usePendingCount(session.status === "authenticated");
+  const outbox = useOutbox();
   const [quickAdd, setQuickAdd] = useState<AddOptions & { open: boolean }>({
     open: false,
     chain: false,
@@ -126,14 +133,31 @@ function Frame({ children }: { children: ReactNode }) {
           router.push({ pathname: ADD_HREF, query: Object.fromEntries(params) });
         }}
       />
-      <SessionExpiredSheet
-        open={sessionStatus === "expired" && !sheetDismissed}
-        localMode={localUserId !== undefined}
-        onSignIn={goToLogin}
-        onClose={() => {
-          setSheetDismissed(true);
-        }}
-      />
+      {/* P-32: with a copy on the device the sheet is a decision with three exits (§8.17); with no
+          copy an expired session really is the end of the road, and §8.12's wall stays. */}
+      {localUserId === undefined ? (
+        <SessionExpiredSheet open={sessionStatus === "expired"} onSignIn={goToLogin} />
+      ) : (
+        <NoSessionChoiceSheet
+          open={sessionStatus === "expired" && !sheetDismissed}
+          pending={outbox.pending + outbox.attention}
+          onSignIn={goToLogin}
+          onStayLocal={() => {
+            setLocalOnly(true);
+            reportOnline(false);
+            setSheetDismissed(true);
+          }}
+          onWipe={async () => {
+            await wipeThisDevice();
+            setLocalOnly(false);
+            queryClient.clear();
+            // A full load, not a client navigation: after a wipe nothing in memory may survive.
+            window.location.assign(
+              new URL(`${localePrefix(locale)}${LOGIN_PATH}?wiped=1`, window.location.origin),
+            );
+          }}
+        />
+      )}
     </FormatSettingsProvider>
   );
 }

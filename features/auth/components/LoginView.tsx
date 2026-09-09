@@ -21,6 +21,8 @@ export function LoginView() {
     <div className="flex flex-col gap-5">
       <AuthHeading title={t("title")} subtitle={t("subtitle")} />
       {params.get("deleted") === "1" && <Alert tone="info">{t("deleted")}</Alert>}
+      {/* P-32: the third exit lands here, and the account is untouched — say both things. */}
+      {params.get("wiped") === "1" && <Alert tone="info">{t("wiped")}</Alert>}
       <LoginForm
         forgotPasswordEnabled={isEnabled("forgotPassword")}
         onSuccess={() => {

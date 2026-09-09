@@ -1,3 +1,5 @@
+import { isLocalOnly } from "./local-only";
+
 export type ConnectivityPhase = "online" | "offline" | "back-online";
 
 export const BACK_ONLINE_VISIBLE_MS = 3000;
@@ -21,7 +23,13 @@ function setPhase(next: ConnectivityPhase): void {
 }
 
 // navigator.onLine is only a hint; W-19 feeds this store from the /api/health heartbeat too.
+// P-32: a device the user put in "this device only" is offline by decision, so nothing may talk it
+// back into being online. Turning the choice off is what lets the next answer through.
 export function reportOnline(online: boolean): void {
+  if (online && isLocalOnly()) {
+    setPhase("offline");
+    return;
+  }
   if (timer) {
     clearTimeout(timer);
     timer = null;
@@ -66,7 +74,10 @@ export function onNetworkFailure(listener: Listener): () => void {
 function start(): void {
   if (started || typeof window === "undefined") return;
   started = true;
-  phase = navigator.onLine ? "online" : "offline";
+  // P-32: the choice comes first. Measured the hard way — with `navigator.onLine` deciding here, a
+  // reload in "this device only" started online and the next write went to the server, which is the
+  // one thing the mode promises not to do.
+  phase = isLocalOnly() || !navigator.onLine ? "offline" : "online";
   window.addEventListener("online", () => {
     reportOnline(true);
   });

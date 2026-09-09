@@ -26,6 +26,21 @@ if (typeof HTMLDialogElement !== "undefined" && !HTMLDialogElement.prototype.sho
   };
 }
 
+// jsdom has no matchMedia, and the install row reads `(display-mode: standalone)` to know whether
+// the app is already installed (F-87). Nothing is standalone under a test unless the test says so.
+if (typeof window !== "undefined" && !window.matchMedia) {
+  window.matchMedia = (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    dispatchEvent: () => false,
+  });
+}
+
 // F-73, same reason as the 15 s testTimeout of F-19: with 137 files across eight workers a render
 // that normally settles in milliseconds can miss Testing Library's default second, and the failure
 // says the element does not exist rather than that the machine was busy.

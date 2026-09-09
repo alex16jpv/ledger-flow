@@ -8,6 +8,7 @@ import { useRouter } from "@/lib/i18n/navigation";
 import { syncedStore } from "@/lib/local/outbox/synced";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { connectivityStore } from "@/lib/network/connectivity";
+import { localOnlyStore } from "@/lib/network/local-only";
 
 import { SyncConflictSheet } from "./SyncConflictSheet";
 
@@ -58,11 +59,29 @@ export function ConnectionBanner({ signedOut = false, onSignIn }: ConnectionBann
     syncedStore.getSnapshot,
     syncedStore.getServerSnapshot,
   );
+  const localOnly = useSyncExternalStore(
+    localOnlyStore.subscribe,
+    localOnlyStore.getSnapshot,
+    localOnlyStore.getServerSnapshot,
+  );
   const waitedForIt = useWaitedForIt(outbox.pending > 0, PENDING_GRACE_MS);
 
   // The order is DESIGN.md §8.12 and only one stripe is painted: with no network nothing can be
   // signed in or sent, so `offline` wins; with the queue blocked or the session dead, resolving
   // conflicts changes nothing yet, so both come before `error`.
+  // P-32: the user chose to work here, so the stripe says that and not "you're offline" — the app
+  // behaves as offline because that is what the choice means, and the wording is what tells the two
+  // apart. It goes before `signedout`, which describes a session that died on its own.
+  if (localOnly) {
+    return (
+      <Banner
+        variant="offline"
+        title={t("localOnly.title")}
+        body={t("localOnly.body", { count: outbox.pending + outbox.attention })}
+        action={onSignIn ? { label: t("localOnly.action"), onClick: onSignIn } : undefined}
+      />
+    );
+  }
   if (phase === "offline") {
     return (
       <Banner

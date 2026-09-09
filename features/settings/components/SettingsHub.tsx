@@ -21,6 +21,7 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
+import { InstallSheet } from "@/components/pwa/InstallSheet";
 import { Avatar } from "@/components/shell/Avatar";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -40,6 +41,7 @@ import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { useOffline } from "@/lib/network/useOffline";
 import { useInstallPrompt } from "@/lib/pwa/install";
 import { useSession } from "@/lib/session/SessionProvider";
+import { useAppUser } from "@/lib/session/useAppUser";
 import { useTheme } from "@/lib/theme";
 import type { ColorToken } from "@/lib/theme/feature-color";
 
@@ -130,6 +132,7 @@ export function SettingsHub() {
   const updateTimeZone = useUpdateTimeZone();
   const deleteAccount = useDeleteAccount();
   const install = useInstallPrompt();
+  const [installing, setInstalling] = useState(false);
   const outbox = useOutbox();
   // The session lives on the server: with no network a sign-out could only clear this device and
   // leave the cookies — and the account — signed in. It waits and says so (R-3b §C).
@@ -139,7 +142,9 @@ export function SettingsHub() {
   const [sheet, setSheet] = useState<
     "language" | "currency" | "timeZone" | "delete" | "signOut" | null
   >(null);
-  const user = session.user;
+  // F-82: the profile card greets and draws initials, so it reads the mirror when the session
+  // cannot say who this is.
+  const user = useAppUser();
   const currencyLocked = hasAccounts.data !== false;
 
   return (
@@ -283,25 +288,25 @@ export function SettingsHub() {
       </Section>
 
       <Section title={t("settings.about")}>
-        {install.state !== "unavailable" && (
-          <SettingsRow
-            icon={<MonitorSmartphone {...iconProps("sm")} />}
-            color="INDIGO"
-            title={t("settings.install.title")}
-            meta={
-              install.state === "installed"
-                ? t("settings.install.installed")
-                : t("settings.install.durability")
-            }
-            onClick={
-              install.state === "available"
-                ? () => {
-                    void install.install();
-                  }
-                : undefined
-            }
-          />
-        )}
+        {/* F-87: the row used to hide itself when the browser had not offered to install, which is
+            exactly where the user needs to be told how. It stays, and the sheet explains. */}
+        <SettingsRow
+          icon={<MonitorSmartphone {...iconProps("sm")} />}
+          color="INDIGO"
+          title={t("settings.install.title")}
+          meta={
+            install.state === "installed"
+              ? t("settings.install.installed")
+              : t("settings.install.durability")
+          }
+          onClick={
+            install.state === "installed"
+              ? undefined
+              : () => {
+                  setInstalling(true);
+                }
+          }
+        />
         <SettingsRow
           icon={<Info {...iconProps("sm")} />}
           color="GRAY"
@@ -428,6 +433,12 @@ export function SettingsHub() {
         open={sheet === "language"}
         onClose={() => {
           setSheet(null);
+        }}
+      />
+      <InstallSheet
+        open={installing}
+        onClose={() => {
+          setInstalling(false);
         }}
       />
     </>

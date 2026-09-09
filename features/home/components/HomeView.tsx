@@ -4,6 +4,7 @@ import { Info, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useMemo } from "react";
 
+import { InstallNotice } from "@/components/pwa/InstallNotice";
 import { Avatar, PageHeader } from "@/components/shell";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -15,7 +16,8 @@ import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
-import { useSession } from "@/lib/session";
+import { useStoredData } from "@/lib/local/useStoredData";
+import { useAppUser } from "@/lib/session";
 
 import { dayBars, topBudgets, useHomeData, useMonthContext } from "../hooks";
 import { AccountsSection } from "./AccountsSection";
@@ -37,7 +39,7 @@ export function HomeView({
   recent,
 }: HomeViewProps) {
   const t = useTranslations();
-  const { user } = useSession();
+  const user = useAppUser();
   const dates = useDates();
   const money = useMoney();
   const month = useMonthContext();
@@ -48,11 +50,13 @@ export function HomeView({
     [data.categories.data],
   );
   const pending = data.pending.data;
+  const hasLocalData = useStoredData();
 
   const header = (
     <PageHeader
       eyebrow={dates.formatLong(month.reference)}
-      title={t("home.greeting", { name: firstName })}
+      // F-82: no text of the app shows the punctuation of a piece of data that is missing.
+      title={firstName ? t("home.greeting", { name: firstName }) : t("home.greetingPlain")}
       actions={
         <Link href="/settings" aria-label={t("nav.settings")} className="rounded-full">
           <Avatar name={user?.name ?? ""} />
@@ -131,6 +135,9 @@ export function HomeView({
           </Alert>
         </Link>
       )}
+      {/* P-34: the notice only makes sense once there is something to lose — a snapshot on this
+          device, or writes still waiting — and never in the installed app (DESIGN §8.18). */}
+      <InstallNotice hasSomethingToLose={hasLocalData} />
       {accounts.length === 0 ? (
         <Card>
           <Empty

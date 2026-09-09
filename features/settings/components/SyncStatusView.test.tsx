@@ -15,6 +15,26 @@ import { account, openTestVault, wipeVaults } from "@/lib/testing/vault";
 
 import { SyncStatusView } from "./SyncStatusView";
 
+// F-85: "Offline ready" describes the worker's cache, and the app only registers a worker in a
+// production build. These tests are about a device that has one; the last one is about a build that
+// has none on purpose.
+vi.mock("@/lib/flags", async (importOriginal) => {
+  const original = await importOriginal();
+  return { ...(original as object), appEnvironment: "production" };
+});
+
+const withWorker = (present: boolean): void => {
+  if (!present) {
+    // Not `undefined`: the app asks `"serviceWorker" in navigator`, like the rest of the repo.
+    Reflect.deleteProperty(navigator, "serviceWorker");
+    return;
+  }
+  Object.defineProperty(navigator, "serviceWorker", {
+    value: { addEventListener: vi.fn(), removeEventListener: vi.fn() },
+    configurable: true,
+  });
+};
+
 const operation = (seq: number): OutboxOperation => ({
   seq,
   opId: `op-${seq}`,
@@ -45,6 +65,7 @@ const warmScreens = (count: number): void => {
 };
 
 beforeEach(() => {
+  withWorker(true);
   shellCache.clear();
   vi.stubGlobal("caches", fakeCaches);
   fetchMock.mockReset();
@@ -131,6 +152,23 @@ describe("Sync status", () => {
     expect(
       screen.getByText("Your data and the app’s screens are on this device"),
     ).toBeInTheDocument();
+  });
+
+  // F-85: a build with no worker has no screens to copy, so the row says so instead of promising a
+  // wait that never ends.
+  it("says offline ready is not available where the app registers no worker", async () => {
+    withWorker(false);
+    const vault = await openTestVault("u1");
+    await vault.db.put("meta", { key: "syncedAt", value: "2026-09-06T10:00:00.000Z" });
+    setCurrentVault(vault);
+
+    view();
+
+    expect(await screen.findByText("Not available")).toBeInTheDocument();
+    expect(
+      screen.getByText("The app’s screens are only saved in the installed app"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Ready")).not.toBeInTheDocument();
   });
 
   it("counts the screens while it is still preparing", async () => {

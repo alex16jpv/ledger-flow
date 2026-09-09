@@ -116,7 +116,8 @@
       "invalidCredentials": "Wrong email or password.",
       "tooManyAttempts": "Too many attempts.",
       "retryIn": "You can try again in {time}.",
-      "deleted": "Your account was deleted. Sign up again with the same email whenever you want to come back."
+      "deleted": "Your account was deleted. Sign up again with the same email whenever you want to come back.",
+      "wiped": "Everything on this device was deleted. Your account is still there: sign in to download it again."
     },
     "register": {
       "title": "Create account",
@@ -165,6 +166,7 @@
   },
   "home": {
     "greeting": "Hi, {name}",
+    "greetingPlain": "Hi",
     "pendingReview": "{count, plural, one {# quick expense to review} other {# quick expenses to review}}",
     "pendingTotal": "· {amount} in total",
     "spending": "{month} spending",
@@ -199,7 +201,14 @@
     "budgetLeft": "{amount} left · on track",
     "budgetWarn": "At {percent}% with {days, plural, one {# day} other {# days}} left",
     "budgetOver": "Over by {amount}",
-    "budgetOf": "/ {amount}"
+    "budgetOf": "/ {amount}",
+    "installNotice": {
+      "title": "Keep your data on this phone",
+      "body": "This browser can delete what you record offline after a few days without opening the site. Installing the app stops that.",
+      "install": "Install",
+      "how": "How",
+      "dismiss": "Not now"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -310,7 +319,19 @@
       "title": "Install app",
       "subtitle": "Add Ledger Flow to your home screen",
       "installed": "Installed",
-      "durability": "Add Ledger Flow to your home screen so the browser doesn’t delete what you record offline"
+      "durability": "Add Ledger Flow to your home screen so the browser doesn’t delete what you record offline",
+      "sheet": {
+        "title": "Install this app",
+        "intro": "Installing keeps your offline data safe: the browser stops treating it as something it can delete.",
+        "asked": "The app already asked this browser to keep your data and it said no — browsers don’t ask you, they decide, and installing is what changes that.",
+        "cta": "Install",
+        "iosStep1": "Tap Share",
+        "iosStep2": "Choose “Add to Home Screen”",
+        "iosStep3": "Confirm with “Add”",
+        "desktopStep1": "Look for the install icon in the address bar",
+        "desktopStep2": "Or open the browser menu and choose “Install Ledger Flow”",
+        "fallback": "Some browsers don’t offer this at all. If yours doesn’t, keep a connection when you record and nothing will be waiting here."
+      }
     },
     "delete": {
       "title": "Delete my account",
@@ -337,7 +358,9 @@
         "active": "Active",
         "signedOut": "Signed out",
         "signedOutHelp": "Signed out on this device, so nothing is syncing",
-        "signIn": "Sign in to sync"
+        "signIn": "Sign in to sync",
+        "localOnly": "This device only",
+        "localOnlyHelp": "You chose to keep working here. Nothing is syncing."
       },
       "cursor": {
         "label": "Sync cursor",
@@ -357,7 +380,9 @@
         "preparingHelp": "Copying your data and the app’s screens · {cached} of {expected} screens",
         "incomplete": "Incomplete",
         "incompleteHelp": "Paused: it needs a connection to finish",
-        "retry": "Retry"
+        "retry": "Retry",
+        "notAvailable": "Not available",
+        "notAvailableHelp": "The app’s screens are only saved in the installed app"
       },
       "queue": {
         "label": "Waiting to send"
@@ -379,7 +404,11 @@
         "help": "Stops the browser evicting your offline data",
         "yes": "Granted",
         "no": "Not granted",
-        "unsupported": "Unsupported"
+        "unsupported": "Unsupported",
+        "grantedHelp": "Your offline data is safe from the browser’s cleanup",
+        "notGrantedHelp": "Only installed apps get it. This browser said no.",
+        "unsupportedHelp": "This browser can’t promise it. Install the app, or keep a connection so nothing waits here long.",
+        "how": "How to get it"
       },
       "mode": {
         "label": "Running as",
@@ -415,6 +444,11 @@
         "cta": "{count, plural, one {See the # change} other {See the # changes}}",
         "queue": "{count, plural, other {# · blocked}}",
         "queueMeta": "Blocked by an app update"
+      },
+      "wipe": {
+        "label": "Delete local data",
+        "help": "Deletes the copy of your data on this device and anything still waiting to send. Your account is not touched.",
+        "cta": "Delete local data"
       }
     }
   },
@@ -604,7 +638,30 @@
     },
     "pendingSync": "Pending sync",
     "needsAttention": "Needs attention",
-    "savedHere": "Saved on this device"
+    "savedHere": "Saved on this device",
+    "noSession": {
+      "title": "This device has your data, but no session",
+      "body": "Your session ended. The app keeps working here and your {count, plural, =1 {# change} other {# changes}} are saved on this device — they just aren’t going anywhere.",
+      "bodyEmpty": "Your session ended. The app keeps working here and everything you record stays on this device — it just isn’t going anywhere.",
+      "signIn": "Sign in to sync",
+      "signInHelp": "Sign in and everything saved here goes to the server.",
+      "stay": "Continue on this device only",
+      "stayHelp": "The app works the same and nothing leaves this device.",
+      "stayWarning": "If you change browser or clear the site’s data, this can’t be recovered.",
+      "wipe": "Delete everything on this device",
+      "wipeHelp": "Deletes the local copy and its {count, plural, =0 {unsent changes} =1 {# unsent change} other {# unsent changes}}. Your account on the server is not touched.",
+      "confirmTitle": "Delete everything on this device?",
+      "confirmBody": "This deletes the copy of your data on this device and {count, plural, =1 {# change} other {# changes}} that only exist here. It does not delete your account: signing in again downloads everything the server has.",
+      "confirmBodyEmpty": "This deletes the copy of your data on this device. It does not delete your account: signing in again downloads everything the server has.",
+      "confirmCta": "Delete everything",
+      "cancel": "Cancel",
+      "wiped": "Everything on this device was deleted"
+    },
+    "localOnly": {
+      "title": "You’re working on this device only.",
+      "body": "{count, plural, =0 {Nothing is being sent to the server.} =1 {# change is saved here.} other {# changes are saved here.}}",
+      "action": "Sign in to sync"
+    }
   },
   "dev": {
     "title": "Component catalog",

@@ -116,7 +116,8 @@
       "invalidCredentials": "Correo o contraseña incorrectos.",
       "tooManyAttempts": "Demasiados intentos.",
       "retryIn": "Puedes intentarlo de nuevo en {time}.",
-      "deleted": "Tu cuenta fue eliminada. Regístrate de nuevo con el mismo correo cuando quieras volver."
+      "deleted": "Tu cuenta fue eliminada. Regístrate de nuevo con el mismo correo cuando quieras volver.",
+      "wiped": "Se borró todo en este dispositivo. Tu cuenta sigue ahí: entra para descargarla otra vez."
     },
     "register": {
       "title": "Crear cuenta",
@@ -165,6 +166,7 @@
   },
   "home": {
     "greeting": "Hola, {name}",
+    "greetingPlain": "Hola",
     "pendingReview": "{count, plural, one {# gasto rápido por revisar} other {# gastos rápidos por revisar}}",
     "pendingTotal": "· {amount} en total",
     "spending": "Gasto de {month}",
@@ -199,7 +201,14 @@
     "budgetLeft": "Quedan {amount} · vas bien",
     "budgetWarn": "Al {percent}% con {days, plural, one {# día} other {# días}} por delante",
     "budgetOver": "Excedido en {amount}",
-    "budgetOf": "/ {amount}"
+    "budgetOf": "/ {amount}",
+    "installNotice": {
+      "title": "Conserva tus datos en este teléfono",
+      "body": "Este navegador puede borrar lo que registras sin conexión tras unos días sin abrir el sitio. Instalar la app lo evita.",
+      "install": "Instalar",
+      "how": "Cómo",
+      "dismiss": "Ahora no"
+    }
   },
   "settings": {
     "title": "Ajustes",
@@ -310,7 +319,19 @@
       "title": "Instalar app",
       "subtitle": "Añade Ledger Flow a tu pantalla de inicio",
       "installed": "Instalada",
-      "durability": "Añade Ledger Flow a tu pantalla de inicio para que el navegador no borre lo que registres sin conexión"
+      "durability": "Añade Ledger Flow a tu pantalla de inicio para que el navegador no borre lo que registres sin conexión",
+      "sheet": {
+        "title": "Instalar esta app",
+        "intro": "Instalarla mantiene a salvo tus datos offline: el navegador deja de tratarlos como algo que puede borrar.",
+        "asked": "La app ya le pidió a este navegador que conserve tus datos y dijo no: los navegadores no te preguntan, deciden, e instalarla es lo que lo cambia.",
+        "cta": "Instalar",
+        "iosStep1": "Toca Compartir",
+        "iosStep2": "Elige «Añadir a pantalla de inicio»",
+        "iosStep3": "Confirma con «Añadir»",
+        "desktopStep1": "Busca el icono de instalar en la barra de direcciones",
+        "desktopStep2": "O abre el menú del navegador y elige «Instalar Ledger Flow»",
+        "fallback": "Algunos navegadores no lo ofrecen. Si el tuyo no, mantén conexión al registrar y aquí no quedará nada esperando."
+      }
     },
     "delete": {
       "title": "Eliminar mi cuenta",
@@ -337,7 +358,9 @@
         "active": "Activa",
         "signedOut": "Cerrada",
         "signedOutHelp": "Cerraste sesión en este dispositivo, así que no se sincroniza nada",
-        "signIn": "Iniciar sesión para sincronizar"
+        "signIn": "Iniciar sesión para sincronizar",
+        "localOnly": "Solo este dispositivo",
+        "localOnlyHelp": "Elegiste seguir trabajando aquí. No se sincroniza nada."
       },
       "cursor": {
         "label": "Cursor de sincronización",
@@ -357,7 +380,9 @@
         "preparingHelp": "Copiando tus datos y las pantallas de la app · {cached} de {expected} pantallas",
         "incomplete": "Incompleto",
         "incompleteHelp": "En pausa: necesita conexión para terminar",
-        "retry": "Reintentar"
+        "retry": "Reintentar",
+        "notAvailable": "No disponible",
+        "notAvailableHelp": "Las pantallas de la app solo se guardan en la app instalada"
       },
       "queue": {
         "label": "Esperando a enviarse"
@@ -379,7 +404,11 @@
         "help": "Evita que el navegador borre tus datos sin conexión",
         "yes": "Concedido",
         "no": "No concedido",
-        "unsupported": "No disponible"
+        "unsupported": "No disponible",
+        "grantedHelp": "Tus datos offline están a salvo de la limpieza del navegador",
+        "notGrantedHelp": "Solo las apps instaladas lo consiguen. Este navegador dijo no.",
+        "unsupportedHelp": "Este navegador no lo puede prometer. Instala la app, o mantén conexión para que aquí no espere nada mucho tiempo.",
+        "how": "Cómo conseguirlo"
       },
       "mode": {
         "label": "Se ejecuta como",
@@ -415,6 +444,11 @@
         "cta": "{count, plural, one {Ver el # cambio} other {Ver los # cambios}}",
         "queue": "{count, plural, other {# · bloqueados}}",
         "queueMeta": "Bloqueados por una actualización de la app"
+      },
+      "wipe": {
+        "label": "Borrar los datos locales",
+        "help": "Borra la copia de tus datos en este dispositivo y lo que esté esperando para enviarse. Tu cuenta no se toca.",
+        "cta": "Borrar los datos locales"
       }
     }
   },
@@ -604,7 +638,30 @@
     },
     "pendingSync": "Pendiente de sincronizar",
     "needsAttention": "Necesita tu atención",
-    "savedHere": "Guardado en este dispositivo"
+    "savedHere": "Guardado en este dispositivo",
+    "noSession": {
+      "title": "Este dispositivo tiene tus datos, pero no tiene sesión",
+      "body": "Tu sesión terminó. La app sigue funcionando aquí y {count, plural, =1 {# cambio} other {# cambios}} están guardados en este dispositivo, solo que no van a ningún sitio.",
+      "bodyEmpty": "Tu sesión terminó. La app sigue funcionando aquí y lo que registres se queda en este dispositivo, solo que no va a ningún sitio.",
+      "signIn": "Iniciar sesión para sincronizar",
+      "signInHelp": "Entra y todo lo que está aquí sale al servidor.",
+      "stay": "Continuar solo en este dispositivo",
+      "stayHelp": "La app funciona igual y nada sale de este dispositivo.",
+      "stayWarning": "Si cambias de navegador o borras los datos del sitio, esto no se recupera.",
+      "wipe": "Borrar todo en este dispositivo",
+      "wipeHelp": "Borra la copia local y {count, plural, =0 {sus cambios sin enviar} =1 {# cambio sin enviar} other {# cambios sin enviar}}. Tu cuenta en el servidor no se toca.",
+      "confirmTitle": "¿Borrar todo en este dispositivo?",
+      "confirmBody": "Esto borra la copia de tus datos en este dispositivo y {count, plural, =1 {# cambio} other {# cambios}} que solo existen aquí. No borra tu cuenta: al entrar otra vez se descarga todo lo que tenga el servidor.",
+      "confirmBodyEmpty": "Esto borra la copia de tus datos en este dispositivo. No borra tu cuenta: al entrar otra vez se descarga todo lo que tenga el servidor.",
+      "confirmCta": "Borrar todo",
+      "cancel": "Cancelar",
+      "wiped": "Se borró todo en este dispositivo"
+    },
+    "localOnly": {
+      "title": "Estás trabajando solo en este dispositivo.",
+      "body": "{count, plural, =0 {No se está enviando nada al servidor.} =1 {# cambio guardado aquí.} other {# cambios guardados aquí.}}",
+      "action": "Iniciar sesión para sincronizar"
+    }
   },
   "dev": {
     "title": "Catálogo de componentes",

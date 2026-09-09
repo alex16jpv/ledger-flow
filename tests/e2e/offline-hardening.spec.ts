@@ -185,7 +185,9 @@ test("with a dead session the app still opens, reads and queues, and syncs after
   // Opening the app with a network and a dead session: it says so and offers the way in, without
   // being a wall — the queue keeps growing behind it (§2.6).
   await page.reload();
-  const dead = page.getByRole("dialog", { name: "Sign in to sync" });
+  // P-32 (2026-09-08): with a copy on the device the sheet is a decision with three exits, and
+  // signing in is the first of them. Its title says what the device has, not what it lost.
+  const dead = page.getByRole("dialog", { name: "This device has your data, but no session" });
   await expect(dead).toBeVisible({ timeout: 30_000 });
   await dead.getByRole("button", { name: "Sign in to sync" }).click();
   await expect(page).toHaveURL(/\/login\?/);
@@ -283,13 +285,56 @@ test("a session that dies with the app open says so without a reload", async ({
   // Well under the 30 s of the heartbeat: the app must not need the tick to notice. What tells it is
   // the answer to the request it just made — a 401 is still an answer, and only the network can
   // deliver one (F-64). Before that hint existed, this sheet took a whole tick to appear.
-  const dead = page.getByRole("dialog", { name: "Sign in to sync" });
+  const dead = page.getByRole("dialog", { name: "This device has your data, but no session" });
   await expect(dead).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("You’re offline.")).toHaveCount(0);
 
   // And the change is still here: a dead session never costs the queue anything (invariant 7).
   expect((await vaultState(page))?.pending).toBe(1);
   expect((await listTransactions(request)).filter((row) => row.amount === amount)).toHaveLength(0);
+});
+
+// P-32 (owner, 2026-09-08): a device with a copy and no session gets a decision, not an invitation.
+// The one that has to be measured is the second exit: the app must behave exactly as it does with no
+// network, with the network right there.
+test("the chosen local-only mode sends nothing to the server, and can be left", async ({
+  page,
+  context,
+  request,
+}) => {
+  test.setTimeout(180_000);
+  const user = await freshUser(request, "local-only");
+  const amount = uniqueAmount();
+  await signInAs(context, request, user);
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+
+  // The choice is a device preference, like the palette: the sheet writes it and the app reads it.
+  await page.evaluate(() => {
+    window.localStorage.setItem("lf.localOnly", "1");
+  });
+  const calls: string[] = [];
+  page.on("request", (outgoing) => {
+    const path = new URL(outgoing.url()).pathname;
+    if (path.startsWith("/api/")) calls.push(`${outgoing.method()} ${path}`);
+  });
+  await page.reload();
+
+  await expect(page.getByText("You’re working on this device only.")).toBeVisible();
+  await createExpense(page, amount, "LOCAL-ONLY latte");
+  // Not "few": none. Reads come from the mirror and writes go to the queue (DESIGN §8.17).
+  expect(calls).toEqual([]);
+  expect((await listTransactions(request)).filter((row) => row.amount === amount)).toHaveLength(0);
+  expect((await vaultState(page))?.pending).toBe(1);
+
+  // And leaving it is one line: the queue goes out on the next pass.
+  await page.evaluate(() => {
+    window.localStorage.removeItem("lf.localOnly");
+  });
+  await page.reload();
+  await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
+  expect((await listTransactions(request)).filter((row) => row.amount === amount)).toHaveLength(1);
 });
 
 // P-33 (owner, 2026-09-08): with no network the root has to open the app too. The proxy cannot do

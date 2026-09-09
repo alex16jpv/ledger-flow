@@ -10,26 +10,33 @@ import {
   RefreshCw,
   ShieldCheck,
   Split,
+  Trash2,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useSyncExternalStore } from "react";
 
+import { InstallSheet } from "@/components/pwa/InstallSheet";
 import { PageHeader } from "@/components/shell/PageHeader";
+import { WipeDeviceSheet } from "@/components/shell/WipeDeviceSheet";
 import { Alert } from "@/components/ui/Alert";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { List, Row, RowBody, RowLink, RowMeta, RowTitle } from "@/components/ui/Row";
 import { Sheet } from "@/components/ui/Sheet";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
+import { localePrefix } from "@/lib/i18n/locales";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 import { forceFullResync } from "@/lib/local/mirror";
 import { syncTransport } from "@/lib/local/outbox/engine";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
+import { wipeThisDevice } from "@/lib/local/wipe";
 import { connectivityStore } from "@/lib/network/connectivity";
+import { localOnlyStore, setLocalOnly } from "@/lib/network/local-only";
 import { warmAppShell } from "@/lib/pwa/service-worker";
 import { useSession } from "@/lib/session";
 
@@ -44,7 +51,9 @@ function StatusRow({
 }: {
   icon: React.ReactNode;
   title: string;
-  value: string;
+  // F-85: `null` is "not read yet", and it draws a skeleton. A row about the vault must not answer
+  // before the vault has answered.
+  value: string | null;
   meta?: string;
   action?: React.ReactNode;
 }) {
@@ -59,7 +68,11 @@ function StatusRow({
         </RowTitle>
         {meta && <RowMeta items={[meta]} />}
       </RowBody>
-      <span className="text-sm text-text-2">{value}</span>
+      {value === null ? (
+        <Skeleton className="h-3 w-16" />
+      ) : (
+        <span className="text-sm text-text-2">{value}</span>
+      )}
       {action}
     </Row>
   );
@@ -79,6 +92,8 @@ export function SyncStatusView() {
   const locale = useLocale();
   const { snapshot, reload } = useSyncSnapshot();
   const [confirming, setConfirming] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [wiping, setWiping] = useState(false);
   const [resyncing, setResyncing] = useState(false);
 
   const storage = snapshot.storage;
@@ -95,6 +110,13 @@ export function SyncStatusView() {
   // F-41: a screen that says what this device owes the server cannot stay quiet about there being
   // nobody to say it to. The stripe warns; this row answers whoever came to look.
   const signedOut = session.status === "expired";
+  // P-32: the two exits that work with no network live here for good, not only in the sheet that
+  // asked once — the choice, and the way to delete what this device holds.
+  const localOnly = useSyncExternalStore(
+    localOnlyStore.subscribe,
+    localOnlyStore.getSnapshot,
+    localOnlyStore.getServerSnapshot,
+  );
 
   // F-54: "offline ready" is two halves — the data the pull left in the vault, and the screens the
   // worker warmed. It is ready only when both are, and with no network what is missing stays
@@ -132,10 +154,22 @@ export function SyncStatusView() {
           <StatusRow
             icon={<LogIn {...iconProps("sm")} />}
             title={t("session.label")}
-            meta={signedOut ? t("session.signedOutHelp") : t("session.help")}
-            value={signedOut ? t("session.signedOut") : t("session.active")}
+            meta={
+              localOnly
+                ? t("session.localOnlyHelp")
+                : signedOut
+                  ? t("session.signedOutHelp")
+                  : t("session.help")
+            }
+            value={
+              localOnly
+                ? t("session.localOnly")
+                : signedOut
+                  ? t("session.signedOut")
+                  : t("session.active")
+            }
             action={
-              signedOut ? (
+              signedOut || localOnly ? (
                 // `reauth` is what gets a device with a live marker past the proxy and onto the
                 // login (§2.6).
                 <Link
@@ -151,37 +185,49 @@ export function SyncStatusView() {
             icon={<Database {...iconProps("sm")} />}
             title={t("cursor.label")}
             meta={t("cursor.help")}
-            value={snapshot.cursor ? t("cursor.set") : t("cursor.never")}
+            value={snapshot.read ? (snapshot.cursor ? t("cursor.set") : t("cursor.never")) : null}
           />
           <StatusRow
             icon={<RefreshCw {...iconProps("sm")} />}
             title={t("lastSync.label")}
             value={
-              snapshot.syncedAt ? dates.formatDay(new Date(snapshot.syncedAt)) : t("lastSync.never")
+              snapshot.read
+                ? snapshot.syncedAt
+                  ? dates.formatDay(new Date(snapshot.syncedAt))
+                  : t("lastSync.never")
+                : null
             }
           />
           <StatusRow
             icon={<CloudCheck {...iconProps("sm")} />}
             title={t("offlineReady.label")}
             meta={
-              offlineReady
-                ? t("offlineReady.help")
-                : offline
-                  ? t("offlineReady.incompleteHelp")
-                  : t("offlineReady.preparingHelp", {
-                      cached: shell.cached,
-                      expected: shell.expected,
-                    })
+              !snapshot.workerSupported
+                ? t("offlineReady.notAvailableHelp")
+                : offlineReady
+                  ? t("offlineReady.help")
+                  : offline
+                    ? t("offlineReady.incompleteHelp")
+                    : t("offlineReady.preparingHelp", {
+                        cached: shell.cached,
+                        expected: shell.expected,
+                      })
             }
             value={
-              offlineReady
-                ? t("offlineReady.ready")
-                : offline
-                  ? t("offlineReady.incomplete")
-                  : t("offlineReady.preparing")
+              !snapshot.read
+                ? null
+                : // The app registers no worker outside production, so there are no screens to copy
+                  // and "Preparing…" would never end (F-85).
+                  !snapshot.workerSupported
+                  ? t("offlineReady.notAvailable")
+                  : offlineReady
+                    ? t("offlineReady.ready")
+                    : offline
+                      ? t("offlineReady.incomplete")
+                      : t("offlineReady.preparing")
             }
             action={
-              !offlineReady && offline ? (
+              snapshot.workerSupported && !offlineReady && offline ? (
                 <Button
                   size="sm"
                   variant="secondary"
@@ -229,8 +275,30 @@ export function SyncStatusView() {
           <StatusRow
             icon={<ShieldCheck {...iconProps("sm")} />}
             title={t("persisted.label")}
-            meta={t("persisted.help")}
+            // F-86: the app already asked (`lib/local/mirror`), and no browser has a dialog for
+            // this — Chrome decides in silence. So the row says what is true of each answer and
+            // points at the one thing that changes it.
+            meta={
+              !storage?.supported
+                ? t("persisted.unsupportedHelp")
+                : storage.persisted
+                  ? t("persisted.grantedHelp")
+                  : t("persisted.notGrantedHelp")
+            }
             value={persisted}
+            action={
+              storage && !storage.persisted ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setInstalling(true);
+                  }}
+                >
+                  {t("persisted.how")}
+                </Button>
+              ) : undefined
+            }
           />
           <StatusRow
             icon={<MonitorSmartphone {...iconProps("sm")} />}
@@ -280,6 +348,46 @@ export function SyncStatusView() {
         </p>
       </div>
 
+      {/* P-32: the exit that needs no network, in the one screen that is about what this device
+          holds. It asks in the same sheet the choice does, with the number in front. */}
+      <div className="flex flex-col gap-2">
+        <Button
+          variant="secondary"
+          block
+          className="text-danger"
+          disabled={wiping}
+          onClick={() => {
+            setWiping(true);
+          }}
+        >
+          <Trash2 {...iconProps("sm")} />
+          {t("wipe.cta")}
+        </Button>
+        <p className="text-xs text-text-3">{t("wipe.help")}</p>
+      </div>
+
+      <WipeDeviceSheet
+        open={wiping}
+        pending={outbox.pending + outbox.attention}
+        onCancel={() => {
+          setWiping(false);
+        }}
+        onConfirm={async () => {
+          await wipeThisDevice();
+          setLocalOnly(false);
+          // A full load, not a client navigation: after a wipe nothing in memory — caches,
+          // providers, the vault handle — may survive into the next screen.
+          window.location.assign(
+            new URL(`${localePrefix(locale)}${LOGIN_PATH}?wiped=1`, window.location.origin),
+          );
+        }}
+      />
+      <InstallSheet
+        open={installing}
+        onClose={() => {
+          setInstalling(false);
+        }}
+      />
       <Sheet
         open={confirming}
         onClose={() => {
