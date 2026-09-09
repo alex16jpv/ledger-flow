@@ -291,3 +291,25 @@ test("a session that dies with the app open says so without a reload", async ({
   expect((await vaultState(page))?.pending).toBe(1);
   expect((await listTransactions(request)).filter((row) => row.amount === amount)).toHaveLength(0);
 });
+
+// P-33 (owner, 2026-09-08): with no network the root has to open the app too. The proxy cannot do
+// it — nothing on the server runs — and the landing document is not in the cache either, because a
+// signed-in device is redirected before it ever gets one. The worker answers with the redirect.
+test("with no network the root opens the app on a device that holds it", async ({
+  page,
+  context,
+  request,
+}) => {
+  test.setTimeout(180_000);
+  const user = await freshUser(request, "root");
+  await signInAs(context, request, user);
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+
+  await context.setOffline(true);
+  await page.goto("/");
+
+  await expect(page).toHaveURL(/\/home$/, { timeout: 30_000 });
+  await expect(page.getByText("You’re offline.")).toBeVisible();
+});

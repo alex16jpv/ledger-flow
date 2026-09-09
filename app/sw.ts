@@ -8,8 +8,12 @@ import {
   type SerwistPlugin,
 } from "serwist";
 
+import { SESSION_COOKIE } from "@/lib/auth/cookies";
+import { APP_HOME_PATH } from "@/lib/auth/routes";
+import { localeOf, localePrefix } from "@/lib/i18n/locales";
 import { OUTBOX_SYNC_TAG } from "@/lib/local/outbox/tag";
 import {
+  isLandingPath,
   isShellPath,
   offlineDocument,
   SHELL_CACHE,
@@ -73,6 +77,15 @@ const serwist: Serwist = new Serwist({
         sameOrigin && request.headers.get("RSC") === "1" && isShellPath(url.pathname),
       handler: new NetworkOnly(),
     },
+    // P-33: the root is the app's door for a device that already holds it. Online the proxy
+    // redirects; with no network nothing on the server runs, and the landing document is not even
+    // cached — a signed-in device never gets it, because the proxy redirects that request too. So
+    // the worker answers the redirect itself when the marker says whose device this is.
+    {
+      matcher: ({ request, sameOrigin, url }) =>
+        sameOrigin && request.mode === "navigate" && isLandingPath(url.pathname),
+      handler: { handle: rootNavigation },
+    },
     {
       matcher: ({ request, sameOrigin, url }) =>
         sameOrigin && request.mode === "navigate" && isShellPath(url.pathname),
@@ -99,6 +112,42 @@ self.addEventListener("sync", (event) => {
     }),
   );
 });
+
+// The marker is the only thing that says "this device holds a vault" (§2.6), and in a worker it can
+// only be read through the Cookie Store API. Where that is missing (Safari, Firefox) the answer is
+// the ordinary one: the landing from cache, or the offline document.
+async function holdsTheApp(): Promise<boolean> {
+  const store = (self as unknown as { cookieStore?: { get: (name: string) => Promise<unknown> } })
+    .cookieStore;
+  if (!store) return false;
+  try {
+    return Boolean(await store.get(SESSION_COOKIE));
+  } catch {
+    return false;
+  }
+}
+
+const network: NetworkOnly = new NetworkOnly();
+
+async function rootNavigation({
+  request,
+  event,
+}: {
+  request: Request;
+  event: ExtendableEvent;
+}): Promise<Response> {
+  try {
+    return await network.handle({ request, event });
+  } catch {
+    if (await holdsTheApp()) {
+      const url = new URL(request.url);
+      return Response.redirect(
+        `${url.origin}${localePrefix(localeOf(url.pathname))}${APP_HOME_PATH}`,
+      );
+    }
+    return shellPages.handle({ request, event });
+  }
+}
 
 async function warmRoute(request: Request, event: ExtendableEvent) {
   const cache = await caches.open(SHELL_CACHE);

@@ -27,6 +27,9 @@ describe("route rules", () => {
     expect(isPublicPath("/home")).toBe(false);
     expect(isPublicPath("/transactions/abc")).toBe(false);
     expect(isGuestOnlyPath("/register")).toBe(true);
+    // P-33: a signed-in device asking for the landing is asking for the app.
+    expect(isGuestOnlyPath("/")).toBe(true);
+    expect(isGuestOnlyPath("/privacy")).toBe(false);
   });
 
   it("asks for a session on every screen of the app group", () => {
