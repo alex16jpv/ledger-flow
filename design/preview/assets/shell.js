@@ -1,41 +1,103 @@
-// Barra de herramientas del preview: paleta, modo y tamaño de dispositivo. No forma parte del diseño.
+// The preview viewer: palette, mode, device size and the plate search. Not part of the design.
 (function () {
-  const PAGES = [
-    ["index.html", "Índice"], ["00-fundamentos.html", "Fundamentos"], ["01-inicio.html", "Inicio"],
-    ["02-registrar.html", "Registrar"], ["03-presupuestos.html", "Presupuestos"], ["04-acceso.html", "Acceso"],
-    ["05-movimientos.html", "Movimientos"], ["06-cuentas.html", "Cuentas"], ["07-categorias.html", "Categorías"],
-    ["08-presupuesto-detalle.html", "Presupuesto"], ["09-estadisticas.html", "Estadísticas"], ["10-ajustes.html", "Ajustes"],
-    ["11-estados.html", "Estados"], ["12-publico.html", "Público"], ["13-variaciones.html", "Variaciones"],
-  ];
-  const PALETTES = [["tinta", "Tinta"], ["brisa", "Brisa (demo)"]];
-  const DEVICES = [["mobile", "Móvil 390", 390], ["tablet", "Tablet 820", 820], ["desktop", "Escritorio 1280", 1280]];
-  const store = (k, v) => { try { v === undefined ? 0 : localStorage.setItem(k, v); return localStorage.getItem(k); } catch { return null; } };
+  const DEVICES = { mobile: 390, tablet: 820, desktop: 1280 };
+  const store = (k, v) => {
+    try {
+      if (v !== undefined) localStorage.setItem(k, v);
+      return localStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  };
   const root = document.documentElement;
-  const q = new URLSearchParams(location.search);   // ?palette=brisa&mode=dark&device=desktop
+  const q = new URLSearchParams(location.search); // ?palette=brisa&mode=dark&device=desktop&frame=tall
   const state = {
     palette: q.get("palette") || store("pv-palette") || "tinta",
     mode: q.get("mode") || store("pv-mode") || "light",
-    device: q.get("device") || store("pv-device") || (document.body.dataset.device || "mobile"),
+    device: q.get("device") || store("pv-device") || "mobile",
   };
+
   function apply() {
     root.dataset.palette = state.palette;
-    if (state.mode === "system") root.removeAttribute("data-mode"); else root.dataset.mode = state.mode;
-    const dev = DEVICES.find((d) => d[0] === state.device) || DEVICES[0];
-    document.body.dataset.device = dev[0];
-    document.querySelectorAll(".device").forEach((el) => { el.style.width = dev[2] + "px"; el.dataset.device = dev[0]; el.classList.toggle("tall", q.get("frame") === "tall"); });
+    if (state.mode === "system") root.removeAttribute("data-mode");
+    else root.dataset.mode = state.mode;
+    document.body.dataset.device = state.device;
+    document.querySelectorAll(".device").forEach((el) => {
+      el.style.width = DEVICES[state.device] + "px";
+      el.dataset.device = state.device;
+      el.classList.toggle("tall", q.get("frame") === "tall");
+    });
     document.querySelectorAll("[data-pv]").forEach((b) => b.setAttribute("aria-pressed", String(state[b.dataset.pv] === b.dataset.value)));
-    const sel = document.querySelector("#pv-palette"); if (sel) sel.value = state.palette;
+    const sel = document.querySelector("#pv-palette");
+    if (sel) sel.value = state.palette;
   }
-  const here = location.pathname.split("/").pop() || "index.html";
-  const bar = document.createElement("div");
-  bar.className = "pv-bar";
-  bar.innerHTML = `
-    <div class="pv-group pv-nav">${PAGES.map(([h, t]) => `<a href="${h}" ${h === here ? 'class="on"' : ""}>${t}</a>`).join("")}</div>
-    <div class="pv-group"><label>Paleta <select id="pv-palette">${PALETTES.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select></label></div>
-    <div class="pv-group pv-seg">${[["light", "Claro"], ["dark", "Oscuro"], ["system", "Sistema"]].map(([v, t]) => `<button data-pv="mode" data-value="${v}">${t}</button>`).join("")}</div>
-    <div class="pv-group pv-seg pv-devices">${DEVICES.map(([v, t]) => `<button data-pv="device" data-value="${v}">${t}</button>`).join("")}</div>`;
-  document.body.prepend(bar);
-  bar.addEventListener("click", (e) => { const b = e.target.closest("[data-pv]"); if (!b) return; state[b.dataset.pv] = b.dataset.value; store("pv-" + b.dataset.pv, b.dataset.value); apply(); });
-  bar.querySelector("#pv-palette").addEventListener("change", (e) => { state.palette = e.target.value; store("pv-palette", state.palette); apply(); });
+
+  const top = document.querySelector(".pv-top");
+  if (top) {
+    top.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-pv]");
+      if (!b) return;
+      state[b.dataset.pv] = b.dataset.value;
+      store("pv-" + b.dataset.pv, b.dataset.value);
+      apply();
+    });
+    const sel = top.querySelector("#pv-palette");
+    if (sel)
+      sel.addEventListener("change", (e) => {
+        state.palette = e.target.value;
+        store("pv-palette", state.palette);
+        apply();
+      });
+  }
+
+  const input = document.querySelector("#pv-q");
+  const results = document.querySelector("#pv-results");
+  if (input && results) {
+    const plates = window.LF_PLATES || [];
+    let hits = [];
+    let cursor = 0;
+    const draw = () => {
+      results.hidden = hits.length === 0 && input.value.trim() === "";
+      if (input.value.trim() === "") return;
+      results.hidden = false;
+      results.innerHTML = hits.length
+        ? hits.map((p, i) => `<a class="${i === cursor ? "on" : ""}" href="${p.p}#${p.i}">${p.t}<span class="where">${p.g}</span></a>`).join("")
+        : '<div class="none">Nothing with that name</div>';
+    };
+    const search = () => {
+      const terms = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+      hits = terms.length === 0 ? [] : plates.filter((p) => terms.every((t) => (p.t + " " + p.g + " " + p.i).toLowerCase().includes(t))).slice(0, 12);
+      cursor = 0;
+      draw();
+    };
+    input.addEventListener("input", search);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        input.value = "";
+        search();
+        return;
+      }
+      if (hits.length === 0) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        cursor = (cursor + (e.key === "ArrowDown" ? 1 : hits.length - 1)) % hits.length;
+        draw();
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        location.href = hits[cursor].p + "#" + hits[cursor].i;
+      }
+    });
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".pv-search")) results.hidden = true;
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "/" && document.activeElement !== input) {
+        e.preventDefault();
+        input.focus();
+      }
+    });
+  }
+
   apply();
 })();

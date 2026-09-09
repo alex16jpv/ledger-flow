@@ -25,12 +25,12 @@ const iconSvg = (name, cls = "") =>
   `<svg class="icon ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 
 const docHead = (title) =>
-  `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title} · Ledger Flow diseño</title>
+  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title} · Ledger Flow design</title>
 <link rel="stylesheet" href="${TOKENS}/palette.tinta.css"><link rel="stylesheet" href="${TOKENS}/palette.brisa.css">
 <link rel="stylesheet" href="${TOKENS}/semantic.css"><link rel="stylesheet" href="${TOKENS}/base.css">
 <link rel="stylesheet" href="assets/ui.css"><link rel="stylesheet" href="assets/shell.css">
-<script defer src="assets/icons.js"></script><script defer src="assets/shell.js"></script></head><body>`;
+<script defer src="assets/icons.js"></script><script defer src="assets/plates.js"></script><script defer src="assets/shell.js"></script></head><body>`;
 
 const DOC_FOOT = "</body></html>";
 
@@ -65,11 +65,6 @@ ${navlink("chart-pie", "Budgets", active == "pres")}${navlink("wallet", "Account
 ${navlink("chart-column", "Stats", active == "stats")}${navlink("tags", "Categories", active == "cat")}
 <div class="footer">${navlink("settings", "Settings", active == "ajustes")}
 <a class="navlink" href="#"><span class="avatar" style="width:28px;height:28px;font-size:11px">JD</span><span class="truncate">John Doe</span></a></div></aside>`;
-
-const device = (inner, label = null, extraCls = "") => {
-  const lab = label ? `<div class="pv-title">${label}</div>` : "";
-  return `<div class="pv-item">${lab}<div class="device ${extraCls}"><div class="app">${inner}</div></div></div>`;
-};
 
 const row = (icon, color, title, meta, amt, kind = "expense", o = {}) => {
   const subh = o.sub ? `<span class="sub">${o.sub}</span>` : "";
@@ -317,7 +312,115 @@ const COLOR_NAMES = [
   "BLACK",
 ];
 
-const foundations = () => {
+const ICONS_CAT = [
+  "house",
+  "utensils",
+  "car",
+  "zap",
+  "shopping-bag",
+  "briefcase",
+  "coins",
+  "circle-plus",
+  "repeat",
+  "credit-card",
+  "coffee",
+  "stethoscope",
+  "dog",
+  "cat",
+  "pizza",
+  "shopping-cart",
+  "bus",
+  "fuel",
+  "plane",
+  "train-front",
+  "bike",
+  "pill",
+  "dumbbell",
+  "graduation-cap",
+  "book-open",
+  "gamepad-2",
+  "music",
+  "film",
+  "tv",
+  "wifi",
+  "phone",
+  "droplets",
+  "flame",
+  "lightbulb",
+  "shirt",
+  "scissors",
+  "baby",
+  "wrench",
+  "hammer",
+  "paint-bucket",
+  "sofa",
+  "bed",
+  "key",
+  "shield",
+  "umbrella",
+  "hand-coins",
+  "percent",
+  "gift",
+  "heart",
+  "star",
+  "trophy",
+  "sprout",
+  "leaf",
+  "beer",
+  "wine",
+  "cake",
+  "ice-cream-cone",
+  "apple",
+  "carrot",
+  "croissant",
+  "sandwich",
+  "ticket",
+  "popcorn",
+  "headphones",
+  "camera",
+  "laptop",
+  "bath",
+  "washing-machine",
+  "trees",
+  "mountain",
+  "tent",
+  "ship",
+  "glasses",
+  "watch",
+  "gem",
+  "crown",
+  "medal",
+  "paintbrush",
+  "footprints",
+  "cookie",
+  "martini",
+  "church",
+  "store",
+  "shopping-basket",
+  "package",
+  "truck",
+  "plug",
+  "battery",
+  "radio",
+  "speaker",
+  "piggy-bank",
+  "landmark",
+  "banknote",
+  "wallet",
+  "receipt",
+  "calculator",
+  "scale",
+  "target",
+  "layers",
+  "building-2",
+  "trending-up",
+  "trending-down",
+  "arrow-left-right",
+  "tag",
+  "hash",
+];
+
+const foundationColors = () => {
   const names = COLOR_NAMES;
   const sw = (
     n,
@@ -346,113 +449,10 @@ ${["bg", "surface", "surface-2", "surface-3"].map((v) => `<div style="border-rad
 <div class="banner error" role="alert" style="position:static;border-radius:10px">${iconSvg("circle-alert")}<span class="txt"><b>Some changes need your attention.</b><span class="sub">2 changes could not sync</span></span><span class="actions"><button class="action">Review</button><button class="action">See all</button></span></div>
 <div class="hstack"><span class="skeleton" style="width:40px;height:40px;border-radius:12px"></span><span class="stack-sm" style="flex:1"><span class="skeleton" style="height:12px;width:60%"></span><span class="skeleton" style="height:10px;width:35%"></span></span></div></div>
 </div>`;
-  const iconsCat = [
-    "house",
-    "utensils",
-    "car",
-    "zap",
-    "shopping-bag",
-    "briefcase",
-    "coins",
-    "circle-plus",
-    "repeat",
-    "credit-card",
-    "coffee",
-    "stethoscope",
-    "dog",
-    "cat",
-    "pizza",
-    "shopping-cart",
-    "bus",
-    "fuel",
-    "plane",
-    "train-front",
-    "bike",
-    "pill",
-    "dumbbell",
-    "graduation-cap",
-    "book-open",
-    "gamepad-2",
-    "music",
-    "film",
-    "tv",
-    "wifi",
-    "phone",
-    "droplets",
-    "flame",
-    "lightbulb",
-    "shirt",
-    "scissors",
-    "baby",
-    "wrench",
-    "hammer",
-    "paint-bucket",
-    "sofa",
-    "bed",
-    "key",
-    "shield",
-    "umbrella",
-    "hand-coins",
-    "percent",
-    "gift",
-    "heart",
-    "star",
-    "trophy",
-    "sprout",
-    "leaf",
-    "beer",
-    "wine",
-    "cake",
-    "ice-cream-cone",
-    "apple",
-    "carrot",
-    "croissant",
-    "sandwich",
-    "ticket",
-    "popcorn",
-    "headphones",
-    "camera",
-    "laptop",
-    "bath",
-    "washing-machine",
-    "trees",
-    "mountain",
-    "tent",
-    "ship",
-    "glasses",
-    "watch",
-    "gem",
-    "crown",
-    "medal",
-    "paintbrush",
-    "footprints",
-    "cookie",
-    "martini",
-    "church",
-    "store",
-    "shopping-basket",
-    "package",
-    "truck",
-    "plug",
-    "battery",
-    "radio",
-    "speaker",
-    "piggy-bank",
-    "landmark",
-    "banknote",
-    "wallet",
-    "receipt",
-    "calculator",
-    "scale",
-    "target",
-    "layers",
-    "building-2",
-    "trending-up",
-    "trending-down",
-    "arrow-left-right",
-    "tag",
-    "hash",
-  ];
+  return `<div class="pv-grid" style="grid-template-columns:1fr">${block("light")}${block("dark")}</div>`;
+};
+
+const foundationTypography = () => {
   const typeScale = [
     ["h1 / 24 semibold", "h1", "Hi, John"],
     ["h2 / 17 semibold", "h2", "New transaction"],
@@ -461,102 +461,16 @@ ${["bg", "surface", "surface-2", "surface-3"].map((v) => `<div style="border-rad
     ["small / 12", "small muted", "Metadata, dates, source account."],
     ["eyebrow / 11 caps", "eyebrow", "September spending"],
   ];
-  const inner = `<div class="pv-stage">
-<div class="pv-note"><b>Fundamentos.</b> Cada color de la interfaz sale de 18 semillas OKLCH (neutro, marca y los 16 tokens del backend). Claro y oscuro se derivan con las mismas reglas: la paleta no decide colores por modo. Cambia la paleta arriba para ver cómo todo se repinta sin tocar componentes.</div>
-<div class="pv-grid" style="grid-template-columns:1fr">${block("light")}${block("dark")}</div>
-<div class="pv-note"><b>Tipografía.</b> Geist (variable) para toda la interfaz; cifras tabulares en cualquier importe. Geist Mono solo para claves técnicas (códigos, períodos, user-agents).</div>
-<div class="app" style="padding:20px;border-radius:14px;display:grid;grid-template-columns:200px 1fr;gap:14px 24px;align-items:baseline;width:100%;max-width:1280px">
+  return `<div class="app" style="padding:20px;border-radius:14px;display:grid;grid-template-columns:200px 1fr;gap:14px 24px;align-items:baseline;width:100%;max-width:1280px">
 ${typeScale.map(([l, c, t]) => `<span class="xs faint mono">${l}</span><span class="${c}">${t}</span>`).join("")}
 <span class="xs faint mono">amount-hero / 40</span><span class="amount-hero">${money(1284300)}</span>
 <span class="xs faint mono">amount-lg / 24</span><span class="amount-lg amount">${money(3420500)}</span>
-<span class="xs faint mono">mono / 12</span><span class="mono muted">2026-09 · America/Bogota · COP</span></div>
-<div class="pv-note"><b>Iconografía.</b> Lucide (ISC), trazo 1.75. Set curado de ${iconsCat.length} iconos para categorías; se guarda la clave (p. ej. <code>utensils</code>) en <code>Category.icon</code>. Se tiñen con el color del token: el mismo icono funciona en claro y oscuro y en cualquier paleta.</div>
-<div class="app" style="padding:20px;border-radius:14px;width:100%;max-width:1280px;display:flex;flex-wrap:wrap;gap:10px">
-${iconsCat.map((n, i) => `<span class="tile color-${names[i % 16]}" title="${n}">${iconSvg(n)}</span>`).join("")}</div>
-</div>`;
-  return docHead("Fundamentos") + inner + DOC_FOOT;
+<span class="xs faint mono">mono / 12</span><span class="mono muted">2026-09 · America/Bogota · COP</span></div>`;
 };
 
-const page = (title, body, note = null, extra = "") => {
-  const n = note ? `<div class="pv-note">${note}</div>` : "";
-  return docHead(title) + `<div class="pv-stage">${n}${body}${extra}</div>` + DOC_FOOT;
-};
-
-const indexPage = () => {
-  const lis = PAGES.map(
-    ([h, t, d]) =>
-      `<a href="${h}" style="display:block;padding:14px 16px;border:1px solid #2a2a2e;border-radius:10px;color:#e6e6e8;text-decoration:none;background:#111113"><b>${t}</b><br><span style="color:#9a9aa3">${d}</span></a>`,
-  ).join("");
-  return (
-    docHead("Índice") +
-    `<div class="pv-stage"><div class="pv-note" style="max-width:720px"><b>Ledger Flow · rediseño UI/UX — entrega completa (punto de revisión 2)</b><br>
-Fundamentos y todas las pantallas del mapa (DESIGN.md §5). Usa la barra superior para cambiar paleta, modo y dispositivo; todo el contenido se repinta desde los tokens. Abre estos archivos directamente desde el disco, no necesitan servidor ni conexión.<br><br>
-La especificación completa está en <code>../DESIGN.md</code>; los tokens listos para Tailwind en <code>../tokens/</code>.</div>
-<div style="display:grid;gap:12px;width:100%;max-width:720px">${lis}</div></div>` +
-    DOC_FOOT
-  );
-};
-
-const PAGES = [
-  [
-    "00-fundamentos.html",
-    "Fundamentos",
-    "Paleta, derivación claro/oscuro, tipografía, iconografía, componentes.",
-  ],
-  ["01-inicio.html", "Inicio", "Gasto del mes, pendientes, presupuestos, cuentas, movimientos."],
-  ["02-registrar.html", "Registrar", "Captura rápida y formulario completo con los cuatro tipos."],
-  [
-    "03-presupuestos.html",
-    "Presupuestos",
-    "Listado por período con global, avisos, override y personalizado.",
-  ],
-  [
-    "04-acceso.html",
-    "Acceso",
-    "Login, registro con moneda y zona horaria, onboarding en dos pasos.",
-  ],
-  [
-    "05-movimientos.html",
-    "Movimientos",
-    "Lista, hoja de filtros, detalle (con conflicto de sync), bandeja de pendientes (Save all, categoría descartada), lista sin conexión.",
-  ],
-  [
-    "06-cuentas.html",
-    "Cuentas",
-    "Lista, detalle, nueva/editar, ajuste de saldo y restaurar con otro nombre.",
-  ],
-  [
-    "07-categorias.html",
-    "Categorías",
-    "Rejilla por tipo, nueva/editar con icono y color, tipo bloqueado, restaurar predeterminadas sin conexión.",
-  ],
-  [
-    "08-presupuesto-detalle.html",
-    "Presupuesto",
-    "Detalle con override por período, nuevo/editar, pasados, archivado con restaurar y su conflicto.",
-  ],
-  [
-    "09-estadisticas.html",
-    "Estadísticas",
-    "Por categoría (con tooltip por tramo), por día y por etiqueta con drill-down.",
-  ],
-  [
-    "10-ajustes.html",
-    "Ajustes",
-    "Perfil, idioma, preferencias, apariencia, sesiones, eliminar cuenta, Sync status, instalar, salir con cambios pendientes, sin conexión.",
-  ],
-  [
-    "11-estados.html",
-    "Estados",
-    "Vacío, carga, error, sesión expirada, confirmación, offline, franjas de sync, conflicto (I), bandeja «Needs your attention», modo local, documento offline, cifras proyectadas.",
-  ],
-  ["12-publico.html", "Público", "Landing indexable, política de privacidad, 404."],
-  [
-    "13-variaciones.html",
-    "Variaciones",
-    "Alternativas de un mismo componente para que el dueño elija: tipo de cuenta (F-03), contador de la franja verde (F-62), marcador de ritmo (F-08).",
-  ],
-];
+const foundationIcons = () =>
+  `<div class="app" style="padding:20px;border-radius:14px;width:100%;max-width:1280px;display:flex;flex-wrap:wrap;gap:10px">
+${ICONS_CAT.map((n, i) => `<span class="tile color-${COLOR_NAMES[i % 16]}" title="${n}">${iconSvg(n)}</span>`).join("")}</div>`;
 
 const screen = (body, o = {}) => {
   const {
@@ -2215,269 +2129,919 @@ const paceVariant = (legend = false) => {
 <span class="small muted amount"><b>${money(84000)}</b> left <span class="faint">· 8 days</span></span></div></div>`;
 };
 
-const variants = () => {
-  const grid = (items) =>
-    `<div class="pv-grid">${items.map(([f, l]) => device(f, l)).join("")}</div>`;
-  const plain = (items) =>
-    `<div class="pv-grid">${items.map(([f, l]) => `<div class=pv-item><div class=pv-title>${l}</div>${f}</div>`).join("")}</div>`;
-  const inner = `<div class="pv-stage">
-<div class="pv-note"><b>Variaciones para decisión.</b> Alternativas de un mismo componente puestas una al lado de otra para que el dueño elija.
-Lo elegido pasa a <code>DESIGN.md</code> y solo entonces se implementa; lo descartado se queda aquí, que para eso existe la pestaña:
-dentro de tres meses explica por qué la app es como es. Esta pestaña se reutiliza cada vez que haya que decidir entre dos formas de hacer lo mismo.<br><br>
-<b>Las tres de esta tanda están decididas (dueño, 2026-09-06): C, B y B.</b> Marcadas con ✓ abajo, y ya escritas en <code>DESIGN.md</code>.</div>
+// ─── The viewer ───────────────────────────────────────────────────────────────
+// Everything below is the preview itself — navigation, search, dates, the review queue.
+// It is not part of the design of the app.
 
-<div class="pv-note"><b>F-03 · Selector de tipo de cuenta (9 tipos).</b> La versión construida rompe los 9 chips en varias líneas
-y ocupa media pantalla. Las tres alternativas ocupan <b>una sola línea</b>.<br>
-<b>A · una línea con desplazamiento:</b> los 9 chips en una fila que se arrastra; se ven los primeros y el degradado avisa de que hay más.
-Sin capas, pero en escritorio arrastrar con ratón es incómodo y los últimos tipos casi no se descubren.<br>
-<b>B · cinco esenciales + «More»:</b> lo que ya hace el onboarding. Todo visible sin desplazar, pero los cuatro tipos raros quedan escondidos tras un botón y aparecen en una hoja distinta a la del resto del formulario.<br>
-<b>C · fila que abre una hoja (ELEGIDA):</b> el mismo componente <i>picker</i> que ya usan cuenta y categoría en Registrar. Una línea siempre,
-enseña el tipo elegido con su descripción, y la hoja tiene sitio para explicar los 9 («Overdraft: a negative balance you can use»),
-que es justo lo que hoy nadie entiende. Escala si algún día hay 12 tipos. <b>Se usa igual en el formulario de cuenta y en el onboarding</b>, para no tener dos maneras de elegir lo mismo.</div>
-${grid([
-  [accountTypeVariant(1), "A · Una línea, desplazable"],
-  [accountTypeVariant(2), "B · Cinco + «More»"],
-  [accountTypeVariant(3), "✓ C · Fila con hoja (elegida)"],
-  [accountTypeVariant(3, true), "✓ C · La hoja de los 9 tipos"],
-])}
+const plate = (id, title, note, html, o = {}) => ({ id, title, note, html, ...o });
 
-<div class="pv-note"><b>F-62 · El contador de la franja verde.</b> El texto <code>states.backOnline.synced</code> ya existe en los mensajes y hoy no se pinta.
-<b>A</b> deja la franja como está: un «Back online.» de tres segundos.
-<b>B</b> añade la segunda línea con lo que acaba de salir, que cierra el círculo de la franja ámbar («2 changes waiting» → «2 changes synced»)
-y es la única confirmación de que la cola se vació. Regla que viaja con la decisión: con cero cambios drenados <b>no</b> se pinta la línea (nunca «0 changes synced»).
-<b>ELEGIDA: B.</b></div>
-${grid([
-  [state("online-plain"), "A · Sin contador (lo construido)"],
-  [state("online"), "✓ B · Con contador (elegida)"],
-])}
+const PAGES = [
+  {
+    file: "foundations.html",
+    title: "Foundations",
+    group: "Foundations",
+    note: "Every colour in the interface comes from 18 OKLCH seeds: one neutral, one brand and the 16 tokens the backend stores. Light and dark are derived from the same seeds with the same rules, so a palette never decides a colour per mode. Switch the palette in the top bar and everything repaints without a component changing.",
+    plates: [
+      plate(
+        "colour-system",
+        "Colour system",
+        "The same seeds in light and dark: surfaces, buttons, amounts, badges, alerts and skeletons.",
+        foundationColors(),
+        { frame: false, added: "2026-09-01" },
+      ),
+      plate(
+        "typography",
+        "Typography",
+        "Geist for the interface, tabular figures in every amount, Geist Mono only for technical keys.",
+        foundationTypography(),
+        { frame: false, added: "2026-09-01" },
+      ),
+      plate(
+        "iconography",
+        "Iconography",
+        `Lucide, 1.75 stroke. A curated set of ${ICONS_CAT.length} icons for categories; the key is what the backend stores.`,
+        foundationIcons(),
+        { frame: false, added: "2026-09-01" },
+      ),
+    ],
+  },
+  {
+    file: "home.html",
+    title: "Home",
+    group: "Screens",
+    note: "The month's spending is the lead figure — the app exists to show the small daily spending — with a bar per day and progress against the global budget. The amber strip is the inbox of quick expenses still to detail. On desktop the same content splits into two columns.",
+    plates: [
+      plate(
+        "home",
+        "Home",
+        "Spending, review inbox, budgets, accounts and recent transactions.",
+        home(),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "install-card",
+        "Install card",
+        "Shown when the device already has something to lose and runs in a browser tab: Install where the browser offers it, How where it does not. It is also the storage-durability notice, because no browser ever asks for that permission.",
+        home({ notice: true }),
+        { added: "2026-09-08" },
+      ),
+      plate(
+        "home-without-a-name",
+        "Home without a name",
+        "Neither the session nor the local mirror knows the name: the greeting loses the comma instead of showing an empty one.",
+        home({ unnamed: true }),
+        { added: "2026-09-08" },
+      ),
+    ],
+  },
+  {
+    file: "add.html",
+    title: "Add",
+    group: "Screens",
+    note: "The centre button opens quick capture: amount first, category optional as a row of recent chips, main account preselected. Save creates the transaction — quick, marked as still to detail, if the category is missing. More details opens the full form, which covers expense, income, transfer and adjustment with one skeleton.",
+    plates: [
+      plate(
+        "quick-capture",
+        "Quick capture",
+        "The sheet behind the centre button.",
+        home({ withSheet: true }),
+        { added: "2026-09-01" },
+      ),
+      plate("full-form-expense", "Full form · expense", "", transactionForm("EXPENSE"), {
+        added: "2026-09-01",
+      }),
+      plate(
+        "full-form-transfer",
+        "Full form · transfer",
+        "Two accounts and no category.",
+        transactionForm("TRANSFER"),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "category-picker",
+        "Category picker",
+        "Search, recents and a way to create one without leaving the form.",
+        categoryPicker(),
+        { added: "2026-09-01" },
+      ),
+      plate("account-picker", "Account picker", "", accountPicker(), { added: "2026-09-01" }),
+      plate(
+        "date-sheet",
+        "Date",
+        "The app's own calendar, not the browser's: it follows the tokens and the language, and disables what the server would refuse (more than 24 hours ahead).",
+        dateSheet(),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "time-sheet",
+        "Time",
+        "The app's own wheel, saved in the user's time zone.",
+        timeSheet(),
+        { added: "2026-09-06" },
+      ),
+    ],
+  },
+  {
+    file: "access.html",
+    title: "Access",
+    group: "Screens",
+    note: "Sign in and sign up, centred and short. Registration suggests the detected currency and time zone and says the currency locks with the first account. After signing up, two onboarding steps: the first account, which becomes the main one, and a total monthly budget.",
+    plates: [
+      plate("sign-in", "Sign in", "", login(), { added: "2026-09-01" }),
+      plate("sign-in-rate-limited", "Sign in · too many attempts", "", login("429"), {
+        added: "2026-09-01",
+      }),
+      plate("create-account", "Create account", "With currency and time zone.", register(), {
+        added: "2026-09-01",
+      }),
+      plate(
+        "account-reactivated",
+        "Create account · reactivated",
+        "The server answers that the account existed: the history comes back and the currency is kept.",
+        register("reactivated"),
+        { added: "2026-09-01" },
+      ),
+      plate("onboarding-first-account", "Onboarding 1 · first account", "", onboarding(1), {
+        added: "2026-09-01",
+      }),
+      plate(
+        "onboarding-monthly-ceiling",
+        "Onboarding 2 · a ceiling for the month",
+        "",
+        onboarding(2),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "language-before-signing-up",
+        "Language before signing up",
+        "The chip in the frame's header and the Language row in the form are the same value, sent as the account's locale.",
+        registerLanguage(),
+        { added: "2026-09-06" },
+      ),
+    ],
+  },
+  {
+    file: "transactions.html",
+    title: "Transactions",
+    group: "Screens",
+    note: "Grouped by day with a daily total; filter chips mirror the API's filters and a summary heads the period. The detail shows everything the backend keeps, including the source. The review inbox completes a quick expense inline: category chips, description and Done.",
+    plates: [
+      plate("list", "List", "Search, filters and infinite scroll.", transactions(), {
+        added: "2026-09-01",
+      }),
+      plate("detail", "Detail", "", transactionDetail(), { added: "2026-09-01" }),
+      plate(
+        "review-inbox",
+        "Review inbox",
+        "Quick expenses to name and categorise, saved in one batch.",
+        reviewInbox(),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "filters",
+        "Filters",
+        "Period with presets and a range, type, account, category, tag, only quick expenses to review, only quick entries. The main button says how many results are waiting.",
+        filtersSheet(),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "detail-with-unsynced-change",
+        "Detail with a change the server did not take",
+        "The row carries a change that never landed, and the detail opens the conflict sheet.",
+        transactionDetail({ conflict: true }),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "dropped-category",
+        "Review inbox · category dropped by the server",
+        "Its category had been archived elsewhere, so the server saved the expense without one.",
+        reviewInbox({ dropped: true }),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "save-all-confirmation",
+        "Review inbox · confirm Save all",
+        "",
+        reviewInbox({ confirm: true }),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "offline-without-a-copy",
+        "Offline with no local copy",
+        "An honest empty state instead of a lie.",
+        state("mov-offline"),
+        { added: "2026-09-06" },
+      ),
+    ],
+  },
+  {
+    file: "accounts.html",
+    title: "Accounts",
+    group: "Screens",
+    note: "Total balance and card debt on top, archived accounts folded away. The detail gathers the actions: adjust balance — which creates an adjustment with the computed delta — edit, make main, and archive, blocked with an explanation while it is the main one.",
+    plates: [
+      plate("list", "List", "", accounts(), { added: "2026-09-01" }),
+      plate("detail", "Detail", "", accountDetail(), { added: "2026-09-01" }),
+      plate(
+        "adjust-balance",
+        "Adjust balance",
+        "The difference becomes an adjustment that counts neither as spending nor in budgets.",
+        accountDetail({ sheet: true }),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "duplicate-name",
+        "New account · duplicate name",
+        "The server's 409 shown inline, on the field.",
+        accountForm(),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "restore-with-another-name",
+        "Restore with another name",
+        "An active account already holds the name, so restoring asks for a new one. The same component serves categories.",
+        accountRestoreSheet(),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "account-type-sheet",
+        "Account type",
+        "One row that opens a sheet with the nine types, each with a line that explains it. The onboarding uses the same picker.",
+        accountForm({ sheet: true }),
+        { added: "2026-09-06" },
+      ),
+    ],
+  },
+  {
+    file: "categories.html",
+    title: "Categories",
+    group: "Screens",
+    note: "A grid per type with icon and colour, archived ones folded, and a way to recreate the defaults without duplicating the ones that were renamed. With history behind it the type locks, and the screen offers creating another category instead.",
+    plates: [
+      plate("grid", "Grid by type", "", categories(), { added: "2026-09-01" }),
+      plate("edit-with-locked-type", "Edit · type locked by history", "", categoryForm(), {
+        added: "2026-09-01",
+      }),
+      plate(
+        "offline",
+        "Offline · restoring defaults needs a connection",
+        "The button is hidden rather than disabled, and the alert says why: the server creates those categories.",
+        categories({ offline: true }),
+        { added: "2026-09-06" },
+      ),
+    ],
+  },
+  {
+    file: "budgets.html",
+    title: "Budgets",
+    group: "Screens",
+    note: "Navigation by reference period, a filter by period type, the global budget as the featured card, and one card per budget with progress, plain-language status and its warnings: an adjusted amount this period, an archived category, a custom window with an end date.",
+    plates: [plate("list", "List", "", budgets(), { added: "2026-09-01" })],
+  },
+  {
+    file: "budget-detail.html",
+    title: "Budget detail",
+    group: "Screens",
+    note: "The detail walks periods, shows what is left, the pace and the days remaining, and keeps the base amount separate from this period's adjustment. Archiving is not final: an archived budget comes back from its own detail or from Past budgets.",
+    plates: [
+      plate("detail", "Detail with a period adjustment", "", budgetDetail(), {
+        added: "2026-09-01",
+      }),
+      plate(
+        "new-budget",
+        "New budget",
+        "Scope, the six period types, amount, colour and the advanced options.",
+        budgetForm(),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "past-budgets",
+        "Ended and archived",
+        "Recurring budgets never end: to see a past month, change the period in the list.",
+        pastBudgets(),
+        { added: "2026-09-01" },
+      ),
+      plate("archived", "Archived · Restore", "", budgetDetail({ archived: true }), {
+        added: "2026-09-06",
+      }),
+      plate(
+        "restore-blocked",
+        "Restore blocked by another budget",
+        "Another active budget covers the same period and the same spending: the sheet names it and leads to it.",
+        budgetDetail({ archived: true, conflict: true }),
+        { added: "2026-09-06" },
+      ),
+    ],
+  },
+  {
+    file: "stats.html",
+    title: "Stats",
+    group: "Screens",
+    note: "A navigable period, flow type as chips, and the API's three groupings, each with its own drill-down into the filtered list.",
+    plates: [
+      plate(
+        "by-category",
+        "By category",
+        "A stacked bar whose segments name themselves on hover or focus, plus a list with percentages.",
+        stats("cat"),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "by-day",
+        "By day",
+        "Gaps filled with zero, and the highest day pulled out.",
+        stats("day"),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "by-tag",
+        "By tag",
+        "Warns about double counting and says how much spending carries no tag.",
+        stats("tag"),
+        { added: "2026-09-01" },
+      ),
+    ],
+  },
+  {
+    file: "settings.html",
+    title: "Settings",
+    group: "Screens",
+    note: "A hub with profile, preferences, security and data. Anything written on the server says so when there is no connection. Sync status is the page that answers what this device has and what it still owes the server.",
+    plates: [
+      plate("settings-hub", "Settings", "", settings(), { added: "2026-09-01" }),
+      plate("appearance", "Appearance", "Mode and palette, with a live preview.", appearance(), {
+        added: "2026-09-01",
+      }),
+      plate("active-sessions", "Active sessions", "", sessions(), { added: "2026-09-01" }),
+      plate(
+        "profile-and-security",
+        "Profile & security",
+        "Changing email or password asks for the current one.",
+        profileSecurity(),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "delete-account",
+        "Delete my account",
+        "Reversible by signing up again with the same email.",
+        deleteAccountScreen(),
+        { added: "2026-09-01" },
+      ),
+      plate("language", "Language", "", languageSheet(), { added: "2026-09-01" }),
+      plate(
+        "sync-status",
+        "Sync status",
+        "In a browser tab: what is on the device, what is waiting, and how much room it takes.",
+        syncStatus(),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "sync-status-installed",
+        "Sync status · installed app",
+        "Persistent storage is granted, so the browser stops treating the data as disposable.",
+        syncStatus("installed"),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "sync-status-one-at-a-time",
+        "Sync status · server without batching",
+        "",
+        syncStatus("routes"),
+        { added: "2026-09-06" },
+      ),
+      plate("sync-status-resync", "Sync status · confirm a full resync", "", syncStatus("resync"), {
+        added: "2026-09-06",
+      }),
+      plate("sync-status-offline", "Sync status · offline", "", syncStatus("offline"), {
+        added: "2026-09-06",
+      }),
+      plate(
+        "sign-out-with-unsent-changes",
+        "Sign out with unsent changes",
+        "Keep them and they go out next time, or discard them and sign out.",
+        signOutSheet(),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "settings-offline",
+        "Settings · offline",
+        "Sign out is disabled: the session lives on the server.",
+        settings({ offline: true }),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "language-offline",
+        "Language · offline",
+        "The same notice covers currency, time zone, profile and deleting the account.",
+        languageSheet({ offline: true }),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "sync-status-signed-out",
+        "Sync status · signed out with a connection",
+        "The session is the first row: without it nothing below reaches the server.",
+        syncStatus("signedout"),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "sync-status-preparing",
+        "Sync status · preparing the device",
+        "How much is still missing before the app works without a connection.",
+        syncStatus("preparing"),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "sync-status-blocked-queue",
+        "Sync status · queue blocked by an update",
+        "",
+        syncStatus("blocked"),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "sync-status-loading",
+        "Sync status · while the mirror answers",
+        "Three rows show a skeleton instead of a false Never until the mirror and the cache answer.",
+        syncStatus("loading"),
+        { added: "2026-09-08" },
+      ),
+      plate(
+        "sync-status-no-service-worker",
+        "Sync status · without a service worker",
+        "Where the app runs without one on purpose the row says Not available, not Ready.",
+        syncStatus("nosw"),
+        { added: "2026-09-08" },
+      ),
+      plate(
+        "sync-status-this-device-only",
+        "Sync status · this device only",
+        "The mode the user chose, said in the Session row without scolding.",
+        syncStatus("localonly"),
+        { added: "2026-09-08" },
+      ),
+      plate(
+        "install-sheet",
+        "Install this app",
+        "Where the browser offers to install.",
+        installSheet(true),
+        { added: "2026-09-08" },
+      ),
+      plate(
+        "install-sheet-steps",
+        "Install this app · by hand",
+        "Where the browser does not offer it, iOS among them: the steps, and what happens if it is never installed.",
+        installSheet(false),
+        { added: "2026-09-08" },
+      ),
+    ],
+  },
+  {
+    file: "public.html",
+    title: "Public",
+    group: "Screens",
+    note: "The only surface search engines should index: the landing, the legal pages and a kind 404. No sidebar and no tab bar, a visible language switch, and legal links in the footer. The signed-in app carries noindex.",
+    plates: [
+      plate(
+        "landing",
+        "Landing",
+        "Value proposition, three benefits, three steps and a call to action.",
+        landing(),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "privacy-policy",
+        "Privacy policy",
+        "Doubles as the data processing policy under Ley 1581.",
+        legal(),
+        { added: "2026-09-01" },
+      ),
+      plate("not-found", "404", "", notFound(), { added: "2026-09-01" }),
+    ],
+  },
+  {
+    file: "states.html",
+    title: "Screen states",
+    group: "States",
+    note: "What every list and every screen does when there is nothing, when it is still loading, when the server fails, and when something has to be confirmed. Every list has an empty state with a call to action, a loading skeleton and an error with a retry.",
+    plates: [
+      plate("empty-list", "Empty", "", state("vacio"), { added: "2026-09-01" }),
+      plate("loading-list", "Loading", "", state("carga"), { added: "2026-09-01" }),
+      plate(
+        "server-error",
+        "Server error",
+        "With a reference the user can quote.",
+        state("error"),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "session-expired",
+        "Session expired",
+        "Blocking, and it leads to the sign-in screen.",
+        state("sesion"),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "archive-confirmation",
+        "Archive confirmation",
+        "Archiving always confirms, saying what is kept.",
+        state("confirmar"),
+        { added: "2026-09-01" },
+      ),
+      plate("new-version", "New version available", "", state("sw-update"), {
+        added: "2026-09-06",
+      }),
+    ],
+  },
+  {
+    file: "sync-stripes.html",
+    title: "Sync stripes",
+    group: "States",
+    note: "The strip sits at the top of the content column, above the header and without covering the sidebar. Amber means incomplete, green is the moment the queue drains, red is kept for a sync that really failed, and neutral for a state the user chose.",
+    plates: [
+      plate(
+        "offline",
+        "Offline",
+        "Fixed strip, a badge per transaction saved locally, and a toast.",
+        state("offline"),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "back-online",
+        "Back online",
+        "Green for a moment, with what just went out — never zero changes synced.",
+        state("online"),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "needs-attention",
+        "Changes that need the user",
+        "Red, with Review and See all.",
+        state("syncfail"),
+        { added: "2026-09-01" },
+      ),
+      plate(
+        "waiting-with-a-connection",
+        "Waiting with a connection",
+        "Amber: there is network and the queue has not drained yet.",
+        state("pendiente"),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "signed-out",
+        "Signed out with a connection",
+        "Nothing is syncing, and the strip offers the way back in.",
+        state("signedout"),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "ready-for-offline",
+        "Ready to use offline",
+        "Said once, when the device can work without a connection.",
+        state("ready"),
+        { added: "2026-09-06" },
+      ),
+      plate("blocked-by-an-update", "An update left the queue unsent", "", state("blocked"), {
+        added: "2026-09-06",
+      }),
+      plate(
+        "this-device-only",
+        "This device only",
+        "Neutral, because it is a decision the user made and not a failure.",
+        state("localonly"),
+        { added: "2026-09-08" },
+      ),
+    ],
+  },
+  {
+    file: "conflicts.html",
+    title: "Sync conflicts",
+    group: "States",
+    note: "One sheet, Resolve sync conflict, in every shape a rejected or duplicated change can take. Each one says what happened, what the server has, what the device has, and what the two ways out are.",
+    plates: [
+      plate(
+        "changed-in-two-places",
+        "Changed in two places",
+        "The version to keep, side by side.",
+        conflict("stale"),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "refused-by-the-server",
+        "Refused by the server",
+        "It was never applied, here or there.",
+        conflict("failed"),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "account-archived-elsewhere",
+        "Account archived elsewhere",
+        "Restore the account and it goes through in the same batch.",
+        conflict("archived"),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "server-did-not-say",
+        "The server did not say what it has",
+        "Keeping this device's version will overwrite it, and the sheet says so.",
+        conflict("noserver"),
+        { added: "2026-09-06" },
+      ),
+      plate("nothing-to-resolve", "Nothing left to resolve", "", conflict("empty"), {
+        added: "2026-09-06",
+      }),
+      plate(
+        "name-taken",
+        "The name is taken",
+        "A restore the server refused: the way out is another name, not trying again.",
+        conflict("dup"),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "fix-the-date",
+        "Fix the date",
+        "The date is corrected here instead of only being discarded, because the device's clock is what is wrong.",
+        conflict("future"),
+        { added: "2026-09-06" },
+      ),
+    ],
+  },
+  {
+    file: "attention-tray.html",
+    title: "Attention tray",
+    group: "States",
+    note: "The tray at /sync: one card per change the server would not take, each saying who asked for what and why it stopped. Nothing else in the queue is waiting behind them.",
+    plates: [
+      plate("tray", "Needs your attention", "", syncInbox(), { added: "2026-09-06" }),
+      plate(
+        "discard-all",
+        "Confirm Discard all",
+        "Says what goes with it: a change made on top of something created here.",
+        syncInbox("confirm"),
+        { added: "2026-09-06" },
+      ),
+      plate("empty-tray", "Nothing needs you", "", syncInbox("empty"), { added: "2026-09-06" }),
+      plate(
+        "restore-with-another-name",
+        "Restore with another name",
+        "The same 409 as in accounts and categories, resolved from the tray.",
+        syncInbox("dup"),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "blocked-by-an-update",
+        "Blocked by an app update",
+        "Recorded with an older version and unsendable: discarding them frees the queue.",
+        syncInbox("blocked"),
+        { added: "2026-09-06" },
+      ),
+    ],
+  },
+  {
+    file: "local-mode.html",
+    title: "Local mode",
+    group: "States",
+    note: "What the app does when the session dies but the device still holds a copy of the data: it keeps working, says nothing is leaving, and marks every figure that already includes an unsent change.",
+    plates: [
+      plate(
+        "sign-in-to-sync",
+        "Session gone, copy still here",
+        "The sheet can be dismissed: the app works, it just is not syncing.",
+        state("local"),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "three-exits",
+        "Three exits",
+        "Sign in, keep working on this device only, or delete everything here. The only sheet in the app that cannot be dismissed without choosing.",
+        threeExits(),
+        { added: "2026-09-08" },
+      ),
+      plate(
+        "delete-local-copy",
+        "Delete everything on this device",
+        "The confirmation: it deletes the local copy and its unsent changes, not the account.",
+        deleteLocalCopy(),
+        { added: "2026-09-08" },
+      ),
+      plate(
+        "projected-figures",
+        "Projected figures",
+        "Every amount or bar that already includes an unconfirmed write carries the amber mark and explains itself on hover or focus.",
+        projected(),
+        { added: "2026-09-06" },
+      ),
+      plate(
+        "offline-document",
+        "Offline fallback document",
+        "A route that was never opened on this device, with no connection.",
+        state("offline-doc"),
+        { added: "2026-09-06" },
+      ),
+    ],
+  },
+  {
+    file: "variants.html",
+    title: "Decided variants",
+    group: "Decisions",
+    note: "Alternatives for one component, put side by side so the owner could choose. What was chosen went into the specification and only then got built; what was discarded stays here, because in three months this page is what explains why the app is the way it is.",
+    plates: [
+      plate(
+        "account-type-scrolling-row",
+        "Account type · one scrolling row",
+        "The nine chips in a row that drags, with a gradient hinting there is more. No extra layer, but on a desktop dragging with a mouse is awkward and the last types are never discovered.",
+        accountTypeVariant(1),
+        { added: "2026-09-06", verdict: "discarded" },
+      ),
+      plate(
+        "account-type-five-plus-more",
+        "Account type · five essentials plus More",
+        "Everything visible without scrolling, but the four rare types hide behind a button and open in a different sheet from the rest of the form.",
+        accountTypeVariant(2),
+        { added: "2026-09-06", verdict: "discarded" },
+      ),
+      plate(
+        "account-type-picker-row",
+        "Account type · a row that opens a sheet",
+        "The same picker account and category already use. Always one line, it shows the chosen type with its description, and the sheet has room to explain all nine — which is what nobody understands today. It scales if there is ever a tenth.",
+        accountTypeVariant(3),
+        { added: "2026-09-06", verdict: "chosen" },
+      ),
+      plate(
+        "account-type-sheet",
+        "Account type · the sheet of nine",
+        "",
+        accountTypeVariant(3, true),
+        { added: "2026-09-06", verdict: "chosen" },
+      ),
+      plate(
+        "back-online-without-counter",
+        "Back online · without a counter",
+        "A three-second Back online and nothing else.",
+        state("online-plain"),
+        { added: "2026-09-06", verdict: "discarded" },
+      ),
+      plate(
+        "back-online-with-counter",
+        "Back online · with a counter",
+        "The second line closes the circle the amber strip opened — 2 changes waiting becomes 2 changes synced — and is the only confirmation that the queue emptied. With nothing drained the line is not painted.",
+        state("online"),
+        { added: "2026-09-06", verdict: "chosen" },
+      ),
+      plate(
+        "pace-mark-tooltip-only",
+        "Pace mark · tooltip only",
+        "The mark can be focused with the keyboard and says the pace on hover or focus.",
+        paceVariant(false),
+        { frame: false, added: "2026-09-06", verdict: "discarded" },
+      ),
+      plate(
+        "pace-mark-with-legend",
+        "Pace mark · tooltip and a legend",
+        "A fixed line underneath on the screens with room for it, because a tooltip does not exist for a finger. Legend in the budget detail, tooltip everywhere.",
+        paceVariant(true),
+        { frame: false, added: "2026-09-06", verdict: "chosen" },
+      ),
+    ],
+  },
+];
 
-<div class="pv-note"><b>F-08 · Qué marca la línea vertical de las barras.</b> En las dos, la marca se puede enfocar con el teclado y dice
-«Day 22 of 30 · 73% expected» al pasar el ratón o al enfocarla. <b>A</b> se queda solo con eso. <b>B</b> añade una línea fija debajo en las
-pantallas que tienen sitio (detalle de presupuesto), porque el tooltip no existe cuando se lee la pantalla con el dedo.
-<b>ELEGIDA: B</b> — tooltip en todas partes, leyenda solo en el detalle; en Inicio y en la lista de presupuestos la línea no cabe sin ruido.</div>
-${plain([
-  [paceVariant(false), "A · Solo tooltip"],
-  [paceVariant(true), "✓ B · Tooltip + leyenda en el detalle (elegida)"],
-])}
-</div>`;
-  return docHead("Variaciones") + inner + DOC_FOOT;
+const ALL_PLATES = PAGES.flatMap((page) => (page.plates ?? []).map((p) => ({ ...p, page })));
+const IN_REVIEW = ALL_PLATES.filter((p) => p.review);
+const LATEST = [...ALL_PLATES]
+  .map((p) => p.added)
+  .sort()
+  .at(-1);
+
+const GROUPS = ["Foundations", "Screens", "States", "Decisions"];
+
+const topBar = () => `<header class="pv-top">
+<a class="pv-brand" href="index.html"><span class="pv-logo">${iconSvg("layers", "sm")}</span>Ledger Flow · Design</a>
+<label class="pv-field">Palette <select id="pv-palette"><option value="tinta">Tinta</option><option value="brisa">Brisa (demo)</option></select></label>
+<div class="pv-seg">${[
+  ["light", "Light"],
+  ["dark", "Dark"],
+  ["system", "System"],
+]
+  .map(([v, t]) => `<button data-pv="mode" data-value="${v}">${t}</button>`)
+  .join("")}</div>
+<div class="pv-seg">${[
+  ["mobile", "Mobile 390"],
+  ["tablet", "Tablet 820"],
+  ["desktop", "Desktop 1280"],
+]
+  .map(([v, t]) => `<button data-pv="device" data-value="${v}">${t}</button>`)
+  .join("")}</div>
+</header>`;
+
+const sideNav = (current) => {
+  const link = (file, title, count, extra = "") =>
+    `<a class="pv-link${file === current ? " on" : ""}${extra}" href="${file}">${title}${count === undefined ? "" : `<span class="pv-count">${count}</span>`}</a>`;
+  const groups = GROUPS.map((group) => {
+    const pages = PAGES.filter((p) => p.group === group);
+    if (pages.length === 0) return "";
+    return `<div class="pv-group"><span class="pv-group-name">${group}</span>${pages.map((p) => link(p.file, p.title, (p.plates ?? []).filter((x) => !x.review).length)).join("")}</div>`;
+  }).join("");
+  return `<aside class="pv-side">
+<div class="pv-search"><input id="pv-q" type="search" placeholder="Search a screen or a state" autocomplete="off" aria-label="Search"><div id="pv-results" class="pv-results" hidden></div></div>
+<nav class="pv-nav">
+<div class="pv-group">${link("index.html", "Start here")}${link("in-review.html", "In review", IN_REVIEW.length, IN_REVIEW.length > 0 ? " waiting" : "")}${link("changes.html", "What changed")}</div>
+${groups}
+</nav></aside>`;
 };
 
-const multi = (frames, note) =>
-  page("", `<div class="pv-grid">${frames.map(([f, l]) => device(f, l)).join("")}</div>`, note);
+const plateArticle = (p) => {
+  const badges =
+    (p.added === LATEST ? '<span class="pv-badge new">New</span>' : "") +
+    (p.review ? '<span class="pv-badge review">In review</span>' : "") +
+    (p.verdict === "chosen" ? '<span class="pv-badge chosen">Chosen</span>' : "") +
+    (p.verdict === "discarded" ? '<span class="pv-badge">Not chosen</span>' : "");
+  const body =
+    p.frame === false ? p.html : `<div class="device"><div class="app">${p.html}</div></div>`;
+  return `<article class="pv-item" id="${p.id}">
+<header class="pv-head"><a class="pv-name" href="#${p.id}">${p.title}</a>${badges}<span class="pv-date">${p.added}</span></header>
+${p.note ? `<p class="pv-sub">${p.note}</p>` : ""}
+${body}
+</article>`;
+};
+
+const shellPage = (title, main, current) =>
+  docHead(title) +
+  `<div class="pv-app">${topBar()}${sideNav(current)}<main class="pv-main">${main}</main></div>` +
+  DOC_FOOT;
+
+const renderPage = (page) => {
+  const plates = (page.plates ?? []).filter((p) => !p.review);
+  const main = `<h1 class="pv-h1">${page.title}</h1>
+${page.note ? `<p class="pv-note">${page.note}</p>` : ""}
+<div class="pv-grid">${plates.map(plateArticle).join("")}</div>`;
+  return shellPage(page.title, main, page.file);
+};
+
+const startHere = () => {
+  const fresh = ALL_PLATES.filter((p) => p.added === LATEST);
+  const total = ALL_PLATES.length;
+  const main = `<h1 class="pv-h1">Ledger Flow · Design</h1>
+<p class="pv-note">Every screen of the app, drawn from the same tokens as the code: ${total} plates across ${PAGES.length} pages. Use the top bar to switch palette, mode and device — everything repaints without a component changing. The sidebar is the map, and its search box finds a plate by name: type “sync” or “budget”, or press / from anywhere.</p>
+<div class="pv-cards">
+<section class="pv-card wide"><h2 class="pv-h2">Where to start</h2>
+<ul class="pv-list">
+<li><a href="in-review.html">In review</a> — what is waiting on a decision of yours. Once you approve it, it moves to the screen it belongs to and this page empties.</li>
+<li><a href="changes.html">What changed</a> — every plate by the day it arrived, newest first.</li>
+<li><a href="foundations.html">Foundations</a> — the colour system, the type scale and the icons everything else is built from.</li>
+</ul></section>
+<section class="pv-card wide"><h2 class="pv-h2">Newest · ${LATEST}</h2><ul class="pv-list">${fresh
+    .map(
+      (p) =>
+        `<li><a href="${p.page.file}#${p.id}">${p.title}</a> <span class="pv-where">${p.page.title}</span></li>`,
+    )
+    .join("")}</ul></section>
+</div>`;
+  return shellPage("Start here", main, "index.html");
+};
+
+const inReview = () => {
+  const main = `<h1 class="pv-h1">In review</h1>
+<p class="pv-note">Anything being worked on lands here, and only here, until it is decided. Look at it, ask for corrections, and once it is right it moves to the screen it belongs to — and this page is empty again, ready for the next one.</p>
+${
+  IN_REVIEW.length === 0
+    ? `<div class="pv-empty">${iconSvg("check")}<span class="pv-h2">Nothing is waiting on you</span><p>Every design has been decided and lives on its own page. The last one landed on ${LATEST}.</p></div>`
+    : `<div class="pv-grid">${IN_REVIEW.map(plateArticle).join("")}</div>`
+}`;
+  return shellPage("In review", main, "in-review.html");
+};
+
+const whatChanged = () => {
+  const dates = [...new Set(ALL_PLATES.map((p) => p.added))].sort().reverse();
+  const main = `<h1 class="pv-h1">What changed</h1>
+<p class="pv-note">Every plate by the day it arrived, newest first. Use it to see what is new since the last time you looked.</p>
+<div class="pv-changes">${dates
+    .map((date) => {
+      const items = ALL_PLATES.filter((p) => p.added === date);
+      return `<section class="pv-card wide"><h2 class="pv-h2">${date}${date === LATEST ? ' <span class="pv-badge new">New</span>' : ""}</h2>
+<ul class="pv-list">${items.map((p) => `<li><a href="${p.page.file}#${p.id}">${p.title}</a> <span class="pv-where">${p.page.title}</span></li>`).join("")}</ul></section>`;
+    })
+    .join("")}</div>`;
+  return shellPage("What changed", main, "changes.html");
+};
+
+const searchIndex = () =>
+  "window.LF_PLATES=" +
+  JSON.stringify(
+    ALL_PLATES.map((p) => ({
+      t: p.title,
+      i: p.id,
+      p: p.review ? "in-review.html" : p.page.file,
+      g: p.page.title,
+      d: p.added,
+    })),
+  ) +
+  ";";
 
 const write = (name, html) => writeFileSync(new URL(name, OUT), html);
 
-mkdirSync(OUT, { recursive: true });
-write("index.html", indexPage());
-write("00-fundamentos.html", foundations());
-write(
-  "01-inicio.html",
-  multi(
-    [
-      [home(), "A · Inicio"],
-      [home({ notice: true }), "B · Con el aviso de instalar y durabilidad (P-34)"],
-    ],
-    "<b>Inicio.</b> <b>Añadido el 2026-09-08 (P-34):</b> la lámina B lleva el aviso de instalar, que es el mismo aviso del almacenamiento persistente — aparece cuando el dispositivo ya tiene algo que perder y corre en pestaña de navegador, con «Install» donde el navegador lo ofrece y «How» donde no (iOS). El número protagonista es el gasto del mes (la app existe para ver el gasto hormiga), con barras por día y avance contra el presupuesto global. La franja ámbar es la bandeja de gastos rápidos sin detallar. En escritorio el mismo contenido se reparte en dos columnas.",
-  ),
-);
-write(
-  "02-registrar.html",
-  page(
-    "Registrar",
-    `<div class="pv-grid">${device(home({ withSheet: true }), "A · Captura rápida (botón central)")}${device(transactionForm("EXPENSE"), "B · Formulario completo · gasto")}${device(transactionForm("TRANSFER"), "C · Formulario completo · transferencia")}${device(categoryPicker(), "D · Selector de categoría")}${device(accountPicker(), "E · Selector de cuenta")}${device(dateSheet(), "F · Fecha · calendario propio (F-05)")}${device(timeSheet(), "G · Hora · rueda propia (F-05)")}</div>`,
-    "<b>Registrar.</b> El botón central abre la hoja de captura rápida: importe primero, categoría opcional en una fila de chips recientes, cuenta principal preseleccionada. <i>Guardar</i> crea el movimiento (rápido si falta categoría, marcado como pendiente de detallar). <i>Más detalles</i> lleva al formulario completo, que cubre gasto, ingreso, transferencia y ajuste con el mismo esqueleto. D y E son las hojas que abren los pickers de categoría (búsqueda, recientes y «nueva categoría» en línea) y de cuenta. Añadido el 2026-09-06 (F-05): la fecha y la hora dejan de abrir el calendario del navegador y usan hojas propias (F, G) con los tokens y el idioma de la app; el calendario deshabilita lo que el servidor rechazaría (más de 24 h en el futuro).",
-  ),
-);
-write(
-  "03-presupuestos.html",
-  page(
-    "Presupuestos",
-    device(budgets()),
-    "<b>Presupuestos.</b> Navegación por período de referencia (mes anterior/siguiente), filtro por tipo de período, el presupuesto global como tarjeta destacada y una tarjeta por presupuesto con avance, estado en lenguaje natural y avisos: monto ajustado este período, categoría archivada, ventana personalizada con fecha de fin.",
-  ),
-);
-write(
-  "04-acceso.html",
-  multi(
-    [
-      [login(), "A · Login"],
-      [login("429"), "B · Login · límite de intentos"],
-      [register(), "C · Registro con moneda y zona horaria"],
-      [register("reactivated"), "D · Registro · cuenta reactivada"],
-      [onboarding(1), "E · Onboarding 1 · primera cuenta"],
-      [onboarding(2), "F · Onboarding 2 · presupuesto mensual total"],
-      [registerLanguage(), "G · Registro · elegir idioma (F-02)"],
-    ],
-    "<b>Acceso.</b> Login y registro centrados y cortos. El registro sugiere moneda y zona horaria detectadas y explica que la moneda se bloquea con la primera cuenta. Tras registrarse, dos pasos de onboarding: primera cuenta (será la principal) y presupuesto mensual total (global). El estado D aparece cuando el backend responde <code>reactivated: true</code>. Añadido el 2026-09-06 (F-02): el idioma se elige antes de tener cuenta —chip en la cabecera del marco y fila «Language» en el formulario, que son el mismo valor— y se envía como <code>locale</code> (G).",
-  ),
-);
-write(
-  "05-movimientos.html",
-  multi(
-    [
-      [transactions(), "A · Lista con búsqueda y filtros"],
-      [transactionDetail(), "B · Detalle de movimiento"],
-      [reviewInbox(), "C · Bandeja de pendientes · Save all"],
-      [filtersSheet(), "D · Hoja de filtros"],
-      [
-        transactionDetail({ conflict: true }),
-        "E · Detalle con un cambio que el servidor no tomó (F-29)",
-      ],
-      [reviewInbox({ dropped: true }), "F · Bandeja · categoría descartada por el servidor (F-57)"],
-      [reviewInbox({ confirm: true }), "G · Bandeja · confirmar Save all"],
-      [state("mov-offline"), "H · Lista sin conexión y sin copia local"],
-    ],
-    "<b>Movimientos.</b> Ampliado el 2026-09-06: el detalle avisa cuando su fila tiene un cambio que el servidor no tomó y abre la hoja de conflicto (E); la bandeja «To review» guarda en lote con Save all (C, G) y explica cuando el servidor guardó un gasto sin su categoría (F); la lista sin conexión y sin copia local enseña un vacío honesto (H). Lista agrupada por día con total diario; chips de filtro (los filtros del API: tipo, cuenta, categoría, sin categoría, etiqueta, rango, pendientes) y un resumen del período. El detalle muestra todo lo que guarda el backend, incluido el origen. La bandeja permite detallar un gasto rápido en línea: categoría por chips, descripción y «Listo» (PUT con <code>pendingDetails:false</code>). D es la hoja de filtros: período con presets y rango, tipo, cuenta, categoría, etiqueta, solo pendientes, solo entradas rápidas; el botón principal anticipa el número de resultados.",
-  ),
-);
-write(
-  "06-cuentas.html",
-  multi(
-    [
-      [accounts(), "A · Lista"],
-      [accountDetail(), "B · Detalle"],
-      [accountDetail({ sheet: true }), "C · Ajustar saldo"],
-      [accountForm(), "D · Nueva cuenta · nombre duplicado"],
-      [accountRestoreSheet(), "E · Restaurar con otro nombre (409 al restaurar)"],
-      [accountForm({ sheet: true }), "F · Tipo de cuenta · hoja con los 9 tipos (F-03)"],
-    ],
-    "<b>Cuentas.</b> Añadido el 2026-09-06: restaurar una cuenta cuyo nombre tomó otra pide un nombre nuevo en una hoja (E; el mismo componente sirve a categorías). Lista con balance total y deuda en tarjetas, archivadas plegadas. El detalle concentra las acciones: ajustar saldo (crea un ADJUSTMENT con el delta calculado), editar, hacer principal, archivar (bloqueado si es la principal, con explicación). El formulario muestra el error de nombre duplicado en línea (409) y el saldo inicial solo al crear. Añadido el 2026-09-06 (F-03, variante C elegida por el dueño): el tipo deja de ser una parrilla de 9 chips y pasa a una fila que abre una hoja donde cada tipo lleva una línea que lo explica (D, F); el onboarding usa el mismo selector.",
-  ),
-);
-write(
-  "07-categorias.html",
-  multi(
-    [
-      [categories(), "A · Rejilla por tipo"],
-      [categoryForm(), "B · Editar · tipo bloqueado con historial"],
-      [categories({ offline: true }), "C · Sin conexión · restaurar predeterminadas necesita red"],
-    ],
-    "<b>Categorías.</b> Añadido el 2026-09-06: sin red, «restaurar predeterminadas» no se ofrece —el botón se oculta— y la alerta dice por qué (C, decisión del dueño). Rejilla por tipo con icono y color; archivadas plegadas; restaurar predeterminadas sin duplicar. El formulario tiene búsqueda de icono sobre el set curado, selector de color y vista previa. Con historial, el tipo queda bloqueado y se ofrece crear otra (CATEGORY_TYPE_LOCKED).",
-  ),
-);
-write(
-  "08-presupuesto-detalle.html",
-  multi(
-    [
-      [budgetDetail(), "A · Detalle con ajuste de período"],
-      [budgetForm(), "B · Nuevo presupuesto"],
-      [pastBudgets(), "C · Terminados y archivados"],
-      [budgetDetail({ archived: true }), "D · Presupuesto archivado · Restore"],
-      [
-        budgetDetail({ archived: true, conflict: true }),
-        "E · Restaurar · otro presupuesto ocupa el período",
-      ],
-    ],
-    "<b>Presupuesto.</b> Corregido el 2026-09-06: archivar ya no es definitivo — un presupuesto archivado se restaura desde su detalle o desde Past budgets (D), y si otro presupuesto activo ocupa el mismo período la hoja lo nombra y lleva a él (E). El detalle navega períodos con <code>?reference=</code>, muestra restante, ritmo y días, y separa el monto base del ajuste del período (fijar, «no aplica este mes» = 0, quitar). El formulario decide alcance (global o por categorías), período (los seis tipos, fechas solo en personalizado), monto, color y opciones avanzadas (vigencia, nota). Los presupuestos terminados o archivados no se restauran: se crean de nuevo.",
-  ),
-);
-write(
-  "09-estadisticas.html",
-  multi(
-    [
-      [stats("cat"), "A · Por categoría"],
-      [stats("day"), "B · Por día"],
-      [stats("tag"), "C · Por etiqueta"],
-    ],
-    "<b>Estadísticas.</b> Añadido el 2026-09-06: cada tramo de la barra apilada nombra su categoría al pasar el ratón o enfocarlo (tooltip, A). Período navegable, tipo de flujo por chips (ajustes solo si se piden), tres agrupaciones del API. Por categoría: barra apilada + lista con porcentaje y drill-down a movimientos filtrados. Por día: serie con huecos rellenados a cero y el día más alto. Por etiqueta: aviso de doble conteo y gasto sin etiquetar.",
-  ),
-);
-write(
-  "10-ajustes.html",
-  multi(
-    [
-      [settings(), "A · Ajustes"],
-      [appearance(), "B · Apariencia"],
-      [sessions(), "C · Sesiones activas"],
-      [profileSecurity(), "D · Perfil y seguridad"],
-      [deleteAccountScreen(), "E · Eliminar cuenta"],
-      [languageSheet(), "F · Idioma"],
-      [syncStatus(), "G · Sync status · en pestaña del navegador"],
-      [syncStatus("installed"), "H · Sync status · app instalada"],
-      [syncStatus("routes"), "I · Sync status · servidor sin lote (Sending mode)"],
-      [syncStatus("resync"), "J · Sync status · confirmar Force full resync"],
-      [syncStatus("offline"), "K · Sync status sin conexión"],
-      [signOutSheet(), "L · Cerrar sesión con cambios sin enviar"],
-      [settings({ offline: true }), "M · Ajustes sin conexión · Sign out deshabilitado"],
-      [
-        languageSheet({ offline: true }),
-        "N · Hoja de idioma sin conexión (igual moneda, zona, perfil, eliminar cuenta)",
-      ],
-      [syncStatus("signedout"), "O · Sync status · sesión cerrada con red (F-41)"],
-      [syncStatus("preparing"), "P · Sync status · preparando el dispositivo (F-54)"],
-      [syncStatus("blocked"), "Q · Sync status · cola bloqueada por una actualización (F-65)"],
-      [
-        syncStatus("loading"),
-        "R · Sync status · las tres filas mientras el espejo contesta (F-85)",
-      ],
-      [
-        syncStatus("nosw"),
-        "S · Sync status · sin service worker, «Offline ready · Not available» (F-85)",
-      ],
-      [syncStatus("localonly"), "T · Sync status · modo «solo este dispositivo» (P-32)"],
-      [installSheet(true), "U · Hoja «Install this app» · el navegador ofrece instalar (F-87)"],
-      [
-        installSheet(false),
-        "V · Hoja «Install this app» · pasos donde no lo ofrece, p. ej. iOS (F-87)",
-      ],
-    ],
-    "<b>Ajustes.</b> <b>Añadido el 2026-09-08:</b> Sync status deja de enseñar valores falsos mientras no los sabe (R, F-85: esqueleto en «Sync cursor», «Last full sync» y «Offline ready» hasta que el espejo y la caché contesten) y dice <b>«Not available»</b> donde la app corre a propósito sin service worker (S); la fila <b>Persistent storage</b> explica por qué dice «Not granted» y lleva a la hoja de instalación en vez de ofrecer un botón que el navegador ignora (F-86, visible en todas las láminas); el modo <b>«solo este dispositivo»</b> de P-32 se ve en la fila Session (T); y la hoja <b>«Install this app»</b> tiene sus dos formas, el botón donde el navegador ofrece instalar (U) y los pasos donde no, como iOS (V, F-87). Ampliado el 2026-09-06: fila Sync status en Datos (con el conteo de la cola), Instalar app en About, Sign out deshabilitado sin red, la hoja «You have unsent changes» al salir con cola, y el aviso «Changing this needs a connection» en las hojas que escriben en el servidor (idioma, moneda, zona horaria, perfil, eliminar cuenta). G–K y O–Q es la pantalla Sync status; el 2026-09-06 gana tres filas fijas: <b>Session</b> (F-41: si la sesión murió, aquí se ve y se vuelve a entrar), <b>Offline ready</b> (F-54: si el dispositivo ya se puede usar sin red) y <b>Waiting to send</b> en su variante bloqueada por una actualización (F-65). Hub con perfil, preferencias (idioma con inglés por defecto y español, moneda bloqueada con motivo, zona horaria, apariencia, categorías), seguridad (credenciales con contraseña actual, sesiones por dispositivo) y datos (exportar/importar reservados). Eliminar cuenta explica que es reversible registrándose con el mismo correo.",
-  ),
-);
-write(
-  "11-estados.html",
-  multi(
-    [
-      [state("vacio"), "A · Vacío"],
-      [state("carga"), "B · Carga"],
-      [state("error"), "C · Error del servidor · con referencia"],
-      [state("sesion"), "D · Sesión expirada (bloqueante)"],
-      [state("confirmar"), "E · Confirmación de archivo"],
-      [state("offline"), "F · Sin conexión · franja fija + badge por movimiento + toast"],
-      [state("online"), "G · Reconexión · Back online"],
-      [
-        state("syncfail"),
-        "H · Cambios que necesitan al usuario · franja roja con Review y See all",
-      ],
-      [conflict("stale"), "I · Resolve sync conflict · cambiado en dos sitios"],
-      [conflict("failed"), "I2 · Resolve sync conflict · rechazado por el servidor"],
-      [conflict("archived"), "I3 · Resolve sync conflict · cuenta archivada en otro sitio (F-58)"],
-      [conflict("noserver"), "I4 · Resolve sync conflict · el servidor no dijo qué tiene"],
-      [conflict("empty"), "I5 · Resolve sync conflict · nada que resolver"],
-      [syncInbox(), "J · Bandeja «Needs your attention» (/sync)"],
-      [syncInbox("confirm"), "J2 · Bandeja · confirmar Discard all con cascada"],
-      [syncInbox("empty"), "J3 · Bandeja vacía"],
-      [state("pendiente"), "K · Con red y cambios esperando · franja ámbar"],
-      [state("local"), "L · Modo local · sesión muerta con vault (hoja descartable)"],
-      [projected(), "M · Cifras proyectadas · marca ámbar y tooltip"],
-      [state("offline-doc"), "N · Documento offline de reserva (ruta nunca abierta)"],
-      [state("sw-update"), "O · Nueva versión disponible"],
-      [conflict("dup"), "I6 · Resolve sync conflict · el nombre está tomado (F-60)"],
-      [conflict("future"), "I7 · Fix the date · fecha rechazada por el servidor (F-66)"],
-      [syncInbox("dup"), "J4 · Bandeja · restaurar con otro nombre (F-60)"],
-      [syncInbox("blocked"), "J5 · Bandeja · cambios bloqueados por una actualización (F-65)"],
-      [state("signedout"), "P · Franja · sesión cerrada con red (F-41)"],
-      [state("ready"), "Q · Aviso único «Ready to use offline» (F-54)"],
-      [state("blocked"), "R · Franja · una actualización dejó la cola sin enviar (F-65)"],
-      [threeExits(), "S · Volver sin sesión · las tres salidas (P-32)"],
-      [deleteLocalCopy(), "S2 · Confirmar el borrado de la copia local (P-32)"],
-      [state("localonly"), "S3 · Franja · «solo este dispositivo», el modo elegido (P-32)"],
-      [home({ unnamed: true }), "T · Inicio sin nombre en la sesión ni en el espejo (F-82)"],
-    ],
-    "<b>Estados de sistema.</b> <b>Añadido el 2026-09-08:</b> las tres salidas de <b>P-32</b> cuando se vuelve sin sesión (S), la confirmación del borrado local (S2) y el séptimo estado de la franja, «solo este dispositivo» (S3), en tono neutro porque es una decisión del usuario y no un fallo; y el saludo cuando no hay nombre ni en la sesión ni en el espejo (T, F-82), que pierde la coma en vez de enseñarla vacía. Ampliado el 2026-09-06 con lo que la fase offline llevó al front (I–O): las cuatro franjas (ámbar sin red, ámbar con red y cola, verde al volver, roja con Review y See all), la hoja «Resolve sync conflict» en sus variantes, la bandeja «Needs your attention» (<code>/sync</code>), el modo local con sesión muerta, la marca ámbar de cifra proyectada con su tooltip, el documento offline de reserva y el aviso de nueva versión. Ampliado otra vez el 2026-09-06 con las fichas que esperaban diseño: la franja de <b>sesión cerrada con red</b> (P, F-41), el aviso único de <b>dispositivo listo para usar sin red</b> (Q, F-54), la franja de <b>cola bloqueada por una actualización</b> (R, F-65) con su sección en la bandeja (J5), <b>restaurar con otro nombre</b> cuando el servidor rechaza un restore por nombre duplicado (I6, J4, F-60) y <b>corregir la fecha</b> de un movimiento rechazado por <code>FUTURE_DATE</code> (I7, F-66), que antes solo se podía descartar. Cada lista tiene vacío con CTA, esqueleto de carga y error con reintento. La sesión expirada (REFRESH_REVOKED) se anuncia en una hoja que lleva al login. Archivar siempre confirma explicando qué se conserva. Sin conexión: franja ámbar pegada al borde superior de la columna de contenido, encima del encabezado y sin cubrir la barra lateral (el ámbar ya significa «incompleto» en la app), badge «Pending sync» en cada movimiento guardado localmente y toast «Saved on this device». Al reconectar la franja pasa a verde un instante; el rojo se reserva para cuando una sincronización falla de verdad.",
-  ),
-);
-write(
-  "12-publico.html",
-  multi(
-    [
-      [landing(), "A · Landing (pública, indexable)"],
-      [legal(), "B · Política de privacidad / Ley 1581"],
-      [notFound(), "C · 404"],
-    ],
-    "<b>Superficie pública.</b> Lo único que los buscadores deben indexar: landing con propuesta de valor, tres beneficios, tres pasos y CTA; páginas legales (privacidad = política de tratamiento de datos, términos); 404 amable. Navegación pública sin barra lateral ni pestañas, selector de idioma visible y enlaces legales en el pie. La app autenticada lleva <code>noindex</code>.",
-  ),
-);
-write("13-variaciones.html", variants());
-console.log("preview generado:", PAGES.length, "páginas");
+mkdirSync(new URL("assets/", OUT), { recursive: true });
+write("assets/plates.js", searchIndex());
+write("index.html", startHere());
+write("in-review.html", inReview());
+write("changes.html", whatChanged());
+for (const page of PAGES) write(page.file, renderPage(page));
+console.log(`preview: ${PAGES.length + 3} pages, ${ALL_PLATES.length} plates`);

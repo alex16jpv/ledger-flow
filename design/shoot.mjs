@@ -1,27 +1,15 @@
 // Screenshots every preview page into design/captures/ (not versioned: regenerate with npm run design:shoot).
-// Usage: node design/shoot.mjs [--page=05] [--device=mobile] [--mode=dark] [--palette=brisa]
-import { mkdirSync } from "node:fs";
+// Usage: node design/shoot.mjs [--page=settings] [--device=mobile] [--mode=dark] [--palette=brisa]
+import { mkdirSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
 
-const PAGES = [
-  "index",
-  "00-fundamentos",
-  "01-inicio",
-  "02-registrar",
-  "03-presupuestos",
-  "04-acceso",
-  "05-movimientos",
-  "06-cuentas",
-  "07-categorias",
-  "08-presupuesto-detalle",
-  "09-estadisticas",
-  "10-ajustes",
-  "11-estados",
-  "12-publico",
-  "13-variaciones",
-];
+const PREVIEW = fileURLToPath(new URL("./preview/", import.meta.url));
+const PAGES = readdirSync(PREVIEW)
+  .filter((f) => f.endsWith(".html"))
+  .map((f) => f.replace(/\.html$/, ""))
+  .sort();
 const DEVICES = { mobile: 460, tablet: 900, desktop: 1400 };
 
 const arg = (name, fallback) =>
@@ -31,7 +19,6 @@ const devices = arg("device") ? [arg("device")] : ["mobile", "desktop"];
 const modes = arg("mode") ? [arg("mode")] : ["light", "dark"];
 const palette = arg("palette", "tinta");
 
-const PREVIEW = fileURLToPath(new URL("./preview/", import.meta.url));
 const OUT = fileURLToPath(new URL("./captures/", import.meta.url));
 mkdirSync(OUT, { recursive: true });
 
