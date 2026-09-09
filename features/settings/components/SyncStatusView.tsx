@@ -14,12 +14,14 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useSyncExternalStore } from "react";
 
+import { InstallSheet } from "@/components/pwa/InstallSheet";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { List, Row, RowBody, RowLink, RowMeta, RowTitle } from "@/components/ui/Row";
 import { Sheet } from "@/components/ui/Sheet";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
@@ -44,7 +46,9 @@ function StatusRow({
 }: {
   icon: React.ReactNode;
   title: string;
-  value: string;
+  // F-85: `null` is "not read yet", and it draws a skeleton. A row about the vault must not answer
+  // before the vault has answered.
+  value: string | null;
   meta?: string;
   action?: React.ReactNode;
 }) {
@@ -59,7 +63,11 @@ function StatusRow({
         </RowTitle>
         {meta && <RowMeta items={[meta]} />}
       </RowBody>
-      <span className="text-sm text-text-2">{value}</span>
+      {value === null ? (
+        <Skeleton className="h-3 w-16" />
+      ) : (
+        <span className="text-sm text-text-2">{value}</span>
+      )}
       {action}
     </Row>
   );
@@ -79,6 +87,7 @@ export function SyncStatusView() {
   const locale = useLocale();
   const { snapshot, reload } = useSyncSnapshot();
   const [confirming, setConfirming] = useState(false);
+  const [installing, setInstalling] = useState(false);
   const [resyncing, setResyncing] = useState(false);
 
   const storage = snapshot.storage;
@@ -151,37 +160,49 @@ export function SyncStatusView() {
             icon={<Database {...iconProps("sm")} />}
             title={t("cursor.label")}
             meta={t("cursor.help")}
-            value={snapshot.cursor ? t("cursor.set") : t("cursor.never")}
+            value={snapshot.read ? (snapshot.cursor ? t("cursor.set") : t("cursor.never")) : null}
           />
           <StatusRow
             icon={<RefreshCw {...iconProps("sm")} />}
             title={t("lastSync.label")}
             value={
-              snapshot.syncedAt ? dates.formatDay(new Date(snapshot.syncedAt)) : t("lastSync.never")
+              snapshot.read
+                ? snapshot.syncedAt
+                  ? dates.formatDay(new Date(snapshot.syncedAt))
+                  : t("lastSync.never")
+                : null
             }
           />
           <StatusRow
             icon={<CloudCheck {...iconProps("sm")} />}
             title={t("offlineReady.label")}
             meta={
-              offlineReady
-                ? t("offlineReady.help")
-                : offline
-                  ? t("offlineReady.incompleteHelp")
-                  : t("offlineReady.preparingHelp", {
-                      cached: shell.cached,
-                      expected: shell.expected,
-                    })
+              !snapshot.workerSupported
+                ? t("offlineReady.notAvailableHelp")
+                : offlineReady
+                  ? t("offlineReady.help")
+                  : offline
+                    ? t("offlineReady.incompleteHelp")
+                    : t("offlineReady.preparingHelp", {
+                        cached: shell.cached,
+                        expected: shell.expected,
+                      })
             }
             value={
-              offlineReady
-                ? t("offlineReady.ready")
-                : offline
-                  ? t("offlineReady.incomplete")
-                  : t("offlineReady.preparing")
+              !snapshot.read
+                ? null
+                : // The app registers no worker outside production, so there are no screens to copy
+                  // and "Preparing…" would never end (F-85).
+                  !snapshot.workerSupported
+                  ? t("offlineReady.notAvailable")
+                  : offlineReady
+                    ? t("offlineReady.ready")
+                    : offline
+                      ? t("offlineReady.incomplete")
+                      : t("offlineReady.preparing")
             }
             action={
-              !offlineReady && offline ? (
+              snapshot.workerSupported && !offlineReady && offline ? (
                 <Button
                   size="sm"
                   variant="secondary"
@@ -229,8 +250,30 @@ export function SyncStatusView() {
           <StatusRow
             icon={<ShieldCheck {...iconProps("sm")} />}
             title={t("persisted.label")}
-            meta={t("persisted.help")}
+            // F-86: the app already asked (`lib/local/mirror`), and no browser has a dialog for
+            // this — Chrome decides in silence. So the row says what is true of each answer and
+            // points at the one thing that changes it.
+            meta={
+              !storage?.supported
+                ? t("persisted.unsupportedHelp")
+                : storage.persisted
+                  ? t("persisted.grantedHelp")
+                  : t("persisted.notGrantedHelp")
+            }
             value={persisted}
+            action={
+              storage && !storage.persisted ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setInstalling(true);
+                  }}
+                >
+                  {t("persisted.how")}
+                </Button>
+              ) : undefined
+            }
           />
           <StatusRow
             icon={<MonitorSmartphone {...iconProps("sm")} />}
@@ -280,6 +323,12 @@ export function SyncStatusView() {
         </p>
       </div>
 
+      <InstallSheet
+        open={installing}
+        onClose={() => {
+          setInstalling(false);
+        }}
+      />
       <Sheet
         open={confirming}
         onClose={() => {

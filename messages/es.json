@@ -165,6 +165,7 @@
   },
   "home": {
     "greeting": "Hola, {name}",
+    "greetingPlain": "Hola",
     "pendingReview": "{count, plural, one {# gasto rápido por revisar} other {# gastos rápidos por revisar}}",
     "pendingTotal": "· {amount} en total",
     "spending": "Gasto de {month}",
@@ -199,7 +200,14 @@
     "budgetLeft": "Quedan {amount} · vas bien",
     "budgetWarn": "Al {percent}% con {days, plural, one {# día} other {# días}} por delante",
     "budgetOver": "Excedido en {amount}",
-    "budgetOf": "/ {amount}"
+    "budgetOf": "/ {amount}",
+    "installNotice": {
+      "title": "Conserva tus datos en este teléfono",
+      "body": "Este navegador puede borrar lo que registras sin conexión tras unos días sin abrir el sitio. Instalar la app lo evita.",
+      "install": "Instalar",
+      "how": "Cómo",
+      "dismiss": "Ahora no"
+    }
   },
   "settings": {
     "title": "Ajustes",
@@ -310,7 +318,19 @@
       "title": "Instalar app",
       "subtitle": "Añade Ledger Flow a tu pantalla de inicio",
       "installed": "Instalada",
-      "durability": "Añade Ledger Flow a tu pantalla de inicio para que el navegador no borre lo que registres sin conexión"
+      "durability": "Añade Ledger Flow a tu pantalla de inicio para que el navegador no borre lo que registres sin conexión",
+      "sheet": {
+        "title": "Instalar esta app",
+        "intro": "Instalarla mantiene a salvo tus datos offline: el navegador deja de tratarlos como algo que puede borrar.",
+        "asked": "La app ya le pidió a este navegador que conserve tus datos y dijo no: los navegadores no te preguntan, deciden, e instalarla es lo que lo cambia.",
+        "cta": "Instalar",
+        "iosStep1": "Toca Compartir",
+        "iosStep2": "Elige «Añadir a pantalla de inicio»",
+        "iosStep3": "Confirma con «Añadir»",
+        "desktopStep1": "Busca el icono de instalar en la barra de direcciones",
+        "desktopStep2": "O abre el menú del navegador y elige «Instalar Ledger Flow»",
+        "fallback": "Algunos navegadores no lo ofrecen. Si el tuyo no, mantén conexión al registrar y aquí no quedará nada esperando."
+      }
     },
     "delete": {
       "title": "Eliminar mi cuenta",
@@ -357,7 +377,9 @@
         "preparingHelp": "Copiando tus datos y las pantallas de la app · {cached} de {expected} pantallas",
         "incomplete": "Incompleto",
         "incompleteHelp": "En pausa: necesita conexión para terminar",
-        "retry": "Reintentar"
+        "retry": "Reintentar",
+        "notAvailable": "No disponible",
+        "notAvailableHelp": "Las pantallas de la app solo se guardan en la app instalada"
       },
       "queue": {
         "label": "Esperando a enviarse"
@@ -379,7 +401,11 @@
         "help": "Evita que el navegador borre tus datos sin conexión",
         "yes": "Concedido",
         "no": "No concedido",
-        "unsupported": "No disponible"
+        "unsupported": "No disponible",
+        "grantedHelp": "Tus datos offline están a salvo de la limpieza del navegador",
+        "notGrantedHelp": "Solo las apps instaladas lo consiguen. Este navegador dijo no.",
+        "unsupportedHelp": "Este navegador no lo puede prometer. Instala la app, o mantén conexión para que aquí no espere nada mucho tiempo.",
+        "how": "Cómo conseguirlo"
       },
       "mode": {
         "label": "Se ejecuta como",

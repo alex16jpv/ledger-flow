@@ -165,6 +165,7 @@
   },
   "home": {
     "greeting": "Hi, {name}",
+    "greetingPlain": "Hi",
     "pendingReview": "{count, plural, one {# quick expense to review} other {# quick expenses to review}}",
     "pendingTotal": "· {amount} in total",
     "spending": "{month} spending",
@@ -199,7 +200,14 @@
     "budgetLeft": "{amount} left · on track",
     "budgetWarn": "At {percent}% with {days, plural, one {# day} other {# days}} left",
     "budgetOver": "Over by {amount}",
-    "budgetOf": "/ {amount}"
+    "budgetOf": "/ {amount}",
+    "installNotice": {
+      "title": "Keep your data on this phone",
+      "body": "This browser can delete what you record offline after a few days without opening the site. Installing the app stops that.",
+      "install": "Install",
+      "how": "How",
+      "dismiss": "Not now"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -310,7 +318,19 @@
       "title": "Install app",
       "subtitle": "Add Ledger Flow to your home screen",
       "installed": "Installed",
-      "durability": "Add Ledger Flow to your home screen so the browser doesn’t delete what you record offline"
+      "durability": "Add Ledger Flow to your home screen so the browser doesn’t delete what you record offline",
+      "sheet": {
+        "title": "Install this app",
+        "intro": "Installing keeps your offline data safe: the browser stops treating it as something it can delete.",
+        "asked": "The app already asked this browser to keep your data and it said no — browsers don’t ask you, they decide, and installing is what changes that.",
+        "cta": "Install",
+        "iosStep1": "Tap Share",
+        "iosStep2": "Choose “Add to Home Screen”",
+        "iosStep3": "Confirm with “Add”",
+        "desktopStep1": "Look for the install icon in the address bar",
+        "desktopStep2": "Or open the browser menu and choose “Install Ledger Flow”",
+        "fallback": "Some browsers don’t offer this at all. If yours doesn’t, keep a connection when you record and nothing will be waiting here."
+      }
     },
     "delete": {
       "title": "Delete my account",
@@ -357,7 +377,9 @@
         "preparingHelp": "Copying your data and the app’s screens · {cached} of {expected} screens",
         "incomplete": "Incomplete",
         "incompleteHelp": "Paused: it needs a connection to finish",
-        "retry": "Retry"
+        "retry": "Retry",
+        "notAvailable": "Not available",
+        "notAvailableHelp": "The app’s screens are only saved in the installed app"
       },
       "queue": {
         "label": "Waiting to send"
@@ -379,7 +401,11 @@
         "help": "Stops the browser evicting your offline data",
         "yes": "Granted",
         "no": "Not granted",
-        "unsupported": "Unsupported"
+        "unsupported": "Unsupported",
+        "grantedHelp": "Your offline data is safe from the browser’s cleanup",
+        "notGrantedHelp": "Only installed apps get it. This browser said no.",
+        "unsupportedHelp": "This browser can’t promise it. Install the app, or keep a connection so nothing waits here long.",
+        "how": "How to get it"
       },
       "mode": {
         "label": "Running as",
