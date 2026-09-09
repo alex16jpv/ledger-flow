@@ -3,6 +3,7 @@
 The UI of Ledger Flow: the preview pages the owner reviews, and the tool that writes them.
 
 ```
+spec/            the specification: one file per screen, plus the foundations and the decision log
 build.mjs        writes preview/*.html from the page model at the bottom of the file
 build-icons.mjs  rebuilds preview/assets/icons.js from lucide-static; icons.txt is the curated list
 serve.mjs        serves preview/ over http (the pages also open straight from disk)
@@ -24,6 +25,11 @@ captures/        generated, not versioned
 The pages read the repo's `tokens/`, so a colour only exists in one place. `npm run check-tokens`
 and `npm run contrast-check` guard it. Captures are not versioned: they are megabytes of PNG that go
 stale the moment a page changes.
+
+## The two halves
+
+`spec/` says what a screen is and why; `preview/` shows it. They are named the same on purpose:
+`spec/screens/settings.md` is `preview/settings.html`. Start at [spec/README.md](spec/README.md).
 
 ## How the preview is organised
 
