@@ -10,12 +10,14 @@ import {
   RefreshCw,
   ShieldCheck,
   Split,
+  Trash2,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useSyncExternalStore } from "react";
 
 import { InstallSheet } from "@/components/pwa/InstallSheet";
 import { PageHeader } from "@/components/shell/PageHeader";
+import { WipeDeviceSheet } from "@/components/shell/WipeDeviceSheet";
 import { Alert } from "@/components/ui/Alert";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -25,13 +27,16 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
+import { localePrefix } from "@/lib/i18n/locales";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 import { forceFullResync } from "@/lib/local/mirror";
 import { syncTransport } from "@/lib/local/outbox/engine";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
+import { wipeThisDevice } from "@/lib/local/wipe";
 import { connectivityStore } from "@/lib/network/connectivity";
+import { localOnlyStore, setLocalOnly } from "@/lib/network/local-only";
 import { warmAppShell } from "@/lib/pwa/service-worker";
 import { useSession } from "@/lib/session";
 
@@ -88,6 +93,7 @@ export function SyncStatusView() {
   const { snapshot, reload } = useSyncSnapshot();
   const [confirming, setConfirming] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [wiping, setWiping] = useState(false);
   const [resyncing, setResyncing] = useState(false);
 
   const storage = snapshot.storage;
@@ -104,6 +110,13 @@ export function SyncStatusView() {
   // F-41: a screen that says what this device owes the server cannot stay quiet about there being
   // nobody to say it to. The stripe warns; this row answers whoever came to look.
   const signedOut = session.status === "expired";
+  // P-32: the two exits that work with no network live here for good, not only in the sheet that
+  // asked once — the choice, and the way to delete what this device holds.
+  const localOnly = useSyncExternalStore(
+    localOnlyStore.subscribe,
+    localOnlyStore.getSnapshot,
+    localOnlyStore.getServerSnapshot,
+  );
 
   // F-54: "offline ready" is two halves — the data the pull left in the vault, and the screens the
   // worker warmed. It is ready only when both are, and with no network what is missing stays
@@ -141,10 +154,22 @@ export function SyncStatusView() {
           <StatusRow
             icon={<LogIn {...iconProps("sm")} />}
             title={t("session.label")}
-            meta={signedOut ? t("session.signedOutHelp") : t("session.help")}
-            value={signedOut ? t("session.signedOut") : t("session.active")}
+            meta={
+              localOnly
+                ? t("session.localOnlyHelp")
+                : signedOut
+                  ? t("session.signedOutHelp")
+                  : t("session.help")
+            }
+            value={
+              localOnly
+                ? t("session.localOnly")
+                : signedOut
+                  ? t("session.signedOut")
+                  : t("session.active")
+            }
             action={
-              signedOut ? (
+              signedOut || localOnly ? (
                 // `reauth` is what gets a device with a live marker past the proxy and onto the
                 // login (§2.6).
                 <Link
@@ -323,6 +348,40 @@ export function SyncStatusView() {
         </p>
       </div>
 
+      {/* P-32: the exit that needs no network, in the one screen that is about what this device
+          holds. It asks in the same sheet the choice does, with the number in front. */}
+      <div className="flex flex-col gap-2">
+        <Button
+          variant="secondary"
+          block
+          className="text-danger"
+          disabled={wiping}
+          onClick={() => {
+            setWiping(true);
+          }}
+        >
+          <Trash2 {...iconProps("sm")} />
+          {t("wipe.cta")}
+        </Button>
+        <p className="text-xs text-text-3">{t("wipe.help")}</p>
+      </div>
+
+      <WipeDeviceSheet
+        open={wiping}
+        pending={outbox.pending + outbox.attention}
+        onCancel={() => {
+          setWiping(false);
+        }}
+        onConfirm={async () => {
+          await wipeThisDevice();
+          setLocalOnly(false);
+          // A full load, not a client navigation: after a wipe nothing in memory — caches,
+          // providers, the vault handle — may survive into the next screen.
+          window.location.assign(
+            new URL(`${localePrefix(locale)}${LOGIN_PATH}?wiped=1`, window.location.origin),
+          );
+        }}
+      />
       <InstallSheet
         open={installing}
         onClose={() => {

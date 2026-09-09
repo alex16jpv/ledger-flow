@@ -9,12 +9,14 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import { setUnauthorizedHandler } from "@/lib/api/client";
 import { noteRefreshedElsewhere, refreshSession } from "@/lib/api/refresh";
 import { resumeSyncEngine } from "@/lib/local/outbox/engine";
 import { purgeVault } from "@/lib/local/purge";
+import { localOnlyStore } from "@/lib/network/local-only";
 import { purgePersistedCaches } from "@/lib/query/purge";
 import { themeStore } from "@/lib/theme/store";
 import type { User } from "@/types/api";
@@ -58,12 +60,21 @@ export function SessionProvider({
   const queryClient = useQueryClient();
   const [expired, setExpired] = useState(false);
 
+  // P-32: in "this device only" the app is not talking to the server, so it does not ask who the
+  // user is either — the question would sit paused for ever and every screen that waits on the
+  // answer would wait with it. The device works from its copy, which is what the choice means.
+  const localOnly = useSyncExternalStore(
+    localOnlyStore.subscribe,
+    localOnlyStore.getSnapshot,
+    localOnlyStore.getServerSnapshot,
+  );
   const query = useQuery({
     queryKey: sessionKeys.me(),
     queryFn: fetchCurrentUser,
     initialData: initialUser ? { user: initialUser } : undefined,
     staleTime: 5 * 60_000,
     retry: false,
+    enabled: !localOnly,
   });
 
   useEffect(() => {
@@ -148,13 +159,14 @@ export function SessionProvider({
   // React Query drops an error back to pending when a query with no data refetches, so a session
   // that failed offline would read as "loading" again the moment the network returns — and whatever
   // hangs on the answer (the vault of §2.6) would be torn down and rebuilt in the gap (R-3b).
-  const status: SessionStatus = expired
-    ? "expired"
-    : query.data
-      ? "authenticated"
-      : query.isError || query.isFetched
-        ? "error"
-        : "loading";
+  const status: SessionStatus =
+    localOnly || expired
+      ? "expired"
+      : query.data
+        ? "authenticated"
+        : query.isError || query.isFetched
+          ? "error"
+          : "loading";
 
   const value = useMemo<SessionContextValue>(
     () => ({

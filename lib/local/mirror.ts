@@ -1,5 +1,6 @@
 import { readSessionMarker } from "@/lib/auth/marker";
 import { connectivityStore } from "@/lib/network/connectivity";
+import { isLocalOnly } from "@/lib/network/local-only";
 
 import { loadClockOffset } from "./clock";
 import { isVaultSupported, openVault, VAULT, type VaultHandle } from "./db";
@@ -70,6 +71,9 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   const pull = (): Promise<void> => {
     const vault = handle;
     if (!vault || state.stopped) return Promise.resolve();
+    // P-32: in "this device only" nothing goes out, and a pull is a request like any other. The app
+    // keeps reading the copy it has; the first pull after the choice ends is what catches it up.
+    if (isLocalOnly()) return Promise.resolve();
     wanted += 1;
     const mine = wanted;
     running ??= pullOnce(vault).finally(() => {
