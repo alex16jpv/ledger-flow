@@ -10,8 +10,9 @@ export default {
     parserOpts: {
       // W-nn is the Fase 2 redesign backlog; O-Fn and O-Bn are the offline plan's items; F-nn are
       // the rows of the findings register in ../auditoria/front/PROGRESO.md, and P-nn the owner's
-      // requests in the same file — a commit that exists because he asked can say so.
-      issuePrefixes: ["W-", "O-F", "O-B", "F-", "P-"],
+      // requests in the same file — a commit that exists because he asked can say so. G-nn are
+      // the project's organisation items, which span both repositories.
+      issuePrefixes: ["W-", "O-F", "O-B", "F-", "P-", "G-"],
     },
   },
 };

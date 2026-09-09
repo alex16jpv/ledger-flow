@@ -1,0 +1,2 @@
+# The design lives in the repo but is not part of the app: no code imports it and nothing serves it.
+design/

@@ -3,11 +3,12 @@
 Ledger Flow web client. Next.js (App Router) + React + TypeScript + Tailwind v4. A real
 multi-user product: never assume a single user, little data or a trusted client.
 
-This file overrides any default habit. The full specification lives outside the repo in
-`../auditoria/front/diseno/HANDOFF.md` (how and what), `DESIGN.md` (UI/UX) and
-`../auditoria/front/FASE-2-CONTRATO-FRONTEND.md` (API contract). Progress of the backlog and of the
-owner's requests is tracked in `../auditoria/front/PROGRESO.md`; update it when you close an item. Read
-them before changing anything.
+This file overrides any default habit. **The UI lives in `design/`**: `design/spec/` is the
+specification — one file per screen — and `design/preview/` is what it looks like (`npm run design`).
+Nothing reaches a screen that is not drawn there first. The plan lives outside the repo in
+`../auditoria/front/diseno/HANDOFF.md` (how and what) and `../auditoria/front/FASE-2-CONTRATO-FRONTEND.md`
+(API contract). Progress of the backlog and of the owner's requests is tracked in
+`../auditoria/front/PROGRESO.md`; update it when you close an item. Read them before changing anything.
 
 ---
 
@@ -21,9 +22,9 @@ A change is not done until all of these hold. If one does not apply, say so and 
    `INVALID_CURSOR`). A bug fix starts with the failing test.
 3. **Verified against the real API** (backend running locally), not only against mocks.
    Mocks are a fallback for cases the backend cannot produce on demand.
-4. **Checked against the design**: the screen matches its capture in
-   `../auditoria/front/diseno/preview/capturas/` in mobile and desktop, light and dark, and renders
-   its four states (data, empty, loading, error).
+4. **Checked against the design**: the screen matches its plate in `design/preview/`
+   (`npm run design`, or `npm run design:shoot` for a capture) in mobile and desktop, light and dark,
+   and renders its four states (data, empty, loading, error).
 5. **Docs updated** (§4). `DECISIONS.md` has an entry for every non-obvious choice.
 6. **One commit per backlog item** (`W-nn`), in English, describing only what was actually done.
 
@@ -78,15 +79,16 @@ features/b`; shared code moves up.
 
 ## 4. Documentation you must update
 
-| You changed                           | Update                                                                                       |
-| ------------------------------------- | -------------------------------------------------------------------------------------------- |
-| A route, layout or navigation item    | `README.md` route map                                                                        |
-| A feature's behaviour                 | `features/<x>/README.md` (one paragraph, what and why)                                       |
-| An architectural or library choice    | `DECISIONS.md` (date, decision, alternatives, consequence)                                   |
-| Environment variables                 | `lib/env.ts`, `.env.example`, `README.md`                                                    |
-| A message key                         | Both `messages/en.json` and `messages/es.json`                                               |
-| Something the backend must change     | `../auditoria/front/BACKEND-DESDE-FRONT.md` (report it; do not change the backend from here) |
-| Anything you found and are not fixing | `../auditoria/front/PROGRESO.md` § "Tareas futuras y hallazgos registrados": one `F-nn` row  |
+| You changed                           | Update                                                                                          |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| A route, layout or navigation item    | `README.md` route map                                                                           |
+| A feature's behaviour                 | `features/<x>/README.md` (one paragraph, what and why)                                          |
+| An architectural or library choice    | `DECISIONS.md` (date, decision, alternatives, consequence)                                      |
+| Environment variables                 | `lib/env.ts`, `.env.example`, `README.md`                                                       |
+| A message key                         | Both `messages/en.json` and `messages/es.json`                                                  |
+| A screen's UI                         | `design/spec/screens/<screen>.md` and its plate in `design/build.mjs` — before touching the app |
+| Something the backend must change     | `../auditoria/front/BACKEND-DESDE-FRONT.md` (report it; do not change the backend from here)    |
+| Anything you found and are not fixing | `../auditoria/front/PROGRESO.md` § "Tareas futuras y hallazgos registrados": one `F-nn` row     |
 
 ---
 

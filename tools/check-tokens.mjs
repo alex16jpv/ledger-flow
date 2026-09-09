@@ -3,7 +3,12 @@ import { join, relative, sep } from "node:path";
 
 const SCAN_ROOTS = ["app", "components", "features", "lib", "tests"];
 const EXTENSIONS = /\.(tsx?|css)$/;
-const EXEMPT_PREFIXES = ["tokens" + sep, "types" + sep];
+// design/preview/assets is the preview's own chrome and mockup CSS, not the app: it paints itself.
+const EXEMPT_PREFIXES = [
+  "tokens" + sep,
+  "types" + sep,
+  ["design", "preview", "assets"].join(sep) + sep,
+];
 // next/og renders with satori, which cannot read CSS variables: the card carries literal brand colors.
 const EXEMPT_FILES = ["opengraph-image.tsx", "manifest.ts", "brand-icon.tsx"];
 

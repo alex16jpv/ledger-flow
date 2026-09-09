@@ -1,9 +1,9 @@
 # Decisions
 
 Lightweight ADR log. One entry per non-obvious choice: date, decision, alternatives, consequence.
-The specification that these decisions refine lives outside the repo in
-`../auditoria/front/diseno/HANDOFF.md`, `../auditoria/front/diseno/DESIGN.md` and
-`../auditoria/front/FASE-2-CONTRATO-FRONTEND.md`.
+The UI these decisions refine lives in `design/` (`design/spec/` for the what and why,
+`design/preview/` for what it looks like). The plan and the API contract live outside the repo in
+`../auditoria/front/diseno/HANDOFF.md` and `../auditoria/front/FASE-2-CONTRATO-FRONTEND.md`.
 
 ## 2026-09-01 · Rebuild from scratch on `redesign/fase-2` (W-01)
 
@@ -2683,3 +2683,42 @@ cover` is set once in the root layout for the standalone display.
   `lag-money-manager` (pull request #7), the sync routes are on `main`, and the types regenerated
   today came from a backend running `main` — sorted, they are identical to the ones the branch
   produced, so the contract the e2e job diffs against has not moved.
+
+## 2026-09-09 · The design system moves into the repo (G-1)
+
+- **Decision:** the design stops living in `../auditoria/front/diseno` and becomes `design/` in this
+  repo: `design/spec/` (the specification, one file per screen) and `design/preview/` (the pages the
+  owner reviews), built by `design/build.mjs` and served by `npm run design`. The owner asked for it
+  so the design could be worked on from any machine, and asked that only what he actually looks at
+  come along.
+- **What moved and what did not.** In: the preview and its generator, the icon build, the screenshot
+  tool, and the specification. Out: `HANDOFF.md`, which is the phase's plan and not the design;
+  `front-guardrails/`, installed here since W-01; the second copy of `tokens/`; and the second copy of
+  `tools/contrast-check.mjs`. The 14 MB of captures are not versioned — they are regenerated with
+  `npm run design:shoot`, because a PNG goes stale the moment its page changes and the repo's `.git`
+  is 24 MB.
+- **One copy of the tokens.** The design's `tokens/` and the repo's differed by 79 lines, and every
+  one of them was a comment the repo had stripped: with comments removed the five files were
+  identical. The design's copy was deleted and the preview reads `tokens/`, which `check-tokens` and
+  `contrast-check` already guard. `contrast-check.mjs` had genuinely diverged — the repo's walks every
+  palette — so the design's older copy was the one that went.
+- **The generator is Node now, and the port was proved, not trusted.** `build-preview.py` was 1154
+  lines of Python in a project that is otherwise all Node. Both generators were run and their output
+  diffed: the 15 pages came out byte for byte identical, the token path aside. The screenshot tool was
+  Windows Edge driven from WSL with a hand-kept list of window sizes; it is Playwright now, which is
+  already a dev dependency.
+- **The preview was reorganised, the app's design was not.** Every mockup is a named plate with an
+  anchor, pages are grouped in a sidebar with search over all 110 plates, the 32 system states split
+  into five pages by subject, and `in-review.html` holds whatever is waiting on the owner's decision
+  until he approves it. Plate names say what a screen is and never carry a ticket code, at the owner's
+  request. Verified the same way: of the 111 mockup blocks, 110 came through byte for byte, and the
+  one that changed is the icon set, which he asked to see as a grid instead of one icon per row.
+- **Consequence:** `CLAUDE.md` and `README.md` point at `design/`; `check-tokens` exempts
+  `design/preview/assets`, which is the viewer's own chrome; `commitlint` accepts `G-`; and
+  `design/preview/` is out of Prettier's reach, because it is generated. A `.vercelignore` — the first one this
+  repo has — keeps `design/` out of the deploy upload: nothing imports it, it is not in `public/`, and no
+  preview string appears anywhere in a production build.
+- **Alternatives considered:** keeping Python and declaring the dependency (rejected: the point was to
+  work from any machine, and a Node project should not need Python for its own design); versioning a
+  handful of canonical captures (rejected by the owner in favour of regenerating them); and moving
+  `DESIGN.md` whole instead of splitting it (rejected: 25 screens today and more coming).

@@ -124,8 +124,9 @@ lib/network          connectivity, the /api/health heartbeat and the offline hoo
 lib/session          the session context, its keys and the multi-tab channel
 app/sw.ts            the Serwist service worker: precache, app-shell routes, Background Sync
 messages/            en.json, es.json (the only place with user-visible text)
-tokens/              design tokens, copied from auditoria/front/diseno/tokens
+tokens/              design tokens; design/preview reads these same files
 types/api.d.ts       generated from the backend OpenAPI (endpoints.md sits in the repo root)
+design/              the UI: spec/ (one file per screen) and preview/ (what it looks like, npm run design)
 tests/e2e            Playwright; unit tests sit next to the code (*.test.ts)
 tests/gate           the recorded offline demos of gates O-A and O-B (npm run demo:offline)
 tools/               check-tokens, contrast-check, size-limit, gen-api-types, lighthouse,
