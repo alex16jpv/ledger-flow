@@ -49,6 +49,10 @@ body { background: var(--pv-bg); color: var(--pv-text); font-family: "Geist", sy
 .pv-badge.new { border-color: #6b5a1f; background: #3a3110; color: #f0b429; }
 .pv-badge.review { border-color: #6b5a1f; background: #3a3110; color: #f0b429; }
 .pv-badge.chosen { border-color: #2f5d3a; background: #16301f; color: #6ede8a; }
+.pv-item.plain { width: 100%; }
+.pv-item.plain > * { width: 100%; }
+.pv-item.plain .app { height: auto; border-radius: 14px; }
+.pv-item.wide { grid-column: 1 / -1; }
 
 .pv-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; max-width: 1100px; }
 .pv-card { background: var(--pv-panel); border: 1px solid var(--pv-line); border-radius: 12px; padding: 14px 16px; }

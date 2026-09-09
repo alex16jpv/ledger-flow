@@ -2147,21 +2147,21 @@ const PAGES = [
         "Colour system",
         "The same seeds in light and dark: surfaces, buttons, amounts, badges, alerts and skeletons.",
         foundationColors(),
-        { frame: false, added: "2026-09-01" },
+        { frame: false, wide: true, added: "2026-09-01" },
       ),
       plate(
         "typography",
         "Typography",
         "Geist for the interface, tabular figures in every amount, Geist Mono only for technical keys.",
         foundationTypography(),
-        { frame: false, added: "2026-09-01" },
+        { frame: false, wide: true, added: "2026-09-01" },
       ),
       plate(
         "iconography",
         "Iconography",
         `Lucide, 1.75 stroke. A curated set of ${ICONS_CAT.length} icons for categories; the key is what the backend stores.`,
         foundationIcons(),
-        { frame: false, added: "2026-09-01" },
+        { frame: false, wide: true, added: "2026-09-01" },
       ),
     ],
   },
@@ -2956,7 +2956,8 @@ const plateArticle = (p) => {
     (p.verdict === "discarded" ? '<span class="pv-badge">Not chosen</span>' : "");
   const body =
     p.frame === false ? p.html : `<div class="device"><div class="app">${p.html}</div></div>`;
-  return `<article class="pv-item" id="${p.id}">
+  const cls = `pv-item${p.frame === false ? " plain" : ""}${p.wide ? " wide" : ""}`;
+  return `<article class="${cls}" id="${p.id}">
 <header class="pv-head"><a class="pv-name" href="#${p.id}">${p.title}</a>${badges}<span class="pv-date">${p.added}</span></header>
 ${p.note ? `<p class="pv-sub">${p.note}</p>` : ""}
 ${body}
