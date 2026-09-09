@@ -469,7 +469,7 @@ ${typeScale.map(([l, c, t]) => `<span class="xs faint mono">${l}</span><span cla
 };
 
 const foundationIcons = () =>
-  `<div class="app" style="padding:20px;border-radius:14px;width:100%;max-width:1280px;display:flex;flex-wrap:wrap;gap:10px">
+  `<div class="app" style="padding:20px;border-radius:14px;width:100%;max-width:1280px;display:grid;grid-template-columns:repeat(auto-fill,40px);justify-content:space-between;gap:10px">
 ${ICONS_CAT.map((n, i) => `<span class="tile color-${COLOR_NAMES[i % 16]}" title="${n}">${iconSvg(n)}</span>`).join("")}</div>`;
 
 const screen = (body, o = {}) => {
