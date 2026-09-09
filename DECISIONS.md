@@ -2320,6 +2320,41 @@ cover` is set once in the root layout for the standalone display.
   stripe are unaffected — they never went through this branch. `DESIGN.md` §8.12 carries the rule,
   because when a drawn state appears is a design decision (D-36).
 
+## 2026-09-08 · The install offer is caught in the head, not in Settings (F-87)
+
+- **Found, in production and reported by the owner:** «Install app» never appeared on his phone, the
+  browser never offered to install either, and nothing in the app explained how to do it by hand.
+- **Measured, not assumed.** The live deployment serves everything installability needs: the manifest
+  answers 200 with name, `start_url`, `display: standalone` and 192/512 icons in both `any` and
+  `maskable`, `/sw.js` is 48 kB of precache, `worker-src 'self'` is in the enforced CSP, and
+  `/dev/ui` answers 404, which proves `appEnvironment` really is `production` there. On a local
+  production build the worker registers, activates and **controls** the page, with zero CSP
+  violations. So nothing in the environment explains it.
+- **The bug was ours, and it is a timing one.** `useInstallPrompt` attached its
+  `beforeinstallprompt` listener from a React effect **inside the Settings hub**, the only screen
+  that used it. The browser fires that event **once per page load**, on whatever screen the user
+  landed on — `/home`, or the login — and it never fires again for a client-side navigation. So by
+  the time Settings mounted the event was long gone and unrecoverable: nobody had called
+  `preventDefault()` and nobody had kept the object. Reproduced on a production build: with the
+  event fired on `/home` the row is **absent** in Settings; fired while Settings is already open it
+  is **present**.
+- **Decision:** the capture moves to a script in the `<head>`, `/install-init.js`, the same pattern
+  the theme already uses (`lib/theme/init-script.ts`): dependency-free, ES5-safe and nonce'd, it
+  keeps the event on `window.__lfInstall` and calls `preventDefault()` so the app still owns the
+  invitation. `useInstallPrompt` becomes a `useSyncExternalStore` reader over that object, so a row
+  that mounts minutes later still finds the offer.
+- **Why not a listener at module scope, or in the root layout's effects:** both run during
+  hydration, and on a slow phone the event can arrive before that. The head script is the only place
+  that cannot be too late — which is the whole point of the fix.
+- **Alternatives:** letting the browser's own mini-infobar through (dropping `preventDefault`) —
+  that is a product call and is left to the owner, who now has a working row to compare against;
+  and polling `getInstalledRelatedApps()`, which answers a different question.
+- **Consequence:** six unit tests over the head script plus the hook, the first of which is the
+  regression (an offer captured before the hook ever mounted), and an e2e that fires the browser's
+  event shape on `/home` and finds the row in Settings. What the row _says_ where the browser never
+  offers to install — iOS above all — is designed in `DESIGN.md` §8.10 (F-87) and is not in this
+  commit.
+
 ## 2026-09-07 · Reduced motion is switched off at the sheet, not component by component (W-38)
 
 - **Found:** the duration tokens already went to 0 under `prefers-reduced-motion` (`tokens/base.css`),

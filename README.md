@@ -125,7 +125,7 @@ lib/session          the session context, its keys and the multi-tab channel
 app/sw.ts            the Serwist service worker: precache, app-shell routes, Background Sync
 messages/            en.json, es.json (the only place with user-visible text)
 tokens/              design tokens, copied from auditoria/front/diseno/tokens
-types/api.d.ts       generated from the backend OpenAPI, with endpoints.md next to this file
+types/api.d.ts       generated from the backend OpenAPI (endpoints.md sits in the repo root)
 tests/e2e            Playwright; unit tests sit next to the code (*.test.ts)
 tests/gate           the recorded offline demos of gates O-A and O-B (npm run demo:offline)
 tools/               check-tokens, contrast-check, size-limit, gen-api-types, lighthouse,
@@ -169,6 +169,9 @@ English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`)
 | `/api/auth/*`                                                  | Session BFF (httpOnly cookies)                                                                                        |
 | `/api/[...path]`                                               | Generic proxy to the backend; logs one JSON line per call with the `requestId`                                        |
 | `/monitoring`                                                  | Sentry tunnel (rewrite to the ingest host) so CSP keeps `connect-src 'self'`                                          |
+| `/api/health`                                                  | Liveness the connectivity heartbeat polls (`lib/network`)                                                             |
+| `/api/csp-report`                                              | Where the Content-Security-Policy reports land                                                                        |
+| `/theme-init.js`, `/install-init.js`                           | Head scripts: palette and mode before first paint, and the install offer before the app hydrates (F-87)               |
 
 Every screen of the app needs a session: `lib/auth/routes.ts` lists them and a unit test reads the
 folders of `app/[locale]/(app)` to make sure none is missing (F-75). The development-only routes are

@@ -32,3 +32,38 @@ test("the app is installable: manifest, icons and the service worker are served"
   expect(worker.status()).toBe(200);
   expect(await worker.text()).toContain("precache");
 });
+
+// The owner hit this in production: the browser fires `beforeinstallprompt` on the screen the user
+// landed on, and Settings mounts long after, so the Install row never appeared. The event is
+// captured in the head now, so arriving at Settings later still finds it.
+test("an install offer made before Settings opens is still there when it does", async ({
+  page,
+  request,
+}) => {
+  const email = `e2e-install-${Date.now()}-${Math.random().toString(16).slice(2)}@ledgerflow.test`;
+  await request.post("/api/auth/register", {
+    headers: { origin: process.env.E2E_APP_URL ?? "http://localhost:3002" },
+    data: { name: "Install E2E", email, password: "LedgerFlow!2026", locale: "en" },
+  });
+  await page.context().addCookies((await request.storageState()).cookies);
+
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  // Chromium only fires the real event under its own heuristics, so the event is the browser's
+  // shape and the capture path is the app's.
+  const prevented = await page.evaluate(() => {
+    const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: string }>;
+    };
+    event.prompt = () => Promise.resolve();
+    event.userChoice = Promise.resolve({ outcome: "dismissed" });
+    window.dispatchEvent(event);
+    return event.defaultPrevented;
+  });
+  expect(prevented).toBe(true);
+
+  await page.getByRole("link", { name: "Settings" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+  await expect(page.getByText("Install app", { exact: true })).toBeVisible();
+});

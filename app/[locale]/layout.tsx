@@ -56,6 +56,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     >
       <head>
         <script async src="/theme-init.js" nonce={nonce} />
+        <script async src="/install-init.js" nonce={nonce} />
       </head>
       <body>
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
