@@ -54,10 +54,15 @@ describe("useInstallPrompt", () => {
     expect(result.current.state).toBe("available");
   });
 
-  it("keeps the browser’s own banner from firing, so the app owns the invitation", () => {
+  // The owner's call (2026-09-08): the user must be told, so the browser's own invitation stays and
+  // the app's row is a second way in, not a replacement.
+  it("lets the browser show its own invitation and keeps the event anyway", () => {
     runHeadScript();
     const event = fireInstallPrompt();
-    expect(event.defaultPrevented).toBe(true);
+
+    expect(event.defaultPrevented).toBe(false);
+    const { result } = renderHook(() => useInstallPrompt());
+    expect(result.current.state).toBe("available");
   });
 
   it("prompts with the captured event and forgets it once accepted", async () => {
