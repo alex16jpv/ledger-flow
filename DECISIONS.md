@@ -2715,7 +2715,9 @@ cover` is set once in the root layout for the standalone display.
   one that changed is the icon set, which he asked to see as a grid instead of one icon per row.
 - **Consequence:** `CLAUDE.md` and `README.md` point at `design/`; `check-tokens` exempts
   `design/preview/assets`, which is the viewer's own chrome; `commitlint` accepts `G-`; and
-  `design/preview/` is out of Prettier's reach, because it is generated.
+  `design/preview/` is out of Prettier's reach, because it is generated. A `.vercelignore` — the first one this
+  repo has — keeps `design/` out of the deploy upload: nothing imports it, it is not in `public/`, and no
+  preview string appears anywhere in a production build.
 - **Alternatives considered:** keeping Python and declaring the dependency (rejected: the point was to
   work from any machine, and a Node project should not need Python for its own design); versioning a
   handful of canonical captures (rejected by the owner in favour of regenerating them); and moving
