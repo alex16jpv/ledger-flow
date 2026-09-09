@@ -73,6 +73,12 @@ function withoutLocale(pathname: string): string {
   return locale === DEFAULT_LOCALE ? pathname : pathname.slice(locale.length + 1);
 }
 
+// P-33 (owner, 2026-09-08): the landing, in either locale. Online the proxy sends a device that
+// carries the marker to `/home`; with no network nothing on the server runs, so the worker answers.
+export function isLandingPath(pathname: string): boolean {
+  return withoutLocale(pathname) === "/" || pathname === "/";
+}
+
 export function isShellPath(pathname: string): boolean {
   const segment = withoutLocale(pathname).split("/")[1] ?? "";
   return (APP_SEGMENTS as readonly string[]).includes(segment);
