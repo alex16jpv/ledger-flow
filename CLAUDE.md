@@ -5,10 +5,10 @@ multi-user product: never assume a single user, little data or a trusted client.
 
 This file overrides any default habit. **The UI lives in `design/`**: `design/spec/` is the
 specification — one file per screen — and `design/preview/` is what it looks like (`npm run design`).
-Nothing reaches a screen that is not drawn there first. The plan lives outside the repo in
-`../auditoria/front/diseno/HANDOFF.md` (how and what) and `../auditoria/front/FASE-2-CONTRATO-FRONTEND.md`
-(API contract). Progress of the backlog and of the owner's requests is tracked in
-`../auditoria/front/PROGRESO.md`; update it when you close an item. Read them before changing anything.
+Nothing reaches a screen that is not drawn there first. The API contract is `types/api.d.ts` and
+`lib/api/errors.ts`, both generated from the backend's OpenAPI (`npm run gen:api-types`) — never a
+hand-written copy. The task list belongs to the owner and is kept outside this repository: work from
+what he gives you, and ask him if you have none. Read `DECISIONS.md` before changing anything.
 
 ---
 
@@ -87,8 +87,8 @@ features/b`; shared code moves up.
 | Environment variables                 | `lib/env.ts`, `.env.example`, `README.md`                                                       |
 | A message key                         | Both `messages/en.json` and `messages/es.json`                                                  |
 | A screen's UI                         | `design/spec/screens/<screen>.md` and its plate in `design/build.mjs` — before touching the app |
-| Something the backend must change     | `../auditoria/front/BACKEND-DESDE-FRONT.md` (report it; do not change the backend from here)    |
-| Anything you found and are not fixing | `../auditoria/front/PROGRESO.md` § "Tareas futuras y hallazgos registrados": one `F-nn` row     |
+| Something the backend must change     | Report it to the owner. Never change the backend from this repository                           |
+| Anything you found and are not fixing | Report it to the owner as a finding (§7). Never fix it silently, never only mention it          |
 
 ---
 
@@ -120,12 +120,12 @@ that never reached the server must show its pending badge).
 - Is every finding you are **not** fixing registered as a row, not just mentioned? (see below)
 
 If you find a problem outside the requested scope, do not fix it silently — and do not merely
-mention it either. **Register it**: an `F-nn` row in `../auditoria/front/PROGRESO.md` §
-"Tareas futuras y hallazgos registrados", or a row in `BACKEND-DESDE-FRONT.md` if the backend owns
-it. This covers bugs, dead code, missing guards, rough edges and ideas alike, whether or not the
-owner asked for them. Writing it only in a session summary, a handover note or a gate document does
-not count: those are diaries, nobody reads them looking for work, and a finding that lives only
-there gets copied forward forever and never done. The row may say "not now"; it may not be absent.
+mention it either. **Report it to the owner as a finding**, so it lands in the project's task list:
+what it is, where, and what it would take. This covers bugs, dead code, missing guards, rough edges
+and ideas alike, whether or not he asked for them, and it covers what the backend owns as much as
+what this repository owns. Writing it only in a session summary or a handover note does not count:
+those are diaries, nobody reads them looking for work, and a finding that lives only there gets
+copied forward forever and never done. The finding may say "not now"; it may not be absent.
 If something in your change is incomplete or doubtful, say so.
 
 ---

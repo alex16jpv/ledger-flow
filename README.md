@@ -67,6 +67,21 @@ the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no envir
 | `npm run fixtures:sync`    | Refreshes the backend's parity fixtures under `lib/local/derive/fixtures/`                     |
 | `npm run gen:feature`      | Scaffolds `features/<name>/{api,keys,hooks,schemas,components}`                                |
 
+## Test data and sessions
+
+The e2e suite and the manual test bench both run against the backend's deterministic seed
+(`npm run seed:test` in `lag-money-manager`, over the Docker Mongo `lag_money_test`). It creates
+`seed@ledgerflow.test` / `LedgerFlow!2026` with accounts, categories, budgets and a year of
+transactions.
+
+In development only, `/api/dev/login?email=<email>&password=<password>&next=<path>` opens a session
+and redirects, which is how screenshots and `/dev/pickers` are driven. These routes answer 404 in a
+production build, and `npm run check-dev-routes` proves it in the gate.
+
+`npm run test:e2e` starts the sibling backend on 3200 and this app on 3002. Baseline as of
+2026-09-08: **161 passed, 0 failed, 1 skipped** — the skipped one is the long-press gesture, which
+only exists on mobile.
+
 ## Deploy
 
 Three environments: `development` (local backend), `preview` (one per PR) and `production`, all on
@@ -206,4 +221,4 @@ answers 404 before anything renders — `npm run check-dev-routes` proves it on 
 ## Working rules
 
 See `CLAUDE.md` (definition of done, hard rules) and `DECISIONS.md` (why things are the way
-they are). Commits follow Conventional Commits with the backlog reference: `type(scope): subject (W-nn)`.
+they are). Commits follow Conventional Commits with the task reference: `type(scope): subject (T-nn)`.
