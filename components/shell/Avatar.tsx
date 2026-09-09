@@ -1,4 +1,7 @@
+import { User } from "lucide-react";
+
 import { cn } from "@/components/ui/cn";
+import { iconProps } from "@/lib/icons/sizes";
 
 export function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -23,7 +26,8 @@ export function Avatar({ name, size = "md", className }: AvatarProps) {
         className,
       )}
     >
-      {initialsOf(name)}
+      {/* F-82: a device with no name yet shows the icon, never two empty initials. */}
+      {initialsOf(name) || <User {...iconProps(size === "md" ? "md" : "sm")} />}
     </span>
   );
 }
