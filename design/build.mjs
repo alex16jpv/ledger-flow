@@ -64,7 +64,7 @@ ${navlink("house", "Home", active == "inicio")}${navlink("list", "Transactions",
 ${navlink("chart-pie", "Budgets", active == "pres")}${navlink("wallet", "Accounts", active == "cuentas")}
 ${navlink("chart-column", "Stats", active == "stats")}${navlink("tags", "Categories", active == "cat")}
 <div class="footer">${navlink("settings", "Settings", active == "ajustes")}
-<a class="navlink" href="#"><span class="avatar" style="width:28px;height:28px;font-size:11px">AV</span><span class="truncate">Andrés Valencia</span></a></div></aside>`;
+<a class="navlink" href="#"><span class="avatar" style="width:28px;height:28px;font-size:11px">JD</span><span class="truncate">John Doe</span></a></div></aside>`;
 
 const device = (inner, label = null, extraCls = "") => {
   const lab = label ? `<div class="pv-title">${label}</div>` : "";
@@ -186,10 +186,10 @@ ${row("briefcase", "GREEN", "August salary", "Yesterday · Bancolombia", 4200000
 ${row("repeat", "GRAY", "Bancolombia → Savings", "Yesterday · Transfer", 1000000, "transfer")}
 ${row("car", "BLUE", "Uber to work", "Yesterday 18:10 · Visa Gold", 18400)}
 </div></section>`;
-  const greet = unnamed ? "Hi" : "Hi, Andrés";
+  const greet = unnamed ? "Hi" : "Hi, John";
   const av = unnamed
     ? `<a class="avatar" href="#" aria-label="Settings">${iconSvg("user", "sm")}</a>`
-    : '<a class="avatar" href="#" aria-label="Settings">AV</a>';
+    : '<a class="avatar" href="#" aria-label="Settings">JD</a>';
   const header = `<header class="page-header"><div class="title"><span class="eyebrow">Tuesday, September 22</span><h1 class="h1">${greet}</h1></div>
 <div class="actions"><button class="btn ghost icon-only round desktop-only" aria-label="Search">${iconSvg("search")}</button>${av}</div></header>`;
   const mobile = `${header}${pend}${installCard}${hero}${stats}${budgetsSection}${accountsSection}${recent}`;
@@ -454,7 +454,7 @@ ${["bg", "surface", "surface-2", "surface-3"].map((v) => `<div style="border-rad
     "hash",
   ];
   const typeScale = [
-    ["h1 / 24 semibold", "h1", "Hi, Andrés"],
+    ["h1 / 24 semibold", "h1", "Hi, John"],
     ["h2 / 17 semibold", "h2", "New transaction"],
     ["h3 / 15 semibold", "h3", "Budgets"],
     ["base / 14 regular", "", "Body copy and list rows."],
@@ -678,7 +678,7 @@ const login = (state = "") => {
     err = `<div class="alert warning">${iconSvg("clock")}<span><b>Too many attempts.</b> You can try again in 12:40.</span></div>`;
   return authFrame(`<div class="stack" style="gap:20px">
 <div class="stack-sm" style="text-align:center"><h1 class="h1">Welcome back</h1><p class="muted" style="margin:0">Sign in to keep tracking your spending.</p></div>${err}
-<div class="stack">${field("Email", "andres@correo.com", null, { icon: "user" })}${field("Password", "••••••••••", null, { icon: "lock", cls: "focus" })}</div>
+<div class="stack">${field("Email", "john@example.com", null, { icon: "user" })}${field("Password", "••••••••••", null, { icon: "lock", cls: "focus" })}</div>
 <a class="small" href="#" style="color:var(--brand-text);font-weight:500;align-self:flex-end;opacity:.6" aria-disabled="true">Forgot your password? <span class="faint">(soon)</span></a>
 <button class="btn primary lg block">Sign in</button>
 <p class="small muted" style="text-align:center;margin:0">New here? <a href="#" style="color:var(--brand-text);font-weight:500">Create account</a></p></div>`);
@@ -691,7 +691,7 @@ const register = (state = "") => {
       : "";
   return authFrame(`<div class="stack" style="gap:20px">
 <div class="stack-sm" style="text-align:center"><h1 class="h1">Create account</h1><p class="muted" style="margin:0">Under a minute. No card needed.</p></div>${react}
-<div class="stack">${field("Name", "Andrés Valencia", null, { icon: "user" })}${field("Email", "andres@correo.com", null, { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
+<div class="stack">${field("Name", "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
 <div class="field"><span class="label">Language</span><button class="picker">${tile("globe", "TEAL", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">English</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">The language of your account. You can change it any time in Settings.</span></div>
 <div class="field"><span class="label">Currency</span><button class="picker">${tile("coins", "GREEN", "sm")}<span class="body"><span class="lbl">Detected from your region</span><span class="val">COP · Colombian peso</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">Used for all your accounts. It locks once you create your first account.</span></div>
 <div class="field"><span class="label">Time zone</span><button class="picker">${tile("globe", "BLUE", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">America/Bogota · GMT−5</span></span>${iconSvg("chevron-down", "sm")}</button></div></div>
@@ -1178,7 +1178,7 @@ const settings = ({ offline = false } = {}) => {
   const banner = offline
     ? `<div class="banner offline" role="status">${iconSvg("wifi-off")}<span class="txt"><b>You’re offline.</b> Changes are saved on this device and will sync when you’re back online.<span class="sub">2 changes waiting</span></span></div>`
     : "";
-  const body = `<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px;font-size:17px">AV</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">Andrés Valencia</span><span class="small muted">andres@correo.com</span><span class="xs faint">Last sign-in today 8:40</span></span>${iconSvg("chevron-right", "sm")}</div>
+  const body = `<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px;font-size:17px">JD</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">John Doe</span><span class="small muted">john@example.com</span><span class="xs faint">Last sign-in today 8:40</span></span>${iconSvg("chevron-right", "sm")}</div>
 <span class="eyebrow">Preferences</span>
 <div class="list card flush">${settingsRow("globe", "Language", "App language", '<span class="small muted">English</span>', "TEAL")}${settingsRow("coins", "Currency", "Locked: you already have accounts", '<span class="badge">COP</span>', "GREEN")}${settingsRow("clock", "Time zone", "Defines your days and periods", '<span class="small muted">Bogotá</span>', "BLUE")}${settingsRow("palette", "Appearance", "Palette and mode", '<span class="small muted">Tinta · System</span>', "PURPLE")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}</div>
 <span class="eyebrow">Security</span>
@@ -1225,7 +1225,7 @@ const sessions = () => {
 };
 
 const profileSecurity = () => {
-  const body = `${field("Name", "Andrés Valencia", null, { icon: "user" })}${field("Email", "andres@correo.com", null, { icon: "user", help: "Changing it signs out your other sessions." })}
+  const body = `${field("Name", "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, { icon: "user", help: "Changing it signs out your other sessions." })}
 <div class="divider"></div><span class="eyebrow">Change password</span>${field("New password", null, "At least 8 characters", { icon: "lock" })}
 <div class="alert warning">${iconSvg("lock")}<span>To change your email or password, confirm your <b>current password</b>. For safety, your other devices will need to sign in again.</span></div>
 ${field("Current password", "••••••••••", null, { icon: "lock", cls: "focus" })}
@@ -1240,10 +1240,10 @@ ${field("Current password", "••••••••••", null, { icon: "loc
 };
 
 const settingsBodyDim = () =>
-  '<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px;font-size:17px">AV</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">Andrés Valencia</span><span class="small muted">andres@correo.com</span></span></div><div class="skeleton" style="height:180px"></div><div class="skeleton" style="height:120px"></div>';
+  '<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px;font-size:17px">JD</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">John Doe</span><span class="small muted">john@example.com</span></span></div><div class="skeleton" style="height:180px"></div><div class="skeleton" style="height:120px"></div>';
 
 const deleteAccountScreen = () => {
-  const inner = `<div class="alert danger">${iconSvg("triangle-alert")}<span><b>Your account will no longer be available.</b> Your data is kept: if you sign up again with <b>andres@correo.com</b> you get your full history back.</span></div>
+  const inner = `<div class="alert danger">${iconSvg("triangle-alert")}<span><b>Your account will no longer be available.</b> Your data is kept: if you sign up again with <b>john@example.com</b> you get your full history back.</span></div>
 ${field("Type DELETE to confirm", null, "DELETE")}
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn danger solid lg" style="flex:1.2">Delete account</button></div>`;
   return screen(settingsBodyDim(), {
