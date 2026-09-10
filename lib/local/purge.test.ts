@@ -1,3 +1,4 @@
+import { markOfflineReadyAnnounced, offlineReadyAnnounced } from "@/lib/pwa/readiness";
 import { purgePersistedCaches } from "@/lib/query/purge";
 import { account, openTestVault, transaction, wipeVaults } from "@/lib/testing/vault";
 
@@ -121,5 +122,16 @@ describe("purgePersistedCaches", () => {
     expect(names).not.toContain("lf-cache-u1");
     expect(names).toContain("lf-vault-u1");
     expect(await countPendingOperations("u1")).toBe(9);
+  });
+
+  it("forgets the offline-ready announcement, so the next copy says it again", async () => {
+    markOfflineReadyAnnounced();
+    const vault = await openTestVault("u1");
+    await vault.db.put("accounts", accountRecord(account({ id: "a1" })));
+    vault.close();
+
+    await purgeVault("u1");
+
+    expect(offlineReadyAnnounced()).toBe(false);
   });
 });

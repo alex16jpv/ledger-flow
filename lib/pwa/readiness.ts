@@ -33,6 +33,16 @@ export function offlineReadyAnnounced(): boolean {
   }
 }
 
+// The copy this device was told about is gone — a logout, a wipe, a resync — so the statement is no
+// longer true and the next one that finishes has to be announced again.
+export function forgetOfflineReadyAnnouncement(): void {
+  try {
+    window.localStorage.removeItem(ANNOUNCED_KEY);
+  } catch {
+    return;
+  }
+}
+
 export function markOfflineReadyAnnounced(): void {
   try {
     window.localStorage.setItem(ANNOUNCED_KEY, "1");

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { markOfflineReadyAnnounced, offlineReadyAnnounced } from "@/lib/pwa/readiness";
 import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 import { account } from "@/lib/testing/vault";
 
@@ -44,5 +45,13 @@ describe("wipeThisDevice", () => {
     clearSessionMarker();
 
     expect(document.cookie).toContain("Max-Age=0");
+  });
+
+  it("forgets the offline-ready announcement, so the next copy says it again", async () => {
+    markOfflineReadyAnnounced();
+
+    await wipeThisDevice();
+
+    expect(offlineReadyAnnounced()).toBe(false);
   });
 });

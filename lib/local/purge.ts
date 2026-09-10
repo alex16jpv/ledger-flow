@@ -1,5 +1,7 @@
 import { openDB } from "idb";
 
+import { forgetOfflineReadyAnnouncement } from "@/lib/pwa/readiness";
+
 import { isVaultSupported, vaultExists } from "./db";
 import { MIRROR_STORES, vaultDatabaseName, type VaultSchema } from "./schema";
 
@@ -54,6 +56,7 @@ export async function purgeVault(
     if (discard && names.includes("outbox")) await tx.objectStore("outbox").clear();
     await tx.done;
 
+    forgetOfflineReadyAnnouncement();
     return {
       mirrorCleared: true,
       operationsDiscarded: discard ? pending : 0,
