@@ -148,9 +148,9 @@ async function createExpense(page: Page, amount: number, description: string): P
   await page.getByRole("button", { name: /^Account/ }).click();
   await page.getByRole("dialog", { name: "Account" }).getByRole("option", { name: /Cash/ }).click();
   await page.getByRole("button", { name: "Save transaction" }).click();
-  // The screen leaves the form on its own; a goto fired into that navigation is aborted. With no
-  // network that leave is a full page load (F-51), so the toast cannot be waited for here: the row
-  // and its "Pending sync" badge on the list are what prove the save.
+  // The screen leaves the form on its own; a goto fired into that navigation is aborted, and the
+  // toast goes with the leave. The row and its "Pending sync" badge on the list are what prove the
+  // save reached the vault.
   await expect(page).toHaveURL(/\/transactions(\?|$)/, { timeout: 15_000 });
   await expect(page.getByRole("heading", { level: 1, name: "Transactions" })).toBeVisible();
   await expect(
@@ -292,7 +292,7 @@ test("three days with no network, a cold start each day, and one drain with no d
     await expect(day2.getByRole("heading", { level: 1, name: "Edit transaction" })).toBeVisible();
     await day2.getByRole("textbox", { name: /^Description/ }).fill("GATE-EDIT offline");
     await day2.getByRole("button", { name: "Save changes" }).click();
-    // Same as createExpense: the leave is a full load offline (F-51), the detail proves the save.
+    // Same as createExpense: the toast goes with the leave, so the queue is what proves the save.
     await expect(day2).not.toHaveURL(/\/edit$/, { timeout: 15_000 });
     await expect(day2.getByText(/3 changes waiting/)).toBeVisible();
     await day2.waitForLoadState("load");
@@ -313,7 +313,7 @@ test("three days with no network, a cold start each day, and one drain with no d
     await day2.goto("/budgets");
     await expect(day2.getByRole("heading", { level: 1, name: "Budgets" })).toBeVisible();
     const beforeClick = tally.mark();
-    // A click that lands before hydration is lost on a page that has just fully reloaded (F-51).
+    // A click that lands before the client owns the page is lost, and a cold start has just begun.
     await expect(async () => {
       await day2.getByRole("button", { name: "Previous month" }).click();
       await expect(day2).toHaveURL(/reference=\d{4}-\d{2}/, { timeout: 3_000 });

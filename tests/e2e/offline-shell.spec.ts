@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 
+import { freshUser, keptDocument, markDocument, readyForOffline, signInAs } from "../offline";
 import { SW_PATH } from "../sw-path";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -21,7 +22,7 @@ async function installWorker(page: Page) {
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
 }
 
-// The documents the worker holds: with no network every navigation loads one (F-51).
+// The documents the worker holds: one answers a navigation the RSC cache cannot (T-01).
 async function warmedRoutes(page: Page, cacheName: string): Promise<string[]> {
   return page.evaluate(async (name) => {
     const cache = await caches.open(name);
@@ -111,9 +112,8 @@ test("the shell navigates with no network, filters included, and falls back on a
 
   await page.getByRole("link", { name: "Home" }).first().click();
   await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 });
-  // A failed RSC hop falls back to a full load, which would interrupt the next one — and so would
-  // the app's own start-up navigation, which only happens once the client has mounted. Waiting for
-  // the screen itself waits for both (F-45).
+  // The app's own start-up navigation only happens once the client has mounted, and it would
+  // interrupt this one. Waiting for the screen itself waits for both (F-45).
   await page.waitForLoadState("load");
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 
@@ -126,4 +126,88 @@ test("the shell navigates with no network, filters included, and falls back on a
   // A route the warm-up does not cover: the app's own document answers, not the browser's error page.
   await page.goto("/settings/nowhere");
   await expect(page.getByRole("heading", { level: 1, name: /offline/i })).toBeVisible();
+});
+
+// T-01: the RSC hop of a client-side navigation is what the worker answers from `app-shell-rsc`.
+// Without it the hop fails, the router loads the document instead, and every module change with no
+// network is a full reload: the page starts over, and anything it was showing is gone.
+test("with no network a navigation stays inside the app instead of reloading it", async ({
+  page,
+  request,
+  context,
+}) => {
+  test.setTimeout(180_000);
+  const user = await freshUser(request, "soft-nav");
+  await signInAs(context, request, user);
+  const created = await request.post("/api/transactions", {
+    headers: { origin: APP },
+    data: {
+      amount: 4321,
+      type: "EXPENSE",
+      date: new Date().toISOString(),
+      description: "SOFT NAV row",
+      fromAccountId: user.accountId,
+    },
+  });
+  expect(created.ok(), await created.text()).toBe(true);
+
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(async () =>
+          (await caches.open("app-shell-rsc")).keys().then((k) => k.length),
+        ),
+      { timeout: 60_000 },
+    )
+    .toBeGreaterThanOrEqual(25);
+
+  await context.setOffline(true);
+  await page.goto("/transactions");
+  await expect(page.getByRole("heading", { level: 1, name: "Transactions" })).toBeVisible();
+  await markDocument(page);
+
+  // A module change, which is what the owner reported.
+  await page.getByRole("link", { name: "Budgets" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Budgets" })).toBeVisible({
+    timeout: 20_000,
+  });
+  expect(await keptDocument(page)).toBe(true);
+
+  // F-06 again, now without a reload: the filter only changes the query, and one entry answers it.
+  await page.getByRole("link", { name: "Transactions" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Transactions" })).toBeVisible({
+    timeout: 20_000,
+  });
+  await page.getByRole("button", { name: "Expenses" }).click();
+  await expect(page).toHaveURL(/type=EXPENSE/, { timeout: 20_000 });
+  expect(await keptDocument(page)).toBe(true);
+
+  // F-48: the payload of a detail route is cached under its template, with an id no row has. The
+  // worker re-points the rewrite header at the row that was asked for, so the URL and the screen
+  // are the row's — not the template's.
+  const row = page.getByRole("button", { name: /SOFT NAV row/ }).first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  await row.click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Transaction", exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("SOFT NAV row")).toBeVisible();
+  await expect(page).toHaveURL(/\/transactions\/[0-9a-f-]{36}$/);
+  expect(await keptDocument(page)).toBe(true);
+
+  await page.getByRole("link", { name: "Edit" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Edit transaction" })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page).toHaveURL(/\/transactions\/[0-9a-f-]{36}\/edit$/);
+  expect(await keptDocument(page)).toBe(true);
+
+  await page.goBack();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Transaction", exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
+  expect(await keptDocument(page)).toBe(true);
 });

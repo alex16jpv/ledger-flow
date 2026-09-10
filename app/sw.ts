@@ -16,7 +16,9 @@ import {
   isLandingPath,
   isShellPath,
   offlineDocument,
+  rewrittenPath,
   SHELL_CACHE,
+  SHELL_RSC_CACHE,
   SHELL_WARMED_MESSAGE,
   shellCacheKey,
   WARM_SHELL_MESSAGE,
@@ -68,13 +70,16 @@ const serwist: Serwist = new Serwist({
   navigationPreload: true,
   runtimeCaching: [
     { matcher: ({ url }) => url.pathname.startsWith("/api/"), handler: new NetworkOnly() },
-    // An RSC payload is never served from a cache: the router reads the URL and the rewrite headers
-    // of the response it gets, and a cached one names the route it was stored under, not the one
-    // asked for — with no network it then chases a rewrite that never happened, or keeps the old
-    // URL. Failing the hop instead makes the router load the document, which the cache answers.
     {
       matcher: ({ request, sameOrigin, url }) =>
-        sameOrigin && request.headers.get("RSC") === "1" && isShellPath(url.pathname),
+        sameOrigin && isNavigationPayload(request) && isShellPath(url.pathname),
+      handler: { handle: rscNavigation },
+    },
+    // A prefetch answers with the route's loading state, not its render, so it must never land in
+    // the cache a navigation reads; failing it with no network costs nothing.
+    {
+      matcher: ({ request, sameOrigin, url }) =>
+        sameOrigin && request.headers.get(RSC_HEADER) === "1" && isShellPath(url.pathname),
       handler: new NetworkOnly(),
     },
     // P-33: the root is the app's door for a device that already holds it. Online the proxy
@@ -129,6 +134,68 @@ async function holdsTheApp(): Promise<boolean> {
 
 const network: NetworkOnly = new NetworkOnly();
 
+// Next's own header names, which it does not export from anywhere public.
+const RSC_HEADER = "RSC";
+const PREFETCH_HEADERS = ["Next-Router-Prefetch", "Next-Router-Segment-Prefetch"] as const;
+const REWRITTEN_PATH_HEADER = "x-nextjs-rewritten-path";
+
+function isNavigationPayload(request: Request): boolean {
+  return (
+    request.headers.get(RSC_HEADER) === "1" &&
+    PREFETCH_HEADERS.every((header) => !request.headers.has(header))
+  );
+}
+
+function payloadRequest(url: string): Request {
+  return new Request(url, { credentials: "same-origin", headers: { [RSC_HEADER]: "1" } });
+}
+
+// A response taken out of a cache carries the URL it was stored under, and the rewrite header names
+// the path it was warmed with — for a detail template, another row's id. Both are read by the router,
+// so the answer is built again: a fresh `Response` has no URL of its own, which is what the router
+// wants (it resolves the request's, query included), and the header is re-pointed at the path asked
+// for. A payload left over from an older build is caught by Next itself, which compares the build id
+// in the body and loads the document instead.
+function rebase(cached: Response, pathname: string): Response {
+  const headers = new Headers(cached.headers);
+  const rewritten = rewrittenPath(pathname);
+  if (rewritten === null) headers.delete(REWRITTEN_PATH_HEADER);
+  else headers.set(REWRITTEN_PATH_HEADER, rewritten);
+  return new Response(cached.body, {
+    status: cached.status,
+    statusText: cached.statusText,
+    headers,
+  });
+}
+
+// The hop a client-side navigation makes. With no network the cache answers it, so the app moves
+// inside itself instead of loading a document (T-01); with no entry the hop still fails, and the
+// router falls back to the document, which `shellPages` answers. **Its own answer is never cached**:
+// the router sends the tree it already holds and the server replies with the part that changed, so
+// what comes back is only good for the screen it was asked from. The cache is filled by the warm,
+// which asks without a tree and gets the whole one.
+async function rscNavigation({
+  request,
+  event,
+}: {
+  request: Request;
+  event: ExtendableEvent;
+}): Promise<Response> {
+  try {
+    return await network.handle({ request, event });
+  } catch (error) {
+    const cache = await caches.open(SHELL_RSC_CACHE);
+    const cached = await cache.match(shellCacheKey(request.url), { ignoreVary: true });
+    if (!cached) throw error;
+    return rebase(cached, new URL(request.url).pathname);
+  }
+}
+
+async function storePayload(cacheName: string, url: string, event: ExtendableEvent): Promise<void> {
+  const response = await network.handle({ request: payloadRequest(url), event }).catch(() => null);
+  if (response?.ok) await (await caches.open(cacheName)).put(shellCacheKey(url), response);
+}
+
 async function rootNavigation({
   request,
   event,
@@ -149,17 +216,24 @@ async function rootNavigation({
   }
 }
 
-async function warmRoute(request: Request, event: ExtendableEvent) {
-  const cache = await caches.open(SHELL_CACHE);
-  if (await cache.match(shellCacheKey(request.url), { ignoreVary: true })) return;
-  await shellPages.handle({ request, event }).catch(() => undefined);
+async function warmRoute(url: string, event: ExtendableEvent) {
+  const documents = await caches.open(SHELL_CACHE);
+  const key = shellCacheKey(url);
+  if (!(await documents.match(key, { ignoreVary: true }))) {
+    await shellPages
+      .handle({ request: new Request(url, { credentials: "same-origin" }), event })
+      .catch(() => undefined);
+  }
+  const payloads = await caches.open(SHELL_RSC_CACHE);
+  if (await payloads.match(key, { ignoreVary: true })) return;
+  await storePayload(SHELL_RSC_CACHE, url, event);
 }
 
 // The routes the user has not opened yet: without this, the first visit with no network has nothing
 // to answer with (§6 O-F6). Already cached routes are left alone, so opening the app costs nothing.
 async function warmShell(urls: string[], event: ExtendableEvent): Promise<void> {
   for (const url of urls) {
-    await warmRoute(new Request(url, { credentials: "same-origin" }), event);
+    await warmRoute(url, event);
   }
 }
 
@@ -192,6 +266,10 @@ async function stageShell(event: ExtendableEvent): Promise<void> {
     const request = new Request(warmUrlFor(key.url), { credentials: "same-origin" });
     await staging.handle({ request, event }).catch(() => undefined);
   }
+  const payloads = await caches.open(SHELL_RSC_CACHE);
+  for (const key of await payloads.keys()) {
+    await storePayload(`${SHELL_RSC_CACHE}${STAGED}`, warmUrlFor(key.url), event);
+  }
 }
 
 async function swapShell(cacheName: string): Promise<void> {
@@ -210,5 +288,5 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(swapShell(SHELL_CACHE));
+  event.waitUntil(Promise.all([swapShell(SHELL_CACHE), swapShell(SHELL_RSC_CACHE)]));
 });

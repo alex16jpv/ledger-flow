@@ -130,6 +130,24 @@ export async function listAccounts(request: APIRequestContext): Promise<AccountR
   return ((await response.json()) as { data: AccountRow[] }).data;
 }
 
+// A navigation that stays inside the app keeps the document, so what the page left on `window`
+// survives it. With no network the RSC hop used to fail, and the router loaded the document
+// instead — every module change was a full reload (T-01).
+const DOCUMENT_MARK = "__ledgerFlowSameDocument";
+
+export function markDocument(page: Page): Promise<void> {
+  return page.evaluate((key) => {
+    (window as unknown as Record<string, boolean>)[key] = true;
+  }, DOCUMENT_MARK);
+}
+
+export function keptDocument(page: Page): Promise<boolean> {
+  return page.evaluate(
+    (key) => (window as unknown as Record<string, boolean>)[key] === true,
+    DOCUMENT_MARK,
+  );
+}
+
 export async function reportsNoNetwork(context: BrowserContext): Promise<void> {
   await context.addInitScript(() => {
     Object.defineProperty(window.navigator, "onLine", { get: () => false });
@@ -295,8 +313,8 @@ export async function createExpense(
   await page.getByRole("button", { name: /^Account/ }).click();
   await page.getByRole("dialog", { name: "Account" }).getByRole("option", { name: /Cash/ }).click();
   await page.getByRole("button", { name: "Save transaction" }).click();
-  // The screen leaves the form on its own; with no network that leave is a full page load (F-51),
-  // so the row and its "Pending sync" badge on the list are what prove the save, not the toast.
+  // The screen leaves the form on its own; the row and its "Pending sync" badge on the list are
+  // what prove the save reached the vault, which a toast would not.
   await expect(page).toHaveURL(/\/transactions(\?|$)/, { timeout: 15_000 });
   await expect(
     page.getByRole("button", { name: new RegExp(`${description}.*Pending sync`) }),

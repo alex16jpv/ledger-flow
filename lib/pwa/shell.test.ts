@@ -5,6 +5,7 @@ import {
   DETAIL_TEMPLATES,
   isShellPath,
   offlineDocument,
+  rewrittenPath,
   SHELL_PATHS,
   shellCacheKey,
   shellUrls,
@@ -120,5 +121,24 @@ describe("shellUrls", () => {
     expect(shellUrls("es", "https://app.test")).toHaveLength(
       SHELL_PATHS.length + DETAIL_TEMPLATES.length,
     );
+  });
+});
+
+describe("rewrittenPath", () => {
+  // Measured against the running app (2026-09-10): next-intl answers `x-nextjs-rewritten-path`
+  // with the default locale prefixed, and answers no such header for a path that already names one.
+  it("names the path the router asked for, in the shape next-intl rewrites it to", () => {
+    expect(rewrittenPath("/transactions")).toBe("/en/transactions");
+    expect(rewrittenPath("/settings/sync")).toBe("/en/settings/sync");
+    expect(rewrittenPath("/es/transactions")).toBeNull();
+  });
+
+  // F-48: the payload of a detail route is warmed with `TEMPLATE_ID`, and the router fills the
+  // route's params from this header — so it has to carry the id of the row that was asked for.
+  it("carries the id of the row asked for, not the one the template was warmed with", () => {
+    expect(rewrittenPath("/transactions/019200aa-1111-7000-8000-000000000001")).toBe(
+      "/en/transactions/019200aa-1111-7000-8000-000000000001",
+    );
+    expect(rewrittenPath(`/accounts/${TEMPLATE_ID}/edit`)).toBe(`/en/accounts/${TEMPLATE_ID}/edit`);
   });
 });

@@ -2789,3 +2789,37 @@ cover` is set once in the root layout for the standalone display.
 - **No new plate.** `#sign-in` already draws exactly this state (an email filled in, the focus ring on
   the password); what was missing was the specification saying where that value comes from and when
   the field is empty, which `design/spec/screens/access.md` now says.
+
+## 2026-09-10 · The worker serves RSC payloads again, rebuilt around the path asked for (T-01)
+
+- **Supersedes** the 2026-09-05 decision (R-3b, F-51), which made the RSC hop network-only. Its
+  consequence was the whole of T-01: with no network every navigation was a full document load.
+- **Decision:** `app-shell-rsc` is back. The payload of every `(app)` route is warmed beside its
+  document, under the same key (origin + route template), and answers the hop of a client-side
+  navigation when the network cannot. The answer is **built again** rather than handed over: a fresh
+  `Response` carries no URL of its own, and `x-nextjs-rewritten-path` is re-pointed at the path that
+  was asked for. With no entry the hop still fails and the router loads the document, which
+  `app-shell` answers — the old behaviour, now the fallback.
+- **Why the two reads that broke it in September are fixed by that:** the router resolves the
+  response URL against the request (`new URL(res.url, fetchUrl)`), so an **empty** one gives it the
+  URL it asked for, query included — which is what a cached `Response` could not do, because it
+  carries the URL it was stored under. `res.redirected` is false on a rebuilt answer, so the
+  canonical URL stays the requested one and nothing chases a rewrite that never happened. The
+  rewrite header is the only thing the router still reads that the cache cannot know, and next-intl
+  computes it from the path alone (`/transactions` → `/en/transactions`, nothing for `/es/…`), so it
+  can be written back exactly. Measured against the running app, in both locales.
+- **What is never cached: the answer to a navigation.** The router sends the tree it already holds
+  and the server replies with the part that changed, so that answer is only good for the screen it
+  was asked from. Only the warm fills the cache, and it asks without a tree.
+- **What is never served from the cache: a prefetch.** Its payload is the route's loading state, not
+  its render, and a prefetch that fails with no network costs nothing.
+- **Alternatives:** leaving it network-only (T-01 is exactly that cost); `experimental.useOffline`,
+  which Next 16.3 ships — it makes a failed hop **wait for the network** instead of loading the
+  document, so with no network a navigation would never arrive, which for this app is worse than a
+  reload; keying payloads by full URL (a soft navigation only for URLs already seen, F-06 again).
+- **Consequence:** the warm downloads a payload per route as well as a document, so a device that
+  prepares itself pays about twice the traffic and holds about twice the cache (~80 KB per route,
+  uncompressed). A new build's payloads are re-fetched on install and swapped in on activate, exactly
+  like the documents — and a payload that still slipped through from an older build is caught by Next
+  itself, which compares the build id in the body and loads the document instead. A toast raised just
+  before a navigation now survives it.
