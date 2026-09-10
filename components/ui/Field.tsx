@@ -70,7 +70,7 @@ export function useFieldContext() {
 }
 
 export const INPUT =
-  "flex h-(--control-lg) w-full items-center gap-2 rounded-md border border-border-strong bg-surface px-3 text-md text-text transition-[border-color,box-shadow] duration-(--dur-1) ease-(--ease) placeholder:text-text-3 focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--focus-ring)] focus-visible:outline-none disabled:bg-surface-2 disabled:text-text-disabled aria-invalid:border-danger-solid";
+  "flex h-(--control-lg) w-full items-center gap-2 rounded-md border border-border-strong bg-surface px-3 text-field text-text transition-[border-color,box-shadow] duration-(--dur-1) ease-(--ease) placeholder:text-text-3 focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--focus-ring)] focus-visible:outline-none disabled:bg-surface-2 disabled:text-text-disabled aria-invalid:border-danger-solid";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   leading?: ReactNode;

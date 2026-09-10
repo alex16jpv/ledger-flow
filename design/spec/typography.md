@@ -3,9 +3,10 @@
 - **Family:** Geist variable (OFL) for everything; Geist Mono only for technical keys — a period
   (`2026-09`), a currency code, a session's user agent.
 - **Scale (px):** 11 eyebrow (uppercase, 0.06em tracking, `--text-3`) · 12 small · 14 base · 15 md
-  (field values) · 17 h2 · 20 stat · 24 h1 and amount-lg · 40 amount-hero · 52 the amount in quick
-  capture. Weights 400/500/600; line height 1.45 for text and 1.2 for titles; tracking −0.01em in
-  general and −0.02/−0.03em on large amounts.
+  · **16 field** · 17 h2 · 20 stat · 24 h1 and amount-lg · 40 amount-hero · 52 the amount in quick
+  capture. **A field's own value is 16 and never smaller:** iOS zooms the page in on focus for
+  anything below that, and leaves it zoomed. Weights 400/500/600; line height 1.45 for text and 1.2
+  for titles; tracking −0.01em in general and −0.02/−0.03em on large amounts.
 - **Amounts:** `font-variant-numeric: tabular-nums`; the currency symbol in `--text-3` and smaller;
   `−` (U+2212) for money out, `+` for income, no sign on transfers, `±` on adjustments. Formatted with
   `Intl.NumberFormat(locale, { currency })`, with no decimals where the currency has no minor unit

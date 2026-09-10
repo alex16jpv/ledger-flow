@@ -224,7 +224,7 @@
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .label { font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--text-2); display: flex; justify-content: space-between; }
 .label .opt { color: var(--text-3); font-weight: var(--fw-regular); }
-.input { display: flex; align-items: center; gap: var(--sp-2); height: var(--control-lg); padding: 0 var(--sp-3); border-radius: var(--r-md); border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font-size: var(--fs-md); width: 100%; transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease); }
+.input { display: flex; align-items: center; gap: var(--sp-2); height: var(--control-lg); padding: 0 var(--sp-3); border-radius: var(--r-md); border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font-size: var(--fs-field); width: 100%; transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease); }
 .input .icon { color: var(--text-3); }
 .input .placeholder { color: var(--text-3); }
 .input .value { flex: 1; min-width: 0; }

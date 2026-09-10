@@ -7,6 +7,8 @@
   --fs-sm: 0.75rem;
   --fs-base: 0.875rem;
   --fs-md: 0.9375rem;
+  /* iOS zooms the page in when a focused field is under 16px, and does not zoom back out. */
+  --fs-field: 1rem;
   --fs-lg: 1.0625rem;
   --fs-xl: 1.25rem;
   --fs-2xl: 1.5rem;
