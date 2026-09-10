@@ -2723,3 +2723,69 @@ cover` is set once in the root layout for the standalone display.
   work from any machine, and a Node project should not need Python for its own design); versioning a
   handful of canonical captures (rejected by the owner in favour of regenerating them); and moving
   `DESIGN.md` whole instead of splitting it (rejected: 25 screens today and more coming).
+
+## 2026-09-09 · A session with no network has an answer (P-35)
+
+- **What the owner saw on his phone:** the installed app opened with no network and every
+  screen stayed on its skeleton — reload after reload, module after module. The cause is one line of
+  React Query's contract: `/api/auth/me` is a server read (`networkMode: "online"`, the default), so
+  a browser that has already reported no network **pauses** it instead of running it. It therefore
+  never failed either, and `SessionProvider` read that as `"loading"` — the one value §2.6 forbids
+  the marker from overruling. `AppFrame` never opened the vault, the gate of F-31 was never lowered,
+  and every read on every screen waited for a vault nobody was going to open.
+- **Decision:** a read the network paused counts as an answer, and the answer is latched — R-3b's own
+  reason applied to the new case, because a paused read resumes as `"fetching"` with no data and no
+  error, and the vault this status decides would be torn down and rebuilt in the gap the network
+  comes back in. The latch is state adjusted during render, which is the one shape `react-hooks`
+  allows: it forbids a ref written while rendering and a `setState` in an effect body alike.
+- **Alternative, tried and measured:** making the session read `offlineFirst` so it fails instead of
+  pausing. It is one line and it fixed the phone — and it **broke P-32**: `enabled: !localOnly` reads
+  `false` on the hydrating render, because the store answers with its server snapshot there, so
+  `GET /api/auth/me` went out twice on a device the user had put in "this device only", which is the
+  one thing that mode promises never happens (the e2e of P-32 caught it). The pause was quietly doing
+  that job too. Also rejected: reading `fetchStatus` in `AppFrame` instead (§2.6's "the session
+  decides while it can" belongs to the provider that owns the question, not to each caller).
+- **Why it looked like a mobile bug, and why no test had caught it:** on a desktop the network is cut
+  in a tab that is already running, where the session read has long since answered; a phone, and an
+  installed app above all, is opened cold. And **Playwright's `setOffline` leaves `navigator.onLine`
+  true**, so the whole offline suite ran in the one state that always worked — the app fired the
+  request, it failed at once and the session resolved. The new test overrides `navigator.onLine`,
+  which is what a device with no network actually reports.
+
+## 2026-09-09 · Signing in ends "this device only" (P-36)
+
+- **What the owner saw:** the sheet of P-32 has three exits and the second one, "Continue on this device only",
+  leaves a stripe whose action is the way back. Taking it signed the user in and **left the mode on**:
+  a live session on a device that still refused to talk to the server, saying so in a stripe that
+  would not go. The mode is a device choice in `localStorage`, so nothing the server answers can
+  clear it.
+- **Decision:** a successful login or registration ends the mode, in the mutation hooks rather than
+  in each view, and reports the network with it — the answer that just arrived is the proof of
+  connection P-32 refuses to take from `navigator.onLine` or the heartbeat. Without that second half
+  the app carried the offline phase into the fresh session and waited up to a heartbeat to notice.
+
+## 2026-09-09 · The login knows whose device it is (P-37)
+
+- **The owner's item:** being sent to the login to resume the sync asked for the email _and_ the
+  password, "cuando la tarea era solo poner el password". The device knows the answer to the first
+  half: the marker names the user (§2.6) and the mirror keeps that user's profile, which is already
+  what gives the greeting a name with no network (F-82).
+- **Decision:** on a device that holds a vault the email arrives written and the focus goes to the
+  password. It stays an ordinary editable field rather than fixed text with a "use another account"
+  way out: the owner asked for the minimum, and an editable field is the version that adds no state
+  to the screen and still lets a second account sign in. What the user has already typed always wins
+  — the vault is read after the screen paints, so this fills a field nobody has touched and never
+  overwrites one.
+- **Where the email comes from:** `readVaultProfile`, which reads the profile store **without opening
+  the vault the app opens**, under the same rule as `countPendingOperations`. The access screens live
+  outside the frame that owns the vault, and a database created by the question would look to D-20
+  like a vault the browser had evicted; where the browser cannot say whether the vault exists
+  (`indexedDB.databases` missing) the field simply stays empty, the same answer the worker gives
+  without the Cookie Store API. Rejected: carrying the email in the URL from `goToLogin` — it would
+  sit in the history for nothing, since the device can read it locally.
+- **Under test:** jsdom drops a `__Host-` cookie over http, so the marker cannot be written the way
+  the BFF writes it; the unit test replaces `readSessionMarker`, which `lib/auth` owns and tests on
+  its own, and the e2e proves the real cookie path against the running app.
+- **No new plate.** `#sign-in` already draws exactly this state (an email filled in, the focus ring on
+  the password); what was missing was the specification saying where that value comes from and when
+  the field is empty, which `design/spec/screens/access.md` now says.

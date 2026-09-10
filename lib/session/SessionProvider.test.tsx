@@ -1,3 +1,4 @@
+import { onlineManager } from "@tanstack/react-query";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -40,6 +41,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   vi.unstubAllGlobals();
+  onlineManager.setOnline(true);
   await wipeVaults();
 });
 
@@ -105,6 +107,27 @@ describe("SessionProvider", () => {
     await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"));
     const afterError = statuses.slice(statuses.indexOf("error"));
     expect(afterError).not.toContain("loading");
+  });
+
+  it("gives up when there is no network to ask over, without asking", async () => {
+    onlineManager.setOnline(false);
+    statuses.length = 0;
+    renderSession();
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("error"));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not fall back to loading when the network comes back", async () => {
+    onlineManager.setOnline(false);
+    statuses.length = 0;
+    renderSession();
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("error"));
+    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "Ada" } }));
+    act(() => {
+      onlineManager.setOnline(true);
+    });
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"));
+    expect(statuses.slice(statuses.indexOf("error"))).not.toContain("loading");
   });
 
   it("logs out, tells the other tabs and calls onSignedOut", async () => {

@@ -4,10 +4,12 @@ import {
   addButton,
   APP,
   createExpense,
+  expectPending,
   freshUser,
   listTransactions,
   outbox,
   readyForOffline,
+  reportsNoNetwork,
   signInAs,
   uniqueAmount,
   vaultState,
@@ -41,7 +43,7 @@ test("a clock days ahead earns a refusal the queue keeps, and says why", async (
   // Through the full form, which carries a date: a quick capture sends none, and the server dates
   // one of those by its own clock, so it could never be in the future.
   await createExpense(page, amount, "OF7 clock ahead");
-  expect((await vaultState(page))?.pending).toBe(1);
+  await expectPending(page, 1);
 
   await context.setOffline(false);
   await page.goto("/home");
@@ -58,7 +60,7 @@ test("a clock days ahead earns a refusal the queue keeps, and says why", async (
   // queue, and the server never took it.
   expect((await outbox(page))[0]).toMatchObject({ status: "failed", lastError: "FUTURE_DATE" });
   expect(await listTransactions(request)).toEqual([]);
-  expect((await vaultState(page))?.pending).toBe(1);
+  await expectPending(page, 1);
 
   // F-66, the way out: the date is corrected to the server's own clock and the same movement goes.
   await page.getByRole("button", { name: "Fix the date" }).click();
@@ -109,8 +111,9 @@ test("a request cut before the server sees it leaves the queue exactly as it was
   // The two cut attempts leave the operation where it was, with its place in the queue.
   await expect.poll(() => cut, { timeout: 60_000 }).toBe(2);
   expect(await listTransactions(request)).toEqual([]);
-  const [queued] = await outbox(page);
-  expect(queued).toMatchObject({ entity: "transaction", status: "pending" });
+  await expect
+    .poll(async () => (await outbox(page))[0], { timeout: 30_000 })
+    .toMatchObject({ entity: "transaction", status: "pending" });
 
   // And the backoff brings it back on its own: nothing here asks for a retry.
   await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
@@ -155,7 +158,7 @@ test("with a dead session the app still opens, reads and queues, and syncs after
   await page.keyboard.type(String(amount));
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(sheet).toBeHidden();
-  expect((await vaultState(page))?.pending).toBe(1);
+  await expectPending(page, 1);
 
   // The session dies while the device is away. The marker stays, which is the whole of §2.6: it
   // says which vault this device holds, never that the session is good.
@@ -179,7 +182,7 @@ test("with a dead session the app still opens, reads and queues, and syncs after
   // where it is, instead of asking a dead session the same question every minute (F-26).
   await context.setOffline(false);
   await page.waitForTimeout(5_000);
-  expect((await vaultState(page))?.pending).toBe(1);
+  await expectPending(page, 1);
   expect((await listTransactions(request)).filter((row) => row.amount === amount)).toHaveLength(0);
 
   // Opening the app with a network and a dead session: it says so and offers the way in, without
@@ -191,7 +194,7 @@ test("with a dead session the app still opens, reads and queues, and syncs after
   await expect(dead).toBeVisible({ timeout: 30_000 });
   await dead.getByRole("button", { name: "Sign in to sync" }).click();
   await expect(page).toHaveURL(/\/login\?/);
-  await page.getByLabel("Email", { exact: true }).fill(user.email);
+  await expect(page.getByLabel("Email", { exact: true })).toHaveValue(user.email);
   await page.getByLabel("Password", { exact: true }).fill(user.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/transactions$/);
@@ -271,7 +274,7 @@ test("a session that dies with the app open says so without a reload", async ({
   await page.keyboard.type(String(amount));
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(sheet).toBeHidden();
-  expect((await vaultState(page))?.pending).toBe(1);
+  await expectPending(page, 1);
 
   // A cold start with no session and no network: the app opens in local mode (§2.6), which is the
   // state F-64 was reported in — the tab that will have to speak is this one.
@@ -290,7 +293,7 @@ test("a session that dies with the app open says so without a reload", async ({
   await expect(page.getByText("You’re offline.")).toHaveCount(0);
 
   // And the change is still here: a dead session never costs the queue anything (invariant 7).
-  expect((await vaultState(page))?.pending).toBe(1);
+  await expectPending(page, 1);
   expect((await listTransactions(request)).filter((row) => row.amount === amount)).toHaveLength(0);
 });
 
@@ -326,7 +329,7 @@ test("the chosen local-only mode sends nothing to the server, and can be left", 
   // Not "few": none. Reads come from the mirror and writes go to the queue (DESIGN §8.17).
   expect(calls).toEqual([]);
   expect((await listTransactions(request)).filter((row) => row.amount === amount)).toHaveLength(0);
-  expect((await vaultState(page))?.pending).toBe(1);
+  await expectPending(page, 1);
 
   // And leaving it is one line: the queue goes out on the next pass.
   await page.evaluate(() => {
@@ -357,4 +360,74 @@ test("with no network the root opens the app on a device that holds it", async (
 
   await expect(page).toHaveURL(/\/home$/, { timeout: 30_000 });
   await expect(page.getByText("You’re offline.")).toBeVisible();
+});
+
+test("a device opened with no network shows what it holds, not skeletons", async ({
+  page,
+  request,
+  context,
+}) => {
+  test.setTimeout(180_000);
+  const user = await freshUser(request, "cold-start");
+
+  await signInAs(context, request, user);
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+
+  await context.setOffline(true);
+  await reportsNoNetwork(context);
+  await page.goto("/home");
+  await expect(page.getByText("You’re offline.")).toBeVisible();
+  await expect(page.getByText(user.accountName).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Hi,/);
+
+  await page.goto("/accounts");
+  await expect(page.getByRole("link", { name: new RegExp(user.accountName) })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
+
+  await page.goto("/transactions");
+  await expect(page.getByRole("heading", { level: 1, name: "Transactions" })).toBeVisible();
+  await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
+});
+
+test("signing in from the stripe ends this-device-only mode", async ({
+  page,
+  request,
+  context,
+}) => {
+  test.setTimeout(180_000);
+  const user = await freshUser(request, "leave-local");
+
+  await signInAs(context, request, user);
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+
+  const kept = (await context.cookies()).filter(
+    (cookie) => !cookie.name.includes("access") && !cookie.name.includes("refresh"),
+  );
+  await context.clearCookies();
+  await context.addCookies(kept);
+  await page.reload();
+
+  const choice = page.getByRole("dialog", { name: "This device has your data, but no session" });
+  await expect(choice).toBeVisible({ timeout: 30_000 });
+  await choice.getByRole("button", { name: "Continue on this device only" }).click();
+  await expect(page.getByText("You’re working on this device only.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Sign in to sync" }).click();
+  await expect(page).toHaveURL(/\/login\?/);
+  await page.getByLabel("Email", { exact: true }).fill(user.email);
+  await page.getByLabel("Password", { exact: true }).fill(user.password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await page.waitForURL(/\/home/, { timeout: 30_000 });
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Hi,/);
+  await expect(page.getByText("You’re working on this device only.")).toHaveCount(0);
+  expect(await page.evaluate(() => window.localStorage.getItem("lf.localOnly"))).toBeNull();
+  await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
 });

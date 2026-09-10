@@ -19,16 +19,30 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderForm(onSuccess = vi.fn()) {
+function renderForm(onSuccess = vi.fn(), knownEmail?: string | null) {
   renderWithProviders(
     <QueryProvider>
-      <LoginForm onSuccess={onSuccess} forgotPasswordEnabled={false} />
+      <LoginForm onSuccess={onSuccess} forgotPasswordEnabled={false} knownEmail={knownEmail} />
     </QueryProvider>,
   );
   return onSuccess;
 }
 
 describe("LoginForm", () => {
+  it("arrives with the device's email written and the password focused", async () => {
+    renderForm(vi.fn(), "ada@ledgerflow.test");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Email")).toHaveValue("ada@ledgerflow.test");
+    });
+    expect(screen.getByLabelText("Password")).toHaveFocus();
+  });
+
+  it("leaves an email the user is already typing alone", async () => {
+    renderForm(vi.fn(), null);
+    await userEvent.type(screen.getByLabelText("Email"), "someone@else.test");
+    expect(screen.getByLabelText("Email")).toHaveValue("someone@else.test");
+  });
+
   it("validates before calling the BFF", async () => {
     renderForm();
     await userEvent.type(screen.getByLabelText("Email"), "not-an-email");

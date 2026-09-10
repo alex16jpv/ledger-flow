@@ -273,7 +273,7 @@ test("three days with no network, a cold start each day, and one drain with no d
     await page.goto("/transactions");
     await expect(page.getByRole("button", { name: /GATE-D1 market.*Pending sync/ })).toBeVisible();
     await expect(page.getByText(/2 changes waiting/)).toBeVisible();
-    expect((await vaultState(page))?.pending).toBe(2);
+    await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 30_000 }).toBe(2);
 
     quickId = (await mirrorIdByAmount(page, amountQ)) ?? "";
     createdId = (await mirrorIdByAmount(page, amountA)) ?? "";

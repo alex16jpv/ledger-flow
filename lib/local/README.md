@@ -509,3 +509,11 @@ outbox: the counter across a reopen, the envelope, both halves of the atomic wri
 that throws and a queue put the store refuses), `dependsOn`, every branch of `write()`, and the
 balance projection against the oracle on all four fixtures and over the optimistic rows. Use `openTestVault` from `lib/testing/vault` — it
 tracks handles so one failed assertion does not leave a connection open and stall the next test.
+
+## The server endpoints this layer still depends on
+
+`READ_SOURCE` is `"mirror"`, so the screens no longer call the API on every render. The API is still
+the other half of every read, and none of these may be retired on the strength of a quiet screen
+(T-18): `GET /transactions`, `/accounts`, `/categories` and `/budgets` answer whenever the mirror
+says it cannot — no vault yet, or no snapshot drained — and `GET /stats/spending` is the reference
+`derive/parity.test.ts` checks the local buckets against, through the fixtures the backend produces.

@@ -130,6 +130,12 @@ export async function listAccounts(request: APIRequestContext): Promise<AccountR
   return ((await response.json()) as { data: AccountRow[] }).data;
 }
 
+export async function reportsNoNetwork(context: BrowserContext): Promise<void> {
+  await context.addInitScript(() => {
+    Object.defineProperty(window.navigator, "onLine", { get: () => false });
+  });
+}
+
 // The e2e build is flagged as "test", so the app does not install the worker by itself: the specs
 // register it to exercise what a production install would do.
 export async function installWorker(page: Page): Promise<void> {
@@ -182,6 +188,10 @@ export function vaultState(page: Page): Promise<VaultState | null> {
     db.close();
     return { name, pending, syncedAt: stamp?.value ?? null, transactions };
   });
+}
+
+export async function expectPending(page: Page, count: number, timeout = 30_000): Promise<void> {
+  await expect.poll(async () => (await vaultState(page))?.pending, { timeout }).toBe(count);
 }
 
 export interface QueuedOperation {
