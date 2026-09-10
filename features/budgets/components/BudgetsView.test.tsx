@@ -194,8 +194,52 @@ describe("BudgetsView", () => {
     expect(
       await screen.findByRole("heading", { name: "Put a ceiling on your small spending" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText("A total monthly budget shows how much is left before the month ends."),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Create a monthly budget" }));
-    expect(onCreateGlobal).toHaveBeenCalled();
+    expect(onCreateGlobal).toHaveBeenCalledWith("MONTHLY");
+  });
+
+  it("creates for the selected filter from the empty state", async () => {
+    fetchMock.mockResolvedValue(list([]));
+    const { onCreateGlobal } = renderView({ periodFilter: "WEEKLY" });
+    expect(
+      await screen.findByText("A total weekly budget shows how much is left before the week ends."),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Create a weekly budget" }));
+    expect(onCreateGlobal).toHaveBeenCalledWith("WEEKLY");
+  });
+
+  it("sends the custom filter to the full form, the only one that asks for the dates", async () => {
+    fetchMock.mockResolvedValue(list([]));
+    const { onCreateGlobal } = renderView({ periodFilter: "CUSTOM" });
+    expect(await screen.findByRole("link", { name: "Create a custom budget" })).toHaveAttribute(
+      "href",
+      "/budgets/new?period=CUSTOM",
+    );
+    expect(screen.queryByRole("button", { name: /^Create a/ })).not.toBeInTheDocument();
+    expect(onCreateGlobal).not.toHaveBeenCalled();
+  });
+
+  it("offers the filter's own budget when the month has others but none of it", async () => {
+    fetchMock.mockResolvedValue(list([budget("food", "Food")]));
+    const { onCreateGlobal } = renderView({ periodFilter: "WEEKLY" });
+    expect(await screen.findByText("No weekly budgets this month")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Create a weekly budget" }));
+    expect(onCreateGlobal).toHaveBeenCalledWith("WEEKLY");
+  });
+
+  it("leaves the monthly filter to the dashed card instead of offering two buttons", async () => {
+    fetchMock.mockResolvedValue(list([budget("coffee", "Coffee", { periodType: "WEEKLY" })]));
+    renderView({ periodFilter: "MONTHLY" });
+    expect(await screen.findByText("No monthly budgets this month")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Create a total monthly budget/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Create a monthly budget" }),
+    ).not.toBeInTheDocument();
   });
 
   it("offers a retry when the list fails", async () => {

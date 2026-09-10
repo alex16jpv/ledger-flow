@@ -913,9 +913,29 @@
   },
   "budgets": {
     "global": {
-      "defaultName": "Presupuesto mensual",
-      "amount": "Monto mensual",
-      "help": "Puedes ajustarlo cualquier mes sin tocar el monto base y añadir presupuestos por categoría cuando quieras."
+      "nameByPeriod": {
+        "WEEKLY": "Presupuesto semanal",
+        "BIWEEKLY": "Presupuesto quincenal",
+        "MONTHLY": "Presupuesto mensual",
+        "QUARTERLY": "Presupuesto trimestral",
+        "YEARLY": "Presupuesto anual"
+      },
+      "amountByPeriod": {
+        "WEEKLY": "Monto semanal",
+        "BIWEEKLY": "Monto quincenal",
+        "MONTHLY": "Monto mensual",
+        "QUARTERLY": "Monto trimestral",
+        "YEARLY": "Monto anual"
+      },
+      "sheetTitle": "Un techo para {span}",
+      "help": "Puedes ajustarlo en cualquier periodo sin tocar el monto base y añadir presupuestos por categoría cuando quieras."
+    },
+    "periodSpan": {
+      "WEEKLY": "la semana",
+      "BIWEEKLY": "la quincena",
+      "MONTHLY": "el mes",
+      "QUARTERLY": "el trimestre",
+      "YEARLY": "el año"
     },
     "periodTypes": {
       "WEEKLY": "Semanal",
@@ -955,8 +975,9 @@
       "footnote": "Los ajustes de saldo y las transferencias nunca cuentan en un presupuesto.",
       "empty": {
         "title": "Ponle un techo a tu gasto hormiga",
-        "body": "Un presupuesto mensual total te dice cuánto queda antes de que acabe el mes.",
-        "cta": "Crear presupuesto mensual"
+        "bodyFor": "Un presupuesto {period} total te dice cuánto queda antes de que acabe {span}.",
+        "bodyCustom": "Un presupuesto personalizado va entre las dos fechas que elijas.",
+        "ctaFor": "Crear presupuesto {period}"
       },
       "noneForFilter": "No hay presupuestos {period} este mes"
     },
@@ -1035,6 +1056,7 @@
       "periodChangeWarning": "Cambiar el período borra todos los ajustes por período de este presupuesto.",
       "amount": "Monto",
       "suggestionsFromSpending": "Según el gasto del mes pasado",
+      "suggestionsScaled": "Escalado según el gasto del mes pasado",
       "color": "Color",
       "advanced": "Opciones avanzadas",
       "effectiveFrom": "Vigente desde",

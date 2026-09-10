@@ -4,7 +4,7 @@ import { COLOR_TOKENS } from "@/lib/theme/feature-color";
 import { type Infer, z } from "@/lib/validation/zod";
 import type { Budget, CreateBudgetInput, UpdateBudgetInput } from "@/types/api";
 
-import { BUDGET_PERIOD_TYPES } from "./progress";
+import { BUDGET_PERIOD_TYPES, type RecurringBudgetPeriod } from "./progress";
 
 export const BUDGET_NAME_MAX = 255;
 export const BUDGET_NOTE_MAX = 255;
@@ -204,17 +204,26 @@ export function roundToNice(value: number): number {
   return Math.max(step, Math.round(value / step) * step);
 }
 
+// The suggestions are monthly figures: another period asks for its share of a month, not a month's.
+const PERIOD_MONTHS: Record<RecurringBudgetPeriod, number> = {
+  WEEKLY: 7 / (365 / 12),
+  BIWEEKLY: 14 / (365 / 12),
+  MONTHLY: 1,
+  QUARTERLY: 3,
+  YEARLY: 12,
+};
+
 export function budgetSuggestions(
   currency: string,
   fractionDigits: number,
   lastMonthSpent: number | null = null,
+  periodType: RecurringBudgetPeriod = "MONTHLY",
 ): number[] {
-  if (lastMonthSpent && lastMonthSpent > 0) {
-    const around = [0.8, 1, 1.2].map((factor) => roundToNice(lastMonthSpent * factor));
-    return [...new Set(around)];
-  }
-  return [
-    ...(CURRENCY_SUGGESTIONS[currency] ??
-      (fractionDigits === 0 ? [150_000, 200_000, 300_000] : [1_500, 2_000, 3_000])),
-  ];
+  const months = PERIOD_MONTHS[periodType];
+  const monthly =
+    lastMonthSpent && lastMonthSpent > 0
+      ? [0.8, 1, 1.2].map((factor) => lastMonthSpent * factor)
+      : (CURRENCY_SUGGESTIONS[currency] ??
+        (fractionDigits === 0 ? [150_000, 200_000, 300_000] : [1_500, 2_000, 3_000]));
+  return [...new Set(monthly.map((value) => roundToNice(value * months)))];
 }
