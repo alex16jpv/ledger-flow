@@ -2,8 +2,8 @@
 
 Lightweight ADR log. One entry per non-obvious choice: date, decision, alternatives, consequence.
 The UI these decisions refine lives in `design/` (`design/spec/` for the what and why,
-`design/preview/` for what it looks like). The plan and the API contract live outside the repo in
-`../auditoria/front/diseno/HANDOFF.md` and `../auditoria/front/FASE-2-CONTRATO-FRONTEND.md`.
+`design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
+`lib/api/errors.ts`, generated from the backend's OpenAPI.
 
 ## 2026-09-01 · Rebuild from scratch on `redesign/fase-2` (W-01)
 
@@ -27,8 +27,8 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 
 ## 2026-09-01 · Token files copied without their Spanish comments (W-01)
 
-- **Decision:** `tokens/*.css` carry the exact values of `auditoria/front/diseno/tokens` (verified by a
-  whitespace-and-comment-insensitive diff) but the explanatory Spanish comments were dropped.
+- **Decision:** `tokens/*.css` carry the exact values of the design's original token files (verified
+  by a whitespace-and-comment-insensitive diff) but the explanatory Spanish comments were dropped.
 - **Why:** HANDOFF §3.0 forbids comments and non-English text in the repo; §0 of DESIGN.md protects
   the values, not the prose. `tokens/` is excluded from Prettier so the files stay diffable
   against the design source.
@@ -117,7 +117,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 
 ## 2026-09-01 · Geist through `next/font/local`, mapped onto the font tokens (W-03)
 
-- **Decision:** the two variable fonts from `auditoria/front/diseno/preview/assets/fonts` live in
+- **Decision:** the two variable fonts shipped with the original design preview live in
   `app/fonts/` and are declared with `next/font/local` (`--font-geist-sans`, `--font-geist-mono`).
   `app/globals.css` re-points the token stacks `--font-sans`/`--font-mono` at those variables.
 - **Why:** `next/font` self-hosts, preloads and adds size-adjusted fallbacks (CLS ≈ 0) but names the
@@ -196,7 +196,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   document embedded in the backend's `swagger-ui-init.js` (there is no public JSON endpoint) and
   runs `openapi-typescript`. The backend views declare no `required`, so the generator marks every
   view property required except `User.reactivated`, `Category.seedKey` and `Session.userAgent`
-  (documented in the script; reported to the backend in `auditoria/front/BACKEND-DESDE-FRONT.md`). CI regenerates the file
+  (documented in the script; reported to the backend). CI regenerates the file
   and fails on a diff.
 - **Enums:** `ColorToken` is the generated `Account.color` type; the runtime `COLOR_TOKENS` list is
   checked against it with `satisfies`, and `lib/api/contract.test.ts` asserts type equality for
@@ -972,7 +972,7 @@ cover` is set once in the root layout for the standalone display.
   it must point at the commit the owner merges after the F5 gate (owner's rule: no push, no deploy).
 - **Not automated:** GitHub branch protection, the Vercel environment variables, the Sentry
   project and the `BACKEND_REPO_TOKEN`/`SENTRY_AUTH_TOKEN` secrets are console settings for the
-  owner; the checklist lives in `auditoria/front/puertas/F5/README.md`.
+  owner; the checklist is in the gate F5 report handed to him.
 
 ## 2026-09-03 · One database per user holds both the mirror and the outbox (O-F1)
 
@@ -1013,7 +1013,7 @@ cover` is set once in the root layout for the standalone display.
   `liveDate` is absent on tombstones, `pendingReview` is present only on live rows that need review,
   and null foreign keys are left out rather than stored as null.
 - **Alternatives:** spreading the index keys flat onto the row. Rejected: `lib/local/derive` (O-F3)
-  is verified against `auditoria/offline-fixtures/`, and it has to receive the server's shape
+  is verified against the backend's parity fixtures, and it has to receive the server's shape
   untouched for that comparison to mean anything.
 - **Consequence:** reads unwrap `record.row`. The compound `dateCursor` index is `["liveDate", "id"]`
   — IndexedDB skips a record when any part of a compound key path is missing, which is what keeps
@@ -1133,7 +1133,7 @@ cover` is set once in the root layout for the standalone display.
   `0.30` in binary floating point.
 - **Consequence:** the pending tray works offline. This is a plain sum over the same filtered set,
   not a derivation — day buckets, balances and `spent` need a time zone and a period and belong to
-  `lib/local/derive` (O-F3), which is checked against `auditoria/offline-fixtures/`. When O-F3 lands,
+  `lib/local/derive` (O-F3), which is checked against the backend's parity fixtures. When O-F3 lands,
   the pending summary moves there with the rest and gets the same fixture check.
 
 ## 2026-09-03 · Budgets decline offline instead of answering the view without `spent` (O-F2a)
@@ -1143,7 +1143,7 @@ cover` is set once in the root layout for the standalone display.
   `MIRROR_BACKED_DOMAINS`: unpausing a domain that cannot answer only turns a paused skeleton into a
   failed request. The seam is in place (`lib/local/repository/budgets.ts`) for O-F3 to fill.
 - **Alternatives:** serving the view with `spent` derived locally — forbidden here, that is O-F3 and
-  it is checked against `auditoria/offline-fixtures/`. Serving the half of the view that is not
+  it is checked against the backend's parity fixtures. Serving the half of the view that is not
   money — rejected because no budget surface can paint without the figure: `BudgetCard`,
   `GlobalBudgetCard`, `BudgetHero`, Home's `BudgetsSection` and `HeroCard`, the ordering in
   `BudgetsView` and `topBudgets`, `budgetProgress` and `budgetStatus` all read `budget.spent`, and
@@ -1181,8 +1181,9 @@ cover` is set once in the root layout for the standalone display.
   very rows the backend verified against a real mongod are the rows the test feeds it. Balances and
   the pending summary land first; `spent` and the day buckets are part 2. The parity fixtures are
   copied verbatim into `lib/local/derive/fixtures/` and committed.
-- **Alternatives:** reading `auditoria/offline-fixtures/` from the test. Rejected because that folder
-  is in no repository and CI checks out only this one, so the parity test would never run where it
+- **Alternatives:** reading the parity fixtures from the shared folder they then lived in, outside
+  both repositories. Rejected because that folder is in no repository and CI checks out only this
+  one, so the parity test would never run where it
   matters. A test that skips when the folder is missing would have been green in CI while proving
   nothing. The vendored copy is guarded instead: on a machine that has the source folder, the test
   compares the two byte for byte and fails on drift; in CI it skips with that reason in its name.
@@ -1212,7 +1213,7 @@ cover` is set once in the root layout for the standalone display.
 
 - **Decision:** `lib/local/derive/fixtures/` is refreshed with `npm run fixtures:sync` from the
   backend's committed `fixtures/offline/`, and `parity.test.ts` guards against that copy. The old
-  `auditoria/offline-fixtures/` is no longer read by anyone.
+  shared folder outside both repositories is no longer read by anyone.
 - **Alternatives:** the previous arrangement (see the 2026-09-04 O-F3 part 1 entry above), where the
   source of the copy was a folder in no repository. Rejected once the backend committed the files:
   the contract can now be worked on from any machine, and the backend's CI fails when its generator
@@ -2686,7 +2687,7 @@ cover` is set once in the root layout for the standalone display.
 
 ## 2026-09-09 · The design system moves into the repo (G-1)
 
-- **Decision:** the design stops living in `../auditoria/front/diseno` and becomes `design/` in this
+- **Decision:** the design stops living outside the repository and becomes `design/` in this
   repo: `design/spec/` (the specification, one file per screen) and `design/preview/` (the pages the
   owner reviews), built by `design/build.mjs` and served by `npm run design`. The owner asked for it
   so the design could be worked on from any machine, and asked that only what he actually looks at
