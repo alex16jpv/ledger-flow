@@ -75,7 +75,7 @@ async function editTransaction(
   await expect(page.getByRole("heading", { level: 1, name: "Edit transaction" })).toBeVisible();
   await fill(page);
   await page.getByRole("button", { name: "Save changes" }).click();
-  // Offline the leave is a full page load (F-51), so the list, not a toast, is what proves the save.
+  // The toast goes with the leave, so the list, not a toast, is what proves the save.
   await expect(page).not.toHaveURL(/\/edit$/, { timeout: 15_000 });
   await page.waitForLoadState("load");
 }
