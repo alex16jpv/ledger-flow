@@ -54,7 +54,7 @@ export function NewBudgetScreen() {
   const source = useBudgetQuery(from ?? "", undefined);
   const categories = useCategoriesQuery(undefined, true, true);
   const create = useCreateBudget();
-  const waiting = (from !== null && source.isPending) || categories.isPending;
+  const waiting = (Boolean(from) && source.isPending) || categories.isPending;
   const defaults =
     from && source.data
       ? fromBudget(source.data, timeZone, "copy", now)
