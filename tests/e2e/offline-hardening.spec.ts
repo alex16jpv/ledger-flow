@@ -8,6 +8,7 @@ import {
   listTransactions,
   outbox,
   readyForOffline,
+  reportsNoNetwork,
   signInAs,
   uniqueAmount,
   vaultState,
@@ -381,10 +382,8 @@ test("a device opened with no network shows what it holds, not skeletons", async
   // Playwright's offline emulation leaves `navigator.onLine` **true**, which no device with no
   // network reports — and it is what the app reads to decide it is offline. Without this the suite
   // measures a browser that believes it is online and merely fails every request, which is the one
-  // case that always worked.
-  await context.addInitScript(() => {
-    Object.defineProperty(window.navigator, "onLine", { get: () => false });
-  });
+  // case that always worked. `offline-no-network.spec.ts` takes the rest of the flows through here.
+  await reportsNoNetwork(context);
   await page.goto("/home");
   await expect(page.getByText("You’re offline.")).toBeVisible();
   await expect(page.getByText(user.accountName).first()).toBeVisible({ timeout: 30_000 });
