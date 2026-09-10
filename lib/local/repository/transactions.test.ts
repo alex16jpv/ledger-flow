@@ -1,5 +1,5 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { openTestVault, transaction, wipeVaults } from "@/lib/testing/vault";
+import { openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
 import type {
   SyncChangesResponse,
   SyncTransaction,
@@ -77,17 +77,30 @@ const json = (body: unknown) =>
 
 const fetchMock = vi.fn<typeof fetch>();
 
-function feedPage(transactions: SyncTransaction[]): SyncChangesResponse {
+function feedPage(
+  transactions: SyncTransaction[],
+  timezone = "America/Bogota",
+): SyncChangesResponse {
   return {
     serverTime: "2026-09-03T12:00:00.000Z",
-    changes: { user: null, accounts: [], categories: [], transactions, budgets: [] },
+    // The profile rides along: a window is a run of local days, so without its zone the mirror
+    // declines a filtered read instead of cutting the days somewhere else.
+    changes: {
+      user: profile({ id: "u1", timezone }),
+      accounts: [],
+      categories: [],
+      transactions,
+      budgets: [],
+    },
     pagination: { limit: 500, count: transactions.length, hasMore: false, nextCursor: "v1|done|" },
   };
 }
 
-async function mirrorOf(transactions: SyncTransaction[]): Promise<void> {
+async function mirrorOf(transactions: SyncTransaction[], timezone?: string): Promise<void> {
   const vault = await openTestVault("u1");
-  await pullChanges(vault, { fetchPage: () => Promise.resolve(feedPage(transactions)) });
+  await pullChanges(vault, {
+    fetchPage: () => Promise.resolve(feedPage(transactions, timezone)),
+  });
   setCurrentVault(vault);
   reportOnline(false);
 }
@@ -242,7 +255,26 @@ describe("the screen filters against the mirror", () => {
   });
 
   it("filters by period, closing the window on the left only", async () => {
-    const window = { from: "2026-08-03T00:00:00.000Z", to: "2026-08-05T12:00:00.000Z" };
+    // Local midnight in Bogota, which is the bound every screen sends.
+    const window = { from: "2026-08-03T05:00:00.000Z", to: "2026-08-05T05:00:00.000Z" };
+
+    expect(ids(await readTransactions({ ...window, limit: 30 }))).toEqual(["t4", "t3"]);
+  });
+
+  it("keeps a row in the month its day was frozen in, after the account moves zone (T-14)", async () => {
+    // 11pm on Aug 31 in Bogota: the instant belongs to September, the accounting day to August.
+    const lateNight = transaction({ id: "t9", date: "2026-09-01T04:00:00.000Z" });
+    expect(lateNight.dayKey).toBe("2026-08-31");
+    // The account has since moved to Madrid, so the window is cut there: [Aug 1, Sep 1) local.
+    await mirrorOf([...ALL, lateNight], "Europe/Madrid");
+
+    const august = { from: "2026-07-31T22:00:00.000Z", to: "2026-08-31T22:00:00.000Z" };
+    expect(ids(await readTransactions({ ...august, limit: 30 }))).toContain("t9");
+  });
+
+  it("widens a window that does not start at local midnight to whole days", async () => {
+    // Midday bounds: the API answers the days they fall on, so both ends come in whole.
+    const window = { from: "2026-08-03T18:00:00.000Z", to: "2026-08-04T18:00:00.000Z" };
 
     expect(ids(await readTransactions({ ...window, limit: 30 }))).toEqual(["t4", "t3"]);
   });

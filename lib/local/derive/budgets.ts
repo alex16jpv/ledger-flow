@@ -1,5 +1,6 @@
 import type { SyncBudget, SyncTransaction } from "@/types/api";
 
+import { dayWindow, withinDays } from "./days";
 import { fromCents, toCents } from "./money";
 import { resolvePeriod } from "./period";
 
@@ -16,7 +17,7 @@ export type BudgetRow = Pick<
 
 export type BudgetTransaction = Pick<
   SyncTransaction,
-  "type" | "amount" | "date" | "categoryId" | "deletedAt"
+  "type" | "amount" | "date" | "dayKey" | "categoryId" | "deletedAt"
 >;
 
 export interface DerivedBudgetView {
@@ -41,15 +42,13 @@ export function deriveBudgetView(
   timeZone: string,
 ): DerivedBudgetView {
   const period = resolvePeriod(budget, reference, timeZone);
-  const from = period.from.getTime();
-  const to = period.to.getTime();
+  const days = dayWindow(period.from.toISOString(), period.to.toISOString(), timeZone);
 
   const spentCents = transactions.reduce((cents, transaction) => {
     if (transaction.deletedAt) return cents;
     // The budget's own type filters the rows: an INCOME budget ignores every expense in its window.
     if (transaction.type !== budget.type) return cents;
-    const at = Date.parse(transaction.date);
-    if (at < from || at >= to) return cents;
+    if (!withinDays(transaction, days)) return cents;
     // No categories means global: the window's whole spend of that type, quick-adds and
     // uncategorized rows included. With categories it sums only those.
     if (

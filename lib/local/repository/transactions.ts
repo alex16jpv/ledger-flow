@@ -10,10 +10,10 @@ import type {
   TransactionList,
 } from "@/types/api";
 
-import { sumAmounts } from "../derive";
+import { type DayWindow, dayWindow, sumAmounts, widenedBound, withinDays } from "../derive";
 import type { TransactionRecord, VaultSchema } from "../schema";
 import { mirrorNotFound, read } from "./read";
-import { dateCursorRange, storedStamp } from "./window";
+import { dateCursorRange, mirrorTimeZone, storedStamp } from "./window";
 
 export type TransactionQuery = Record<string, QueryValue>;
 
@@ -41,6 +41,7 @@ const SUPPORTED_PARAMS = new Set([
 interface MirrorFilter {
   from?: string;
   to?: string;
+  days?: DayWindow;
   limit: number;
   cursor?: string;
   includeSummary: boolean;
@@ -66,7 +67,10 @@ export function toApiRow(row: SyncTransaction): Transaction {
   return transaction;
 }
 
-function toMirrorFilter(query: TransactionQuery): MirrorFilter | undefined {
+function toMirrorFilter(
+  query: TransactionQuery,
+  timeZone: string | undefined,
+): MirrorFilter | undefined {
   const entries = Object.entries(query).filter(([, value]) => sent(value));
   if (entries.some(([key]) => !SUPPORTED_PARAMS.has(key))) return undefined;
   const params = new Map(entries.map(([key, value]) => [key, String(value)]));
@@ -94,14 +98,23 @@ function toMirrorFilter(query: TransactionQuery): MirrorFilter | undefined {
     (value) => value !== undefined,
   );
 
+  // A window is a run of local days matched row by row, so it counts as a predicate: the index
+  // range around it is widened and can no longer answer the total on its own. Without the profile
+  // there is no zone to cut those days on, and the mirror declines rather than guessing one.
+  const windowed = from !== undefined || to !== undefined;
+  if (windowed && timeZone === undefined) return undefined;
+  const days = windowed && timeZone !== undefined ? dayWindow(from, to, timeZone) : undefined;
+
   return {
     from,
     to,
+    days,
     limit: Math.min(Math.max(rawLimit || DEFAULT_LIMIT, 1), MAX_LIMIT),
     cursor: params.get("cursor"),
     includeSummary: isTrue(params.get("includeSummary")),
-    filtered: uncategorized || predicates.length > 0,
+    filtered: uncategorized || predicates.length > 0 || days !== undefined,
     matches: (record) =>
+      (days === undefined || withinDays(record.row, days)) &&
       (type === undefined || record.row.type === type) &&
       (accountId === undefined ||
         record.fromAccountId === accountId ||
@@ -133,7 +146,7 @@ async function queryMirror(
   let past = false;
   // Its own transaction: awaiting the pivot lookup first would let this one auto-commit mid-walk.
   const index = db.transaction("transactions").store.index("dateCursor");
-  const range = dateCursorRange(filter.from, filter.to);
+  const range = dateCursorRange(widenedBound(filter.from, -1), widenedBound(filter.to, 1));
   // The server counts the whole filtered set on every page, and so does this. With no question to
   // ask of each row the index answers it without deserialising any, and the walk can then stop at
   // the page instead of paying O(n) per page of an infinite scroll (F-15). Both requests go out
@@ -167,12 +180,18 @@ async function queryMirror(
 }
 
 export function readTransactions(query: TransactionQuery): Promise<TransactionList> {
-  const filter = toMirrorFilter(query);
   return read<TransactionList>(
     () => api<TransactionList>("/transactions", { query }),
-    filter ? (db) => queryMirror(db, filter) : () => Promise.resolve(undefined),
+    async (db) => {
+      // Only a windowed query needs the zone, so a list with no month filter still answers from a
+      // mirror that has not stored the profile yet.
+      const filter = toMirrorFilter(query, hasWindow(query) ? await mirrorTimeZone(db) : undefined);
+      return filter ? queryMirror(db, filter) : undefined;
+    },
   );
 }
+
+const hasWindow = (query: TransactionQuery): boolean => sent(query.from) || sent(query.to);
 
 export function readTransaction(id: string): Promise<Transaction> {
   return read<Transaction>(

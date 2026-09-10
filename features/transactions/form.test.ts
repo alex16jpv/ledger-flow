@@ -92,6 +92,7 @@ describe("transaction form model", () => {
       type: "TRANSFER",
       amount: 500,
       date: "2026-09-22T23:10:00.000Z",
+      dayKey: "2026-09-22",
       categoryId: null,
       description: "Move",
       fromAccountId: "a1",

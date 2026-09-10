@@ -2886,3 +2886,27 @@ cover` is set once in the root layout for the standalone display.
   so the page is already inside it; the 0.4 s limit that flags this belongs to seobility. That audit
   warning, and the render-blocking one for the single 13.5 kB brotli stylesheet, will not go green:
   inlining the CSS is only worth it on a page the edge can cache.
+
+## 2026-09-10 · A transaction owns its accounting day (T-14)
+
+- **Decision:** a transaction's `date` stays the instant it happened, and the **day** it belongs to
+  is now a field the backend freezes when the row is written (`dayKey`, the local day in the
+  account's time zone), re-stamped only when `date` changes. Every calendar window — a month, a
+  budget period, the day buckets, the day headers of the list — is a **run of local days** matched
+  against that field, here and on the server. Owner's decision of 2026-09-10, taken after the
+  alternatives were laid out for him.
+- **Why:** deriving the day at read time meant the account's zone decided it, and that zone can
+  change. Measured against a real backend: an expense logged at 11pm on Aug 31 in Bogota is Sep 1 in
+  UTC and in Madrid, so after moving the account to Madrid August's total read **0** instead of the
+  amount — the month, the day bucket and the budget's `spent` all moved without anybody touching a
+  transaction.
+- **Alternatives:** (a) leave it derived and only warn on the time-zone screen — rejected, it
+  confesses the defect instead of fixing it; (b) store the zone per row and read each row in its own
+  — rejected, then no window has a definable set of instants.
+- **Consequence:** a bound that is not local midnight is widened to whole days, which is what the
+  API answers now. In the mirror, the `dateCursor` range is widened by a day at each end (the index
+  is on the instant) and a **windowed** read of `/transactions` needs the profile's zone, so it
+  declines without it and goes to the server — the same dependency `/budgets` and `/stats` already
+  had, and one more reason to close the half of H-14 that is still open. Rows written before the
+  field are answered by their instant, so nothing disappears before the backend's
+  `npm run db:backfill-day-key` runs.

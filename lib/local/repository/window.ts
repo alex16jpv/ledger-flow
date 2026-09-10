@@ -2,6 +2,7 @@ import type { IDBPDatabase } from "idb";
 
 import type { SyncTransaction } from "@/types/api";
 
+import { widenedBound } from "../derive";
 import { PROFILE_KEY, type VaultSchema } from "../schema";
 
 // Comparing the dates as strings is comparing them as instants: they are the ISO stamps the server
@@ -40,7 +41,12 @@ export async function liveRowsInWindow(
 ): Promise<SyncTransaction[]> {
   const rows: SyncTransaction[] = [];
   const index = db.transaction("transactions").store.index("dateCursor");
-  const range = dateCursorRange(asStoredStamp(from), asStoredStamp(to));
+  // The index is on the instant and the window is a run of local days, which can sit up to a day
+  // apart: the range is widened so it cannot miss an edge row, and `withinDays` is what decides.
+  const range = dateCursorRange(
+    widenedBound(asStoredStamp(from), -1),
+    widenedBound(asStoredStamp(to), 1),
+  );
   for await (const entry of index.iterate(range)) rows.push(entry.value.row);
   return rows;
 }

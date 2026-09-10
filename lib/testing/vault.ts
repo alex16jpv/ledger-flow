@@ -1,7 +1,9 @@
+import { dayKey } from "@/lib/format/dates";
 import { openVault, type VaultDefinition, type VaultHandle } from "@/lib/local/db";
 import type { Account, Category, SyncBudget, SyncTransaction, User } from "@/types/api";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
+const PROFILE_TIME_ZONE = "America/Bogota";
 
 export function profile(overrides: Partial<User> = {}): User {
   return {
@@ -9,7 +11,7 @@ export function profile(overrides: Partial<User> = {}): User {
     email: "john@example.com",
     name: "John Doe",
     currency: "COP",
-    timezone: "America/Bogota",
+    timezone: PROFILE_TIME_ZONE,
     locale: "en",
     lastLoginAt: null,
     createdAt: "2026-01-01T00:00:00.000Z",
@@ -52,11 +54,14 @@ export function category(overrides: Partial<Category> = {}): Category {
 }
 
 export function transaction(overrides: Partial<SyncTransaction> = {}): SyncTransaction {
+  const date = overrides.date ?? "2026-08-01T10:00:00.000Z";
   return {
     id: "t1",
     type: "EXPENSE",
     amount: 20.29,
-    date: "2026-08-01T10:00:00.000Z",
+    date,
+    // The day the server would have frozen, so a row given another date carries the matching one.
+    dayKey: dayKey(new Date(date), PROFILE_TIME_ZONE),
     categoryId: "c1",
     description: null,
     fromAccountId: "a1",

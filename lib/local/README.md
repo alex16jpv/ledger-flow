@@ -229,6 +229,16 @@ sides cannot drift into disagreeing about the same money.
   hours long. `repository/window.ts` picks those rows with the `dateCursor` index — never
   `getAll` (D-18) — and normalises a bound to the feed's UTC shape first, because the index compares
   the stamps as strings and a bound carrying an offset would sort below its own last day's rows.
+- **A window is a run of local days, not a range of instants** (T-14). `derive/days.ts` turns the
+  bounds into the days they cover and matches them against the `dayKey` the server froze on each
+  row, so a change of the account's zone cannot move a past row between months or periods — the
+  same rule as the backend's, and the one the parity fixtures now carry. Two consequences here: the
+  `dateCursor` range is **widened by a day at each end**, because that index is on the instant and a
+  local day can sit up to 26 hours from the same day elsewhere (the exact rule is `withinDays`, the
+  index only decides how many rows it looks at); and a windowed read of `/transactions` now needs
+  the profile's zone, so a mirror without that row declines it and the read goes to the server, the
+  way `/budgets` and `/stats` already did. A row written before the field exists carries
+  `dayKey: null` and is answered by its instant, exactly as the server answers it.
 
 **A balance from here is a projection, never a figure the server sent.** Invariant 2 of the plan
 forbids painting one as if it were, so nothing renders these yet: the marking (the amber tone

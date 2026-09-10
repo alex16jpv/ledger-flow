@@ -19,6 +19,7 @@ function mirrorRow(userId: string, currency: string, row: ParityFixture["transac
     type: row.type,
     amount: row.amount,
     date,
+    dayKey: row.dayKey,
     categoryId: row.categoryId,
     description: row.description,
     fromAccountId: row.fromAccountId,

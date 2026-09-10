@@ -19,6 +19,8 @@ export class NotProjectableError extends Error {
 export interface ProjectionContext {
   userId: string;
   currency: string;
+  // The zone that freezes the accounting day of a row written here, the same one the server uses.
+  timeZone: string;
   occurredAt: string;
 }
 
@@ -29,7 +31,12 @@ export async function projectionContext(
   const record = await tx.objectStore("profile").get(PROFILE_KEY);
   if (!record) throw new NotProjectableError("a row without the profile it belongs to");
   const profile: User = record.row;
-  return { userId: profile.id, currency: profile.currency, occurredAt };
+  return {
+    userId: profile.id,
+    currency: profile.currency,
+    timeZone: profile.timezone,
+    occurredAt,
+  };
 }
 
 // Quick capture leaves the account to the server when the sheet did not pick one, so the mirror
