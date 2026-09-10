@@ -1,6 +1,14 @@
 import { type IDBPDatabase, openDB } from "idb";
 
-import { MIRROR_STORES, type OutboxOperation, vaultDatabaseName, type VaultSchema } from "./schema";
+import type { User } from "@/types/api";
+
+import {
+  MIRROR_STORES,
+  type OutboxOperation,
+  PROFILE_KEY,
+  vaultDatabaseName,
+  type VaultSchema,
+} from "./schema";
 
 export const VAULT_SCHEMA_VERSION = 1;
 export const MIRROR_VERSION = 2;
@@ -196,6 +204,21 @@ export async function vaultExists(userId: string): Promise<boolean> {
   if (!isVaultSupported() || typeof indexedDB.databases !== "function") return false;
   const name = vaultDatabaseName(userId);
   return (await indexedDB.databases()).some((database) => database.name === name);
+}
+
+// P-37: who this device holds, read under the same rule as the queue below — the access screens ask
+// it from outside the frame that owns the vault (§2.6), and a database created by the question would
+// look to D-20 like a vault the browser had evicted. Null where the browser cannot say whether the
+// vault is there, which is what `vaultExists` answers when `indexedDB.databases` is missing.
+export async function readVaultProfile(userId: string): Promise<User | null> {
+  if (!(await vaultExists(userId))) return null;
+  const db = await openDB<VaultSchema>(vaultDatabaseName(userId));
+  try {
+    if (!db.objectStoreNames.contains("profile")) return null;
+    return (await db.get("profile", PROFILE_KEY))?.row ?? null;
+  } finally {
+    db.close();
+  }
 }
 
 // Reads the queue without opening the vault: asking how much is unsent must never migrate anything,

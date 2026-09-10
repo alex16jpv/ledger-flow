@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { User } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Alert } from "@/components/ui/Alert";
@@ -22,9 +22,12 @@ import { RateLimitAlert } from "./RateLimitAlert";
 interface LoginFormProps {
   onSuccess: (session: SessionUser) => void;
   forgotPasswordEnabled: boolean;
+  // P-37: whose device this is, when it holds someone's data. The field stays editable, so another
+  // account can sign in here; what changes is that nobody has to type what the device already knows.
+  knownEmail?: string | null;
 }
 
-export function LoginForm({ onSuccess, forgotPasswordEnabled }: LoginFormProps) {
+export function LoginForm({ onSuccess, forgotPasswordEnabled, knownEmail }: LoginFormProps) {
   const t = useTranslations();
   const login = useLogin();
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
@@ -33,6 +36,13 @@ export function LoginForm({ onSuccess, forgotPasswordEnabled }: LoginFormProps) 
     defaultValues: { email: "", password: "" },
   });
   const { errors } = form.formState;
+  // The vault is read after the screen paints, so the email arrives late. Whatever the user has
+  // already typed wins: this fills a field nobody has touched, it never overwrites one.
+  useEffect(() => {
+    if (!knownEmail || form.getFieldState("email").isDirty) return;
+    form.setValue("email", knownEmail);
+    form.setFocus("password");
+  }, [knownEmail, form]);
 
   const submit = form.handleSubmit(async (values) => {
     try {

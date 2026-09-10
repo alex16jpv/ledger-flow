@@ -2763,3 +2763,26 @@ cover` is set once in the root layout for the standalone display.
   in each view, and reports the network with it — the answer that just arrived is the proof of
   connection P-32 refuses to take from `navigator.onLine` or the heartbeat. Without that second half
   the app carried the offline phase into the fresh session and waited up to a heartbeat to notice.
+
+## 2026-09-09 · The login knows whose device it is (P-37)
+
+- **The owner's item:** being sent to the login to resume the sync asked for the email _and_ the
+  password, "cuando la tarea era solo poner el password". The device knows the answer to the first
+  half: the marker names the user (§2.6) and the mirror keeps that user's profile, which is already
+  what gives the greeting a name with no network (F-82).
+- **Decision:** on a device that holds a vault the email arrives written and the focus goes to the
+  password. It stays an ordinary editable field rather than fixed text with a "use another account"
+  way out: the owner asked for the minimum, and an editable field is the version that adds no state
+  to the screen and still lets a second account sign in. What the user has already typed always wins
+  — the vault is read after the screen paints, so this fills a field nobody has touched and never
+  overwrites one.
+- **Where the email comes from:** `readVaultProfile`, which reads the profile store **without opening
+  the vault the app opens**, under the same rule as `countPendingOperations`. The access screens live
+  outside the frame that owns the vault, and a database created by the question would look to D-20
+  like a vault the browser had evicted; where the browser cannot say whether the vault exists
+  (`indexedDB.databases` missing) the field simply stays empty, the same answer the worker gives
+  without the Cookie Store API. Rejected: carrying the email in the URL from `goToLogin` — it would
+  sit in the history for nothing, since the device can read it locally.
+- **No new plate.** `#sign-in` already draws exactly this state (an email filled in, the focus ring on
+  the password); what was missing was the specification saying where that value comes from and when
+  the field is empty, which `design/spec/screens/access.md` now says.

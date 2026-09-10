@@ -11,6 +11,14 @@
   or password" — one message, never revealing which half failed. A 429 (`#sign-in-rate-limited`) shows a
   `warning` alert with a countdown computed from `Retry-After` or from the 15-minute window, and the
   button stays disabled while it runs.
+
+  **On a device that already holds someone's data the email arrives written** and the focus goes to the
+  password, which is the only thing missing (P-37): coming back to sync is not a first sign-in, and the
+  screen must not ask for what the device already knows. It stays an ordinary editable field, so another
+  account can still sign in here; it is filled from the profile the mirror keeps, so it works with no
+  network, and a device with no vault — a first sign-in, or one after "Delete everything on this
+  device" — gets the empty field. Nothing else about the screen changes: the plate above is that state.
+
 - **Sign up** (`#create-account`): name, email, password (help: "between 8 and 128"), a **required
   consent checkbox** ("I agree to the Privacy policy and to the processing of my personal data (Ley
   1581)", with links; the button is disabled until it is ticked), **language** (a "Language" picker row

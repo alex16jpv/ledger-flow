@@ -192,7 +192,8 @@ test("with a dead session the app still opens, reads and queues, and syncs after
   await expect(dead).toBeVisible({ timeout: 30_000 });
   await dead.getByRole("button", { name: "Sign in to sync" }).click();
   await expect(page).toHaveURL(/\/login\?/);
-  await page.getByLabel("Email", { exact: true }).fill(user.email);
+  // P-37: the device knows whose it is, so the only thing left to type is the password.
+  await expect(page.getByLabel("Email", { exact: true })).toHaveValue(user.email);
   await page.getByLabel("Password", { exact: true }).fill(user.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/transactions$/);

@@ -3,10 +3,18 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 
 import { ApiError } from "@/lib/api/errors";
+import type { SessionMarker } from "@/lib/auth/cookies";
+import { profileRecord } from "@/lib/local/schema";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { isLocalOnly, setLocalOnly } from "@/lib/network/local-only";
+import { openTestVault, profile, wipeVaults } from "@/lib/testing/vault";
 
-import { useLogin, useRegister } from "./hooks";
+// jsdom drops a `__Host-` cookie over http, so the marker cannot be written the way the BFF writes
+// it. What it says is what this hook depends on; `lib/auth` owns reading it.
+const marker = vi.hoisted(() => ({ value: null as SessionMarker | null }));
+vi.mock("@/lib/auth/marker", () => ({ readSessionMarker: () => marker.value }));
+
+const { useDeviceEmail, useLogin, useRegister } = await import("./hooks");
 
 const fetchMock = vi.fn<typeof fetch>();
 const json = (body: unknown) =>
@@ -25,9 +33,11 @@ beforeEach(() => {
   connectivityStore.reset();
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
   setLocalOnly(false);
+  marker.value = null;
+  await wipeVaults();
 });
 
 describe("auth", () => {
@@ -79,6 +89,29 @@ describe("auth", () => {
 
     await waitFor(() => {
       expect(isLocalOnly()).toBe(false);
+    });
+  });
+
+  // P-37: the marker says whose device this is (§2.6) and the mirror keeps that user's profile, so
+  // the screen that resumes the sync already has the email.
+  it("reads the email of the user this device holds", async () => {
+    const user = profile({ id: "u9", email: "ada@ledgerflow.test" });
+    const vault = await openTestVault(user.id);
+    await vault.db.put("profile", profileRecord(user));
+    vault.close();
+    marker.value = { userId: user.id, issuedAt: 1_757_000_000_000 };
+
+    const { result } = renderHook(() => useDeviceEmail());
+
+    await waitFor(() => {
+      expect(result.current).toBe("ada@ledgerflow.test");
+    });
+  });
+
+  it("has no email to offer on a device with no vault", async () => {
+    const { result } = renderHook(() => useDeviceEmail());
+    await waitFor(() => {
+      expect(result.current).toBeNull();
     });
   });
 });

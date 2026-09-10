@@ -9,6 +9,7 @@ import { safeNextPath } from "@/lib/auth/routes";
 import { isEnabled } from "@/lib/flags";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 
+import { useDeviceEmail } from "../hooks";
 import { LoginForm } from "./LoginForm";
 
 export function LoginView() {
@@ -16,6 +17,8 @@ export function LoginView() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNextPath(params.get("next"));
+  // P-37: the device already knows whose it is, so coming back to sync only needs the password.
+  const knownEmail = useDeviceEmail();
 
   return (
     <div className="flex flex-col gap-5">
@@ -25,6 +28,7 @@ export function LoginView() {
       {params.get("wiped") === "1" && <Alert tone="info">{t("wiped")}</Alert>}
       <LoginForm
         forgotPasswordEnabled={isEnabled("forgotPassword")}
+        knownEmail={knownEmail}
         onSuccess={() => {
           router.replace(next);
         }}

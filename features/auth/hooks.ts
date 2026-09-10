@@ -1,8 +1,11 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 import { ApiError } from "@/lib/api/errors";
+import { readSessionMarker } from "@/lib/auth/marker";
+import { readVaultProfile } from "@/lib/local/db";
 import { reportOnline } from "@/lib/network/connectivity";
 import { setLocalOnly } from "@/lib/network/local-only";
 
@@ -32,4 +35,25 @@ export function useLogin() {
 
 export function useRegister() {
   return useMutation({ mutationFn: register, onSuccess: syncFromNowOn });
+}
+
+// P-37: coming back to sync is not a first sign-in. The marker says whose device this is (§2.6) and
+// the mirror keeps that user's profile, so the only thing the screen is missing is the password.
+// Null on a device with no vault, which is exactly where a first sign-in happens.
+export function useDeviceEmail(): string | null {
+  const [email, setEmail] = useState<string | null>(null);
+  useEffect(() => {
+    const marker = readSessionMarker();
+    if (!marker) return undefined;
+    let wanted = true;
+    void readVaultProfile(marker.userId)
+      .then((profile) => {
+        if (wanted && profile) setEmail(profile.email);
+      })
+      .catch(() => undefined);
+    return () => {
+      wanted = false;
+    };
+  }, []);
+  return email;
 }
