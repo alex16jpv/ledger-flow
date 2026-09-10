@@ -115,7 +115,7 @@ export function TagsInput({
           onBlur={() => {
             if (draft.trim()) add(draft);
           }}
-          className="min-w-[6ch] flex-1 bg-transparent text-md outline-none placeholder:text-text-3"
+          className="min-w-[6ch] flex-1 bg-transparent text-field outline-none placeholder:text-text-3"
         />
       </div>
       {matching.length > 0 && !full && (

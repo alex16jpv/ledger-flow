@@ -68,3 +68,35 @@ test("an install offer made before Settings opens is still there when it does", 
   await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
   await expect(page.getByText("Install app", { exact: true })).toBeVisible();
 });
+
+// Fixing the scale in the served HTML would fail WCAG 1.4.4 and axe's `meta-viewport` on every
+// screen, and iOS ignores it in Safari anyway: only the installed app gets it, from the head script.
+test("the served document keeps its zoom and hands the block to the installed app", async ({
+  request,
+}) => {
+  const html = await (await request.get("/")).text();
+  const served = /<meta name="viewport" content="([^"]*)"/.exec(html)?.[1] ?? "";
+  expect(served).toContain("width=device-width");
+  expect(served).not.toContain("user-scalable");
+  expect(served).not.toContain("maximum-scale");
+  expect(html).toContain('src="/viewport-init.js"');
+
+  const script = await request.get("/viewport-init.js");
+  expect(script.status()).toBe(200);
+  expect(script.headers()["content-type"]).toContain("javascript");
+  const source = await script.text();
+  expect(source).toContain("(display-mode: standalone)");
+  expect(source).toContain("user-scalable=no");
+});
+
+// The other half of the promise: the head script must not fix the scale in a browser page either.
+// Its standalone branch cannot be exercised here — `display-mode` is not in Chromium's emulated
+// media features and Playwright opens no app-mode window — so that branch lives in unit tests.
+test("the head script leaves a browser page scalable once it has run", async ({ page }) => {
+  await page.goto("/login");
+  await expect(page.locator("script[src='/viewport-init.js']")).toHaveCount(1);
+
+  await expect
+    .poll(() => page.locator("meta[name=viewport]").getAttribute("content"))
+    .not.toContain("user-scalable");
+});

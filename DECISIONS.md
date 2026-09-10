@@ -2823,3 +2823,40 @@ cover` is set once in the root layout for the standalone display.
   like the documents — and a payload that still slipped through from an older build is caught by Next
   itself, which compares the build id in the body and loads the document instead. A toast raised just
   before a navigation now survives it.
+
+## 2026-09-10 · Zoom is fixed in the installed app only, and fields are 16px
+
+- **Asked for:** on mobile the app must not zoom in or out, because a stray pinch wrecks the layout
+  and is hard to undo from the phone.
+- **What blocking it costs, measured:** `user-scalable=no, maximum-scale=1` in the served HTML fails
+  `axe-core`'s `meta-viewport` (enabled by default, tagged `wcag2aa`/`wcag144`) and
+  `meta-viewport-large`, so the 18 e2e specs that call `expectNoAxeViolations()` go red; and it fails
+  Lighthouse's `meta-viewport` audit, **weight 10** in the accessibility category, against the
+  `>= 0.95` both `lighthouserc*.json` assert. On top of that iOS **ignores** `user-scalable` in Safari
+  as a browser (since iOS 10) and honours it only in standalone, so the served meta buys nothing
+  there.
+- **Decision:** the document stays scalable and `/viewport-init.js` appends
+  `, maximum-scale=1, user-scalable=no` to the viewport meta at runtime, only when
+  `display-mode: standalone` or `navigator.standalone` says the app owns the window. Same pattern as
+  the theme and install scripts: a static route, nonce'd, dependency-free, ES5-safe. It runs a second
+  pass on `DOMContentLoaded` because Next decides where the viewport meta lands in the head, and it
+  removes the suffix again if the display mode changes back.
+- **Why that and not relaxing the gates:** the block lands exactly where the owner wants it and where
+  the platform obeys, and in a browser tab the zoom really is still there — so no assertion has to be
+  lowered and no axe rule disabled to keep a promise the app no longer keeps.
+- **Second half, the zoom nobody asked for:** fields were `text-md` (15px), and iOS zooms the page in
+  on focus for anything under 16px and does not zoom back out. `--fs-field: 1rem` is a token of its
+  own (`text-field`), used by `Field`'s `INPUT` and `TagsInput`; `--fs-md` keeps its other uses, so no
+  other screen changes size. An e2e reads the computed `font-size` of the fields on `/login`.
+- **Alternatives:** blocking it everywhere and lowering the accessibility gate (rejected: it weakens
+  two gates the owner asked for and gains nothing on iOS Safari); `touch-action: pan-x pan-y`, which
+  kills only double-tap zoom and passes every check but leaves the pinch (rejected: not what was
+  asked); raising `--fs-md` to 16px for everything (rejected: it resizes every screen using it).
+- **Consequence:** seven unit tests over the head script and three e2e — the served document is still
+  scalable and ships the script, the browser page is still scalable once the script has run, and no
+  field on `/login` computes under 16px. **The standalone branch is covered in jsdom only.** Two ways
+  to reach it in a real browser were tried and neither works: `display-mode` is not one of Chromium's
+  emulated media features (`Emulation.setEmulatedMedia` leaves `(display-mode: browser)` matching),
+  and `launchPersistentContext` with `--app=<url>` opens `about:blank` instead of an app window. So
+  that a real engine re-reads a viewport meta rewritten after parse — and that iOS honours it in
+  standalone — is taken from the platform's documented behaviour, not measured here.

@@ -36,6 +36,7 @@ export async function generateMetadata({
 }
 
 // Standalone PWA: draw under the notch and let the theme script set theme-color from the live --bg token.
+// Stays scalable here on purpose: `/viewport-init.js` fixes the scale only in the installed app.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -57,6 +58,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       <head>
         <script async src="/theme-init.js" nonce={nonce} />
         <script async src="/install-init.js" nonce={nonce} />
+        <script async src="/viewport-init.js" nonce={nonce} />
       </head>
       <body>
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
