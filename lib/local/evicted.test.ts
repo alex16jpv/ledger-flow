@@ -1,7 +1,12 @@
 import { setErrorReporter } from "@/lib/observability/reporter";
 import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 
-import { noteVaultOpened, reportVaultEvictionIfAny, VaultEvictedError } from "./evicted";
+import {
+  forgetVaultsOpened,
+  noteVaultOpened,
+  reportVaultEvictionIfAny,
+  VaultEvictedError,
+} from "./evicted";
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 8, 5);
@@ -29,7 +34,7 @@ describe("the vault eviction event (D-20)", () => {
   });
 
   it("reports the mode and how long the vault had been sitting", async () => {
-    noteVaultOpened(NOW - 9 * DAY);
+    noteVaultOpened("u1", NOW - 9 * DAY);
 
     expect(await reportVaultEvictionIfAny("u1", NOW - 40 * DAY, NOW)).toBe(true);
     expect(reported).toHaveLength(1);
@@ -52,5 +57,38 @@ describe("the vault eviction event (D-20)", () => {
   it("does not blame the browser for a device that never had a vault", async () => {
     expect(await reportVaultEvictionIfAny("u1", Number.NaN, NOW)).toBe(false);
     expect(reported).toEqual([]);
+  });
+
+  it("says nothing on the sign-in that stamps the marker", async () => {
+    expect(await reportVaultEvictionIfAny("u1", NOW - 60_000, NOW)).toBe(false);
+    expect(reported).toEqual([]);
+  });
+
+  it("counts the days per user, so a first sign-in beside another account is not a loss", async () => {
+    noteVaultOpened("u1", NOW - 3 * DAY);
+
+    expect(await reportVaultEvictionIfAny("u2", NOW - 60_000, NOW)).toBe(false);
+    expect(reported).toEqual([]);
+  });
+
+  it("forgets the marks a wipe of this device took the vaults with", async () => {
+    noteVaultOpened("u1", NOW - 3 * DAY);
+    forgetVaultsOpened();
+
+    expect(await reportVaultEvictionIfAny("u1", NOW - 3 * DAY, NOW)).toBe(false);
+    expect(reported).toEqual([]);
+  });
+
+  it("does not answer where the browser cannot list its databases", async () => {
+    noteVaultOpened("u1", NOW - 9 * DAY);
+    // Firefox: `indexedDB.databases()` does not exist, so "no vault" is unknown, not a loss.
+    Object.defineProperty(indexedDB, "databases", { value: undefined, configurable: true });
+
+    try {
+      expect(await reportVaultEvictionIfAny("u1", NOW - 40 * DAY, NOW)).toBe(false);
+      expect(reported).toEqual([]);
+    } finally {
+      Reflect.deleteProperty(indexedDB, "databases");
+    }
   });
 });

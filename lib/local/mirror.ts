@@ -177,7 +177,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
       return;
     }
     handle = opened;
-    noteVaultOpened();
+    noteVaultOpened(userId);
     setCurrentVault(opened);
     // An app update this build has no migration for left these behind (F-65). The app keeps writing
     // normally — blocking the record would be worse than not sending the old — so all this does is

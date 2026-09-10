@@ -1,4 +1,8 @@
-import { reportNetworkAnswer, reportNetworkFailure } from "@/lib/network/connectivity";
+import {
+  confirmOnline,
+  reportNetworkAnswer,
+  reportNetworkFailure,
+} from "@/lib/network/connectivity";
 import { isReportable, reportError } from "@/lib/observability/reporter";
 import type { ErrorResponse } from "@/types/api";
 
@@ -101,7 +105,10 @@ async function send(path: string, request: ApiRequest, requestId: string): Promi
       throw cause;
     reportNetworkFailure();
     const error = new NetworkError(requestId, timedOut, cause);
-    if (isReportable(error)) reportError(error, "network");
+    if (isReportable(error))
+      void confirmOnline().then((online) => {
+        if (online) reportError(error, "network");
+      });
     throw error;
   }
 }

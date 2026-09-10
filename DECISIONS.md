@@ -2911,6 +2911,7 @@ cover` is set once in the root layout for the standalone display.
   field are answered by their instant, so nothing disappears, and the owner decided on 2026-09-10 not
   to backfill them: with the account's zone unchanged both rules agree, so the backend keeps that
   branch instead of migrating the rows.
+
 ## 2026-09-10 · Creating a budget follows the period filter
 
 - **Decision:** on `/budgets`, what the screen offers to create is the **selected filter's** period,
@@ -2937,3 +2938,31 @@ cover` is set once in the root layout for the standalone display.
   `budgets.periodSpan` instead of one parameterized string, because English capitalizes the period at
   the head of a phrase and Spanish does not, and `messages.test.ts` requires both locales to use the
   same ICU arguments for a key.
+
+## 2026-09-10 · What reaches Sentry has to be the app's fault (P-45)
+
+- **Measured first.** Ten unresolved issues, and eight of them were not defects: eleven
+  `VaultEvictedError` events, every one of them with `daysSinceMarker=0` and most with no
+  `daysSinceLastOpen` at all, and six `NetworkError` issues whose breadcrumbs end in a failed
+  `/api/health`. The two that remain are Sentry's own sample event and Vercel's toolbar.
+- **Decision:** an eviction is only reported when this device is known to have opened that user's
+  vault. The mark that says so is now per user (`lf:vault-opened-at:<userId>`) and a wipe of the
+  device clears it, so the app never reads its own delete as a loss. Where the mark is gone — a real
+  eviction takes localStorage with it — the marker cookie stands in, but only past the seven days
+  WebKit waits before clearing script-writable storage. Under that floor a missing vault is one this
+  device never had: the marker is stamped at sign-in, before the vault is created, which is why
+  every event so far was a first boot. Where `indexedDB.databases()` does not exist (Firefox) the
+  question cannot be answered and nothing is reported, instead of reporting a loss on every boot.
+- **Consequence:** a vault evicted under a browser's storage pressure days after a sign-in is no
+  longer reported. That is the price of not inventing losses; the deadline D-20 set out to measure
+  is the seven-day one, and it still reports.
+- **Decision:** a failed request is filed as an error only once the heartbeat has had its say
+  (`confirmOnline`). `navigator.onLine` stays as the cheap first gate, but it is true on iOS with no
+  network, so on its own it turned every lost connection into an issue. The screens still fail
+  loudly the moment the request fails — this changes what is reported, not what is shown.
+- **Alternative:** dropping `NetworkError` from the reports entirely. Rejected: an API that answers
+  nothing while the device is online is exactly the failure worth knowing about.
+- **Decision:** an event thrown inside `/_next-live/` — Vercel's injected toolbar — is dropped in
+  `beforeSend`. It is not the app's code and cannot be fixed from here (H-22).
+- **Decision:** the Sentry `release` falls back to the commit SHA the way `lib/env.ts` already does
+  for Settings › About, so an event says which deploy it came from (H-21).

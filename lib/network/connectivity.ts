@@ -64,6 +64,27 @@ export function reportNetworkAnswer(): void {
   for (const listener of suspectListeners) listener();
 }
 
+// The heartbeat answers a failed request in well under this; what is left is the time a request to
+// a black hole takes to give up (HEALTH_TIMEOUT_MS) plus room for the round trip.
+export const OFFLINE_VERDICT_MS = 6000;
+
+// A failed request is not an error until the heartbeat says the network is there: reporting it
+// straight away files every lost connection as a fault of the app.
+export function confirmOnline(graceMs = OFFLINE_VERDICT_MS): Promise<boolean> {
+  if (phase === "offline") return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const unsubscribe = connectivityStore.subscribe(() => {
+      if (phase !== "offline") return;
+      unsubscribe();
+      resolve(false);
+    });
+    setTimeout(() => {
+      unsubscribe();
+      resolve(true);
+    }, graceMs);
+  });
+}
+
 export function onNetworkFailure(listener: Listener): () => void {
   suspectListeners.add(listener);
   return () => {

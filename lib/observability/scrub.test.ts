@@ -58,6 +58,7 @@ describe("scrubEvent", () => {
     } as unknown as ErrorEvent;
 
     const scrubbed = scrubEvent(event);
+    if (!scrubbed) throw new Error("the event was dropped");
 
     expect(scrubbed.user).toBeUndefined();
     expect(scrubbed.extra).toBeUndefined();
@@ -72,5 +73,26 @@ describe("scrubEvent", () => {
       },
     ]);
     expect(scrubbed.exception?.values?.[0]?.value).toBe("Amount # rejected");
+  });
+
+  it("drops what the injected toolbar threw, which is not the app's (H-22)", () => {
+    const event = {
+      exception: {
+        values: [
+          {
+            type: "InvalidNodeTypeError",
+            value: "Failed to execute 'selectNode' on 'Range'",
+            stacktrace: {
+              frames: [
+                { filename: "app:///_next/static/chunks/main.js" },
+                { filename: "app:///_next-live/feedback/913.js" },
+              ],
+            },
+          },
+        ],
+      },
+    } as unknown as ErrorEvent;
+
+    expect(scrubEvent(event)).toBeNull();
   });
 });

@@ -4,6 +4,7 @@ import { markOfflineReadyAnnounced, offlineReadyAnnounced } from "@/lib/pwa/read
 import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 import { account } from "@/lib/testing/vault";
 
+import { noteVaultOpened, reportVaultEvictionIfAny } from "./evicted";
 import { setCurrentVault } from "./repository";
 import { accountRecord } from "./schema";
 import { clearSessionMarker, wipeThisDevice } from "./wipe";
@@ -45,6 +46,16 @@ describe("wipeThisDevice", () => {
     clearSessionMarker();
 
     expect(document.cookie).toContain("Max-Age=0");
+  });
+
+  // Left behind, the mark turns the next sign-in into an eviction the browser never made.
+  it("forgets that this device ever opened a vault", async () => {
+    noteVaultOpened("u1");
+    expect(await reportVaultEvictionIfAny("u1", Date.now() - 60_000)).toBe(true);
+
+    await wipeThisDevice();
+
+    expect(await reportVaultEvictionIfAny("u1", Date.now() - 60_000)).toBe(false);
   });
 
   it("forgets the offline-ready announcement, so the next copy says it again", async () => {
