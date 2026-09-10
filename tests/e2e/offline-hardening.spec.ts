@@ -192,7 +192,6 @@ test("with a dead session the app still opens, reads and queues, and syncs after
   await expect(dead).toBeVisible({ timeout: 30_000 });
   await dead.getByRole("button", { name: "Sign in to sync" }).click();
   await expect(page).toHaveURL(/\/login\?/);
-  // P-37: the device knows whose it is, so the only thing left to type is the password.
   await expect(page.getByLabel("Email", { exact: true })).toHaveValue(user.email);
   await page.getByLabel("Password", { exact: true }).fill(user.password);
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -361,11 +360,6 @@ test("with no network the root opens the app on a device that holds it", async (
   await expect(page.getByText("You’re offline.")).toBeVisible();
 });
 
-// P-35 (owner, 2026-09-09): the way an installed app is opened is cold, and on a phone with no
-// network every screen stayed on its skeleton — reload after reload, module after module. The
-// session read is paused, not run, with no network, so nothing ever resolved it and the marker
-// never got to name the vault (§2.6). What this measures is data, not headings: a heading paints
-// with or without a vault.
 test("a device opened with no network shows what it holds, not skeletons", async ({
   page,
   request,
@@ -380,20 +374,13 @@ test("a device opened with no network shows what it holds, not skeletons", async
   await readyForOffline(page);
 
   await context.setOffline(true);
-  // Playwright's offline emulation leaves `navigator.onLine` **true**, which no device with no
-  // network reports — and it is what the app reads to decide it is offline. Without this the suite
-  // measures a browser that believes it is online and merely fails every request, which is the one
-  // case that always worked. `offline-no-network.spec.ts` takes the rest of the flows through here.
   await reportsNoNetwork(context);
   await page.goto("/home");
   await expect(page.getByText("You’re offline.")).toBeVisible();
   await expect(page.getByText(user.accountName).first()).toBeVisible({ timeout: 30_000 });
   await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
-  // And the name, which comes from the profile the pull stored (F-82): with no vault open there is
-  // none, and the greeting drops the comma with it.
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Hi,/);
 
-  // "Cambiando de módulo": each of these is a document load of its own with no network (T-01).
   await page.goto("/accounts");
   await expect(page.getByRole("link", { name: new RegExp(user.accountName) })).toBeVisible({
     timeout: 30_000,
@@ -405,9 +392,6 @@ test("a device opened with no network shows what it holds, not skeletons", async
   await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
 });
 
-// P-36 (owner, 2026-09-09): the third exit of the sheet is the one that keeps working here, and the
-// stripe it leaves behind offers the way back. Taking it signed the user in and left the mode on:
-// a live session on a device that still refused to talk to the server, saying so in a stripe.
 test("signing in from the stripe ends this-device-only mode", async ({
   page,
   request,
@@ -421,7 +405,6 @@ test("signing in from the stripe ends this-device-only mode", async ({
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
   await readyForOffline(page);
 
-  // The session dies and the marker stays, which is what §2.6 asks the app to open in.
   const kept = (await context.cookies()).filter(
     (cookie) => !cookie.name.includes("access") && !cookie.name.includes("refresh"),
   );
@@ -440,11 +423,9 @@ test("signing in from the stripe ends this-device-only mode", async ({
   await page.getByLabel("Password", { exact: true }).fill(user.password);
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  // The login has its own heading, so the app is what has to be waited for, not a heading.
   await page.waitForURL(/\/home/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Hi,/);
   await expect(page.getByText("You’re working on this device only.")).toHaveCount(0);
   expect(await page.evaluate(() => window.localStorage.getItem("lf.localOnly"))).toBeNull();
-  // And the mode is over for good, not only in this tab: what was queued goes out.
   await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
 });

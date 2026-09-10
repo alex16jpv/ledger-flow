@@ -206,10 +206,6 @@ export async function vaultExists(userId: string): Promise<boolean> {
   return (await indexedDB.databases()).some((database) => database.name === name);
 }
 
-// P-37: who this device holds, read under the same rule as the queue below — the access screens ask
-// it from outside the frame that owns the vault (§2.6), and a database created by the question would
-// look to D-20 like a vault the browser had evicted. Null where the browser cannot say whether the
-// vault is there, which is what `vaultExists` answers when `indexedDB.databases` is missing.
 export async function readVaultProfile(userId: string): Promise<User | null> {
   if (!(await vaultExists(userId))) return null;
   const db = await openDB<VaultSchema>(vaultDatabaseName(userId));

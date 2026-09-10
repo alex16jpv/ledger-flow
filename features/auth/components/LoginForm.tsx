@@ -22,8 +22,6 @@ import { RateLimitAlert } from "./RateLimitAlert";
 interface LoginFormProps {
   onSuccess: (session: SessionUser) => void;
   forgotPasswordEnabled: boolean;
-  // P-37: whose device this is, when it holds someone's data. The field stays editable, so another
-  // account can sign in here; what changes is that nobody has to type what the device already knows.
   knownEmail?: string | null;
 }
 
@@ -36,8 +34,6 @@ export function LoginForm({ onSuccess, forgotPasswordEnabled, knownEmail }: Logi
     defaultValues: { email: "", password: "" },
   });
   const { errors } = form.formState;
-  // The vault is read after the screen paints, so the email arrives late. Whatever the user has
-  // already typed wins: this fills a field nobody has touched, it never overwrites one.
   useEffect(() => {
     if (!knownEmail || form.getFieldState("email").isDirty) return;
     form.setValue("email", knownEmail);

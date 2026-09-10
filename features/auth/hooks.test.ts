@@ -9,8 +9,6 @@ import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { isLocalOnly, setLocalOnly } from "@/lib/network/local-only";
 import { openTestVault, profile, wipeVaults } from "@/lib/testing/vault";
 
-// jsdom drops a `__Host-` cookie over http, so the marker cannot be written the way the BFF writes
-// it. What it says is what this hook depends on; `lib/auth` owns reading it.
 const marker = vi.hoisted(() => ({ value: null as SessionMarker | null }));
 vi.mock("@/lib/auth/marker", () => ({ readSessionMarker: () => marker.value }));
 
@@ -41,8 +39,6 @@ afterEach(async () => {
 });
 
 describe("auth", () => {
-  // P-36: the sheet of P-32 sends a device-only user to the login to end the mode, and the mode
-  // outlived the sign-in: the stripe still said nothing was syncing on a session that just started.
   it("ends this-device-only mode when the sign-in succeeds", async () => {
     setLocalOnly(true);
     reportOnline(true);
@@ -72,7 +68,6 @@ describe("auth", () => {
     expect(connectivityStore.getSnapshot()).toBe("offline");
   });
 
-  // A registration is a sign-in too: the third exit of P-32 wipes the device and lands here.
   it("ends this-device-only mode when a registration succeeds", async () => {
     setLocalOnly(true);
     fetchMock.mockResolvedValue(json({ user: { id: "u2", name: "Grace" } }));
@@ -92,8 +87,6 @@ describe("auth", () => {
     });
   });
 
-  // P-37: the marker says whose device this is (§2.6) and the mirror keeps that user's profile, so
-  // the screen that resumes the sync already has the email.
   it("reads the email of the user this device holds", async () => {
     const user = profile({ id: "u9", email: "ada@ledgerflow.test" });
     const vault = await openTestVault(user.id);

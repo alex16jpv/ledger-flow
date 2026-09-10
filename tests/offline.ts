@@ -130,11 +130,6 @@ export async function listAccounts(request: APIRequestContext): Promise<AccountR
   return ((await response.json()) as { data: AccountRow[] }).data;
 }
 
-// Two outages, and the app tells them apart. `context.setOffline(true)` fails every request but
-// leaves `navigator.onLine` **true**, which is a captive portal or a wifi with no internet: the app
-// believes it is connected and watches its reads fail. A device with no network at all *reports* it,
-// and then a server read is paused instead of run, which is the state P-35 lived in. Both are real;
-// only the first was ever measured, so this is what the second one needs.
 export async function reportsNoNetwork(context: BrowserContext): Promise<void> {
   await context.addInitScript(() => {
     Object.defineProperty(window.navigator, "onLine", { get: () => false });

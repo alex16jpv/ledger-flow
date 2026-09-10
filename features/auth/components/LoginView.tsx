@@ -17,7 +17,6 @@ export function LoginView() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNextPath(params.get("next"));
-  // P-37: the device already knows whose it is, so coming back to sync only needs the password.
   const knownEmail = useDeviceEmail();
 
   return (
