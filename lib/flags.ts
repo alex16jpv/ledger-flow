@@ -5,7 +5,6 @@ export type FeatureFlag =
   | "importTransactions"
   | "forgotPassword"
   | "emailVerification"
-  | "offlineSync"
   | "componentCatalog"
   | "devLogin";
 
@@ -16,7 +15,6 @@ const base: Flags = {
   importTransactions: false,
   forgotPassword: false,
   emailVerification: false,
-  offlineSync: false,
   componentCatalog: true,
   devLogin: false,
 };
