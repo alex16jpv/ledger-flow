@@ -86,6 +86,7 @@ export default async function LandingPage() {
           <h2 id="why-title" className="text-2xl font-semibold tracking-[-0.02em]">
             {t("whyTitle")}
           </h2>
+          <p className="mx-auto mt-3 max-w-[62ch] text-text-2">{t("whyLede")}</p>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           {why.map(({ icon: Icon, color, title, body }) => (

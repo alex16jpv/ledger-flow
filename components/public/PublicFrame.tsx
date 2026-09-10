@@ -72,11 +72,12 @@ export async function PublicFrame({ children }: { children: ReactNode }) {
             {t("footer.contact")}
           </a>
         </nav>
+        {/* next-intl prefixes the default locale whenever `locale` is passed, and `/en` redirects to `/`. */}
         <span className="flex items-center gap-2">
           <Globe {...iconProps("sm")} />
           <Link
             href="/"
-            locale="en"
+            locale={locale === "en" ? undefined : "en"}
             className="hover:text-text"
             aria-current={locale === "en" ? "true" : undefined}
           >
@@ -85,7 +86,7 @@ export async function PublicFrame({ children }: { children: ReactNode }) {
           <span aria-hidden="true">·</span>
           <Link
             href="/"
-            locale="es"
+            locale={locale === "es" ? undefined : "es"}
             className="hover:text-text"
             aria-current={locale === "es" ? "true" : undefined}
           >
