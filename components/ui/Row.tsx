@@ -79,17 +79,21 @@ export function RowTitle({ className, children }: { className?: string; children
   );
 }
 
+export function RowMetaDot({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn("size-[3px] shrink-0 rounded-full bg-border-strong", className)}
+    />
+  );
+}
+
 export function RowMeta({ items, className }: { items: ReactNode[]; className?: string }) {
   return (
     <span className={cn("flex min-w-0 items-center gap-1.5 text-sm text-text-3", className)}>
       {items.filter(Boolean).map((item, index) => (
         <span key={index} className="flex min-w-0 items-center gap-1.5">
-          {index > 0 && (
-            <span
-              aria-hidden="true"
-              className="size-[3px] shrink-0 rounded-full bg-border-strong"
-            />
-          )}
+          {index > 0 && <RowMetaDot />}
           <span className="truncate">{item}</span>
         </span>
       ))}

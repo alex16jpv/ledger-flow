@@ -181,6 +181,15 @@
 .row .title span { min-width: 0; }
 .row .meta { font-size: var(--fs-sm); color: var(--text-3); display: flex; align-items: center; gap: 6px; min-width: 0; }
 .row .meta .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--border-strong); flex: none; }
+/* Below 600px the sessions row stacks its facts: the frame is sized in px, so the device attribute switches it, not a media query. */
+.row .meta.stack { flex-direction: column; align-items: flex-start; gap: 2px; }
+.row .meta.stack .sep { display: none; }
+body[data-device="tablet"] .row .meta.stack, body[data-device="desktop"] .row .meta.stack { flex-direction: row; align-items: center; gap: 6px; }
+body[data-device="tablet"] .row .meta.stack .sep, body[data-device="desktop"] .row .meta.stack .sep { display: block; }
+.row .btn.icon-sm { width: var(--control-sm); padding: 0; }
+body[data-device="tablet"] .row .btn.icon-sm, body[data-device="desktop"] .row .btn.icon-sm { width: auto; padding: 0 var(--sp-3); }
+.row .btn.icon-sm .label { display: none; }
+body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"] .row .btn.icon-sm .label { display: inline; }
 .row .right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
 .row .right .sub { font-size: var(--fs-xs); color: var(--text-3); }
 .row.pending { background: linear-gradient(90deg, var(--warning-soft), transparent 40%); }

@@ -136,3 +136,26 @@ test("a new user edits the profile, changes currency and time zone, reviews sess
   await expect(page).toHaveURL(/\/login\?deleted=1$/, { timeout: 30_000 });
   await expect(page.getByText(/Your account was deleted/)).toBeVisible();
 });
+
+// The owner could only read a fraction of each session row on his phone. The width is set here
+// because the suite's phone is 412px wide, where the old layout cut only 3-5px off each fact; at
+// 375px (iPhone SE, and close to the 390px of his) it showed 73% of each and that is the damage.
+test("no fact in a session row is cut off at its own width", async ({ page, request }) => {
+  await signedInPage(page, request);
+  await page.setViewportSize({ width: 375, height: 700 });
+  await page.goto("/settings/sessions");
+  await expect(page.getByRole("heading", { level: 1, name: "Active sessions" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Sign out .+/ }).first()).toBeVisible();
+
+  const cut = await page.locator("span.truncate").evaluateAll((spans) =>
+    spans
+      .map((span) => ({
+        text: span.textContent ?? "",
+        shown: span.clientWidth,
+        needs: span.scrollWidth,
+      }))
+      .filter((fact) => fact.needs > fact.shown + 1),
+  );
+
+  expect(cut).toEqual([]);
+});

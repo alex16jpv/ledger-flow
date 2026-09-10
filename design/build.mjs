@@ -1147,14 +1147,15 @@ const appearance = () => {
 };
 
 const sessions = () => {
-  const sess = (icon, name, meta, current = false) => {
+  const sess = (icon, name, activity, since, expires, current = false) => {
     const r = current
       ? '<span class="badge success">This device</span>'
-      : '<button class="btn ghost sm" style="color:var(--danger)">Sign out</button>';
-    return `<div class="row" style="cursor:default">${tile(icon, "NONE")}<span class="body"><span class="title">${name}</span><span class="meta">${meta}</span></span><span class="right" style="flex-direction:row">${r}</span></div>`;
+      : `<button class="btn ghost sm icon-sm" style="color:var(--danger)">${iconSvg("log-out", "sm")}<span class="label">Sign out</span></button>`;
+    const meta = `<span class="meta stack"><span>${activity}</span><span class="sep"></span><span class="meta">since ${since}<span class="sep"></span>expires ${expires}</span></span>`;
+    return `<div class="row" style="cursor:default">${tile(icon, "NONE")}<span class="body"><span class="title">${name}</span>${meta}</span><span class="right" style="flex-direction:row">${r}</span></div>`;
   };
   const body = `<div class="alert neutral">${iconSvg("info")}<span>Each sign-in opens a session of up to 30 days. Signing out a session forces that device to sign in again.</span></div>
-<div class="list card flush">${sess("smartphone", "Android · Chrome", "Active now · since Mar 12", true)}${sess("laptop", "Windows · Edge", "2 hours ago · since Sep 18")}${sess("smartphone", "iPhone · Safari", "12 days ago · expires Sep 30")}</div>
+<div class="list card flush">${sess("smartphone", "Android · Chrome", "Active now", "Mar 12", "Oct 12", true)}${sess("laptop", "Windows · Edge", "2 hours ago", "Sep 18", "Oct 18", false)}${sess("smartphone", "iPhone · Safari", "12 days ago", "Aug 31", "Sep 30", false)}</div>
 <button class="btn danger block">${iconSvg("log-out", "sm")}Sign out all other sessions</button>`;
   return screen(body, {
     tab: "",
