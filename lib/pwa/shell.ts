@@ -57,13 +57,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const SHELL_CACHE = "app-shell";
 
-// The RSC payloads of the same routes, so a navigation with no network stays inside the app instead
-// of loading a document (T-01). Separate from `SHELL_CACHE`: one route has both, under the same key.
 export const SHELL_RSC_CACHE = "app-shell-rsc";
 
-// next-intl rewrites an unprefixed path onto the default locale (`/transactions` → `/en/transactions`)
-// and leaves a prefixed one alone. The router fills the route's params from this header, so a payload
-// answered from the cache has to name the path that was asked for, not the one it was warmed with.
+// next-intl prefixes the default locale and leaves an already-prefixed path alone (T-01).
 export function rewrittenPath(pathname: string): string | null {
   const [, first] = pathname.split("/");
   return isAppLocale(first) ? null : `/${DEFAULT_LOCALE}${pathname}`;

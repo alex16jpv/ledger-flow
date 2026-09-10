@@ -148,9 +148,7 @@ async function createExpense(page: Page, amount: number, description: string): P
   await page.getByRole("button", { name: /^Account/ }).click();
   await page.getByRole("dialog", { name: "Account" }).getByRole("option", { name: /Cash/ }).click();
   await page.getByRole("button", { name: "Save transaction" }).click();
-  // The screen leaves the form on its own; a goto fired into that navigation is aborted, and the
-  // toast goes with the leave. The row and its "Pending sync" badge on the list are what prove the
-  // save reached the vault.
+  // A goto fired into the screen's own leave is aborted, so the list is what proves the save.
   await expect(page).toHaveURL(/\/transactions(\?|$)/, { timeout: 15_000 });
   await expect(page.getByRole("heading", { level: 1, name: "Transactions" })).toBeVisible();
   await expect(

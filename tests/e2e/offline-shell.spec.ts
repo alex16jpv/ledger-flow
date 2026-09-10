@@ -112,8 +112,7 @@ test("the shell navigates with no network, filters included, and falls back on a
 
   await page.getByRole("link", { name: "Home" }).first().click();
   await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 });
-  // The app's own start-up navigation only happens once the client has mounted, and it would
-  // interrupt this one. Waiting for the screen itself waits for both (F-45).
+  // The app's own start-up navigation runs on mount and would interrupt this one (F-45).
   await page.waitForLoadState("load");
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 
@@ -128,9 +127,7 @@ test("the shell navigates with no network, filters included, and falls back on a
   await expect(page.getByRole("heading", { level: 1, name: /offline/i })).toBeVisible();
 });
 
-// T-01: the RSC hop of a client-side navigation is what the worker answers from `app-shell-rsc`.
-// Without it the hop fails, the router loads the document instead, and every module change with no
-// network is a full reload: the page starts over, and anything it was showing is gone.
+// T-01: without the payload cache the hop fails and the router reloads the whole document.
 test("with no network a navigation stays inside the app instead of reloading it", async ({
   page,
   request,
@@ -169,7 +166,6 @@ test("with no network a navigation stays inside the app instead of reloading it"
   await expect(page.getByRole("heading", { level: 1, name: "Transactions" })).toBeVisible();
   await markDocument(page);
 
-  // A module change, which is what the owner reported.
   await page.getByRole("link", { name: "Budgets" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: "Budgets" })).toBeVisible({
     timeout: 20_000,
@@ -185,9 +181,7 @@ test("with no network a navigation stays inside the app instead of reloading it"
   await expect(page).toHaveURL(/type=EXPENSE/, { timeout: 20_000 });
   expect(await keptDocument(page)).toBe(true);
 
-  // F-48: the payload of a detail route is cached under its template, with an id no row has. The
-  // worker re-points the rewrite header at the row that was asked for, so the URL and the screen
-  // are the row's — not the template's.
+  // F-48: one template entry answers every row, so the URL and the screen must be this row's.
   const row = page.getByRole("button", { name: /SOFT NAV row/ }).first();
   await expect(row).toBeVisible({ timeout: 30_000 });
   await row.click();

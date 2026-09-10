@@ -75,8 +75,7 @@ const serwist: Serwist = new Serwist({
         sameOrigin && isNavigationPayload(request) && isShellPath(url.pathname),
       handler: { handle: rscNavigation },
     },
-    // A prefetch answers with the route's loading state, not its render, so it must never land in
-    // the cache a navigation reads; failing it with no network costs nothing.
+    // A prefetch's payload is the route's loading state, not its render: never cached, never served.
     {
       matcher: ({ request, sameOrigin, url }) =>
         sameOrigin && request.headers.get(RSC_HEADER) === "1" && isShellPath(url.pathname),
@@ -150,12 +149,7 @@ function payloadRequest(url: string): Request {
   return new Request(url, { credentials: "same-origin", headers: { [RSC_HEADER]: "1" } });
 }
 
-// A response taken out of a cache carries the URL it was stored under, and the rewrite header names
-// the path it was warmed with — for a detail template, another row's id. Both are read by the router,
-// so the answer is built again: a fresh `Response` has no URL of its own, which is what the router
-// wants (it resolves the request's, query included), and the header is re-pointed at the path asked
-// for. A payload left over from an older build is caught by Next itself, which compares the build id
-// in the body and loads the document instead.
+// Built again, not handed over: a fresh `Response` has no URL, so the router resolves the one it asked for.
 function rebase(cached: Response, pathname: string): Response {
   const headers = new Headers(cached.headers);
   const rewritten = rewrittenPath(pathname);
@@ -168,12 +162,7 @@ function rebase(cached: Response, pathname: string): Response {
   });
 }
 
-// The hop a client-side navigation makes. With no network the cache answers it, so the app moves
-// inside itself instead of loading a document (T-01); with no entry the hop still fails, and the
-// router falls back to the document, which `shellPages` answers. **Its own answer is never cached**:
-// the router sends the tree it already holds and the server replies with the part that changed, so
-// what comes back is only good for the screen it was asked from. The cache is filled by the warm,
-// which asks without a tree and gets the whole one.
+// A navigation's own answer is never cached: it is only the part of the tree that changed (T-01).
 async function rscNavigation({
   request,
   event,
