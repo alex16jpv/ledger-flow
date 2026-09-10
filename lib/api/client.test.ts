@@ -1,4 +1,10 @@
-import { connectivityStore, onNetworkFailure, reportOnline } from "@/lib/network/connectivity";
+import {
+  connectivityStore,
+  OFFLINE_VERDICT_MS,
+  onNetworkFailure,
+  reportOnline,
+} from "@/lib/network/connectivity";
+import { setErrorReporter } from "@/lib/observability/reporter";
 
 import { api, setUnauthorizedHandler } from "./client";
 import { ApiError, NetworkError } from "./errors";
@@ -130,5 +136,36 @@ describe("api", () => {
     fetchMock.mockRejectedValue(new DOMException("timeout", "TimeoutError"));
     const error = (await api("/accounts").catch((e: unknown) => e)) as NetworkError;
     expect(error.timedOut).toBe(true);
+  });
+
+  it("keeps a failure the heartbeat calls a lost network out of the error report", async () => {
+    const reported: unknown[] = [];
+    setErrorReporter((error) => reported.push(error));
+    connectivityStore.reset();
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await expect(api("/accounts")).rejects.toBeInstanceOf(NetworkError);
+    reportOnline(false);
+    await Promise.resolve();
+    expect(reported).toEqual([]);
+
+    setErrorReporter(null);
+    connectivityStore.reset();
+  });
+
+  it("reports the failure the app cannot blame on the network", async () => {
+    const reported: unknown[] = [];
+    setErrorReporter((error) => reported.push(error));
+    connectivityStore.reset();
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await expect(api("/accounts")).rejects.toBeInstanceOf(NetworkError);
+    await vi.advanceTimersByTimeAsync(OFFLINE_VERDICT_MS);
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toBeInstanceOf(NetworkError);
+
+    vi.useRealTimers();
+    setErrorReporter(null);
   });
 });

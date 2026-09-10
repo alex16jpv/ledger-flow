@@ -200,8 +200,14 @@ export async function openVault(
   };
 }
 
+// Firefox has no `indexedDB.databases()`: there the question cannot be answered, and a caller that
+// reads the "no" as "the vault is gone" invents a loss (D-20).
+export function canListVaults(): boolean {
+  return isVaultSupported() && typeof indexedDB.databases === "function";
+}
+
 export async function vaultExists(userId: string): Promise<boolean> {
-  if (!isVaultSupported() || typeof indexedDB.databases !== "function") return false;
+  if (!canListVaults()) return false;
   const name = vaultDatabaseName(userId);
   return (await indexedDB.databases()).some((database) => database.name === name);
 }

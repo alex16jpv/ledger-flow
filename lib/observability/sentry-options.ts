@@ -8,7 +8,12 @@ export function sentryOptions() {
     dsn,
     enabled: Boolean(dsn),
     environment: process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.NODE_ENV,
-    release: process.env.NEXT_PUBLIC_APP_VERSION ?? "dev",
+    // Same fallback `lib/env.ts` gives Settings › About: without it every deploy reports as `dev`
+    // and no fix can be told apart from the build before it (H-21).
+    release:
+      process.env.NEXT_PUBLIC_APP_VERSION ??
+      process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ??
+      "dev",
     sendDefaultPii: false,
     tracesSampleRate: 0,
     maxBreadcrumbs: 30,

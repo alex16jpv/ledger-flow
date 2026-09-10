@@ -34,7 +34,17 @@ export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
   return { ...breadcrumb, message: breadcrumb.message && redactNumbers(breadcrumb.message) };
 }
 
-export function scrubEvent(event: ErrorEvent): ErrorEvent {
+// Vercel injects its toolbar into every preview, and what it throws is reported as ours (H-22):
+// the file it threw from is the only thing that tells the two apart.
+const VENDOR_PATH = "/_next-live/";
+
+function threwInsideVendorCode(event: ErrorEvent): boolean {
+  const frames = event.exception?.values?.at(-1)?.stacktrace?.frames;
+  return frames?.at(-1)?.filename?.includes(VENDOR_PATH) === true;
+}
+
+export function scrubEvent(event: ErrorEvent): ErrorEvent | null {
+  if (threwInsideVendorCode(event)) return null;
   const scrubbed: ErrorEvent = {
     ...event,
     user: undefined,

@@ -213,7 +213,9 @@ answers 404 before anything renders — `npm run check-dev-routes` proves it on 
 - **Follow an error:** every API call carries an `x-request-id` (UUID v7) that the backend echoes
   and logs; failed screens print it as "Reference: …" and the BFF logs it as JSON. Search that id in
   the backend logs and in Sentry (tag `request_id`). Sentry events pass through
-  `lib/observability/scrub.ts`: no user, bodies, query strings, cookies or long numbers ever leave.
+  `lib/observability/scrub.ts`: no user, bodies, query strings, cookies or long numbers ever leave,
+  and neither does what the injected Vercel toolbar throws. A failed request is only reported once
+  the heartbeat confirms the network is there, so an offline device files nothing.
 - **Add copy:** every user-visible string is a key in `messages/en.json` and `messages/es.json`,
   nested by feature (`transactions.list.empty.title`). Use ICU plurals and rich tags; never
   concatenate fragments.
