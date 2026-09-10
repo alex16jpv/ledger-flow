@@ -3,13 +3,18 @@ import { account, wipeVaults } from "@/lib/testing/vault";
 import type { SyncChangesResponse } from "@/types/api";
 
 import { VAULT } from "./db";
-import { PULL_STALE_MS, startMirror } from "./mirror";
+import { forceFullResync, PULL_STALE_MS, startMirror } from "./mirror";
 import type { PullPageQuery } from "./pull";
 import { currentVault, expectVault, read, resetVaultGate, setCurrentVault } from "./repository";
-import { vaultDatabaseName } from "./schema";
+import { PROFILE_KEY, vaultDatabaseName } from "./schema";
 
 const originalStorage = Object.getOwnPropertyDescriptor(navigator, "storage");
 const persist = vi.fn().mockResolvedValue(true);
+// The feed of this suite never carries a profile, and the mirror asks for it when it is missing.
+const meResponse = () =>
+  new Response(JSON.stringify({ user: { id: "u1", name: "Ada", timezone: "America/Bogota" } }), {
+    headers: { "content-type": "application/json" },
+  });
 
 const feed: SyncChangesResponse = {
   serverTime: "2026-09-03T12:00:00.000Z",
@@ -49,6 +54,10 @@ beforeEach(() => {
   clock = 1_000_000;
   persist.mockClear();
   onChanged.mockClear();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(meResponse())),
+  );
   Object.defineProperty(navigator, "storage", {
     value: { persisted: vi.fn().mockResolvedValue(false), persist },
     configurable: true,
@@ -204,5 +213,39 @@ describe("startMirror", () => {
     clock += PULL_STALE_MS;
     window.dispatchEvent(new Event("focus"));
     expect(queries).toHaveLength(1);
+  });
+
+  // The resync throws the copy away before downloading it again, so a pass that failed leaves the
+  // device with nothing: saying "Resynced" over that is the one answer it must never give.
+  it("rejects when the pull that should refill the copy failed", async () => {
+    const stop = startMirror("u1", {
+      now: () => clock,
+      pull: { fetchPage: () => Promise.reject(new Error("no network")) },
+    });
+    await vi.waitFor(() => {
+      expect(currentVault()).not.toBeNull();
+    });
+
+    await expect(forceFullResync("u1")).rejects.toThrow("no network");
+    stop();
+  });
+
+  it("says it could not resync when no mirror is there to refill the copy", async () => {
+    await expect(forceFullResync("u1")).rejects.toThrow(/no mirror is open/);
+  });
+
+  // H-14: `changes.user` is null unless the profile changed in that page, so a mirror can end up
+  // with no zone to build a window in — and then every windowed read goes to the server, which
+  // with no network is a dead screen. The copy is filled online, so it can ask for the row.
+  it("asks the server for the profile when the feed never carried it", async () => {
+    const stop = start();
+
+    await vi.waitFor(async () => {
+      expect(await currentVault()?.db.get("profile", PROFILE_KEY)).toBeDefined();
+    });
+    const profile = await currentVault()?.db.get("profile", PROFILE_KEY);
+    expect(profile?.row.timezone).toBe("America/Bogota");
+
+    stop();
   });
 });

@@ -1,6 +1,7 @@
 import { readSessionMarker } from "@/lib/auth/marker";
 import { connectivityStore } from "@/lib/network/connectivity";
 import { isLocalOnly } from "@/lib/network/local-only";
+import { fetchCurrentUser } from "@/lib/session/api";
 
 import { loadClockOffset } from "./clock";
 import { isVaultSupported, openVault, VAULT, type VaultHandle } from "./db";
@@ -16,6 +17,7 @@ import { requestPersistentStorage } from "./persist";
 import { pullChanges, type PullOptions } from "./pull";
 import { purgeVault } from "./purge";
 import { setCurrentVault } from "./repository";
+import { PROFILE_KEY, profileRecord } from "./schema";
 
 // Plan §4.2: pull on open, on regaining focus if the copy is stale, and after a push. Never on a
 // background timer, which is the traffic pattern local-first exists to remove.
@@ -36,12 +38,34 @@ export function noMirror(): void {
 
 // The running mirror's own pull, so "Force full resync" can ask for one without a second engine.
 let activePull: (() => Promise<void>) | null = null;
+// A background pass swallows its failure so the mirror keeps serving; the resync threw the copy
+// away first, so it needs to know.
+let lastPullError: Error | null = null;
+
+function takeLastPullError(): Error | null {
+  const failure = lastPullError;
+  lastPullError = null;
+  return failure;
+}
+
+export class ResyncUnavailableError extends Error {
+  constructor(reason: string) {
+    super(`The offline copy cannot be downloaded again: ${reason}`);
+    this.name = "ResyncUnavailableError";
+  }
+}
 
 // Ajustes › Sync status: throw the copy away and take it again from the top. The queue is not a
 // copy of anything — it is the only place unsent work exists — so it stays (invariant 7).
 export async function forceFullResync(userId: string): Promise<void> {
+  if (isLocalOnly()) throw new ResyncUnavailableError("this device is working on its own");
+  const pull = activePull;
   await purgeVault(userId, { discardPendingWork: false });
-  await activePull?.();
+  if (!pull) throw new ResyncUnavailableError("no mirror is open on this device");
+  takeLastPullError();
+  await pull();
+  const failure = takeLastPullError();
+  if (failure) throw failure;
 }
 
 export function startMirror(userId: string, options: MirrorOptions = {}): () => void {
@@ -53,15 +77,35 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   let lastPullAt = 0;
   const state = { stopped: false };
 
+  // The feed carries the profile only when it changed, so a mirror filled by pages that never did
+  // has no zone to build a window in — and every windowed read goes to the server (H-14).
+  const ensureProfile = async (vault: VaultHandle): Promise<boolean> => {
+    if (await vault.db.get("profile", PROFILE_KEY)) return false;
+    const { user } = await fetchCurrentUser();
+    await vault.db.put("profile", profileRecord(user));
+    return true;
+  };
+
   const pullOnce = (vault: VaultHandle): Promise<void> => {
     served = wanted;
     return pullChanges(vault, options.pull)
-      .then((result) => {
+      .then(async (result) => {
         lastPullAt = now();
-        if (result.changed) options.onChanged?.();
+        lastPullError = null;
+        // A profile that cannot be fetched is a failed pass, but it must not cost the screens what
+        // this one did bring, so it is caught here and the next pass tries again.
+        let stored = false;
+        try {
+          stored = await ensureProfile(vault);
+        } catch (error: unknown) {
+          lastPullError = error instanceof Error ? error : new Error(String(error));
+          console.warn("ledger-flow: the mirror could not fetch the profile it lacks", error);
+        }
+        if (result.changed || stored) options.onChanged?.();
       })
       .catch((error: unknown) => {
         // lib/api already reported it; the mirror keeps serving whatever the last pull left.
+        lastPullError = error instanceof Error ? error : new Error(String(error));
         console.warn("ledger-flow: pulling the offline mirror failed", error);
       });
   };
