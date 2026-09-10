@@ -36,12 +36,34 @@ export function noMirror(): void {
 
 // The running mirror's own pull, so "Force full resync" can ask for one without a second engine.
 let activePull: (() => Promise<void>) | null = null;
+// A background pass swallows its failure so the mirror keeps serving; the resync threw the copy
+// away first, so it needs to know.
+let lastPullError: Error | null = null;
+
+function takeLastPullError(): Error | null {
+  const failure = lastPullError;
+  lastPullError = null;
+  return failure;
+}
+
+export class ResyncUnavailableError extends Error {
+  constructor(reason: string) {
+    super(`The offline copy cannot be downloaded again: ${reason}`);
+    this.name = "ResyncUnavailableError";
+  }
+}
 
 // Ajustes › Sync status: throw the copy away and take it again from the top. The queue is not a
 // copy of anything — it is the only place unsent work exists — so it stays (invariant 7).
 export async function forceFullResync(userId: string): Promise<void> {
+  if (isLocalOnly()) throw new ResyncUnavailableError("this device is working on its own");
+  const pull = activePull;
   await purgeVault(userId, { discardPendingWork: false });
-  await activePull?.();
+  if (!pull) throw new ResyncUnavailableError("no mirror is open on this device");
+  takeLastPullError();
+  await pull();
+  const failure = takeLastPullError();
+  if (failure) throw failure;
 }
 
 export function startMirror(userId: string, options: MirrorOptions = {}): () => void {
@@ -58,10 +80,12 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     return pullChanges(vault, options.pull)
       .then((result) => {
         lastPullAt = now();
+        lastPullError = null;
         if (result.changed) options.onChanged?.();
       })
       .catch((error: unknown) => {
         // lib/api already reported it; the mirror keeps serving whatever the last pull left.
+        lastPullError = error instanceof Error ? error : new Error(String(error));
         console.warn("ledger-flow: pulling the offline mirror failed", error);
       });
   };

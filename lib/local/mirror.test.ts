@@ -3,7 +3,7 @@ import { account, wipeVaults } from "@/lib/testing/vault";
 import type { SyncChangesResponse } from "@/types/api";
 
 import { VAULT } from "./db";
-import { PULL_STALE_MS, startMirror } from "./mirror";
+import { forceFullResync, PULL_STALE_MS, startMirror } from "./mirror";
 import type { PullPageQuery } from "./pull";
 import { currentVault, expectVault, read, resetVaultGate, setCurrentVault } from "./repository";
 import { vaultDatabaseName } from "./schema";
@@ -204,5 +204,24 @@ describe("startMirror", () => {
     clock += PULL_STALE_MS;
     window.dispatchEvent(new Event("focus"));
     expect(queries).toHaveLength(1);
+  });
+
+  // The resync throws the copy away before downloading it again, so a pass that failed leaves the
+  // device with nothing: saying "Resynced" over that is the one answer it must never give.
+  it("rejects when the pull that should refill the copy failed", async () => {
+    const stop = startMirror("u1", {
+      now: () => clock,
+      pull: { fetchPage: () => Promise.reject(new Error("no network")) },
+    });
+    await vi.waitFor(() => {
+      expect(currentVault()).not.toBeNull();
+    });
+
+    await expect(forceFullResync("u1")).rejects.toThrow("no network");
+    stop();
+  });
+
+  it("says it could not resync when no mirror is there to refill the copy", async () => {
+    await expect(forceFullResync("u1")).rejects.toThrow(/no mirror is open/);
   });
 });
