@@ -145,7 +145,11 @@ when detection fails. The steps of a browser other than the one in use are never
   agent (smartphone, laptop, monitor), "This device" for the current refresh family or a "Sign out"
   button (`DELETE /auth/sessions/:id`, idempotent), last activity and expiry; and "Sign out all other
   sessions" (`POST /auth/logout-all`) — the confirmation warns that this device will have to sign in
-  again too.
+  again too. **Below 600px the row's three facts do not fit on one line**, so the activity takes its
+  own line and the two dates share the next one, with no dot between them and the row's own dot only
+  from 600px up; and "Sign out" becomes icon-only, keeping the device in its accessible name. Nothing
+  in the row is ever truncated: measured at 375px, the three facts on one line showed 73% of their
+  text each.
 - **Profile & security** (`#profile-and-security`): name, email (help: it signs out other sessions), a
   new password, a re-authentication alert and a required "Current password" field when the email or the
   password changes; `CURRENT_PASSWORD_INVALID` shows inline; success brings a toast and a token refresh.

@@ -8,7 +8,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
-import { List, Row, RowBody, RowMeta, RowTitle } from "@/components/ui/Row";
+import { List, Row, RowBody, RowMeta, RowMetaDot, RowTitle } from "@/components/ui/Row";
 import { Sheet } from "@/components/ui/Sheet";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
@@ -83,21 +83,26 @@ export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<voi
                     <RowTitle>
                       <span>{label}</span>
                     </RowTitle>
-                    <RowMeta
-                      items={[
-                        activity,
-                        t("settings.sessions.since", {
-                          date: dates.formatDay(new Date(session.createdAt)),
-                        }),
-                        t("settings.sessions.expires", {
-                          date: dates.formatDay(new Date(session.expiresAt)),
-                        }),
-                      ]}
-                    />
+                    <span className="flex min-w-0 flex-col items-start gap-0.5 sm:flex-row sm:items-center sm:gap-1.5">
+                      <RowMeta items={[activity]} />
+                      <RowMetaDot className="hidden sm:block" />
+                      <RowMeta
+                        items={[
+                          t("settings.sessions.since", {
+                            date: dates.formatDay(new Date(session.createdAt)),
+                          }),
+                          t("settings.sessions.expires", {
+                            date: dates.formatDay(new Date(session.expiresAt)),
+                          }),
+                        ]}
+                      />
+                    </span>
                   </RowBody>
                   <Button
                     variant="secondary"
                     size="sm"
+                    iconOnly
+                    className="sm:w-auto sm:px-3"
                     aria-label={t("settings.sessions.signOutDevice", { device: label })}
                     loading={revoke.isPending && revoke.variables === session.id}
                     onClick={() => {
@@ -114,7 +119,8 @@ export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<voi
                         });
                     }}
                   >
-                    {t("settings.sessions.signOut")}
+                    <LogOut {...iconProps("sm")} />
+                    <span className="hidden sm:inline">{t("settings.sessions.signOut")}</span>
                   </Button>
                 </Row>
               );
