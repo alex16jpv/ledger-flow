@@ -34,6 +34,7 @@ export function useBudgetQuery(id: string, reference?: string) {
   return useQuery({
     queryKey: budgetKeys.detail(id, reference),
     queryFn: () => fetchBudget(id, reference),
+    enabled: id !== "",
   });
 }
 

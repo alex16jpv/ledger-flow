@@ -2911,3 +2911,29 @@ cover` is set once in the root layout for the standalone display.
   field are answered by their instant, so nothing disappears, and the owner decided on 2026-09-10 not
   to backfill them: with the account's zone unchanged both rules agree, so the backend keeps that
   branch instead of migrating the rows.
+## 2026-09-10 · Creating a budget follows the period filter
+
+- **Decision:** on `/budgets`, what the screen offers to create is the **selected filter's** period,
+  not always a monthly budget: the empty state's line and button name it ("Create a weekly budget"),
+  and the "No {period} budgets this month" line gains the same button. "All" keeps meaning monthly.
+  The one-amount sheet (`GlobalBudgetForm`) takes the period, titles itself after it ("A ceiling for
+  the week") and creates the **global** budget of that type — the same thing it created before, in
+  another period. Owner's decision of 2026-09-10, asked before touching anything.
+- **Decision:** **CUSTOM has no sheet.** Its window is two dates only a person can pick, so the call
+  to action there is a link to `/budgets/new?period=CUSTOM` and the form arrives with the period
+  selected. `RecurringBudgetPeriod` (`Exclude<BudgetPeriodType, "CUSTOM">`) makes that a fact of the
+  type, not a runtime check: the sheet cannot be handed a period it could not fulfil.
+- **Decision:** the suggested amounts are **scaled to the period**. They are monthly figures (a
+  currency table or last month's spending), so a weekly budget divides them by a month's worth of
+  weeks (7 / (365/12)) and a yearly one multiplies by twelve, each rounded by `roundToNice`. With
+  COP and no history the monthly $1,500,000 / $2,000,000 / $3,000,000 become $350,000 / $450,000 /
+  $700,000 for a week. Monthly figures come out unchanged, checked value by value. Alternative:
+  dropping the suggestions outside the monthly case, rejected because it takes away the only help the
+  sheet gives; leaving them monthly was never an option — it would ask for a week's ceiling with a
+  month's number.
+- **Consequence:** `budgets.global.help` no longer says "any month" but "in any period", so it stays
+  true whatever the period is. That sentence also shows in the onboarding, whose plate was rebuilt.
+  Per-period copy lives in `budgets.global.nameByPeriod`, `budgets.global.amountByPeriod` and
+  `budgets.periodSpan` instead of one parameterized string, because English capitalizes the period at
+  the head of a phrase and Spanish does not, and `messages.test.ts` requires both locales to use the
+  same ICU arguments for a key.

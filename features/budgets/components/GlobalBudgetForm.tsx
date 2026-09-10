@@ -16,15 +16,22 @@ import { iconProps } from "@/lib/icons/sizes";
 import { budgetSuggestions } from "../form";
 import { useCreateBudget } from "../hooks";
 import { useLastMonthSpending } from "../hooks";
+import type { RecurringBudgetPeriod } from "../progress";
 import { budgetAmountSchema } from "../schemas";
 
 interface GlobalBudgetFormProps {
   onDone: () => void;
   submitLabel: string;
   skipLabel: string;
+  periodType?: RecurringBudgetPeriod;
 }
 
-export function GlobalBudgetForm({ onDone, submitLabel, skipLabel }: GlobalBudgetFormProps) {
+export function GlobalBudgetForm({
+  onDone,
+  submitLabel,
+  skipLabel,
+  periodType = "MONTHLY",
+}: GlobalBudgetFormProps) {
   const t = useTranslations();
   const money = useMoney();
   const createBudget = useCreateBudget();
@@ -33,6 +40,7 @@ export function GlobalBudgetForm({ onDone, submitLabel, skipLabel }: GlobalBudge
     money.currency,
     money.fractionDigits,
     lastMonth.data ?? null,
+    periodType,
   );
   const [amount, setAmount] = useState<number | null>(null);
   const [inputKey, setInputKey] = useState(0);
@@ -48,11 +56,11 @@ export function GlobalBudgetForm({ onDone, submitLabel, skipLabel }: GlobalBudge
     setValidation(null);
     try {
       await createBudget.mutateAsync({
-        name: t("budgets.global.defaultName"),
+        name: t(`budgets.global.nameByPeriod.${periodType}`),
         color: "INDIGO",
         categoryIds: [],
         type: "EXPENSE",
-        periodType: "MONTHLY",
+        periodType,
         amount: parsed.data.amount,
       });
       onDone();
@@ -67,7 +75,7 @@ export function GlobalBudgetForm({ onDone, submitLabel, skipLabel }: GlobalBudge
       <Card className="flex flex-col gap-3 bg-[linear-gradient(135deg,var(--brand-soft),var(--surface)_70%)]">
         <AmountInput
           key={inputKey}
-          label={t("budgets.global.amount")}
+          label={t(`budgets.global.amountByPeriod.${periodType}`)}
           defaultValue={amount}
           onChange={setAmount}
           invalid={validation !== null}
@@ -81,7 +89,11 @@ export function GlobalBudgetForm({ onDone, submitLabel, skipLabel }: GlobalBudge
         )}
         {lastMonth.data ? (
           <span className="text-center text-xs text-text-3">
-            {t("budgets.form.suggestionsFromSpending")}
+            {t(
+              periodType === "MONTHLY"
+                ? "budgets.form.suggestionsFromSpending"
+                : "budgets.form.suggestionsScaled",
+            )}
           </span>
         ) : null}
         <ChipRow className="justify-center">

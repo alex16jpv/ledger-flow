@@ -20,6 +20,7 @@ import {
   toUpdateInput,
 } from "@/features/budgets/form";
 import { useBudgetQuery, useCreateBudget, useUpdateBudget } from "@/features/budgets/hooks";
+import { parseBudgetPeriod } from "@/features/budgets/progress";
 import { useCategoriesQuery } from "@/features/categories/hooks";
 import { ApiError } from "@/lib/api/errors";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
@@ -49,14 +50,15 @@ export function NewBudgetScreen() {
   const { timeZone } = useFormatSettings();
   const [now] = useState(() => new Date());
   const from = params.get("from");
+  const period = parseBudgetPeriod(params.get("period"));
   const source = useBudgetQuery(from ?? "", undefined);
   const categories = useCategoriesQuery(undefined, true, true);
   const create = useCreateBudget();
-  const waiting = (from !== null && source.isPending) || categories.isPending;
+  const waiting = (Boolean(from) && source.isPending) || categories.isPending;
   const defaults =
     from && source.data
       ? fromBudget(source.data, timeZone, "copy", now)
-      : defaultBudgetValues(now, timeZone);
+      : { ...defaultBudgetValues(now, timeZone), ...(period ? { periodType: period } : {}) };
 
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-5">
@@ -70,7 +72,7 @@ export function NewBudgetScreen() {
         <FormSkeleton label={t("common.loading")} />
       ) : (
         <BudgetForm
-          key={from ?? "new"}
+          key={from ?? period ?? "new"}
           defaultValues={defaults}
           categories={categories.data ?? []}
           submitLabel={t("budgets.form.create")}

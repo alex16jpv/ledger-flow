@@ -246,7 +246,7 @@ ${accounts}
 </div></main></div>`;
 };
 
-const budgets = () => {
+const budgets = (v = {}) => {
   const card = (name, spent, limit, period, note, o = {}) => {
     const [ic, col] = o.icon ? [o.icon, o.color] : CATS[name];
     const pct = limit ? Math.min(100, round((spent / limit) * 100)) : 0;
@@ -284,13 +284,40 @@ const budgets = () => {
   ].join("");
   const header = `<header class="page-header"><div class="title"><h1 class="h1">Budgets</h1></div>
 <div class="actions"><button class="btn ghost icon-only round" aria-label="Past budgets">${iconSvg("archive")}</button><button class="btn primary desktop-only">${iconSvg("plus", "sm")}New budget</button><button class="btn secondary icon-only round mobile-only" aria-label="New">${iconSvg("plus")}</button></div></header>`;
-  const period = `<div class="period-nav"><button class="btn ghost icon-only round" aria-label="Previous month">${iconSvg("chevron-left")}</button><span class="label">September 2026</span><button class="btn ghost icon-only round" aria-label="Next month" disabled>${iconSvg("chevron-right")}</button></div>
-<div class="chips"><button class="chip selected">All</button><button class="chip">Monthly</button><button class="chip">Weekly</button><button class="chip">Biweekly</button><button class="chip">Quarterly</button><button class="chip">Yearly</button><button class="chip">Custom</button></div>`;
-  return `<div class="shell">${sidebar("pres")}<main class="main"><div class="page">
-${header}${period}${glob}
+  const period = (
+    sel = "All",
+  ) => `<div class="period-nav"><button class="btn ghost icon-only round" aria-label="Previous month">${iconSvg("chevron-left")}</button><span class="label">September 2026</span><button class="btn ghost icon-only round" aria-label="Next month" disabled>${iconSvg("chevron-right")}</button></div>
+<div class="chips">${["All", "Weekly", "Biweekly", "Monthly", "Quarterly", "Yearly", "Custom"].map((c) => `<button class="chip${c === sel ? " selected" : ""}">${c}</button>`).join("")}</div>`;
+  const footnote = `<div class="empty" style="padding:24px 16px 8px"><span class="small faint">Balance adjustments and transfers never count toward a budget.</span></div>`;
+  const shell = (body, sheet = "") =>
+    `<div class="shell">${sidebar("pres")}<main class="main"><div class="page">
+${body}
+</div></main>${tabbar("pres")}</div>${sheet}`;
+  const cta = (kind) =>
+    `<${kind === "link" ? 'a class="btn primary" href="#"' : 'button class="btn primary"'} style="margin-top:8px">Create a ${v.filter.toLowerCase()} budget</${kind === "link" ? "a" : "button"}>`;
+  if (v.empty)
+    return shell(
+      `${header}${period(v.filter)}
+<div class="empty" style="padding-top:56px">${tile("chart-pie", "NONE", "lg")}<span class="h3">Put a ceiling on your small spending</span><p class="small muted" style="margin:0;max-width:280px">${v.filter === "Custom" ? "A custom budget runs between the two dates you pick." : `A total ${v.filter.toLowerCase()} budget shows how much is left before the ${v.span} ends.`}</p>${cta(v.filter === "Custom" ? "link" : "button")}</div>`,
+      v.sheet
+        ? sheetWrap(
+            `<div class="card color-INDIGO" style="background:linear-gradient(135deg,var(--brand-soft),var(--surface) 70%)"><div class="amount-input" style="padding:12px 0"><span class="cur">$</span><span class="num">450,000</span><span class="caret"></span></div>
+<span class="xs faint" style="text-align:center">Scaled from last month’s spending</span>
+<div class="chips" style="justify-content:center">${["$350,000", "$450,000", "$700,000"].map((v) => `<button class="chip">${v}</button>`).join("")}</div></div>
+<div class="alert neutral">${iconSvg("sparkles")}<span>You can adjust it in any period without touching the base amount, and add per-category budgets whenever you like.</span></div>
+<button class="btn primary lg block">Create budget</button><button class="btn ghost block">Cancel</button>`,
+            `A ceiling for the ${v.span}`,
+          )
+        : "",
+    );
+  if (v.noneFor)
+    return shell(
+      `${header}${period(v.filter)}
+<div class="empty" style="padding:32px 16px 8px"><span class="small faint">No ${v.filter.toLowerCase()} budgets this month</span>${cta("button")}</div>${footnote}`,
+    );
+  return shell(`${header}${period()}${glob}
 <div class="grid-2">${cards}</div>
-<div class="empty" style="padding:24px 16px 8px"><span class="small faint">Balance adjustments and transfers never count toward a budget.</span></div>
-</div></main>${tabbar("pres")}</div>`;
+${footnote}`);
 };
 
 const COLOR_NAMES = [
@@ -640,7 +667,7 @@ const onboarding = (step) => {
     body = `<div class="stack-sm" style="text-align:center"><span class="eyebrow">Step 2 of 2</span><h1 class="h1">A ceiling for the month</h1><p class="muted" style="margin:0">A total monthly budget: it counts everything you spend, including what you log without a category.</p></div>
 <div class="card color-INDIGO" style="background:linear-gradient(135deg,var(--brand-soft),var(--surface) 70%)"><div class="amount-input" style="padding:12px 0"><span class="cur">$</span><span class="num">2,000,000</span><span class="caret"></span></div>
 <div class="chips" style="justify-content:center">${["$1,500,000", "$2,000,000", "$3,000,000"].map((v) => `<button class="chip">${v}</button>`).join("")}</div></div>
-<div class="alert neutral">${iconSvg("sparkles")}<span>You can adjust it any month without touching the base amount, and add per-category budgets whenever you like.</span></div>
+<div class="alert neutral">${iconSvg("sparkles")}<span>You can adjust it in any period without touching the base amount, and add per-category budgets whenever you like.</span></div>
 <button class="btn primary lg block">Create budget</button><button class="btn ghost block">Not now</button>`;
   }
   return authFrame(
@@ -2397,7 +2424,37 @@ const PAGES = [
     title: "Budgets",
     group: "Screens",
     note: "Navigation by reference period, a filter by period type, the global budget as the featured card, and one card per budget with progress, plain-language status and its warnings: an adjusted amount this period, an archived category, a custom window with an end date.",
-    plates: [plate("list", "List", "", budgets(), { added: "2026-09-01" })],
+    plates: [
+      plate("list", "List", "", budgets(), { added: "2026-09-01" }),
+      plate(
+        "empty-follows-filter",
+        "Empty · the filter names what gets created",
+        'Under "Weekly" the line and the call to action are weekly; under "All" they are monthly, as they were.',
+        budgets({ empty: true, filter: "Weekly", span: "week" }),
+        { added: "2026-09-10" },
+      ),
+      plate(
+        "empty-sheet-for-the-period",
+        "Empty · the one-amount sheet of that period",
+        "Titled after the period, and the suggested amounts are last month's spending scaled to it.",
+        budgets({ empty: true, sheet: true, filter: "Weekly", span: "week" }),
+        { added: "2026-09-10" },
+      ),
+      plate(
+        "none-for-the-filter",
+        "None for the filter, others in the month",
+        'The sentence gains the same call to action. Under "All" and "Monthly" the dashed card above already is it, so there the sentence stays alone.',
+        budgets({ noneFor: true, filter: "Weekly" }),
+        { added: "2026-09-10" },
+      ),
+      plate(
+        "empty-custom",
+        'Empty · "Custom" goes to the full form',
+        "A custom window is two dates the user picks, so there is no one-amount sheet: the call to action is a link to New budget.",
+        budgets({ empty: true, filter: "Custom" }),
+        { added: "2026-09-10" },
+      ),
+    ],
   },
   {
     file: "budget-detail.html",

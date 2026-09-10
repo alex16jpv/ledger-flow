@@ -8,17 +8,15 @@ import { Sheet } from "@/components/ui/Sheet";
 import { BudgetsView } from "@/features/budgets/components/BudgetsView";
 import { GlobalBudgetForm } from "@/features/budgets/components/GlobalBudgetForm";
 import { PastBudgetsView, type PastTab } from "@/features/budgets/components/PastBudgetsView";
-import { BUDGET_PERIOD_TYPES, type BudgetPeriodType } from "@/features/budgets/progress";
+import {
+  type BudgetPeriodType,
+  parseBudgetPeriod,
+  type RecurringBudgetPeriod,
+} from "@/features/budgets/progress";
 import { parseMonthKey } from "@/features/budgets/reference";
 import { useCategoriesQuery } from "@/features/categories/hooks";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useRouter } from "@/lib/i18n/navigation";
-
-function parsePeriod(value: string | null): BudgetPeriodType | null {
-  return (BUDGET_PERIOD_TYPES as readonly string[]).includes(value ?? "")
-    ? (value as BudgetPeriodType)
-    : null;
-}
 
 function useCategoryMap() {
   const categories = useCategoriesQuery(undefined, true, true);
@@ -35,9 +33,10 @@ export function BudgetsScreen() {
   const { timeZone } = useFormatSettings();
   const [now] = useState(() => new Date());
   const monthKey = parseMonthKey(params.get("reference"), now, timeZone);
-  const period = parsePeriod(params.get("period"));
+  const period = parseBudgetPeriod(params.get("period"));
   const categories = useCategoryMap();
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState<RecurringBudgetPeriod | null>(null);
+  const sheetPeriod = creating ?? "MONTHLY";
 
   function apply(next: { reference?: string; period?: BudgetPeriodType | null }) {
     const reference = next.reference ?? monthKey;
@@ -64,22 +63,24 @@ export function BudgetsScreen() {
         onPeriodFilterChange={(next) => {
           apply({ period: next });
         }}
-        onCreateGlobal={() => {
-          setCreating(true);
+        onCreateGlobal={(next) => {
+          setCreating(next);
         }}
       />
       <Sheet
-        open={creating}
+        open={creating !== null}
         onClose={() => {
-          setCreating(false);
+          setCreating(null);
         }}
-        title={t("onboarding.budget.title")}
+        title={t("budgets.global.sheetTitle", { span: t(`budgets.periodSpan.${sheetPeriod}`) })}
       >
         <GlobalBudgetForm
+          key={sheetPeriod}
+          periodType={sheetPeriod}
           submitLabel={t("onboarding.budget.submit")}
           skipLabel={t("common.cancel")}
           onDone={() => {
-            setCreating(false);
+            setCreating(null);
           }}
         />
       </Sheet>
