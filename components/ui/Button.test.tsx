@@ -13,6 +13,14 @@ describe("Button", () => {
     expect(icon).not.toMatch(/px-\d|rounded-md/);
   });
 
+  it("paints the secondary border and only that variant's (T-05)", () => {
+    const secondary = buttonClasses({ variant: "secondary" });
+    expect(secondary).toContain("border-border-strong");
+    expect(secondary).not.toContain("border-transparent");
+    expect(buttonClasses({ variant: "primary" })).toContain("border-transparent");
+    expect(buttonClasses({ variant: "ghost" })).toContain("border-transparent");
+  });
+
   it("blocks double submit while loading and exposes aria-busy", async () => {
     const onClick = vi.fn();
     render(

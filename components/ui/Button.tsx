@@ -14,14 +14,15 @@ export interface ButtonStyleProps {
   block?: boolean;
 }
 
+// `cn` is a plain join, so a border colour in the base class wins by stylesheet order, not by variant.
 const VARIANT: Record<ButtonVariant, string> = {
-  primary: "bg-brand text-on-brand hover:bg-brand-hover",
-  secondary: "bg-surface border-border-strong text-text hover:bg-surface-2",
-  soft: "bg-brand-soft text-brand-text",
-  ghost: "bg-transparent text-text-2 hover:bg-surface-2 hover:text-text",
-  danger: "bg-danger-soft text-danger",
-  dangerSolid: "bg-danger-solid text-on-brand",
-  ink: "bg-ink text-on-ink",
+  primary: "border-transparent bg-brand text-on-brand hover:bg-brand-hover",
+  secondary: "border-border-strong bg-surface text-text hover:bg-surface-2",
+  soft: "border-transparent bg-brand-soft text-brand-text",
+  ghost: "border-transparent bg-transparent text-text-2 hover:bg-surface-2 hover:text-text",
+  danger: "border-transparent bg-danger-soft text-danger",
+  dangerSolid: "border-transparent bg-danger-solid text-on-brand",
+  ink: "border-transparent bg-ink text-on-ink",
 };
 
 const SIZE: Record<ButtonSize, string> = {
@@ -46,7 +47,7 @@ export function buttonClasses({
   block = false,
 }: ButtonStyleProps = {}): string {
   return cn(
-    "inline-flex items-center justify-center gap-2 border border-transparent font-medium whitespace-nowrap select-none",
+    "inline-flex items-center justify-center gap-2 border font-medium whitespace-nowrap select-none",
     "transition-[background,border-color,color,transform] duration-(--dur-1) ease-(--ease) active:scale-[0.98]",
     "disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
     VARIANT[variant],
