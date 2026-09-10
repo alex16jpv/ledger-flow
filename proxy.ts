@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth/routes";
 import { isEnabled } from "@/lib/flags";
 import { routing } from "@/lib/i18n/routing";
+import { namesUnknownRow, UNKNOWN_ROW_HEADER } from "@/lib/routing/entity-route";
 import { buildCsp, cspHeaderName, newNonce } from "@/lib/security/csp";
 
 const intl = createMiddleware(routing);
@@ -67,6 +68,9 @@ export default function proxy(request: NextRequest) {
     url.search = "";
     return NextResponse.redirect(url);
   }
+
+  // The address cannot name a row, so the group's layout answers 404 above its own streaming boundary.
+  if (namesUnknownRow(path)) request.headers.set(UNKNOWN_ROW_HEADER, "1");
 
   const nonce = newNonce();
   const csp = buildCsp({

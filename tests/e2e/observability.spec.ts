@@ -3,8 +3,11 @@ import { expect, type Page, test } from "@playwright/test";
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
 const MISSING_ACCOUNT = "01920000-0000-7000-8000-0000000000ff";
-// Not found has its own friendly state; a malformed id fails with the generic screen error and its reference.
-const BROKEN_ACCOUNT = "not-an-account-id";
+// T-03 took away the only address that reached this state: a malformed id is refused with a 404
+// before any screen runs, and a well-formed unknown one gets the friendly not-found state, which
+// carries no reference. A 503 is what the design puts the reference under, and the backend cannot be
+// asked for one on demand, so this is the mock §1.3 allows.
+const BROKEN_ACCOUNT = "01920000-0000-7000-8000-0000000000e0";
 type Request = Parameters<Parameters<typeof test>[2]>[0]["request"];
 
 async function signIn(page: Page, request: Request) {
@@ -31,15 +34,25 @@ test("a failing screen shows the same reference the API call carried", async ({
   request,
 }) => {
   await signIn(page, request);
-  const failed = page.waitForResponse(
-    (response) => response.url().includes(`/api/accounts/${BROKEN_ACCOUNT}`) && !response.ok(),
-  );
+  // Every attempt, because the read retries a 503 once and the screen prints the last one's id.
+  const carried: string[] = [];
+  await page.route(`**/api/accounts/${BROKEN_ACCOUNT}`, (route) => {
+    const requestId = route.request().headers()["x-request-id"] ?? "";
+    carried.push(requestId);
+    return route.fulfill({
+      status: 503,
+      headers: { "content-type": "application/json", "x-request-id": requestId },
+      body: JSON.stringify({ code: "DB_UNAVAILABLE", message: "The database is unavailable." }),
+    });
+  });
+
   await page.goto(`/accounts/${BROKEN_ACCOUNT}`);
-  const response = await failed;
-  const requestId = response.request().headers()["x-request-id"];
-  expect(requestId).toBeTruthy();
-  expect(response.headers()["x-request-id"]).toBe(requestId);
-  await expect(page.getByText(`Reference: ${requestId}`)).toBeVisible();
+  const reference = page.getByText(/^Reference: /);
+  await expect(reference).toBeVisible();
+
+  const shown = (await reference.innerText()).replace("Reference: ", "");
+  expect(carried).toContain(shown);
+  expect(shown).toBe(carried.at(-1));
 });
 
 test("the monitoring tunnel path is left alone by the locale middleware", async ({ request }) => {
