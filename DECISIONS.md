@@ -2966,3 +2966,27 @@ cover` is set once in the root layout for the standalone display.
   `beforeSend`. It is not the app's code and cannot be fixed from here (H-22).
 - **Decision:** the Sentry `release` falls back to the commit SHA the way `lib/env.ts` already does
   for Settings › About, so an event says which deploy it came from (H-21).
+
+## 2026-09-10 · Only a signed verdict ends a session (H-10)
+
+- **Measured first.** On 2026-09-09 the owner saw the three-exit sheet while his session was still
+  listed in `GET /auth/sessions`, which only lists families the backend has not revoked: the
+  backend never ended it, the client did. `refresh.ts` expired the session on `REFRESH_INVALID`,
+  `REFRESH_REVOKED` **or no code at all**, and a 401 with no code is what an edge, a gateway or a
+  deployment in the middle of a restart answers.
+- **Decision:** the BFF signs the answers it owns with `x-lf-session-end` — `backend` when the
+  backend's own 401 carries `REFRESH_INVALID` or `REFRESH_REVOKED`, `no-cookie` when the browser
+  sent no refresh cookie — and the client ends the session only on a signed answer. A 401 nobody
+  signed is a moment, not a verdict.
+- **Decision:** the BFF stops clearing the session cookies on an unsigned 401. Clearing them turned
+  one bad answer into a permanent logout, because every later refresh then had no cookie to send.
+- **Decision:** one retry, half a second later, before believing an unsigned 401 or a request that
+  never landed. Two attempts with no answer at all throw a `NetworkError`, so the screens read it
+  as what it is — the device cannot reach its own server — instead of as an authentication failure.
+- **Decision:** the moment a session is declared over is reported to Sentry (`SessionEndedError`,
+  scope `session`) with who said so. It is the one event that asks the user for a password again,
+  and it was invisible: the incident of 2026-09-10 could not be attributed because a 401 and a
+  sheet are not errors.
+- **Alternative:** branching on the response body's `code` alone. Rejected: the BFF answers
+  `REFRESH_INVALID` for its own no-cookie case, so the code cannot say who decided, which is
+  exactly what had to be told apart.

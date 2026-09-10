@@ -1,10 +1,22 @@
+import {
+  isSessionEnd,
+  SESSION_END_HEADER,
+  type SessionEnd,
+  SessionEndedError,
+} from "@/lib/auth/session-end";
 import { resumeSyncEngine } from "@/lib/local/outbox/engine";
+import { reportNetworkAnswer, reportNetworkFailure } from "@/lib/network/connectivity";
+import { reportError } from "@/lib/observability/reporter";
 import { tabChannel } from "@/lib/session/channel";
 
 import { API_PREFIX } from "./client";
-import { isErrorCode } from "./errors";
+import { NetworkError } from "./errors";
+import { newRequestId } from "./request-id";
 
 export const REFRESH_LOCK = "lf-refresh";
+
+// One second chance before believing an answer nobody signed, or none at all.
+const RETRY_DELAY_MS = 500;
 
 let inFlight: Promise<boolean> | null = null;
 let lastRefreshAt = 0;
@@ -13,27 +25,59 @@ interface RefreshOptions {
   since?: number;
 }
 
+async function post(): Promise<Response | null> {
+  try {
+    const response = await fetch(`${API_PREFIX}/auth/refresh`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { accept: "application/json" },
+    });
+    reportNetworkAnswer();
+    return response;
+  } catch {
+    reportNetworkFailure();
+    return null;
+  }
+}
+
+// Who ended the session, when someone did: a 401 the BFF did not sign is an edge, a gateway or a
+// deploy in the middle, and none of them knows anything about this token (H-10).
+function endedBy(response: Response | null): SessionEnd | null {
+  if (response?.status !== 401) return null;
+  const by = response.headers.get(SESSION_END_HEADER);
+  return isSessionEnd(by) ? by : null;
+}
+
+async function codeOf(response: Response): Promise<string | null> {
+  const body = (await response.json().catch(() => null)) as { code?: unknown } | null;
+  return typeof body?.code === "string" ? body.code : null;
+}
+
 async function requestRefresh(): Promise<boolean> {
-  const response = await fetch(`${API_PREFIX}/auth/refresh`, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { accept: "application/json" },
-  });
-  if (response.ok) {
+  let response = await post();
+  if (!response?.ok && !endedBy(response)) {
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    response = await post();
+  }
+  if (response?.ok) {
     lastRefreshAt = Date.now();
     tabChannel.post({ type: "session:refreshed", at: lastRefreshAt });
     // Whatever the queue stopped on when the session died can go out again (F-26).
     resumeSyncEngine();
     return true;
   }
-  if (response.status === 401) {
-    const body = (await response.json().catch(() => null)) as { code?: unknown } | null;
-    const code = isErrorCode(body?.code) ? body.code : null;
-    if (code === "REFRESH_INVALID" || code === "REFRESH_REVOKED" || code === null) {
-      tabChannel.emitLocal({ type: "session:expired" });
-      tabChannel.post({ type: "session:expired" });
-    }
+  const by = endedBy(response);
+  if (by && response) {
+    // The one event that asks for the password again: which side said so is the difference
+    // between a token that is over and a bad minute, and it was invisible until now.
+    reportError(new SessionEndedError(by, await codeOf(response)), "session");
+    tabChannel.emitLocal({ type: "session:expired" });
+    tabChannel.post({ type: "session:expired" });
+    return false;
   }
+  // Twice with no answer at all: the device cannot reach its own server, which says nothing
+  // about the session and everything about the network.
+  if (!response) throw new NetworkError(newRequestId(), false);
   return false;
 }
 
