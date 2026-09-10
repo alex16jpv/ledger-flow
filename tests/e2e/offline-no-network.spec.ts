@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import {
   addButton,
   createExpense,
+  expectPending,
   freshUser,
   listTransactions,
   readyForOffline,
@@ -74,7 +75,7 @@ test("a device that reports no network still records, and sends when it is back"
   await expect(page.getByText("You’re offline.")).toBeVisible();
 
   await createExpense(page, amount, "NO-NET latte");
-  expect((await vaultState(page))?.pending).toBe(1);
+  await expectPending(page, 1);
   expect((await listTransactions(request)).filter((row) => row.amount === amount)).toHaveLength(0);
 
   await context.setOffline(false);
@@ -116,6 +117,6 @@ test("with no network and no session the marker opens the app, and the sheet sta
   await page.keyboard.type(String(uniqueAmount()));
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(sheet).toBeHidden();
-  expect((await vaultState(page))?.pending).toBe(1);
+  await expectPending(page, 1);
   await expect(page.getByText("1 to review").first()).toBeAttached();
 });

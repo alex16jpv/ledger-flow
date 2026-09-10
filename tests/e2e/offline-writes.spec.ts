@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import {
   addButton,
   coldStart,
+  expectPending,
   freshUser,
   listAccounts,
   listTransactions,
@@ -53,14 +54,14 @@ test("twenty movements with no network survive a reload and reach the server exa
   }
 
   await expect(page.getByText(new RegExp(`${HOW_MANY} changes waiting`))).toBeVisible();
-  expect((await vaultState(page))?.pending).toBe(HOW_MANY);
+  await expectPending(page, HOW_MANY);
   // Not one of them left the device.
   expect(await listTransactions(request)).toEqual([]);
 
   // A reload with no network: the queue belongs to IndexedDB, not to the tab (invariant 7).
   await page.reload();
   await expect(page.getByText("You’re offline.")).toBeVisible();
-  expect((await vaultState(page))?.pending).toBe(HOW_MANY);
+  await expectPending(page, HOW_MANY);
 
   // And a cold start, which is the device the next morning: the page is gone, the vault is not.
   await page.close();
@@ -124,7 +125,7 @@ test("a reply lost after the server applied it replays as a duplicate, not as a 
   await page.keyboard.type(String(amount));
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(sheet).toBeHidden();
-  expect((await vaultState(page))?.pending).toBe(1);
+  await expectPending(page, 1);
 
   // The first batch reaches the server and its answer is cut on the way back; the second is the
   // replay. Counted and read, not assumed: a queue that dropped the operation after the abort would

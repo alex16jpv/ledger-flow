@@ -190,6 +190,10 @@ export function vaultState(page: Page): Promise<VaultState | null> {
   });
 }
 
+export async function expectPending(page: Page, count: number, timeout = 30_000): Promise<void> {
+  await expect.poll(async () => (await vaultState(page))?.pending, { timeout }).toBe(count);
+}
+
 export interface QueuedOperation {
   seq: number;
   entity: string;
