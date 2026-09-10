@@ -287,7 +287,7 @@ const budgets = (v = {}) => {
   const period = (
     sel = "All",
   ) => `<div class="period-nav"><button class="btn ghost icon-only round" aria-label="Previous month">${iconSvg("chevron-left")}</button><span class="label">September 2026</span><button class="btn ghost icon-only round" aria-label="Next month" disabled>${iconSvg("chevron-right")}</button></div>
-<div class="chips">${["All", "Monthly", "Weekly", "Biweekly", "Quarterly", "Yearly", "Custom"].map((c) => `<button class="chip${c === sel ? " selected" : ""}">${c}</button>`).join("")}</div>`;
+<div class="chips">${["All", "Weekly", "Biweekly", "Monthly", "Quarterly", "Yearly", "Custom"].map((c) => `<button class="chip${c === sel ? " selected" : ""}">${c}</button>`).join("")}</div>`;
   const footnote = `<div class="empty" style="padding:24px 16px 8px"><span class="small faint">Balance adjustments and transfers never count toward a budget.</span></div>`;
   const shell = (body, sheet = "") =>
     `<div class="shell">${sidebar("pres")}<main class="main"><div class="page">
