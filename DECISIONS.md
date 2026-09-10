@@ -2860,3 +2860,29 @@ cover` is set once in the root layout for the standalone display.
   and `launchPersistentContext` with `--app=<url>` opens `about:blank` instead of an app window. So
   that a real engine re-reads a viewport meta rewritten after parse — and that iOS honours it in
   standalone — is taken from the platform's documented behaviour, not measured here.
+
+## 2026-09-10 · The landing says what it is, and the nonce keeps it dynamic (P-41)
+
+- **Decision:** the "Why" section opens with a lede (`public.landing.whyLede`) that names the product
+  in the words a person searches for — free expense tracker, budget app, personal finance — and
+  repeats the nouns of the `h1`. Before it, `money`, `goes` and `where` appeared **once each on the
+  whole page, inside the `h1` itself**, and the document held 237 words in English and 244 in
+  Spanish; it now holds 280 and 290. The footer's language switch stops prefixing the locale already
+  in use: `next-intl` prefixes the default locale whenever `locale` is passed, so "English" on an
+  English page linked to `/en`, which the proxy answers with a 307 back to `/`.
+- **Decision:** the public pages **stay dynamic**. `app/[locale]/layout.tsx` reads the CSP nonce from
+  `headers()`, which opts every route below it out of static rendering, so `/`, `/es`, `/privacy` and
+  `/terms` render per request and Vercel answers `no-store`. A nonce must be unique per response, so
+  a nonce and a prerendered page are mutually exclusive; `'strict-dynamic'` overrides `'self'`, and
+  without the nonce nothing executes — not the three head scripts, not Next's own inline hydration.
+- **Alternatives:** a per-route CSP giving `/`, `/es`, `/privacy` and `/terms` `script-src 'self'
+'unsafe-inline'` so they prerender and serve from the edge. Rejected: those pages share an origin
+  with the app, so a script injected there runs with the session's httpOnly cookies attached and can
+  call the BFF as the user — the blast radius is the account, not the page. Build-time hashes for
+  Next's inline bootstrap were also rejected: their content changes per build and per page, and Next
+  does not expose them.
+- **Consequence:** measured over the same network path, an edge `HIT` answers in 0.28 s TTFB and the
+  document in 0.38–0.62 s, so the render costs ~0.17 s. Google's TTFB threshold for "good" is 800 ms,
+  so the page is already inside it; the 0.4 s limit that flags this belongs to seobility. That audit
+  warning, and the render-blocking one for the single 13.5 kB brotli stylesheet, will not go green:
+  inlining the CSS is only worth it on a page the edge can cache.

@@ -1510,7 +1510,8 @@ const landing = () => {
 <div class="cta"><a class="btn primary lg" href="#">Create your free account</a><a class="btn secondary lg" href="#">Sign in</a></div>
 <span class="small faint">Works offline &middot; English &amp; Espa&ntilde;ol &middot; Your data stays yours</span></div>
 <div class="phone"><div class="app">${home()}</div></div></section>`;
-  const feats = `<section class="stack" style="gap:24px"><div class="stack-sm" style="text-align:center"><span class="eyebrow">Why Ledger Flow</span><h2 class="h1" style="font-size:28px">Built for the small stuff</h2></div>
+  const feats = `<section class="stack" style="gap:24px"><div class="stack-sm" style="text-align:center"><span class="eyebrow">Why Ledger Flow</span><h2 class="h1" style="font-size:28px">Built for the small stuff</h2>
+<p class="muted" style="max-width:62ch;margin:8px auto 0">Ledger Flow is a free expense tracker and budget app for everyday personal finance. You log what you spend, it keeps your account balances right, and it shows you where your money goes &mdash; by category, by month, and against the ceiling you set.</p></div>
 <div class="feature-grid">
 <div class="card feature">${tile("zap", "AMBER", "lg")}<span class="h3">Three-second capture</span><p>Tap, type the amount, done. Add the category later from your review inbox: the expense already counts.</p></div>
 <div class="card feature">${tile("chart-pie", "INDIGO", "lg")}<span class="h3">Budgets that talk back</span><p>A ceiling for the month plus per-category limits, with pace and days left in plain language, not just a bar.</p></div>

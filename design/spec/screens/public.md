@@ -10,12 +10,19 @@
 - **Landing** (`#landing`): a two-column hero at 900px and up (the text, and a phone showing the real
   Home screen rather than a picture), a "Free · no card needed" badge, a single h1, the value paragraph,
   a primary call to action to sign up and a secondary one to sign in, and a line of reassurance
-  (offline, bilingual, your data stays yours). A "Why" section with three cards — three-second capture,
-  budgets that talk back, works without signal — built from the system's tiles. A "How it works" section
+  (offline, bilingual, your data stays yours). A "Why" section that opens with a lede under its `h2` —
+  one paragraph, centred, 62ch — and then three cards — three-second capture, budgets that talk back,
+  works without signal — built from the system's tiles. The lede is the page's only plain definition
+  of what Ledger Flow is: it names the product in the words a person would type into a search box
+  (free expense tracker, budget app, personal finance) and repeats the nouns the `h1` uses, because
+  the `h1` alone says them once and a page whose copy never uses its own heading words is a page that
+  ranks for nothing. It is also what carries the landing past 250 words. A "How it works" section
   with three numbered steps and a final call to action. Semantics: one `h1`, an `h2` per section,
   `section` with `aria-labelledby`. Metadata: a title of 60 characters at most, a description of 155 at
   most, Open Graph with a generated OG image, a canonical, `hreflang` en/es, and JSON-LD
-  `SoftwareApplication` plus `Organization`.
+  `SoftwareApplication` plus `Organization`. The language switch in the footer points the current
+  language at the plain path: a link that only redirects back to the page it sits on is a link a
+  crawler follows for nothing.
 - **Legal** (`#privacy-policy`): a 720px column, an eyebrow with the date of the last update, an `h1`
   and `h2` sections (what we store, why, your rights, contact). The privacy policy doubles as the data
   processing policy under Ley 1581: purpose, the rights of access, correction and erasure, the contact

@@ -22,6 +22,7 @@ test("the landing is static, bilingual and links to sign-up, sign-in and the leg
   await expect(
     page.getByRole("heading", { level: 2, name: "Built for the small stuff" }),
   ).toBeVisible();
+  await expect(page.getByText(/free expense tracker and budget app/)).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 2, name: "Up and running in a minute" }),
   ).toBeVisible();
@@ -30,6 +31,8 @@ test("the landing is static, bilingual and links to sign-up, sign-in and the leg
   const html = await (await request.get("/")).text();
   expect(html).toContain("See where your money actually goes.");
   expect(html).toContain('<html lang="en"');
+  await expect(page.getByRole("link", { name: "English" })).toHaveAttribute("href", /\/$/);
+  await expect(page.getByRole("link", { name: "Español" })).toHaveAttribute("href", /\/es$/);
 
   await page.goto("/terms");
   await expect(page.getByRole("heading", { level: 1, name: "Terms of service" })).toBeVisible();
@@ -43,6 +46,8 @@ test("the landing is static, bilingual and links to sign-up, sign-in and the leg
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "Mira a dónde se va tu dinero de verdad.",
   );
+
+  await expect(page.getByRole("link", { name: "English" })).toHaveAttribute("href", /\/en$/);
 
   // F-37: the footer sits at the very bottom of a page taller than the emulated phone's viewport,
   // and Chromium's mobile emulation hit-tests a click there against a layout viewport ~96 px taller
