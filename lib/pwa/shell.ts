@@ -1,3 +1,4 @@
+import { isEntityId } from "@/lib/api/entity-id";
 import { DEFAULT_LOCALE, isAppLocale, localeOf, localePrefix } from "@/lib/i18n/locales";
 
 // Every first segment of the `(app)` group: what the worker may answer from its own caches without
@@ -53,8 +54,6 @@ export const DETAIL_TEMPLATES = [
 // A valid UUID no row will ever have: the request that warms a template has to name some id.
 export const TEMPLATE_ID = "00000000-0000-7000-8000-000000000000";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export const SHELL_CACHE = "app-shell";
 
 export const SHELL_RSC_CACHE = "app-shell-rsc";
@@ -97,7 +96,7 @@ export function templatePath(pathname: string): string {
   const segments = pathname.split("/");
   const at = localeOf(pathname) === DEFAULT_LOCALE ? 2 : 3;
   const id = segments[at];
-  if (id === undefined || !UUID.test(id)) return pathname;
+  if (!isEntityId(id)) return pathname;
   if (!(APP_SEGMENTS as readonly string[]).includes(segments[at - 1] ?? "")) return pathname;
   return [...segments.slice(0, at), "[id]", ...segments.slice(at + 1)].join("/");
 }

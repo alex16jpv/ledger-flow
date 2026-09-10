@@ -22,6 +22,14 @@ server fails and when something has to be confirmed.
   object and says what is kept; the primary button carries the verb ("Archive", "Make main") and
   "Cancel" is a ghost. Final actions — deleting a transaction, archiving a budget, deleting the account
   — use `danger`.
+- **An address that cannot name a row** answers **404 with no request at all**, and shows the public
+  404 ([public.md](public.md) `#not-found`) — there is no separate in-app 404. A detail route's `[id]`
+  matches any segment, so `/accounts/nope` used to answer 200 and then ask the server for a row that
+  cannot exist. The status has to be decided **above** the app group's streaming boundary, and Next
+  skips the layout that throws, which is the one that draws the frame: so a 404 with the tab bar is
+  not reachable without moving that boundary, and the public 404 is what answers. **A well-formed id
+  the app does not know is not this state:** it renders its screen and its own error, which is what
+  lets the copy on the device answer with no network.
 - **New version available** (`#new-version`): when a new service worker is waiting, a toast, "New
   version available", with the action "Reload". It never reloads on its own.
 - **Toast:** confirms every save, five seconds, with "Undo" where the backend can revert it (create →
