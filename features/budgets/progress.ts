@@ -11,6 +11,15 @@ export const BUDGET_PERIOD_TYPES = [
 
 export type BudgetPeriodType = (typeof BUDGET_PERIOD_TYPES)[number];
 
+// Every period but CUSTOM has a window the app can infer, so only these can be created from an amount alone.
+export type RecurringBudgetPeriod = Exclude<BudgetPeriodType, "CUSTOM">;
+
+export function parseBudgetPeriod(value: string | null): BudgetPeriodType | null {
+  return (BUDGET_PERIOD_TYPES as readonly string[]).includes(value ?? "")
+    ? (value as BudgetPeriodType)
+    : null;
+}
+
 export type BudgetStatusKind = "over" | "fast" | "untouched" | "ended" | "ok";
 
 export interface BudgetProgress {

@@ -22,10 +22,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderForm(onDone = vi.fn()) {
+function renderForm(onDone = vi.fn(), periodType?: "WEEKLY" | "QUARTERLY") {
   renderWithProviders(
     <QueryProvider>
-      <GlobalBudgetForm submitLabel="Create budget" skipLabel="Not now" onDone={onDone} />
+      <GlobalBudgetForm
+        submitLabel="Create budget"
+        skipLabel="Not now"
+        onDone={onDone}
+        periodType={periodType}
+      />
     </QueryProvider>,
   );
   return onDone;
@@ -67,6 +72,29 @@ describe("GlobalBudgetForm", () => {
       "Enter an amount greater than zero.",
     );
     expect(posts()).toHaveLength(0);
+  });
+
+  it("creates the budget of the period it is given, with the amounts scaled to it", async () => {
+    fetchMock.mockImplementation((input, init) =>
+      Promise.resolve(
+        init?.method === "POST" ? json({ id: "b1" }, { status: 201 }) : stats(1_284_300),
+      ),
+    );
+    const onDone = renderForm(vi.fn(), "WEEKLY");
+    expect(await screen.findByText("Scaled from last month’s spending")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Weekly amount" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "$300,000" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create budget" }));
+    await waitFor(() => {
+      expect(onDone).toHaveBeenCalled();
+    });
+    const body = JSON.parse(posts()[0]?.[1]?.body as string) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      categoryIds: [],
+      periodType: "WEEKLY",
+      amount: 300_000,
+      name: "Weekly budget",
+    });
   });
 
   it("suggests amounts around last month's spending when there is history (F-01)", async () => {

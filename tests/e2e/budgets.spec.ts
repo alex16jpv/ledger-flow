@@ -87,6 +87,34 @@ test("a new user sees the empty state and creates the global budget from it", as
   await expect(page.getByText("$2,000,000 left · nothing spent yet")).toBeVisible();
 });
 
+test("creating from the list follows the period filter, and Custom goes to the full form", async ({
+  page,
+  request,
+}) => {
+  await signUp(page, request);
+  await page.goto("/budgets?period=WEEKLY");
+  await expect(
+    page.getByText("A total weekly budget shows how much is left before the week ends."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Create a weekly budget" }).click();
+  const sheet = page.getByRole("dialog", { name: "A ceiling for the week" });
+  await sheet.getByRole("textbox", { name: "Weekly amount" }).fill("400000");
+  await sheet.getByRole("button", { name: "Create budget" }).click();
+  await expect(page.getByRole("link", { name: /Weekly budget/ })).toBeVisible();
+  await expect(page.getByText(/^Weekly · /)).toBeVisible();
+
+  await page.getByRole("button", { name: "Monthly" }).click();
+  await expect(page.getByText("No monthly budgets this month")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Create a total monthly budget/ })).toBeVisible();
+
+  await page.getByRole("button", { name: "Custom" }).click();
+  await page.getByRole("link", { name: "Create a custom budget" }).click();
+  await expect(page).toHaveURL(/\/budgets\/new\?period=CUSTOM$/);
+  await expect(
+    page.getByRole("group", { name: "Period" }).getByRole("button", { name: "Custom" }),
+  ).toHaveAttribute("aria-pressed", "true");
+});
+
 test("the detail adjusts, skips and removes the period amount, then archives the budget", async ({
   page,
   request,

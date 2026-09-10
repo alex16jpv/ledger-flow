@@ -20,7 +20,16 @@ by the API and `RestoreBudgetConflictSheet` names the budget in the way and offe
 category), expense-category chips (archived ones kept on edit), the six period types with native date
 inputs for CUSTOM (inclusive end → half-open API window), amount, color and the advanced options
 (effective from, note). `budgetSuggestions` (owner request F-01) scales the global-budget chips by
-currency or by last month's spending.
+currency or by last month's spending, and then by the period asked for: those figures are monthly, so
+a weekly budget is offered a week's share of them.
+
+Creating from the list follows the period filter: the empty state and the "No {period} budgets this
+month" line offer a budget of the selected type — "All" means monthly, as it did — and the sheet
+behind them creates the global budget of that period (`GlobalBudgetForm` takes a
+`RecurringBudgetPeriod`, monthly by default, which is what the onboarding and the home CTA still
+use). CUSTOM is the exception: its window is two dates a person picks, so there the call to action is
+a link to `/budgets/new?period=CUSTOM`. Under "All" and "Monthly" the dashed global card already is
+that invitation, so the line does not repeat it.
 
 O-F2a routed the list and the detail through `lib/local/repository`, and since O-F3 part 2 the mirror
 answers both — with network too, since O-F2b: it stores the saved shape (`SyncBudget`) and builds the

@@ -21,7 +21,12 @@ import { iconProps } from "@/lib/icons/sizes";
 import type { Budget, Category } from "@/types/api";
 
 import { useBudgetsQuery } from "../hooks";
-import { BUDGET_PERIOD_TYPES, type BudgetPeriodType, isGlobalBudget } from "../progress";
+import {
+  BUDGET_PERIOD_TYPES,
+  type BudgetPeriodType,
+  isGlobalBudget,
+  type RecurringBudgetPeriod,
+} from "../progress";
 import { currentMonthKey, monthReference, overlapsMonth, shiftMonthKey } from "../reference";
 import { BudgetCard } from "./BudgetCard";
 import { GlobalBudgetCard } from "./GlobalBudgetCard";
@@ -32,7 +37,7 @@ export interface BudgetsViewProps {
   categories: ReadonlyMap<string, Category>;
   onMonthChange: (monthKey: string) => void;
   onPeriodFilterChange: (period: BudgetPeriodType | null) => void;
-  onCreateGlobal: () => void;
+  onCreateGlobal: (period: RecurringBudgetPeriod) => void;
   now?: Date;
 }
 
@@ -68,6 +73,24 @@ export function BudgetsView({
     .sort((a, b) => b.spent / (b.amount || 1) - a.spent / (a.amount || 1));
   const showGlobalSlot = periodFilter === null || periodFilter === "MONTHLY";
   const detailHref = (budget: Budget) => `/budgets/${budget.id}?reference=${monthKey}`;
+  const creates = periodFilter ?? "MONTHLY";
+  const periodName = (period: BudgetPeriodType) =>
+    t(`budgets.periodTypes.${period}`).toLocaleLowerCase();
+  const createLabel = t("budgets.list.empty.ctaFor", { period: periodName(creates) });
+  const createAction =
+    creates === "CUSTOM" ? (
+      <Link href={`${NEW_HREF}?period=CUSTOM`} className={buttonClasses({})}>
+        {createLabel}
+      </Link>
+    ) : (
+      <Button
+        onClick={() => {
+          onCreateGlobal(creates);
+        }}
+      >
+        {createLabel}
+      </Button>
+    );
 
   return (
     <div className="flex flex-col gap-4">
@@ -168,8 +191,15 @@ export function BudgetsView({
         <Empty
           icon={<ChartPie {...iconProps("lg")} />}
           title={t("budgets.list.empty.title")}
-          body={t("budgets.list.empty.body")}
-          action={<Button onClick={onCreateGlobal}>{t("budgets.list.empty.cta")}</Button>}
+          body={
+            creates === "CUSTOM"
+              ? t("budgets.list.empty.bodyCustom")
+              : t("budgets.list.empty.bodyFor", {
+                  period: periodName(creates),
+                  span: t(`budgets.periodSpan.${creates}`),
+                })
+          }
+          action={createAction}
         />
       ) : (
         <>
@@ -180,7 +210,9 @@ export function BudgetsView({
               isCurrent && (
                 <button
                   type="button"
-                  onClick={onCreateGlobal}
+                  onClick={() => {
+                    onCreateGlobal("MONTHLY");
+                  }}
                   className={cn(
                     "flex flex-col items-center gap-1 rounded-lg border-[1.5px] border-dashed border-border-strong px-4 py-5 text-center hover:bg-surface-2",
                     "focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] focus-visible:outline-none",
@@ -197,11 +229,12 @@ export function BudgetsView({
             all.length > 0 &&
             periodFilter !== null &&
             !(showGlobalSlot && global) && (
-              <p className="py-6 text-center text-sm text-text-3">
-                {t("budgets.list.noneForFilter", {
-                  period: t(`budgets.periodTypes.${periodFilter}`).toLocaleLowerCase(),
-                })}
-              </p>
+              <div className="flex flex-col items-center gap-3 py-6">
+                <p className="text-center text-sm text-text-3">
+                  {t("budgets.list.noneForFilter", { period: periodName(periodFilter) })}
+                </p>
+                {isCurrent && !showGlobalSlot && createAction}
+              </div>
             )}
           <div className="grid gap-3 md:grid-cols-2">
             {rest.map((budget) => (

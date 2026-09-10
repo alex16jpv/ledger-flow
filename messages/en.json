@@ -913,9 +913,29 @@
   },
   "budgets": {
     "global": {
-      "defaultName": "Monthly budget",
-      "amount": "Monthly amount",
-      "help": "You can adjust it any month without touching the base amount, and add per-category budgets whenever you like."
+      "nameByPeriod": {
+        "WEEKLY": "Weekly budget",
+        "BIWEEKLY": "Biweekly budget",
+        "MONTHLY": "Monthly budget",
+        "QUARTERLY": "Quarterly budget",
+        "YEARLY": "Yearly budget"
+      },
+      "amountByPeriod": {
+        "WEEKLY": "Weekly amount",
+        "BIWEEKLY": "Biweekly amount",
+        "MONTHLY": "Monthly amount",
+        "QUARTERLY": "Quarterly amount",
+        "YEARLY": "Yearly amount"
+      },
+      "sheetTitle": "A ceiling for {span}",
+      "help": "You can adjust it in any period without touching the base amount, and add per-category budgets whenever you like."
+    },
+    "periodSpan": {
+      "WEEKLY": "the week",
+      "BIWEEKLY": "the two-week period",
+      "MONTHLY": "the month",
+      "QUARTERLY": "the quarter",
+      "YEARLY": "the year"
     },
     "periodTypes": {
       "WEEKLY": "Weekly",
@@ -955,8 +975,9 @@
       "footnote": "Balance adjustments and transfers never count toward a budget.",
       "empty": {
         "title": "Put a ceiling on your small spending",
-        "body": "A total monthly budget shows how much is left before the month ends.",
-        "cta": "Create a monthly budget"
+        "bodyFor": "A total {period} budget shows how much is left before {span} ends.",
+        "bodyCustom": "A custom budget runs between the two dates you pick.",
+        "ctaFor": "Create a {period} budget"
       },
       "noneForFilter": "No {period} budgets this month"
     },
@@ -1035,6 +1056,7 @@
       "periodChangeWarning": "Changing the period clears every per-period adjustment of this budget.",
       "amount": "Amount",
       "suggestionsFromSpending": "Based on last month’s spending",
+      "suggestionsScaled": "Scaled from last month’s spending",
       "color": "Color",
       "advanced": "Advanced options",
       "effectiveFrom": "Effective from",
