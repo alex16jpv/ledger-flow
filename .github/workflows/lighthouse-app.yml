@@ -22,7 +22,9 @@ jobs:
           repository: alex16jpv/lag-money-manager
           ref: ${{ env.BACKEND_REF }}
           path: backend
-          token: ${{ secrets.BACKEND_REPO_TOKEN }}
+          # The backend repository is public, so the workflow's own token clones it. An explicit
+          # empty secret is not "use the default": checkout rejects it as a missing input.
+          token: ${{ secrets.BACKEND_REPO_TOKEN || github.token }}
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
