@@ -53,6 +53,8 @@ function feedRow(userId: string, row: FixtureTransaction): SyncTransaction {
     type: row.type,
     amount: row.amount,
     date,
+    // The day the server froze in the user's zone, which is the fixture's, not the helper's default.
+    dayKey: row.dayKey,
     description: row.description,
     categoryId: row.categoryId,
     fromAccountId: row.fromAccountId,

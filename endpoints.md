@@ -701,10 +701,13 @@ Creates only the missing defaults. Archived seed categories count as present and
 
 ### `GET /stats/spending`
 
-Buckets are computed in the user's timezone (from the token claim), so
-a day boundary is their midnight, not UTC's. Deleted transactions are
-excluded, and ADJUSTMENT ones only appear when asked for explicitly
-with `type=ADJUSTMENT` (they are balance reconciliations, not spending).
+A `day` bucket is the transaction's own accounting day (`dayKey`),
+frozen when it was written, so a later change of the account's time
+zone cannot move past spending between buckets or months; the zone
+(from the token claim) resolves the days the range covers. Deleted
+transactions are excluded, and ADJUSTMENT ones only appear when asked
+for explicitly with `type=ADJUSTMENT` (they are balance
+reconciliations, not spending).
 
 Bucket semantics: `groupBy=day` comes back ascending by date and skips
 days without transactions (the client fills the gaps); the other
@@ -716,12 +719,12 @@ real, non-double-counted sum. Transactions without tags land in the
 
 **Query**
 
-| Name      | Type                                                | Required | Description                                                     |
-| --------- | --------------------------------------------------- | -------- | --------------------------------------------------------------- |
-| `groupBy` | `category` \| `day` \| `tag`                        | no       | Bucket dimension                                                |
-| `type`    | `INCOME` \| `EXPENSE` \| `TRANSFER` \| `ADJUSTMENT` | no       | Transaction type to aggregate                                   |
-| `from`    | string (date-time)                                  | no       | Start of the range, inclusive (ISO 8601, offsets accepted)      |
-| `to`      | string (date-time)                                  | no       | End of the range, EXCLUSIVE — the range is half-open [from, to) |
+| Name      | Type                                                | Required | Description                                                                                                          |
+| --------- | --------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `groupBy` | `category` \| `day` \| `tag`                        | no       | Bucket dimension                                                                                                     |
+| `type`    | `INCOME` \| `EXPENSE` \| `TRANSFER` \| `ADJUSTMENT` | no       | Transaction type to aggregate                                                                                        |
+| `from`    | string (date-time)                                  | no       | Start of the range, inclusive (ISO 8601, offsets accepted)                                                           |
+| `to`      | string (date-time)                                  | no       | End of the range, EXCLUSIVE — the range is half-open [from, to) and is matched as the whole calendar days it covers. |
 
 **Responses**
 
@@ -857,22 +860,22 @@ page); it stays consistent when transactions are backdated.
 
 **Query**
 
-| Name             | Type                                                | Required | Description                                                                                      |
-| ---------------- | --------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `limit`          | integer, 1–100, default `20`                        | no       | Maximum number of items to return                                                                |
-| `offset`         | integer, 0–, default `0`                            | no       | Number of items to skip (offset-based pagination)                                                |
-| `cursor`         | string (uuid)                                       | no       | ID of the last item of the previous page (cursor-based pagination; overrides offset)             |
-| `ids`            | string                                              | no       | Comma-separated list of UUIDs to filter by ID (max 100)                                          |
-| `accountId`      | string (uuid)                                       | no       | Filter transactions by account ID (matches fromAccountId or toAccountId)                         |
-| `categoryId`     | string (uuid)                                       | no       | Filter transactions by category ID                                                               |
-| `uncategorized`  | `true` \| `false`                                   | no       | Only transactions without a category. Cannot be combined with categoryId.                        |
-| `pendingDetails` | `true` \| `false`                                   | no       | Filter by the pendingDetails flag (true = quick-adds awaiting detailing)                         |
-| `source`         | `MANUAL` \| `QUICK` \| `IMPORT`                     | no       | Only transactions created through this channel (QUICK = quick-add)                               |
-| `from`           | string (date-time)                                  | no       | Start of the date range, inclusive (half-open range [from, to))                                  |
-| `to`             | string (date-time)                                  | no       | End of the date range, exclusive (half-open range [from, to))                                    |
-| `includeSummary` | `true` \| `false`                                   | no       | Adds summary.totalAmount, the sum over the whole filtered set (one extra aggregation, so opt-in) |
-| `tag`            | string                                              | no       | Only transactions carrying this tag (tags are stored trimmed and lowercased)                     |
-| `type`           | `INCOME` \| `EXPENSE` \| `TRANSFER` \| `ADJUSTMENT` | no       | Filter transactions by type                                                                      |
+| Name             | Type                                                | Required | Description                                                                                                                                                                                                                          |
+| ---------------- | --------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `limit`          | integer, 1–100, default `20`                        | no       | Maximum number of items to return                                                                                                                                                                                                    |
+| `offset`         | integer, 0–, default `0`                            | no       | Number of items to skip (offset-based pagination)                                                                                                                                                                                    |
+| `cursor`         | string (uuid)                                       | no       | ID of the last item of the previous page (cursor-based pagination; overrides offset)                                                                                                                                                 |
+| `ids`            | string                                              | no       | Comma-separated list of UUIDs to filter by ID (max 100)                                                                                                                                                                              |
+| `accountId`      | string (uuid)                                       | no       | Filter transactions by account ID (matches fromAccountId or toAccountId)                                                                                                                                                             |
+| `categoryId`     | string (uuid)                                       | no       | Filter transactions by category ID                                                                                                                                                                                                   |
+| `uncategorized`  | `true` \| `false`                                   | no       | Only transactions without a category. Cannot be combined with categoryId.                                                                                                                                                            |
+| `pendingDetails` | `true` \| `false`                                   | no       | Filter by the pendingDetails flag (true = quick-adds awaiting detailing)                                                                                                                                                             |
+| `source`         | `MANUAL` \| `QUICK` \| `IMPORT`                     | no       | Only transactions created through this channel (QUICK = quick-add)                                                                                                                                                                   |
+| `from`           | string (date-time)                                  | no       | Start of the range, inclusive. The range is matched as the run of calendar days it covers in the account's time zone, against each transaction's frozen `dayKey`, so a bound that is not local midnight is widened to the whole day. |
+| `to`             | string (date-time)                                  | no       | End of the range, exclusive (the day it falls on is included).                                                                                                                                                                       |
+| `includeSummary` | `true` \| `false`                                   | no       | Adds summary.totalAmount, the sum over the whole filtered set (one extra aggregation, so opt-in)                                                                                                                                     |
+| `tag`            | string                                              | no       | Only transactions carrying this tag (tags are stored trimmed and lowercased)                                                                                                                                                         |
+| `type`           | `INCOME` \| `EXPENSE` \| `TRANSFER` \| `ADJUSTMENT` | no       | Filter transactions by type                                                                                                                                                                                                          |
 
 **Responses**
 

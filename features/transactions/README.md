@@ -20,7 +20,8 @@ and `useTagsQuery` back the screens in `app/[locale]/(app)/transactions/`.
 W-19 adds the list: `filters.ts` parses and serializes the URL filters (period presets, type,
 account, category, tag, pending, quick-only, search) and maps them to the API query;
 `useTransactionsInfinite` pages by cursor, `usePeriodTotals` turns the server's day buckets into
-the summary and the day headers, `groups.ts` only cuts the sorted rows where the local day changes.
+the summary and the day headers, `groups.ts` only cuts the sorted rows where the day changes — the `dayKey` the server froze on the
+row (T-14), so a header cannot disagree with the period total above it.
 The screen and the filters sheet live in `app/[locale]/(app)/transactions/`.
 
 W-20 adds the detail screen (`app/[locale]/(app)/transactions/[id]/`): hero with the category tile

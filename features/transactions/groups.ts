@@ -7,12 +7,14 @@ export interface DayGroup {
   items: Transaction[];
 }
 
-// Rows arrive sorted by date desc; grouping only cuts them where the local day changes.
+// Rows arrive sorted by date desc; grouping only cuts them where the day changes. The day is the
+// one the server froze on the row, so a header cannot disagree with the total of the period it is
+// under after the account changes time zone; `timeZone` still answers for a row written before it.
 export function groupByDay(transactions: readonly Transaction[], timeZone: string): DayGroup[] {
   const groups: DayGroup[] = [];
   for (const transaction of transactions) {
     const date = new Date(transaction.date);
-    const day = dayKey(date, timeZone);
+    const day = transaction.dayKey ?? dayKey(date, timeZone);
     const last = groups.at(-1);
     if (last?.day === day) last.items.push(transaction);
     else groups.push({ day, date, items: [transaction] });

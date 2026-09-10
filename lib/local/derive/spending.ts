@@ -1,13 +1,14 @@
 import { dayKey } from "@/lib/format/dates";
 import type { StatsBucket, StatsResponse, SyncTransaction } from "@/types/api";
 
+import { dayWindow, withinDays } from "./days";
 import { fromCents, toCents } from "./money";
 
 export type SpendingGroupBy = StatsResponse["groupBy"];
 
 export type SpendingTransaction = Pick<
   SyncTransaction,
-  "type" | "amount" | "date" | "categoryId" | "tags" | "deletedAt"
+  "type" | "amount" | "date" | "dayKey" | "categoryId" | "tags" | "deletedAt"
 >;
 
 export interface SpendingWindow {
@@ -27,8 +28,7 @@ export function deriveSpending(
   transactions: SpendingTransaction[],
   window: SpendingWindow,
 ): { total: number; buckets: StatsBucket[] } {
-  const from = window.from === undefined ? -Infinity : Date.parse(window.from);
-  const to = window.to === undefined ? Infinity : Date.parse(window.to);
+  const days = dayWindow(window.from, window.to, window.timeZone);
 
   const matched = transactions.filter((transaction) => {
     if (transaction.deletedAt) return false;
@@ -36,9 +36,8 @@ export function deriveSpending(
     if (window.type ? transaction.type !== window.type : transaction.type === "ADJUSTMENT") {
       return false;
     }
-    const at = Date.parse(transaction.date);
-    // Half-open [from, to): a row at the closing instant belongs to the next window, never to two.
-    return at >= from && at < to;
+    // The window is the run of calendar days it covers, matched against the day frozen on the row.
+    return withinDays(transaction, days);
   });
 
   const totals = new Map<string, { cents: number; count: number }>();
@@ -52,7 +51,7 @@ export function deriveSpending(
   for (const transaction of matched) {
     const cents = toCents(transaction.amount);
     if (window.groupBy === "day") {
-      add(dayKey(new Date(transaction.date), window.timeZone), cents);
+      add(transaction.dayKey ?? dayKey(new Date(transaction.date), window.timeZone), cents);
     } else if (window.groupBy === "category") {
       add(transaction.categoryId ?? "uncategorized", cents);
     } else if (transaction.tags.length === 0) {

@@ -11,6 +11,7 @@ export {
   type DerivedBudgetView,
   lifetimeFloor,
 } from "./budgets";
+export { type DayWindow, dayWindow, widenedBound, withinDays } from "./days";
 export { fromCents, sumAmounts, toCents } from "./money";
 export { type PeriodDefinition, type ResolvedPeriod, resolvePeriod } from "./period";
 export {

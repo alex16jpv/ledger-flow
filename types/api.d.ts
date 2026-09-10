@@ -2025,10 +2025,13 @@ export type paths = {
         };
         /**
          * Aggregate spending grouped by category, day or tag
-         * @description Buckets are computed in the user's timezone (from the token claim), so
-         *     a day boundary is their midnight, not UTC's. Deleted transactions are
-         *     excluded, and ADJUSTMENT ones only appear when asked for explicitly
-         *     with `type=ADJUSTMENT` (they are balance reconciliations, not spending).
+         * @description A `day` bucket is the transaction's own accounting day (`dayKey`),
+         *     frozen when it was written, so a later change of the account's time
+         *     zone cannot move past spending between buckets or months; the zone
+         *     (from the token claim) resolves the days the range covers. Deleted
+         *     transactions are excluded, and ADJUSTMENT ones only appear when asked
+         *     for explicitly with `type=ADJUSTMENT` (they are balance
+         *     reconciliations, not spending).
          *
          *     Bucket semantics: `groupBy=day` comes back ascending by date and skips
          *     days without transactions (the client fills the gaps); the other
@@ -2047,7 +2050,7 @@ export type paths = {
                     type?: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
                     /** @description Start of the range, inclusive (ISO 8601, offsets accepted) */
                     from?: string;
-                    /** @description End of the range, EXCLUSIVE — the range is half-open [from, to) */
+                    /** @description End of the range, EXCLUSIVE — the range is half-open [from, to) and is matched as the whole calendar days it covers. */
                     to?: string;
                 };
                 header?: never;
@@ -2337,9 +2340,9 @@ export type paths = {
                     pendingDetails?: "true" | "false";
                     /** @description Only transactions created through this channel (QUICK = quick-add) */
                     source?: "MANUAL" | "QUICK" | "IMPORT";
-                    /** @description Start of the date range, inclusive (half-open range [from, to)) */
+                    /** @description Start of the range, inclusive. The range is matched as the run of calendar days it covers in the account's time zone, against each transaction's frozen `dayKey`, so a bound that is not local midnight is widened to the whole day. */
                     from?: string;
-                    /** @description End of the date range, exclusive (half-open range [from, to)) */
+                    /** @description End of the range, exclusive (the day it falls on is included). */
                     to?: string;
                     /** @description Adds summary.totalAmount, the sum over the whole filtered set (one extra aggregation, so opt-in) */
                     includeSummary?: "true" | "false";
@@ -3530,6 +3533,11 @@ export type components = {
             amount: number;
             /** Format: date-time */
             date: string;
+            /**
+             * @description The local accounting day of `date` in the account's time zone, frozen when the transaction was written: a later change of that zone cannot move it to another day, month or budget period. Null only on rows written before the field existed.
+             * @example 2026-09-30
+             */
+            dayKey: string | null;
             /** Format: uuid */
             categoryId: string | null;
             description: string | null;
@@ -3570,6 +3578,11 @@ export type components = {
             amount: number;
             /** Format: date-time */
             date: string;
+            /**
+             * @description The local accounting day of `date` in the account's time zone, frozen when the transaction was written: a later change of that zone cannot move it to another day, month or budget period. Null only on rows written before the field existed.
+             * @example 2026-09-30
+             */
+            dayKey: string | null;
             /** Format: uuid */
             categoryId: string | null;
             description: string | null;

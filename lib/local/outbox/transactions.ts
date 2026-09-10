@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/api/errors";
+import { dayKey } from "@/lib/format/dates";
 import type {
   BatchUpdateFailure,
   BatchUpdateResult,
@@ -82,7 +83,7 @@ const readBack =
 function newRow(
   input: CreateTransactionInput,
   id: string,
-  owner: { userId: string; currency: string },
+  owner: { userId: string; currency: string; timeZone: string },
   source: SyncTransaction["source"],
   pendingDetails: boolean,
   createdAt: string,
@@ -92,6 +93,7 @@ function newRow(
     type: input.type,
     amount: input.amount,
     date: input.date,
+    dayKey: dayKey(new Date(input.date), owner.timeZone),
     categoryId: input.categoryId ?? null,
     description: input.description ?? null,
     fromAccountId: input.fromAccountId ?? null,
@@ -186,8 +188,13 @@ function updateRequest(id: string, input: UpdateTransactionInput): WriteRequest<
       entityId: id,
       action: "update",
       payload: { body: input },
-      project: async (tx) => {
+      project: async (tx, occurredAt) => {
         const next = patch(await currentRow(tx, id), input);
+        // The day only moves when the date does, and only then is the profile needed.
+        if (input.date !== undefined) {
+          const { timeZone } = await projectionContext(tx, occurredAt);
+          next.dayKey = dayKey(new Date(next.date), timeZone);
+        }
         const { change, effect } = await projectTransaction(tx, id, next);
         return { ...change, effect };
       },

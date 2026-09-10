@@ -23,6 +23,7 @@ export interface FixtureTransaction {
   type: SyncTransaction["type"];
   amount: number;
   date: string;
+  dayKey: string;
   description: string | null;
   categoryId: string | null;
   fromAccountId: string | null;
