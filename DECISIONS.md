@@ -2783,6 +2783,9 @@ cover` is set once in the root layout for the standalone display.
   (`indexedDB.databases` missing) the field simply stays empty, the same answer the worker gives
   without the Cookie Store API. Rejected: carrying the email in the URL from `goToLogin` — it would
   sit in the history for nothing, since the device can read it locally.
+- **Under test:** jsdom drops a `__Host-` cookie over http, so the marker cannot be written the way
+  the BFF writes it; the unit test replaces `readSessionMarker`, which `lib/auth` owns and tests on
+  its own, and the e2e proves the real cookie path against the running app.
 - **No new plate.** `#sign-in` already draws exactly this state (an email filled in, the focus ring on
   the password); what was missing was the specification saying where that value comes from and when
   the field is empty, which `design/spec/screens/access.md` now says.

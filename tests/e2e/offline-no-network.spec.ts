@@ -117,4 +117,5 @@ test("with no network and no session the marker opens the app, and the sheet sta
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(sheet).toBeHidden();
   expect((await vaultState(page))?.pending).toBe(1);
+  await expect(page.getByText("1 to review").first()).toBeAttached();
 });

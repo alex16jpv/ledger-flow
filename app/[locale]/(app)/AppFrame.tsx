@@ -52,7 +52,7 @@ function Frame({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
-  const pendingCount = usePendingCount(session.status === "authenticated");
+  const pendingCount = usePendingCount();
   const outbox = useOutbox();
   const [quickAdd, setQuickAdd] = useState<AddOptions & { open: boolean }>({
     open: false,
