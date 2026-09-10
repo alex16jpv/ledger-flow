@@ -2908,5 +2908,6 @@ cover` is set once in the root layout for the standalone display.
   is on the instant) and a **windowed** read of `/transactions` needs the profile's zone, so it
   declines without it and goes to the server — the same dependency `/budgets` and `/stats` already
   had, and one more reason to close the half of H-14 that is still open. Rows written before the
-  field are answered by their instant, so nothing disappears before the backend's
-  `npm run db:backfill-day-key` runs.
+  field are answered by their instant, so nothing disappears, and the owner decided on 2026-09-10 not
+  to backfill them: with the account's zone unchanged both rules agree, so the backend keeps that
+  branch instead of migrating the rows.
