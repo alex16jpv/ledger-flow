@@ -8,3 +8,9 @@ sheet and both switch the screen's language, which _is_ the `locale` the account
 there is no third value to keep in step. The switch carries the query string, so a `?reauth=1&next=…`
 login does not lose its way back (§2.6). No "Follow device" here: that is a local mode of Settings,
 not a value the contract takes.
+
+A successful sign-in — a login or a registration — **ends "this device only"** (P-36). The mode is a
+device choice, so nothing on the server can clear it, and the sheet of P-32 sends the user here to
+leave it: left set, the app came back with a live session and a stripe still saying nothing was
+syncing. The answer that arrived is also the proof of network the mode refuses to take from anywhere
+else, so the connectivity phase is reported with it.

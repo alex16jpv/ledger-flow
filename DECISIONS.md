@@ -2751,3 +2751,15 @@ cover` is set once in the root layout for the standalone display.
   true**, so the whole offline suite ran in the one state that always worked — the app fired the
   request, it failed at once and the session resolved. The new test overrides `navigator.onLine`,
   which is what a device with no network actually reports.
+
+## 2026-09-09 · Signing in ends "this device only" (P-36)
+
+- **What the owner saw:** the sheet of P-32 has three exits and the second one, "Continue on this device only",
+  leaves a stripe whose action is the way back. Taking it signed the user in and **left the mode on**:
+  a live session on a device that still refused to talk to the server, saying so in a stripe that
+  would not go. The mode is a device choice in `localStorage`, so nothing the server answers can
+  clear it.
+- **Decision:** a successful login or registration ends the mode, in the mutation hooks rather than
+  in each view, and reports the network with it — the answer that just arrived is the proof of
+  connection P-32 refuses to take from `navigator.onLine` or the heartbeat. Without that second half
+  the app carried the offline phase into the fresh session and waited up to a heartbeat to notice.

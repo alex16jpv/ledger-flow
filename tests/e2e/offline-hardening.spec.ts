@@ -404,3 +404,47 @@ test("a device opened with no network shows what it holds, not skeletons", async
   await expect(page.getByRole("heading", { level: 1, name: "Transactions" })).toBeVisible();
   await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
 });
+
+// P-36 (owner, 2026-09-09): the third exit of the sheet is the one that keeps working here, and the
+// stripe it leaves behind offers the way back. Taking it signed the user in and left the mode on:
+// a live session on a device that still refused to talk to the server, saying so in a stripe.
+test("signing in from the stripe ends this-device-only mode", async ({
+  page,
+  request,
+  context,
+}) => {
+  test.setTimeout(180_000);
+  const user = await freshUser(request, "leave-local");
+
+  await signInAs(context, request, user);
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+
+  // The session dies and the marker stays, which is what §2.6 asks the app to open in.
+  const kept = (await context.cookies()).filter(
+    (cookie) => !cookie.name.includes("access") && !cookie.name.includes("refresh"),
+  );
+  await context.clearCookies();
+  await context.addCookies(kept);
+  await page.reload();
+
+  const choice = page.getByRole("dialog", { name: "This device has your data, but no session" });
+  await expect(choice).toBeVisible({ timeout: 30_000 });
+  await choice.getByRole("button", { name: "Continue on this device only" }).click();
+  await expect(page.getByText("You’re working on this device only.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Sign in to sync" }).click();
+  await expect(page).toHaveURL(/\/login\?/);
+  await page.getByLabel("Email", { exact: true }).fill(user.email);
+  await page.getByLabel("Password", { exact: true }).fill(user.password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  // The login has its own heading, so the app is what has to be waited for, not a heading.
+  await page.waitForURL(/\/home/, { timeout: 30_000 });
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Hi,/);
+  await expect(page.getByText("You’re working on this device only.")).toHaveCount(0);
+  expect(await page.evaluate(() => window.localStorage.getItem("lf.localOnly"))).toBeNull();
+  // And the mode is over for good, not only in this tab: what was queued goes out.
+  await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
+});
