@@ -1,4 +1,5 @@
 import { SESSION_COOKIE, sessionMarkerCookie } from "@/lib/auth/cookies";
+import { forgetOfflineReadyAnnouncement } from "@/lib/pwa/readiness";
 import { purgePersistedCaches } from "@/lib/query/purge";
 
 import { isVaultSupported } from "./db";
@@ -40,6 +41,7 @@ export async function wipeThisDevice(): Promise<void> {
   currentVault()?.close();
   setCurrentVault(null);
   clearSessionMarker();
+  forgetOfflineReadyAnnouncement();
   await purgePersistedCaches();
   if (!isVaultSupported() || typeof indexedDB.databases !== "function") return;
   const names = (await indexedDB.databases())

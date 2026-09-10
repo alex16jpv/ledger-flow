@@ -1,4 +1,9 @@
-import { shellReadiness } from "./readiness";
+import {
+  forgetOfflineReadyAnnouncement,
+  markOfflineReadyAnnounced,
+  offlineReadyAnnounced,
+  shellReadiness,
+} from "./readiness";
 import { SHELL_CACHE, SHELL_SCREENS, shellCacheKey, shellUrls } from "./shell";
 
 const store = new Map<string, Set<string>>();
@@ -50,5 +55,16 @@ describe("how ready this device is to run with no network", () => {
   it("promises nothing where the browser has no cache at all", async () => {
     vi.stubGlobal("caches", undefined);
     expect(await shellReadiness("en")).toEqual({ cached: 0, expected: SHELL_SCREENS });
+  });
+
+  // The alert at the foot of the screen is how a device says it is ready. If the copy it was said
+  // of is thrown away, the sentence stops being true and the next copy has to say it again.
+  it("forgets the announcement so a copy downloaded again can announce itself", () => {
+    markOfflineReadyAnnounced();
+    expect(offlineReadyAnnounced()).toBe(true);
+
+    forgetOfflineReadyAnnouncement();
+
+    expect(offlineReadyAnnounced()).toBe(false);
   });
 });
