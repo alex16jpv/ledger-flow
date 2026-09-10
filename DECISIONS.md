@@ -2723,3 +2723,31 @@ cover` is set once in the root layout for the standalone display.
   work from any machine, and a Node project should not need Python for its own design); versioning a
   handful of canonical captures (rejected by the owner in favour of regenerating them); and moving
   `DESIGN.md` whole instead of splitting it (rejected: 25 screens today and more coming).
+
+## 2026-09-09 · A session with no network has an answer (P-35)
+
+- **What the owner saw on his phone:** the installed app opened with no network and every
+  screen stayed on its skeleton — reload after reload, module after module. The cause is one line of
+  React Query's contract: `/api/auth/me` is a server read (`networkMode: "online"`, the default), so
+  a browser that has already reported no network **pauses** it instead of running it. It therefore
+  never failed either, and `SessionProvider` read that as `"loading"` — the one value §2.6 forbids
+  the marker from overruling. `AppFrame` never opened the vault, the gate of F-31 was never lowered,
+  and every read on every screen waited for a vault nobody was going to open.
+- **Decision:** a read the network paused counts as an answer, and the answer is latched — R-3b's own
+  reason applied to the new case, because a paused read resumes as `"fetching"` with no data and no
+  error, and the vault this status decides would be torn down and rebuilt in the gap the network
+  comes back in. The latch is state adjusted during render, which is the one shape `react-hooks`
+  allows: it forbids a ref written while rendering and a `setState` in an effect body alike.
+- **Alternative, tried and measured:** making the session read `offlineFirst` so it fails instead of
+  pausing. It is one line and it fixed the phone — and it **broke P-32**: `enabled: !localOnly` reads
+  `false` on the hydrating render, because the store answers with its server snapshot there, so
+  `GET /api/auth/me` went out twice on a device the user had put in "this device only", which is the
+  one thing that mode promises never happens (the e2e of P-32 caught it). The pause was quietly doing
+  that job too. Also rejected: reading `fetchStatus` in `AppFrame` instead (§2.6's "the session
+  decides while it can" belongs to the provider that owns the question, not to each caller).
+- **Why it looked like a mobile bug, and why no test had caught it:** on a desktop the network is cut
+  in a tab that is already running, where the session read has long since answered; a phone, and an
+  installed app above all, is opened cold. And **Playwright's `setOffline` leaves `navigator.onLine`
+  true**, so the whole offline suite ran in the one state that always worked — the app fired the
+  request, it failed at once and the session resolved. The new test overrides `navigator.onLine`,
+  which is what a device with no network actually reports.

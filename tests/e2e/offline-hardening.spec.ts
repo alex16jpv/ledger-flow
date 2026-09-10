@@ -358,3 +358,49 @@ test("with no network the root opens the app on a device that holds it", async (
   await expect(page).toHaveURL(/\/home$/, { timeout: 30_000 });
   await expect(page.getByText("You’re offline.")).toBeVisible();
 });
+
+// P-35 (owner, 2026-09-09): the way an installed app is opened is cold, and on a phone with no
+// network every screen stayed on its skeleton — reload after reload, module after module. The
+// session read is paused, not run, with no network, so nothing ever resolved it and the marker
+// never got to name the vault (§2.6). What this measures is data, not headings: a heading paints
+// with or without a vault.
+test("a device opened with no network shows what it holds, not skeletons", async ({
+  page,
+  request,
+  context,
+}) => {
+  test.setTimeout(180_000);
+  const user = await freshUser(request, "cold-start");
+
+  await signInAs(context, request, user);
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+
+  await context.setOffline(true);
+  // Playwright's offline emulation leaves `navigator.onLine` **true**, which no device with no
+  // network reports — and it is what the app reads to decide it is offline. Without this the suite
+  // measures a browser that believes it is online and merely fails every request, which is the one
+  // case that always worked.
+  await context.addInitScript(() => {
+    Object.defineProperty(window.navigator, "onLine", { get: () => false });
+  });
+  await page.goto("/home");
+  await expect(page.getByText("You’re offline.")).toBeVisible();
+  await expect(page.getByText(user.accountName).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
+  // And the name, which comes from the profile the pull stored (F-82): with no vault open there is
+  // none, and the greeting drops the comma with it.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Hi,/);
+
+  // "Cambiando de módulo": each of these is a document load of its own with no network (T-01).
+  await page.goto("/accounts");
+  await expect(page.getByRole("link", { name: new RegExp(user.accountName) })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
+
+  await page.goto("/transactions");
+  await expect(page.getByRole("heading", { level: 1, name: "Transactions" })).toBeVisible();
+  await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
+});

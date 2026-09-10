@@ -1,3 +1,4 @@
+import { onlineManager } from "@tanstack/react-query";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -40,6 +41,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   vi.unstubAllGlobals();
+  onlineManager.setOnline(true);
   await wipeVaults();
 });
 
@@ -105,6 +107,31 @@ describe("SessionProvider", () => {
     await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"));
     const afterError = statuses.slice(statuses.indexOf("error"));
     expect(afterError).not.toContain("loading");
+  });
+
+  // P-35: a browser that has already reported no network pauses a server read instead of running
+  // it, and a paused read never fails either — "loading" is what kept the marker from naming the
+  // vault (§2.6) and every screen on a device opened with no network on its skeleton, for ever.
+  it("gives up when there is no network to ask over, without asking", async () => {
+    onlineManager.setOnline(false);
+    statuses.length = 0;
+    renderSession();
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("error"));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // The other half of R-3b: a paused read resumes as "fetching", with no data and no error yet.
+  it("does not fall back to loading when the network comes back", async () => {
+    onlineManager.setOnline(false);
+    statuses.length = 0;
+    renderSession();
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("error"));
+    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "Ada" } }));
+    act(() => {
+      onlineManager.setOnline(true);
+    });
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"));
+    expect(statuses.slice(statuses.indexOf("error"))).not.toContain("loading");
   });
 
   it("logs out, tells the other tabs and calls onSignedOut", async () => {

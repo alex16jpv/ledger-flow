@@ -156,15 +156,22 @@ export function SessionProvider({
     [queryClient],
   );
 
-  // React Query drops an error back to pending when a query with no data refetches, so a session
-  // that failed offline would read as "loading" again the moment the network returns — and whatever
-  // hangs on the answer (the vault of §2.6) would be torn down and rebuilt in the gap (R-3b).
+  // P-35: with no network a server read is **paused, not run**, so this one never failed either and
+  // the status stayed "loading" — the one value §2.6 forbids the marker from overruling, so no vault
+  // opened and every screen on a device opened with no network kept its skeleton. A read that cannot
+  // even start has answered as much as one that failed.
+  // Latched, and R-3b is why: React Query drops a failed read back to pending when it refetches and
+  // a paused one back to fetching when the network returns, and the vault this status decides would
+  // be torn down and rebuilt in that gap.
+  const answered = query.isError || query.isFetched || query.fetchStatus === "paused";
+  const [wasAnswered, setWasAnswered] = useState(false);
+  if (answered && !wasAnswered) setWasAnswered(true);
   const status: SessionStatus =
     localOnly || expired
       ? "expired"
       : query.data
         ? "authenticated"
-        : query.isError || query.isFetched
+        : wasAnswered
           ? "error"
           : "loading";
 
