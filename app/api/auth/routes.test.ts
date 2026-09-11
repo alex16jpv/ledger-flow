@@ -82,6 +82,26 @@ describe("login handler", () => {
     expect((init?.headers as Record<string, string>)["x-request-id"]).toBe("req-1");
   });
 
+  it("tells the backend which client is logging in, not just that the frontend called", async () => {
+    fetchMock.mockResolvedValue(json(tokens, { status: 200 }));
+    await authenticate(
+      "/auth/login",
+      post("/api/auth/login", { email: "a@b.co", password: "x" }, { "x-real-ip": "203.0.113.7" }),
+    );
+    const headers = fetchMock.mock.calls[0]?.[1]?.headers as Record<string, string>;
+    expect(headers["x-client-ip"]).toBe("203.0.113.7");
+  });
+
+  it("does not let the browser pick the address its login attempts count against", async () => {
+    fetchMock.mockResolvedValue(json(tokens, { status: 200 }));
+    await authenticate(
+      "/auth/login",
+      post("/api/auth/login", { email: "a@b.co", password: "x" }, { "x-client-ip": "203.0.113.7" }),
+    );
+    const headers = fetchMock.mock.calls[0]?.[1]?.headers as Record<string, string>;
+    expect(headers["x-client-ip"]).toBeUndefined();
+  });
+
   it("passes backend errors through with their code and Retry-After", async () => {
     fetchMock.mockResolvedValue(
       json(

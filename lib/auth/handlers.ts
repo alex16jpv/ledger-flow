@@ -3,6 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 
 import { backendFetch, BackendUnavailableError, readBackendJson } from "@/lib/api/backend";
+import { clientIpOf } from "@/lib/api/client-ip";
 import { REQUEST_ID_HEADER } from "@/lib/api/request-id";
 import { env } from "@/lib/env";
 import { LOCALE_COOKIE } from "@/lib/i18n/routing";
@@ -140,6 +141,7 @@ export async function authenticate(
     method: "POST",
     body,
     requestId,
+    clientIp: clientIpOf(request),
     userAgent: request.headers.get("user-agent"),
   });
   if (!upstream.ok) return passThroughError(upstream, requestId);

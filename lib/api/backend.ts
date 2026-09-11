@@ -2,6 +2,7 @@ import "server-only";
 
 import { env } from "@/lib/env";
 
+import { CLIENT_IP_HEADER } from "./client-ip";
 import { REQUEST_ID_HEADER } from "./request-id";
 
 export interface BackendRequest {
@@ -10,6 +11,7 @@ export interface BackendRequest {
   rawBody?: string;
   accessToken?: string | null;
   requestId?: string | null;
+  clientIp?: string | null;
   userAgent?: string | null;
   headers?: Record<string, string>;
   signal?: AbortSignal;
@@ -27,6 +29,7 @@ export async function backendFetch(path: string, request: BackendRequest = {}): 
     rawBody,
     accessToken,
     requestId,
+    clientIp,
     userAgent,
     headers = {},
     signal,
@@ -42,6 +45,7 @@ export async function backendFetch(path: string, request: BackendRequest = {}): 
         ...(body !== undefined ? { "content-type": "application/json" } : {}),
         ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
         ...(requestId ? { [REQUEST_ID_HEADER]: requestId } : {}),
+        ...(clientIp ? { [CLIENT_IP_HEADER]: clientIp } : {}),
         ...(userAgent ? { "user-agent": userAgent } : {}),
         ...headers,
       },
