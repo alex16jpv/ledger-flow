@@ -19,7 +19,7 @@ export type paths = {
                     limit?: number;
                     /** @description Number of items to skip (offset-based pagination) */
                     offset?: number;
-                    /** @description Cursor ID for cursor-based pagination (overrides offset) */
+                    /** @description ID of the last item of the previous page; must name a row of the caller's (cursor-based pagination; overrides offset) */
                     cursor?: string;
                     /** @description Comma-separated list of account UUIDs to filter by ID (1-100) */
                     ids?: string;
@@ -41,7 +41,7 @@ export type paths = {
                         "application/json": components["schemas"]["AccountList"];
                     };
                 };
-                /** @description Invalid query parameters (code VALIDATION) */
+                /** @description Invalid query parameters (code VALIDATION), or a cursor that names no account of the caller's (code INVALID_CURSOR) */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -975,7 +975,7 @@ export type paths = {
                     limit?: number;
                     /** @description Number of items to skip (offset-based pagination) */
                     offset?: number;
-                    /** @description ID of the last item of the previous page (cursor-based pagination; overrides offset) */
+                    /** @description ID of the last item of the previous page; must name a row of the caller's (cursor-based pagination; overrides offset) */
                     cursor?: string;
                 };
                 header?: never;
@@ -993,7 +993,7 @@ export type paths = {
                         "application/json": components["schemas"]["BudgetList"];
                     };
                 };
-                /** @description Invalid query parameters */
+                /** @description Invalid query parameters (code VALIDATION), or a cursor that names no budget of the caller's (code INVALID_CURSOR) */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1564,7 +1564,7 @@ export type paths = {
                     limit?: number;
                     /** @description Number of items to skip (offset-based pagination) */
                     offset?: number;
-                    /** @description Cursor ID for cursor-based pagination (overrides offset) */
+                    /** @description ID of the last item of the previous page; must name a row of the caller's (cursor-based pagination; overrides offset) */
                     cursor?: string;
                     /** @description Comma-separated list of category UUIDs to filter by ID (1-100) */
                     ids?: string;
@@ -1588,7 +1588,7 @@ export type paths = {
                         "application/json": components["schemas"]["CategoryList"];
                     };
                 };
-                /** @description Invalid query parameters (code VALIDATION) */
+                /** @description Invalid query parameters (code VALIDATION), or a cursor that names no category of the caller's (code INVALID_CURSOR) */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2117,7 +2117,7 @@ export type paths = {
          *     | status | meaning | what the client does |
          *     |---|---|---|
          *     | `applied` | landed now; `result` is what the route would have answered | drop the operation, keep `result` |
-         *     | `duplicate` | already landed: a resent `opId`, or a create whose `id` the user already owns (`result` carries the row in that case) | drop the operation |
+         *     | `duplicate` | already landed: a resent `opId`, a create whose `id` the user already owns (`result` carries the row in that case), or a write whose `baseUpdatedAt` no longer matches but whose state the row already carries | drop the operation |
          *     | `conflict` | the route would have answered 409 (`STALE_UPDATE` with `current`, `DUPLICATE`, `ID_TAKEN`), or a row the server has explains it: a `DUPLICATE` whose name an active row holds, and `RESOURCE_ARCHIVED` for an account archived online. `current` carries that row | keep it; resolve |
          *     | `rejected` | the route would have answered another 4xx (`VALIDATION`, `NOT_FOUND`, `CATEGORY_ARCHIVED`, `BUDGET_PERIOD_OVERLAP`, `FUTURE_DATE`…) | keep it; the user fixes or discards |
          *     | `blocked` | a row it names (`dependsOn`, or its own `id`) had an operation fail earlier in this batch; `blockedBy` is that opId | keep it; resend once the blocker is resolved |
@@ -2133,7 +2133,11 @@ export type paths = {
          *     dropped (no categories means a global budget). A movement whose account
          *     was archived online is a `conflict` `RESOURCE_ARCHIVED` and is never
          *     lost. Archiving an already-archived row lands, and deleting a movement
-         *     another device deleted answers `duplicate`.
+         *     another device deleted answers `duplicate`. A guard that no longer
+         *     matches is not a conflict when the row already carries what the
+         *     operation asked for — its own write landed and the registry row did
+         *     not, or another device made the same change: the state it wanted holds,
+         *     so it answers `duplicate`.
          *
          *     **Actions per entity:** account: create, update, archive, restore,
          *     setDefault · category: create, update, archive, restore · transaction:
@@ -2326,7 +2330,7 @@ export type paths = {
                     limit?: number;
                     /** @description Number of items to skip (offset-based pagination) */
                     offset?: number;
-                    /** @description ID of the last item of the previous page (cursor-based pagination; overrides offset) */
+                    /** @description ID of the last item of the previous page; must name a row of the caller's (cursor-based pagination; overrides offset) */
                     cursor?: string;
                     /** @description Comma-separated list of UUIDs to filter by ID (max 100) */
                     ids?: string;
