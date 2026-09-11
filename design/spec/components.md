@@ -39,7 +39,9 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     on the drag gesture.
 13. **Toast** — `--ink`, one action ("Undo"), five seconds, above the tab bar.
 14. **Alert** — inline, four variants; the main-account warning uses `warning`.
-15. **Empty** — an lg outline tile plus a title, a line and a call to action.
+15. **Empty** — an lg outline tile plus a title, a line and a call to action. The title is an `h2` at
+    17 inside a screen that has its own header; where the `Empty` **is** the whole page — the 404, an
+    error boundary — it carries the page's `h1` instead.
 16. **Skeleton** — a 1.4s shimmer over `--surface-2/3`.
 17. **Stat** — a 12px label, a 20px value, an 11px delta with an icon.
 18. **Bars** — a small daily series, brand at 35% opacity, peaks at 100%, today highlighted, days with

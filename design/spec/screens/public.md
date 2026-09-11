@@ -29,4 +29,6 @@
   channel (`ledgerflow@alexpiral.com`) and the response time. Terms use the same template.
 - **404** (`#not-found`): an `Empty` with a `search` tile, a title, a reassuring line ("Your money is
   where you left it"), a call to action to Home and "Back". It returns a real 404. A 500 and a network
-  error use the same composition with a `circle-alert` tile.
+  error use the same composition with a `circle-alert` tile. **The title is the page's `h1`**, at the
+  page title's size (24): the `Empty` is the whole page here, so nothing else carries the document's
+  first heading.

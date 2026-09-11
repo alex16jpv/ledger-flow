@@ -15,6 +15,8 @@ export default async function NotFound() {
         <Empty
           icon={<Search {...iconProps("lg")} />}
           title={t("title")}
+          titleAs="h1"
+          titleSize="page"
           body={t("body")}
           action={
             <Link href="/home" className={buttonClasses()}>

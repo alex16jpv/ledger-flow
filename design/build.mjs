@@ -1553,7 +1553,7 @@ const landing = () => {
 };
 
 const notFound = () => {
-  const inner = `<div class="empty" style="padding-top:96px">${tile("search", "NONE", "lg")}<span class="h1">Page not found</span><p class="muted" style="margin:0;max-width:360px">The address may be wrong or the page may have moved. Your money is where you left it.</p><div class="hstack" style="gap:10px;margin-top:8px"><a class="btn primary" href="#">Go to Home</a><a class="btn ghost" href="#">Back</a></div></div>`;
+  const inner = `<div class="empty" style="padding-top:96px">${tile("search", "NONE", "lg")}<h1 class="h1">Page not found</h1><p class="muted" style="margin:0;max-width:360px">The address may be wrong or the page may have moved. Your money is where you left it.</p><div class="hstack" style="gap:10px;margin-top:8px"><a class="btn primary" href="#">Go to Home</a><a class="btn ghost" href="#">Back</a></div></div>`;
   return publicShell(inner);
 };
 

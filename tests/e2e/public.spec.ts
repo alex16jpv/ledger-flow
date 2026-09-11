@@ -71,9 +71,10 @@ test("an unknown public address answers a real 404 inside the public frame", asy
 }) => {
   expect((await request.get("/this-page-does-not-exist")).status()).toBe(404);
   await page.goto("/this-page-does-not-exist");
-  await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Go to Home" })).toHaveAttribute("href", /\/home$/);
   await expect(page.getByRole("link", { name: "Get started" })).toBeVisible();
+  await expectNoAxeViolations(page);
 });
 
 // P-33 (owner, 2026-09-08): the root is the app's door for a device that already signed in, so the
