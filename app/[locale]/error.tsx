@@ -20,6 +20,8 @@ export default function PublicError({ error, reset }: { error: Error; reset: () 
         tone="danger"
         icon={<CircleAlert {...iconProps("lg")} />}
         title={t("title")}
+        titleAs="h1"
+        titleSize="page"
         body={t("body")}
         action={<Button onClick={reset}>{t("retry")}</Button>}
         className="w-full"

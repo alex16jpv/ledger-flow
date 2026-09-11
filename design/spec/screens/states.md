@@ -13,7 +13,10 @@ server fails and when something has to be confirmed.
   six rows. Never a full-page spinner; a spinner only inside a button.
 - **Error** (`#server-error`): a 503, `DB_UNAVAILABLE` or a network failure shows a red tile, a title, an
   explanation and "Retry", and underneath the mono line "Reference: {requestId}" for support. An error
-  while saving shows a red toast with "Retry" that keeps the form.
+  while saving shows a red toast with "Retry" that keeps the form. **When the error replaces the whole
+  screen** — a route's error boundary, where the screen's own header is gone with it — **its title
+  carries the page's `h1`**; the composition and the size do not change, only the level, because
+  otherwise the document has no first heading at all.
 - **Session expired** (`#session-expired`): the refresh is silent; `REFRESH_INVALID` /
   `REFRESH_REVOKED` opens a blocking sheet, "Your session ended", with "Sign in", keeping the route to
   come back to. **With a vault on the device the sheet changes identity**: it becomes the three-exit

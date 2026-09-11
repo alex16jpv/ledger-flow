@@ -24,6 +24,7 @@ export default function AppError({ error, reset }: { error: Error; reset: () => 
         tone="danger"
         icon={<CircleAlert {...iconProps("lg")} />}
         title={t("title")}
+        titleAs="h1"
         body={<LoadErrorBody error={error} />}
         action={
           <Button variant="secondary" onClick={reset}>
