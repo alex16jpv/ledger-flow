@@ -1477,7 +1477,8 @@ const stats = (view = "cat") => {
     ).join("");
     const tip =
       '<span class="tooltip show" style="position:absolute;left:14%;top:-4px"><span class="tip">Food</span></span>';
-    content = `<div class="card stack-sm" style="position:relative;overflow:visible">${tip}<div class="stackbar" style="height:12px">${bar}</div></div><div class="list card flush">${lis}</div>`;
+    content = `<div class="card stack-sm" style="position:relative;overflow:visible">${tip}<div class="stackbar" style="height:12px">${bar}</div></div><div class="list card flush">${lis}</div>
+${trendsLink()}`;
   } else if (view == "day" || view == "cal") {
     const toggle = `<div class="segment" style="flex:none;width:96px">${[
       ["chart-column", "day"],
@@ -3051,7 +3052,7 @@ const PAGES = [
       plate(
         "by-category",
         "By category",
-        "A stacked bar whose segments name themselves on hover or focus, plus a list with percentages. The sample figures now add up to the month Home shows.",
+        "A stacked bar whose segments name themselves on hover or focus, plus a list with percentages. It gains the way into Trends, and its sample figures now add up: the six rows are the 48 transactions the card above counts, and the month Home shows.",
         stats("cat"),
         { added: "2026-09-01", updated: "2026-09-11", review: true },
       ),
