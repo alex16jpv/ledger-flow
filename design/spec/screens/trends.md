@@ -21,7 +21,7 @@ Stats was showing.
   solid, the same days of the previous month dashed — and one sentence: "You have spent $1,284,300 so
   far — 2% less than at this point in August." Comparing a finished month against one in its third
   week is the mistake this card exists to prevent.
-- **Where it goes**: `stackCols`, one stacked column per month with the top five categories and
+- **Where it goes**: stacked columns (component 33), one column per month with the top five categories and
   "Other", so a category that is quietly growing shows up as a band that widens. The running month is
   drawn at 55% here too.
 - A closing line: a month is counted in the user's time zone, like every other figure in the app.

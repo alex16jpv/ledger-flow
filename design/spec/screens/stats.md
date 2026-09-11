@@ -25,7 +25,9 @@ transactions, the average).
 - **By day, as a calendar** (`#spending-calendar`): the same data and the same card, one toggle apart
   — `heat`, a cell per day in four steps, a Less/More scale, weeks starting on the language's first
   day. A row of bars hides which weeks and which weekdays were expensive; the calendar shows it. The
-  toggle is per user and remembered.
+  toggle is remembered. Where: the only preference store the app has today is
+  `localStorage`, which is per browser and not per user — whether this one deserves a row in the
+  profile is a decision, not an assumption.
 - **By account** (`#by-account`): which card or account the money left from — the same `stackbar` and
   the same `row` list as categories, with the account's colour and icon. Transfers between the user's
   own accounts are **not** spending and never appear here; a line under the list says so.
