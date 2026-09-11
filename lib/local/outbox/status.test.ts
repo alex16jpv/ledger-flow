@@ -63,8 +63,7 @@ describe("what the queue says about the figures on screen", () => {
     ]);
 
     expect(status.attention).toBe(2);
-    // The row opens on the earliest of its stuck operations, and a row that is only waiting is not
-    // in the map at all (F-29).
+    // F-29: a row opens on its earliest stuck operation; one only waiting is not in the map.
     expect([...status.attentionRows]).toEqual([["t1", 1]]);
     expect(status.queuedRows.has("t2")).toBe(true);
   });

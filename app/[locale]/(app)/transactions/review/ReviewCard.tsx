@@ -37,8 +37,7 @@ interface ReviewCardProps {
   recent: readonly Category[];
   focused: boolean;
   errorKey: ErrorMessageKey | null;
-  // F-57: the server saved this movement without its category because it had been archived while
-  // this device had no network, so the card says why it is here.
+  // F-57: the server saved this movement without its category because it was archived offline.
   droppedCategory?: boolean;
 }
 

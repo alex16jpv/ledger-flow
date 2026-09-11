@@ -132,13 +132,11 @@ describe("AccountForm", () => {
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("/api/accounts/a1");
     expect(init?.method).toBe("PUT");
-    // Only the name was touched, so only the name travels: a body naming the type and the colour
-    // too would make a rename on another device a conflict the user has to answer (§1 example 3).
+    // §1 example 3: only what was touched travels, or a rename elsewhere becomes a conflict.
     expect(JSON.parse(init?.body as string)).toEqual({ name: "Nu Bank" });
   });
 
-  // F-03, variant C: one row, and a sheet with room to say what each of the nine types is — which
-  // is what the grid of chips could not do.
+  // F-03, variant C: one row and a sheet with room to say what each of the nine types is.
   it("offers all nine account types in a sheet, each with the line that explains it", async () => {
     renderForm();
     await userEvent.click(screen.getByRole("button", { name: /^Type/ }));

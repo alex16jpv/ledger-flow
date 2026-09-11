@@ -73,8 +73,7 @@ describe("the outbox queue", () => {
 
   it("writes the row and the operation together: if the queue refuses, the row goes back too", async () => {
     const vault = await openTestVault("u1");
-    // A payload the structured clone algorithm refuses: the mirror row is already written when the
-    // queue's own put fails, which is the half this item exists to make impossible.
+    // A payload structured clone refuses: the mirror row is written when the queue's put fails.
     const unstorable = write({
       entityId: "t2",
       payload: { body: { amount: () => 1 } as unknown as Record<string, unknown> },

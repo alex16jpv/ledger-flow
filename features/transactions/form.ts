@@ -143,11 +143,7 @@ export function toTransactionInput(
   };
 }
 
-// Which fields of the request each form field owns. An edit sends what the user actually touched:
-// the queue classifies a conflict by the fields the operation carries (§6 O-F5a), so a body that
-// always names the amount and the date turns every disagreement between two devices into a money
-// question — the opposite of §1 example 3, where a rename on one device and a note on the other
-// combine without asking anyone.
+// §6 O-F5a: the queue classifies a conflict by the fields the operation carries (§1 example 3).
 const OWNED_BY: Record<keyof TransactionFormValues, readonly (keyof UpdateTransactionInput)[]> = {
   // The type decides whether a category is allowed and which side each account goes on.
   type: ["type", "categoryId", "fromAccountId", "toAccountId"],
@@ -166,8 +162,7 @@ const OWNED_BY: Record<keyof TransactionFormValues, readonly (keyof UpdateTransa
 
 export type TouchedFields = Partial<Record<keyof TransactionFormValues, unknown>>;
 
-// React Hook Form marks a field dirty only while its value differs from the one the form opened
-// with, so a value typed and typed back is not a change and does not travel.
+// RHF marks a field dirty only while it differs from the opening value, so a round trip is not.
 export function toTransactionChanges(
   input: CreateTransactionInput & UpdateTransactionInput,
   touched: TouchedFields,

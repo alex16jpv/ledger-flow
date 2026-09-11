@@ -41,9 +41,7 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
-// A filter, a month or Next's `_rsc` token change the URL and not the answer, so every request for
-// a route shares one entry and changing a filter with no network still finds it (F-06); a row's id
-// folds into its route template the same way (F-48).
+// F-06: filters, months and `_rsc` change the URL, not the answer, so a route is one entry (F-48).
 const byRoute: SerwistPlugin = {
   cacheKeyWillBeUsed: ({ request }) => Promise.resolve(shellCacheKey(request.url)),
 };
@@ -53,8 +51,7 @@ const shellPages: NetworkFirst = new NetworkFirst({
   plugins: [
     byRoute,
     {
-      // Neither the network nor the cache has this route: the app answers with its own document
-      // rather than letting the browser show its error page (§6 O-F6).
+      // §6 O-F6: with neither network nor cache for this route, the app answers its own document.
       handlerDidError: ({ request }): Promise<Response | undefined> =>
         serwist.matchPrecache(offlineDocument(new URL(request.url).pathname)),
     },
@@ -81,10 +78,7 @@ const serwist: Serwist = new Serwist({
         sameOrigin && request.headers.get(RSC_HEADER) === "1" && isShellPath(url.pathname),
       handler: new NetworkOnly(),
     },
-    // P-33: the root is the app's door for a device that already holds it. Online the proxy
-    // redirects; with no network nothing on the server runs, and the landing document is not even
-    // cached — a signed-in device never gets it, because the proxy redirects that request too. So
-    // the worker answers the redirect itself when the marker says whose device this is.
+    // P-33: a signed-in device never gets the landing document, so the worker redirects it itself.
     {
       matcher: ({ request, sameOrigin, url }) =>
         sameOrigin && request.mode === "navigate" && isLandingPath(url.pathname),
@@ -101,13 +95,7 @@ const serwist: Serwist = new Serwist({
 
 serwist.addEventListeners();
 
-// The other half of Background Sync: the engine registers this tag when a pass ends with the queue
-// still full, and the drain itself lives in the page (F-24). **The tag only brings the drain
-// forward while a tab is alive** (F-39, owner's decision 2026-09-06): woken with no clients,
-// `matchAll` answers an empty list and the queue waits for the next time the app is opened, which
-// costs the user nothing — nothing is lost, it is sent later. Draining from here would mean a second
-// copy of the engine, its routes and its access to the vault, which is the most delicate code in the
-// app and the last place to duplicate it.
+// F-39 (owner, 2026-09-06): the tag only brings the drain forward while a tab is alive (F-24).
 self.addEventListener("sync", (event) => {
   if (event.tag !== OUTBOX_SYNC_TAG) return;
   event.waitUntil(
@@ -117,9 +105,7 @@ self.addEventListener("sync", (event) => {
   );
 });
 
-// The marker is the only thing that says "this device holds a vault" (§2.6), and in a worker it can
-// only be read through the Cookie Store API. Where that is missing (Safari, Firefox) the answer is
-// the ordinary one: the landing from cache, or the offline document.
+// §2.6: in a worker the marker is readable only through the Cookie Store API, missing in Safari.
 async function holdsTheApp(): Promise<boolean> {
   const store = (self as unknown as { cookieStore?: { get: (name: string) => Promise<unknown> } })
     .cookieStore;
@@ -218,8 +204,7 @@ async function warmRoute(url: string, event: ExtendableEvent) {
   await storePayload(SHELL_RSC_CACHE, url, event);
 }
 
-// The routes the user has not opened yet: without this, the first visit with no network has nothing
-// to answer with (§6 O-F6). Already cached routes are left alone, so opening the app costs nothing.
+// §6 O-F6: without this the first visit with no network has nothing to answer with.
 async function warmShell(urls: string[], event: ExtendableEvent): Promise<void> {
   for (const url of urls) {
     await warmRoute(url, event);
@@ -239,11 +224,7 @@ self.addEventListener("message", (event) => {
 
 const STAGED = "-next";
 
-// A new worker ships new chunks, so the documents the old one warmed point at files that are gone.
-// They are fetched again while this worker installs — the one moment a new build is guaranteed to
-// have the network, and the page's cookies — into a staging cache, and swapped in on activate. A
-// route that cannot be fetched now is dropped: a stale document would ask for chunks that no longer
-// exist, which is worse than the offline page.
+// A new build's chunks replace the old, so the shell is refetched on install and staged, not kept.
 async function stageShell(event: ExtendableEvent): Promise<void> {
   const live = await caches.open(SHELL_CACHE);
   const staging = new NetworkFirst({

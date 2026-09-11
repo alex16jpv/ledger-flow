@@ -8,8 +8,7 @@ import type { Budget, StatsResponse } from "@/types/api";
 
 export type BudgetFilters = Omit<BudgetListParams, "limit">;
 
-// Reads go through the repository, which answers from the mirror while offline; writes go through
-// the outbox, which queues the operation with the row and answers from the projection (O-F4).
+// O-F4: reads go through the repository (mirror fallback); writes go through the outbox.
 export {
   archiveBudget,
   createBudget,

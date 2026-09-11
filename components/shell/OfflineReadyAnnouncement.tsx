@@ -15,8 +15,7 @@ import { onShellWarmed } from "@/lib/pwa/service-worker";
 
 const SYNC_STATUS_PATH = "/settings/sync";
 
-// F-54: nobody was told when a device finished preparing. It is said once, on the device it is true
-// of, and never again — the fixed row in Sync status is where it can be looked up afterwards.
+// F-54: said once, on the device it is true of; Sync status is where it is looked up after.
 export function OfflineReadyAnnouncement({ enabled }: { enabled: boolean }) {
   const t = useTranslations("settings.sync.offlineReadyToast");
   const locale = useLocale();
@@ -46,9 +45,7 @@ export function OfflineReadyAnnouncement({ enabled }: { enabled: boolean }) {
         });
       })();
     };
-    // The two halves finish in either order, so both moments are checked: the worker's answer, and
-    // the mount that follows a pull which landed after it. A device announces itself on the visit
-    // that completes it, or on the next one.
+    // The two halves finish in either order, so both the worker's answer and the mount are checked.
     const stop = onShellWarmed(check);
     check();
     return () => {

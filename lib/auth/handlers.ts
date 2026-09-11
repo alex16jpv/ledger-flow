@@ -104,9 +104,7 @@ export function sessionResponse(
   return response;
 }
 
-// Explicit logout. `Clear-Site-Data` no longer asks for `"storage"`: it would take the vault with
-// it, and whether the unsent queue goes is the user's answer to the sheet of F-34, applied precisely
-// by `purgeVault`. Only the app-shell caches go, because the next user gets their own.
+// F-34: no `storage` here — it would take the vault; `purgeVault` applies the user's answer.
 export function endSessionResponse(status = 200): NextResponse {
   const response =
     status === 204
@@ -117,8 +115,7 @@ export function endSessionResponse(status = 200): NextResponse {
   return response;
 }
 
-// The refresh token died. The session is over, the vault is not (§2.6, invariant 7): the marker
-// stays, nothing is cleared, and the app opens in local mode until the user signs in to sync.
+// §2.6, invariant 7: the session is over, the vault is not — the marker stays, nothing is cleared.
 export function endExpiredSessionResponse(status = 401): NextResponse {
   const response = NextResponse.json({ ok: false }, { status });
   applyCookies(response, expiredAuthCookies());

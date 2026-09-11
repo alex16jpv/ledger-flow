@@ -15,9 +15,7 @@ import type { WriteTransaction } from "./queue";
 import { reconcileRemoval, reconcileRow } from "./reconcile";
 import type { MirrorRow } from "./reproject";
 
-// What the server needs to refuse a write made against a row it has already moved on from (O-B2).
-// Absent for a create and for a row the queue has not put on the server yet: guarding against an
-// `updatedAt` the server never printed would be a 409 on every attempt.
+// O-B2: absent for a create and an unsent row — guarding an unprinted `updatedAt` is a 409.
 export interface WriteGuard {
   ifMatch?: string;
 }
@@ -25,8 +23,7 @@ export interface WriteGuard {
 const ifMatch = (guard: WriteGuard) =>
   guard.ifMatch ? { headers: { "If-Match": guard.ifMatch } } : {};
 
-// Everything a route needs to rebuild its request. The engine replays operations it did not queue —
-// after a reload the closures are gone — so `body` and `query` are kept in the envelope verbatim.
+// The engine replays operations it did not queue, so `body` and `query` are kept verbatim.
 export interface OperationRef {
   entityId: string;
   payload: OperationPayload;
@@ -41,8 +38,7 @@ export interface Route {
   ) => Promise<void> | void;
 }
 
-// The one cast in the table: a route knows the shape it sends and the shape it is answered with,
-// and the registry that holds all of them together cannot.
+// The one cast in the table: the registry holding every route cannot know each one's shapes.
 function route<R>(spec: {
   send: (ref: OperationRef, guard: WriteGuard) => Promise<R>;
   confirm?: (tx: WriteTransaction, result: R, operation: OutboxOperation) => Promise<void> | void;
@@ -53,8 +49,7 @@ function route<R>(spec: {
   };
 }
 
-// An archive answers the row since F-22 (backend `7e4edb4`), which is what lets the engine rebase
-// the guard of a restore queued behind it. The guard stays: `transaction:delete` answers a message.
+// F-22 (backend `7e4edb4`): an archive answers the row, but `transaction:delete` a message.
 const isRow = (result: unknown): result is { id: string; updatedAt: string } =>
   typeof result === "object" &&
   result !== null &&
@@ -67,9 +62,7 @@ const toSyncRow = (row: Transaction): SyncTransaction => ({
   deletedAt: (row as { deletedAt?: string | null }).deletedAt ?? null,
 });
 
-// The view the API answers with drops what only the stored row carries — the override map, the
-// CUSTOM dates, the owner — so the server's reply is merged over the baseline the mirror kept
-// instead of replacing it, and the next pull brings the authoritative row.
+// The API's view drops the override map, the CUSTOM dates and the owner, so it is merged over.
 async function budgetBaseline(tx: WriteTransaction, view: Budget): Promise<SyncBudget | undefined> {
   const record = await tx.objectStore("budgets").get(view.id);
   if (!record) return undefined;
@@ -90,8 +83,7 @@ async function budgetBaseline(tx: WriteTransaction, view: Budget): Promise<SyncB
   };
 }
 
-// How a row the server sent enters the mirror, by entity rather than by route: the row becomes the
-// baseline and what the queue still holds for it is projected back on top (D-24).
+// D-24: the row becomes the baseline and what the queue holds is projected back on top.
 export async function serverBaseline(
   tx: WriteTransaction,
   entity: OutboxEntity,
@@ -117,8 +109,7 @@ const confirmRemoval = (
 
 export type RouteKey = { [E in OutboxEntity]: `${E}:${OutboxAction<E>}` }[OutboxEntity];
 
-// One entry per route the outbox covers. Both callers go through it: the write that queues the
-// operation and the engine that replays it later, so there is a single description of each request.
+// Both callers go through it — the write and the engine — so each request is described once.
 export const ROUTES: Record<RouteKey, Route> = {
   "account:create": route<Account>({
     // O-B1: a create carrying an id is already idempotent, so the header would be redundant.

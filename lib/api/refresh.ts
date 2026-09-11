@@ -40,8 +40,7 @@ async function post(): Promise<Response | null> {
   }
 }
 
-// Who ended the session, when someone did: a 401 the BFF did not sign is an edge, a gateway or a
-// deploy in the middle, and none of them knows anything about this token (H-10).
+// H-10: a 401 the BFF did not sign is an edge or a gateway, and knows nothing about this token.
 function endedBy(response: Response | null): SessionEnd | null {
   if (response?.status !== 401) return null;
   const by = response.headers.get(SESSION_END_HEADER);
@@ -68,15 +67,13 @@ async function requestRefresh(): Promise<boolean> {
   }
   const by = endedBy(response);
   if (by && response) {
-    // The one event that asks for the password again: which side said so is the difference
-    // between a token that is over and a bad minute, and it was invisible until now.
+    // Which side ended it is the difference between a token that is over and a bad minute.
     reportError(new SessionEndedError(by, await codeOf(response)), "session");
     tabChannel.emitLocal({ type: "session:expired" });
     tabChannel.post({ type: "session:expired" });
     return false;
   }
-  // Twice with no answer at all: the device cannot reach its own server, which says nothing
-  // about the session and everything about the network.
+  // Twice with no answer at all says nothing about the session and everything about the network.
   if (!response) throw new NetworkError(newRequestId(), false);
   return false;
 }

@@ -13,17 +13,14 @@ export type SpendingTransaction = Pick<
 
 export interface SpendingWindow {
   groupBy: SpendingGroupBy;
-  // null is the service's "everything but ADJUSTMENT". The HTTP layer never sends it: an absent
-  // `type` there means EXPENSE, and `repository/stats.ts` applies that default before calling here.
+  // null is everything but ADJUSTMENT; the HTTP layer never sends it, EXPENSE is applied before.
   type: SyncTransaction["type"] | null;
   from?: string;
   to?: string;
   timeZone: string;
 }
 
-// The rows the window covers, grouped and totalled the way `aggregateSpending` does it. The window
-// is re-applied here rather than assumed: this is the statement of the rule, and the repository's
-// index range is how it avoids walking rows it already knows are outside.
+// The window is re-applied here rather than assumed: this is the statement of the rule.
 export function deriveSpending(
   transactions: SpendingTransaction[],
   window: SpendingWindow,
@@ -57,8 +54,7 @@ export function deriveSpending(
     } else if (transaction.tags.length === 0) {
       add("untagged", cents);
     } else {
-      // The server unwinds the tags: a two-tag row is counted in both buckets and once in the
-      // total, so the buckets can add up to more than `total`.
+      // The server unwinds the tags, so the buckets can add up to more than `total`.
       for (const tag of transaction.tags) add(tag, cents);
     }
   }
@@ -70,8 +66,7 @@ export function deriveSpending(
     // Rounded in minor units, exactly where the server rounds it: 10.01 over 2 rows is 5.01.
     avg: fromCents(Math.round(bucket.cents / bucket.count)),
   }));
-  // Day buckets are a time series; the rest rank by spend. The key breaks a tie the server leaves
-  // to Mongo, which no fixture exercises because no two of its buckets share a total.
+  // Day buckets are a time series; the rest rank by spend, with the key breaking Mongo's tie.
   buckets.sort((a, b) =>
     window.groupBy === "day"
       ? a.key.localeCompare(b.key)

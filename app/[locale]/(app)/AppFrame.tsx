@@ -39,13 +39,9 @@ import { QuickAddSheet } from "./QuickAddSheet";
 import { ServiceWorkerUpdates } from "./ServiceWorkerUpdates";
 
 function Frame({ children }: { children: ReactNode }) {
-  // The screens below render, and query, before any effect here runs: the gate that makes a read
-  // wait for the vault has to go up now, not where the vault is opened (F-31).
+  // F-31: the gate that makes a read wait for the vault must go up before the screens query.
   expectVault();
-  // The document the worker serves for this URL may have been rendered for another one — another
-  // query, another row (D-28) — and React keeps the server's attributes when they do not match, so
-  // a filter chip would stay on the server's choice. The screens are data-driven client work anyway:
-  // they render once the client owns the page.
+  // D-28: the worker may serve a document rendered for another URL, so screens render client-side.
   const mounted = useMounted();
   const session = useSession();
   const locale = useLocale();
@@ -58,8 +54,7 @@ function Frame({ children }: { children: ReactNode }) {
     open: false,
     chain: false,
   });
-  // Closing the sheet in local mode closes it for good (F-41); the `signedout` stripe is what stays
-  // behind, and a session that comes back remounts this frame with the flag clear.
+  // F-41: closing the sheet in local mode closes it for good; a new session remounts it clear.
   const [sheetDismissed, setSheetDismissed] = useState(false);
   useEffect(() => startHeartbeat(), []);
   const userId = session.user?.id;
@@ -71,20 +66,14 @@ function Frame({ children }: { children: ReactNode }) {
     sessionStatus === "loading" ? "loading" : "resolved",
     marker,
   );
-  // Who the user is when the session cannot say — an offline cold start, or local mode (§2.6): the
-  // profile the pull stored, the same row `/api/auth/me` answers. Without it the currency and the
-  // zone fell to the app's defaults and every figure shown offline wore the wrong symbol (F-63).
-  // With a session, the session wins.
+  // F-63: offline or in local mode (§2.6), the mirror profile carries the currency and the zone.
   const mirrorProfile = useMirrorProfile(Boolean(localUserId) && session.user === null);
   const user = session.user ?? mirrorProfile;
   // F-38: what the pull writes into the mirror only reaches the screens through an invalidation.
   const onMirrorChanged = useCallback(() => {
     void invalidateMirrorBacked(queryClient);
   }, [queryClient]);
-  // §2.6: the session cannot be resolved — no network, or the refresh is dead — but the marker says
-  // this device holds a vault for that user, so the app opens it and runs in local mode. Only the
-  // user decides this: a session that settles later for the same user must not restart the mirror,
-  // because every read in that gap would go to the server (R-3b).
+  // §2.6: only the user restarts the mirror — a later session for the same user must not (R-3b).
   useEffect(() => {
     if (localUserId) return startMirror(localUserId, { onChanged: onMirrorChanged });
     return undefined;
@@ -93,15 +82,13 @@ function Frame({ children }: { children: ReactNode }) {
     // Still asking who this is: the reads keep waiting. Anywhere else, no vault is coming.
     if (!localUserId && sessionStatus !== "loading") noMirror();
   }, [localUserId, sessionStatus]);
-  // Warmed for whoever has a vault here, not only for a live session: local mode (§2.6) has to
-  // survive a worker update too, and a dead session still has the marker the proxy lets through.
+  // Warmed for whoever has a vault here, not only a live session: local mode (§2.6) needs it too.
   useEffect(() => {
     if (!localUserId) return;
     void warmAppShell(locale);
   }, [localUserId, locale]);
 
-  // `reauth` is what gets past the marker on the way to the login (§2.6); without it the proxy
-  // would send a device with a 400-day marker straight back to the app it cannot sync.
+  // `reauth` is what gets a device with a live marker past the proxy to the login (§2.6).
   const goToLogin = useCallback(() => {
     router.replace(`${LOGIN_PATH}?${REAUTH_PARAM}=1&next=${encodeURIComponent(pathname)}`);
   }, [router, pathname]);
@@ -133,8 +120,7 @@ function Frame({ children }: { children: ReactNode }) {
           router.push({ pathname: ADD_HREF, query: Object.fromEntries(params) });
         }}
       />
-      {/* P-32: with a copy on the device the sheet is a decision with three exits (§8.17); with no
-          copy an expired session really is the end of the road, and §8.12's wall stays. */}
+      {/* P-32: with a copy here the sheet has three exits (§8.17); without one, §8.12's wall. */}
       {localUserId === undefined ? (
         <SessionExpiredSheet open={sessionStatus === "expired"} onSignIn={goToLogin} />
       ) : (

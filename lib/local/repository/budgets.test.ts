@@ -93,8 +93,7 @@ async function mirrorOf(seed: Seed): Promise<void> {
 }
 
 describe("budgets through the repository", () => {
-  // O-F2b: the view the mirror builds is the one the endpoint answers, and from here it is the one
-  // the screen gets with network too. The server serves only until the first snapshot has drained.
+  // O-F2b: the view the mirror builds is the endpoint's, with network too once a pull drained.
   it("asks the server until a pull has drained and builds the view locally from then on", async () => {
     fetchMock.mockResolvedValue(
       json({
@@ -192,8 +191,7 @@ describe("budgets through the repository", () => {
     ).resolves.toMatchObject([{ id: "b2", expired: true }]);
   });
 
-  // The lifetime floor drops the period, not the budget: a September reference on a budget that
-  // only starts in October has nothing to show.
+  // The lifetime floor drops the period, not the budget.
   it("drops a period that closes on or before the budget's lifetime floor", async () => {
     await mirrorOf({
       budgets: [budget({ id: "b1", effectiveFrom: "2026-10-01T05:00:00.000Z" })],

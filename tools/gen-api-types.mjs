@@ -22,9 +22,7 @@ const byMethod = (a, b) => {
   return order === 0 ? alphabetical(a, b) : order;
 };
 
-// The backend lists its paths in registration order, which changes between processes: without this
-// every regeneration rewrites all 2394 lines of types/api.d.ts and no reviewer can see the contract
-// that actually moved.
+// The backend lists its paths in registration order, which changes between processes.
 function sortSpec(spec) {
   const paths = sortByKey(spec.paths ?? {}, alphabetical);
   return {

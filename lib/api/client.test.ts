@@ -38,8 +38,7 @@ describe("api", () => {
     expect(headers.accept).toBe("application/json");
   });
 
-  // F-64: an answer — any answer — is the app's proof that the network is back, and the only one it
-  // gets while it believes it is offline and has stopped asking.
+  // F-64: an answer is the only proof the network is back while the app has stopped asking.
   it("reports an answer that came back while the app believed it was offline", async () => {
     const asked = vi.fn();
     const stop = onNetworkFailure(asked);

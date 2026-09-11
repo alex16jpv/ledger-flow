@@ -17,9 +17,7 @@ export interface ProjectedProps {
   className?: string;
 }
 
-// Invariant 2 of the offline plan: a figure that already carries writes the server has not seen is
-// a projection, and is never painted as one the server sent. Amber is what "incomplete" looks like
-// everywhere else in the app (DESIGN §8.12), and the mark is next to the figure, not inside it.
+// Invariant 2: a figure carrying writes the server has not seen is never painted as the server's.
 export function Projected({ when, align = "baseline", children, className }: ProjectedProps) {
   const t = useTranslations("states");
   if (!when) return children;

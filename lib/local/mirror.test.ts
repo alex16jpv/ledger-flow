@@ -81,8 +81,7 @@ describe("another tab upgrading the schema (F-14)", () => {
     });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    // A tab running a newer build opens the same database at a higher version, which fires
-    // `versionchange` here; holding the connection would stall that tab forever, so it is closed.
+    // Holding the connection through a `versionchange` would stall the newer tab forever.
     const other = indexedDB.open(vaultDatabaseName("u1"), VAULT.schemaVersion + 1);
     await new Promise<void>((resolve) => {
       other.onsuccess = () => {
@@ -149,8 +148,7 @@ describe("startMirror", () => {
     stop();
   });
 
-  // F-32: a request that arrives mid-pull joins the one in flight, which cannot carry what the
-  // server wrote after it started.
+  // F-32: a request arriving mid-pull joins the one in flight, which cannot carry later writes.
   it("pulls once more when a request arrives while a pull is in flight", async () => {
     const stop = start(true);
     await vi.waitFor(() => {
@@ -184,8 +182,7 @@ describe("startMirror", () => {
     stop();
   });
 
-  // F-38: the pull writes behind React Query's back, so a screen keeps showing what it read before
-  // the tirón unless something tells it to read again — and only a pull that brought news should.
+  // F-38: the pull writes behind React Query's back, so only news may trigger a re-read.
   it("says the mirror changed once, and not again when the overlap replays the same row", async () => {
     const stop = start();
     await vi.waitFor(() => {
@@ -215,8 +212,7 @@ describe("startMirror", () => {
     expect(queries).toHaveLength(1);
   });
 
-  // The resync throws the copy away before downloading it again, so a pass that failed leaves the
-  // device with nothing: saying "Resynced" over that is the one answer it must never give.
+  // The resync empties the copy first, so saying Resynced over a failed pass is the worst answer.
   it("rejects when the pull that should refill the copy failed", async () => {
     const stop = startMirror("u1", {
       now: () => clock,
@@ -234,9 +230,7 @@ describe("startMirror", () => {
     await expect(forceFullResync("u1")).rejects.toThrow(/no mirror is open/);
   });
 
-  // H-14: `changes.user` is null unless the profile changed in that page, so a mirror can end up
-  // with no zone to build a window in — and then every windowed read goes to the server, which
-  // with no network is a dead screen. The copy is filled online, so it can ask for the row.
+  // H-14: `changes.user` is null unless the profile changed, so a mirror can end with no zone.
   it("asks the server for the profile when the feed never carried it", async () => {
     const stop = start();
 

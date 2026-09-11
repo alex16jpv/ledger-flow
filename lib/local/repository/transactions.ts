@@ -21,8 +21,7 @@ export type TransactionQuery = Record<string, QueryValue>;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
-// Anything outside this list would make the mirror answer a question it did not apply, so it
-// declines instead and the read goes to the server.
+// Anything outside this list would make the mirror answer a question it did not apply.
 const SUPPORTED_PARAMS = new Set([
   "from",
   "to",
@@ -45,8 +44,7 @@ interface MirrorFilter {
   limit: number;
   cursor?: string;
   includeSummary: boolean;
-  // Whether `matches` can turn a row down. With nothing to ask of each row, the index knows the
-  // total on its own and the walk can stop at the page (F-15).
+  // F-15: with nothing to ask of each row the index knows the total and the walk can stop.
   filtered: boolean;
   matches: (record: TransactionRecord) => boolean;
 }
@@ -75,9 +73,7 @@ function toMirrorFilter(
   if (entries.some(([key]) => !SUPPORTED_PARAMS.has(key))) return undefined;
   const params = new Map(entries.map(([key, value]) => [key, String(value)]));
 
-  // The index compares the bounds as strings against the feed's UTC stamps, so one written with an
-  // offset ("2025-12-01T00:00:00-05:00") sorts below every row of its own last day and would drop
-  // them without a word. Normalised before it is compared or used as a key (F-17).
+  // F-17: a bound with an offset sorts below every row of its own last day, so it is normalised.
   const bound = (raw?: string) => (raw === undefined ? undefined : storedStamp(raw));
   const from = bound(params.get("from"));
   const to = bound(params.get("to"));
@@ -98,9 +94,7 @@ function toMirrorFilter(
     (value) => value !== undefined,
   );
 
-  // A window is a run of local days matched row by row, so it counts as a predicate: the index
-  // range around it is widened and can no longer answer the total on its own. Without the profile
-  // there is no zone to cut those days on, and the mirror declines rather than guessing one.
+  // Without the profile there is no zone to cut the days on, and the mirror declines.
   const windowed = from !== undefined || to !== undefined;
   if (windowed && timeZone === undefined) return undefined;
   const days = windowed && timeZone !== undefined ? dayWindow(from, to, timeZone) : undefined;
@@ -133,8 +127,7 @@ async function queryMirror(
 ): Promise<TransactionList | undefined> {
   let pivot: [string, string] | undefined;
   if (filter.cursor !== undefined) {
-    // Keyset over (date, id) like the server: the pivot's own date comes from the row it names, and
-    // a tombstone still carries it, so deleting the last row of a page does not restart the list.
+    // Keyset over (date, id) like the server, and a tombstone still carries the pivot's date.
     const anchor = await db.get("transactions", filter.cursor);
     if (!anchor) return undefined;
     pivot = [anchor.date, anchor.id];
@@ -147,10 +140,7 @@ async function queryMirror(
   // Its own transaction: awaiting the pivot lookup first would let this one auto-commit mid-walk.
   const index = db.transaction("transactions").store.index("dateCursor");
   const range = dateCursorRange(widenedBound(filter.from, -1), widenedBound(filter.to, 1));
-  // The server counts the whole filtered set on every page, and so does this. With no question to
-  // ask of each row the index answers it without deserialising any, and the walk can then stop at
-  // the page instead of paying O(n) per page of an infinite scroll (F-15). Both requests go out
-  // before the first await, so they share this transaction rather than seeing two states.
+  // F-15: both requests go out before the first await, so they share this transaction.
   const counting = filter.filtered || filter.includeSummary ? undefined : index.count(range);
   for await (const entry of index.iterate(range, "prev")) {
     const record = entry.value;
@@ -183,8 +173,7 @@ export function readTransactions(query: TransactionQuery): Promise<TransactionLi
   return read<TransactionList>(
     () => api<TransactionList>("/transactions", { query }),
     async (db) => {
-      // Only a windowed query needs the zone, so a list with no month filter still answers from a
-      // mirror that has not stored the profile yet.
+      // Only a windowed query needs the zone, so an unfiltered list answers without the profile.
       const filter = toMirrorFilter(query, hasWindow(query) ? await mirrorTimeZone(db) : undefined);
       return filter ? queryMirror(db, filter) : undefined;
     },

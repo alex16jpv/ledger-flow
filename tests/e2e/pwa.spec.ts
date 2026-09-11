@@ -33,9 +33,7 @@ test("the app is installable: manifest, icons and the service worker are served"
   expect(await worker.text()).toContain("precache");
 });
 
-// The owner hit this in production: the browser fires `beforeinstallprompt` on the screen the user
-// landed on, and Settings mounts long after, so the Install row never appeared. The event is
-// captured in the head now, so arriving at Settings later still finds it.
+// The browser fires `beforeinstallprompt` on the landing screen, long before Settings mounts.
 test("an install offer made before Settings opens is still there when it does", async ({
   page,
   request,
@@ -49,8 +47,7 @@ test("an install offer made before Settings opens is still there when it does", 
 
   await page.goto("/home");
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-  // Chromium only fires the real event under its own heuristics, so the event is the browser's
-  // shape and the capture path is the app's.
+  // Chromium only fires the real event under its own heuristics, so the shape is faked here.
   const notPrevented = await page.evaluate(() => {
     const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
       prompt: () => Promise<void>;
@@ -69,8 +66,7 @@ test("an install offer made before Settings opens is still there when it does", 
   await expect(page.getByText("Install app", { exact: true })).toBeVisible();
 });
 
-// Fixing the scale in the served HTML would fail WCAG 1.4.4 and axe's `meta-viewport` on every
-// screen, and iOS ignores it in Safari anyway: only the installed app gets it, from the head script.
+// Fixing the scale in the served HTML fails WCAG 1.4.4, and iOS ignores it in Safari anyway.
 test("the served document keeps its zoom and hands the block to the installed app", async ({
   request,
 }) => {
@@ -89,9 +85,7 @@ test("the served document keeps its zoom and hands the block to the installed ap
   expect(source).toContain("user-scalable=no");
 });
 
-// The other half of the promise: the head script must not fix the scale in a browser page either.
-// Its standalone branch cannot be exercised here — `display-mode` is not in Chromium's emulated
-// media features and Playwright opens no app-mode window — so that branch lives in unit tests.
+// The standalone branch cannot run here: `display-mode` is not an emulated media feature.
 test("the head script leaves a browser page scalable once it has run", async ({ page }) => {
   await page.goto("/login");
   await expect(page.locator("script[src='/viewport-init.js']")).toHaveCount(1);

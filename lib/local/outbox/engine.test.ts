@@ -60,8 +60,7 @@ const batches = (): string[][] =>
 
 const sent = (): string[] => batches().flat();
 
-// The guards the operations travelled with, batch by batch. `undefined` is an unconditional write:
-// inside one batch only the first operation of a row carries its `If-Match` (D-34).
+// D-34: `undefined` is unconditional — only the first operation of a row carries its `If-Match`.
 const guards = (): (string | undefined)[] =>
   fetchMock.mock.calls.flatMap(([, init]) => opsOf(init).map((op) => op.baseUpdatedAt));
 
@@ -206,8 +205,7 @@ describe("the sync engine", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const left = await pendingOperations(vault.db);
     expect(left.map((entry) => entry.seq)).toEqual([1, 2, 3]);
-    // The request may have landed: every operation in it counts an attempt, which is what stops the
-    // fold from crossing it, and none of them is taken for sent.
+    // The request may have landed: every operation counts an attempt, which stops the fold.
     expect(left.map((entry) => [entry.status, entry.attempts, entry.lastError])).toEqual([
       ["pending", 1, "NETWORK"],
       ["pending", 1, "NETWORK"],
@@ -553,7 +551,6 @@ describe("a session that died under the queue (F-26)", () => {
     startSyncEngine({ schedule: () => () => undefined });
     await seed(vault.db, [{ seq: 1 }]);
     answers(() => ({ result: transaction({ id: "t1" }) }));
-    // Somebody else signed in on this device while this tab still held the first user's vault.
     // jsdom refuses to set a `__Host-` cookie over http, so the read is stubbed instead.
     const cookie = vi
       .spyOn(document, "cookie", "get")
@@ -629,8 +626,7 @@ describe("two guarded operations queued on one row (R-2 §A)", () => {
 
     await requestSync();
 
-    // Both travel in one batch, so there is no gap to rebase the second guard in: the stamp the
-    // first one earns is the server's own, and it applies them in `seq` order (D-34).
+    // D-34: one batch has no gap to rebase in, and the server applies it in `seq` order.
     expect(sent()).toEqual(["transaction:update:t1", "transaction:delete:t1"]);
     expect(guards()).toEqual([T0, undefined]);
     expect(await pendingOperations(vault.db)).toEqual([]);
@@ -652,8 +648,7 @@ describe("two guarded operations queued on one row (R-2 §A)", () => {
 
     await requestSync();
 
-    // The unguarded delete was never applied: `POST /sync` blocks by entity id, which is what makes
-    // dropping its guard safe (D-30).
+    // D-30: `POST /sync` blocks by entity id, which is what makes dropping the guard safe.
     const left = await pendingOperations(vault.db);
     expect(left.map((entry) => [entry.action, entry.status])).toEqual([
       ["update", "conflict"],
@@ -762,8 +757,7 @@ describe("an operation that sits ahead of the create it names (R-2 §B)", () => 
 
     await requestSync();
 
-    // The movement is held out of the first batch — nothing may go ahead of the create it names —
-    // and leaves in the next one.
+    // Nothing may go ahead of the create it names, so the movement leaves in the next batch.
     expect(batches()).toEqual([["account:create:a9"], ["transaction:update:t1"]]);
     expect(await pendingOperations(vault.db)).toEqual([]);
   });

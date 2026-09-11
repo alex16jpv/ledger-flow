@@ -26,9 +26,7 @@ const NOTHING: VaultPurgeOutcome = {
   operationsKept: 0,
 };
 
-// The mirror is disposable and goes on every explicit logout, so a second user on the device never
-// sees the first one's data. The outbox is not: unsent work survives unless the user was shown what
-// it was and chose to discard it (D-3, D-7, invariant 7).
+// D-3, D-7, invariant 7: the mirror is disposable; unsent work goes only if the user chose it.
 export async function purgeVault(
   userId: string,
   options: VaultPurgeOptions = {},

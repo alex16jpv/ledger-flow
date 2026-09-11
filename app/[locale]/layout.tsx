@@ -35,7 +35,6 @@ export async function generateMetadata({
   };
 }
 
-// Standalone PWA: draw under the notch and let the theme script set theme-color from the live --bg token.
 // Stays scalable here on purpose: `/viewport-init.js` fixes the scale only in the installed app.
 export const viewport: Viewport = {
   width: "device-width",

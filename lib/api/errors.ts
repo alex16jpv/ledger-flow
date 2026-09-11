@@ -143,8 +143,7 @@ export class ApiError extends Error {
   readonly details: NonNullable<ErrorResponse["details"]>;
   readonly requestId: string;
   readonly retryAfterSeconds: number | undefined;
-  // What `409 STALE_UPDATE` carries: the row as the server has it, so a conflict can be shown
-  // without a second request (O-B2). Absent on every other error.
+  // O-B2: what `409 STALE_UPDATE` carries — the server's row. Absent on every other error.
   readonly current: unknown;
 
   constructor(init: ApiErrorInit) {

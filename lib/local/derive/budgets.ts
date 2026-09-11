@@ -32,8 +32,7 @@ export interface DerivedBudgetView {
   archivedCategoryIds: string[];
 }
 
-// Everything the API's budget view adds to the stored row. Archiving is not part of it: the detail
-// endpoint answers for an archived budget too, and it is the list that leaves it out.
+// Archiving is not part of it: the detail endpoint answers for an archived budget too.
 export function deriveBudgetView(
   budget: BudgetRow,
   transactions: BudgetTransaction[],
@@ -49,8 +48,7 @@ export function deriveBudgetView(
     // The budget's own type filters the rows: an INCOME budget ignores every expense in its window.
     if (transaction.type !== budget.type) return cents;
     if (!withinDays(transaction, days)) return cents;
-    // No categories means global: the window's whole spend of that type, quick-adds and
-    // uncategorized rows included. With categories it sums only those.
+    // No categories means global: the window's whole spend of that type, uncategorized included.
     if (
       budget.categoryIds.length > 0 &&
       (transaction.categoryId === null || !budget.categoryIds.includes(transaction.categoryId))
@@ -78,8 +76,7 @@ export function deriveBudgetView(
   };
 }
 
-// A budget does not exist before this instant, and the list drops any period that closes on or
-// before it. A CUSTOM window is explicit, so a budget backdated before its own creation still lists.
+// A CUSTOM window is explicit, so a budget backdated before its own creation still lists.
 export function lifetimeFloor(
   budget: Pick<SyncBudget, "effectiveFrom" | "createdAt" | "periodType" | "periodStartDate">,
 ): Date {

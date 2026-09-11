@@ -5,8 +5,7 @@ export const SESSION_COOKIE = "__Host-session";
 
 export const ACCESS_MAX_AGE_SECONDS = 15 * 60;
 export const REFRESH_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
-// The marker outlives the refresh token on purpose (§2.6): it says "this device holds a vault for
-// this user", never "the session is valid". 400 days is the ceiling browsers cap Max-Age at.
+// §2.6: says this device holds a vault, never that the session is valid; 400 d is the browser cap.
 export const SESSION_MARKER_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
 export const LOCALE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
 
@@ -46,9 +45,7 @@ export function refreshCookie(token: string): CookieSpec {
   };
 }
 
-// `<userId>.<issued at, seconds>`: which vault to open without a session, and how old the marker is
-// when the vault turned out to be gone (D-20). Readable by scripts because the app reads it; it is
-// not a credential, and treating it as one is what §2.6 forbids.
+// D-20: `<userId>.<issued at, s>` — which vault to open, how old the marker is. No credential.
 export function sessionMarkerCookie(userId: string, issuedAtMs = Date.now()): CookieSpec {
   return {
     name: SESSION_COOKIE,
@@ -87,8 +84,7 @@ export function localeCookie(name: string, locale: string): CookieSpec {
   };
 }
 
-// The marker is only rewritten when the user is known: a refresh answers tokens and no user, and
-// re-stamping it with an empty id would cost the device its vault.
+// Rewritten only when the user is known: an empty id would cost the device its vault.
 export function sessionCookies(
   tokens: { accessToken: string; refreshToken: string },
   userId?: string,

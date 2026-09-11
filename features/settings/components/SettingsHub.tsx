@@ -138,16 +138,14 @@ export function SettingsHub() {
   // A desktop has no home screen, so the row may not tell its user to add the app to one.
   const onDesktop = useMounted() && devicePlatform() === "desktop";
   const outbox = useOutbox();
-  // The session lives on the server: with no network a sign-out could only clear this device and
-  // leave the cookies — and the account — signed in. It waits and says so (R-3b §C).
+  // R-3b §C: the session lives on the server, so with no network a sign-out clears only here.
   const offline = useOffline();
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<
     "language" | "currency" | "timeZone" | "delete" | "signOut" | null
   >(null);
-  // F-82: the profile card greets and draws initials, so it reads the mirror when the session
-  // cannot say who this is.
+  // F-82: the profile card greets and draws initials, so it reads the mirror too.
   const user = useAppUser();
   const currencyLocked = hasAccounts.data !== false;
 
@@ -292,8 +290,7 @@ export function SettingsHub() {
       </Section>
 
       <Section title={t("settings.about")}>
-        {/* F-87: the row used to hide itself when the browser had not offered to install, which is
-            exactly where the user needs to be told how. It stays, and the sheet explains. */}
+        {/* F-87: the row used to hide exactly where the user needs to be told how. */}
         <SettingsRow
           icon={<MonitorSmartphone {...iconProps("sm")} />}
           color="INDIGO"

@@ -13,10 +13,7 @@ export interface AccountListParams {
   limit?: number;
 }
 
-// The mirror keeps the server's `balance` and never writes one (invariant 2), so what a screen sees
-// while the queue is not empty is that figure plus the effect of the operations the server has not
-// applied yet. With an empty queue it is the server's own figure, untouched. An operation in
-// conflict or refused for good moves nothing: its row shows the server's version too (D-23).
+// Invariant 2 with D-23: the server's `balance` plus the effect of what it has not applied yet.
 async function withProjectedBalances(db: VaultDb, rows: Account[]): Promise<Account[]> {
   const operations = (await pendingOperations(db)).filter(willBeSent);
   if (operations.length === 0) return rows;

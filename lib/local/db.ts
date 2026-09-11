@@ -14,8 +14,7 @@ export const VAULT_SCHEMA_VERSION = 1;
 export const MIRROR_VERSION = 2;
 export const OUTBOX_VERSION = 1;
 
-// Returning null means "this operation cannot be carried forward": the vault then blocks the
-// outbox upgrade instead of dropping it (invariant 7).
+// Invariant 7: null means the operation cannot be carried forward, so the upgrade blocks.
 export type OutboxMigration = (operation: OutboxOperation) => OutboxOperation | null;
 export type OutboxMigrations = Readonly<Record<number, OutboxMigration>>;
 
@@ -43,8 +42,7 @@ export interface VaultHandle {
   mirrorReset: boolean;
   outbox: OutboxState;
   blockedOperations: number;
-  // Which ones, so the tray can show them and the user can throw them away (F-65). Empty unless
-  // `outbox` is "blocked".
+  // F-65: which ones, so the tray can show them. Empty unless `outbox` is blocked.
   blockedSeqs: readonly number[];
   close: () => void;
 }
@@ -104,16 +102,14 @@ async function resetMirror(db: IDBPDatabase<VaultSchema>, mirrorVersion: number)
   const tx = db.transaction([...MIRROR_STORES, "meta"], "readwrite");
   for (const name of MIRROR_STORES) await tx.objectStore(name).clear();
   const meta = tx.objectStore("meta");
-  // The cursor describes rows that are no longer there, so it goes with them: the next pull is a
-  // full snapshot. The outbox store is deliberately absent from this transaction.
+  // The cursor goes with the rows it describes; the outbox store is deliberately not in this tx.
   await meta.delete("syncCursor");
   await meta.delete("syncedAt");
   await meta.put({ key: "mirrorVersion", value: mirrorVersion });
   await tx.done;
 }
 
-// Only ever walks forward, so an operation written by a newer build blocks an older one instead of
-// being reinterpreted with fields that build does not know about.
+// Only walks forward: an operation from a newer build blocks an older one, never reinterpreted.
 function migrateOperation(
   operation: OutboxOperation,
   target: number,
@@ -156,8 +152,7 @@ async function upgradeOutbox(
 }
 
 export interface OpenVaultOptions {
-  // Called when another tab's upgrade forces this connection shut. Whoever holds the handle has to
-  // stop using it: every call on it from here on throws `InvalidStateError` (F-14).
+  // F-14: once another tab's upgrade closes this handle, every call throws `InvalidStateError`.
   onClosed?: () => void;
 }
 
@@ -200,8 +195,7 @@ export async function openVault(
   };
 }
 
-// Firefox has no `indexedDB.databases()`: there the question cannot be answered, and a caller that
-// reads the "no" as "the vault is gone" invents a loss (D-20).
+// D-20: Firefox has no `indexedDB.databases()`, and reading the no as a loss invents one.
 export function canListVaults(): boolean {
   return isVaultSupported() && typeof indexedDB.databases === "function";
 }
@@ -223,8 +217,7 @@ export async function readVaultProfile(userId: string): Promise<User | null> {
   }
 }
 
-// Reads the queue without opening the vault: asking how much is unsent must never migrate anything,
-// and must never create the database as a side effect of the question.
+// Asking how much is unsent must not migrate anything nor create the database.
 export async function countPendingOperations(userId: string): Promise<number> {
   if (!(await vaultExists(userId))) return 0;
   const db = await openDB<VaultSchema>(vaultDatabaseName(userId));

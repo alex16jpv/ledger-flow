@@ -53,8 +53,7 @@ export function TransactionRow({ transaction, lookups, onOpen }: TransactionRowP
   const outbox = useOutbox();
   const category = lookups.categories.get(transaction.categoryId ?? "");
   const account = lookups.accounts.get(transaction.fromAccountId ?? transaction.toAccountId ?? "");
-  // F-16 (a): a movement the server has not confirmed says so on its own row, not only in the
-  // stripe at the top — the figures on this screen already include it.
+  // F-16 (a): an unconfirmed movement says so on its own row, since the figures include it.
   const queued = outbox.queuedRows.has(transaction.id);
   const stuck = outbox.attentionRows.has(transaction.id);
   const meta = [

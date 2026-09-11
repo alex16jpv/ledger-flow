@@ -8,8 +8,7 @@ import {
   stripLocale,
 } from "./routes";
 
-// `dev/pickers` is the pickers bench: it lives in the group for the app frame, and what switches it
-// off is the componentCatalog flag, not a session (tools/check-dev-routes.mjs measures that).
+// `dev/pickers` is switched off by the componentCatalog flag, not by a session.
 const FLAG_GUARDED = new Set(["dev"]);
 
 describe("route rules", () => {

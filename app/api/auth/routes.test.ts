@@ -124,8 +124,7 @@ describe("refresh handler", () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toMatchObject({ code: "REFRESH_REVOKED" });
     const cookies = setCookies(response);
-    // A dead refresh is not a logout: taking the marker or the storage would take the vault with
-    // it, and the app is supposed to keep working locally (§2.6, invariant 7).
+    // §2.6, invariant 7: a dead refresh is not a logout — taking the marker takes the vault.
     expect(cookies.some((c) => c.startsWith("__Host-session="))).toBe(false);
     expect(cookies.filter((c) => /Max-Age=0/i.test(c))).toHaveLength(2);
     expect(response.headers.get("clear-site-data")).toBeNull();
@@ -173,8 +172,7 @@ describe("logout handler", () => {
     const response = await logout(request);
     expect(response.status).toBe(200);
     expect(fetchMock.mock.calls[0]?.[0]).toBe("http://backend.test/auth/logout");
-    // Only the app shell: whether the unsent queue goes is the user's answer to the sheet of
-    // F-34, and `purgeVault` applies it. `"storage"` here would decide it for them.
+    // F-34: only the app shell — whether the unsent queue goes is the user's answer, not ours.
     expect(response.headers.get("clear-site-data")).toBe('"cache"');
     const cookies = setCookies(response);
     expect(cookies.filter((c) => /Max-Age=0/i.test(c))).toHaveLength(3);

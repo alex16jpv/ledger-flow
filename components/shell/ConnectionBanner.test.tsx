@@ -78,10 +78,7 @@ describe("ConnectionBanner", () => {
     expect(screen.getByRole("status")).toHaveTextContent("2 changes waiting");
   });
 
-  // F-72: with a network the queue drains in ~30 ms, so the stripe said "waiting" for one frame on
-  // every write. It waits out the grace first, and what is under it never moves for a round trip.
-  // Real timers on purpose: faking `setTimeout` before rendering deadlocks React's own scheduler,
-  // which falls back to it under jsdom, so this test costs the grace it is measuring.
+  // Real timers: faking `setTimeout` before rendering deadlocks React's scheduler under jsdom.
   it("says nothing about a queue that has not been waiting long enough", async () => {
     await queueOf([operation(1)]);
     render();
@@ -93,8 +90,7 @@ describe("ConnectionBanner", () => {
       { timeout: PENDING_GRACE_MS * 3 },
     );
 
-    // And the grace is forgotten when the queue drains, or the next write would inherit it and the
-    // flash would be back on the second save.
+    // The grace is forgotten when the queue drains, or the next write would inherit it.
     act(() => {
       resetOutboxStatus();
     });
@@ -103,8 +99,7 @@ describe("ConnectionBanner", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
-  // A round that already came back with something to say has waited long enough, whatever the clock
-  // says: the grace exists for the round trip nobody is waiting on, not for a queue that is stuck.
+  // The grace exists for a round trip nobody is waiting on, not for a queue that is stuck.
   it("says it straight away when the last round failed", async () => {
     await queueOf([operation(1, { lastError: "NETWORK" })]);
     render();
@@ -137,9 +132,7 @@ describe("ConnectionBanner", () => {
     });
   });
 
-  // F-41: with the session dead the stripe is the only way back to the login once the sheet is
-  // closed, and §8.12 puts it above `error` — resolving conflicts changes nothing until there is a
-  // session to send them with.
+  // F-41: §8.12 puts this above `error` — conflicts change nothing until there is a session.
   it("says the session is gone and offers the way back", async () => {
     await queueOf([operation(1)]);
     const onSignIn = vi.fn();
@@ -167,8 +160,7 @@ describe("ConnectionBanner", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("You’re offline.");
   });
 
-  // F-65: `openVault` reported a blocked outbox and nobody read it, so a queue that could never go
-  // out looked exactly like one that had not gone out yet.
+  // F-65: a queue that can never go out looked exactly like one that had not gone out yet.
   it("says an app update stopped changes from being sent, above everything but the network", async () => {
     await queueOf([operation(1), operation(2, { status: "conflict" })]);
     setBlockedOperations([1]);
@@ -185,8 +177,7 @@ describe("ConnectionBanner", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("You’re offline.");
   });
 
-  // F-62: the text has existed in `messages/` since W-19 and the stripe never painted it, so the
-  // only sign the queue emptied was the amber one disappearing.
+  // F-62: the text existed since W-19 and the stripe never painted it.
   it("counts what the round drained on the green stripe", async () => {
     await queueOf([]);
     reportSynced(

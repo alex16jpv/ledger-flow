@@ -2,9 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 
 import { addButton, freshUser, signInAs, uniqueAmount } from "../offline";
 
-// F-72: how long the amber "changes waiting" stripe is on screen when the network is up, and how far
-// it moves the content under it. Sampled with requestAnimationFrame, which is the granularity the eye
-// gets: a change that never survives a frame is never painted.
+// F-72: sampled with requestAnimationFrame — a change that never survives a frame is not painted.
 const RUNS = Number(process.env.MEASURE_RUNS ?? 6);
 
 interface Sample {
@@ -70,8 +68,7 @@ test("how long the pending stripe lives, and how far it pushes the content", asy
   page,
   request,
 }) => {
-  // Its own user and its own account: this script writes dozens of expenses, and doing that on the
-  // shared seed user drove its balance negative and broke `pickers.spec.ts` two runs later.
+  // Its own user: dozens of expenses on the shared seed drove its balance negative once.
   await signInAs(page.context(), request, await freshUser(request, "banner"));
   await page.goto("/home");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -106,8 +103,7 @@ test("how long the pending stripe lives, and how far it pushes the content", asy
   console.warn(`\n[${test.info().project.name}]\n${rows.join("\n")}\n`);
 });
 
-// The same thing over a link that is not localhost. `LATENCY_MS` is added to the batch request only,
-// so what grows is the round trip the stripe is waiting for and nothing else.
+// `LATENCY_MS` is added to the batch request only, so only that round trip grows.
 const LATENCY_MS = Number(process.env.MEASURE_LATENCY_MS ?? 250);
 
 test("the same write over a slower link", async ({ page, request }) => {
@@ -130,8 +126,7 @@ test("the same write over a slower link", async ({ page, request }) => {
     await mark(page);
     await sheet.getByRole("button", { name: "Save" }).click();
     if (run === 0) {
-      // After the stripe's grace and before waiting for the sheet, which does not close until the
-      // server answers: by then the stripe this shot exists for is already gone (F-72).
+      // F-72: after the grace and before the sheet closes, by when the stripe is already gone.
       await page.waitForTimeout(Math.min(LATENCY_MS - 400, 1600));
       await page.screenshot({
         path: `test-results/measure/with-stripe-${test.info().project.name}.png`,

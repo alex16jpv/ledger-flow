@@ -80,8 +80,7 @@ describe("NoSessionChoiceSheet", () => {
     expect(props.onWipe).not.toHaveBeenCalled();
   });
 
-  // The one sheet that cannot be closed without answering: closing it would put the user back in
-  // the state this exists to remove.
+  // Closing it would put the user back in the state this sheet exists to remove.
   it("does not close on Escape", async () => {
     const props = view();
 

@@ -112,8 +112,7 @@ describe("RegisterForm", () => {
     expect(await screen.findByText(/Your account may already exist/)).toBeInTheDocument();
   });
 
-  // F-02: the account's language could only be whatever the URL happened to carry, and nothing on
-  // the screen said so or let the user change it before the account existed.
+  // F-02: the account's language was whatever the URL carried, with no way to change it.
   it("shows the language it will create the account with, and switches it in place", async () => {
     renderForm();
 

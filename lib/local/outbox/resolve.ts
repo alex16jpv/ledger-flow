@@ -12,8 +12,7 @@ import { enqueue } from "./write";
 
 const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
 
-// Only what the user was asked about can be resolved: an operation another tab has already put back
-// in line between the question and the answer is no longer theirs to discard.
+// An operation another tab put back in line is no longer the user's to discard.
 const stuck = (operation: OutboxOperation): boolean =>
   operation.status === "conflict" || operation.status === "failed";
 
@@ -24,9 +23,7 @@ const STORE_OF: Record<OutboxEntity, "accounts" | "categories" | "transactions" 
   budget: "budgets",
 };
 
-// The row goes back to the server's version plus what the queue will still send (D-24). The
-// baseline the mirror kept aside is at least as fresh as the 409's `current` (the conflict put it
-// there, and any pull since replaced it); `current` only serves a row that has none.
+// D-24: the baseline kept aside is at least as fresh as the 409's `current`, which only backs it.
 async function reconcileResolved(tx: WriteTransaction, operation: OutboxOperation): Promise<void> {
   const { entity, entityId } = operation;
   const serverRow = ownServerRow(operation);
@@ -38,10 +35,7 @@ async function reconcileResolved(tx: WriteTransaction, operation: OutboxOperatio
   await reconcileRow(tx, entity, entityId, baseline);
 }
 
-// Everything that cannot survive without the operations being thrown away. Only a create is named
-// in a `dependsOn`, so only discarding one cascades: the row will never exist on the server, and an
-// operation addressing it would ask about an id nobody has. Transitive, because a create discarded
-// this way can itself be what another create's row depended on.
+// Only a create is named in a `dependsOn`, so only discarding one cascades, transitively.
 function victimsOf(queue: OutboxOperation[], discarded: OutboxOperation[]): OutboxOperation[] {
   const seqs = new Set<number>(discarded.map((operation) => operation.seq));
   const orphaned = new Set<string>();
@@ -72,10 +66,7 @@ export interface DiscardResult {
   discarded: number;
 }
 
-// The user chose the server's version. The operations are settled without ever being sent, and the
-// mirror goes back to the rows the 409 answered with — the projection it holds is this device's
-// version, and nothing else would replace it: the server never received the write, so no pull
-// corrects it (F-23).
+// F-23: the server never received the write, so no pull would correct the projection.
 export async function discardOperations(
   db: VaultDb,
   seqs: readonly number[],
@@ -84,9 +75,7 @@ export async function discardOperations(
   return discardSeeds(db, queue, seedsOf(queue, seqs));
 }
 
-// An operation an app update left behind is `pending`, not stuck: the server never refused it, this
-// build simply cannot send it (F-65). Throwing it away is the same work with a different admission
-// test — anything queued on top of a discarded create still goes with it.
+// F-65: the server never refused these — this build simply cannot send them.
 export async function discardBlockedOperations(
   db: VaultDb,
   seqs: readonly number[],
@@ -112,8 +101,7 @@ async function discardSeeds(
   for (const victim of victims) await tx.objectStore("outbox").delete(victim.seq);
   const reconciled = new Set<string>();
   for (const victim of victims) {
-    // A create the server never saw leaves no row behind; every other row goes back to the server's
-    // version plus whatever the queue still holds for it.
+    // A create the server never saw leaves no row behind; every other row goes back.
     if (isCreate(victim.action)) {
       await tx.objectStore(STORE_OF[victim.entity]).delete(victim.entityId);
       continue;
@@ -131,18 +119,14 @@ async function discardSeeds(
 export const discardOperation = (db: VaultDb, seq: number): Promise<DiscardResult> =>
   discardOperations(db, [seq]);
 
-// What the tray has to say before it asks: discarding a create takes its dependents with it, and
-// the count is only knowable before anything is deleted.
+// The count is only knowable before anything is deleted.
 export async function discardImpact(db: VaultDb, seqs: readonly number[]): Promise<number> {
   const queue = await pendingOperations(db);
   const seeds = seedsOf(queue, seqs);
   return seeds.length === 0 ? 0 : victimsOf(queue, seeds).length;
 }
 
-// The user chose this device's version. Each operation goes back in line guarded by the stamp the
-// server answered its 409 with, so it applies on top of the row it lost to instead of losing again.
-// `attempts` restarts because this is a new decision, not another try at the old one — and a zeroed
-// count is what lets the text rule of §6 O-F5a fold it again.
+// Guarded by the 409's stamp, and `attempts` restarts so §6 O-F5a can fold it again.
 export async function retryOperations(db: VaultDb, seqs: readonly number[]): Promise<void> {
   const tx = writeTransaction(db);
   const store = tx.objectStore("outbox");
@@ -164,20 +148,14 @@ export async function retryOperations(db: VaultDb, seqs: readonly number[]): Pro
   }
   await tx.done;
   await refreshOutboxStatus(db);
-  // Operations queued behind these on the same row keep their own guard: each is its own decision,
-  // and D-22 only rebases what an answer from the server has just proved.
+  // D-22 only rebases what an answer from the server has just proved, so the rest keep theirs.
   await requestSync();
 }
 
 export const retryOperation = (db: VaultDb, seq: number): Promise<void> =>
   retryOperations(db, [seq]);
 
-// The way out of a `conflict` `RESOURCE_ARCHIVED`: the account the movement names was archived
-// online while this device had no network (F-58). The restore is an operation like any other — no
-// endpoint of its own, no validation skipped (D-32) — and it has to reach the server ahead of the
-// movement, in the same batch, which is what the `seq` below the movement's buys. Nothing is atomic
-// and nothing needs to be: a restore that lands without the movement leaves the account restored,
-// which is what the user asked for, and the movement in the tray.
+// F-58: the restore is an ordinary operation (D-32) with a `seq` below the movement's.
 export async function restoreArchivedAccount(db: VaultDb, seq: number): Promise<boolean> {
   const operation = await db.get("outbox", seq);
   if (!operation || !stuck(operation)) return false;
@@ -200,8 +178,7 @@ export async function restoreArchivedAccount(db: VaultDb, seq: number): Promise<
       status: "pending",
       attempts: 0,
       lastError: null,
-      // Naming the account is what makes the batch answer `blocked` instead of the same
-      // `RESOURCE_ARCHIVED` if the restore does not land: `POST /sync` blocks by entity id (D-30).
+      // D-30: naming the account makes the batch answer `blocked` if the restore does not land.
       dependsOn: [...new Set([...queued.dependsOn, accountId])],
     };
     delete next.archivedId;
@@ -214,9 +191,7 @@ export async function restoreArchivedAccount(db: VaultDb, seq: number): Promise<
   return true;
 }
 
-// The way out of a `DUPLICATE` on a restore (F-60): the same operation goes back in line with the
-// name the user chose, which the restore route already takes in its body. Nothing else about it
-// changes — it is the same restore, of the same row, asked for under a name the server will accept.
+// F-60: the same restore goes back in line with the name the restore route already takes.
 export async function restoreWithName(db: VaultDb, seq: number, name: string): Promise<boolean> {
   const operation = await db.get("outbox", seq);
   if (!operation || !stuck(operation) || !isNameTaken(operation)) return false;
@@ -232,8 +207,7 @@ export async function restoreWithName(db: VaultDb, seq: number, name: string): P
     attempts: 0,
     lastError: null,
   };
-  // The refused row is somebody else's (`ownServerRow` refuses it as a baseline for good reason);
-  // dropping it also takes the sheet out of the "name taken" state.
+  // The refused row is somebody else's, and dropping it leaves the name-taken state too.
   delete next.serverRow;
   await store.put(next);
   // Written first, so the row the mirror shows carries the new name from now on.
@@ -244,9 +218,7 @@ export async function restoreWithName(db: VaultDb, seq: number, name: string): P
   return true;
 }
 
-// The way out of a `FUTURE_DATE` (F-66): the same movement goes back in line with the date the user
-// corrected. Editing it from the list is not an option — it is a creation the server never took, so
-// the row only exists here — and trying again unchanged earns the same refusal.
+// F-66: a creation the server never took exists only here, so the date is corrected in place.
 export async function retryWithDate(db: VaultDb, seq: number, date: string): Promise<boolean> {
   const operation = await db.get("outbox", seq);
   if (!operation || !stuck(operation) || !isFutureDate(operation)) return false;
@@ -271,8 +243,7 @@ export async function retryWithDate(db: VaultDb, seq: number, date: string): Pro
   return true;
 }
 
-// What the tray of part 2 and the sheet both open on: the queue in `seq` order, only what the user
-// has to act on (F-23 — a definitive refusal is as stuck as a conflict).
+// F-23: the queue in `seq` order, only what the user has to act on; a refusal is as stuck.
 export async function operationsNeedingAttention(db: VaultDb): Promise<OutboxOperation[]> {
   const queue = await pendingOperations(db);
   return queue.filter(

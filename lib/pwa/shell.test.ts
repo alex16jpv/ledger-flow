@@ -28,8 +28,7 @@ function appRoutes(dir: string, prefix = ""): string[] {
 const ROUTES = appRoutes(join(process.cwd(), "app/[locale]/(app)"));
 
 describe("SHELL_PATHS and DETAIL_TEMPLATES", () => {
-  // F-47: three of the nine routes missing from the list were the forms that create an account, a
-  // category and a budget — the outbox could queue them and the worker had no document to show.
+  // F-47: the outbox could queue a create the worker had no document to show.
   it("cover every route of the (app) group, static ones by path and dynamic ones by template", () => {
     const shipped = ROUTES.filter((route) => !route.startsWith("/dev/"));
     const listed = [...SHELL_PATHS, ...DETAIL_TEMPLATES] as readonly string[];
@@ -125,16 +124,14 @@ describe("shellUrls", () => {
 });
 
 describe("rewrittenPath", () => {
-  // Measured against the running app (2026-09-10): next-intl answers `x-nextjs-rewritten-path`
-  // with the default locale prefixed, and answers no such header for a path that already names one.
+  // Measured (2026-09-10): next-intl prefixes the default locale and omits the header otherwise.
   it("names the path the router asked for, in the shape next-intl rewrites it to", () => {
     expect(rewrittenPath("/transactions")).toBe("/en/transactions");
     expect(rewrittenPath("/settings/sync")).toBe("/en/settings/sync");
     expect(rewrittenPath("/es/transactions")).toBeNull();
   });
 
-  // F-48: the payload of a detail route is warmed with `TEMPLATE_ID`, and the router fills the
-  // route's params from this header — so it has to carry the id of the row that was asked for.
+  // F-48: the payload is warmed with `TEMPLATE_ID`, so the header must carry the row asked for.
   it("carries the id of the row asked for, not the one the template was warmed with", () => {
     expect(rewrittenPath("/transactions/019200aa-1111-7000-8000-000000000001")).toBe(
       "/en/transactions/019200aa-1111-7000-8000-000000000001",

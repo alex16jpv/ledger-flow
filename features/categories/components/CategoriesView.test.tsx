@@ -144,9 +144,7 @@ describe("CategoriesView", () => {
     expect(screen.getByRole("button", { name: "Restore Old" })).toBeVisible();
   });
 
-  // F-20: the server mints these rows and their ids, so this one write of the screen cannot be
-  // queued offline. With no network the button is not offered at all (owner, 2026-09-06) and the
-  // alert says why, instead of a dead control or a network error.
+  // F-20: the server mints these ids, so with no network the button is not offered (2026-09-06).
   it("hides the restore-defaults button while offline, and says why", async () => {
     routeFetch();
     reportOnline(false);

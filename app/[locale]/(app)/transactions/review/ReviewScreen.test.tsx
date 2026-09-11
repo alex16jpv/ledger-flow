@@ -175,8 +175,7 @@ describe("ReviewScreen", () => {
   it("saves every categorized card row by row and keeps the failed one with its error", async () => {
     fetchMock.mockImplementation((input, init) => {
       const url = urlOf(input);
-      // F-20: the lot leaves as one operation per row, each addressed by its own id and guarded on
-      // its own, so one refusal does not take the rest of the batch down with it.
+      // F-20: one operation per row, each guarded on its own, so one refusal does not sink the lot.
       const row = /\/api\/transactions\/(q1|q2)$/.exec(url);
       if (row && init?.method === "PUT") {
         if (row[1] === "q2") {

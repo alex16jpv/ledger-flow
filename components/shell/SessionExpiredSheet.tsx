@@ -10,12 +10,10 @@ import { connectivityStore } from "@/lib/network/connectivity";
 
 interface SessionExpiredSheetProps {
   open: boolean;
-  // The device still holds this user's vault, so the app keeps working and the sheet is an offer,
-  // not a wall (§2.6). Without a vault an expired session really is the end of the road.
+  // §2.6: with a vault on the device the sheet is an offer; without one it is the end of the road.
   localMode?: boolean;
   onSignIn: () => void;
-  // Closing closes (F-41): in local mode the sheet is an offer, and the `signedout` stripe stays
-  // behind it as the way back. Without a vault it is a wall and there is nothing to close.
+  // F-41: closing closes — the `signedout` stripe stays behind it as the way back.
   onClose?: () => void;
 }
 
@@ -31,8 +29,7 @@ export function SessionExpiredSheet({
     connectivityStore.getSnapshot,
     connectivityStore.getServerSnapshot,
   );
-  // Asking someone with no network to sign in is asking for something they cannot do; the queue
-  // keeps filling locally and the sheet waits until there is a network to sync over.
+  // Asking someone with no network to sign in asks for what they cannot do.
   const dismissible = localMode;
   if (localMode && phase === "offline") return null;
 

@@ -18,8 +18,7 @@ async function readyVault(userId: string) {
 }
 
 describe("read", () => {
-  // O-F2b: the mirror is the primary path, and the network no longer takes part in the decision.
-  // Everything that still reaches the server is the mirror saying it cannot answer.
+  // O-F2b: everything that still reaches the server is the mirror saying it cannot answer.
   it("answers from the mirror while there is network, once a pull has drained", async () => {
     await readyVault("u1");
     const fromServer = vi.fn().mockResolvedValue("server");
@@ -45,9 +44,7 @@ describe("read", () => {
     expect(fromMirror).not.toHaveBeenCalled();
   });
 
-  // A mirror stopped halfway through its first snapshot holds a fraction of the data; answering
-  // from it would look like an empty account instead of a failed read. With network, this is the
-  // whole of what the server still serves on a device that has one open (the first load).
+  // A half-filled mirror would look like an empty account instead of a failed read.
   it("goes to the server when no pull has ever finished, network or not", async () => {
     const vault = await openTestVault("u1");
     setCurrentVault(vault);
@@ -59,8 +56,7 @@ describe("read", () => {
     expect(fromMirror).not.toHaveBeenCalled();
   });
 
-  // F-31: the screens query before the frame has opened the vault, and a read that decided then
-  // went to the server with a full mirror sitting there.
+  // F-31: the screens query before the frame has opened the vault.
   it("waits for the vault the frame is about to open before deciding", async () => {
     expectVault();
     const fromServer = vi.fn().mockResolvedValue("server");

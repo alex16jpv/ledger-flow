@@ -1,9 +1,7 @@
 import type { OutboxOperation } from "../schema";
 import { pendingOperations, type VaultDb } from "./queue";
 
-// Which derived figures a queued operation can move. Invariant 2 forbids painting a projection as a
-// figure the server sent, and from the first queued write that is exactly what `spent`, the buckets,
-// the month's spending and the balances become (F-16).
+// F-16 with invariant 2: from the first queued write these figures become projections.
 export interface OutboxProjection {
   balances: boolean;
   spending: boolean;
@@ -12,22 +10,16 @@ export interface OutboxProjection {
 
 export interface OutboxStatus {
   pending: number;
-  // Conflicts AND definitive refusals: both are stuck until the user decides, and a `failed`
-  // operation the queue could not undo is as far from the server as one in conflict (F-23).
+  // F-23: conflicts and definitive refusals both — a `failed` operation is as far from the server.
   attention: number;
-  // The rows a screen can mark: everything with something queued, and the subset the user has to
-  // act on. The first is ids alone — a row badge asks "is this one waiting?" and nothing more; the
-  // second carries the `seq` of the first stuck operation on the row, which is what a screen opens
-  // the conflict sheet on (F-29).
+  // F-29: `queuedRows` is ids alone; `attentionRows` carries the seq the sheet opens on.
   queuedRows: ReadonlySet<string>;
   attentionRows: ReadonlyMap<string, number>;
   // Where "Review" goes: the first operation, in queue order, that needs a decision.
   firstAttention: number | null;
   // The last thing the server (or the network) said no with, for Ajustes › Sync status.
   lastError: string | null;
-  // Operations an app update left behind: written by an older version of the app, and this one has
-  // no migration for them, so they will never reach the server on their own (F-65). Everything
-  // recorded from now on syncs normally — nothing waits behind these.
+  // F-65: written by an older app with no migration here; nothing new waits behind them.
   blocked: readonly number[];
   projected: OutboxProjection;
 }
@@ -50,8 +42,7 @@ const needsAttention = (operation: OutboxOperation): boolean =>
   operation.status === "conflict" || operation.status === "failed";
 
 function projectionOf(operations: OutboxOperation[]): OutboxProjection {
-  // A queued movement moves every money figure at once: it is a row the server's aggregations have
-  // not seen. An account create adds an opening balance; a budget write changes its own view.
+  // A queued movement moves every money figure at once; an account create only its opening.
   const money = operations.some((operation) => operation.entity === "transaction");
   return {
     balances:
@@ -69,8 +60,7 @@ let blocked: readonly number[] = [];
 function summarise(operations: OutboxOperation[]): OutboxStatus {
   const stuck = operations.filter(needsAttention);
   return {
-    // Discarding one is the only thing that can take it off the list, and that is a change of the
-    // queue like any other.
+    // Discarding one is the only thing that takes it off the list, and that is a queue change.
     blocked: blocked.filter((seq) => operations.some((operation) => operation.seq === seq)),
     pending: operations.length,
     attention: stuck.length,
@@ -126,8 +116,7 @@ export async function refreshOutboxStatus(db: VaultDb): Promise<OutboxStatus> {
   return status;
 }
 
-// What `openVault` found it could not migrate. Set once, when the vault opens, and cleared with the
-// status: nothing else in the app can turn an operation into a blocked one.
+// Set once when the vault opens: nothing else in the app can turn an operation into a blocked one.
 export function setBlockedOperations(seqs: readonly number[]): void {
   blocked = seqs;
   publish({ ...status, blocked: seqs });

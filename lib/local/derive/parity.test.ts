@@ -28,8 +28,7 @@ import { sumAmounts } from "./money";
 import { deriveSpending } from "./spending";
 
 const VENDORED = resolve(process.cwd(), "lib/local/derive/fixtures");
-// The backend's committed copy, which `npm run fixtures:sync` copies here. The guard below runs only
-// where both repos are checked out side by side: in CI there is nothing to compare against.
+// The guard below runs only where both repos are checked out side by side; in CI there is none.
 const SOURCE = resolve(
   process.env.OFFLINE_FIXTURES_DIR ?? join(process.cwd(), "../lag-money-manager/fixtures/offline"),
 );
@@ -43,9 +42,7 @@ function balanceOf(fixture: typeof bogota, key: string, rows = fixture.transacti
     .balance;
 }
 
-// A fixture row is the feed row minus its human `key` and the audit fields, which the tray never
-// reads. The fixture keeps each date in the offset the user typed it in; the feed prints UTC, and
-// the mirror stores what the feed sends, so the stamp is normalised here and not anywhere later.
+// The fixture keeps the offset the user typed; the feed prints UTC, so the stamp normalises here.
 function feedRow(userId: string, row: FixtureTransaction): SyncTransaction {
   const date = new Date(row.date).toISOString();
   return transaction({
@@ -115,9 +112,7 @@ function feedPage(
   };
 }
 
-// The whole scenario in a vault, so a read can be checked through the path a screen actually takes.
-// `effectiveFrom` is pulled back to the epoch: the fixture's expectations are the views themselves,
-// with none of the list's lifetime-floor filtering applied to them.
+// `effectiveFrom` is pulled back to the epoch: the expectations are the views, with no floor.
 async function vaultOf(fixture: ParityFixture) {
   const userId = fixture.user.id;
   const vault = await openTestVault(userId);
@@ -160,8 +155,7 @@ describe.each(PARITY_FIXTURES)("$id", (fixture) => {
   });
 
   it.each(fixture.expected.spending)("derives the $name buckets", (expected) => {
-    // The query is read from the fixture, never invented: `type: null` is the service's "everything
-    // but ADJUSTMENT", which no URL can ask for.
+    // `type: null` is the service's everything-but-ADJUSTMENT, which no URL can ask for.
     expect(
       deriveSpending(fixture.transactions, {
         groupBy: expected.query.groupBy,
@@ -206,8 +200,7 @@ describe.each(PARITY_FIXTURES)("$id", (fixture) => {
     expect(views).toEqual(fixture.expected.budgets.views);
   });
 
-  // Reading through the repository is the other half: the derivation can be right while the rows
-  // the mirror hands it are the wrong ones. The queries a URL can express are checked this way.
+  // The derivation can be right while the rows the mirror hands it are the wrong ones.
   it.each(fixture.expected.spending.filter((entry) => entry.query.type !== null))(
     "answers $name through the repository",
     async (expected) => {
@@ -258,8 +251,7 @@ describe.each(PARITY_FIXTURES)("$id", (fixture) => {
     );
   });
 
-  // The tray is the repository's own answer to the list endpoint, so the fixture is checked against
-  // that path and not against a second derivation of the same figure.
+  // The tray is the repository's own answer, so the fixture checks that path, not a second sum.
   it("answers the pending tray from the mirror exactly as the fixture says", async () => {
     const vault = await openTestVault(fixture.user.id);
     const rows = fixture.transactions.map((row) => feedRow(fixture.user.id, row));

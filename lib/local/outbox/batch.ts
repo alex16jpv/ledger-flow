@@ -7,9 +7,7 @@ import { operationPayload } from "./envelope";
 
 export type SyncOperationInput = SyncBatchInput["operations"][number];
 
-// The batch's own limits (backend `src/shared/syncBatch.ts`): 1–200 operations and a body of 1 MB,
-// where every other route stops at 10 kB. The budget is short of the megabyte because the envelope
-// around the operations is not free, and a queue that guessed too high would earn a `413`.
+// Backend `src/shared/syncBatch.ts`: 1–200 operations and 1 MB, minus the envelope, or a `413`.
 export const SYNC_MAX_OPERATIONS = 200;
 export const SYNC_BODY_BUDGET_BYTES = 900_000;
 
@@ -20,10 +18,7 @@ const bodyOf = (payload: unknown): Record<string, unknown> | undefined =>
     ? (payload as Record<string, unknown>)
     : undefined;
 
-// `seq` on the wire is the rank inside the batch, not the device's counter (D-33). The server takes
-// an integer and uses it for one thing — the order it applies the batch in — while a resolution
-// queued ahead of the operation it unblocks holds a fractional local `seq` (F-58) that the server's
-// `z.number().int()` would refuse. Results are matched by `opId`, never by `seq`.
+// D-33: `seq` on the wire is the rank in the batch; results match by `opId`, never by `seq`.
 export function wireOperation(
   operation: OutboxOperation,
   rank: number,
@@ -39,8 +34,7 @@ export function wireOperation(
     entity: operation.entity,
     action: operation.action,
     id: operation.entityId,
-    // `effect` stays at home: it is the money the row moved, bookkeeping for the local projection,
-    // and the server has no field for it.
+    // `effect` stays at home: bookkeeping for the local projection, with no field on the server.
     payload: {
       ...(body === undefined ? {} : { body }),
       ...(reference === undefined ? {} : { query: { reference } }),
@@ -53,15 +47,7 @@ export function wireOperation(
   };
 }
 
-// D-34: only the first operation of a row carries its `If-Match`. The ones behind it were queued
-// against the stamp the first one is about to replace (D-22), and a batch has no gap to rebase them
-// in. Unguarded they open no window: `POST /sync` blocks by entity id, so if the first one conflicts
-// the rest come back `blocked` without ever being applied (D-30).
-//
-// "First" is per PASS, not per batch: a row split across two batches whose first operation landed
-// without a row to rebase onto (a replay answered `duplicate`) would otherwise send the next batch's
-// first operation with the stamp the earlier one already replaced (F-61). The caller owns the set so
-// it spans the batches of one pass; a pass that rebuilds its plan starts a fresh one.
+// D-34: only the first operation of a row per PASS carries its `If-Match` (D-22, D-30, F-61).
 export function batchBody(entries: Collapsed[], guarded = new Set<string>()): SyncBatchInput {
   return {
     operations: entries.map((entry, rank) => {
@@ -82,8 +68,7 @@ export function chunkBatch(entries: Collapsed[]): Collapsed[][] {
   for (const entry of entries) {
     const cost = bytesOf(wireOperation(entry.operation, 0, true)) + 1;
     const full = current.length >= SYNC_MAX_OPERATIONS || bytes + cost > SYNC_BODY_BUDGET_BYTES;
-    // An operation over the budget on its own still goes: a `413` is a truer answer than a queue
-    // that stops draining, and the fallback gives it the verdict of its own route.
+    // An operation over the budget still goes: a `413` beats a queue that stops draining.
     if (current.length > 0 && full) {
       chunks.push(current);
       current = [];

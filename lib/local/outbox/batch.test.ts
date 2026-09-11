@@ -137,8 +137,7 @@ describe("the envelope the batch sends", () => {
   });
 
   it("numbers the operations by their rank, whatever the device's own seq is", () => {
-    // A resolution queued ahead of the operation it unblocks holds a fractional seq (F-58), which
-    // the server's `z.number().int()` would refuse: the wire carries the order, not the counter.
+    // F-58: a fractional seq fails the server's `z.number().int()`; the wire carries the order.
     const body = batchBody([entry({ seq: 1.5 }), entry({ seq: 2, entityId: "t2" })]);
 
     expect(body.operations.map((op) => op.seq)).toEqual([0, 1]);
@@ -209,8 +208,7 @@ describe("how the engine spreads the answers", () => {
     await requestSync();
 
     expect(await queued(vault.db)).toEqual([]);
-    // Nothing came back to replace the projection: the row stays as the mirror had it, and the pull
-    // that closes the round is what brings the server's version.
+    // Nothing came back to replace the projection, so the pull that closes the round brings it.
     expect((await vault.db.get("transactions", "t1"))?.row.amount).toBe(99);
   });
 
@@ -292,8 +290,7 @@ describe("how the engine spreads the answers", () => {
     );
     const named = { ...transaction({ id: "t1" }), categoryId: "c-mine" };
     await vault.db.put("transactions", transactionRecord(named, named));
-    // A resent opId the registry answered as a merge: no `result` travels back, so nothing but the
-    // mirror itself can keep the server's category as the server has it.
+    // A merge answers with no `result`, so only the mirror can keep the server's category.
     answerBatch(fetchMock, () => ({ status: "duplicate", mergedInto: "c-server" }));
 
     await requestSync();
@@ -341,8 +338,7 @@ describe("how the engine spreads the answers", () => {
       lastError: "RESOURCE_ARCHIVED",
       archivedId: "a1",
     });
-    // The account is not this operation's server version, so it is not kept as one; the mirror does
-    // learn it is archived, which is what the sheet reads to offer restoring it.
+    // The account is not this operation's server version, so it is not kept as one.
     expect(stuck?.serverRow).toBeUndefined();
     expect((await vault.db.get("accounts", "a1"))?.row.archivedAt).toBe("2026-09-05T00:00:00.000Z");
   });
@@ -363,8 +359,7 @@ describe("how the engine spreads the answers", () => {
 
     const [stuck] = await queued(vault.db);
     expect(stuck).toMatchObject({ status: "conflict", lastError: "DUPLICATE", serverRow: cash });
-    // Somebody else's row: it never becomes this row's baseline in the mirror, which keeps the
-    // device's own (the row still has a queue, so D-24 puts one aside).
+    // D-24: somebody else's row never becomes this row's baseline while it still has a queue.
     expect((await vault.db.get("accounts", "a2"))?.server?.id).toBe("a2");
   });
 
@@ -424,8 +419,7 @@ describe("a queue bigger than one batch", () => {
   });
 
   it("does not send the second batch's first operation of a row under a stamp the first already replaced (F-61)", async () => {
-    // The row is split across the two batches: 200 other rows sit between its two operations, and
-    // `update` → `delete` is not a fold, so both travel in the same pass.
+    // 200 rows sit between the two operations, and `update` → `delete` is not a fold.
     const middle = Array.from({ length: 200 }, (_, index) => ({
       entityId: `t${index + 2}`,
       baseUpdatedAt: OLD,
@@ -438,8 +432,7 @@ describe("a queue bigger than one batch", () => {
     for (const id of ["t1", ...middle.map((row) => row.entityId)]) {
       await vault.db.put("transactions", transactionRecord(transaction({ id })));
     }
-    // The replay of a lost response: the registry remembers the opId and answers without a row, so
-    // there is no fresh stamp to rebase the operations behind it onto.
+    // The registry answers a replayed opId without a row, so there is no stamp to rebase onto.
     answerBatch(fetchMock, (op) =>
       op.id === "t1" && op.action === "update"
         ? { status: "duplicate" }
@@ -502,8 +495,7 @@ describe("a server with no batch endpoint", () => {
 
   it("sends the plan one request at a time when the envelope itself is refused, and keeps the batch", async () => {
     const vault = await vaultWith([{ entityId: "t1" }]);
-    // Nothing was applied: a batch this client cannot fix would stall the queue for good, so each
-    // operation goes for the verdict of its own route instead.
+    // A batch this client cannot fix would stall the queue, so each operation takes its own route.
     missing(400);
 
     await requestSync();

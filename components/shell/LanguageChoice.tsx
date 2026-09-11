@@ -14,17 +14,14 @@ import { type AppLocale, routing } from "@/lib/i18n/routing";
 import { useDeviceDefaults } from "@/lib/i18n/useDeviceDefaults";
 import { iconProps } from "@/lib/icons/sizes";
 
-// F-02: the screen can be read in the user's language before there is an account to store one in.
-// Switching navigates to the same page in the other language — the account is created from the URL's
-// locale, so what the user chose here is what `locale` carries and what the app opens in afterwards.
+// F-02: the account is created from the URL's locale, so the switch is what the app opens in.
 export function useLocaleSwitch(): (locale: AppLocale) => void {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   return useCallback(
     (locale: AppLocale) => {
-      // `?reauth=1&next=…` is what gets a device with a live marker to the login (§2.6): the language
-      // must not be the thing that drops it.
+      // §2.6: `?reauth=1&next=…` is what gets a device with a live marker to the login.
       router.replace({ pathname, query: Object.fromEntries(params) }, { locale });
     },
     [router, pathname, params],
@@ -82,8 +79,7 @@ export function LanguageChoiceSheet({ open, onClose }: { open: boolean; onClose:
   );
 }
 
-// The chip of §8.4, to the right of the brand: the same choice as the row of the register form, so
-// changing either changes the other.
+// §8.4: the same choice as the row of the register form, so changing either changes the other.
 export function LanguageChip() {
   const t = useTranslations();
   const locale = useLocale();

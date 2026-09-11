@@ -2,16 +2,12 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-// W-39: the development-only screens are switched off by the `componentCatalog` and `devLogin`
-// flags, which are read from the environment at request time — a build alone never proves they are
-// off. This starts the production build the gate just made, with no NEXT_PUBLIC_APP_ENV to reopen
-// them, and asks the server.
+// W-39: the flags are read at request time, so only a running production build proves it.
 const DIST_DIR = process.env.NEXT_DIST_DIR ?? ".next";
 const PORT = process.env.DEV_ROUTES_PORT ?? "3004";
 const ORIGIN = `http://localhost:${PORT}`;
 
-// The public routes are the control: a server that answered 404 to everything would pass a check
-// made only of 404s.
+// The public routes are the control: a server 404ing everything would pass a check of 404s.
 const EXPECTED = [
   { path: "/dev/ui", status: 404 },
   // `en` is the default locale: next-intl redirects `/en/x` to `/x`, so this one is followed.
@@ -46,8 +42,7 @@ if (!existsSync(join(DIST_DIR, "build-manifest.json"))) {
   process.exit(1);
 }
 
-// A server already on the port would answer for us, and a stale one from another build would say
-// whatever it was built with: the check has to measure the build it was pointed at, or nothing.
+// A server already on the port would answer for us, from whatever build it was made of.
 try {
   await fetch(ORIGIN, { redirect: "manual", signal: AbortSignal.timeout(2000) });
   console.error(`check-dev-routes: something already answers at ${ORIGIN}; free the port first`);
@@ -59,8 +54,7 @@ try {
 const env = { ...process.env, NODE_ENV: "production", NEXT_DIST_DIR: DIST_DIR };
 delete env.NEXT_PUBLIC_APP_ENV;
 
-// Detached so the whole group can be stopped: killing `npx` alone leaves the server it started
-// listening, and the next run would measure that one.
+// Detached so the whole group can be stopped: killing `npx` leaves the server listening.
 const server = spawn("npx", ["next", "start", "--port", PORT], {
   env,
   stdio: "ignore",

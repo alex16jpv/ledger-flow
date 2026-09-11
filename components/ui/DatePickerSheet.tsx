@@ -13,14 +13,11 @@ import { Chip, ChipRow } from "./Chip";
 import { cn } from "./cn";
 import { Sheet } from "./Sheet";
 
-// 7.28: the browser's calendar follows neither the tokens nor the app's language, and it cannot grey
-// out the days the server refuses. This one does both. Days are plain `YYYY-MM-DD` keys, never Date
-// objects: the value is a calendar day in the user's zone, not an instant.
+// 7.28: days are plain `YYYY-MM-DD` keys, never Date objects — a calendar day, not an instant.
 export interface DatePickerSheetProps {
   open: boolean;
   value: string;
-  // Nothing after this day can be chosen. The transaction form sets it to tomorrow (the server
-  // refuses more than 24 h ahead); a budget's period has no ceiling at all.
+  // The transaction form sets it to tomorrow; a budget's period has no ceiling at all.
   max?: string;
   min?: string;
   title: string;
@@ -53,7 +50,6 @@ const shiftMonthKey = (day: string, months: number): string => {
 // `getWeekInfo` is in every browser this app supports and not yet in TypeScript's lib.
 type LocaleWithWeek = Intl.Locale & { getWeekInfo?: () => { firstDay: number } };
 
-// Which weekday the grid starts on, from the language: Monday nearly everywhere, Sunday in en-US.
 // `firstDay` counts 1 = Monday … 7 = Sunday, and the grid counts Sunday as 0.
 function firstWeekday(locale: string): number {
   try {
@@ -64,8 +60,7 @@ function firstWeekday(locale: string): number {
   }
 }
 
-// The 7 × n window a month is drawn in, neighbours included, as day keys: whole weeks, and no more
-// of them than the month needs — a sixth row would repeat a day number that is already on screen.
+// Whole weeks, and no more than the month needs: a sixth row would repeat a day already shown.
 function monthGrid(month: string, startsOn: number): string[] {
   const { year, month: index } = partsOf(month);
   const first = new Date(Date.UTC(year, index, 1));
@@ -93,8 +88,7 @@ export function DatePickerSheet({
 }: DatePickerSheetProps) {
   const t = useTranslations("common");
   const { formatLocale, timeZone } = useFormatSettings();
-  // The sheet is a decision of its own: it opens on the value it was given and reports only on Done,
-  // and the opener remounts it on every open so that a cancelled edit leaves nothing behind.
+  // It opens on the value it was given and reports only on Done; the opener remounts it each open.
   const [draft, setDraft] = useState(value);
 
   const startsOn = firstWeekday(formatLocale);
@@ -105,8 +99,7 @@ export function DatePickerSheet({
     year: "numeric",
     timeZone: "UTC",
   }).format(new Date(Date.UTC(shown.year, shown.month, 1)));
-  // A screen reader hearing "30" learns nothing: the cell carries the whole day, and the neighbours
-  // of the month are told apart by it too.
+  // A screen reader hearing 30 learns nothing, so the cell carries the whole day.
   const fullDate = new Intl.DateTimeFormat(formatLocale, {
     weekday: "long",
     day: "numeric",

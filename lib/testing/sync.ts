@@ -3,8 +3,7 @@ import type { SyncBatchInput, SyncOpResult } from "@/types/api";
 
 export const SERVER_TIME = "2026-09-06T10:00:00.000Z";
 
-// The engine sends the queue as one `POST /sync` (O-F5b), so a test that drives it answers a batch
-// instead of a route: one result per operation, `applied` unless the test says otherwise.
+// O-F5b: the engine sends one `POST /sync`, so a test answers a batch, not a route.
 export const operationsOf = (init: RequestInit | undefined): SyncOperationInput[] => {
   const body = typeof init?.body === "string" ? init.body : "{}";
   return (JSON.parse(body) as SyncBatchInput).operations;

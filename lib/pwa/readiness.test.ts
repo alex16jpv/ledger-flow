@@ -43,8 +43,7 @@ describe("how ready this device is to run with no network", () => {
     expect(readiness.cached).toBe(readiness.expected);
   });
 
-  // A device warmed in Spanish holds Spanish documents: English is a set of screens it never asked
-  // for, and promising it works with no network would be a lie.
+  // A device warmed in Spanish holds Spanish documents; English is screens it never asked for.
   it("counts the language it is asked about, not the one it warmed", async () => {
     warm(shellUrls("es", window.location.origin));
 
@@ -57,8 +56,7 @@ describe("how ready this device is to run with no network", () => {
     expect(await shellReadiness("en")).toEqual({ cached: 0, expected: SHELL_SCREENS });
   });
 
-  // The alert at the foot of the screen is how a device says it is ready. If the copy it was said
-  // of is thrown away, the sentence stops being true and the next copy has to say it again.
+  // If the copy it was said of is thrown away, the next one has to say it again.
   it("forgets the announcement so a copy downloaded again can announce itself", () => {
     markOfflineReadyAnnounced();
     expect(offlineReadyAnnounced()).toBe(true);

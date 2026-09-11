@@ -104,8 +104,7 @@ export function budget(overrides: Partial<SyncBudget> = {}): SyncBudget {
 
 const opened = new Set<VaultHandle>();
 
-// A failed assertion skips the close() at the end of a test, and the open connection then blocks
-// deleteDatabase for every test after it. Tracking the handles keeps one failure from cascading.
+// A failed assertion skips `close()`, and an open connection blocks every later delete.
 export async function openTestVault(
   userId: string,
   definition?: VaultDefinition,

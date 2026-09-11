@@ -9,8 +9,7 @@ export interface EmptyProps {
   body?: ReactNode;
   action?: ReactNode;
   tone?: "neutral" | "danger";
-  // Where this Empty is the whole page — the 404, an error boundary — nothing else carries the
-  // document's first heading.
+  // Where this Empty is the whole page, nothing else carries the document's first heading.
   titleAs?: "h1" | "h2";
   titleSize?: "md" | "page";
   className?: string;

@@ -12,8 +12,7 @@ import type {
 
 export async function updateUser(id: string, input: UpdateUserInput): Promise<User> {
   const answer = await api<User>(`/users/${id}`, { method: "PUT", body: input });
-  // The profile row lives in the mirror too, and the zone `lib/local/derive` buckets by comes from
-  // it: without a pull the figures would keep being cut on the old day boundary.
+  // The zone `lib/local/derive` buckets by comes from the profile row, which a pull refreshes.
   await pullAfterDirectSend();
   return answer;
 }
@@ -22,9 +21,7 @@ export function deleteUser(id: string): Promise<unknown> {
   return api<unknown>(`/users/${id}`, { method: "DELETE" });
 }
 
-// Through the repository, like every other read: these were the last two screens in `(app)` still
-// asking the server, so Settings cost two requests with a full mirror and its two figures were the
-// only ones that went blank with no network (F-43).
+// F-43: through the repository like every other read, so the figures survive with no network.
 export function fetchCategorySummary(): Promise<CategoryList> {
   return readCategoriesPage({ includeArchived: true, limit: 100 });
 }

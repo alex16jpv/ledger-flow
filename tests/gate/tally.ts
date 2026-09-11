@@ -8,8 +8,7 @@ export interface Call {
   operations?: number;
 }
 
-// Every /api call the pages make, in order, so a phase can be measured by slicing the log (§4.2).
-// Shared by the two gate demos: O-A counts one device's outage, O-B counts the drain of two.
+// §4.2: every /api call in order, so a phase is measured by slicing the log.
 export class Tally {
   readonly calls: Call[] = [];
 
@@ -45,8 +44,7 @@ export const reads = (calls: Call[]): Call[] =>
 export const pushes = (calls: Call[]): Call[] =>
   calls.filter((c) => c.method !== "GET" && DATA.test(c.path));
 export const pulls = (calls: Call[]): Call[] => calls.filter((c) => c.path === "/api/sync/changes");
-// Since O-F5b the queue leaves as one batch: `pushes` counts what would go by the ordinary routes —
-// which is nothing now — and `batches` counts the requests the queue actually makes.
+// Since O-F5b `pushes` counts the ordinary routes — nothing now — and `batches` the real ones.
 export const batches = (calls: Call[]): Call[] =>
   calls.filter((c) => c.method === "POST" && c.path === "/api/sync");
 export const health = (calls: Call[]): Call[] =>

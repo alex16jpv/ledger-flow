@@ -5,8 +5,7 @@ import type { SyncTransaction } from "@/types/api";
 import { widenedBound } from "../derive";
 import { PROFILE_KEY, type VaultSchema } from "../schema";
 
-// Comparing the dates as strings is comparing them as instants: they are the ISO stamps the server
-// printed. An array key [d, id] sorts after [d], so an open bound on [to] is the server's `$lt`.
+// An array key [d, id] sorts after [d], so an open bound on [to] is the server's `$lt`.
 export function dateCursorRange(from?: string, to?: string): IDBKeyRange | null {
   if (from !== undefined && to !== undefined) return IDBKeyRange.bound([from], [to], false, true);
   if (from !== undefined) return IDBKeyRange.lowerBound([from]);
@@ -14,11 +13,7 @@ export function dateCursorRange(from?: string, to?: string): IDBKeyRange | null 
   return null;
 }
 
-// The index compares the stamps as strings, and a stored date is always the feed's UTC one. A bound
-// carrying an offset instead ("2025-12-01T00:00:00-05:00") would compare below every row of its own
-// last day and drop them in silence, so a bound is normalised to the same shape before it is used as
-// a key — here and wherever else a window reaches the mirror (F-17). `null` is a bound that is not a
-// date at all, which the server answers with a 400.
+// F-17: a bound with an offset would drop its own last day, and `null` is the server's 400.
 export function storedStamp(bound: string): string | null {
   const at = new Date(bound);
   return Number.isNaN(at.getTime()) ? null : at.toISOString();
@@ -31,9 +26,7 @@ const asStoredStamp = (bound?: string): string | undefined => {
   return stamp;
 };
 
-// Every derived figure is bounded by a window, and this is how its rows are chosen: the dateCursor
-// index, never a walk of the whole store (D-18). A tombstone carries no `liveDate`, so the index
-// cannot reach a deleted row and no caller has to filter one out.
+// D-18: the dateCursor index, never a walk of the store; a tombstone has no `liveDate`.
 export async function liveRowsInWindow(
   db: IDBPDatabase<VaultSchema>,
   from?: string,
@@ -41,8 +34,7 @@ export async function liveRowsInWindow(
 ): Promise<SyncTransaction[]> {
   const rows: SyncTransaction[] = [];
   const index = db.transaction("transactions").store.index("dateCursor");
-  // The index is on the instant and the window is a run of local days, which can sit up to a day
-  // apart: the range is widened so it cannot miss an edge row, and `withinDays` is what decides.
+  // The range is widened so it cannot miss an edge row, and `withinDays` is what decides.
   const range = dateCursorRange(
     widenedBound(asStoredStamp(from), -1),
     widenedBound(asStoredStamp(to), 1),
@@ -51,9 +43,7 @@ export async function liveRowsInWindow(
   return rows;
 }
 
-// The zone every window is built in. The server reads it from the user; offline the mirror holds
-// the same row. Absent means the mirror cannot answer — never "fall back to the device's zone",
-// which would silently bucket a day differently from the server.
+// Absent means the mirror cannot answer — never fall back to the device's zone.
 export async function mirrorTimeZone(db: IDBPDatabase<VaultSchema>): Promise<string | undefined> {
   const record = await db.get("profile", PROFILE_KEY);
   return record?.row.timezone;

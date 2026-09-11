@@ -1,4 +1,3 @@
-// Screenshots every preview page into design/captures/ (not versioned: regenerate with npm run design:shoot).
 // Usage: node design/shoot.mjs [--page=settings] [--device=mobile] [--mode=dark] [--palette=brisa]
 import { mkdirSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";

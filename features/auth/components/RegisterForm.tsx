@@ -141,8 +141,7 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
           />
         </Field>
         <Field label={t("auth.register.language")} help={t("auth.register.languageHelp")}>
-          {/* The same value as the chip in the frame (F-02): both are the language the screen is
-              being read in, and that is the `locale` the account is created with. */}
+          {/* F-02: the same value as the chip — the `locale` the account is created with. */}
           <Picker
             label={
               detected === locale

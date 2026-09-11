@@ -49,10 +49,7 @@ test("the landing is static, bilingual and links to sign-up, sign-in and the leg
 
   await expect(page.getByRole("link", { name: "English" })).toHaveAttribute("href", /\/en$/);
 
-  // F-37: the footer sits at the very bottom of a page taller than the emulated phone's viewport,
-  // and Chromium's mobile emulation hit-tests a click there against a layout viewport ~96 px taller
-  // than the one Playwright measures in, so the click lands on the section above the footer. The
-  // keyboard reaches it without coordinates at all — and a footer link has to answer the keyboard.
+  // F-37: Chromium's mobile emulation hit-tests a footer click ~96 px off, so focus is used.
   const privacy = page.getByRole("link", { name: "Política de privacidad" });
   await expect(privacy).toHaveAttribute("href", /\/es\/privacy$/);
   await privacy.focus();
@@ -77,8 +74,7 @@ test("an unknown public address answers a real 404 inside the public frame", asy
   await expectNoAxeViolations(page);
 });
 
-// P-33 (owner, 2026-09-08): the root is the app's door for a device that already signed in, so the
-// pitch is for visitors only.
+// P-33 (owner, 2026-09-08): the root is the app's door, and the pitch is for visitors only.
 test("the root opens the app for a device that carries the session marker", async ({
   page,
   request,

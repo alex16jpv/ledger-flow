@@ -70,8 +70,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
   const outbox = useOutbox();
   const [confirming, setConfirming] = useState(false);
   const [resolving, setResolving] = useState(false);
-  // F-29: DESIGN §8.12 asks for the conflict sheet from Movements too, and a row is a button, so
-  // the way in is here rather than inside the list row.
+  // F-29: DESIGN §8.12 asks for the conflict sheet from Movements; the way in is here, not a row.
   const stuck = outbox.attentionRows.get(id) ?? null;
   const notFound = transaction.error instanceof ApiError && transaction.error.status === 404;
   const lookups = useMemo<TransactionLookups>(

@@ -9,9 +9,7 @@ import {
 } from "../schema";
 import { envelope, type MoneyEffect, type OperationDraft } from "./envelope";
 
-// Every write opens the same scope: the mirror, the queue and the counter. IndexedDB needs the
-// stores named up front, and a write that could not reach one of them would be the phantom this
-// whole item exists to prevent.
+// IndexedDB needs the stores named up front, and every write opens all three together.
 const WRITE_STORES = [...MIRROR_STORES, "outbox", "meta"] as const;
 
 export type WriteTransaction = IDBPTransaction<
@@ -26,9 +24,7 @@ export function writeTransaction(db: VaultDb): WriteTransaction {
   return db.transaction([...WRITE_STORES], "readwrite");
 }
 
-// The counter never restarts and never reuses a number, so the queue's order survives a reload, a
-// second tab and a clock that jumps. It lives in `meta`, inside the same transaction as the
-// operation it numbers.
+// The counter never restarts nor reuses a number, and lives in `meta` inside the same tx.
 async function allocateSeq(tx: WriteTransaction): Promise<number> {
   const meta = tx.objectStore("meta");
   const record = await meta.get("outboxSeq");
@@ -37,10 +33,7 @@ async function allocateSeq(tx: WriteTransaction): Promise<number> {
   return next;
 }
 
-// A resolution has to travel ahead of the operation it unblocks, in the same batch (F-58), and the
-// counter only goes up: the room is made between `before` and whatever precedes it, which is why
-// this one is not an integer. Nothing local reads `seq` as anything but an order, and the wire sends
-// the rank inside the batch instead (D-33).
+// F-58: room is made below `before`, so this seq is fractional; the wire sends the rank (D-33).
 async function insertSeq(tx: WriteTransaction, before: number): Promise<number> {
   const keys = await tx.objectStore("outbox").getAllKeys(IDBKeyRange.upperBound(before, true));
   const previous = keys.length > 0 ? (keys[keys.length - 1] ?? 0) : 0;
@@ -55,9 +48,7 @@ export async function operationsFor(
   return tx.objectStore("outbox").index("entity").getAll([entity, entityId]);
 }
 
-// True while the queue still holds the create that would put this row on the server. Two things
-// hang on it: an `If-Match` guard against an `updatedAt` the server never printed would always be
-// stale, and an operation naming a row the server has not seen has to declare it in `dependsOn`.
+// A guard on an `updatedAt` the server never printed is always stale; the row needs `dependsOn`.
 export async function unsent(
   tx: WriteTransaction,
   entity: OutboxEntity,
@@ -72,8 +63,6 @@ export interface EntityRef {
   id: string | null | undefined;
 }
 
-// The ids the client already knows the server does not: a movement that spends from an account
-// created offline declares that account, and the engine holds it back only if that create fails.
 // An operation's own row is not in here — same-entity order is `seq`'s job, not a dependency.
 export async function dependenciesOf(tx: WriteTransaction, refs: EntityRef[]): Promise<string[]> {
   const seen = new Set<string>();
@@ -84,8 +73,7 @@ export async function dependenciesOf(tx: WriteTransaction, refs: EntityRef[]): P
   return [...seen];
 }
 
-// What a mirror projection reports back to the write: the guard it can offer the server, the ids it
-// waits on, and how to put the mirror back if the server rejects the write for good.
+// The guard it can offer, the ids it waits on, and how to put the mirror back on a refusal.
 export interface LocalChange {
   baseUpdatedAt?: string;
   dependsOn: string[];
@@ -99,8 +87,7 @@ export interface LocalWrite {
   entityId: string;
   action: string;
   payload: OperationDraft["payload"];
-  // Runs inside the transaction that queues the operation. Whatever it writes to the mirror and the
-  // operation itself commit together or not at all: half of this is a movement that never happened.
+  // Runs inside the transaction that queues the operation: both commit or neither does.
   project: (tx: WriteTransaction, occurredAt: string) => Promise<LocalChange>;
 }
 
@@ -146,9 +133,7 @@ export async function queueWrite(
     await tx.done;
     return { operation, undo: change.undo };
   } catch (error) {
-    // O-F1's rule, applied to a write: nothing is written unless all of it is. Without the abort an
-    // open transaction commits on its own, and the mirror would keep a row with no operation.
-    // `tx.done` rejects with the abort nobody is awaiting any more; the failure below is the real one.
+    // O-F1: without the abort the transaction commits and the mirror keeps a row with no operation.
     tx.done.catch(() => undefined);
     try {
       tx.abort();
@@ -159,8 +144,7 @@ export async function queueWrite(
   }
 }
 
-// Dropping an operation and reconciling the mirror is one transaction too: a queue that forgot an
-// operation whose result never landed is the same phantom seen from the other side.
+// Dropping the operation and reconciling the mirror is one transaction too.
 export async function settleWrite(
   db: VaultDb,
   seq: number,
@@ -172,11 +156,7 @@ export async function settleWrite(
   await tx.done;
 }
 
-// Every operation queued on one row reads the guard the mirror held at the time, and the client never
-// writes `updatedAt` (invariant 2), so a chain of them all carry the stamp the first one is about to
-// replace. When it lands, whatever still shares its guard moves to the stamp the server answered
-// with. A different guard means a pull brought another device's edit: that one keeps it and earns
-// its 409. Runs inside the transaction that settles the landed operation.
+// Invariant 2: whatever still shares the landed guard moves to the stamp the server answered.
 export async function rebaseGuards(
   tx: WriteTransaction,
   landed: OutboxOperation,
@@ -217,9 +197,7 @@ export async function markOperation(
   await tx.done;
 }
 
-// The batch answered for every operation at once, so the queue moves for all of them at once too.
-// `attempts` counts an operation the server was asked about: a request that never came back may
-// have landed, which is what stops the fold of `coalesce` from crossing it.
+// `attempts` counts an operation the server was asked about, which is what stops `coalesce`.
 export async function requeueOperations(
   db: VaultDb,
   seqs: readonly number[],
@@ -240,9 +218,7 @@ export async function requeueOperations(
   await tx.done;
 }
 
-// `blocked`: the server did not attempt it, so nothing about it changed but the fact that it is
-// back in line. Counting an attempt here would stop it from ever being folded again for a batch it
-// was never part of.
+// `blocked` was never attempted, so counting one would stop it from ever being folded again.
 export async function holdOperations(db: VaultDb, seqs: readonly number[]): Promise<void> {
   const tx = writeTransaction(db);
   const store = tx.objectStore("outbox");

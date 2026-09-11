@@ -7,8 +7,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 
-// P-32: the confirmation of the third exit, shared by the sheet that offers it when there is no
-// session and by Sync status, which keeps that exit reachable at any time (DESIGN §8.17).
+// P-32: the confirmation of the third exit, shared by the sheet and Sync status (DESIGN §8.17).
 export function WipeDeviceSheet({
   open,
   pending,

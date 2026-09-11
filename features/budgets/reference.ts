@@ -11,9 +11,7 @@ export function parseMonthKey(value: string | null, now: Date, timeZone: string)
   return value && MONTH.test(value) ? value : currentMonthKey(now, timeZone);
 }
 
-// Any instant inside the month works as `reference`. The current month uses "now", so a CUSTOM window
-// that is still open today is not reported as expired; a past month uses noon on the 15th, which stays
-// inside it even if the server resolved the period in another zone.
+// A past month uses noon on the 15th, which stays inside it in any zone; the current one, now.
 export function monthReference(
   monthKey: string,
   timeZone: string,

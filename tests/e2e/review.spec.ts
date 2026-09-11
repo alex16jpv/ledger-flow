@@ -61,8 +61,7 @@ test("Save all completes the categorized cards, one guarded operation per row", 
   page,
   request,
 }) => {
-  // A fresh user: the batch sweeps every categorized card of the inbox, so sharing the seed inbox
-  // with the other specs would let it swallow their rows mid-flight.
+  // A fresh user: the batch sweeps every categorized card, so a shared inbox would be swallowed.
   const email = `e2e-saveall-${Date.now()}-${Math.random().toString(16).slice(2)}@ledgerflow.test`;
   await request.post("/api/auth/register", {
     headers: { origin: APP },
@@ -94,9 +93,7 @@ test("Save all completes the categorized cards, one guarded operation per row", 
   }
   await cards[1]!.getByRole("textbox", { name: "Description" }).fill("E2E batch");
 
-  // F-20 with O-F5b: the lot leaves the outbox expanded into one operation per row — each with its
-  // own guard and its own outcome — and the queue travels as one `POST /sync`, never as the API's
-  // own `PATCH /transactions/batch`.
+  // F-20 with O-F5b: one operation per row, travelling as one `POST /sync`, never the API's batch.
   const sentUrls: string[] = [];
   const batches: { entity: string; action: string; id: string; baseUpdatedAt?: string }[][] = [];
   page.on("request", (sent) => {
@@ -113,8 +110,7 @@ test("Save all completes the categorized cards, one guarded operation per row", 
   await dialog.getByRole("button", { name: "Save 2" }).click();
   await expect(page.getByText("2 expenses saved")).toBeVisible();
   await expect(page.getByRole("heading", { name: "All reviewed" })).toBeVisible();
-  // F-77: the toast and the empty state can both be on screen before Playwright has seen the request
-  // go out, so the batch is waited for, not read.
+  // F-77: the toast can be on screen before Playwright saw the request, so the batch is polled.
   await expect.poll(() => batches).toHaveLength(1);
   expect(sentUrls.filter((url) => url.endsWith("/api/transactions/batch"))).toHaveLength(0);
   const operations = batches[0]!;

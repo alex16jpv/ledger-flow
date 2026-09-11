@@ -12,9 +12,7 @@ export const profileKeys = {
   mirror: () => [...QUERY_DOMAINS.profile, "mirror"] as const,
 };
 
-// Who the user is when the session cannot say — an offline cold start, or local mode (§2.6): the
-// profile the last pull stored (F-63). A mirror-backed domain, so the pull that brings it refreshes
-// it like every other read (F-38) and no network does not pause it.
+// F-63: the profile the last pull stored; a mirror-backed domain, so F-38 refreshes it.
 export function useMirrorProfile(enabled: boolean): User | null {
   const query = useQuery({ queryKey: profileKeys.mirror(), queryFn: readMirrorProfile, enabled });
   return query.data ?? null;

@@ -61,8 +61,7 @@ export interface QuickAddResult {
   detailsSaved: boolean;
 }
 
-// The quick endpoint always flags pendingDetails and takes no description: a follow-up PUT adds the
-// description and, when a category was chosen, clears the flag (owner decision P-17: a category is enough).
+// P-17: the quick endpoint always flags pendingDetails; a follow-up PUT with a category clears it.
 export async function quickAddWithDetails({
   input,
   description,

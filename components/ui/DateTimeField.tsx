@@ -23,8 +23,7 @@ import { TimePickerSheet } from "./TimePickerSheet";
 
 export type DateTimeValue = DateTimeParts;
 
-// The control that opens a sheet, drawn as the input it replaces (§8.2, preview B): a leading icon
-// and the value, never the browser's own widget (F-05).
+// F-05: §8.2 preview B — a leading icon and the value, never the browser's own widget.
 function Opener({
   leading,
   value,
@@ -137,8 +136,7 @@ export interface DateFieldProps {
   note?: string;
 }
 
-// Standalone: the range of the filters sheet (§8.5) and the budget's dates (§8.8) ask for a day and
-// nothing else.
+// The filters sheet (§8.5) and a budget's dates (§8.8) ask for a day and nothing else.
 export function DateField({ disabled = false, ...rest }: DateFieldProps) {
   return <DateOpener disabled={disabled} {...rest} />;
 }

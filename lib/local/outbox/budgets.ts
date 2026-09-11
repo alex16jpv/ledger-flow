@@ -62,8 +62,7 @@ async function projectBudget(
   };
 }
 
-// The screen asks for a view, and building one needs the categories and the movements of the
-// period: `spent` is derived, not stored. The reference is the one the caller was looking at.
+// `spent` is derived, so a view needs the categories and the movements of the period.
 const readBack =
   (id: string, reference?: string) =>
   async (db: VaultDb): Promise<Budget> => {

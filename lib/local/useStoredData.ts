@@ -5,9 +5,7 @@ import { useEffect, useState } from "react";
 import { useOutbox } from "./outbox/useOutbox";
 import { vaultReady } from "./repository";
 
-// P-34: whether this device has anything to lose — a full copy the pull left behind, or writes still
-// waiting. Both are read the way the rest of the app reads them: the vault gate (F-31) and the
-// outbox store, never a poll.
+// P-34: read through the vault gate (F-31) and the outbox store, never a poll.
 export function useStoredData(): boolean {
   const outbox = useOutbox();
   const [copied, setCopied] = useState(false);

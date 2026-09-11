@@ -81,9 +81,7 @@ afterEach(async () => {
 });
 
 describe("home reads", () => {
-  // O-F2b: Home reads the mirror with network too, and what it answers is what the three endpoints
-  // answer. The URLs are still asserted because they are what a device with no snapshot falls back
-  // to on its first load, and getting one wrong would only show up there.
+  // O-F2b: the URLs still matter — they are the fallback for a device with no snapshot.
   it("answers accounts, categories and the pending tray from the mirror, with network", async () => {
     fetchMock.mockImplementation((input) => {
       const url = urlOf(input);
@@ -139,9 +137,7 @@ describe("home reads", () => {
     expect((await fetchHomeCategories()).data).toEqual([dining, gym]);
   });
 
-  // The month's buckets and every budget's `spent` are derived money (O-F3), and the zone they are
-  // cut on comes from the profile: with no profile in the mirror there is nothing to derive with,
-  // and the server answers rather than the mirror inventing a figure.
+  // O-F3: derived money is cut on the profile's zone, so with no profile the server answers.
   it("asks the server for the spending and the budgets while the mirror has no profile", async () => {
     reportOnline(false);
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));

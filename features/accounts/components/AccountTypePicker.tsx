@@ -21,9 +21,7 @@ export interface AccountTypePickerProps {
   error?: string;
 }
 
-// F-03, variant C (owner, 2026-09-06): one line always, and a sheet with room to explain the nine
-// types — which is what nobody could work out from a grid of chips. The same control serves the
-// account form and the onboarding (§8.4, §8.6), so there is only one way to choose the same thing.
+// F-03, variant C (owner, 2026-09-06): one control for the form and the onboarding (§8.4, §8.6).
 export function AccountTypePicker({ value, onChange, label, error }: AccountTypePickerProps) {
   const t = useTranslations();
   const locale = useLocale();

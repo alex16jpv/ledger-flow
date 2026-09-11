@@ -45,8 +45,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  // H-08: a drain one test started outlives it and calls the next test's fetch mock, which then
-  // sees a request nobody in it made.
+  // H-08: a drain one test started outlives it and calls the next test's fetch mock.
   resetSyncEngine();
   resetOutboxStatus();
   setCurrentVault(null);
@@ -223,8 +222,7 @@ describe("the Resolve sync conflict sheet", () => {
     expect(movement).toMatchObject({ status: "pending", dependsOn: ["a1"] });
   });
 
-  // F-60: the tray's "Try again" repeated the same refusal for good. The restore route takes a
-  // `name`, so the way through is asking for one.
+  // F-60: the restore route takes a `name`, so the way through is asking for one.
   it("offers restoring under another name when the name is taken", async () => {
     const vault = await vaultWith([
       {
@@ -341,8 +339,7 @@ describe("the Resolve sync conflict sheet", () => {
     expect(screen.getByText(/more than 24 hours ahead of the server’s time/)).toBeInTheDocument();
     expect(screen.getByText(/clock is 3 days ahead/)).toBeInTheDocument();
     expect(screen.getByText("Was Sep 25 1:10 PM")).toBeInTheDocument();
-    // Prefilled with the server's own clock — three days behind this device's — and never with the
-    // date that was refused.
+    // Prefilled with the server's clock, three days behind this device's, never the refused date.
     const onTheServer = dayKey(new Date(Date.now() - 3 * DAY), "America/Bogota");
     await userEvent.click(screen.getByRole("button", { name: /^Date/ }));
     const calendar = screen.getByRole("dialog", { name: "Date" });

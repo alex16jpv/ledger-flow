@@ -6,24 +6,20 @@ import { operationPayload } from "./envelope";
 import { patch } from "./projected";
 import type { RouteKey } from "./routes";
 
-// D-23: only what is still going out. A `conflict` or a `failed` operation will never be sent, so
-// the mirror shows the row the server sent and the user's version lives in the conflict sheet.
+// D-23: a `conflict` or `failed` operation never goes out, so the mirror shows the server's row.
 export const willBeSent = (operation: OutboxOperation): boolean =>
   operation.status === "pending" || operation.status === "sending";
 
 export type MirrorRow = Account | Category | SyncTransaction | SyncBudget;
 
-// What the mirror has to project back on top of a row the server sent: the queue grouped by the row
-// each operation addresses, in `seq` order, which is the order they will reach the server.
+// Grouped by row, in `seq` order, which is the order they will reach the server.
 export interface QueuedMirror {
   rows: ReadonlyMap<string, readonly OutboxOperation[]>;
-  // Every row with an operation in the queue, whatever its status: the rows whose server version
-  // the mirror has to keep aside (D-24).
+  // D-24: whatever its status — these are the rows whose server version is kept aside.
   touched: ReadonlySet<string>;
   // The account a queued `setDefault` is about to hand the flag to, if any; the last one wins.
   defaultAccountId: string | null;
-  // Absent until the first pull brings the profile. A budget override cannot resolve its period
-  // without the owner's zone, so it is left alone rather than filed under the wrong key.
+  // A budget override cannot resolve its period without the owner's zone, so it is left alone.
   timezone: string | null;
 }
 
@@ -71,9 +67,7 @@ function periodKey(
 
 type Rule = (row: MirrorRow, operation: OutboxOperation, queued: QueuedMirror) => MirrorRow;
 
-// One rule per route, the mirror image of what each write projects when it is queued. A create has
-// none on purpose: the server can only send back a row it already holds, so a create in the feed is
-// one whose answer was lost, and the server's row is the more current of the two.
+// A create has none on purpose: the server's row is the more current of the two.
 const RULES: Partial<Record<RouteKey, Rule>> = {
   "account:update": (row, operation) => merge(row as Account, operation),
   "account:archive": (row, operation) => ({
@@ -141,10 +135,7 @@ export interface ReprojectStep {
   after: MirrorRow;
 }
 
-// The row the mirror keeps once the server's version is known: that version, with the operations
-// that have not left the queue projected on top of it, in the order they will leave (D-23). The
-// steps are what each operation moved, which is what its money `effect` has to say. `updatedAt` is
-// never touched, so the stamp the next write guards against stays the server's own (invariant 2).
+// D-23 with invariant 2: `updatedAt` is never touched, so the next guard stays the server's.
 export function reprojectWalk<R extends MirrorRow>(
   entity: OutboxEntity,
   row: R,
@@ -157,8 +148,7 @@ export function reprojectWalk<R extends MirrorRow>(
     steps.push({ operation, before: next, after });
     next = after;
   }
-  // Two defaults would have quick capture pick the wrong account for as long as the queue holds
-  // the operation that moves the flag, so the account it is moving away from gives it up here too.
+  // Two defaults would have quick capture pick the wrong account while the flag is queued.
   if (entity === "account" && queued.defaultAccountId && queued.defaultAccountId !== row.id) {
     next = { ...(next as Account), isDefault: false } as R;
   }

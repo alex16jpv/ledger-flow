@@ -26,11 +26,9 @@ export type MetaKey =
   | "syncCursor"
   | "syncedAt"
   | "outboxSeq"
-  // What `POST /sync` warned about the writes that landed degraded, as JSON: a store of its own
-  // would cost a mirror version bump (D-24) for a handful of notices the next pull cannot rebuild.
+  // D-24: a store of its own would cost a mirror version bump for notices a pull cannot rebuild.
   | "syncNotices"
-  // How far this device's clock runs from the server's, learned from the `serverTime` of every
-  // answer: the form needs it when there is no network left to ask again (F-66).
+  // F-66: learned from the `serverTime` of every answer, for when there is no network left.
   | "clockOffsetMs";
 
 export interface MetaRecord {
@@ -38,14 +36,12 @@ export interface MetaRecord {
   value: string | number | null;
 }
 
-// IndexedDB refuses booleans and nulls as keys, so every filter the lists use is stored as a
-// sibling key: 0/1 for flags, and omitted entirely where the index must skip the row.
+// IndexedDB refuses booleans and nulls as keys, so every filter is stored as a sibling key.
 export interface MirrorRecord<T> {
   id: string;
   row: T;
   updatedAt: string;
-  // The row as the server last sent it, kept only while the outbox holds operations on this row:
-  // `row` is then that plus what the queue will still send (D-24). Absent, `row` is the server's.
+  // D-24: kept only while the outbox holds operations on this row; absent, `row` is the server's.
   server?: T;
 }
 
@@ -64,8 +60,7 @@ export type BudgetRecord = ArchivableRecord<SyncBudget>;
 export interface TransactionRecord extends MirrorRecord<SyncTransaction> {
   deleted: 0 | 1;
   date: string;
-  // Absent on deleted rows: a compound index skips a record when any part of its key path is
-  // missing, which is what keeps the list cursor from ever walking a tombstone.
+  // Absent on deleted rows: a compound index skips a record with a missing key path.
   liveDate?: string;
   categoryId?: string;
   fromAccountId?: string;
@@ -90,16 +85,11 @@ export interface OutboxOperation {
   status: OutboxStatus;
   attempts: number;
   lastError: string | null;
-  // Set once, by the engine, after a `409 ID_TAKEN` moved the row to a new id (F-21). A second
-  // collision on a fresh UUID v7 is a bug, not luck, so it is never re-minted twice.
+  // F-21: set once by the engine after a `409 ID_TAKEN`; a second collision on a v7 is a bug.
   reminted?: true;
-  // The row as the server had it when it refused the write, straight from the `409 STALE_UPDATE`
-  // (O-B2) or from a `conflict` of the batch. The resolution sheet reads it: the mirror cannot
-  // answer for the server, it holds this device's projection. A `DUPLICATE` carries the row that
-  // holds the name, which is somebody else's row: `ownServerRow` is what tells the two apart.
+  // O-B2: the server's row at the refusal; a `DUPLICATE` carries somebody else's (`ownServerRow`).
   serverRow?: unknown;
-  // The account `conflict` `RESOURCE_ARCHIVED` names: archived online while this device had no
-  // network, so the movement cannot land until it is restored (F-58).
+  // F-58: archived online while this device had no network, so the movement waits for a restore.
   archivedId?: string;
 }
 

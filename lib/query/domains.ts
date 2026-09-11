@@ -12,10 +12,7 @@ export const QUERY_DOMAINS = {
   profile: ["profile"],
 } as const;
 
-// Reads these can answer from the offline mirror, so their fetch must run instead of being paused
-// while offline (O-F2a). The prefix covers every key of a domain, so a domain is only listed once
-// all its reads answer locally: budgets, home and stats joined when O-F3 part 2 derived `spent` and
-// the spending buckets, which were the last server-only reads any of them had.
+// O-F2a: the prefix covers a whole domain, so it is listed only once all its reads are local.
 export const MIRROR_BACKED_DOMAINS = [
   QUERY_DOMAINS.accounts,
   QUERY_DOMAINS.categories,
@@ -26,10 +23,7 @@ export const MIRROR_BACKED_DOMAINS = [
   QUERY_DOMAINS.profile,
 ];
 
-// F-38: a pull that brought news wrote straight into the mirror, and React Query has no idea. Every
-// mirror-backed domain is re-read rather than the ones whose store changed: a stale screen fails in
-// silence, and mapping an entity to the domains that show it is a map that drifts the first time a
-// screen joins one more. Re-reading is IndexedDB, not the network.
+// F-38: every mirror-backed domain is re-read; a map of entity to domain would drift.
 export async function invalidateMirrorBacked(queryClient: QueryClient): Promise<void> {
   await Promise.all(
     MIRROR_BACKED_DOMAINS.map((queryKey) => queryClient.invalidateQueries({ queryKey })),

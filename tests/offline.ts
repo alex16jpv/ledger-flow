@@ -8,8 +8,7 @@ import {
 
 import { SW_PATH } from "./sw-path";
 
-// `playwright.config.ts` puts this on the runner too: in CI the app is on another port, and a wrong
-// origin here is a `403 UNTRUSTED_ORIGIN` from the BFF on the very first request of every spec.
+// In CI the app is on another port, and a wrong origin is a `403 UNTRUSTED_ORIGIN`.
 export const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
 export interface Row {
@@ -48,13 +47,7 @@ export interface Fixture extends Credentials {
   openingBalance: number;
 }
 
-// A user of its own for each test. The seeded one is shared by the whole suite, and these specs
-// count rows, compare balances and let two devices disagree about one row: on a shared user every
-// one of those assertions is a race with whatever else is running (F-45 is that lesson already).
-// Registration signs `request` in, so its cookies are this user's from here on.
-// F-11: a keep-alive socket the server is closing while the request context reuses it answers
-// `read ECONNRESET`, which has nothing to do with what the test is checking. One retry is enough:
-// the calls that go through here are a login, a registration and two reads.
+// F-11: a keep-alive socket the server is closing answers `read ECONNRESET`; one retry is enough.
 async function retryOnReset<T>(call: () => Promise<T>): Promise<T> {
   try {
     return await call();
@@ -152,8 +145,7 @@ export async function reportsNoNetwork(context: BrowserContext): Promise<void> {
   });
 }
 
-// The e2e build is flagged as "test", so the app does not install the worker by itself: the specs
-// register it to exercise what a production install would do.
+// The e2e build is flagged `test`, so the specs register the worker themselves.
 export async function installWorker(page: Page): Promise<void> {
   await page.evaluate((path) => navigator.serviceWorker.register(path, { scope: "/" }), SW_PATH);
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
@@ -161,8 +153,7 @@ export async function installWorker(page: Page): Promise<void> {
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
 }
 
-// Reads the vault the app is using without going through it: what the queue really holds, and
-// whether a snapshot ever drained, are facts a spec must not take the UI's word for.
+// The queue's real contents and whether a snapshot drained are not the UI's word to give.
 export interface VaultState {
   name: string;
   pending: number;
@@ -331,8 +322,7 @@ export async function coldStart(context: BrowserContext, at?: Date): Promise<Pag
 // The first snapshot has drained and the shell is cached: from here the device works with no network.
 export async function readyForOffline(page: Page): Promise<void> {
   await installWorker(page);
-  // A string, not "not null": with no vault at all `vaultState` is null, `?.syncedAt` is undefined,
-  // and `not.toBeNull()` would pass in exactly the failure this gate exists to catch.
+  // A string, not not-null: with no vault `?.syncedAt` is undefined and `not.toBeNull()` passes.
   await expect
     .poll(async () => (await vaultState(page))?.syncedAt, { timeout: 60_000 })
     .toEqual(expect.any(String));

@@ -5,10 +5,7 @@ import eurMadrid from "./fixtures/eur-madrid.json";
 import jpyTokyo from "./fixtures/jpy-tokyo.json";
 import usdNewYork from "./fixtures/usd-new-york.json";
 
-// The parity contract, vendored verbatim from the backend's committed `fixtures/offline/` with
-// `npm run fixtures:sync`; CI only ever sees this copy, and `parity.test.ts` fails if the two drift.
-// The shapes are `Fixture*` from the backend's `scripts/offline-fixtures/types.ts`, kept in its
-// vocabulary rather than restated: a field that changes name there has to change name here too.
+// Vendored verbatim from the backend with `npm run fixtures:sync`; `parity.test.ts` catches drift.
 
 export interface FixtureAccount {
   key: string;

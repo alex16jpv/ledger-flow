@@ -31,8 +31,7 @@ describe("local-only mode", () => {
     expect(listener).toHaveBeenCalledTimes(2);
   });
 
-  // P-32: the whole point of the choice is that nothing talks the device back into being online —
-  // the heartbeat, a request that answered, none of it.
+  // P-32: nothing talks the device back into being online — not the heartbeat, not an answer.
   it("keeps the app offline while it lasts, and lets go when it is turned off", () => {
     setLocalOnly(true);
     reportOnline(true);

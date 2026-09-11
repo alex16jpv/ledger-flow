@@ -34,8 +34,7 @@ async function mirrorOf(accounts: Account[], categories: Category[]): Promise<vo
   setCurrentVault(vault);
 }
 
-// F-43: the two figures of Settings were the last reads in `(app)` still going to the server, so the
-// screen cost two requests with a full mirror and went blank with no network.
+// F-43: Settings' two figures were the last reads in `(app)` still going to the server.
 describe("the counts Settings shows", () => {
   it("counts the categories, archived ones included, from the mirror and with no network", async () => {
     await mirrorOf(

@@ -158,8 +158,7 @@ describe("TransactionDetailScreen", () => {
     expect(screen.getByText("Quick add")).toBeVisible();
   });
 
-  // F-29: DESIGN §8.12 asks for the conflict sheet from Movements too, and the list row is a
-  // button, so the way in is the detail screen.
+  // F-29: DESIGN §8.12 asks for the conflict sheet from Movements, and the way in is the detail.
   it("opens the conflict of the movement it is showing", async () => {
     const vault = await openTestVault("u1");
     await vault.db.put("outbox", {

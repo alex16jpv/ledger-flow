@@ -1,7 +1,6 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 
-// Relative on purpose: `next.config.ts` loads this file through a transpiler that does not resolve
-// the `@/` alias.
+// Relative on purpose: `next.config.ts` loads this through a transpiler with no `@/` alias.
 import { z } from "./validation/zod";
 
 export const env = createEnv({

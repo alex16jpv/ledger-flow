@@ -135,8 +135,7 @@ export function HomeView({
           </Alert>
         </Link>
       )}
-      {/* P-34: the notice only makes sense once there is something to lose — a snapshot on this
-          device, or writes still waiting — and never in the installed app (DESIGN §8.18). */}
+      {/* P-34: only once there is something to lose, and never in the installed app (§8.18). */}
       <InstallNotice hasSomethingToLose={hasLocalData} />
       {accounts.length === 0 ? (
         <Card>
