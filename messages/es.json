@@ -203,8 +203,9 @@
     "budgetOver": "Excedido en {amount}",
     "budgetOf": "/ {amount}",
     "installNotice": {
-      "title": "Conserva tus datos en este teléfono",
-      "body": "Este navegador puede borrar lo que registras sin conexión tras unos días sin abrir el sitio. Instalar la app lo evita.",
+      "title": "Para cuando no haya conexión",
+      "body": "Ledger Flow ya guarda una copia en este dispositivo, así que funciona sin señal. Instalada, se abre sola, fuera del navegador.",
+      "risk": "Este navegador además puede borrar lo que registras sin conexión tras unos días sin abrir el sitio. Instalar la app lo evita.",
       "install": "Instalar",
       "how": "Cómo",
       "dismiss": "Ahora no"
@@ -320,6 +321,7 @@
       "subtitle": "Añade Ledger Flow a tu pantalla de inicio",
       "installed": "Instalada",
       "durability": "Añade Ledger Flow a tu pantalla de inicio para que el navegador no borre lo que registres sin conexión",
+      "durabilityDesktop": "Instala Ledger Flow para que el navegador no borre lo que registres sin conexión",
       "sheet": {
         "title": "Instalar esta app",
         "intro": "Instalarla mantiene a salvo tus datos offline: el navegador deja de tratarlos como algo que puede borrar.",
@@ -328,6 +330,8 @@
         "iosStep1": "Toca Compartir",
         "iosStep2": "Elige «Añadir a pantalla de inicio»",
         "iosStep3": "Confirma con «Añadir»",
+        "androidStep1": "Abre el menú del navegador",
+        "androidStep2": "Elige «Instalar app» o «Añadir a pantalla de inicio»",
         "desktopStep1": "Busca el icono de instalar en la barra de direcciones",
         "desktopStep2": "O abre el menú del navegador y elige «Instalar Ledger Flow»",
         "fallback": "Algunos navegadores no lo ofrecen. Si el tuyo no, mantén conexión al registrar y aquí no quedará nada esperando."

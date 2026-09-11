@@ -34,34 +34,59 @@
 
 ## The install card, which is also the storage notice
 
-`preview/home.html#install-card`
+`preview/home.html#install-card` · `preview/home.html#install-card-safe`
 
-> The browser's half of this is already in the code: the app stopped cancelling
-> `beforeinstallprompt`, so Chrome shows its own prompt again. What is missing is the half the browser
-> cannot give: **on iOS that event does not exist**, and **the storage permission is never asked for in
-> any browser** — it is granted by heuristics, and the lever is having the app installed. So the app
-> gives the notice, and **they are the same notice**: installing is what makes the data durable.
+> The browser's half is already in the code: the app does not cancel `beforeinstallprompt`, so Chrome
+> shows its own invitation, and the card's **Install** fires that same native dialog rather than one of
+> ours. What the browser cannot give: **on iOS no such event exists at all** — there is no way for a
+> page to ask, and Add to Home Screen is done by hand — and **no browser ever asks about durable
+> storage**; it is granted by heuristics and the lever is having the app installed.
+>
+> So how hard the app insists depends on the platform, because what the user stands to lose is not the
+> same on each (owner, 2026-09-11).
 
 - **Where:** a **card on Home**, below the review inbox and above the hero. Not a modal: the user came
   to record an expense, and a wall to talk about durability is exactly what this app does not do.
 - **When it appears:** when the device **already has something to lose** — a first full copy
-  (`syncedAt`) or something in the queue — **and** the app is running in a browser tab. Never when
-  installed, never before the first copy: there is nothing to protect yet, and it would be noise in
-  the first minute.
-- **What it says:** an amber `monitor-smartphone` tile, the title **"Keep your data on this phone"**
-  (ES «Conserva tus datos en este teléfono»), and the body **"This browser can delete what you record
-  offline after a few days without opening the site. Installing the app stops that."** (ES «Este
-  navegador puede borrar lo que registras sin conexión tras unos días sin abrir el sitio. Instalar la
-  app lo evita.»). Actions: **"Install"** (primary) where the browser offered to, which fires its
-  prompt, and **"How"** (secondary) where it did not, which opens the "Install this app" sheet with the
-  steps for the browser in use. It is dismissed with **"Not now"** (ghost).
-- **How often:** "Not now" hides it for **seven days**; the **third** time it is dismissed it does not
-  come back — the Settings › About row and the Persistent storage row already say the same without
-  insisting. Installing removes it for good. It is counted per device, alongside the other local
-  preferences.
+  (`syncedAt`) or something in the queue —, the app is running in a **browser tab**, and the device is
+  **not a desktop**. Never when installed, never before the first copy.
+- **Never on a desktop.** There the browser puts its own install button in the address bar and
+  **Settings › About** carries the row that explains the rest. A card on top of that is insistence
+  without a reason: nothing is being deleted on a machine whose browser granted durable storage, and
+  the user who wants the app finds it where it is.
+- **How often, and this is the part that differs:**
+
+  | Platform | "Not now" hides it for   | Gives up                   |
+  | -------- | ------------------------ | -------------------------- |
+  | iOS      | **3 days**               | **never**                  |
+  | Android  | **7 days**               | on the **third** dismissal |
+  | Desktop  | the card does not appear | —                          |
+
+  iOS never gives up because it is the one place where the data really does go away — Safari deletes a
+  site's storage after seven days in which the user does not open it — and the one place with no
+  install prompt of any kind. Three days is not a race against that deadline: opening the app resets
+  Safari's clock, so whoever sees the card was never going to lose anything that week. It is short
+  because the only chance to convince someone is while they are still active, before they drift away.
+  Installing removes the card for good on every platform.
+
+- **What it says.** An amber `monitor-smartphone` tile, the title **"For when there's no connection"**
+  (ES «Para cuando no haya conexión»), and the body **"Ledger Flow already keeps a copy on this device,
+  so it works with no signal. Installed, it opens on its own, outside the browser."** (ES «Ledger Flow
+  ya guarda una copia en este dispositivo, así que funciona sin señal. Instalada, se abre sola, fuera
+  del navegador.»). The app is **completely usable from the browser tab**, so the card leads with the
+  one thing installing is actually for, and never says "phone" — it also shows on tablets.
+- **And one more sentence, only where it is true:** where the browser has **not** granted durable
+  storage, the card adds **"This browser can also delete what you record offline after a few days
+  without opening the site. Installing the app stops that."** (ES «Este navegador además puede borrar
+  lo que registras sin conexión tras unos días sin abrir el sitio. Instalar la app lo evita.») That is
+  every iPhone, and any Android whose browser said no. Where the browser already granted it — most
+  Android Chrome — the sentence is **absent**: the app asked and was told yes, so claiming the data can
+  be deleted would be a lie, and a warning that is not true is worse than no warning.
+- **Actions:** **"Install"** (primary) where the browser offered to, which fires its prompt, and
+  **"How"** (secondary) where it did not, which opens the "Install this app" sheet with the steps for
+  the platform in use. Dismissed with **"Not now"** (ghost).
 - **What it does not do:** it never promises the permission will be granted — the browser decides —
   and it never says "accept the permission", because **there is no permission to accept**: no
-  persistent-storage dialog exists. It says what the user can do (install) and what they get for it
-  (nothing gets deleted).
+  persistent-storage dialog exists.
 - **Once installed:** the Persistent storage row in Sync status turns to "Granted" on its own, without
   asking for anything, because browsers grant it to installed apps.

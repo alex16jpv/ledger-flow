@@ -95,7 +95,7 @@ const catChip = (name, selected = false) => {
   return `<button class="chip cat color-${col}${selected ? " selected" : ""}"><span class="dot">${iconSvg(ic)}</span>${name}</button>`;
 };
 
-const home = ({ withSheet = false, unnamed = false, notice = false } = {}) => {
+const home = ({ withSheet = false, unnamed = false, notice = "" } = {}) => {
   const bars = [
     [30, ""],
     [55, ""],
@@ -141,11 +141,16 @@ const home = ({ withSheet = false, unnamed = false, notice = false } = {}) => {
 <span class="small muted" style="white-space:nowrap">64% of monthly budget</span></div>
 </section>`;
   const pend = `<a class="alert warning" href="#" style="align-items:center">${iconSvg("inbox")}<span style="flex:1"><b>3 quick expenses to review</b> · $47,900 in total</span>${iconSvg("chevron-right", "sm")}</a>`;
+  const installRisk =
+    notice === "risk"
+      ? `<span class="small muted">This browser can also delete what you record offline after a few days without opening the site. Installing the app stops that.</span>`
+      : "";
   const installCard = notice
     ? `<section class="card hstack" style="gap:12px;align-items:flex-start">${tile("monitor-smartphone", "AMBER")}
 <span class="body" style="flex:1;display:flex;flex-direction:column;gap:6px">
-<span class="h3">Keep your data on this phone</span>
-<span class="small muted">This browser can delete what you record offline after a few days without opening the site. Installing the app stops that.</span>
+<span class="h3">For when there's no connection</span>
+<span class="small muted">Ledger Flow already keeps a copy on this device, so it works with no signal. Installed, it opens on its own, outside the browser.</span>
+${installRisk}
 <span class="hstack" style="gap:8px;margin-top:4px"><button class="btn primary sm">${iconSvg("download", "sm")}Install</button><button class="btn secondary sm">How</button><button class="btn ghost sm">Not now</button></span>
 </span></section>`
     : "";
@@ -2219,10 +2224,17 @@ const PAGES = [
       ),
       plate(
         "install-card",
-        "Install card",
-        "Shown when the device already has something to lose and runs in a browser tab: Install where the browser offers it, How where it does not. It is also the storage-durability notice, because no browser ever asks for that permission.",
-        home({ notice: true }),
+        "Install card · data at risk",
+        "On a phone or tablet whose browser has not protected the offline copy — every iPhone, and any Android Chrome that said no. Install where the browser offers it, How where it does not. Never on a desktop.",
+        home({ notice: "risk" }),
         { added: "2026-09-08" },
+      ),
+      plate(
+        "install-card-safe",
+        "Install card · data already safe",
+        "Same card on an Android whose browser already granted durable storage: the deletion sentence is gone, because it would not be true, and what is left is the reason that still holds.",
+        home({ notice: "safe" }),
+        { added: "2026-09-11" },
       ),
       plate(
         "home-without-a-name",

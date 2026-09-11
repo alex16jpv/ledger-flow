@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { iconProps } from "@/lib/icons/sizes";
 import { useInstallPrompt } from "@/lib/pwa/install";
+import { devicePlatform } from "@/lib/pwa/platform";
+import { useMounted } from "@/lib/react/useMounted";
 
 // F-87: where the browser offers to install, this fires its prompt. Where it does not — iOS above
 // all, which has no such event — it shows the steps of the browser in use, and never of another one.
@@ -15,10 +17,14 @@ export function InstallSheet({ open, onClose }: { open: boolean; onClose: () => 
   const t = useTranslations("settings.install.sheet");
   const install = useInstallPrompt();
   const offered = install.state === "available";
-  const touch = typeof navigator !== "undefined" && navigator.maxTouchPoints > 1;
-  const steps = touch
-    ? [t("iosStep1"), t("iosStep2"), t("iosStep3")]
-    : [t("desktopStep1"), t("desktopStep2")];
+  // A Windows laptop with a touch screen used to be handed the iPhone's steps, and so was Android.
+  const platform = useMounted() ? devicePlatform() : "desktop";
+  const steps =
+    platform === "ios"
+      ? [t("iosStep1"), t("iosStep2"), t("iosStep3")]
+      : platform === "android"
+        ? [t("androidStep1"), t("androidStep2")]
+        : [t("desktopStep1"), t("desktopStep2")];
 
   return (
     <Sheet open={open} onClose={onClose} title={t("title")}>
@@ -42,7 +48,7 @@ export function InstallSheet({ open, onClose }: { open: boolean; onClose: () => 
                 <li key={step}>
                   <span className="inline-flex items-center gap-1.5">
                     {step}
-                    {index === 0 && touch ? <Share {...iconProps("sm")} /> : null}
+                    {index === 0 && platform === "ios" ? <Share {...iconProps("sm")} /> : null}
                   </span>
                 </li>
               ))}

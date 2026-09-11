@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,7 +7,8 @@ import { renderWithProviders } from "@/lib/testing/render";
 import { InstallNotice } from "./InstallNotice";
 
 const copy = {
-  title: "Keep your data on this phone",
+  title: "For when there’s no connection",
+  risk: "This browser can also delete what you record offline after a few days without opening the site. Installing the app stops that.",
   install: "Install",
   how: "How",
   dismiss: "Not now",
@@ -16,14 +17,41 @@ const copy = {
 
 const prompt = vi.hoisted(() => ({ state: "unavailable", install: vi.fn() }));
 const mode = vi.hoisted(() => ({ value: "browser" }));
+const device = vi.hoisted(() => ({ value: "ios" }));
+const durability = vi.hoisted(() => ({ supported: true, persisted: false }));
 
 vi.mock("@/lib/pwa/install", () => ({
   useInstallPrompt: () => ({ state: prompt.state, install: prompt.install }),
 }));
 vi.mock("@/lib/pwa/mode", () => ({ displayMode: () => mode.value }));
+vi.mock("@/lib/pwa/platform", () => ({ devicePlatform: () => device.value }));
+vi.mock("@/lib/local/persist", () => ({
+  readStorageDurability: () =>
+    Promise.resolve({ ...durability, usageBytes: null, quotaBytes: null }),
+}));
 
 const view = (hasSomethingToLose = true) =>
   renderWithProviders(<InstallNotice hasSomethingToLose={hasSomethingToLose} />);
+
+const card = () => screen.findByText(copy.title);
+
+// The card decides only once the durability read resolves, so a "not there" claim has to wait for it.
+const noCard = async () => {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  expect(screen.queryByText(copy.title)).not.toBeInTheDocument();
+};
+
+async function dismiss(times: number) {
+  for (let i = 0; i < times; i++) {
+    const { unmount } = view();
+    await userEvent.click(await screen.findByRole("button", { name: copy.dismiss }));
+    unmount();
+    vi.setSystemTime(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  }
+}
 
 describe("InstallNotice", () => {
   beforeEach(() => {
@@ -32,48 +60,97 @@ describe("InstallNotice", () => {
     prompt.install.mockReset();
     prompt.install.mockResolvedValue(undefined);
     mode.value = "browser";
+    device.value = "ios";
+    durability.supported = true;
+    durability.persisted = false;
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-11T10:00:00Z"));
   });
 
   // P-34: the browser cannot always ask, so the app does — but only once there is something to lose.
-  it("stays quiet on a device with nothing stored yet", () => {
+  it("stays quiet on a device with nothing stored yet", async () => {
     view(false);
 
-    expect(screen.queryByText(copy.title)).not.toBeInTheDocument();
+    await noCard();
+  });
+
+  it("says nothing in the installed app", async () => {
+    mode.value = "installed";
+    view();
+
+    await noCard();
+  });
+
+  // P-46: the browser puts its own install button in the address bar and Settings carries the row.
+  it("never appears on a desktop", async () => {
+    device.value = "desktop";
+    view();
+
+    await noCard();
   });
 
   it("offers the browser's own prompt when there is one", async () => {
     prompt.state = "available";
+    device.value = "android";
     view();
 
-    await userEvent.click(screen.getByRole("button", { name: copy.install }));
+    await userEvent.click(await screen.findByRole("button", { name: copy.install }));
 
     expect(prompt.install).toHaveBeenCalledOnce();
   });
 
-  // iOS, where no such event exists: the way in is the sheet with the steps.
   it("opens the steps where the browser never offers", async () => {
     view();
 
-    await userEvent.click(screen.getByRole("button", { name: copy.how }));
+    await userEvent.click(await screen.findByRole("button", { name: copy.how }));
 
     expect(await screen.findByText(copy.sheet)).toBeInTheDocument();
   });
 
-  it("says nothing in the installed app", () => {
-    mode.value = "installed";
+  // P-46: the deletion sentence is true on every iPhone and on an Android that was told no.
+  it("warns about deletion only where the browser has not protected the copy", async () => {
     view();
 
-    expect(screen.queryByText(copy.title)).not.toBeInTheDocument();
+    expect(await screen.findByText(copy.risk)).toBeInTheDocument();
   });
 
-  it("goes away for a week when dismissed, and the next mount respects it", async () => {
-    const { unmount } = view();
-
-    await userEvent.click(screen.getByRole("button", { name: copy.dismiss }));
-    expect(screen.queryByText(copy.title)).not.toBeInTheDocument();
-
-    unmount();
+  it("drops the deletion sentence once the browser granted durable storage", async () => {
+    device.value = "android";
+    durability.persisted = true;
     view();
-    expect(screen.queryByText(copy.title)).not.toBeInTheDocument();
+
+    expect(await card()).toBeInTheDocument();
+    expect(screen.queryByText(copy.risk)).not.toBeInTheDocument();
+  });
+
+  it("hides for three days on iOS and comes back after them", async () => {
+    const { unmount } = view();
+    await userEvent.click(await screen.findByRole("button", { name: copy.dismiss }));
+    unmount();
+
+    vi.setSystemTime(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    const still = view();
+    await noCard();
+    still.unmount();
+
+    vi.setSystemTime(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    view();
+    expect(await card()).toBeInTheDocument();
+  });
+
+  // The whole point of the platform split: Safari deletes the copy and offers no prompt of its own.
+  it("never gives up on iOS, however many times it is dismissed", async () => {
+    await dismiss(6);
+    view();
+
+    expect(await card()).toBeInTheDocument();
+  });
+
+  it("gives up on Android after the third dismissal", async () => {
+    device.value = "android";
+    await dismiss(3);
+    view();
+
+    await noCard();
   });
 });
