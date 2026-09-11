@@ -36,8 +36,8 @@ under the field.
 ## Sync (across the whole app) ✅
 
 The **attention tray** (`/sync`: one card per stuck change, actions per card and in bulk, a discard
-confirmation that names the cascade) · **Settings › Sync status** (`/settings/sync`: cursor, last full
-copy, queue, sending mode, storage, persistence, installed or tab, a link to the tray, and Force full
+confirmation that names the cascade) · **Settings › Sync status** (`/settings/sync`: cursor, last update,
+queue, sending mode, storage, persistence, installed or tab, a link to the tray, and Force full
 resync) · the **Resolve sync conflict** sheet in its seven shapes · **local mode** with a dead session
 · the offline fallback document · and the **projection mark** on any amount or bar that includes
 writes the server has not confirmed.

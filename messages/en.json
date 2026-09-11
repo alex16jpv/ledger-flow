@@ -369,7 +369,8 @@
         "never": "Never synced"
       },
       "lastSync": {
-        "label": "Last full sync",
+        "label": "Last updated",
+        "help": "The last time this copy caught up with the server",
         "never": "Never"
       },
       "offlineReady": {

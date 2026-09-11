@@ -33,6 +33,8 @@ Sync status opens with three rows the offline phase added. **Session** is first 
 session nothing below it reaches the server, so it says `Active` or `Signed out` and carries the way
 back to the login. **Offline ready** (F-54) is true only when both halves are — the pull wrote
 `syncedAt` _and_ the worker's cache holds all 25 screens of `shellUrls()` for the language in use —
-and it counts them while it prepares; a device announces itself once, ever, with a toast. And when
+and it counts them while it prepares; a device announces itself once, ever, with a toast. That same
+`syncedAt` is what **Last updated** shows, and the pull stamps it every time it drains the change
+feed: the row says how fresh the copy is, not when a whole snapshot last came down (H-11). And when
 `openVault` reports an outbox an app update left behind (F-65), the screen opens with a `danger`
 alert and **Waiting to send** reads `n · blocked`, because that queue is not slow, it is stuck.

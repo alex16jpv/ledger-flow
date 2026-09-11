@@ -1892,7 +1892,12 @@ const syncStatus = (kind = "tab") => {
   let last;
   if (kind == "loading") {
     cursor = statusRow("database", "Sync cursor", "Where the next pull starts from", sk);
-    last = statusRow("refresh-cw", "Last full sync", "", sk);
+    last = statusRow(
+      "refresh-cw",
+      "Last updated",
+      "The last time this copy caught up with the server",
+      sk,
+    );
     ready = statusRow(
       "cloud-check",
       "Offline ready",
@@ -1901,7 +1906,12 @@ const syncStatus = (kind = "tab") => {
     );
   } else {
     cursor = statusRow("database", "Sync cursor", "Where the next pull starts from", "Set");
-    last = statusRow("refresh-cw", "Last full sync", "", "Today 8:40");
+    last = statusRow(
+      "refresh-cw",
+      "Last updated",
+      "The last time this copy caught up with the server",
+      "Today 8:40",
+    );
   }
   if (kind == "nosw") {
     // F-85 · the app runs without a service worker on purpose (development).
