@@ -44,8 +44,20 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     error boundary — it carries the page's `h1` instead.
 16. **Skeleton** — a 1.4s shimmer over `--surface-2/3`.
 17. **Stat** — a 12px label, a 20px value, an 11px delta with an icon.
-18. **Bars** — a small daily series, brand at 35% opacity, peaks at 100%, today highlighted, days with
-    no data in `--surface-3`.
+18. **Bars** — a daily series, one bar per day: brand at 35% opacity, the highest day and today at
+    100%, a day with nothing spent in `--surface-3`, and **a day that has not arrived yet as a 1px rule
+    in `--text-3`** — a day with no spending and a day that has not happened are not the same fact, and
+    the chart may not draw them the same; a day that has not arrived is not a control and is hidden
+    from readers. **Two modes, one component.** Where the slots lead somewhere — a day opens that day's
+    transactions — each bar is a control: its accessible name is its day and its amount, it takes
+    keyboard focus through the chart's roving `tabindex`, and it shows the same text on hover and on
+    focus in a `Tooltip` (23) and in the `readout` (29). Where they lead nowhere — the average by
+    weekday: there is no "all Wednesdays" to open — the chart is one `role="img"` whose accessible name
+    reads every slot, and the bubble is a pointer convenience only; seven buttons that do nothing are
+    worse than one image. The chart keeps a bubble's height of room above the tallest bar so the bubble
+    never covers the card's title, and at either end the bubble aligns to that edge instead of
+    centring. Home, Stats, the budget detail and the weekday average are this one component with a
+    different height, different labels and a different mode — never a copy.
 19. **Account card** — a 3px stripe of the colour on the left, a dot plus the name plus the Main badge,
     a 24px balance (negative with `−`) and an 11px type. On mobile it is a snapping carousel (72% of the
     width, 260px maximum); at 600px and up, an auto-fill grid.
@@ -63,9 +75,11 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
 23. **Tooltip** — a bubble over `--ink` with 11px medium text and an arrow, above the element, shown on
     hover and on keyboard focus; it is visual only (`aria-hidden`) because the control that carries it
     already has an accessible name. Used for: the colour's name in the swatches, the icon's name in the
-    grid, the category of each segment of the stacked bar in Stats, the projection mark, and the pace
-    mark. The exception to `aria-hidden` is the pace mark, which is not a control with a name of its
-    own, so it carries its `aria-label` with the same text.
+    grid, the category of each segment of the stacked bar in Stats, **every slot of every chart that has
+    slots** (18, 30, 32, 33 — 31 is a line, not slots, and puts its reading in the sentence and the
+    `readout` beside it), the projection mark, and the pace mark. The exception to `aria-hidden` is the pace
+    mark, which is not a control with a name of its own, so it carries its `aria-label` with the same
+    text.
 24. **Projection mark (`projected`)** — a 16px `cloud-off` icon in `--warning` next to a figure (aligned
     to its baseline) or a bar (centred), with the tooltip "Includes changes not yet synced". It appears
     on **every amount, balance, `spent`, percentage or bar** that includes a write the server has not
@@ -91,3 +105,34 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     sheets (`role="dialog"`, a 360px modal at 600px and up) with "Cancel" and "Done", full keyboard
     support (arrows move the day, `PageUp`/`PageDown` change month, `Enter` picks) and a footer line
     with the user's time zone.
+29. **Readout (`readout`)** — the fixed line under a chart: on the left what the pointer or the focus
+    is on, on the right its amount. With nothing pointed at, it says what the chart shows as a whole —
+    the highest day, the month still running. It exists because **a tooltip does not exist for a
+    finger**, which is the answer the pace mark already got (F-08); on a touch screen the line is the
+    only reading, and it is never the only place a figure appears.
+30. **Grouped bars (`gbars`)** — two series in one slot: income in `--income`, spending in `--brand`,
+    one pair per month. A period still running is drawn at 55% and its readout says "in progress"; it
+    is **never** counted into an average, a total or a rate that claims to be a finished period's.
+31. **Trend (`trend`)** — one or more lines over the same x axis: solid is what happened, dashed
+    `--text-3` is a reference (the period's pace, the same days of the previous month), dashed
+    `--danger` is a limit or a projection. The live line ends in a dot. A line may start late — a
+    projection starts at today — and the gap is drawn as a gap, never interpolated backwards.
+32. **Calendar heatmap (`heat`)** — the same days as `Bars`, laid out as the month: one cell per day in
+    four steps of `--brand`, `--surface-3` for a day with nothing spent, an outline for a day that has
+    not arrived, today ringed, and a Less/More scale. Weeks start on the language's first day, like the
+    calendar sheet (28). It answers what a row of bars hides — which weeks, which weekdays — so the two
+    are one toggle over one set of data, never two screens.
+
+33. **Stacked columns (`colbars`)** — one column per period, built of segments. Two uses, one
+    implementation: the top categories stacked inside each month, and a **single** segment with the
+    period's limit drawn as a dashed cap across the column (an adjusted month does not share the base
+    amount, so the cap is per column, never one rule across the chart) and the segment in `--danger`
+    when it is over. A period still running is drawn at 55% and is excluded from any count in the line
+    underneath.
+
+**Every chart obeys the same contract**, and every shape has exactly one implementation: a slot — a
+bar, a cell, a column, a pair — carries its name and its amount as its accessible name; it shows that
+same text on hover and on keyboard focus through `Tooltip` (23); it repeats it in the `readout` (29)
+for a finger; and where there is a list behind the slot, the slot is a control that opens that list
+already filtered. A chart drawn from figures that include an unconfirmed write carries the projection
+mark (24), exactly like a number does.

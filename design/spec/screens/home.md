@@ -21,6 +21,14 @@
   (`groupBy=day`, gaps filled with zero, today highlighted), and progress against the global monthly
   budget with the pace mark. With no global budget, the progress line is replaced by a call to action
   to create one.
+
+  **The bars answer which day** (`#hero-day-tooltip`): each one is a control that says its day and its
+  amount on hover, on keyboard focus and in the `readout` line under the chart, and opens that day's
+  transactions — the same `Bars` as Stats, with the same contract, because it is the same component and
+  always was. Days that have not arrived are drawn as a rule, not as a zero. The figures above the chart
+  — the hero amount, the daily average, yesterday — are the same series added up, so the chart and the
+  numbers can never disagree.
+
 - **Stats:** total balance (the sum of active accounts) and the month's income; a third card,
   "Estimated savings", only at 600px and up.
 - **Budgets:** up to three, the ones with the highest share consumed, each with its tile, amount over

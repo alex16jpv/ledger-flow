@@ -425,3 +425,91 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .wheel .col::-webkit-scrollbar { display: none; }
 .wheel .col button { height: 40px; border: 0; background: transparent; border-radius: var(--r-sm); color: var(--text-2); font-variant-numeric: var(--num); font-size: var(--fs-md); cursor: pointer; scroll-snap-align: center; }
 .wheel .col button.sel { background: var(--surface); color: var(--text); font-weight: var(--fw-semibold); box-shadow: var(--shadow-1); }
+
+/* ── Gráficas ───────────────────────────────────────────────────────────── */
+.chart { display: flex; flex-direction: column; gap: var(--sp-2); }
+.chart .readout { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); min-height: 18px; font-size: var(--fs-sm); color: var(--text-2); }
+.chart .readout .v { font-variant-numeric: var(--num); font-weight: var(--fw-medium); color: var(--text); }
+.chart .axis { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--text-3); }
+.legend.row { flex-direction: row; flex-wrap: wrap; gap: 4px 14px; }
+.legend.row .li { gap: 6px; font-size: var(--fs-xs); color: var(--text-2); }
+.legend.row .li .dot.inc { background: var(--income); }
+.legend.row .li .dot.exp { background: var(--brand); }
+.legend.row .li .dot.line { width: 14px; height: 2px; border-radius: 1px; background: var(--text-3); }
+
+.chart .plot { margin-top: 22px; }
+.chart .axis.marked { position: relative; display: block; height: 1em; }
+.chart .axis.marked span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.bars .slot.future > i { background: transparent; opacity: 1; min-height: 1px; border-top: 1px solid var(--text-3); border-radius: 0; }
+.heat .d.future { background: transparent; color: var(--text-3); box-shadow: inset 0 0 0 1px var(--text-3); }
+.heat .d.future:hover { box-shadow: inset 0 0 0 1px var(--text-3); }
+.heat-head { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.heat-head span { font-size: var(--fs-xs); color: var(--text-3); text-align: center; }
+.bars .slot { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: flex-end; padding: 0; border: 0; background: none; cursor: pointer; }
+.bars span.slot { cursor: default; }
+.bars .slot > i { width: 100%; }
+.bars .slot:hover > i, .bars .slot:focus-visible > i, .bars .slot.sel > i { opacity: 1; }
+.bars .slot.sel > i { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--brand); }
+
+.gbars { display: flex; align-items: flex-end; gap: var(--sp-2); }
+.gbars .slot { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: flex-end; justify-content: center; gap: 3px; padding: 0; border: 0; background: none; cursor: pointer; }
+.gbars .slot i { width: 11px; min-height: 3px; border-radius: 3px 3px 1px 1px; display: block; position: relative; opacity: 0.8; }
+.gbars .slot i.inc { background: var(--income); }
+.gbars .slot i.exp { background: var(--brand); }
+.gbars .slot:hover i, .gbars .slot:focus-visible i, .gbars .slot.sel i { opacity: 1; }
+
+.colbars { display: flex; align-items: flex-end; gap: var(--sp-2); }
+.colbars .col { flex: 1; min-width: 0; align-self: stretch; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; border: 0; background: none; cursor: pointer; position: relative; }
+.colbars .col i { display: block; background: var(--f); min-height: 2px; border-radius: 2px; opacity: 0.85; box-shadow: inset 0 -1px 0 var(--surface); }
+.colbars .col i:first-child { border-radius: 3px 3px 2px 2px; }
+.colbars .col:hover i, .colbars .col:focus-visible i, .colbars .col.sel i { opacity: 1; }
+
+.trend { display: block; width: 100%; overflow: visible; }
+.trend .line { fill: none; stroke: var(--brand); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.trend .line.ghost { stroke: var(--text-3); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.trend .line.pace { stroke: var(--text-3); stroke-width: 1.5; stroke-dasharray: 3 4; }
+.trend .line.over { stroke: var(--danger); }
+.trend .line.limit { stroke: var(--danger); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.trend .line.projection { stroke: var(--danger); stroke-width: 2; stroke-dasharray: 2 5; opacity: 0.55; }
+.trend .dot { fill: var(--brand); }
+.trend .dot.over { fill: var(--danger); }
+
+.heat { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.heat .d { aspect-ratio: 1; min-height: 26px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 5px; cursor: pointer; font-size: var(--fs-xs); font-variant-numeric: var(--num); background: var(--surface-3); color: var(--text-3); position: relative; }
+.heat .d.out { background: transparent; color: var(--text-disabled); cursor: default; }
+.heat .d.l1 { background: var(--heat-1); color: var(--text); }
+.heat .d.l2 { background: var(--heat-2); color: var(--text); }
+.heat .d.l3 { background: var(--heat-3); color: var(--text); }
+.heat .d.l4 { background: var(--heat-4); color: var(--on-brand); }
+.heat .d.today { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--border-strong); }
+.heat .d:hover, .heat .d:focus-visible { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--brand); }
+.heat-scale { display: flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--text-3); }
+.heat-scale i { width: 12px; height: 12px; border-radius: 3px; display: block; background: var(--surface-3); }
+.heat-scale i.l1 { background: var(--heat-1); }
+.heat-scale i.l2 { background: var(--heat-2); }
+.heat-scale i.l3 { background: var(--heat-3); }
+.heat-scale i.l4 { background: var(--heat-4); }
+.colbars .col .cap { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--text-3); }
+.colbars .col i.over { background: var(--danger); }
+
+.bars .slot:first-child .tip, .gbars .slot:first-child .tip, .colbars .col:first-child .tip, .heat .d:nth-child(7n+1) .tip { left: 0; right: auto; transform: none; }
+.bars .slot:first-child .tip::after, .gbars .slot:first-child .tip::after, .colbars .col:first-child .tip::after, .heat .d:nth-child(7n+1) .tip::after { left: 10px; transform: none; }
+.bars .slot:last-child .tip, .gbars .slot:last-child .tip, .colbars .col:last-child .tip, .heat .d:nth-child(7n) .tip { left: auto; right: 0; transform: none; }
+.bars .slot:last-child .tip::after, .gbars .slot:last-child .tip::after, .colbars .col:last-child .tip::after, .heat .d:nth-child(7n) .tip::after { left: auto; right: 10px; transform: none; }
+.colbars .col.partial i,
+.gbars .slot.partial i {
+  position: relative;
+}
+.colbars .col.partial i::after,
+.gbars .slot.partial i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 3px,
+    var(--surface) 3px 5px
+  );
+  opacity: 0.75;
+}

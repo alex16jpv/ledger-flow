@@ -71,6 +71,7 @@ function modesFor(seeds) {
       onBrand: { l: 1, c: 0, h: 0 },
       brandSoft: derive(B, 0.94, 0.35),
       brandText: derive(B, 0.4),
+      heat: [derive(B, 0.94, 0.35), derive(B, 0.88, 0.55), derive(B, 0.8, 0.75), B],
       feature: (s) => ({ solid: s, soft: derive(s, 0.95, 0.3), text: derive(s, 0.42, 0.9) }),
     },
     dark: {
@@ -86,6 +87,7 @@ function modesFor(seeds) {
       onBrand: derive(B, 0.16, 0.3),
       brandSoft: derive(B, 0.26, 0.4),
       brandText: derive(B, 0.84, 0.7),
+      heat: [derive(B, 0.26, 0.4), derive(B, 0.36, 0.55), derive(B, 0.48, 0.75), derive(B, 0.7)],
       feature: (s) => ({
         solid: { ...s, l: Math.max(s.l + 0.08, 0.52) },
         soft: derive(s, 0.26, 0.35),
@@ -114,6 +116,10 @@ function checkPalette(file) {
     check(mode, "text-3 / surface", t.text3, t.surface, 4.5);
     check(mode, "text-3 / bg", t.text3, t.bg, 4.5);
     check(mode, "on-brand / brand", t.onBrand, t.brand, 4.5);
+    t.heat.slice(0, 3).forEach((step, i) => {
+      check(mode, `text / heat-${i + 1}`, t.text, step, 4.5);
+    });
+    check(mode, "on-brand / heat-4", t.onBrand, t.heat[3], 4.5);
     check(mode, "brand-text / brand-soft", t.brandText, t.brandSoft, 4.5);
     check(mode, "brand / surface (ui)", t.brand, t.surface, 3);
     check(mode, "on-ink / ink", t.onInk, t.ink, 4.5);

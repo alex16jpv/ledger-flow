@@ -35,6 +35,7 @@ const docHead = (title) =>
 const DOC_FOOT = "</body></html>";
 
 const money = (v, sign = "") => `${sign}<span class="cur">$</span>${nf.format(Math.abs(v))}`;
+const moneyText = (v, sign = "") => `${sign}$${nf.format(Math.abs(v))}`;
 
 const amount = (v, kind = "expense", cls = "") => {
   const sign = { expense: "−", income: "+", transfer: "", adjustment: "±" }[kind];
@@ -95,7 +96,212 @@ const catChip = (name, selected = false) => {
   return `<button class="chip cat color-${col}${selected ? " selected" : ""}"><span class="dot">${iconSvg(ic)}</span>${name}</button>`;
 };
 
-const home = ({ withSheet = false, unnamed = false, notice = "" } = {}) => {
+// ── Charts ──────────────────────────────────────────────────────────────────
+// One September 2026 for every chart, so a tooltip, a tile and a total on the same screen never disagree.
+const SEP_SHAPE = [
+  30, 55, 20, 65, 40, 0, 70, 45, 90, 35, 25, 50, 60, 0, 30, 75, 40, 55, 20, 45, 85, 38,
+];
+const SEP_DAYS = 30;
+const TODAY = 22;
+const scaleTo = (shape, total) => {
+  const sum = shape.reduce((a, b) => a + b, 0);
+  const out = shape.map((h) => Math.round((h * total) / sum / 100) * 100);
+  const peak = out.indexOf(Math.max(...out));
+  out[peak] -= out.reduce((a, b) => a + b, 0) - total;
+  return out;
+};
+const SEP_SPEND = [...scaleTo(SEP_SHAPE, 1284300), ...range(TODAY, SEP_DAYS).map(() => 0)];
+const SEP_TOTAL = SEP_SPEND.reduce((a, b) => a + b, 0);
+const WD = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+const WD_LONG = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+// 2026-09-01 falls on a Tuesday: index 1 of a week that starts on Monday.
+const SEP_FIRST_WD = 1;
+const sepWeekday = (day) => (SEP_FIRST_WD + day - 1) % 7;
+const dayTip = (day, value) => `${WD[sepWeekday(day)]} ${day} Sep · ${moneyText(value)}`;
+
+const readout = (left, right = "") =>
+  `<div class="readout"><span>${left}</span>${right ? `<span class="v">${right}</span>` : ""}</div>`;
+
+const axis = (...marks) =>
+  `<div class="axis">${marks.map((m) => `<span>${m}</span>`).join("")}</div>`;
+
+// F-90 · one slot is one control: it names what it is and what it cost, and opens it.
+const pct = (value, top) => (top > 0 ? round((value / top) * 100) : 0);
+
+const chartSlot = (cls, label, inner, o = {}) =>
+  o.interactive === false
+    ? `<span class="${cls} tooltip${o.active ? " show" : ""}" aria-hidden="true">${inner}<span class="tip">${label}</span></span>`
+    : `<button class="${cls} tooltip${o.active ? " show sel" : ""}" aria-label="${label}">${inner}<span class="tip">${label}</span></button>`;
+
+const chartCard = (eyebrow, body, o = {}) =>
+  `<div class="card chart"><div class="card-head" style="margin:0"><span class="eyebrow">${eyebrow}</span>${o.right ?? ""}</div>${body}</div>`;
+
+const plot = (kind, height, label, inner, interactive = true) =>
+  `<div class="plot ${kind}" style="height:${height}px" role="${interactive ? "group" : "img"}" aria-label="${label}">${inner}</div>`;
+
+const barsChart = (values, o = {}) => {
+  const {
+    height = 140,
+    today = -1,
+    active = -1,
+    label = "Spending per day",
+    tip = dayTip,
+    interactive = true,
+  } = o;
+  const until = o.until ?? values.length;
+  const top = Math.max(0, ...values);
+  const items = values
+    .map((v, i) => {
+      const day = i + 1;
+      if (day > until)
+        return `<span class="slot future" aria-hidden="true"><i style="height:1px"></i></span>`;
+      const cls = [
+        v === 0 ? "nil" : "",
+        day === today ? "today" : "",
+        v === top && top > 0 ? "hi" : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const bar = `<i class="${cls}" style="height:${Math.max(pct(v, top), 2)}%"></i>`;
+      return chartSlot("slot", tip(day, v), bar, { active: i === active, interactive });
+    })
+    .join("");
+  return plot("bars", height, label, items, interactive);
+};
+
+const gbars = (rows, o = {}) => {
+  const { height = 120, active = -1, label = "Income and spending per month" } = o;
+  const top = Math.max(0, ...rows.flatMap(([, inc, exp]) => [inc, exp]));
+  const slots = rows
+    .map(([name, inc, exp, partial], i) => {
+      const txt = `${name} · ${moneyText(inc, "+")} in, ${moneyText(exp, "−")} out${partial ? ", in progress" : ""}`;
+      const bars = `<i class="inc" style="height:${pct(inc, top)}%"></i><i class="exp" style="height:${pct(exp, top)}%"></i>`;
+      return chartSlot(`slot${partial ? " partial" : ""}`, txt, bars, { active: i === active });
+    })
+    .join("");
+  return plot("gbars", height, label, slots);
+};
+
+// One column chart: stacked segments, or a single bar with the limit as a dashed cap.
+const stackCols = (cols, o = {}) => {
+  const { height = 130, active = -1, label = "Spending per month" } = o;
+  const totals = cols.map(([, parts]) => parts.reduce((a, [, v]) => a + v, 0));
+  const caps = cols.map(([, , opts = {}]) => opts.cap ?? 0);
+  const top = Math.max(0, ...totals, ...caps);
+  const tip =
+    o.tip ??
+    ((name, total, i) =>
+      `${name} · ${moneyText(total)}${cols[i][2]?.partial ? ", in progress" : ""}`);
+  const items = cols
+    .map(([name, parts, opts = {}], i) => {
+      const cap = opts.cap ? `<span class="cap" style="bottom:${pct(opts.cap, top)}%"></span>` : "";
+      const seg = parts
+        .map(
+          ([token, v]) =>
+            `<i class="${token === "over" ? "over" : `color-${token}`}" style="height:${pct(v, top)}%"></i>`,
+        )
+        .join("");
+      return chartSlot(`col${opts.partial ? " partial" : ""}`, tip(name, totals[i], i), cap + seg, {
+        active: i === active,
+      });
+    })
+    .join("");
+  return plot("colbars", height, label, items);
+};
+
+const trend = (series, o = {}) => {
+  const { height = 120, max: mx, marks = [], label = "Trend" } = o;
+  const W = 300;
+  const H = 100;
+  const span = o.span ?? Math.max(...series.map((s) => s.points.length));
+  const values = series.flatMap((s) => s.points).filter((v) => v !== null);
+  const top = mx ?? Math.max(0, ...values, ...marks.map((m) => m.at));
+  const at = (v, i) => [
+    span > 1 ? round((i / (span - 1)) * W * 10) / 10 : W / 2,
+    round((H - pct(v, top)) * 10) / 10,
+  ];
+  const path = (pts) => {
+    let d = "";
+    let drawing = false;
+    pts.forEach((v, i) => {
+      if (v === null) {
+        drawing = false;
+        return;
+      }
+      const [x, y] = at(v, i);
+      d += `${drawing ? "L" : "M"}${x} ${y} `;
+      drawing = true;
+    });
+    return d.trim();
+  };
+  const lines = series
+    .map((s) => `<path class="line ${s.cls ?? ""}" d="${path(s.points)}"/>`)
+    .join("");
+  const dots = series
+    .filter((s) => s.dot)
+    .map((s) => {
+      const last = s.points.reduce((acc, v, i) => (v === null ? acc : i), 0);
+      const [x, y] = at(s.points[last], last);
+      return `<circle class="dot ${s.cls ?? ""}" cx="${x}" cy="${y}" r="3.5"/>`;
+    })
+    .join("");
+  const rules = marks
+    .map(
+      (m) =>
+        `<path class="line ${m.cls ?? "limit"}" d="M0 ${round(H - pct(m.at, top))} L${W} ${round(H - pct(m.at, top))}"/>`,
+    )
+    .join("");
+  return `<svg class="trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${height}px" role="img" aria-label="${label}">${rules}${lines}${dots}</svg>`;
+};
+
+const heatCal = (values, o = {}) => {
+  const { today = TODAY, active = -1, label = "Spending calendar" } = o;
+  const until = o.until ?? today;
+  const top = Math.max(0, ...values);
+  const level = (v) => {
+    if (v === 0 || top === 0) return "";
+    const share = v / top;
+    if (share > 0.75) return " l4";
+    if (share > 0.5) return " l3";
+    if (share > 0.25) return " l2";
+    return " l1";
+  };
+  const head = WD.map((d) => `<span>${d}</span>`).join("");
+  const lead = range(0, SEP_FIRST_WD)
+    .map(() => '<span class="d out"></span>')
+    .join("");
+  const cells = values
+    .map((v, i) => {
+      const day = i + 1;
+      if (day > until) return `<span class="d future" aria-hidden="true">${day}</span>`;
+      return chartSlot(
+        `d${level(v)}${day === today ? " today" : ""}`,
+        dayTip(day, v),
+        String(day),
+        {
+          active: i === active,
+        },
+      );
+    })
+    .join("");
+  return `<div class="heat-head" aria-hidden="true">${head}</div><div class="plot heat" role="group" aria-label="${label}">${lead}${cells}</div>`;
+};
+
+const heatScale = () =>
+  `<div class="heat-scale" aria-hidden="true"><span>Less</span><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span>More</span></div>`;
+
+const weekdayAverages = () => {
+  const sums = [0, 0, 0, 0, 0, 0, 0];
+  const counts = [0, 0, 0, 0, 0, 0, 0];
+  SEP_SPEND.slice(0, TODAY).forEach((v, i) => {
+    const weekday = sepWeekday(i + 1);
+    sums[weekday] += v;
+    counts[weekday] += 1;
+  });
+  return sums.map((sum, i) => (counts[i] > 0 ? round(sum / counts[i]) : 0));
+};
+
+const home = ({ withSheet = false, unnamed = false, notice = "", chart = false } = {}) => {
   const bars = [
     [30, ""],
     [55, ""],
@@ -131,11 +337,17 @@ const home = ({ withSheet = false, unnamed = false, notice = "" } = {}) => {
   ]
     .map(([h, c]) => `<i style="height:${h}%" class="${c}"></i>`)
     .join("");
+  const heroPace = chart
+    ? `<p class="small muted" style="margin:6px 0 14px">Daily average <b class="amount">${money(round(SEP_TOTAL / TODAY))}</b> · <span class="faint">Yesterday you spent ${money(SEP_SPEND[TODAY - 2])}</span></p>`
+    : `<p class="small muted" style="margin:6px 0 14px">Daily average <b class="amount">${money(42800)}</b> · <span class="faint">Yesterday you spent $38,500</span></p>`;
+  const heroChart = chart
+    ? `<div class="chart">${barsChart(SEP_SPEND, { height: 56, today: TODAY, until: TODAY, active: 8 })}${readout(`${WD_LONG[sepWeekday(9)]} 9 September`, money(SEP_SPEND[8]))}</div>`
+    : `<div class="bars" aria-label="Spending per day">${bars}</div>`;
   const hero = `<section class="card">
 <div class="card-head"><span class="eyebrow">September spending</span><span class="badge outline">${iconSvg("calendar")}Day 22 of 30</span></div>
 <div class="amount-hero">${money(1284300)}</div>
-<p class="small muted" style="margin:6px 0 14px">Daily average <b class="amount">${money(42800)}</b> · <span class="faint">Yesterday you spent $38,500</span></p>
-<div class="bars" aria-label="Spending per day">${bars}</div>
+${heroPace}
+${heroChart}
 <div class="hstack" style="margin-top:14px;gap:12px">
 <div class="progress color-INDIGO" style="flex:1"><span class="fill" style="width:64%"></span>${paceMark()}</div>
 <span class="small muted" style="white-space:nowrap">64% of monthly budget</span></div>
@@ -957,7 +1169,141 @@ ${field("Name", "Food")}
   return screen(body, { tab: "", side: "cat", back: true, title: "Edit category", narrow: true });
 };
 
-const budgetDetail = ({ archived = false, conflict = false } = {}) => {
+const BUD_LIMIT = 300000;
+const BUD_BASE = 250000;
+const BUD_SPENT = 356000;
+const BUD_SPEND = [
+  0,
+  18000,
+  0,
+  19100,
+  22000,
+  0,
+  26400,
+  0,
+  98000,
+  0,
+  12600,
+  0,
+  15000,
+  0,
+  16900,
+  0,
+  0,
+  42000,
+  0,
+  0,
+  48000,
+  38000,
+  ...range(TODAY, SEP_DAYS).map(() => 0),
+];
+const BUD_HISTORY = [
+  ["April", 268000, BUD_BASE],
+  ["May", 212000, BUD_BASE],
+  ["June", 241000, BUD_BASE],
+  ["July", 305000, BUD_BASE],
+  ["August", 276000, BUD_BASE],
+  ["September", BUD_SPENT, BUD_LIMIT, true],
+];
+const BUD_BIGGEST = [
+  ["Zara", "shopping-bag", "PINK", "We 9 · Visa Gold", 98000],
+  ["Falabella", "shopping-bag", "PINK", "Mo 21 · Visa Gold", 48000],
+  ["Cine Colombia", "film", "PINK", "Fr 18 · Cash", 42000],
+  ["Vinos y Licores", "wine", "PINK", "Tu 22 · Visa Gold", 38000],
+  ["Spotify", "music", "PINK", "Tu 15 · Visa Gold", 16900],
+];
+
+const budgetDayCard = () =>
+  chartCard(
+    "Spending per day",
+    `${barsChart(BUD_SPEND, { height: 120, today: TODAY, until: TODAY, active: 8, label: "Budget spending per day" })}
+${axis("Sep 1", "15", "30")}
+${readout(`${WD_LONG[sepWeekday(9)]} 9 September · 1 transaction`, money(BUD_SPEND[8]))}`,
+  );
+
+const budgetPaceCard = () => {
+  let running = 0;
+  const spent = [0, ...BUD_SPEND.slice(0, TODAY).map((v) => (running += v))];
+  const cum = [...spent, ...range(TODAY + 1, SEP_DAYS + 1).map(() => null)];
+  const pace = range(0, SEP_DAYS + 1).map((d) => round((BUD_LIMIT * d) / SEP_DAYS));
+  const endsAt = round((BUD_SPENT / TODAY) * SEP_DAYS * 0.01) * 100;
+  const projection = range(0, SEP_DAYS + 1).map((d) =>
+    d < TODAY
+      ? null
+      : d === TODAY
+        ? BUD_SPENT
+        : round(((endsAt - BUD_SPENT) * (d - TODAY)) / (SEP_DAYS - TODAY)) + BUD_SPENT,
+  );
+  return chartCard(
+    "Against the pace",
+    `${trend(
+      [
+        { points: pace, cls: "pace" },
+        { points: projection, cls: "projection" },
+        { points: cum, cls: "over", dot: true },
+      ],
+      {
+        height: 128,
+        span: SEP_DAYS + 1,
+        marks: [{ at: BUD_LIMIT }],
+        label: "Spent so far against the period's pace, and where it ends at this rate",
+      },
+    )}
+<div class="axis marked"><span style="left:0;transform:none">Sep 1</span><span style="left:${round((TODAY / SEP_DAYS) * 100)}%">today</span><span style="left:100%;transform:translateX(-100%)">Sep 30</span></div>
+<p class="small muted" style="margin:0">At this rate you finish the period at <b class="amount">${money(endsAt)}</b> — <b class="amount" style="color:var(--danger)">${money(endsAt - BUD_LIMIT)}</b> over the limit.</p>
+<span class="legend row"><span class="li"><i class="dot" style="background:var(--danger)"></i>Spent</span><span class="li"><i class="dot line"></i>Pace</span><span class="li"><i class="dot line" style="background:var(--danger);opacity:.55"></i>Where it ends</span><span class="li"><i class="dot line" style="background:var(--danger)"></i>Limit</span></span>`,
+    { right: `<span class="badge danger">${iconSvg("trending-up")}Over</span>` },
+  );
+};
+
+const budgetHistoryCard = () => {
+  const complete = BUD_HISTORY.filter(([, , , partial]) => !partial);
+  const over = complete.filter(([, v, lim]) => v > lim).length;
+  return chartCard(
+    "Last six periods",
+    `${stackCols(
+      BUD_HISTORY.map(([name, v, lim, partial]) => [
+        name,
+        [[v > lim ? "over" : "PINK", v]],
+        { cap: lim, partial },
+      ]),
+      {
+        height: 110,
+        active: 5,
+        label: "Spent against the limit, period by period",
+        tip: (name, total, i) =>
+          `${name} · ${moneyText(total)} of ${moneyText(BUD_HISTORY[i][2])}${BUD_HISTORY[i][3] ? ", in progress" : ""}`,
+      },
+    )}
+${axis(...BUD_HISTORY.map(([n]) => n.slice(0, 3)))}
+${readout(`${over} of the ${complete.length} finished periods went over. September already has.`)}`,
+  );
+};
+
+// Only for a budget of several categories: its own spend is the whole of each one over the period.
+const budgetCategoryCard = () => {
+  const parts = [
+    ["Lifestyle", "PINK", "shopping-bag", 356000, 6],
+    ["Coffee", "BROWN", "coffee", 96700, 11],
+  ];
+  const total = parts.reduce((sum, [, , , v]) => sum + v, 0);
+  const bar = parts.map(([, c, , v]) => `<i class="color-${c}" style="flex:${v}"></i>`).join("");
+  const lis = parts
+    .map(
+      ([n, c, ic, v, k]) =>
+        `<a class="row" href="#">${tile(ic, c)}<span class="body"><span class="title">${n}</span><span class="meta">${round((v / total) * 100)} % of the budget</span></span><span class="right">${amount(v)}<span class="sub">${k} txns</span></span></a>`,
+    )
+    .join("");
+  return `<div class="app" style="padding:20px;border-radius:14px;display:flex;flex-direction:column;gap:14px;width:100%">
+<div class="card stack-sm"><div class="card-head" style="margin:0"><h3 class="h3">Where it went</h3><span class="small muted amount">${money(total)} of ${money(500000)}</span></div><div class="stackbar" style="height:10px">${bar}</div></div>
+<div class="list card flush">${lis}</div></div>`;
+};
+
+const budgetBiggestCard = () =>
+  `<div class="section-head"><h3 class="h3">Biggest this period</h3><a class="link" href="#">See all</a></div>
+<div class="list card flush">${BUD_BIGGEST.map(([n, ic, c, meta, v]) => row(ic, c, n, meta, v)).join("")}</div>`;
+
+const budgetDetail = ({ archived = false, conflict = false, charts = false } = {}) => {
   const arch = archived
     ? `<div class="alert neutral" style="align-items:center">${iconSvg("archive")}<span style="flex:1">This budget is archived and no longer tracks spending. Restore it to bring it back exactly as it was.</span><button class="btn sm secondary">${iconSvg("archive-restore", "sm")}Restore</button></div>`
     : "";
@@ -980,8 +1326,9 @@ const budgetDetail = ({ archived = false, conflict = false } = {}) => {
 <div class="hstack" style="gap:8px;flex-wrap:wrap"><button class="btn secondary sm">${iconSvg("pencil", "sm")}Change adjustment</button><button class="btn secondary sm">Skip this month</button><button class="btn ghost sm">Remove adjustment</button></div></div>
 <div class="card stack-sm"><h3 class="h3">Categories</h3><div class="chips" style="flex-wrap:wrap">${catChip("Lifestyle")}<button class="chip cat color-CYAN" style="opacity:.7"><span class="dot">${iconSvg("plane")}</span>Vacation <span class="badge warning" style="height:16px">${iconSvg("archive")}archived</span></button></div></div>
 <div class="card stack-sm"><h3 class="h3">Note</h3><p class="small muted" style="margin:0">Clothes, going out and treats. Review in December.</p></div>
+${charts ? budgetDayCard() + budgetPaceCard() + budgetHistoryCard() + budgetBiggestCard() : ""}
 <div class="section-head"><h3 class="h3">Transactions this period</h3><a class="link" href="#">See all</a></div>
-<div class="list card flush">${row("shopping-bag", "PINK", "Zara", "Sat 19 · Visa Gold", 189000)}${row("shopping-bag", "PINK", "Cine Colombia", "Fri 18 · Cash", 42000)}${row("shopping-bag", "PINK", "Spotify", "Tue 15 · Visa Gold", 16900, "expense", { sub: "#monthly" })}</div>
+<div class="list card flush">${row("wine", "PINK", "Vinos y Licores", "Tu 22 · Visa Gold", 38000)}${row("shopping-bag", "PINK", "Falabella", "Mo 21 · Visa Gold", 48000)}${row("film", "PINK", "Cine Colombia", "Fr 18 · Cash", 42000)}</div>
 <div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn danger lg" style="flex:1">${iconSvg("archive", "sm")}Archive</button></div>
 <p class="xs faint" style="text-align:center;margin:0">You can restore it later from Past budgets.</p>`;
   return screen(body, {
@@ -1049,52 +1396,130 @@ const pastBudgets = () => {
   });
 };
 
+const STATS_CATS = [
+  ["Food", "ORANGE", 412000, 14],
+  ["Lifestyle", "PINK", 356000, 6],
+  ["Bills", "AMBER", 186200, 5],
+  ["Transport", "BLUE", 185500, 9],
+  ["Coffee", "BROWN", 96700, 11],
+  ["Uncategorized", "NONE", 47900, 3],
+];
+const STATS_ACCOUNTS = [
+  ["Visa Gold", "PURPLE", "credit-card", 612400, 27],
+  ["Bancolombia", "BLUE", "landmark", 487900, 14],
+  ["Cash", "GRAY", "banknote", 184000, 7],
+];
+const BIGGEST = [
+  ["Zara", "shopping-bag", "PINK", "We 9 · Visa Gold", 98000],
+  ["Falabella", "shopping-bag", "PINK", "Mo 21 · Visa Gold", 48000],
+  ["Éxito", "shopping-cart", "ORANGE", "Mo 21 · Bancolombia", 44000],
+  ["Cine Colombia", "film", "PINK", "Fr 18 · Cash", 42000],
+  ["Vinos y Licores", "wine", "PINK", "Tu 22 · Visa Gold", 38000],
+];
+const MONTHS6 = [
+  ["April", 4200000, 1980000],
+  ["May", 4200000, 2240000],
+  ["June", 4600000, 1680000],
+  ["July", 4200000, 2110000],
+  ["August", 4200000, 1855000],
+  ["September", 4200000, SEP_TOTAL, true],
+];
+const CAT_MIX = [
+  ["Food", "ORANGE", [34, 30, 32, 31, 33, 32]],
+  ["Lifestyle", "PINK", [22, 28, 20, 26, 24, 28]],
+  ["Bills", "AMBER", [16, 15, 18, 15, 16, 14]],
+  ["Transport", "BLUE", [14, 13, 16, 14, 13, 14]],
+  ["Coffee", "BROWN", [8, 8, 8, 8, 8, 8]],
+  ["Other", "GRAY", [6, 6, 6, 6, 6, 4]],
+];
+
+const statTile = (k, v, d = "") =>
+  `<div class="card stat"><span class="k">${k}</span><span class="v amount" style="font-size:16px">${v}</span>${d ? `<span class="d faint">${d}</span>` : ""}</div>`;
+
+const weekdayCard = () => {
+  const wk = weekdayAverages();
+  const peak = wk.indexOf(Math.max(...wk));
+  return `<div class="card chart"><span class="eyebrow">Average by weekday</span>
+${barsChart(wk, { height: 64, active: peak, interactive: false, label: `Average spending per weekday: ${wk.map((v, i) => `${WD_LONG[i]} ${moneyText(v)}`).join(", ")}.`, tip: (i, v) => `${WD_LONG[i - 1]} · ${moneyText(v)} on average` })}
+${axis(...WD)}
+${readout(`${WD_LONG[peak]} is your most expensive day`, money(wk[peak]))}</div>`;
+};
+
+const biggestCard = () =>
+  `<div class="section-head"><h3 class="h3">Biggest this period</h3><a class="link" href="#">See all</a></div>
+<div class="list card flush">${BIGGEST.map(([n, ic, c, meta, v]) => row(ic, c, n, meta, v)).join("")}</div>`;
+
+const trendsLink = () =>
+  `<a class="card hstack" href="#" style="gap:12px;align-items:center;text-decoration:none;color:inherit">${tile("chart-line", "INDIGO")}<span class="body" style="flex:1;display:flex;flex-direction:column"><span style="font-weight:500">Trends over time</span><span class="small faint">Income, savings and categories month by month</span></span>${iconSvg("chevron-right", "sm")}</a>`;
+
 const stats = (view = "cat") => {
-  const cats = [
-    ["Food", "ORANGE", 412000, 24],
-    ["Lifestyle", "PINK", 356000, 11],
-    ["Transport", "BLUE", 185500, 18],
-    ["Bills", "AMBER", 186200, 6],
-    ["Coffee", "BROWN", 98400, 31],
-    ["Uncategorized", "NONE", 47900, 3],
-  ];
-  const total = cats.reduce((a, [, , v]) => a + v, 0);
-  const seg = `<div class="segment"><button aria-pressed="${String(view == "cat")}">Categories</button><button aria-pressed="${String(view == "day")}">Days</button><button aria-pressed="${String(view == "tag")}">Tags</button></div>`;
+  const total = SEP_TOTAL;
+  const selected = view === "cal" ? "day" : view;
+  const seg = `<div class="segment">${[
+    ["Categories", "cat"],
+    ["Days", "day"],
+    ["Accounts", "acct"],
+    ["Tags", "tag"],
+  ]
+    .map(([t, k]) => `<button aria-pressed="${String(selected == k)}">${t}</button>`)
+    .join("")}</div>`;
   const intro = `<div class="period-nav"><button class="btn ghost icon-only round">${iconSvg("chevron-left")}</button><span class="label">September 2026</span><button class="btn ghost icon-only round" disabled>${iconSvg("chevron-right")}</button></div>
 <div class="chips"><button class="chip selected">Expenses</button><button class="chip">Income</button><button class="chip">Transfers</button><button class="chip">${iconSvg("scale", "sm")}Adjustments</button></div>${seg}
 <div class="card"><span class="eyebrow">Total spent</span><div class="amount-hero" style="font-size:34px">${money(total)}</div><span class="small muted">48 transactions · average <b class="amount">${money(round(total / 48))}</b></span></div>`;
   let content;
   if (view == "cat") {
-    const bar = cats.map(([, c, v]) => `<i class="color-${c}" style="flex:${v}"></i>`).join("");
-    const lis = cats
-      .map(
-        ([n, c, v, k]) =>
-          `<a class="row" href="#">${tile(CATS[n][0], c)}<span class="body"><span class="title"><span class="truncate">${n}</span></span><span class="meta"><span class="progress thin color-${c}" style="width:120px"><span class="fill" style="width:${round((v / total) * 100)}%"></span></span>${round((v / total) * 100)} %</span></span><span class="right">${amount(v)}<span class="sub">${k} txns</span></span></a>`,
-      )
-      .join("");
+    const bar = STATS_CATS.map(([, c, v]) => `<i class="color-${c}" style="flex:${v}"></i>`).join(
+      "",
+    );
+    const lis = STATS_CATS.map(
+      ([n, c, v, k]) =>
+        `<a class="row" href="#">${tile(CATS[n][0], c)}<span class="body"><span class="title"><span class="truncate">${n}</span></span><span class="meta"><span class="progress thin color-${c}" style="width:120px"><span class="fill" style="width:${round((v / total) * 100)}%"></span></span>${round((v / total) * 100)} %</span></span><span class="right">${amount(v)}<span class="sub">${k} txns</span></span></a>`,
+    ).join("");
     const tip =
       '<span class="tooltip show" style="position:absolute;left:14%;top:-4px"><span class="tip">Food</span></span>';
-    content = `<div class="card stack-sm" style="position:relative;overflow:visible">${tip}<div class="stackbar" style="height:12px">${bar}</div></div><div class="list card flush">${lis}</div>`;
-  } else if (view == "day") {
-    const hs = [
-      30, 55, 20, 65, 40, 0, 70, 45, 90, 35, 25, 50, 60, 0, 30, 75, 40, 55, 20, 45, 85, 30, 40, 60,
-      35, 50, 25, 65, 45, 38,
-    ];
-    const bars = hs
+    content = `<div class="card stack-sm" style="position:relative;overflow:visible">${tip}<div class="stackbar" style="height:12px">${bar}</div></div><div class="list card flush">${lis}</div>
+${trendsLink()}`;
+  } else if (view == "day" || view == "cal") {
+    const toggle = `<div class="segment" style="flex:none;width:96px">${[
+      ["chart-column", "day"],
+      ["calendar-days", "cal"],
+    ]
       .map(
-        (h, i) =>
-          `<i style="height:${Math.max(h, 3)}%" class="${h == 0 ? "nil" : h > 80 ? "hi" : ""}${i == 29 ? " today" : ""}"></i>`,
+        ([ic, k]) =>
+          `<button aria-pressed="${String(view == k)}" aria-label="${k == "day" ? "Bars" : "Calendar"}">${iconSvg(ic, "sm")}</button>`,
       )
-      .join("");
-    content = `<div class="card stack-sm"><div class="bars" style="height:140px">${bars}</div><div class="hstack small faint" style="justify-content:space-between"><span>Sep 1</span><span>15</span><span>30</span></div></div>
-<div class="stats" style="grid-template-columns:repeat(3,1fr)"><div class="card stat"><span class="k">Priciest day</span><span class="v amount" style="font-size:16px">${money(214000)}</span><span class="d faint">Sat 9</span></div><div class="card stat"><span class="k">Daily average</span><span class="v amount" style="font-size:16px">${money(42800)}</span></div><div class="card stat"><span class="k">No-spend days</span><span class="v" style="font-size:16px">2</span></div></div>
-<div class="list card flush"><div class="day-head"><span>Sat 9 · highest</span><span class="amount">${money(214000, "−")}</span></div>${row("shopping-bag", "PINK", "Zara", "Visa Gold", 189000)}${row("coffee", "BROWN", "Pergamino Coffee", "Cash", 9800)}${row("car", "BLUE", "Uber", "Visa Gold", 15200)}</div>`;
+      .join("")}</div>`;
+    const head = `<div class="card-head" style="margin:0"><span class="eyebrow">Spending per day</span>${toggle}</div>`;
+    const body =
+      view == "day"
+        ? `${barsChart(SEP_SPEND, { height: 140, today: TODAY, until: TODAY, active: 8 })}${axis("Sep 1", "15", "30")}`
+        : `${heatCal(SEP_SPEND, { active: 8 })}${heatScale()}`;
+    content = `<div class="card chart">${head}${body}
+${readout(`${WD_LONG[sepWeekday(9)]} 9 September · 3 transactions`, money(SEP_SPEND[8]))}</div>
+<div class="stats" style="grid-template-columns:repeat(3,1fr)">${statTile("Priciest day", money(SEP_SPEND[8]), `${WD_LONG[sepWeekday(9)]} 9`)}${statTile("Daily average", money(round(SEP_TOTAL / TODAY)))}${statTile("No-spend days", "2", "of 22 so far")}</div>
+${weekdayCard()}
+<div class="list card flush"><div class="day-head"><span>We 9 · highest</span><span class="amount">${money(SEP_SPEND[8], "−")}</span></div>${row("shopping-bag", "PINK", "Zara", "Visa Gold", 98000)}${row("car", "BLUE", "Uber", "Visa Gold", 11000)}${row("coffee", "BROWN", "Pergamino Coffee", "Cash", SEP_SPEND[8] - 109000)}</div>
+${biggestCard()}
+${trendsLink()}`;
+  } else if (view == "acct") {
+    const bar = STATS_ACCOUNTS.map(
+      ([, c, , v]) => `<i class="color-${c}" style="flex:${v}"></i>`,
+    ).join("");
+    const lis = STATS_ACCOUNTS.map(
+      ([n, c, ic, v, k]) =>
+        `<a class="row" href="#">${tile(ic, c)}<span class="body"><span class="title"><span class="truncate">${n}</span></span><span class="meta"><span class="progress thin color-${c}" style="width:120px"><span class="fill" style="width:${round((v / total) * 100)}%"></span></span>${round((v / total) * 100)} %</span></span><span class="right">${amount(v)}<span class="sub">${k} txns</span></span></a>`,
+    ).join("");
+    content = `<div class="card stack-sm" style="position:relative;overflow:visible"><span class="tooltip show" style="position:absolute;left:22%;top:-4px"><span class="tip">Visa Gold</span></span><div class="stackbar" style="height:12px">${bar}</div></div>
+<div class="list card flush">${lis}</div>
+<p class="xs faint" style="margin:0">Transfers between your own accounts are not spending: they are counted under Transfers, never here.</p>
+${biggestCard()}
+${trendsLink()}`;
   } else {
     const tags = [
-      ["latte", 286400, 41],
-      ["groceries", 312000, 4],
-      ["monthly", 165900, 6],
-      ["work", 88200, 9],
+      ["groceries", 268000, 9],
+      ["latte", 61300, 7],
+      ["monthly", 55900, 4],
+      ["work", 42400, 5],
     ];
     const lis = tags
       .map(
@@ -1102,7 +1527,8 @@ const stats = (view = "cat") => {
           `<a class="row" href="#"><span class="tile"><span style="font-weight:600;color:var(--text-2)">#</span></span><span class="body"><span class="title">#${t}</span><span class="meta">${n} transactions</span></span><span class="right">${amount(v)}</span></a>`,
       )
       .join("");
-    content = `<div class="alert neutral">${iconSvg("info")}<span>A transaction with several tags counts in each of them, so tag totals can add up to more than the total. <b class="amount">${money(1162300)}</b> of spending has no tags.</span></div><div class="list card flush">${lis}</div>`;
+    content = `<div class="alert neutral">${iconSvg("info")}<span>A transaction with several tags counts in each of them, so tag totals can add up to more than the total. <b class="amount">${money(SEP_TOTAL - 361400)}</b> of spending has no tags.</span></div><div class="list card flush">${lis}</div>
+${trendsLink()}`;
   }
   return screen(intro + content, {
     tab: "",
@@ -1110,6 +1536,58 @@ const stats = (view = "cat") => {
     title: "Stats",
     actions: `<button class="btn ghost icon-only round" aria-label="Export" disabled>${iconSvg("download")}</button>`,
   });
+};
+
+const trends = ({ months = 6 } = {}) => {
+  const MONTHS = MONTHS6.slice(-months);
+  const complete = MONTHS.filter(([, , , partial]) => !partial);
+  const saved = complete.reduce((a, [, inc, exp]) => a + inc - exp, 0);
+  const earned = complete.reduce((a, [, inc]) => a + inc, 0);
+  const rate = round((saved / earned) * 100);
+  const rows = MONTHS.map(([n, inc, exp, partial]) => [n, inc, exp, partial]);
+  const augShape = [
+    22, 40, 15, 0, 58, 30, 12, 66, 25, 18, 44, 0, 35, 52, 20, 28, 61, 14, 0, 38, 47, 26,
+  ];
+  let running = 0;
+  const sepCum = SEP_SPEND.slice(0, TODAY).map((v) => (running += v));
+  let augRunning = 0;
+  const augCum = scaleTo(augShape, round((1855000 * TODAY) / 31)).map((v) => (augRunning += v));
+  const diff = round(((sepCum[TODAY - 1] - augCum[TODAY - 1]) / augCum[TODAY - 1]) * 100);
+  const offset = MONTHS6.length - MONTHS.length;
+  const last = MONTHS.length - 1;
+  const mix = MONTHS.map(([n, , exp, partial], i) => [
+    n,
+    CAT_MIX.map(([, c, pcts]) => [c, round((exp * pcts[i + offset]) / 100)]),
+    { partial },
+  ]);
+  const short = months < 6;
+  const body = `${
+    short
+      ? `<div class="alert neutral">${iconSvg("info")}<span>This account has <b>${months} months</b> of history, so that is the whole range there is. The tiles count the ${complete.length} that finished.</span></div>`
+      : `<div class="segment"><button aria-pressed="true">Last 6 months</button><button>Last 12 months</button></div>`
+  }
+<div class="card chart"><div class="card-head" style="margin:0"><span class="eyebrow">Income and spending</span><span class="legend row"><span class="li"><i class="dot inc"></i>Income</span><span class="li"><i class="dot exp"></i>Spending</span></span></div>
+${gbars(rows, { height: 128, active: last })}
+${axis(...MONTHS.map(([n]) => n.slice(0, 3)))}
+${readout("September · in progress, 22 of 30 days", money(SEP_TOTAL))}</div>
+<div class="stats" style="grid-template-columns:repeat(2,1fr)">${statTile("Saved", money(saved), `${complete.length} complete months`)}${statTile("Savings rate", `${rate}%`, "of what came in")}</div>
+<div class="card chart"><span class="eyebrow">This month against last</span>
+${trend(
+  [
+    { points: augCum, cls: "ghost" },
+    { points: sepCum, dot: true },
+  ],
+  { height: 120, label: "Spending so far this month against the same days last month" },
+)}
+${axis("Day 1", "Day 22")}
+<p class="small muted" style="margin:0">You have spent <b class="amount">${money(sepCum[TODAY - 1])}</b> so far — <b>${Math.abs(diff)}% ${diff < 0 ? "less" : "more"}</b> than at this point in August.</p>
+<span class="legend row"><span class="li"><i class="dot exp"></i>September</span><span class="li"><i class="dot line"></i>August, same days</span></span></div>
+<div class="card chart"><span class="eyebrow">Where it goes</span>
+${stackCols(mix, { height: 132, active: last })}
+${axis(...MONTHS.map(([n]) => n.slice(0, 3)))}
+<span class="legend row">${CAT_MIX.map(([n, c]) => `<span class="li"><i class="dot color-${c}" style="background:var(--f)"></i>${n}</span>`).join("")}</span></div>
+<p class="xs faint" style="margin:0">A month is counted in your time zone, the same way every other figure in the app is.</p>`;
+  return screen(body, { tab: "", side: "stats", back: true, title: "Trends", narrow: true });
 };
 
 const settingsRow = (icon, title, meta, right = "", color = "NONE") => {
@@ -2173,9 +2651,37 @@ const paceVariant = (legend = false) => {
 <span class="small muted amount"><b>${money(84000)}</b> left <span class="faint">· 8 days</span></span></div></div>`;
 };
 
+// F-91 · the day under the pointer: only a bubble, or a bubble and a line that a finger can read too.
+const dayReadoutVariant = (line = false) => {
+  const chart = `${barsChart(SEP_SPEND, { height: 96, today: TODAY, until: TODAY, active: 8 })}${axis("Sep 1", "15", "30")}`;
+  const foot = line
+    ? readout(`${WD_LONG[sepWeekday(9)]} 9 September · 3 transactions`, money(SEP_SPEND[8]))
+    : "";
+  return `<div class="app" style="padding:20px;border-radius:14px;display:flex;flex-direction:column;gap:14px;width:100%">
+<div class="card chart"><div class="card-head" style="margin:0"><span class="eyebrow">September spending</span><span class="badge outline">${iconSvg("calendar")}Day 22 of 30</span></div>
+<div class="amount-hero" style="font-size:30px">${money(SEP_TOTAL)}</div>${chart}${foot}</div></div>`;
+};
+
+// F-92 · three routes for a recurring expense, awaiting the owner's choice.
+const recurringVariant = (kind) => {
+  const detected = `<div class="card chart"><div class="card-head" style="margin:0"><span class="eyebrow">Looks like it repeats</span><span class="badge">${iconSvg("sparkles")}Found by the app</span></div>
+<p class="small muted" style="margin:0">Seven charges came back every month for the last three months. Together they are <b class="amount">${money(486700)}</b> a month.</p>
+<div class="list" style="margin:0 -16px">${row("music", "PINK", "Spotify", "Every month · around the 15th", 16900, "expense", { sub: "3 months" })}${row("zap", "AMBER", "Claro", "Every month · around the 3rd", 89000, "expense", { sub: "6 months" })}${row("house", "BROWN", "Rent share", "Every month · around the 16th", 74000, "expense", { sub: "9 months" })}</div>
+<div class="alert warning" style="align-items:center">${iconSvg("triangle-alert")}<span style="flex:1"><b>Netflix has not arrived this month.</b> It usually lands around the 8th.</span></div></div>`;
+  const declared = `<div class="card stack-sm"><div class="card-head" style="margin:0"><h3 class="h3">Recurring</h3><button class="btn secondary sm">${iconSvg("plus", "sm")}New</button></div>
+<p class="small muted" style="margin:0">Four you set up yourself. Ledger Flow writes them on their day and marks them to review.</p>
+<div class="list" style="margin:0 -16px">${row("music", "PINK", "Spotify", "Monthly · next on 15 Oct", 16900, "expense", { badges: '<span class="badge success">On</span>' })}${row("zap", "AMBER", "Claro", "Monthly · next on 3 Oct", 89000, "expense", { badges: '<span class="badge success">On</span>' })}${row("house", "BROWN", "Rent share", "Monthly · paused", 74000, "expense", { badges: '<span class="badge">Paused</span>' })}</div></div>`;
+  const both = `<div class="card stack-sm"><div class="card-head" style="margin:0"><h3 class="h3">Recurring</h3><button class="btn secondary sm">${iconSvg("plus", "sm")}New</button></div>
+<div class="list" style="margin:0 -16px">${row("music", "PINK", "Spotify", "Monthly · next on 15 Oct", 16900, "expense", { badges: '<span class="badge success">On</span>' })}${row("zap", "AMBER", "Claro", "Monthly · next on 3 Oct", 89000, "expense", { badges: '<span class="badge success">On</span>' })}</div>
+<div class="alert neutral" style="align-items:center">${iconSvg("sparkles")}<span style="flex:1"><b>Rent share</b> has repeated for nine months and is not set up.</span><button class="btn sm ink">Set it up</button></div></div>`;
+  const body = { detected, declared, both }[kind];
+  return `<div class="app" style="padding:20px;border-radius:14px;display:flex;flex-direction:column;gap:14px;width:100%">${body}</div>`;
+};
+
 // Everything below is the preview itself — navigation, search, dates — not the app's design.
 
 const plate = (id, title, note, html, o = {}) => ({ id, title, note, html, ...o });
+const plateDay = (p) => p.updated ?? p.added;
 
 const PAGES = [
   {
@@ -2233,6 +2739,13 @@ const PAGES = [
         "Same card on an Android whose browser already granted durable storage: the deletion sentence is gone, because it would not be true, and what is left is the reason that still holds.",
         home({ notice: "safe" }),
         { added: "2026-09-11" },
+      ),
+      plate(
+        "hero-day-tooltip",
+        "Hero chart · the day under the pointer",
+        "Every bar is a control: it says its day and its amount on hover, on focus and in the line underneath, and it opens that day. The month's figures are now the sum of the bars.",
+        home({ chart: true }),
+        { added: "2026-09-11", review: true },
       ),
       plate(
         "home-without-a-name",
@@ -2483,9 +2996,13 @@ const PAGES = [
     group: "Screens",
     note: "The detail walks periods, shows what is left, the pace and the days remaining, and keeps the base amount separate from this period's adjustment. Archiving is not final: an archived budget comes back from its own detail or from Past budgets.",
     plates: [
-      plate("detail", "Detail with a period adjustment", "", budgetDetail(), {
-        added: "2026-09-01",
-      }),
+      plate(
+        "detail",
+        "Detail with a period adjustment",
+        "The sample movements now fit inside the days they belong to, so the list and the new charts cannot disagree.",
+        budgetDetail(),
+        { added: "2026-09-01", updated: "2026-09-11" },
+      ),
       plate(
         "new-budget",
         "New budget",
@@ -2499,6 +3016,20 @@ const PAGES = [
         "Recurring budgets never end: to see a past month, change the period in the list.",
         pastBudgets(),
         { added: "2026-09-01" },
+      ),
+      plate(
+        "detail-with-charts",
+        "Detail · what the period is doing",
+        "The same chart Home has, over the budget's own period, plus the curve against the pace with where it ends at this rate, the last six periods against their limit, and the biggest movements.",
+        budgetDetail({ charts: true }),
+        { added: "2026-09-11", review: true },
+      ),
+      plate(
+        "budget-by-category",
+        "Where it went · a budget of several categories",
+        "One more card, and only when the budget covers more than one: which of them is eating it. A budget over Lifestyle and Coffee holds the whole of both for the period, so the figures are Stats' own.",
+        budgetCategoryCard(),
+        { frame: false, added: "2026-09-11", review: true },
       ),
       plate("archived", "Archived · Restore", "", budgetDetail({ archived: true }), {
         added: "2026-09-06",
@@ -2521,23 +3052,59 @@ const PAGES = [
       plate(
         "by-category",
         "By category",
-        "A stacked bar whose segments name themselves on hover or focus, plus a list with percentages.",
+        "A stacked bar whose segments name themselves on hover or focus, plus a list with percentages. It gains the way into Trends, and its sample figures now add up: the six rows are the 48 transactions the card above counts, and the month Home shows.",
         stats("cat"),
-        { added: "2026-09-01" },
+        { added: "2026-09-01", updated: "2026-09-11", review: true },
       ),
       plate(
         "by-day",
         "By day",
-        "Gaps filled with zero, and the highest day pulled out.",
+        "Every bar says its day and its amount on hover, on focus and in the line underneath. Underneath: the average by weekday, the biggest movements of the period, and the way into Trends.",
         stats("day"),
-        { added: "2026-09-01" },
+        { added: "2026-09-01", updated: "2026-09-11", review: true },
+      ),
+      plate(
+        "spending-calendar",
+        "By day · as a calendar",
+        "The same days read as a month instead of a series: the shape of a week shows up where a row of bars hides it. One toggle switches between the two.",
+        stats("cal"),
+        { added: "2026-09-11", review: true },
+      ),
+      plate(
+        "by-account",
+        "By account",
+        "Which card or account the spending leaves from, with the same stacked bar and list as categories. Transfers between your own accounts are never counted here.",
+        stats("acct"),
+        { added: "2026-09-11", review: true },
       ),
       plate(
         "by-tag",
         "By tag",
-        "Warns about double counting and says how much spending carries no tag.",
+        "Warns about double counting and says how much spending carries no tag; it also carries the way into Trends.",
         stats("tag"),
-        { added: "2026-09-01" },
+        { added: "2026-09-01", updated: "2026-09-11", review: true },
+      ),
+    ],
+  },
+  {
+    file: "trends.html",
+    title: "Trends",
+    group: "Screens",
+    note: "Stats answers where this month's money went; Trends answers whether this month is better than the last ones. They are two screens because one period navigator cannot walk a month at a time and span six at once. Everything here counts complete months only, and says so where a month is still running.",
+    plates: [
+      plate(
+        "trends-short-history",
+        "Trends · not enough history yet",
+        "The common case for a new account, and the one that breaks charts: three months where the range asks for six. The axis starts where the data starts, the twelve-month range is not offered, and the tiles say over how many finished months they counted — nothing is padded with zeros.",
+        trends({ months: 3 }),
+        { added: "2026-09-11", review: true },
+      ),
+      plate(
+        "trends",
+        "Trends over time",
+        "Income against spending month by month, what was saved and at what rate, this month against the same days of the last one, and where the money went as the months pass.",
+        trends(),
+        { added: "2026-09-11", review: true },
       ),
     ],
   },
@@ -2966,6 +3533,41 @@ const PAGES = [
         { added: "2026-09-06", verdict: "chosen" },
       ),
       plate(
+        "day-readout-tooltip-only",
+        "The day under the pointer · bubble only",
+        "The bubble says the day and the amount on hover and on keyboard focus. On a phone there is no pointer: the only way left to read a day is to open it.",
+        dayReadoutVariant(false),
+        { frame: false, added: "2026-09-11", review: true },
+      ),
+      plate(
+        "day-readout-with-a-line",
+        "The day under the pointer · bubble and a line",
+        "The same bubble, plus a fixed line under the chart that a finger can read. It is the pace mark's answer applied again: a tooltip does not exist for a finger.",
+        dayReadoutVariant(true),
+        { frame: false, added: "2026-09-11", review: true },
+      ),
+      plate(
+        "recurring-found-by-the-app",
+        "Recurring · found by the app",
+        "Nothing new to fill in: the app reads the history, groups what repeats and warns when something that always arrives has not. It can be wrong, and it can only see what has already happened at least twice.",
+        recurringVariant("detected"),
+        { frame: false, added: "2026-09-11", review: true },
+      ),
+      plate(
+        "recurring-set-up-by-you",
+        "Recurring · set up by you",
+        "A recurring transaction is a thing you create, with its own schedule, and the app writes it on its day. It is exact, and it is a feature of its own: a new entity in the backend, occurrences that can be skipped or edited, and money written without anybody pressing save.",
+        recurringVariant("declared"),
+        { frame: false, added: "2026-09-11", review: true },
+      ),
+      plate(
+        "recurring-both",
+        "Recurring · both, in this order",
+        "What you set up is the truth; what the app finds and you never set up is an offer, never a figure. Detection ships first because it changes no data; declaring comes after, with its own design.",
+        recurringVariant("both"),
+        { frame: false, added: "2026-09-11", review: true },
+      ),
+      plate(
         "pace-mark-tooltip-only",
         "Pace mark · tooltip only",
         "The mark can be focused with the keyboard and says the pace on hover or focus.",
@@ -2985,10 +3587,7 @@ const PAGES = [
 
 const ALL_PLATES = PAGES.flatMap((page) => (page.plates ?? []).map((p) => ({ ...p, page })));
 const IN_REVIEW = ALL_PLATES.filter((p) => p.review);
-const LATEST = [...ALL_PLATES]
-  .map((p) => p.added)
-  .sort()
-  .at(-1);
+const LATEST = [...ALL_PLATES].map(plateDay).sort().at(-1);
 
 const GROUPS = ["Foundations", "Screens", "States", "Decisions"];
 
@@ -3029,7 +3628,9 @@ ${groups}
 
 const plateArticle = (p) => {
   const badges =
-    (p.added === LATEST ? '<span class="pv-badge new">New</span>' : "") +
+    (plateDay(p) === LATEST
+      ? `<span class="pv-badge new">${p.updated ? "Updated" : "New"}</span>`
+      : "") +
     (p.review ? '<span class="pv-badge review">In review</span>' : "") +
     (p.verdict === "chosen" ? '<span class="pv-badge chosen">Chosen</span>' : "") +
     (p.verdict === "discarded" ? '<span class="pv-badge">Not chosen</span>' : "");
@@ -3050,14 +3651,23 @@ const shellPage = (title, main, current) =>
 
 const renderPage = (page) => {
   const plates = (page.plates ?? []).filter((p) => !p.review);
+  const waiting = (page.plates ?? []).length - plates.length;
+  const body =
+    plates.length > 0
+      ? `<div class="pv-grid">${plates.map(plateArticle).join("")}</div>`
+      : `<div class="pv-empty">${iconSvg("inbox")}<span class="pv-h2">This whole screen is being changed</span><p>Its ${waiting} plates are in <a href="in-review.html">In review</a> until you decide. Approving one brings it back here.</p></div>`;
+  const note =
+    waiting > 0 && plates.length > 0
+      ? `<p class="pv-note">${waiting} more ${waiting === 1 ? "plate is" : "plates are"} waiting for you in <a href="in-review.html">In review</a>.</p>`
+      : "";
   const main = `<h1 class="pv-h1">${page.title}</h1>
-${page.note ? `<p class="pv-note">${page.note}</p>` : ""}
-<div class="pv-grid">${plates.map(plateArticle).join("")}</div>`;
+${page.note ? `<p class="pv-note">${page.note}</p>` : ""}${note}
+${body}`;
   return shellPage(page.title, main, page.file);
 };
 
 const startHere = () => {
-  const fresh = ALL_PLATES.filter((p) => p.added === LATEST);
+  const fresh = ALL_PLATES.filter((p) => plateDay(p) === LATEST);
   const total = ALL_PLATES.length;
   const main = `<h1 class="pv-h1">Ledger Flow · Design</h1>
 <p class="pv-note">Every screen of the app, drawn from the same tokens as the code: ${total} plates across ${PAGES.length} pages. Use the top bar to switch palette, mode and device — everything repaints without a component changing. The sidebar is the map, and its search box finds a plate by name: type “sync” or “budget”, or press / from anywhere.</p>
@@ -3090,14 +3700,19 @@ ${
 };
 
 const whatChanged = () => {
-  const dates = [...new Set(ALL_PLATES.map((p) => p.added))].sort().reverse();
+  const dates = [...new Set(ALL_PLATES.flatMap((p) => [p.added, p.updated].filter(Boolean)))]
+    .sort()
+    .reverse();
   const main = `<h1 class="pv-h1">What changed</h1>
 <p class="pv-note">Every plate by the day it arrived, newest first. Use it to see what is new since the last time you looked.</p>
 <div class="pv-changes">${dates
     .map((date) => {
-      const items = ALL_PLATES.filter((p) => p.added === date);
+      const items = ALL_PLATES.filter((p) => p.added === date || p.updated === date).map((p) => ({
+        ...p,
+        changed: p.updated === date && p.added !== date,
+      }));
       return `<section class="pv-card wide"><h2 class="pv-h2">${date}${date === LATEST ? ' <span class="pv-badge new">New</span>' : ""}</h2>
-<ul class="pv-list">${items.map((p) => `<li><a href="${p.page.file}#${p.id}">${p.title}</a> <span class="pv-where">${p.page.title}</span></li>`).join("")}</ul></section>`;
+<ul class="pv-list">${items.map((p) => `<li><a href="${p.page.file}#${p.id}">${p.title}</a> <span class="pv-where">${p.page.title}${p.changed ? " · updated" : ""}</span></li>`).join("")}</ul></section>`;
     })
     .join("")}</div>`;
   return shellPage("What changed", main, "changes.html");
