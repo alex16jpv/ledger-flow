@@ -61,7 +61,13 @@ jobs:
             sleep 2
           done
       - run: npm ci --ignore-scripts
-      - run: npm ci && npm run build && (npm run start &) && npm run seed:test
+      # Not `npm run start`: that script pins NODE_ENV=production, where the app redirects http to
+      # https and mounts no /api-docs.json, so the contract step below fetched a 301 (H-39).
+      - run: |
+          npm ci && npm run build
+          (node dist/server.js &)
+          npm run seed:test
+          for i in $(seq 1 30); do curl -fsS http://localhost:3000/health/db >/dev/null && break; sleep 1; done
         working-directory: backend
         env:
           MONGO_URI: mongodb://localhost:27017/ledgerflow?replicaSet=rs0&directConnection=true
