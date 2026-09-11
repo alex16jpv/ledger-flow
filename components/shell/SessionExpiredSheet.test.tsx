@@ -23,8 +23,7 @@ describe("the expired session sheet", () => {
     expect(screen.getByText(/keeps working on this device/i)).toBeInTheDocument();
   });
 
-  // F-41: `onClose` used to be `onSignIn`, so the X, Escape and the scrim all led to the login and
-  // the sheet was a wall with another door.
+  // F-41: `onClose` used to be `onSignIn`, so the sheet was a wall with another door.
   it("closes for good in local mode instead of walking to the login", async () => {
     const onSignIn = vi.fn();
     const onClose = vi.fn();

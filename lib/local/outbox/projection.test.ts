@@ -10,8 +10,7 @@ import { projectBalances } from "./projection";
 import { pendingOperations } from "./queue";
 import { createTransaction, deleteTransaction, updateTransaction } from "./transactions";
 
-// The fixture keeps each date in the offset the user typed; the feed prints UTC and the mirror
-// stores what the feed sends.
+// The fixture keeps the offset the user typed; the feed prints UTC and the mirror stores that.
 function mirrorRow(userId: string, currency: string, row: ParityFixture["transactions"][number]) {
   const date = new Date(row.date).toISOString();
   return {

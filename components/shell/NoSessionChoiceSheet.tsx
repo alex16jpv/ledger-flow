@@ -12,9 +12,7 @@ import { connectivityStore } from "@/lib/network/connectivity";
 
 import { WipeDeviceSheet } from "./WipeDeviceSheet";
 
-// P-32 (owner, 2026-09-08): a device with a copy of the user's data and no session used to get an
-// invitation to sign in. It gets a decision now, with three exits, and none of them is a dead end:
-// sign in, keep working here, or delete what this device holds (DESIGN §8.17).
+// P-32 (owner, 2026-09-08): a decision with three exits, none of them a dead end (DESIGN §8.17).
 export interface NoSessionChoiceSheetProps {
   open: boolean;
   pending: number;
@@ -37,9 +35,7 @@ export function NoSessionChoiceSheet({
     connectivityStore.getSnapshot,
     connectivityStore.getServerSnapshot,
   );
-  // §8.17, same rule §8.15 had: two of the three exits need a network, and asking a question whose
-  // main answer cannot be given is a wall. The app keeps working and the stripe says what is going
-  // on; the two exits that work with no network live in Sync status for good.
+  // §8.17: two of the three exits need a network, and an unanswerable question is a wall.
   if (phase === "offline" && !confirming) return null;
 
   if (confirming) {
@@ -56,8 +52,7 @@ export function NoSessionChoiceSheet({
   }
 
   return (
-    // The one sheet in the app that cannot be closed without answering: closing it would put the
-    // user back in the state P-32 exists to remove.
+    // The one sheet that cannot be closed without answering (P-32).
     <Sheet open={open} onClose={onSignIn} dismissible={false} title={t("title")}>
       <div className="flex flex-col gap-4">
         <Alert tone="warning">{pending > 0 ? t("body", { count: pending }) : t("bodyEmpty")}</Alert>

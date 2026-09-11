@@ -59,8 +59,7 @@ interface VaultState {
   transactions: number;
 }
 
-// Reads the vault the app is using without going through it: what the queue really holds, and
-// whether a snapshot ever drained, are the two facts the demo cannot take the UI's word for.
+// The queue's real contents and whether a snapshot drained are not the UI's word to give.
 async function vaultState(page: Page): Promise<VaultState | null> {
   return page.evaluate(async () => {
     const name = (await indexedDB.databases())
@@ -157,8 +156,7 @@ async function createExpense(page: Page, amount: number, description: string): P
   await page.waitForLoadState("load");
 }
 
-// A day of the outage: the page the device had is gone, the browser starts the app again from the
-// worker's caches, and the only thing that carries over is what IndexedDB kept.
+// A day of the outage: the page is gone and only what IndexedDB kept carries over.
 async function coldStart(context: BrowserContext, tally: Tally, at: Date): Promise<Page> {
   const page = await context.newPage();
   tally.watch(page);
@@ -168,9 +166,7 @@ async function coldStart(context: BrowserContext, tally: Tally, at: Date): Promi
   return page;
 }
 
-// The rows the run leaves behind are dated today and yesterday, so a run that fails before its last
-// step would hand the next one a `GATE-*` row as the one to edit — and the edit form, with the clock
-// pushed back three days, refuses a date that far ahead. Sweeping here runs on failure too (F-59).
+// F-59: sweeping runs on failure too, or the next run inherits a `GATE-*` row to edit.
 test.afterEach(async ({ request }) => {
   for (const row of await listTransactions(request)) {
     if (!(row.description ?? "").startsWith("GATE-")) continue;
@@ -187,11 +183,9 @@ test("three days with no network, a cold start each day, and one drain with no d
   const context = page.context();
   const report: Record<string, unknown> = { project: test.info().project.name };
   const now = Date.now();
-  // The outage is the three days before today, so every movement it queues is dated in the past:
-  // the server refuses a date more than 24 h ahead of its own clock (FUTURE_DATE).
+  // The outage is the three days before today: the server refuses a date over 24 h ahead.
   const days = [new Date(now - 3 * DAY_MS), new Date(now - 2 * DAY_MS), new Date(now - DAY_MS)];
-  // Declared here and filled in by the steps: the whole point of the demo is that what one day
-  // leaves behind is still there on the next one.
+  // Filled in by the steps: what one day leaves behind has to still be there on the next.
   let editRow: Row;
   let deleteRow: Row;
   let before = 0;
@@ -220,8 +214,7 @@ test("three days with no network, a cold start each day, and one drain with no d
     report.mirrorAfterFirstLoad = await vaultState(page);
 
     const seeded = await listTransactions(request);
-    // Dated before the outage: day 2 edits one of them with the clock pushed back, and the form
-    // refuses a date more than a day ahead of what it believes today is (F-59).
+    // F-59: dated before the outage — the form refuses a date over a day ahead of its today.
     const editable = seeded.filter(
       (row) =>
         row.type === "EXPENSE" &&
@@ -236,8 +229,7 @@ test("three days with no network, a cold start each day, and one drain with no d
     deleteRow = editable[1]!;
     expect(editRow.id).not.toBe(deleteRow.id);
     before = seeded.length;
-    // Nothing else is visited on purpose: the rows the outage edits and deletes, and the inbox the
-    // capture is completed in, have to open from the warmed shell alone (F-47, F-48).
+    // F-47, F-48: nothing else is visited, so these have to open from the warmed shell alone.
   });
 
   await test.step("Se corta la red", async () => {
@@ -337,8 +329,7 @@ test("three days with no network, a cold start each day, and one drain with no d
       changeMonth: reads(monthCalls).length,
       changeFilter: reads(filterCalls).length,
     };
-    // No read of data may leave the device while the network is down (§4.2). The detail of the row
-    // just deleted used to be the one exception (F-46); it is recorded above so a regression shows.
+    // §4.2: no read of data may leave the device; F-46 was the one exception, recorded above.
     expect(day2Reads).toEqual([]);
     expect(pushes(tally.since(mark))).toHaveLength(0);
     expect(batches(tally.since(mark))).toHaveLength(0);
@@ -365,8 +356,7 @@ test("three days with no network, a cold start each day, and one drain with no d
     expect(pushes(tally.since(mark))).toHaveLength(0);
     expect(batches(tally.since(mark))).toHaveLength(0);
 
-    // A movement born during the outage opens, with no network, from the template entry of its
-    // route (F-48): the row comes from the mirror, the screen from the worker.
+    // F-48: a movement born during the outage opens from the template entry of its route.
     await day3.goto(`/transactions/${createdId}`);
     await expect(day3.getByRole("heading", { level: 1, name: "Transaction" })).toBeVisible();
     await expect(day3.getByText("GATE-D1 market")).toBeVisible();
@@ -386,9 +376,7 @@ test("three days with no network, a cold start each day, and one drain with no d
     const day4 = await coldStart(context, tally, new Date(now));
     expect((await vaultState(day4))?.pending).toBe(queued);
 
-    // The duplicate the gate is about: the server applies the batch and the answer never arrives, so
-    // the queue replays operations that already exist on the other side. Since O-F5b that is the
-    // whole queue at once, which puts the registry of `POST /sync` under test.
+    // O-F5b: the whole queue replays at once, which puts the registry of `POST /sync` under test.
     let dropped: string | null = null;
     await day4.route("**/api/sync", async (route) => {
       if (dropped !== null || route.request().method() !== "POST") {
@@ -413,9 +401,7 @@ test("three days with no network, a cold start each day, and one drain with no d
       droppedAnswer: dropped !== null,
     };
     expect(dropped).not.toBeNull();
-    // The whole queue in one batch, and one replay of it because its answer was thrown away: the
-    // second time the server answers `duplicate` for whatever already landed, so nothing is applied
-    // twice and nothing is lost. Not one operation goes by the ordinary routes any more.
+    // One batch and one replay: the second answers `duplicate`, and no operation takes a route.
     expect(batches(drain)).toHaveLength(2);
     expect(batches(drain)[0]?.operations).toBe(queued);
     expect(pushes(drain)).toHaveLength(0);

@@ -1,9 +1,7 @@
 import type { OutboxOperation } from "../schema";
 import { operationPayload } from "./envelope";
 
-// §6 O-F5a: the text/money classification lives in the front, in one place. The server never needs
-// to know it, and a second copy in the other repo would drift from this one. `pendingDetails` is a
-// review flag, neither money nor a reference: the PUT that follows every quick capture carries it.
+// §6 O-F5a: the classification lives here only; `pendingDetails` is a review flag, not money.
 export const TEXT_FIELDS: ReadonlySet<string> = new Set([
   "description",
   "note",
@@ -14,8 +12,7 @@ export const TEXT_FIELDS: ReadonlySet<string> = new Set([
   "pendingDetails",
 ]);
 
-// "text" retries itself over the stamp the server answered with; "structural" is money or shape and
-// is asked about, because merging it would silently pick a winner the user never chose.
+// `text` retries over the server's stamp; `structural` is asked about, never merged silently.
 export type ConflictKind = "text" | "structural";
 
 const bodyOf = (operation: OutboxOperation): Record<string, unknown> | null => {
@@ -28,8 +25,7 @@ const changedFields = (body: Record<string, unknown>): string[] =>
   Object.keys(body).filter((field) => body[field] !== undefined);
 
 export function conflictKind(operation: OutboxOperation): ConflictKind {
-  // Only an edit can be merged by retrying: a create carries no guard at all, and archiving,
-  // restoring or making an account the default are shape, not a field with two versions.
+  // Only an edit can merge by retrying: a create carries no guard, and the rest are shape.
   if (operation.action !== "update") return "structural";
   const body = bodyOf(operation);
   if (!body) return "structural";
@@ -49,9 +45,7 @@ export interface ConflictField {
   disputed: boolean;
 }
 
-// The two versions side by side, over the fields the operation actually asked to change. A field
-// both sides agree on is still shown — it is context for the one that differs — but only the
-// disputed ones are highlighted.
+// A field both sides agree on is context; only the disputed ones are highlighted.
 export function conflictFields(operation: OutboxOperation, serverRow: unknown): ConflictField[] {
   const body = bodyOf(operation);
   if (!body) return [];
@@ -69,18 +63,13 @@ export function conflictFields(operation: OutboxOperation, serverRow: unknown): 
     }));
 }
 
-// The refusal's row, but only when it IS the operation's row. A `conflict` `DUPLICATE` answers with
-// the row that already holds the name — somebody else's row — and taking that one as the operation's
-// own baseline would put a foreign row in the mirror and guard the retry against a stamp that never
-// belonged to it. The sheet still shows it: comparing the two names is the point.
+// A `DUPLICATE` answers with somebody else's row, which must never become this row's baseline.
 export function ownServerRow(operation: OutboxOperation): unknown {
   const row = operation.serverRow as { id?: unknown } | null | undefined;
   return row?.id === operation.entityId ? operation.serverRow : undefined;
 }
 
-// F-60: a restore the server refused because an active row already holds the name. It is the one
-// refusal trying again cannot fix — the same name would be refused again — and the one the route
-// itself can fix, because a restore takes a `name` in its body.
+// F-60: the one refusal trying again cannot fix, and the one a restore's `name` can.
 export function isNameTaken(operation: OutboxOperation): boolean {
   return (
     operation.action === "restore" &&
@@ -89,8 +78,7 @@ export function isNameTaken(operation: OutboxOperation): boolean {
   );
 }
 
-// F-66: the server refused the date, and the device's own clock is why the form let it through.
-// Trying again unchanged repeats the refusal; the way out is the date itself.
+// F-66: trying again unchanged repeats the refusal; the way out is the date itself.
 export function isFutureDate(operation: OutboxOperation): boolean {
   return operation.entity === "transaction" && operation.lastError === "FUTURE_DATE";
 }

@@ -51,8 +51,7 @@ function StatusRow({
 }: {
   icon: React.ReactNode;
   title: string;
-  // F-85: `null` is "not read yet", and it draws a skeleton. A row about the vault must not answer
-  // before the vault has answered.
+  // F-85: `null` is not read yet and draws a skeleton; a row must not answer before the vault.
   value: string | null;
   meta?: string;
   action?: React.ReactNode;
@@ -98,8 +97,7 @@ export function SyncStatusView() {
 
   const storage = snapshot.storage;
   const userId = snapshot.userId;
-  // Resyncing throws the copy away before it downloads a new one, so with no network it would leave
-  // the app with nothing to read until the connection came back.
+  // Resyncing throws the copy away first, so with no network it would leave nothing to read.
   const offline =
     useSyncExternalStore(
       connectivityStore.subscribe,
@@ -107,20 +105,16 @@ export function SyncStatusView() {
       connectivityStore.getServerSnapshot,
     ) === "offline";
 
-  // F-41: a screen that says what this device owes the server cannot stay quiet about there being
-  // nobody to say it to. The stripe warns; this row answers whoever came to look.
+  // F-41: this screen says what the device owes the server, so it cannot omit having nobody to owe.
   const signedOut = session.status === "expired";
-  // P-32: the two exits that work with no network live here for good, not only in the sheet that
-  // asked once — the choice, and the way to delete what this device holds.
+  // P-32: the two exits that work with no network live here for good, not only in the sheet.
   const localOnly = useSyncExternalStore(
     localOnlyStore.subscribe,
     localOnlyStore.getSnapshot,
     localOnlyStore.getServerSnapshot,
   );
 
-  // F-54: "offline ready" is two halves — the data the pull left in the vault, and the screens the
-  // worker warmed. It is ready only when both are, and with no network what is missing stays
-  // missing, which is a state of its own and not a slower "preparing".
+  // F-54: offline ready is two halves, the vault and the warmed screens, and needs both.
   const blocked = outbox.blocked.length;
   const shell = snapshot.shell;
   const offlineReady = Boolean(snapshot.syncedAt) && shell.cached >= shell.expected;
@@ -170,8 +164,7 @@ export function SyncStatusView() {
             }
             action={
               signedOut || localOnly ? (
-                // `reauth` is what gets a device with a live marker past the proxy and onto the
-                // login (§2.6).
+                // §2.6: `reauth` gets a device with a live marker past the proxy to the login.
                 <Link
                   href={`${LOGIN_PATH}?${REAUTH_PARAM}=1`}
                   className={buttonClasses({ variant: "secondary", size: "sm" })}
@@ -254,8 +247,7 @@ export function SyncStatusView() {
             }
             value={blocked > 0 ? t("blocked.queue", { count: blocked }) : String(outbox.pending)}
           />
-          {/* Only when it fell back: a server without `POST /sync` takes the queue one operation at
-              a time, and support has no other way to see it. */}
+          {/* Only when it fell back: without `POST /sync` the queue goes one at a time. */}
           {syncTransport() === "routes" && (
             <StatusRow
               icon={<Split {...iconProps("sm")} />}
@@ -276,9 +268,7 @@ export function SyncStatusView() {
           <StatusRow
             icon={<ShieldCheck {...iconProps("sm")} />}
             title={t("persisted.label")}
-            // F-86: the app already asked (`lib/local/mirror`), and no browser has a dialog for
-            // this — Chrome decides in silence. So the row says what is true of each answer and
-            // points at the one thing that changes it.
+            // F-86: no browser has a dialog for this — Chrome decides in silence.
             meta={
               !storage?.supported
                 ? t("persisted.unsupportedHelp")
@@ -349,8 +339,7 @@ export function SyncStatusView() {
         </p>
       </div>
 
-      {/* P-32: the exit that needs no network, in the one screen that is about what this device
-          holds. It asks in the same sheet the choice does, with the number in front. */}
+      {/* P-32: the exit that needs no network, in the screen about what this device holds. */}
       <div className="flex flex-col gap-2">
         <Button
           variant="secondary"
@@ -376,8 +365,7 @@ export function SyncStatusView() {
         onConfirm={async () => {
           await wipeThisDevice();
           setLocalOnly(false);
-          // A full load, not a client navigation: after a wipe nothing in memory — caches,
-          // providers, the vault handle — may survive into the next screen.
+          // A full load, not a client navigation: nothing in memory may survive a wipe.
           window.location.assign(
             new URL(`${localePrefix(locale)}${LOGIN_PATH}?wiped=1`, window.location.origin),
           );

@@ -60,9 +60,7 @@ export function SessionProvider({
   const queryClient = useQueryClient();
   const [expired, setExpired] = useState(false);
 
-  // P-32: in "this device only" the app is not talking to the server, so it does not ask who the
-  // user is either — the question would sit paused for ever and every screen that waits on the
-  // answer would wait with it. The device works from its copy, which is what the choice means.
+  // P-32: in this-device-only the question would sit paused for ever, so it is not asked.
   const localOnly = useSyncExternalStore(
     localOnlyStore.subscribe,
     localOnlyStore.getSnapshot,
@@ -86,9 +84,7 @@ export function SessionProvider({
 
   const userId = query.data?.user.id ?? null;
 
-  // Explicit logout only: an expired session leaves the vault alone, because the app keeps working
-  // offline and its queue outlives the session (D-7, invariant 7). The mirror always goes, so the
-  // next user on this device sees nothing; the queue only goes if the user said so (F-34).
+  // D-7, invariant 7, F-34: the mirror always goes; the queue only if the user said so.
   const endLocalSession = useCallback(
     async ({ discardPendingWork = false }: SignOutOptions = {}) => {
       queryClient.clear();
@@ -156,9 +152,7 @@ export function SessionProvider({
     [queryClient],
   );
 
-  // React Query drops an error back to pending when a query with no data refetches, so a session
-  // that failed offline would read as "loading" again the moment the network returns — and whatever
-  // hangs on the answer (the vault of §2.6) would be torn down and rebuilt in the gap (R-3b).
+  // R-3b: an errored query refetching reads as loading, and §2.6's vault would be torn down.
   const answered = query.isError || query.isFetched || query.fetchStatus === "paused";
   const [wasAnswered, setWasAnswered] = useState(false);
   if (answered && !wasAnswered) setWasAnswered(true);

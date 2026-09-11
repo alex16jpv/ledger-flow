@@ -34,14 +34,12 @@ describe("withinDays", () => {
   });
 
   it("answers a row written before the day was stored by its instant (T-14, H-28)", () => {
-    // 11pm on Aug 31 in Bogota. Read from the zone it was written in, both rules agree: a row
-    // without a day is not lost, which is why no backfill has to run before this ships.
+    // Read from the zone it was written in, both rules agree, so no backfill has to run first.
     const lateNight = "2026-09-01T04:00:00.000Z";
     expect(withinDays(row(lateNight, null), AUGUST)).toBe(true);
     expect(withinDays(row(lateNight, "2026-08-31"), AUGUST)).toBe(true);
 
-    // Read from another zone, only the frozen day keeps it in August. That is exactly what a row
-    // without one still loses, and what the backfill buys it.
+    // From another zone only the frozen day keeps it in August — what the backfill buys a row.
     const augustInMadrid = dayWindow(
       "2026-07-31T22:00:00.000Z",
       "2026-08-31T22:00:00.000Z",

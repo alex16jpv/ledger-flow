@@ -1,8 +1,6 @@
 import { dayKey } from "@/lib/format/dates";
 
-// A calendar window is a run of local days, and every transaction carries the day the server froze
-// on it (`dayKey`), so neither side moves when the account changes time zone. Same rule as the
-// backend's `dayWindow` in its transaction repository.
+// Same rule as the backend's `dayWindow`: local days, and the day the server froze on the row.
 export interface DayWindow {
   fromDay?: string;
   // Inclusive: the last day the half-open instant window touches.
@@ -24,8 +22,7 @@ export function dayWindow(
   };
 }
 
-// A row written before the day was stored is answered by its instant, exactly as the server answers
-// it, so a mirror filled by an older version still adds up while the backfill has not run.
+// A row written before the day was stored is answered by its instant, as the server answers it.
 export function withinDays(
   row: { dayKey: string | null; date: string },
   window: DayWindow,
@@ -39,9 +36,7 @@ export function withinDays(
   return true;
 }
 
-// The two extra days the index range needs so a day window cannot miss a row at its edges: a zone
-// is at most 26 hours away from another, so a local day can sit that far from the same day
-// elsewhere. The exact rule is `withinDays`; this only decides how many rows it looks at.
+// A zone is at most 26 h from another, so the index range widens by two days; `withinDays` rules.
 const EDGE_MS = 48 * 60 * 60 * 1000;
 
 export function widenedBound(bound: string | undefined, days: -1 | 1): string | undefined {

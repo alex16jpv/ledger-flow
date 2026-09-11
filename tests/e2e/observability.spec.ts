@@ -3,10 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
 const MISSING_ACCOUNT = "01920000-0000-7000-8000-0000000000ff";
-// T-03 took away the only address that reached this state: a malformed id is refused with a 404
-// before any screen runs, and a well-formed unknown one gets the friendly not-found state, which
-// carries no reference. A 503 is what the design puts the reference under, and the backend cannot be
-// asked for one on demand, so this is the mock §1.3 allows.
+// T-03: only a 503 carries the reference, and the backend cannot be asked for one on demand.
 const BROKEN_ACCOUNT = "01920000-0000-7000-8000-0000000000e0";
 type Request = Parameters<Parameters<typeof test>[2]>[0]["request"];
 

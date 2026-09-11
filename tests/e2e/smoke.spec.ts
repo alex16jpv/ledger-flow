@@ -9,9 +9,7 @@ test("the root page responds and has no accessibility violations", async ({ page
   await expectNoAxeViolations(page);
 });
 
-// T-03: `[id]` matches any segment, so every one of these answered 200 and the screen then asked the
-// server for a row that cannot exist. A well-formed id stays a 200 on purpose — the copy on the
-// device can answer it with no network, and the screen shows its own error when nobody can.
+// T-03: `[id]` matches any segment; a well-formed id stays a 200 so the device can answer it.
 test("an address that cannot name a row answers 404, not a rendered screen", async ({
   page,
   request,
@@ -23,10 +21,7 @@ test("an address that cannot name a row answers 404, not a rendered screen", asy
   });
   await page.context().addCookies((await request.storageState()).cookies);
 
-  // The copy first: a visit to `/es/…` leaves the locale cookie in Spanish, and next-intl then sends
-  // every default-locale URL to its `/es` twin. It is the public 404, because the status has to be
-  // decided above the app group's streaming boundary and Next skips the layout that throws — which is
-  // the one that draws the frame.
+  // The public 404: the status is decided above the app group's streaming boundary.
   const first = await page.goto("/accounts/nope");
   expect(first?.status()).toBe(404);
   await expect(page.getByText("Page not found")).toBeVisible();
@@ -45,8 +40,7 @@ test("an address that cannot name a row answers 404, not a rendered screen", asy
     expect(response?.status(), path).toBe(404);
   }
 
-  // A well-formed id stays a 200 on purpose: only the row itself knows whether it exists, and with no
-  // network the copy on the device is what answers.
+  // A well-formed id stays a 200: only the row itself knows whether it exists.
   const known = await page.goto("/accounts/01a08c1f-024c-7bbe-b5b6-38d73bbfd050");
   expect(known?.status()).toBe(200);
 });

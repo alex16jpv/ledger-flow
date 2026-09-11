@@ -73,8 +73,7 @@ function toApiError(response: Response, payload: unknown, requestId: string): Ap
     details: body.details,
     requestId: response.headers.get(REQUEST_ID_HEADER) ?? requestId,
     retryAfterSeconds: parseRetryAfter(response.headers.get("retry-after")),
-    // Only `STALE_UPDATE` carries it, and it is not in the OpenAPI schema: the resolution sheet
-    // needs the server's own row, and this is the response that already has it (O-B2).
+    // O-B2: only `STALE_UPDATE` carries the server's row, and it is not in the OpenAPI schema.
     current: body.current,
   });
 }

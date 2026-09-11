@@ -24,15 +24,10 @@ export interface WriteRequest<T> {
   optimistic: (db: VaultDb) => Promise<T> | T;
 }
 
-// The mirror image of `repository/read`: the entity and its operation land in one IndexedDB
-// transaction, the screen is answered from that projection, and the engine is asked to drain. What
-// the request looks like on the wire lives once, in `routes.ts`, because the engine has to be able
-// to rebuild it from the envelope alone long after this call returned.
+// What the request looks like on the wire lives once, in `routes.ts`, for the engine to replay.
 async function sendDirect<T>(local: LocalWrite): Promise<T> {
   const route = routeFor(local.entity, local.action);
-  // No vault, or a row the mirror cannot project: the write goes out the way it did before O-F4, and
-  // with no network it fails as it always did rather than inventing a row. The cast is the one the
-  // route's own type already made — this path has no projection to answer from.
+  // No vault, or a row the mirror cannot project: the write goes out as it did before O-F4.
   const answer = (await route.send({ entityId: local.entityId, payload: local.payload }, {})) as T;
   // It reached the server and left no trace in the mirror, which is what the screen reads (F-33).
   await pullAfterDirectSend();
@@ -50,9 +45,7 @@ function outcomeOf(report: DrainReport, seq: number): DrainOutcome | undefined {
   return outcome;
 }
 
-// Queues a write and stops there. The one caller is a resolution that has to travel with the
-// operation it unblocks (F-58): asking for a drain here would send the resolution on its own, in a
-// batch of one, which is the whole thing it exists to avoid.
+// F-58: asking for a drain here would send the resolution alone, in a batch of one.
 export async function enqueue(
   db: VaultDb,
   local: LocalWrite,
@@ -80,22 +73,16 @@ export async function write<T>(request: WriteRequest<T>): Promise<T> {
   await refreshOutboxStatus(db);
 
   const outcome = outcomeOf(await requestSync(), seq);
-  // Refused for good: the engine has already put the mirror back, and the error reaches the form,
-  // which is the only place that can still fix it.
+  // Refused for good: the engine put the mirror back, and the form is the only place left.
   if (outcome?.kind === "rejected") throw outcome.error;
   // The server answered in time, so the screen gets its row rather than the projection of it.
   if (outcome?.kind === "sent") return outcome.result as T;
-  // Answered from the projection, so nobody is waiting for this operation any more. Whatever undo
-  // it left behind stops being an answer to a form: a later drain that finds the server refusing it
-  // leaves it in the tray for the user to resolve instead of undoing a write nobody is looking at
-  // (F-23). Settled operations have already dropped theirs; this is the one still queued.
+  // F-23: nobody is waiting any more, so the undo stops being an answer to a form.
   forgetRollbacks([seq]);
   return request.optimistic(db);
 }
 
-// Queues several writes before asking the engine for a single drain, so a screen that saves N rows
-// does not make N round trips of its own. Each row keeps its own operation, its own guard and its
-// own outcome: that is what makes partial success per row possible (F-20).
+// F-20: each row keeps its own operation, guard and outcome, so partial success is possible.
 export async function writeAll<T>(requests: WriteRequest<T>[]): Promise<PromiseSettledResult<T>[]> {
   const vault = await vaultReady();
   if (!vault) return Promise.allSettled(requests.map((request) => sendDirect<T>(request.local)));

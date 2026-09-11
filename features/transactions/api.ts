@@ -9,9 +9,7 @@ import type { StatsResponse, TagList, Transaction, TransactionList } from "@/typ
 
 export const LIST_PAGE_SIZE = 30;
 
-// Reads go through the repository, which falls back to the offline mirror; writes go through the
-// outbox, which queues the operation with the row and answers from the projection (O-F4). The batch
-// is queued expanded into one operation per row, because one `If-Match` cannot guard N of them.
+// O-F4: reads via the repository, writes via the outbox; a batch expands, one `If-Match` each.
 export {
   batchUpdateTransactions,
   createTransaction,

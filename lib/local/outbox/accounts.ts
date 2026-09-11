@@ -18,9 +18,7 @@ async function currentRow(tx: WriteTransaction, id: string): Promise<Account> {
   return record.row;
 }
 
-// Puts the projected row in the mirror and hands back what undoes it. The guard is the mirror's
-// `updatedAt`, and only while the server has already seen the row: a row still waiting for its own
-// create carries a stamp the server never printed.
+// The guard is the mirror's `updatedAt`, and only once the server has already seen the row.
 async function projectAccount(
   tx: WriteTransaction,
   id: string,
@@ -28,8 +26,7 @@ async function projectAccount(
 ): Promise<LocalChange> {
   const store = tx.objectStore("accounts");
   const previous = await store.get(id);
-  // The server's version rides along while the row has a queue (D-24); a row created here is its
-  // own baseline until the server answers.
+  // D-24: the server's version rides along; a row created here is its own baseline for now.
   await store.put(accountRecord(next, previous ? (previous.server ?? previous.row) : next));
   const guarded = previous !== undefined && !(await unsent(tx, "account", id));
   return {
@@ -62,8 +59,7 @@ export function createAccount(input: CreateAccountInput): Promise<Account> {
       payload: { body },
       project: async (tx, occurredAt) => {
         const { userId, currency } = await projectionContext(tx, occurredAt);
-        // The server derives both figures from the single `balance` the form sends, and makes the
-        // first account the default one. Every one of these is a projection until it answers.
+        // The server derives both figures from `balance` and makes the first account the default.
         const isDefault = (await tx.objectStore("accounts").count()) === 0;
         return projectAccount(tx, id, {
           id,
@@ -112,8 +108,7 @@ export function archiveAccount(id: string): Promise<unknown> {
   });
 }
 
-// The queue's own description of a restore, so the resolution of F-58 puts the same operation in
-// the queue as the button does — one guard, one projection, one undo, in one place.
+// F-58: the resolution queues the same operation as the button — one guard, one projection.
 export const restoreAccountWrite = (id: string, input: RestoreInput = {}): LocalWrite => ({
   entity: "account",
   entityId: id,
@@ -135,8 +130,7 @@ export function setDefaultAccount(id: string): Promise<Account> {
       action: "setDefault",
       payload: {},
       project: async (tx) => {
-        // The server moves the flag, so the mirror moves it too: leaving two defaults would make
-        // quick capture pick the wrong account for as long as the operation is queued.
+        // Two defaults would make quick capture pick the wrong account while it is queued.
         const store = tx.objectStore("accounts");
         const demoted = (await store.getAll()).filter(
           (record) => record.row.isDefault && record.id !== id,

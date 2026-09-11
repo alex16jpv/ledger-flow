@@ -79,8 +79,7 @@ export function Sidebar({ userName, pendingCount, onAdd }: SidebarProps) {
       </nav>
       <div className="mt-auto flex flex-col gap-1">
         <SidebarLink item={SETTINGS_ITEM} active={isActive(pathname, SETTINGS_ITEM.href)} />
-        {/* No name, no row: the avatar is decorative, so with an empty name the link had nothing a
-            screen reader could announce. The session is unknown after an offline cold start (F-63). */}
+        {/* F-63: no name, no row — the avatar is decorative and the link says nothing. */}
         {userName !== "" && (
           <Link
             href={SETTINGS_ITEM.href}

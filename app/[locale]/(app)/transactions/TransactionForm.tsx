@@ -49,8 +49,7 @@ export interface TransactionFormProps {
   submitLabel: string;
   pending: boolean;
   error: unknown;
-  // `changes` is the same input narrowed to the fields the user touched: an edit sends that, so a
-  // note typed on one device does not travel as a new amount and a new date too (§1 example 3).
+  // §1 example 3: `changes` is narrowed to the touched fields, so a note never travels as money.
   onSubmit: (
     input: CreateTransactionInput,
     idempotencyKey: string,
@@ -69,10 +68,7 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const t = useTranslations();
   const { timeZone } = useFormatSettings();
-  // F-66, the preventive half: the form's own guard uses this device's clock, so a device that runs
-  // ahead accepts a date the server will refuse. The distance is only knowable from the server, and
-  // the vault keeps it for exactly this moment.
-  // The server refuses anything more than 24 h ahead, so the calendar stops there (7.28).
+  // F-66: the server refuses a date more than 24 h ahead, so the calendar stops there (7.28).
   const tomorrow = shiftDayKey(dayKey(new Date(), timeZone), 1);
   const skew = aheadOfServer(
     useSyncExternalStore(
@@ -88,9 +84,7 @@ export function TransactionForm({
     resolver: zodResolver(transactionFormSchema),
     defaultValues,
   });
-  // `dirtyFields` is read during render on purpose: React Hook Form's formState is a Proxy that only
-  // tracks what the component subscribed to, and reading it for the first time inside the submit
-  // handler would answer with an empty object.
+  // `dirtyFields` is read during render: RHF's formState Proxy only tracks what render subscribed.
   const { errors, dirtyFields } = form.formState;
   const type = useWatch({ control: form.control, name: "type" });
 
@@ -134,8 +128,7 @@ export function TransactionForm({
   }
 
   function changeType(next: TransactionType) {
-    // `shouldDirty` because an edit only sends what is dirty: a value the screen sets on the user's
-    // behalf is still the user's change.
+    // `shouldDirty` because an edit sends only dirty fields, and this is still the user's change.
     form.setValue("type", next, { shouldDirty: true });
     if (!categoryAllowed(next)) form.setValue("categoryId", null, { shouldDirty: true });
     form.clearErrors();

@@ -3,12 +3,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// F-12: run under WSL, `chrome-launcher` finds the Windows browser through `/mnt/c` and asks it for a
-// profile directory whose Linux path it cannot translate, so the browser creates one literally named
-// `C:\Users\…` in the directory the command was run from — the repo root, where it then waits to be
-// committed by mistake. Two things keep it out: a browser that is Linux all the way down (the one
-// Playwright already installs, when nothing else names one), and a profile under the system temp dir.
-// On CI (Ubuntu) there is a real Chrome and `CHROME_PATH`, so only the temp profile applies.
+// F-12: under WSL `chrome-launcher` writes a Windows-path profile into the repo root.
 async function linuxChrome() {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
   try {
@@ -100,8 +95,7 @@ async function signIn() {
   return cookies.join("; ");
 }
 
-// The screens with an `[id]` need a row that exists: the seeded database provides them, and the app's
-// own BFF answers with the session it just handed out.
+// The `[id]` screens need a row that exists: the seeded database provides them.
 async function firstId(path, cookie) {
   const response = await fetch(`${APP_URL}/api${path}`, { headers: { cookie } });
   if (!response.ok) throw new Error(`lighthouse: ${path} answered ${response.status}`);
@@ -118,8 +112,7 @@ async function screens(cookie) {
     const id = await firstId(list, cookie);
     for (const template of templates) paths.push(template.replace(":id", id));
   }
-  // No locale prefix: `en` is the default and next-intl redirects `/en/x` to `/x` — and Lighthouse's
-  // extra headers do not survive that redirect, so the session would be lost on the way in.
+  // No locale prefix: Lighthouse's extra headers do not survive next-intl's redirect.
   return paths.map((path) => `${APP_URL}${path}`);
 }
 
@@ -223,8 +216,7 @@ async function authenticatedRun(flags, chrome) {
     await waitFor(`${APP_URL}/en/login`, "the app");
     return await collectAuthenticated(flags, chrome);
   } finally {
-    // `npx next start` and the backend runner both leave a grandchild holding the port: the whole
-    // process group has to go, not the child this process spawned.
+    // Both runners leave a grandchild holding the port, so the whole group has to go.
     for (const child of started) {
       if (child.pid) {
         try {
@@ -240,9 +232,7 @@ async function authenticatedRun(flags, chrome) {
 const profile = mkdtempSync(join(tmpdir(), "ledger-flow-lighthouse-"));
 const chrome = await linuxChrome();
 const flags = `--no-sandbox --headless=new --user-data-dir=${profile}`;
-// `--user-data-dir` is not enough: under WSL `chrome-launcher` still makes a profile of its own out
-// of `TEMP`, and with the Windows value it lands in the working directory as `C:\Users\…`, which the
-// next Turbopack build dies reading (F-12). The trailing slash keeps its `\lighthouse.n` inside.
+// F-12: `--user-data-dir` is not enough, and the trailing slash keeps the launcher's dir inside.
 process.env.TEMP = `${profile}/`;
 process.env.TMP = process.env.TEMP;
 

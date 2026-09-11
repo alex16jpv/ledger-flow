@@ -9,8 +9,7 @@ import { Button } from "./Button";
 import { cn } from "./cn";
 import { Sheet } from "./Sheet";
 
-// 7.28: the other half of the browser's control. The value is `HH:mm` in the user's zone, and the
-// wheel shows it the way the language does — twelve hours with AM/PM where that is how time is read.
+// 7.28: the value is `HH:mm` in the user's zone, shown the way the language reads time.
 export interface TimePickerSheetProps {
   open: boolean;
   value: string;
@@ -28,8 +27,7 @@ const partsOf = (time: string): { hour: number; minute: number } => {
   return { hour, minute };
 };
 
-// Only the minutes the wheel offers exist on it, so a value between two of them rounds down rather
-// than showing nothing selected.
+// A value between two offered minutes rounds down, or nothing would look selected.
 const snap = (minute: number): number => minute - (minute % MINUTE_STEP);
 
 function uses12Hour(locale: string): boolean {
@@ -86,8 +84,7 @@ export function TimePickerSheet({
 }: TimePickerSheetProps) {
   const t = useTranslations("common");
   const { formatLocale, timeZone } = useFormatSettings();
-  // The sheet is a decision of its own: it opens on the value it was given and reports only on Done,
-  // and the opener remounts it on every open so that a cancelled edit leaves nothing behind.
+  // It opens on the value it was given and reports only on Done; the opener remounts it each open.
   const [draft, setDraft] = useState(value);
 
   const twelve = uses12Hour(formatLocale);

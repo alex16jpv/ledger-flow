@@ -48,9 +48,7 @@ interface StampedStore {
   get: (id: string) => Promise<{ updatedAt: string } | undefined>;
 }
 
-// The feed overlaps 60 seconds on purpose (D-14), so a page carrying rows is not the same as a page
-// carrying news: only a stamp the mirror has not seen is worth making the screens read again. The
-// callers stop asking once one row is news, which is all the answer they need.
+// D-14: the feed overlaps 60 seconds, so only a stamp the mirror has not seen is news.
 async function isNews(store: StampedStore, id: string, updatedAt: string): Promise<boolean> {
   return (await store.get(id))?.updatedAt !== updatedAt;
 }
@@ -63,8 +61,7 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
     news ||= await isNews(tx.objectStore("profile"), PROFILE_KEY, changes.user.updatedAt);
     await tx.objectStore("profile").put(profileRecord(changes.user));
   }
-  // D-23 (F-25): the server's row lands, and what the queue still has to send is projected back on
-  // top of it. Without this a movement deleted with no network comes back alive on the next pull.
+  // D-23 (F-25): without this a movement deleted with no network comes back alive on the next pull.
   const context = await reconcileContext(tx);
   for (const row of changes.accounts) {
     news ||= await isNews(tx.objectStore("accounts"), row.id, row.updatedAt);
@@ -105,8 +102,7 @@ export async function pullChanges(
 
   for (;;) {
     const page = await fetchPage({ cursor, limit });
-    // Every answer carries the server's clock, and the form of §8.2 has to warn before there is a
-    // refusal to explain (F-66).
+    // F-66: every answer carries the server's clock, needed before there is a refusal to explain.
     await rememberServerTime(handle.db, page.serverTime);
     // Rows are applied by id with put, so the deliberate 60-second overlap of D-14 costs nothing.
     changed = (await applyPage(handle, page)) || changed;

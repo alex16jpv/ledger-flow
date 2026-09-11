@@ -1,17 +1,12 @@
 import type { VaultDb } from "./outbox/queue";
 
-// Trap 7.4 of the offline plan, the half that was never built (F-66): a form can only check a date
-// against the clock it runs on, so a device three days ahead accepts what the server will refuse.
-// Every answer the server gives carries its own clock, so the distance between the two is knowable;
-// it lives in the vault because the form needs it exactly when there is no network left to ask.
+// F-66 (trap 7.4): the offset lives in the vault because the form needs it with no network left.
 const OFFSET_KEY = "clockOffsetMs";
 
-// Under an hour nothing is at stake: the server refuses dates more than 24 h ahead, and a minute of
-// drift is normal on any device.
+// Under an hour nothing is at stake: the server refuses dates more than 24 h ahead.
 export const CLOCK_SKEW_MIN_MS = 60 * 60 * 1000;
 
-// Rewritten only when it moved by more than a minute: the answer to every round would otherwise be
-// a write.
+// Rewritten only past a minute of movement, or every round would end in a write.
 const WORTH_STORING_MS = 60 * 1000;
 
 type Listener = () => void;
@@ -65,8 +60,7 @@ export interface ClockSkew {
   count: number;
 }
 
-// How far ahead of the server this device runs, in the coarsest unit that says it, or null when the
-// distance is too small to matter.
+// The coarsest unit that says it, or null when the distance is too small to matter.
 export function aheadOfServer(offset: number = clockOffsetMs()): ClockSkew | null {
   if (offset < CLOCK_SKEW_MIN_MS) return null;
   const hours = Math.round(offset / (60 * 60 * 1000));

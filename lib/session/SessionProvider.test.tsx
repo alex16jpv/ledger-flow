@@ -89,8 +89,7 @@ describe("SessionProvider", () => {
     expect(urlOf(fetchMock.mock.calls[0]?.[0] ?? "")).toBe("/api/auth/me");
   });
 
-  // R-3b: React Query drops an errored query with no data back to pending when it refetches; the
-  // vault of §2.6 hangs on this status and must not be torn down while the network comes back.
+  // R-3b: React Query drops an errored query back to pending, and §2.6's vault hangs on it.
   it("does not fall back to loading when a failed session is fetched again", async () => {
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
     statuses.length = 0;
@@ -195,8 +194,7 @@ describe("SessionProvider", () => {
     expect(await countPendingOperations("u1")).toBe(4);
   });
 
-  // F-34: the other half of the sheet. Keeping is the default; discarding only happens when the
-  // user was shown what they were throwing away and said so.
+  // F-34: keeping is the default; discarding only after the user was shown what goes.
   it("discards the queue on logout when the user chose to", async () => {
     await fillVault("u1", 4);
     fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "A" } }));

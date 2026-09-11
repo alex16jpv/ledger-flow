@@ -102,8 +102,7 @@ describe("BudgetForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Custom" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "100");
     await pickDay("Start", "October", 10);
-    // The calendar will not offer a day before the start, so the window cannot be inverted at all
-    // (F-05); the rule the form used to catch afterwards is now a day nobody can choose.
+    // F-05: the calendar offers no day before the start, so the window cannot be inverted.
     await userEvent.click(screen.getByRole("button", { name: /^End/ }));
     const end = screen.getByRole("dialog", { name: "End" });
     expect(within(end).getByRole("gridcell", { name: /October 1, 2026/ })).toBeDisabled();

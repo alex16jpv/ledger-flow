@@ -69,8 +69,7 @@ describe("writing through the outbox", () => {
     expect(await vault.db.get("accounts", created.id)).toBeDefined();
   });
 
-  // F-65, the question the ficha left open and the design answered: blocking the record would be
-  // worse than not sending the old, and nothing new waits behind what is blocked.
+  // F-65: blocking the record would be worse, and nothing new waits behind what is blocked.
   it("keeps writing normally while an app update holds part of the queue back", async () => {
     const vault = await vaultWith();
     await vault.db.put("outbox", {
@@ -147,8 +146,7 @@ describe("writing through the outbox", () => {
 
     const updated = await updateAccount("a1", { name: "Renamed" });
 
-    // D-23: a row whose write is in conflict shows the server's version; the user's lives in the
-    // sheet, read off the envelope. The screen gets the same row it will read back.
+    // D-23: a row in conflict shows the server's version; the user's lives in the sheet.
     expect(updated.name).toBe("Cash");
     expect((await vault.db.get("accounts", "a1"))?.row.name).toBe("Cash");
     expect((await pendingOperations(vault.db))[0]).toMatchObject({
@@ -161,8 +159,7 @@ describe("writing through the outbox", () => {
   it("takes a movement another device already deleted as the state it asked for", async () => {
     const vault = await vaultWith();
     await vault.db.put("transactions", transactionRecord(transaction({ id: "t1" })));
-    // Another device deleted it first: the batch answers `duplicate`, which is the state the
-    // operation asked for.
+    // Another device deleted it first, so `duplicate` is the state the operation asked for.
     answerBatch(fetchMock, () => ({ status: "duplicate" }));
 
     await deleteTransaction("t1");
@@ -225,8 +222,7 @@ describe("writing through the outbox", () => {
       createCategory({ name: "comida", type: "EXPENSE", color: "GREEN" }),
     ).rejects.toMatchObject({ code: "DUPLICATE" });
 
-    // Nothing dangles: the row the device minted is the server's row now (F-57), and the queue is
-    // empty — the operation did land, on a row that already existed.
+    // F-57: the minted row is the server's row now, and the operation did land.
     expect(await pendingOperations(vault.db)).toEqual([]);
     expect((await vault.db.getAll("categories")).map((record) => record.id)).toEqual(["c-server"]);
   });
@@ -243,23 +239,19 @@ describe("writing through the outbox", () => {
     reportOnline(true);
     await requestSync();
 
-    // It stays for the tray with what the user typed still in its envelope, instead of being
-    // undone and dropped: nobody was there to be told why it went.
+    // Nobody was there to be told why it went, so it stays for the tray with its envelope.
     const [left] = await pendingOperations(vault.db);
     expect(left).toMatchObject({
       status: "failed",
       lastError: "FUTURE_DATE",
       payload: { body: { amount: 35 } },
     });
-    // The row shows the server's version while the operation is stuck (D-23); the sheet is where
-    // this device's version lives from here on.
+    // D-23: the row shows the server's version while the operation is stuck.
     expect((await vault.db.get("transactions", "t1"))?.row.amount).toBe(20);
   });
 });
 
-// Trap 7.3 seen from the write side: the browser refuses the write because there is no room left.
-// The whole point of §4.1 is that the row and its operation go in ONE transaction — so a refusal
-// leaves neither, and the form is told instead of showing a movement that was never saved.
+// Trap 7.3: §4.1 puts the row and its operation in ONE transaction, so a refusal leaves neither.
 describe("when IndexedDB refuses the write", () => {
   it("fails loudly and leaves nothing half-written", async () => {
     const vault = await vaultWith();

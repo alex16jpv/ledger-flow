@@ -15,9 +15,7 @@ import { account, openTestVault, wipeVaults } from "@/lib/testing/vault";
 
 import { SyncStatusView } from "./SyncStatusView";
 
-// F-85: "Offline ready" describes the worker's cache, and the app only registers a worker in a
-// production build. These tests are about a device that has one; the last one is about a build that
-// has none on purpose.
+// F-85: the app registers a worker only in a production build, and these rows describe its cache.
 vi.mock("@/lib/flags", async (importOriginal) => {
   const original = await importOriginal();
   return { ...(original as object), appEnvironment: "production" };
@@ -115,8 +113,7 @@ describe("Sync status", () => {
     expect(screen.getByText("Browser tab")).toBeInTheDocument();
   });
 
-  // H-11: the pull stamps `syncedAt` every time it drains the feed, not only when a whole snapshot
-  // comes down, and the row used to be called "Last full sync".
+  // H-11: the pull stamps `syncedAt` on every drain of the feed, not only on a whole snapshot.
   it("says its date is when the copy caught up, not when it was downloaded whole", async () => {
     const vault = await openTestVault("u1");
     await vault.db.put("meta", { key: "syncedAt", value: "2026-09-10T12:00:00.000Z" });
@@ -154,8 +151,7 @@ describe("Sync status", () => {
     expect(screen.queryByText("Last error: NETWORK")).not.toBeInTheDocument();
   });
 
-  // F-54: nobody could tell when a device had finished preparing; "Last synced" only ever spoke
-  // for the data, never for the screens.
+  // F-54: Last synced only ever spoke for the data, never for the screens.
   it("says the device is ready when both the data and the screens are here", async () => {
     warmScreens(SHELL_SCREENS);
     const vault = await openTestVault("u1");
@@ -170,8 +166,7 @@ describe("Sync status", () => {
     ).toBeInTheDocument();
   });
 
-  // F-85: a build with no worker has no screens to copy, so the row says so instead of promising a
-  // wait that never ends.
+  // F-85: a build with no worker has no screens to copy, so the row says so.
   it("says offline ready is not available where the app registers no worker", async () => {
     withWorker(false);
     const vault = await openTestVault("u1");
@@ -219,8 +214,7 @@ describe("Sync status", () => {
     expect(screen.queryByText("Ready")).not.toBeInTheDocument();
   });
 
-  // F-41: without a session nothing below this row reaches the server, so the screen says so and
-  // offers the way back instead of leaving "Sign out" as the only door.
+  // F-41: without a session nothing below this row reaches the server.
   it("says the session is gone and offers to sign in again", async () => {
     const vault = await openTestVault("u1");
     setCurrentVault(vault);

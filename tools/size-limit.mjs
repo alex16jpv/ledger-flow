@@ -2,17 +2,10 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
-// Budgets exclude the shared Next/React runtime (reported separately): only route-owned JS counts.
-// A budget can match more than one route: the heaviest of them is the one reported and the one that
-// has to fit. The `(app)` group had a pattern that matched no route at all, so the authenticated app
-// went unwatched from W-01 to F-10 — the group has no `page.tsx` of its own, every screen is a
-// segment below it.
+// F-10: budgets exclude the shared runtime, and a pattern matching no route watches nothing.
 const BUDGETS = [
   { name: "landing", route: /^(?:\/\(public\))?(?:\/\[locale\])?\/page$/, limitKb: 60 },
-  // `dev/` is the component playground, built but never linked from the app. Every `(app)` screen
-  // sits within 10 kB of every other, because they share the shell, the providers and the offline
-  // stack; the heaviest measures 183.5 kB gz since F-70 took Zod's locales out of the bundle, so the
-  // 200 kB budget is a real limit again and not an aspiration.
+  // F-70 took Zod's locales out, so the heaviest is 183.5 kB gz and 200 kB is a real limit.
   { name: "app screen", route: /^(?:\/\[locale\])?\/\(app\)\/(?!dev\/).+\/page$/, limitKb: 200 },
 ];
 
@@ -61,8 +54,7 @@ let failed = false;
 for (const budget of BUDGETS) {
   const matching = measured.filter((entry) => budget.route.test(entry.route));
   if (matching.length === 0) {
-    // A budget that matches nothing is a budget that watches nothing, and it used to say so by
-    // printing no line at all (F-10).
+    // F-10: a budget that matches nothing used to say so by printing no line at all.
     failed = true;
     console.log(`size-limit: FAIL ${budget.name} matches no route`);
     continue;

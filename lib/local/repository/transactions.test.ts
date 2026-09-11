@@ -83,8 +83,7 @@ function feedPage(
 ): SyncChangesResponse {
   return {
     serverTime: "2026-09-03T12:00:00.000Z",
-    // The profile rides along: a window is a run of local days, so without its zone the mirror
-    // declines a filtered read instead of cutting the days somewhere else.
+    // Without the profile's zone the mirror declines a filtered read instead of cutting days.
     changes: {
       user: profile({ id: "u1", timezone }),
       accounts: [],
@@ -118,8 +117,7 @@ afterEach(async () => {
 });
 
 describe("the transaction list through the repository", () => {
-  // O-F2b: the page the mirror builds is the page the endpoint answers — order, total, cursor and
-  // `hasMore` included — and from here it is the one the screen gets with network too.
+  // O-F2b: order, total, cursor and `hasMore` included, with network too once a pull drained.
   it("asks the server until a pull has drained and pages the mirror from then on", async () => {
     const served: TransactionList = {
       data: [dinner, salary, coffee].map(apiRow),
@@ -153,8 +151,7 @@ describe("the transaction list through the repository", () => {
     expect(ids(await readTransactions({ limit: 30 }))).toEqual(["t7b", "t7a", "t6"]);
   });
 
-  // F-15: with nothing to ask of each row the index counts the set and the walk stops at the page,
-  // so a page of an infinite scroll stops costing O(n). A filter still has to look at every row.
+  // F-15: with nothing to ask of each row the index counts the set and the walk stops at the page.
   it("counts the same filtered set whether or not the walk stops at the page", async () => {
     await mirrorOf(ALL);
 
@@ -220,8 +217,7 @@ describe("the local cursor", () => {
     expect(second.pagination.total).toBe(6);
   });
 
-  // The server reads the pivot's date without the deletedAt guard, so a row deleted between two
-  // pages still says where the list was; it just never comes back in one.
+  // The server reads the pivot's date without the deletedAt guard, so a tombstone still anchors.
   it("never hands back a transaction that was deleted, cursor included", async () => {
     const vault = await openTestVault("u1");
     await pullChanges(vault, { fetchPage: () => Promise.resolve(feedPage(ALL)) });
@@ -280,8 +276,7 @@ describe("the screen filters against the mirror", () => {
   });
 
   it("takes a bound written with an offset instead of dropping rows of its own day (F-17)", async () => {
-    // Midnight in a −05:00 zone is 05:00 UTC, but as a string it sorts at "T00", below every row of
-    // its own day: an early row inside the window would fall out of it without a word.
+    // Midnight in a −05:00 zone is 05:00 UTC but sorts at T00, below every row of its own day.
     const early = transaction({ id: "t5a", date: "2026-08-05T02:00:00.000Z" });
     await mirrorOf([...ALL, early]);
 
@@ -379,8 +374,7 @@ describe("one transaction and the tag list", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  // F-46: a deleted row is a 404 everywhere but the sync feed, and the tombstone is enough to say
-  // so — asking the server was the one data read that left the device with no network.
+  // F-46: a deleted row is a 404 everywhere but the sync feed, and the tombstone says so.
   it("answers 404 for a deleted transaction from its own tombstone, without a request", async () => {
     await mirrorOf(ALL);
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));

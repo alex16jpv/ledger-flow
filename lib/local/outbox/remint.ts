@@ -10,9 +10,7 @@ import {
 } from "../schema";
 import { type VaultDb, type WriteTransaction, writeTransaction } from "./queue";
 
-// The id lives in three places: the row in the mirror, the rows that name it, and the operations
-// still queued — as their own `entityId`, in their `dependsOn`, and inside the body they will
-// replay. All of them move together or the queue starts pointing at a row that is not there.
+// The id lives in the row, the rows naming it and the queue; all of them move together.
 const REFERENCE_KEYS = ["fromAccountId", "toAccountId", "categoryId", "id"] as const;
 
 // Returns the same object when nothing in it named the old id, so a caller can tell a rewrite apart.
@@ -33,8 +31,7 @@ function rewriteBody(body: unknown, oldId: string, newId: string): unknown {
   return changed ? next : body;
 }
 
-// The balance projection keys a movement's effect by account id (`projectBalances`), so the rows an
-// effect holds have to move with the account or the re-minted account loses its queued movements.
+// `projectBalances` keys an effect by account id, so the rows inside it move with the account.
 function rewriteEffect(effect: unknown, oldId: string, newId: string): unknown {
   if (typeof effect !== "object" || effect === null) return effect;
   const { before, after } = effect as { before?: unknown; after?: unknown };
@@ -48,8 +45,7 @@ function rewriteEffect(effect: unknown, oldId: string, newId: string): unknown {
 const moved = <T extends { id: string }>(server: T | undefined, newId: string): T | undefined =>
   server && { ...server, id: newId };
 
-// A re-mint moves the row to an id nobody has; a merge (F-57) moves it to a row the mirror already
-// holds — the server's — and that one stays as it is: it is the truth the minted row just landed on.
+// F-57: a merge lands on a row the mirror already holds — the server's — and that one stays.
 async function moveRow(
   tx: WriteTransaction,
   entity: OutboxEntity,
@@ -94,8 +90,7 @@ async function moveRow(
 const swapId = (id: string | null, oldId: string, newId: string): string | null =>
   id === oldId ? newId : id;
 
-// The baseline kept aside for a row with queue (D-24) names the same ids as the row: it moves too,
-// or the next reconcile would put the old id back.
+// D-24: the baseline kept aside names the same ids, or the next reconcile puts the old id back.
 async function moveReferences(
   tx: WriteTransaction,
   entity: OutboxEntity,
@@ -143,9 +138,7 @@ async function moveReferences(
   }
 }
 
-// F-21, the answer to `409 ID_TAKEN`: the id belongs to another user (O-B1 with D-17), so the row
-// takes a new one and goes back in the queue. `reminted` makes it once and only once — a second
-// collision on a freshly minted UUID v7 is not a coincidence to keep retrying, it is a bug.
+// F-21 (O-B1 with D-17): `reminted` makes it once — a second collision on a v7 is a bug.
 export async function remint(
   db: VaultDb,
   entity: OutboxEntity,

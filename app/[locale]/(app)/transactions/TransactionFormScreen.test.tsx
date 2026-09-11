@@ -170,8 +170,7 @@ describe("NewTransactionScreen", () => {
     });
   });
 
-  // F-66, the preventive half: the form's guard runs on this device's clock, so a device that runs
-  // ahead accepts a date the server will refuse and only says so after the queue is stuck.
+  // F-66, the preventive half: the form's guard runs on this device's clock, not the server's.
   it("warns when this device's clock runs ahead of the server's", async () => {
     const vault = await openTestVault("u1");
     await rememberServerTime(
@@ -230,8 +229,7 @@ describe("EditTransactionScreen", () => {
     await waitFor(() => {
       expect(calls("PUT")).toHaveLength(1);
     });
-    // Only what was touched travels: a body that also named the amount and the date would make the
-    // queue treat every two-device disagreement about this row as a money conflict (§1 example 3).
+    // §1 example 3: only what was touched travels, or every disagreement becomes a money conflict.
     expect(JSON.parse(calls("PUT")[0]?.[1]?.body as string)).toEqual({ description: "Taxi" });
     expect(push).toHaveBeenCalledWith("/transactions");
 
@@ -244,8 +242,7 @@ describe("EditTransactionScreen", () => {
     expect(await screen.findByText("Transaction deleted")).toBeVisible();
   });
 
-  // Owner report after R-3b: a quick capture edited through the full form, category included, kept
-  // its "To review" badge. The form applies the inbox's rule (P-17).
+  // P-17: a quick capture edited through the full form with a category is no longer To review.
   it("completes a quick capture when the full form saves it with a category", async () => {
     fetchMock.mockImplementation((input, init) => {
       const url = urlOf(input);

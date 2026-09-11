@@ -13,8 +13,7 @@ export type SpendingType = Extract<CategoryType, "EXPENSE" | "INCOME">;
 
 export type CategoryFilters = CategoryListParams;
 
-// Reads go through the repository, which falls back to the offline mirror; writes go through the
-// outbox (O-F4). `restore-defaults` stays a plain call: the server mints the rows and their ids.
+// O-F4: reads via the repository, writes via the outbox; `restore-defaults` stays a plain call.
 export {
   archiveCategory,
   createCategory,

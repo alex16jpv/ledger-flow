@@ -9,19 +9,13 @@ import type { VaultSchema } from "../schema";
 
 type ReadSource = "server" | "mirror";
 
-// O-F2b: the mirror is the primary path, network or not (decision 12.2), and the server answers only
-// what the mirror cannot — no vault, no snapshot drained yet, or a question it does not know how to
-// ask. Setting this back to "server" is the whole way back to the fallback of O-F2a.
+// O-F2b (decision 12.2): setting this back to `server` is the whole way back to O-F2a.
 const READ_SOURCE: ReadSource = "mirror";
 
-// Returning undefined means "the mirror cannot answer this", not "there is nothing": the caller then
-// asks the server, which either succeeds or fails with a real error instead of a fabricated one.
-// "There is nothing" is an answer too, and the mirror gives it by throwing `mirrorNotFound`.
+// undefined is the mirror cannot answer; there is nothing is `mirrorNotFound`, which throws.
 export type MirrorReader<T> = (db: IDBPDatabase<VaultSchema>) => Promise<T | undefined>;
 
-// The 404 the API would answer for a row the mirror knows is gone (F-46): a deleted transaction
-// keeps its tombstone, so asking the server — which with no network is not there — told the screen
-// nothing the mirror did not already know, and was the one data read that left the device offline.
+// F-46: a deleted transaction keeps its tombstone, so no request is needed to answer 404.
 export function mirrorNotFound(entity: string, id: string): ApiError {
   return new ApiError({
     status: 404,
@@ -35,9 +29,7 @@ let current: VaultHandle | null = null;
 let opening: Promise<VaultHandle | null> | null = null;
 let opened: ((handle: VaultHandle | null) => void) | null = null;
 
-// The screens render and fire their queries before the frame's effects run, so a read that decided
-// on `current` alone went to the server with a full mirror sitting there (F-31). The frame raises
-// this gate while it renders; `startMirror` lowers it with the handle, or with null when none opens.
+// F-31: the frame raises this gate while it renders; `startMirror` lowers it with the handle.
 export function expectVault(): void {
   opening ??= new Promise<VaultHandle | null>((resolve) => {
     opened = resolve;
@@ -54,9 +46,7 @@ export function currentVault(): VaultHandle | null {
   return current;
 }
 
-// What a write has to wait for before deciding it has no vault (R-3 §B3): the screens fire their
-// first save as early as they fire their first read, and going straight to the server there would
-// skip the outbox on exactly the load where the queue is the only thing that survives.
+// R-3 §B3: a write must wait too, or the first save of a load would skip the outbox.
 export async function vaultReady(): Promise<VaultHandle | null> {
   if (opening) await opening;
   return current;
@@ -68,8 +58,7 @@ export function resetVaultGate(): void {
   opened = null;
 }
 
-// A mirror that never finished a snapshot would answer with a fraction of the data and look like an
-// empty account; syncedAt is written only by a drained pull.
+// `syncedAt` is written only by a drained pull; a fraction of the data looks like an empty account.
 async function mirrorReady(vault: VaultHandle): Promise<boolean> {
   const record = await vault.db.get("meta", "syncedAt");
   return typeof record?.value === "string";
@@ -88,8 +77,7 @@ export async function read<T>(
   return (await fromMirror(vault.db)) ?? fromServer();
 }
 
-// The shape GET /accounts and GET /categories return for a first page, so a screen cannot tell the
-// two sources apart: the server pages these by _id ascending, which is IndexedDB's own key order.
+// The server pages these by `_id` ascending, which is IndexedDB's own key order.
 export function mirrorPage<T extends { id: string }>(
   rows: T[],
   limit: number,

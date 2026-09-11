@@ -41,8 +41,7 @@ export async function POST(request: NextRequest) {
         .catch(() => null)) as {
         code?: unknown;
       } | null;
-      // A 401 nobody signed is not the session's: it costs the cookies, and with them the way
-      // back, for what may be an edge or a gateway having a bad minute (H-10).
+      // H-10: a 401 nobody signed is not the session's, and it would cost the cookies.
       if (!isSessionVerdict(body?.code)) return error;
       const ended = endExpiredSessionResponse();
       ended.headers.forEach((value, key) => {

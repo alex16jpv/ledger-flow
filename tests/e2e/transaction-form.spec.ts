@@ -118,8 +118,7 @@ test("an adjustment sends only the chosen side, and a far-future date cannot be 
   await page.getByRole("button", { name: /^Account/ }).click();
   await page.getByRole("dialog", { name: "Account" }).getByRole("option", { name: /Cash/ }).click();
   await page.getByRole("button", { name: "Decrease balance" }).click();
-  // F-05: a date the server would refuse is no longer reachable — the calendar stops at tomorrow
-  // and says why, so the error this test used to provoke cannot be produced from the form.
+  // F-05: the calendar stops at tomorrow, so the error this used to provoke is unreachable.
   await page.getByRole("button", { name: /^Date/ }).click();
   const calendar = page.getByRole("dialog", { name: "Date" });
   await expect(calendar.getByRole("button", { name: "Next month" })).toBeDisabled();

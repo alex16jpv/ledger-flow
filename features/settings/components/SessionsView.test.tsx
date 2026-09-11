@@ -75,8 +75,7 @@ describe("SessionsView", () => {
     expect(onSignOutAll).toHaveBeenCalled();
   });
 
-  // R-3b §C: with no network the request cannot reach the server, so the sign-out would only clear
-  // this device and leave the account signed in. It waits, and says why.
+  // R-3b §C: with no network the sign-out would clear this device and leave the account in.
   it("does not offer to sign out every device while offline", async () => {
     fetchMock.mockResolvedValue(json({ data: sessions }));
     reportOnline(false);

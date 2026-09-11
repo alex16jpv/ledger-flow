@@ -44,12 +44,7 @@ export async function reconcileContext(tx: WriteTransaction): Promise<ReconcileC
 const sameEffect = (left: MoneyEffect | undefined, right: MoneyEffect): boolean =>
   JSON.stringify(left ?? null) === JSON.stringify(right);
 
-// D-24: for every row the mirror keeps the server's version and, on top of it, what the queue will
-// still send. Everything that learns something new about a row — a page of the feed, the answer to
-// a write, the `current` of a 409, a discard, a retry — comes through here, so the row on screen,
-// the version kept aside for the sheet and the money effects never drift apart. Without `server`
-// the row's own baseline is used; with no operation left on the row the baseline is dropped, and
-// the row is the server's again.
+// D-24: everything that learns something about a row comes through here, so nothing drifts.
 export async function reconcileRow(
   tx: WriteTransaction,
   entity: OutboxEntity,
@@ -78,10 +73,7 @@ export async function reconcileRow(
       .put(transactionRecord(row as SyncTransaction, kept as SyncTransaction));
   }
 
-  // The balance projection is the server's figure plus what the queue moved, so each effect has to
-  // start from the server's row — the one the feed or the answer just brought, not the one the
-  // mirror held when the write was queued. Only when the server has the row: a create still in the
-  // queue keeps its own `before: null`.
+  // Each effect starts from the server's row just brought, and only when the server has it.
   if (entity !== "transaction" || mine.some((op) => isCreate(op.action))) return;
   const outboxStore = tx.objectStore("outbox");
   for (const step of steps) {
@@ -95,10 +87,7 @@ export async function reconcileRow(
   }
 }
 
-// A removal the server confirmed without sending the row back (a `transaction:delete` answers a
-// message; a delete that was already gone answers 404 or, in a batch, `duplicate`): the baseline
-// moves the way the operation asked, because the server did do it and nothing else will say so
-// until the next pull.
+// The server did it and nothing else says so until the next pull, so the baseline moves.
 export async function reconcileRemoval(
   tx: WriteTransaction,
   operation: OutboxOperation,

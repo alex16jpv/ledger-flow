@@ -2,8 +2,7 @@ import type { SyncTransaction } from "@/types/api";
 
 import { fromCents, toCents } from "./money";
 
-// The fields the figure needs, not the whole row: this runs over the mirror and over the parity
-// fixtures, which carry a subset of Account.
+// The fields the figure needs: this runs over the mirror and over the parity fixtures.
 export interface BalanceAccount {
   id: string;
   openingBalance: number;
@@ -19,8 +18,7 @@ export interface AccountBalance {
   balance: number;
 }
 
-// Opening balance plus the effect of the live rows, in the order the accounts came. It is a
-// projection, never a figure the server sent: whatever paints it marks it (invariant 2).
+// Invariant 2: a projection, never a figure the server sent, and whatever paints it marks it.
 export function deriveBalances(
   accounts: BalanceAccount[],
   transactions: BalanceTransaction[],

@@ -63,9 +63,7 @@ test("a new user edits the profile, changes currency and time zone, reviews sess
   page,
   request,
 }) => {
-  // F-83: seven screens before the delete, and the delete is a round trip plus purging the vault
-  // plus a navigation. Under eight workers that does not fit in Playwright's default 30 s, and the
-  // failure then pointed at whatever step the clock happened to stop on.
+  // F-83: seven screens plus a delete do not fit in Playwright's default 30 s under eight workers.
   test.setTimeout(120_000);
   const email = `e2e-settings-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@ledgerflow.test`;
   const password = "LedgerFlow!2026";
@@ -122,9 +120,7 @@ test("a new user edits the profile, changes currency and time zone, reviews sess
   const remove = page.getByRole("dialog", { name: "Delete my account" });
   await expect(remove.getByRole("button", { name: "Delete account" })).toBeDisabled();
   await remove.getByRole("textbox").fill("DELETE");
-  // F-83: deleting is a round trip, then purging the vault, then a navigation, and waiting only for
-  // the URL blamed the navigation when what was slow was the request. The request is awaited first,
-  // so a failure says which half broke.
+  // F-83: the request is awaited before the URL, so a failure says which half broke.
   const deleted = page.waitForResponse(
     (response) =>
       response.request().method() === "DELETE" && response.url().includes("/api/users/"),
@@ -137,9 +133,7 @@ test("a new user edits the profile, changes currency and time zone, reviews sess
   await expect(page.getByText(/Your account was deleted/)).toBeVisible();
 });
 
-// The owner could only read a fraction of each session row on his phone. The width is set here
-// because the suite's phone is 412px wide, where the old layout cut only 3-5px off each fact; at
-// 375px (iPhone SE, and close to the 390px of his) it showed 73% of each and that is the damage.
+// 375px, not the suite's 412px: at 412 the old layout cut only 3–5 px off each fact.
 test("no fact in a session row is cut off at its own width", async ({ page, request }) => {
   await signedInPage(page, request);
   await page.setViewportSize({ width: 375, height: 700 });

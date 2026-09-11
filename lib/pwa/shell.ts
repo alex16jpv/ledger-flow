@@ -1,8 +1,7 @@
 import { isEntityId } from "@/lib/api/entity-id";
 import { DEFAULT_LOCALE, isAppLocale, localeOf, localePrefix } from "@/lib/i18n/locales";
 
-// Every first segment of the `(app)` group: what the worker may answer from its own caches without
-// leaving the frame. Anything else (the landing, login, the legal pages) stays on `defaultCache`.
+// Anything else — the landing, login, the legal pages — stays on `defaultCache`.
 const APP_SEGMENTS = [
   "home",
   "transactions",
@@ -14,9 +13,7 @@ const APP_SEGMENTS = [
   "sync",
 ] as const;
 
-// Every static route of `(app)`, so one the user never opened still has a shell with no network
-// (§6 O-F6). `shell.test.ts` checks this list against the route files: a screen added without an
-// entry here is a screen that answers `offline.html` the first time it is needed offline (F-47).
+// F-47: `shell.test.ts` checks this against the route files; a missing entry is `offline.html`.
 export const SHELL_PATHS = [
   "/home",
   "/transactions",
@@ -38,9 +35,7 @@ export const SHELL_PATHS = [
   "/sync",
 ] as const;
 
-// The dynamic routes, cached once per template rather than once per id: the document and the RSC
-// payload of a detail screen carry no id (the screen reads it from the URL, `useDetailRouteId`), so
-// one entry answers every row — including one created on this device with no network (F-48).
+// F-48: one entry per template — the screen reads its id from the URL, not from the payload.
 export const DETAIL_TEMPLATES = [
   "/transactions/[id]",
   "/transactions/[id]/edit",
@@ -66,8 +61,7 @@ export function rewrittenPath(pathname: string): string | null {
 
 export const WARM_SHELL_MESSAGE = "ledger-flow-warm-shell";
 
-// The worker's answer when it has been through the list: the page has no other way to know the
-// warm ended, and "Ready to use offline" is a promise nobody should make early (F-54).
+// F-54: the page has no other way to know the warm ended.
 export const SHELL_WARMED_MESSAGE = "ledger-flow-shell-warmed";
 
 export interface WarmShellMessage {
@@ -80,8 +74,7 @@ function withoutLocale(pathname: string): string {
   return locale === DEFAULT_LOCALE ? pathname : pathname.slice(locale.length + 1);
 }
 
-// P-33 (owner, 2026-09-08): the landing, in either locale. Online the proxy sends a device that
-// carries the marker to `/home`; with no network nothing on the server runs, so the worker answers.
+// P-33 (owner, 2026-09-08): with no network nothing on the server runs, so the worker answers.
 export function isLandingPath(pathname: string): boolean {
   return withoutLocale(pathname) === "/" || pathname === "/";
 }
@@ -101,9 +94,7 @@ export function templatePath(pathname: string): string {
   return [...segments.slice(0, at), "[id]", ...segments.slice(at + 1)].join("/");
 }
 
-// One entry per route: a filter, a month and Next's own `_rsc` token live in the query string, and
-// neither the document nor the RSC payload behind them depends on it (F-06); a row's id lives in
-// the path, and the shell of a detail route does not depend on it either (F-48).
+// F-06 with F-48: query strings and row ids change the URL, not the document behind it.
 export function shellCacheKey(url: string): string {
   const parsed = new URL(url);
   return `${parsed.origin}${templatePath(parsed.pathname)}`;

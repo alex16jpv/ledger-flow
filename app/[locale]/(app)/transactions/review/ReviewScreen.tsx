@@ -59,8 +59,7 @@ export function ReviewScreen() {
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
   const [failures, setFailures] = useState<Record<string, ErrorMessageKey>>({});
   const [confirming, setConfirming] = useState(false);
-  // What `POST /sync` warned about the movements that landed without their category (F-57). Read
-  // once per visit and pruned there: a notice outlives its row by nothing.
+  // F-57: what `POST /sync` warned about; read once per visit and pruned there.
   const [dropped, setDropped] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {

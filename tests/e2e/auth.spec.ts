@@ -12,8 +12,7 @@ test("protected routes redirect guests to the localized login with a next parame
   expect(new URL(es.headers().location ?? "", APP).href).toBe(`${APP}/es/login?next=%2Fsettings`);
 });
 
-// F-75: `/sync` was the one `(app)` screen missing from APP_PREFIXES, so it opened without a session
-// and never carried the noindex header the rest of the app does.
+// F-75: `/sync` was the one `(app)` screen missing from APP_PREFIXES.
 test("the attention screen is protected like the rest of the app", async ({ request }) => {
   const response = await request.get("/sync", { maxRedirects: 0 });
   expect(response.status()).toBe(307);
@@ -84,8 +83,7 @@ test("register sets httpOnly session cookies, refresh rotates them and logout cl
   expect(home.status()).not.toBe(307);
 
   const logout = await request.post("/api/auth/logout", { headers: { origin: APP } });
-  // O-F6 part 2: `"storage"` would delete IndexedDB, and with it the unsent outbox (invariant 7).
-  // What leaves on a logout is `purgeVault`'s decision now, not the header's.
+  // O-F6 part 2: `storage` would delete IndexedDB, and with it the outbox (invariant 7).
   expect(logout.headers()["clear-site-data"]).toContain("cache");
   expect(logout.headers()["clear-site-data"]).not.toContain("storage");
   const afterLogout = await request.get("/api/auth/me");

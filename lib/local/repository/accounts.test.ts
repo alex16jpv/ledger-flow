@@ -42,8 +42,7 @@ async function mirrorOf(accounts: Account[]): Promise<void> {
 }
 
 describe("accounts through the repository", () => {
-  // O-F2b: the mirror answers with network too, and the answer is the server's own, byte for byte.
-  // Until a pull has drained there is nothing to answer with, and only then does the server serve.
+  // O-F2b: with network too — the server serves only until the first pull has drained.
   it("asks the server until a pull has drained and reads the mirror from then on", async () => {
     const served: AccountList = {
       data: [cash, bank],

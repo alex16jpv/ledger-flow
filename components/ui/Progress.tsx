@@ -7,8 +7,7 @@ export interface ProgressProps {
   value: number;
   max?: number;
   marker?: number;
-  // What the mark means, in words. With it the mark becomes a focusable control with a tooltip
-  // (7.7, F-08); without it, a line nobody can ask about.
+  // 7.7, F-08: with it the mark is a focusable control with a tooltip; without it, just a line.
   markerLabel?: string;
   thin?: boolean;
   color?: ColorToken | null;
@@ -37,8 +36,7 @@ export function Progress({
   const width = `${Math.min(100, Math.max(0, ratio * 100))}%`;
   const at = `${Math.min(100, Math.max(0, (marker ?? 0) * 100))}%`;
   return (
-    // The bar clips its fill; the mark and its tooltip live outside that, or the bubble would be
-    // cut off by the very element it explains.
+    // The bar clips its fill, so the mark and its tooltip live outside it or get cut off.
     <div className={cn("relative", className)} style={featureColorStyle(color)}>
       <div
         role="progressbar"

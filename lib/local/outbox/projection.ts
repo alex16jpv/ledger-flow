@@ -8,9 +8,7 @@ export interface ProjectedAccount {
   balance: number;
 }
 
-// The server's `balance` from the mirror plus the effect of the operations it has not seen. The
-// rule is borrowed from `deriveBalances` rather than restated, so the oracle and the screen's
-// recipe agree by construction (D-18); with an empty queue this is the server's own figure.
+// D-18: the rule is borrowed from `deriveBalances`, so the oracle and the screen agree.
 export function projectBalances(
   accounts: ProjectedAccount[],
   operations: OutboxOperation[],
@@ -24,8 +22,7 @@ export function projectBalances(
     if (effect.after) after.push(effect.after);
   }
 
-  // Opening at zero turns the oracle into a pure delta, and the sums stay in minor units until the
-  // single division at the end: adding two rounded floats is how a cent goes missing.
+  // Opening at zero makes it a pure delta, and sums stay in minor units to the last division.
   const opening = accounts.map((account) => ({ id: account.id, openingBalance: 0 }));
   const added = new Map(deriveBalances(opening, after).map((row) => [row.accountId, row.balance]));
   const removed = new Map(

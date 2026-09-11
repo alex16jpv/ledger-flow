@@ -15,8 +15,7 @@ import {
 } from "../offline";
 import { expectNoAxeViolations } from "./axe";
 
-// §1 examples 3, 4, 5 and 7, and §6 O-F7's second bullet: two devices of the same user, one of them
-// with no network. The tablet works through its own browser, like a person on the other side.
+// §1 examples 3, 4, 5 and 7, and §6 O-F7: two devices of one user, one with no network.
 async function device(
   browser: Parameters<Parameters<typeof test>[2]>[0]["browser"],
   request: Parameters<Parameters<typeof test>[2]>[0]["request"],
@@ -281,8 +280,7 @@ test("an account archived online offers Restore the account, and the movement go
 }) => {
   test.setTimeout(240_000);
   const user = await freshUser(request, "archived");
-  // Not the user's default account: the server refuses to archive that one, and the screen's button
-  // is disabled for it. This is the spare the phone will spend from.
+  // Not the default account: the server refuses to archive that one and the button is disabled.
   const created = await request.post("/api/accounts", {
     headers: { origin: APP },
     data: { name: "Wallet", type: "CASH", balance: 100_000 },

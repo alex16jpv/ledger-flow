@@ -24,8 +24,7 @@ describe("wipeThisDevice", () => {
     await wipeVaults();
   });
 
-  // P-32: the third exit. Everything this device holds goes, including work nobody else has — which
-  // is why the sheet says the number first.
+  // P-32: everything this device holds goes, which is why the sheet says the number first.
   it("drops the vault, its queue and the marker", async () => {
     const vault = await openTestVault("u1");
     await vault.db.put("accounts", accountRecord(account()));

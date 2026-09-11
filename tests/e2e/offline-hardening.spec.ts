@@ -18,8 +18,7 @@ import { expectNoAxeViolations } from "./axe";
 
 const DAY_MS = 86_400_000;
 
-// §6 O-F7, third bullet, and trap 7.4: the device's clock runs days ahead, so what it records looks
-// like the future to the server. The movement is never lost; it waits in the tray with the reason.
+// §6 O-F7 and trap 7.4: a clock days ahead records what looks like the future to the server.
 test("a clock days ahead earns a refusal the queue keeps, and says why", async ({
   page,
   request,
@@ -35,13 +34,11 @@ test("a clock days ahead earns a refusal the queue keeps, and says why", async (
   await readyForOffline(page);
 
   await context.setOffline(true);
-  // Three days ahead: the form's own guard uses the device's clock, so it lets this through — it is
-  // the server, with a clock of its own, that will not have it.
+  // Three days ahead: the form's guard uses the device's clock, so it lets this through.
   await page.clock.setSystemTime(new Date(Date.now() + 3 * DAY_MS));
   await page.goto("/home");
   await expect(page.getByText("You’re offline.")).toBeVisible();
-  // Through the full form, which carries a date: a quick capture sends none, and the server dates
-  // one of those by its own clock, so it could never be in the future.
+  // A quick capture sends no date, so the server dates it and it could never be in the future.
   await createExpense(page, amount, "OF7 clock ahead");
   await expectPending(page, 1);
 
@@ -56,8 +53,7 @@ test("a clock days ahead earns a refusal the queue keeps, and says why", async (
   await expect(page.getByText(/is more than 24 hours ahead of the server’s time/)).toBeVisible();
   await expect(page.getByText(/clock is 3 days ahead/)).toBeVisible();
 
-  // Invariant 7: refused is not discarded. The movement is still on the device and still in the
-  // queue, and the server never took it.
+  // Invariant 7: refused is not discarded — it is still on the device and still in the queue.
   expect((await outbox(page))[0]).toMatchObject({ status: "failed", lastError: "FUTURE_DATE" });
   expect(await listTransactions(request)).toEqual([]);
   await expectPending(page, 1);
@@ -74,8 +70,7 @@ test("a clock days ahead earns a refusal the queue keeps, and says why", async (
   await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 60_000 }).toBe(0);
 });
 
-// §1 example 2 seen from the other side: the request never reaches the server. Nothing is applied,
-// nothing is lost, and the queue goes out whole when the network comes back.
+// §1 example 2: the request never reaches the server, so nothing is applied and nothing lost.
 test("a request cut before the server sees it leaves the queue exactly as it was", async ({
   page,
   request,
@@ -122,8 +117,7 @@ test("a request cut before the server sees it leaves the queue exactly as it was
   expect(after[0]?.amount).toBe(amount);
 });
 
-// F-42: the refresh token is dead and the vault is not. The app opens, reads and writes; the queue
-// waits for its own user to come back instead of asking a dead session every minute (F-26).
+// F-42 with F-26: the refresh token is dead, the vault is not, and the queue waits for its user.
 test("with a dead session the app still opens, reads and queues, and syncs after signing in again", async ({
   page,
   request,
@@ -160,8 +154,7 @@ test("with a dead session the app still opens, reads and queues, and syncs after
   await expect(sheet).toBeHidden();
   await expectPending(page, 1);
 
-  // The session dies while the device is away. The marker stays, which is the whole of §2.6: it
-  // says which vault this device holds, never that the session is good.
+  // §2.6: the marker stays — it says which vault this device holds, never that the session is good.
   const kept = (await context.cookies()).filter(
     (cookie) => !cookie.name.includes("access") && !cookie.name.includes("refresh"),
   );
@@ -169,8 +162,7 @@ test("with a dead session the app still opens, reads and queues, and syncs after
   await context.addCookies(kept);
   expect(kept.some((cookie) => cookie.name === "__Host-session")).toBe(true);
 
-  // A cold start with no session and no network: the app opens `(app)`, not the login, and reads
-  // its data from the mirror.
+  // A cold start with no session and no network opens `(app)`, not the login.
   await page.reload();
   await page.goto("/transactions");
   await expect(page).toHaveURL(/\/transactions$/);
@@ -178,18 +170,15 @@ test("with a dead session the app still opens, reads and queues, and syncs after
   await expect(page.getByRole("button", { name: /Before the session died/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Pending sync/ })).toHaveCount(1);
 
-  // The network comes back but the session does not: the app offers the way in and the queue holds
-  // where it is, instead of asking a dead session the same question every minute (F-26).
+  // F-26: network back, session not — the queue holds instead of asking every minute.
   await context.setOffline(false);
   await page.waitForTimeout(5_000);
   await expectPending(page, 1);
   expect((await listTransactions(request)).filter((row) => row.amount === amount)).toHaveLength(0);
 
-  // Opening the app with a network and a dead session: it says so and offers the way in, without
-  // being a wall — the queue keeps growing behind it (§2.6).
+  // §2.6: with a network and a dead session it says so without being a wall.
   await page.reload();
-  // P-32 (2026-09-08): with a copy on the device the sheet is a decision with three exits, and
-  // signing in is the first of them. Its title says what the device has, not what it lost.
+  // P-32 (2026-09-08): the title says what the device has, not what it lost.
   const dead = page.getByRole("dialog", { name: "This device has your data, but no session" });
   await expect(dead).toBeVisible({ timeout: 30_000 });
   await dead.getByRole("button", { name: "Sign in to sync" }).click();
@@ -239,8 +228,7 @@ test("the connection strip passes axe with no network and with a queue behind it
   await expectNoAxeViolations(page);
 });
 
-// F-64: the session dies while the app stays open. Nothing is reloaded, so whatever says so has to
-// come from the request that got the 401 — until it does, the queue stops with no explanation.
+// F-64: nothing is reloaded, so what says so has to come from the request that got the 401.
 test("a session that dies with the app open says so without a reload", async ({
   page,
   request,
@@ -276,18 +264,14 @@ test("a session that dies with the app open says so without a reload", async ({
   await expect(sheet).toBeHidden();
   await expectPending(page, 1);
 
-  // A cold start with no session and no network: the app opens in local mode (§2.6), which is the
-  // state F-64 was reported in — the tab that will have to speak is this one.
+  // §2.6: a cold start with no session and no network opens in local mode, where F-64 was seen.
   await page.reload();
   await expect(page.getByText("You’re offline.")).toBeVisible();
 
-  // The network comes back and nobody reloads anything: the queue asks, gets its 401, and the only
-  // thing that can tell the user why nothing syncs is this tab.
+  // Nobody reloads anything: the queue asks, gets its 401, and only this tab can say why.
   await context.setOffline(false);
 
-  // Well under the 30 s of the heartbeat: the app must not need the tick to notice. What tells it is
-  // the answer to the request it just made — a 401 is still an answer, and only the network can
-  // deliver one (F-64). Before that hint existed, this sheet took a whole tick to appear.
+  // F-64: well under the 30 s tick — a 401 is still an answer, and only the network delivers one.
   const dead = page.getByRole("dialog", { name: "This device has your data, but no session" });
   await expect(dead).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("You’re offline.")).toHaveCount(0);
@@ -297,9 +281,7 @@ test("a session that dies with the app open says so without a reload", async ({
   expect((await listTransactions(request)).filter((row) => row.amount === amount)).toHaveLength(0);
 });
 
-// P-32 (owner, 2026-09-08): a device with a copy and no session gets a decision, not an invitation.
-// The one that has to be measured is the second exit: the app must behave exactly as it does with no
-// network, with the network right there.
+// P-32 (owner, 2026-09-08): the app must behave as with no network, with the network right there.
 test("the chosen local-only mode sends nothing to the server, and can be left", async ({
   page,
   context,
@@ -340,9 +322,7 @@ test("the chosen local-only mode sends nothing to the server, and can be left", 
   expect((await listTransactions(request)).filter((row) => row.amount === amount)).toHaveLength(1);
 });
 
-// P-33 (owner, 2026-09-08): with no network the root has to open the app too. The proxy cannot do
-// it — nothing on the server runs — and the landing document is not in the cache either, because a
-// signed-in device is redirected before it ever gets one. The worker answers with the redirect.
+// P-33 (owner, 2026-09-08): nothing on the server runs, so the worker answers with the redirect.
 test("with no network the root opens the app on a device that holds it", async ({
   page,
   context,

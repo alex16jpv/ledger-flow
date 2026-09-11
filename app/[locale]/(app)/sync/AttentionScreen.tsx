@@ -44,12 +44,10 @@ interface Item {
 type View =
   | { kind: "loading" }
   | { kind: "error" }
-  // F-65 keeps its own list: an operation an app update left behind is `pending`, so it never turns
-  // up among the ones the server refused, and its way out is not theirs either.
+  // F-65 keeps its own list: an operation left behind by an update is `pending`, not refused.
   | { kind: "ready"; items: Item[]; blocked: Item[] };
 
-// F-58: the account the operation names was archived online, so trying again as it is would earn the
-// same refusal. Its way out is restoring the account, which travels in the same batch.
+// F-58: an operation naming an account archived online gets out by restoring it, same batch.
 const isArchivedAccount = (operation: OutboxOperation): boolean =>
   operation.status === "conflict" && operation.lastError === "RESOURCE_ARCHIVED";
 
@@ -113,10 +111,7 @@ export function AttentionScreen() {
     return () => {
       live = false;
     };
-    // The queue is the source: a drain that resolved one of these while the tray was open has to
-    // take it off the list rather than leave a decision that no longer exists. The snapshot changes
-    // reference on any change of the queue, which the count alone would miss when one operation is
-    // resolved and another gets stuck in the same drain.
+    // The queue is the source: the snapshot changes reference on any change; a count would miss it.
   }, [reloads, outbox]);
 
   const act = useCallback(
@@ -136,8 +131,7 @@ export function AttentionScreen() {
     act(async () => {
       const vault = currentVault();
       if (!vault) return;
-      // Discarding a create takes its dependents with it, and how many is only knowable before
-      // anything is deleted: the tray says the real number before it asks.
+      // How many dependents a discarded create takes is only knowable before anything is deleted.
       setConfirming({ seqs, impact: await discardImpact(vault.db, seqs) });
     });
 
@@ -181,8 +175,7 @@ export function AttentionScreen() {
       toast.show({ message: t("states.attention.discarded", { count: discarded }) });
     });
 
-  // "Keep it here" is the answer that changes nothing on the device: the operation stays, in case a
-  // future version knows how to migrate it, and the card stops asking for this visit.
+  // Keeping it here leaves the operation in place and stops the card asking for this visit.
   function blockedCard({ operation, name }: Item) {
     const what = t(`states.conflict.entities.${operation.entity}`);
     const said = saidAbout(operation, what);
@@ -248,9 +241,7 @@ export function AttentionScreen() {
         { count: skew.count },
       )}`;
     }
-    // A `conflict` the server explained with a code of its own — a name already taken, a reference
-    // it will not take — never applied either, and the code is the reason. Only `STALE_UPDATE` is
-    // the same row written in two places.
+    // Only `STALE_UPDATE` is the same row written twice; any other code is the server's reason.
     if (operation.status !== "failed" && operation.lastError === "STALE_UPDATE") {
       return t("states.conflict.stale.body", { what });
     }
@@ -264,8 +255,7 @@ export function AttentionScreen() {
     });
   }
 
-  // next-intl types a key against the message tree, and the action is read off the envelope.
-  // `t.has` is the guard; the cast is the one this indirection costs, as in the sheet.
+  // next-intl types keys against the message tree; `t.has` guards the cast this costs.
   type MessageKey = Parameters<typeof t>[0];
   function saidAbout(operation: OutboxOperation, what: string): string {
     const key = `states.conflict.actions.${operation.action}` as MessageKey;
@@ -287,11 +277,9 @@ export function AttentionScreen() {
     const said = saidAbout(operation, what);
     const refused = operation.status === "failed";
     const archived = isArchivedAccount(operation);
-    // The same name would be refused again, so this card has no "Try again": what it offers instead
-    // is the rename, which lives inside the comparison sheet (F-60).
+    // F-60: the same name is refused again, so the exit is the rename in the comparison sheet.
     const taken = isNameTaken(operation);
-    // The date is what the server refused, so the card leads with correcting it; "Try again" stays,
-    // last, for the case where the clock was put right in the meantime (§8.14).
+    // §8.14: the card leads with correcting the date; Try again stays last, for a fixed clock.
     const badDate = isFutureDate(operation);
     return (
       <Card key={operation.seq} className="flex flex-col gap-3 p-4">

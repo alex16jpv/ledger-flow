@@ -49,8 +49,7 @@ beforeEach(() => {
     new Response("{}", { headers: { "content-type": "application/json" } }),
   );
   vi.stubGlobal("fetch", fetchMock);
-  // The tray is what is under test, not the engine: with no network a retry goes back in the queue
-  // and stays there, so the assertions can look at the queue instead of racing a drain.
+  // The tray is under test, not the engine: with no network a retry stays in the queue.
   reportOnline(false);
 });
 
@@ -261,8 +260,7 @@ describe("the Needs your attention tray", () => {
     expect(within(sheet).getByRole("textbox", { name: "New name" })).toHaveValue("Cash (old)");
   });
 
-  // F-66: the reason said "The date can’t be in the future" and the only ways out repeated the
-  // refusal or threw the movement away.
+  // F-66: the reason repeated the refusal and the only exits threw the movement away.
   it("says which date the server refused and leads with correcting it", async () => {
     const vault = await vaultWith([
       {

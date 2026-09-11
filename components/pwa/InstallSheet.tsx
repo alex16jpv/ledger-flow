@@ -11,8 +11,7 @@ import { useInstallPrompt } from "@/lib/pwa/install";
 import { devicePlatform } from "@/lib/pwa/platform";
 import { useMounted } from "@/lib/react/useMounted";
 
-// F-87: where the browser offers to install, this fires its prompt. Where it does not — iOS above
-// all, which has no such event — it shows the steps of the browser in use, and never of another one.
+// F-87: without the browser's install event — iOS — it shows the steps of the browser in use.
 export function InstallSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useTranslations("settings.install.sheet");
   const install = useInstallPrompt();

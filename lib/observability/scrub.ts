@@ -34,8 +34,7 @@ export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
   return { ...breadcrumb, message: breadcrumb.message && redactNumbers(breadcrumb.message) };
 }
 
-// Vercel injects its toolbar into every preview, and what it throws is reported as ours (H-22):
-// the file it threw from is the only thing that tells the two apart.
+// H-22: Vercel's toolbar throws inside every preview, and only the file tells the two apart.
 const VENDOR_PATH = "/_next-live/";
 
 function threwInsideVendorCode(event: ErrorEvent): boolean {

@@ -60,8 +60,7 @@ export function CategoriesView() {
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [conflict, setConflict] = useState<Category | null>(null);
   const archivedId = useId();
-  // F-20: the server mints these ids, so there is nothing the queue could project. It is the one
-  // action on this screen that needs the network, and it says so instead of failing.
+  // F-20: the server mints these ids, so there is nothing the queue could project.
   const offline = useOffline();
 
   const active = useMemo(

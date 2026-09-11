@@ -23,9 +23,7 @@ function setPhase(next: ConnectivityPhase): void {
   emit();
 }
 
-// navigator.onLine is only a hint; W-19 feeds this store from the /api/health heartbeat too.
-// P-32: a device the user put in "this device only" is offline by decision, so nothing may talk it
-// back into being online. Turning the choice off is what lets the next answer through.
+// P-32: `navigator.onLine` is only a hint, and a device the user put offline stays offline.
 export function reportOnline(online: boolean): void {
   reported = true;
   if (online && isLocalOnly()) {
@@ -56,22 +54,16 @@ export function reportNetworkFailure(): void {
   for (const listener of suspectListeners) listener();
 }
 
-// The other hint, and the one that was missing: a request that came back with an answer proves the
-// network is there. Without it the app could stay offline in its own mind for a whole heartbeat
-// after the network returned, and everything that waits on the phase — the strip, the queue, the
-// sheet that asks for a sign-in — waited with it (F-64). The heartbeat still decides; it just
-// decides now instead of in 30 s.
+// F-64: an answer proves the network is there, so the phase moves now instead of in 30 s.
 export function reportNetworkAnswer(): void {
   if (phase !== "offline") return;
   for (const listener of suspectListeners) listener();
 }
 
-// The heartbeat answers a failed request in well under this; what is left is the time a request to
-// a black hole takes to give up (HEALTH_TIMEOUT_MS) plus room for the round trip.
+// `HEALTH_TIMEOUT_MS` for a request to a black hole, plus room for the round trip.
 export const OFFLINE_VERDICT_MS = 6000;
 
-// A failed request is not an error until the heartbeat says the network is there: reporting it
-// straight away files every lost connection as a fault of the app.
+// Reporting a failed request straight away files every lost connection as a fault of the app.
 export function confirmOnline(graceMs = OFFLINE_VERDICT_MS): Promise<boolean> {
   if (phase === "offline") return Promise.resolve(false);
   return new Promise((resolve) => {
@@ -97,10 +89,7 @@ export function onNetworkFailure(listener: Listener): () => void {
 function start(): void {
   if (started || typeof window === "undefined") return;
   started = true;
-  // P-32: the choice comes first. Measured the hard way — with `navigator.onLine` deciding here, a
-  // reload in "this device only" started online and the next write went to the server, which is the
-  // one thing the mode promises not to do.
-  // H-08: and only if nobody decided yet — `navigator.onLine` is a hint and may not undo a report.
+  // P-32 first, and H-08: `navigator.onLine` is a hint and may not undo a report.
   if (!reported) phase = isLocalOnly() || !navigator.onLine ? "offline" : "online";
   window.addEventListener("online", () => {
     reportOnline(true);

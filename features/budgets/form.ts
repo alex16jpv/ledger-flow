@@ -8,8 +8,7 @@ import { BUDGET_PERIOD_TYPES, type RecurringBudgetPeriod } from "./progress";
 
 export const BUDGET_NAME_MAX = 255;
 export const BUDGET_NOTE_MAX = 255;
-// The API accepts up to 20 categories, but the owner limits a budget to one (2026-09-02): a category can
-// only sit in one budget per period type, so several per budget only made overlaps harder to explain.
+// The API accepts 20 categories; the owner limits a budget to one (2026-09-02).
 export const BUDGET_CATEGORIES_MAX = 1;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_CUSTOM_DAYS = 30;

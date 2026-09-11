@@ -253,8 +253,7 @@ describe("the way out of a movement whose account was archived online (F-58)", (
       "account:restore",
       "transaction:create",
     ]);
-    // The movement names the account, so a restore that does not land answers `blocked` instead of
-    // the same refusal (D-30).
+    // D-30: the movement names the account, so a restore that fails answers `blocked`.
     expect(sent[1]?.dependsOn).toEqual(["a1"]);
     expect(await pendingOperations(vault.db)).toEqual([]);
     expect((await vault.db.get("accounts", "a1"))?.row.archivedAt).toBeNull();

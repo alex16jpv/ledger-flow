@@ -5,14 +5,10 @@ export interface ShellReadiness {
   expected: number;
 }
 
-// Announced once per device, not once per session: "Ready to use offline" is news the first time
-// and noise every time after it (F-54). A device, not a user — the shell it counts is the origin's.
+// F-54: once per device, not per session — the shell it counts is the origin's.
 const ANNOUNCED_KEY = "ledger-flow.offline-ready-announced";
 
-// How much of the app this device holds. The page counts the keys the warm should have left in the
-// worker's cache: the Cache API answers the window too, so this is the same number a round-trip to
-// the worker would give, without a message protocol to keep in step. Locale-aware on purpose — a
-// device that only ever ran in Spanish is not ready for English it never warmed.
+// The Cache API answers the window too, so no message protocol; locale-aware on purpose.
 export async function shellReadiness(locale: string): Promise<ShellReadiness> {
   if (typeof caches === "undefined") return { cached: 0, expected: SHELL_SCREENS };
   const urls = shellUrls(locale, window.location.origin);
@@ -33,8 +29,7 @@ export function offlineReadyAnnounced(): boolean {
   }
 }
 
-// The copy this device was told about is gone — a logout, a wipe, a resync — so the statement is no
-// longer true and the next one that finishes has to be announced again.
+// The copy it was said of is gone, so the next one that finishes announces itself again.
 export function forgetOfflineReadyAnnouncement(): void {
   try {
     window.localStorage.removeItem(ANNOUNCED_KEY);

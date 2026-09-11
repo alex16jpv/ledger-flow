@@ -5,9 +5,7 @@ import base from "./playwright.config";
 // Slow enough to follow with the eye when the run is watched headed (npm run demo:offline:watch).
 const slowMo = Number(process.env.DEMO_SLOW_MS ?? 0);
 
-// The demo of gate O-A (plan §8): one long recorded run, kept out of `tests/e2e` so it never joins
-// the suite the sessions compare their baseline against. Everything is recorded — video, trace and
-// an HTML report — because the demo exists to be watched by the owner, not only to pass.
+// Plan §8: kept out of `tests/e2e` so it never joins the suite the baseline is compared against.
 export default defineConfig({
   ...base,
   testDir: "./tests/gate",

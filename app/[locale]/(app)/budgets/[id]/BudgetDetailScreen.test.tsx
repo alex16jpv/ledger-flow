@@ -145,8 +145,7 @@ describe("BudgetDetailScreen", () => {
     expect(screen.getByText("Adjusted")).toBeInTheDocument();
     expect(screen.getByText("Remaining")).toBeInTheDocument();
     expect(screen.getByText("9 days")).toBeInTheDocument();
-    // F-08: the pace mark can be asked what it marks, and only here does the answer also stay on
-    // screen, for a page read with a finger.
+    // F-08: the pace mark can be asked what it marks, and only here the answer stays on screen.
     expect(screen.getByRole("button", { name: /Day 22 of 30/ })).toBeInTheDocument();
     expect(
       screen.getByText(/The mark is today’s pace: \d+% of the period has passed \(day 22 of 30\)/),

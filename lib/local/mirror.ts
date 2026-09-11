@@ -19,15 +19,13 @@ import { purgeVault } from "./purge";
 import { setCurrentVault } from "./repository";
 import { PROFILE_KEY, profileRecord } from "./schema";
 
-// Plan §4.2: pull on open, on regaining focus if the copy is stale, and after a push. Never on a
-// background timer, which is the traffic pattern local-first exists to remove.
+// Plan §4.2: on open, on focus if stale, and after a push — never on a background timer.
 export const PULL_STALE_MS = 5 * 60_000;
 
 export interface MirrorOptions {
   pull?: PullOptions;
   now?: () => number;
-  // F-38: the pull writes to the mirror behind React Query's back, so the screens go on showing
-  // what they read before it. Nothing here knows about React, and the frame passes the bridge.
+  // F-38: the pull writes behind React Query's back; nothing here knows about React.
   onChanged?: () => void;
 }
 
@@ -38,8 +36,7 @@ export function noMirror(): void {
 
 // The running mirror's own pull, so "Force full resync" can ask for one without a second engine.
 let activePull: (() => Promise<void>) | null = null;
-// A background pass swallows its failure so the mirror keeps serving; the resync threw the copy
-// away first, so it needs to know.
+// A background pass swallows its failure; the resync threw the copy away first, so it needs it.
 let lastPullError: Error | null = null;
 
 function takeLastPullError(): Error | null {
@@ -55,8 +52,7 @@ export class ResyncUnavailableError extends Error {
   }
 }
 
-// Ajustes › Sync status: throw the copy away and take it again from the top. The queue is not a
-// copy of anything — it is the only place unsent work exists — so it stays (invariant 7).
+// Invariant 7: the queue is the only place unsent work exists, so a resync leaves it alone.
 export async function forceFullResync(userId: string): Promise<void> {
   if (isLocalOnly()) throw new ResyncUnavailableError("this device is working on its own");
   const pull = activePull;
@@ -77,8 +73,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   let lastPullAt = 0;
   const state = { stopped: false };
 
-  // The feed carries the profile only when it changed, so a mirror filled by pages that never did
-  // has no zone to build a window in — and every windowed read goes to the server (H-14).
+  // H-14: the feed carries the profile only when it changed, so a mirror can end with no zone.
   const ensureProfile = async (vault: VaultHandle): Promise<boolean> => {
     if (await vault.db.get("profile", PROFILE_KEY)) return false;
     const { user } = await fetchCurrentUser();
@@ -92,8 +87,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
       .then(async (result) => {
         lastPullAt = now();
         lastPullError = null;
-        // A profile that cannot be fetched is a failed pass, but it must not cost the screens what
-        // this one did bring, so it is caught here and the next pass tries again.
+        // A profile that cannot be fetched must not cost the screens what this pass did bring.
         let stored = false;
         try {
           stored = await ensureProfile(vault);
@@ -110,13 +104,11 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
       });
   };
 
-  // The engine's discipline (F-32): a request that arrives mid-pull joins the one in flight, which
-  // cannot carry what the server wrote after it started, so it asks for a pass of its own after.
+  // F-32: a request arriving mid-pull joins the one in flight, so it asks for a pass of its own.
   const pull = (): Promise<void> => {
     const vault = handle;
     if (!vault || state.stopped) return Promise.resolve();
-    // P-32: in "this device only" nothing goes out, and a pull is a request like any other. The app
-    // keeps reading the copy it has; the first pull after the choice ends is what catches it up.
+    // P-32: in this-device-only nothing goes out, and a pull is a request like any other.
     if (isLocalOnly()) return Promise.resolve();
     wanted += 1;
     const mine = wanted;
@@ -142,8 +134,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   // The engine owns its own triggers; what it borrows from here is the pull that follows a round.
   const stopEngine = startSyncEngine({ afterRound: pull });
 
-  // F-14: another tab shipping a new schema closes this connection under us. The handle is dead —
-  // every call on it throws — so the reads go back to the server until a fresh one is open.
+  // F-14: another tab's new schema closes this connection, so reads go back to the server.
   const reopen = (): void => {
     if (state.stopped) return;
     handle = null;
@@ -165,8 +156,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
 
   const ready = (async () => {
     if (!isVaultSupported()) return;
-    // Before opening, because opening is what creates it: a marker with no vault behind it is the
-    // browser having evicted one, which is the measurement D-20 asks the app itself to take.
+    // D-20: before opening, because opening is what creates the vault the marker claims.
     const marker = readSessionMarker();
     if (marker?.userId === userId) {
       await reportVaultEvictionIfAny(userId, marker.issuedAt).catch(() => false);
@@ -179,17 +169,13 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     handle = opened;
     noteVaultOpened(userId);
     setCurrentVault(opened);
-    // An app update this build has no migration for left these behind (F-65). The app keeps writing
-    // normally — blocking the record would be worse than not sending the old — so all this does is
-    // make them visible, and the stripe and the tray take it from here.
+    // F-65: the app keeps writing; all this does is make the operations left behind visible.
     setBlockedOperations(opened.blockedSeqs);
-    // The queue survives reloads, so the banner and the marked figures have to know about it before
-    // the first write of the session (invariant 7).
+    // Invariant 7: the queue survives reloads, so the banner knows before the first write.
     await refreshOutboxStatus(opened.db);
     // What the last session learned about this device's clock, before the first form opens (F-66).
     await loadClockOffset(opened.db);
-    // Written in O-F1 and called here for the first time: from this item on the vault holds data,
-    // and without the grant the browser may evict it under storage pressure.
+    // O-F1: from this item on the vault holds data, and without the grant it can be evicted.
     await requestPersistentStorage();
     await pull();
     // Opening the app is a trigger too: whatever the queue kept from the last session goes out now.

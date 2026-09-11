@@ -31,8 +31,7 @@ describe("useInstallPrompt", () => {
     });
   });
 
-  // The bug the owner hit in production: the browser fires the event on the screen the user landed
-  // on, and Settings mounts much later, so the row never appeared.
+  // The browser fires the event on the landing screen, and Settings mounts much later.
   it("reports an install captured before the hook ever mounted", () => {
     runHeadScript();
     fireInstallPrompt();
@@ -54,8 +53,7 @@ describe("useInstallPrompt", () => {
     expect(result.current.state).toBe("available");
   });
 
-  // The owner's call (2026-09-08): the user must be told, so the browser's own invitation stays and
-  // the app's row is a second way in, not a replacement.
+  // Owner's call (2026-09-08): the browser's own invitation stays and the row is a second way in.
   it("lets the browser show its own invitation and keeps the event anyway", () => {
     runHeadScript();
     const event = fireInstallPrompt();

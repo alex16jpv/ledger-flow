@@ -51,8 +51,7 @@ async function mirrorOf(transactions: SyncTransaction[], user: User | null = pro
 const AUGUST = { from: "2026-08-01T05:00:00.000Z", to: "2026-09-01T05:00:00.000Z" };
 
 describe("spending through the repository", () => {
-  // O-F2b: with a drained mirror the buckets are derived, network or not. The URL still has to be
-  // right, because it is what a mirror that cannot answer (no zone yet) falls back to.
+  // O-F2b: the URL still has to be right — it is what a mirror with no zone falls back to.
   it("derives with a mirror to read, and keeps the query it falls back with", async () => {
     fetchMock.mockResolvedValue(json({ groupBy: "day", buckets: [], total: 0 }));
     await mirrorOf([], null);

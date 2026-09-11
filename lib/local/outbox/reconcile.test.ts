@@ -180,8 +180,7 @@ describe("the row the mirror keeps while its queue is not empty", () => {
     reportOnline(false);
     await updateTransaction("t1", { amount: 130 });
     await deleteTransaction("t1");
-    // The batch takes the edit and says nothing about the delete: an operation the server did not
-    // answer for is never taken for landed, so it stays in line.
+    // An operation the server did not answer for is never taken for landed, so it stays in line.
     fetchMock.mockImplementation((_input, init) =>
       Promise.resolve(
         json({

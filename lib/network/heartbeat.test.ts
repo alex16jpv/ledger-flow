@@ -37,8 +37,7 @@ describe("heartbeat", () => {
     stop();
   });
 
-  // F-64: a request that came back is proof the network is there, and waiting for the next tick to
-  // act on it left the app silent for up to 30 s with its queue stopped and nothing on screen.
+  // F-64: waiting for the next tick left the app silent for up to 30 s with its queue stopped.
   it("comes back online as soon as a request is answered, without waiting for the tick", async () => {
     const check = vi.fn<() => Promise<boolean>>().mockResolvedValue(false);
     const stop = startHeartbeat(check);

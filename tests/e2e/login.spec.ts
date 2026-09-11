@@ -31,8 +31,7 @@ test("a user can sign in and lands on home; a wrong password shows one message",
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hi, Login");
 });
 
-// iOS zooms the page in when a focused field is under 16px and does not zoom back out: the value a
-// user types is 16 everywhere (design/spec/typography.md), so nothing has to be pinched back.
+// iOS zooms in on a focused field under 16px and never back out (design/spec/typography.md).
 test("no field is small enough to make iOS zoom in on focus", async ({ page }) => {
   await page.goto("/login");
   const sizes = await page

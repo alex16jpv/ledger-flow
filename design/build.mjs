@@ -2173,9 +2173,7 @@ const paceVariant = (legend = false) => {
 <span class="small muted amount"><b>${money(84000)}</b> left <span class="faint">· 8 days</span></span></div></div>`;
 };
 
-// ─── The viewer ───────────────────────────────────────────────────────────────
-// Everything below is the preview itself — navigation, search, dates, the review queue.
-// It is not part of the design of the app.
+// Everything below is the preview itself — navigation, search, dates — not the app's design.
 
 const plate = (id, title, note, html, o = {}) => ({ id, title, note, html, ...o });
 

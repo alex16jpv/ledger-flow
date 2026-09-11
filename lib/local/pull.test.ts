@@ -140,8 +140,7 @@ describe("pullChanges", () => {
     expect((await vault.db.get("accounts", "a1"))?.row.name).toBe("Wallet");
   });
 
-  // F-38: the screens are made to read again off this flag, and the 60-second overlap replays rows
-  // the mirror already holds, so "rows arrived" would wake them after every push for nothing.
+  // F-38: the 60-second overlap replays rows the mirror holds, so rows arrived is not news.
   it("calls the overlap news only when a stamp actually moved", async () => {
     const vault = await openTestVault("u1");
     const first = account({ id: "a1", name: "Cash", updatedAt: "2026-09-01T00:00:00.000Z" });
@@ -222,8 +221,7 @@ async function queue(vault: VaultHandle, overrides: Partial<OutboxOperation>): P
   });
 }
 
-// D-23 (F-25): the feed is authoritative for the row, and what the queue has not sent yet is
-// projected back on top of it — otherwise a pull undoes an edit made with no network.
+// D-23 (F-25): the feed is authoritative, and the unsent queue is projected back on top.
 describe("a pull with operations still queued", () => {
   afterEach(wipeVaults);
 
@@ -265,8 +263,7 @@ describe("a pull with operations still queued", () => {
 
     const record = await vault.db.get("transactions", "t1");
     expect(record?.row.amount).toBe(90);
-    // Everything the operation did not ask to change is the server's, the stamp included: the guard
-    // the next write reads has to be the one the server printed (invariant 2).
+    // Invariant 2: the stamp included — the guard the next write reads must be the server's.
     expect(record?.row.description).toBe("From the other device");
     expect(record?.updatedAt).toBe("2026-09-03T09:00:00.000Z");
   });

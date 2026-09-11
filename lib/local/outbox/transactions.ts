@@ -41,9 +41,7 @@ interface Projected {
   effect: MoneyEffect;
 }
 
-// The one place a movement enters the mirror before the server has it. Besides the row it records
-// what the figure moved: the projection of the balances is the mirror's `balance` plus these, and
-// the mirror no longer holds the row the operation replaced.
+// The mirror no longer holds the replaced row, so what the figure moved is recorded with it.
 async function projectTransaction(
   tx: WriteTransaction,
   id: string,
@@ -110,8 +108,7 @@ function newRow(
   };
 }
 
-// `idempotencyKey` is the row's id now, not a header: a create carrying an id is already idempotent
-// (O-B1), and one key per distinct payload still means a retried form names the same row.
+// O-B1: a create carrying an id is already idempotent, so the key is the row's id, not a header.
 export function createTransaction(
   input: CreateTransactionInput,
   idempotencyKey: string,
@@ -149,8 +146,7 @@ export function quickAddTransaction(
       payload: { body },
       project: async (tx, occurredAt) => {
         const owner = await projectionContext(tx, occurredAt);
-        // The server's own defaults, restated because the mirror has to show the same row it will
-        // send back: EXPENSE, now, and the default account on whichever side is missing.
+        // The server's own defaults, restated because the mirror shows the row it will send back.
         const type = body.type ?? "EXPENSE";
         const needsFrom = (type === "EXPENSE" || type === "TRANSFER") && !body.fromAccountId;
         const needsTo = type === "INCOME" && !body.toAccountId;
@@ -207,11 +203,7 @@ export function updateTransaction(id: string, input: UpdateTransactionInput): Pr
   return write(updateRequest(id, input));
 }
 
-// F-20: the batch endpoint addresses N rows with one request, and an envelope carries one entity and
-// one `If-Match`. So the lot enters the queue expanded into N `transaction:update` operations — each
-// row with its own guard, its own conflict and its own place in the order — and the screen still
-// gets the `{ updated, failed }` it always read. Online this is N requests where it used to be one:
-// the price of a row-by-row guard, and of the review tray working with no network at all.
+// F-20: an envelope carries one entity and one `If-Match`, so the lot expands into N operations.
 export async function batchUpdateTransactions(
   input: BatchUpdateTransactionsInput,
 ): Promise<BatchUpdateResult> {
@@ -245,8 +237,7 @@ export function deleteTransaction(id: string): Promise<unknown> {
       action: "delete",
       payload: {},
       project: async (tx, occurredAt) => {
-        // A tombstone keeps no `liveDate`, so the row leaves the list and every window the moment
-        // it is written, exactly as a deleted row from the feed does.
+        // A tombstone keeps no `liveDate`, so the row leaves every window the moment it is written.
         const next = { ...(await currentRow(tx, id)), deletedAt: occurredAt };
         const { change, effect } = await projectTransaction(tx, id, next);
         return { ...change, effect };

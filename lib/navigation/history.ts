@@ -12,8 +12,7 @@ const stack: string[] = [];
 let lastLength = 0;
 let poppedByUser = false;
 
-// Landing on the entry below the top is a "back" whether or not popstate was observed: Next may apply
-// the URL before our listener runs, so the flag alone is not reliable.
+// Next may apply the URL before our listener runs, so the popstate flag alone is not reliable.
 export function recordNavigation(url: string, historyLength: number, popped: boolean): void {
   if (stack.at(-1) === url) return;
   if (stack.at(-2) === url) {

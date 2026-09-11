@@ -13,8 +13,7 @@ async function signIn(page: Page, request: Request) {
   await page.context().addCookies((await request.storageState()).cookies);
 }
 
-// The e2e build is flagged as "test", so the app does not install the worker by itself: the suite
-// registers it to exercise what a production install would do.
+// The e2e build is flagged `test`, so the suite registers the worker itself.
 async function installWorker(page: Page) {
   await page.evaluate((path) => navigator.serviceWorker.register(path, { scope: "/" }), SW_PATH);
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
@@ -116,8 +115,7 @@ test("the shell navigates with no network, filters included, and falls back on a
   await page.waitForLoadState("load");
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 
-  // F-48: a row nobody opened on this device before the network went — its detail comes from the
-  // template entry, and the row itself from the mirror.
+  // F-48: the detail comes from the template entry and the row from the mirror.
   await page.goto(`/transactions/${row!.id}`);
   await expect(page.getByRole("heading", { level: 1, name: "Transaction" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Delete" })).toBeVisible();

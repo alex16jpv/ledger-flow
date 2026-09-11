@@ -40,8 +40,7 @@ interface Loaded {
   operation: OutboxOperation;
   fields: ConflictField[];
   names: Names;
-  // What discarding this one would take with it, minus itself: a creation the server refused holds
-  // back everything queued on top of it, and the sheet says so before asking (§8.12 I7).
+  // §8.12 I7: a refused creation holds back everything queued on top of it, minus itself.
   waiting: number;
 }
 
@@ -57,8 +56,7 @@ const DATE_FIELDS = new Set([
 ]);
 const REFERENCE_FIELDS = new Set(["categoryId", "categoryIds", "fromAccountId", "toAccountId"]);
 
-// What the API takes for an account's or a category's name. Declared here rather than imported from
-// a feature: this sheet sits below them and serves both.
+// Declared here, not imported from a feature: this sheet sits below them and serves both.
 const NAME_MAX = 255;
 
 async function load(seq: number): Promise<View> {
@@ -68,8 +66,7 @@ async function load(seq: number): Promise<View> {
   if (!operation || (operation.status !== "conflict" && operation.status !== "failed")) {
     return { kind: "empty" };
   }
-  // The mirror already holds every account and category this device knows: a conflict sheet that
-  // printed raw ids would be honest and useless.
+  // The mirror holds every account and category: a sheet printing raw ids would be useless.
   const names = new Map<string, string>();
   for (const record of await vault.db.getAll("accounts")) names.set(record.id, record.row.name);
   for (const record of await vault.db.getAll("categories")) names.set(record.id, record.row.name);
@@ -89,8 +86,7 @@ export interface SyncConflictSheetProps {
   onClose: () => void;
 }
 
-// F-58: the account this movement names was archived online. The way out is an operation like any
-// other — an `account:restore` queued ahead of it — so both travel in the same batch.
+// F-58: the way out is an `account:restore` queued ahead of it, travelling in the same batch.
 const isArchivedAccount = (operation: OutboxOperation): boolean =>
   operation.status === "conflict" && operation.lastError === "RESOURCE_ARCHIVED";
 
@@ -103,9 +99,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
   const outbox = useOutbox();
   const [loaded, setLoaded] = useState<{ seq: number; view: View } | null>(null);
   const [busy, setBusy] = useState(false);
-  // The name the user typed into the embedded rename of F-60, tagged with the operation it was
-  // typed for: another operation is another question, and the suggestion is what answers it until
-  // someone types over it.
+  // F-60: the typed name is tagged with its operation — another operation is another question.
   const [renamed, setRenamed] = useState<{ seq: number; name: string } | null>(null);
   const renameTo = renamed?.seq === seq ? renamed.name : null;
   // The date the user is correcting (F-66), tagged with its operation for the same reason.
@@ -126,8 +120,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
     return () => {
       live = false;
     };
-    // The queue is the source: a drain that resolved this operation while the sheet was open has to
-    // move it to the "nothing left" state rather than leave a decision that no longer exists.
+    // The queue is the source: a drain that resolved this while the sheet was open has to move it.
   }, [open, seq, outbox.attention]);
 
   const view: View = loaded?.seq === seq ? loaded.view : { kind: "loading" };
@@ -203,8 +196,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
     );
   }
 
-  // next-intl types a key against the message tree, and these keys are a field name or an action
-  // read off the envelope. `t.has` is the guard; the cast is the one this indirection costs.
+  // next-intl types keys against the message tree; `t.has` guards the cast this costs.
   type MessageKey = Parameters<typeof t>[0];
   const optional = (key: string, values?: Record<string, string>): string | null => {
     const typed = key as MessageKey;
@@ -215,9 +207,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
     return optional(`fields.${field}`) ?? field;
   }
 
-  // The two names side by side (F-60). The restore's body carries no fields of its own, so the
-  // comparison is built from the row this device is putting back and the row the server answered
-  // with — which is somebody else's, and the reason the restore was refused.
+  // F-60: the restore carries no fields, so the comparison uses the server's row, somebody else's.
   const takenName = (loaded: Loaded): string =>
     (loaded.operation.serverRow as { name?: unknown } | null | undefined)?.name as string;
   const restoredName = (loaded: Loaded): string =>
@@ -322,9 +312,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
         </div>
       );
     }
-    // A refusal for good, and a `conflict` the server explained with a code of its own — a name
-    // already taken, a reference it will not accept: the change never applied, and the reason is the
-    // code, not "two versions of the same row".
+    // Only `STALE_UPDATE` is the same row written twice; any other code is the server's reason.
     if (operation.status === "failed" || operation.lastError !== "STALE_UPDATE") {
       return (
         <div className="flex flex-col gap-3">
@@ -370,8 +358,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
       );
     }
     const { operation } = view;
-    // A refusal the server made for good will be refused again: discarding is the way out, and
-    // trying again is the second chance for the case where what blocked it has since been fixed.
+    // A refusal for good repeats, so discarding leads and Try again is the second chance.
     const discardFirst = operation.status === "failed";
     const discard = (
       <Button
@@ -395,8 +382,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
         {discardFirst ? t("retry") : t("keepMine")}
       </Button>
     );
-    // The date is the whole refusal, and the movement cannot be edited from the list: it is a
-    // creation the server never took, so this sheet is the only place it can be corrected.
+    // A creation the server never took cannot be edited from the list, so it is corrected here.
     if (isFutureDate(operation)) {
       const value = correctedTo ?? dateTimeParts(serverInstant(), timeZone);
       return (
@@ -422,8 +408,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
         </>
       );
     }
-    // The name is the whole refusal, so the way out is a different one. "Try again" is not offered:
-    // the same name would be refused again, and the body of the sheet says so.
+    // The same name would be refused again, so Try again is not offered.
     if (isNameTaken(operation)) {
       const typed = (renameTo ?? suggestedName(view)).trim();
       return (
@@ -441,8 +426,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
         </>
       );
     }
-    // Trying again as it is would earn the same refusal: what unblocks this one is restoring the
-    // account, and the other way out — moving the movement to another account — is an ordinary edit.
+    // What unblocks this is restoring the account; moving the movement is an ordinary edit.
     if (isArchivedAccount(operation)) {
       return (
         <>

@@ -55,10 +55,7 @@ export function Sheet({
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
-  // axe's `scrollable-region-focusable`: a region that scrolls has to be reachable by keyboard. It
-  // needs a tab stop of its own only when nothing inside it can take one — a sheet whose body is
-  // reading matter and whose buttons live in the footer, like "Resolve sync conflict". Giving every
-  // sheet one would put a stop in front of the search box of every picker.
+  // axe `scrollable-region-focusable`: a tab stop only when nothing inside the body can take one.
   useEffect(() => {
     setBodyNeedsFocus(open && body.current?.querySelector(FOCUSABLE) == null);
   }, [open, children]);

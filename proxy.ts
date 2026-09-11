@@ -33,16 +33,12 @@ export default function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const prefix = localePrefix(pathname);
   const path = stripLocale(pathname, routing.locales);
-  // The marker says this device holds a vault, not that the session is alive (§2.6): it is what
-  // lets `(app)` open with a dead refresh, and it is never proof of anything else.
+  // §2.6: the marker says this device holds a vault, never that the session is alive.
   const hasMarker = request.cookies.has(SESSION_COOKIE);
-  // ...which is why it cannot bounce anyone off the login: with a 400-day marker and a dead session
-  // that would be a device locked out of its own account.
+  // …so it cannot bounce anyone off the login, or a dead session locks the device out.
   const reauthenticating = request.nextUrl.searchParams.has(REAUTH_PARAM);
 
-  // W-39: every `/dev/` screen guards itself with `notFound()`, but `/dev/pickers` sits inside the
-  // `(app)` group, whose `loading.tsx` starts streaming before the page runs, so its 404 arrived as a
-  // 200 with the not-found body inside. The flag is a routing fact: decided here, nothing renders.
+  // W-39: `(app)/loading.tsx` streams before the page, so the 404 is decided here instead.
   if (path.startsWith("/dev/") && !isEnabled("componentCatalog")) {
     const gone = new NextResponse(null, { status: 404 });
     gone.headers.set("x-robots-tag", "noindex, nofollow");

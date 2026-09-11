@@ -9,8 +9,7 @@ import type { VaultSchema } from "../schema";
 import { read } from "./read";
 import { liveRowsInWindow, mirrorTimeZone } from "./window";
 
-// An index signature, not just these four keys: `api` takes a Record, and the query travels to it
-// verbatim so the online URL is exactly the one each call site was already sending.
+// An index signature: the query travels to `api` verbatim, so the online URL is unchanged.
 export interface SpendingQuery extends Record<string, QueryValue> {
   groupBy?: SpendingGroupBy;
   type?: SyncTransaction["type"];
@@ -18,8 +17,7 @@ export interface SpendingQuery extends Record<string, QueryValue> {
   to?: string;
 }
 
-// The one seam for /stats/spending. All six of its call sites go through it, so the buckets a screen
-// paints come from one derivation rather than six.
+// The one seam for /stats/spending: all six call sites paint one derivation, not six.
 export function readSpending(query: SpendingQuery): Promise<StatsResponse> {
   return read<StatsResponse>(
     () => api<StatsResponse>("/stats/spending", { query }),
@@ -34,8 +32,7 @@ async function spendingFromMirror(
   const timeZone = await mirrorTimeZone(db);
   if (timeZone === undefined) return undefined;
 
-  // The defaults StatsController stamps on an absent parameter. Its `type` default is EXPENSE, not
-  // the service's "everything but ADJUSTMENT": no URL can ask for that one, only a fixture can.
+  // StatsController's `type` default is EXPENSE, not the service's everything-but-ADJUSTMENT.
   const groupBy = query.groupBy ?? "category";
   const type = query.type ?? "EXPENSE";
 

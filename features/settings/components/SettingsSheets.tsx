@@ -196,8 +196,7 @@ export function DeleteAccountSheet({
   );
 }
 
-// F-34: signing out with a queue behind you is a decision, not a side effect. Keeping is the
-// default and the safe answer — the operations go out at the next sign-in on this device.
+// F-34: keeping the queue is the default — it goes out at the next sign-in on this device.
 export function SignOutSheet({
   open,
   onClose,

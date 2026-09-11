@@ -15,8 +15,7 @@ export function retryDelayWithJitter(attempt: number): number {
 
 export function shouldRetryQuery(failureCount: number, error: unknown): boolean {
   if (failureCount >= 1) return false;
-  // `offlineFirst` runs the first attempt and then pauses the retry until the network is back, so
-  // an invalidation awaiting it never resolves and the write that asked for it spins forever.
+  // `offlineFirst` pauses the retry, so an invalidation awaiting it never resolves.
   if (connectivityStore.getSnapshot() === "offline") return false;
   if (error instanceof ApiError) return error.status >= 500 || error.status === 429;
   return error instanceof NetworkError;
@@ -33,8 +32,7 @@ export function createQueryClient(): QueryClient {
         retryDelay: retryDelayWithJitter,
         refetchOnWindowFocus: true,
       },
-      // A paused mutation never runs its mutationFn, so with no network the outbox of O-F4 was
-      // never reached and the form spun forever: `write()` is what chooses the queue or the wire.
+      // A paused mutation never runs its mutationFn, so the outbox of O-F4 was never reached.
       mutations: { retry: 0, networkMode: "offlineFirst" },
     },
   });

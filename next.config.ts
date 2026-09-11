@@ -28,8 +28,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Events leave through /monitoring on this origin: CSP keeps connect-src 'self' and ad blockers stay out of it.
-// Source maps upload only when SENTRY_AUTH_TOKEN is present (the deploy pipeline); local builds skip it.
+// Events leave through /monitoring so connect-src stays 'self'; maps need SENTRY_AUTH_TOKEN.
 export default withSentryConfig(withNextIntl(nextConfig), {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,

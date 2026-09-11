@@ -15,17 +15,14 @@ import {
 
 const HOW_MANY = 20;
 
-// §6 O-F7, first bullet: twenty movements with no network, a reload with no network, a reconnection,
-// and no duplicates or figures moved. Each test registers its own user, so the counts and the
-// balances are this test's alone (nothing to clean up either — the user is thrown away).
+// §6 O-F7, first bullet: each test registers its own user, so the counts are its alone.
 test("twenty movements with no network survive a reload and reach the server exactly once", async ({
   page,
   request,
   context,
 }) => {
   test.setTimeout(300_000);
-  // Euros in Madrid, not the defaults: what the shell shows with no session has to come from the
-  // mirror's profile, and a user born with the app's own fallbacks could not tell the two apart (F-63).
+  // F-63: euros in Madrid — a user born with the app's own fallbacks could not tell the two apart.
   const user = await freshUser(request, "writes", { currency: "EUR", timezone: "Europe/Madrid" });
   const amounts = new Set<number>();
   while (amounts.size < HOW_MANY) amounts.add(uniqueAmount());
@@ -42,8 +39,7 @@ test("twenty movements with no network survive a reload and reach the server exa
   await page.goto("/home");
   await expect(page.getByText("You’re offline.")).toBeVisible();
 
-  // Twenty captures and nothing else: a note would be a second operation of its own, and what is
-  // being counted here is movements.
+  // Twenty captures and nothing else: a note would be a second operation of its own.
   for (const amount of wanted) {
     await addButton(page).click();
     const sheet = page.getByRole("dialog", { name: "Add expense" });
@@ -70,8 +66,7 @@ test("twenty movements with no network survive a reload and reach the server exa
   expect((await vaultState(back))?.pending).toBe(HOW_MANY);
   await back.goto("/transactions");
   await expect(back.getByRole("button", { name: /Pending sync/ })).toHaveCount(HOW_MANY);
-  // And it knows whose device this is: the amounts are euros, not the fallback currency, and the
-  // sidebar names the user, all read from the mirror's profile (F-63).
+  // F-63: euros and the user's name, all read from the mirror's profile.
   await expect(back.getByText(/€/).first()).toBeVisible();
   await expect(back.getByText(/COP/)).toHaveCount(0);
   if (test.info().project.name === "desktop")
@@ -100,8 +95,7 @@ test("twenty movements with no network survive a reload and reach the server exa
   await expect(back.getByText(/changes? waiting/)).toHaveCount(0);
 });
 
-// §1 example 2: the drain reaches the server and the answer is cut on the way back. The queue
-// replays the whole batch; `POST /sync` remembers the opIds (D-2) and nothing lands twice.
+// §1 example 2: `POST /sync` remembers the opIds (D-2), so a replay lands nothing twice.
 test("a reply lost after the server applied it replays as a duplicate, not as a second row", async ({
   page,
   request,
@@ -127,10 +121,7 @@ test("a reply lost after the server applied it replays as a duplicate, not as a 
   await expect(sheet).toBeHidden();
   await expectPending(page, 1);
 
-  // The first batch reaches the server and its answer is cut on the way back; the second is the
-  // replay. Counted and read, not assumed: a queue that dropped the operation after the abort would
-  // drain to zero and leave one row on the server too, so only the second answer saying `duplicate`
-  // proves what the title says.
+  // Counted and read, not assumed: only the second answer saying `duplicate` proves the title.
   const answers: string[][] = [];
   await context.route("**/api/sync", async (route) => {
     const answered = await route.fetch();

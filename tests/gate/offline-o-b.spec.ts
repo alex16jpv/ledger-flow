@@ -25,8 +25,7 @@ interface Category {
   type: string;
 }
 
-// The other device of the same user: its own browser context, with network the whole time, like a
-// person working on the tablet while the phone is in the metro.
+// The other device of the same user: its own browser context, with network the whole time.
 async function otherDevice(
   browser: Browser,
   request: Request,
@@ -132,9 +131,7 @@ test("two devices, one outage: what merges merges, what is money is asked, and o
   const tally = new Tally();
   tally.watch(page);
   const report: Record<string, unknown> = { project: test.info().project.name };
-  // Euros in Madrid, and a user of its own: the seeded one is shared by the whole suite, and what
-  // this demo counts — rows, balances, one merged category — is a race on a shared user. The
-  // currency also makes F-63 visible: with no session the shell has to read it from the mirror.
+  // A user of its own: the seeded one is shared, and F-63 needs a currency that is not the default.
   const user = await freshUser(request, "gate-b", {
     currency: "EUR",
     timezone: "Europe/Madrid",
@@ -148,8 +145,7 @@ test("two devices, one outage: what merges merges, what is money is asked, and o
   const spare = (await created.json()) as { id: string };
   const spareBalance = 100;
 
-  // Euros a person would really spend: the demo is watched, and four amounts that cannot collide
-  // are enough for a user whose whole history is these four rows.
+  // Four amounts that cannot collide, for a user whose whole history is these four rows.
   const noted = 24;
   const disputed = 20;
   const corrected = 30;
@@ -249,8 +245,7 @@ test("two devices, one outage: what merges merges, what is money is asked, and o
   });
 
   await test.step("Vuelve la red · un POST /sync por pasada, y la respuesta del primer lote se tira", async () => {
-    // Example 2, on the batch: the server applies the whole queue and the answer never arrives, so
-    // the phone replays it. What proves nothing landed twice is the second answer, read here.
+    // Example 2 on the batch: the second answer is what proves nothing landed twice.
     await context.route("**/api/sync", async (route) => {
       const answered = await route.fetch();
       const text = await answered.text();
@@ -262,8 +257,7 @@ test("two devices, one outage: what merges merges, what is money is asked, and o
 
     const mark = tally.mark();
     await context.setOffline(false);
-    // The queue settles with exactly the two questions the user has to answer: the money and the
-    // archived account. Everything else merged, landed or replayed by itself.
+    // Exactly two questions are left: the money and the archived account.
     await expect
       .poll(async () => statuses(await outbox(page)).sort(), { timeout: 240_000 })
       .toEqual(["conflict", "conflict"]);

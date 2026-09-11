@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-// Copies the parity contract from the backend repo (its committed `fixtures/offline/`) into
-// lib/local/derive/fixtures/. The copy is vendored because CI checks out this repo alone;
-// parity.test.ts fails on drift wherever both repos sit side by side.
+// Vendored because CI checks out this repo alone; `parity.test.ts` fails on drift side by side.
 import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 

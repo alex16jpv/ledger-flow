@@ -33,8 +33,7 @@ function listQuery(params: BudgetListParams, cursor?: string) {
   };
 }
 
-// The expired and lifetime filters run after pagination on the server, so hasMore must be followed
-// even for short pages.
+// The expired and lifetime filters run after pagination, so `hasMore` is followed on short pages.
 async function drain(params: BudgetListParams): Promise<Budget[]> {
   const data: Budget[] = [];
   let cursor: string | undefined;
@@ -56,8 +55,7 @@ interface ViewContext {
 const windowKey = (period: ResolvedPeriod): string =>
   `${period.from.getTime()}_${period.to.getTime()}`;
 
-// One walk of the index per distinct window, the way the server runs one aggregation for the
-// budgets that share one. Undefined means the mirror cannot answer, and the read goes to the server.
+// Undefined means the mirror cannot answer, and the read goes to the server.
 async function viewContext(
   db: IDBPDatabase<VaultSchema>,
   budgets: SyncBudget[],
@@ -83,8 +81,7 @@ async function viewContext(
   return { reference, timeZone, archivedCategoryIds, rows };
 }
 
-// SyncBudget plus everything the API adds on top: the period's own fields, `archivedCategoryIds`
-// from the categories mirror, and `effectiveFrom`, which the API answers as the lifetime floor.
+// Plus the period's fields, `archivedCategoryIds`, and `effectiveFrom` as the lifetime floor.
 function toView(budget: SyncBudget, context: ViewContext): Budget {
   const period = resolvePeriod(budget, context.reference, context.timeZone);
   const view = deriveBudgetView(
@@ -119,9 +116,7 @@ function toView(budget: SyncBudget, context: ViewContext): Budget {
   };
 }
 
-// A budget does not exist before its lifetime floor, and an expired CUSTOM one-shot leaves the
-// default listing while the recurring types roll forward. Both run after pagination, as on the
-// server, which is why a page's `total` counts rows these still drop.
+// Both run after pagination, as on the server, so a page's `total` counts rows these drop.
 function listed(view: Budget, budget: SyncBudget, params: BudgetListParams): boolean {
   if (Date.parse(view.periodTo) <= lifetimeFloor(budget).getTime()) return false;
   return Boolean(params.includeExpired) || !view.expired;
@@ -175,8 +170,7 @@ export function readBudgetsPage(params: BudgetListParams = {}): Promise<BudgetLi
   );
 }
 
-// The view built from the mirror alone, with no server behind it: what a queued write answers with
-// while its operation waits (O-F4). `readBudget` is the same thing with the seam in front.
+// O-F4: the mirror alone, which is what a queued write answers with while its operation waits.
 export async function mirrorBudget(
   db: IDBPDatabase<VaultSchema>,
   id: string,

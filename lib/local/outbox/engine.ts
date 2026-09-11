@@ -30,19 +30,16 @@ import { outboxStatusStore, refreshOutboxStatus } from "./status";
 import { reportSynced, resetSynced } from "./synced";
 import { OUTBOX_SYNC_TAG } from "./tag";
 
-// The plan's numbers (§6 O-F4). The step doubles from a second to a minute; the jitter can only
-// shorten it, so a fleet of devices that lost the network together does not come back in lockstep.
+// §6 O-F4: the jitter can only shorten the step, so devices do not come back in lockstep.
 export const BACKOFF_MIN_MS = 1_000;
 export const BACKOFF_MAX_MS = 60_000;
 
-// How many times a text-only edit may rebase itself onto a fresh stamp before it stops being bad
-// luck and starts being a row somebody else is writing continuously. Then it asks, like the rest.
+// Past this a text-only rebase is a row somebody else is writing continuously, so it asks.
 export const AUTO_MERGE_ATTEMPTS = 5;
 
 export type DrainOutcome =
   | { kind: "sent"; result: unknown }
-  // It landed and the server sent no row back: a duplicate `opId` the registry answered from
-  // memory. The screen keeps the projection it already had and the pull of the round brings the row.
+  // It landed with no row back: a duplicate `opId` answered from memory, and the pull brings it.
   | { kind: "landed" }
   | { kind: "gone" }
   | { kind: "cancelled" }
@@ -58,8 +55,7 @@ export type DrainReport = Map<number, DrainOutcome>;
 
 export const EMPTY_REPORT: DrainReport = new Map();
 
-// A rejection the queue can outlive: the request never arrived, or the server could not answer it
-// yet. Anything else in the 4xx range is the server saying no for good, and the write is undone.
+// Anything else in the 4xx range is the server saying no for good, and the write is undone.
 function retryable(error: unknown): boolean {
   if (error instanceof NetworkError) return true;
   if (!(error instanceof ApiError)) return false;
@@ -74,30 +70,23 @@ const codeOf = (error: unknown): string =>
 const isConflict = (error: unknown): boolean =>
   error instanceof ApiError && error.code === "STALE_UPDATE";
 
-// O-B2: a transaction the server no longer has answers 404, and for a delete or an archive that is
-// the state the operation asked for. Only a removal may read it that way.
+// O-B2: a 404 is the state a delete or an archive asked for; only a removal may read it so.
 const isAlreadyGone = (error: unknown, action: string): boolean =>
   error instanceof ApiError && error.status === 404 && isRemoval(action);
 
-// O-B1 with D-17: `ID_TAKEN` only ever means the id belongs to ANOTHER user, so the answer is a new
-// id, not an error in the user's face (F-21).
+// O-B1 with D-17: `ID_TAKEN` means the id belongs to another user, so the answer is a new id.
 const isIdTaken = (error: unknown): boolean =>
   error instanceof ApiError && error.code === "ID_TAKEN";
 
-// The refresh already had its turn inside `lib/api` (a 401 here means it failed), so retrying is
-// asking a dead session the same question every minute until the tab closes (F-26).
+// F-26: the refresh already had its turn in `lib/api`, so a 401 here is a dead session.
 const isUnauthorized = (error: unknown): boolean =>
   error instanceof ApiError && error.status === 401;
 
-// A server with no batch endpoint: the front was deployed ahead of its backend. One answer settles
-// it for the session and the queue keeps leaving by the ordinary routes (owner, 2026-09-06).
+// One answer settles it for the session and the queue leaves by the ordinary routes (2026-09-06).
 const isBatchMissing = (error: unknown): boolean =>
   error instanceof ApiError && (error.status === 404 || error.status === 501);
 
-// The envelope itself was refused, so nothing in the batch was applied: this client built a batch
-// the server cannot read, or one over the megabyte. The plan goes out one request at a time instead,
-// where each operation gets the verdict of its own route rather than the queue stalling on a batch
-// nobody can fix.
+// The envelope was refused, so nothing was applied: the plan goes out one request at a time.
 const isEnvelopeRefused = (error: unknown): boolean =>
   error instanceof ApiError && (error.status === 400 || error.status === 413);
 
@@ -109,9 +98,7 @@ const stampOf = (answer: unknown): string | undefined => {
 
 const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
 
-// How a write undoes itself, kept by seq while the tab that made it is still open. The engine runs
-// it when the server refuses the operation for good; an operation replayed after a reload has none,
-// so it is left `failed` in the queue for the tray of O-F5a instead of silently disappearing.
+// An operation replayed after a reload has no undo, so it is left `failed` for the tray (O-F5a).
 const rollbacks = new Map<number, (tx: WriteTransaction) => Promise<void>>();
 
 export function registerRollback(seq: number, undo: (tx: WriteTransaction) => Promise<void>): void {
@@ -135,14 +122,10 @@ const forget = (seqs: number[]): void => {
 // Resolving a conflict settles operations the engine never sent: their rollbacks go with them.
 export const forgetRollbacks = forget;
 
-// True while the write that made this operation is still waiting for it: `write()` registers the
-// undo before it asks for the drain, and drops it as soon as it answers the screen from the
-// projection. So an undo still registered means a form is on screen waiting for this very pass —
-// and an answer it cannot act on belongs to it, not to a tray it never opened.
+// An undo still registered means a form is on screen waiting for this very pass.
 const awaited = (seq: number): boolean => rollbacks.has(seq);
 
-// Drops an operation and everything folded into it in one transaction, together with whatever the
-// server's answer leaves in the mirror.
+// Drops an operation and everything folded into it in one transaction.
 async function settle(
   db: VaultDb,
   entry: Collapsed,
@@ -155,8 +138,7 @@ async function settle(
   });
 }
 
-// A movement created and deleted before either left the device: the operations go, and so does the
-// row, because nothing on the server ever knew about it.
+// The row goes too: nothing on the server ever knew about it.
 async function cancel(db: VaultDb, cancelled: Cancelled[], report: DrainReport): Promise<void> {
   const tx = writeTransaction(db);
   for (const entry of cancelled) {
@@ -171,9 +153,7 @@ async function cancel(db: VaultDb, cancelled: Cancelled[], report: DrainReport):
   await tx.done;
 }
 
-// Marks the operations as being asked about without counting the attempt: `markOperation` does that
-// once, when the answer is in. A tab killed mid-flight leaves `sending` behind, which the next pass
-// picks up like any other queued operation — and which coalescing will not fold across.
+// Without counting the attempt: `markOperation` does that once, when the answer is in.
 async function beginSending(db: VaultDb, seqs: readonly number[]): Promise<void> {
   const tx = writeTransaction(db);
   const store = tx.objectStore("outbox");
@@ -189,9 +169,7 @@ interface PassResult {
   progressed: boolean;
   // The network or the server asked us to come back later: the pass ends and the backoff starts.
   stopped: boolean;
-  // The server said something about the data — a write that landed, a conflict, a refusal — so the
-  // mirror may be behind it and the round ends with a pull (F-32). A network failure or a 5xx says
-  // nothing new, and does not.
+  // F-32: the server said something about the data, so the round ends with a pull.
   answered: boolean;
   // The session died under the queue: the pass stops and nothing is scheduled (F-26).
   unauthorized: boolean;
@@ -207,11 +185,9 @@ const emptyPass = (): PassResult => ({
 });
 
 interface Holds {
-  // The ids nothing may be sent against: an operation in conflict or refused for good, and anything
-  // that named it. Only its dependents are held; the rest of the queue keeps going.
+  // Only the dependents of a blocked id are held; the rest of the queue keeps going.
   blocked: Set<string>;
-  // The rows whose create is still ahead in this plan: nothing that names one may go first. With
-  // `seq` alone this never happens; it is the belt for any fold that moves an operation earlier.
+  // The belt for any fold that moves an operation earlier; with `seq` alone it cannot happen.
   creating: Set<string>;
 }
 
@@ -293,9 +269,7 @@ async function sendPlanned(
       if (isConflict(error)) {
         const current = error instanceof ApiError ? error.current : undefined;
         const stamp = stampOf(current);
-        // §6 O-F5a: an edit that only carries text merges by itself over the stamp the server
-        // answered with — the API's PUT is a partial update, so the other device's other fields
-        // survive. A stamp that did not move would only conflict again, so it is not retried.
+        // §6 O-F5a: the API's PUT is partial, so the other device's other fields survive the retry.
         if (
           conflictKind(operation) === "text" &&
           stamp !== undefined &&
@@ -309,10 +283,7 @@ async function sendPlanned(
           // The plan holds the guard this operation just moved: the pass looks at the queue again.
           return result;
         }
-        // Money or structure: the user's edit is neither lost nor applied, and the sheet is where
-        // it is decided. The queue holds it, the figures stay marked, and only what named this row
-        // waits with it. The server's own row rides along so the sheet needs no second request,
-        // and the mirror shows it (D-23): the user's version lives in the sheet from here on.
+        // D-23: the server's row rides along so the sheet needs no second request.
         await markOperation(
           db,
           seq,
@@ -346,10 +317,7 @@ async function sendPlanned(
       }
       const undos = takeRollbacks([seq, ...entry.absorbed].reverse());
       if (undos.length < 1 + entry.absorbed.length) {
-        // Nobody left to hand the error to — this operation, or one folded into it, outlived the tab
-        // that made it. Undoing only half of a fold would leave the mirror at an edit the server never
-        // got, with no operation behind it; the whole run stays in the queue as `failed` so the tray
-        // of O-F5a can show it, rather than vanishing.
+        // O-F5a: undoing half a fold would strand the mirror, so the run stays `failed`.
         await markOperation(db, seq, "failed", codeOf(error), {}, (tx) =>
           reconcileRow(tx, entity, entityId),
         );
@@ -377,14 +345,11 @@ interface BatchRun {
   report: DrainReport;
   result: PassResult;
   holds: Holds;
-  // A re-mint moved ids under the queue, or a landed answer moved a guard: whatever is left of the
-  // plan describes a queue that no longer exists, so the pass looks at it again.
+  // Whatever is left of the plan describes a queue that no longer exists, so the pass re-looks.
   stale: boolean;
 }
 
-// The refusal as the route itself would have raised it, so the form maps it by `code` exactly as it
-// does online and the tray reads the same table. `requestId` names the batch, the way the mirror's
-// own refusals name themselves (`repository/read`): there is one request behind many operations.
+// The refusal as the route would have raised it; `requestId` names the batch, not an operation.
 const rejection = (answer: BatchAnswer): ApiError =>
   new ApiError({
     status: answer.status === "conflict" ? 409 : answer.code === "NOT_FOUND" ? 404 : 400,
@@ -395,10 +360,7 @@ const rejection = (answer: BatchAnswer): ApiError =>
     current: answer.current,
   });
 
-// What the mirror does with an operation the server took. With a row, the route's own `confirm`;
-// without one — a `transaction:delete`, an archive that answers a message, an `opId` the registry
-// answered from memory — the baseline moves the way the operation asked, or the row is reprojected
-// without it, and the pull that closes the round brings what the server actually holds.
+// With a row, the route's own `confirm`; without one the baseline moves as the operation asked.
 async function confirmLanded(
   tx: WriteTransaction,
   operation: OutboxOperation,
@@ -415,11 +377,7 @@ async function confirmLanded(
   await reconcileRow(tx, operation.entity, operation.entityId);
 }
 
-// `applied`, `duplicate` and `merged`: the operation's desired state is on the server, so it leaves
-// the queue whatever the answer carried.
-// The server landed the create on a row it already had, and a form is waiting to hear it created
-// one. The re-mint stands — the row does exist, under the server's id — and the form is told what
-// the route would have told it: the name is taken, which is the one thing it can act on.
+// The form is told what the route would have told it: the name is taken, which it can act on.
 const nameTaken = (answer: BatchAnswer): ApiError =>
   new ApiError({
     status: 409,
@@ -433,9 +391,7 @@ async function applyLanded(run: BatchRun, entry: Collapsed, answer: BatchAnswer)
   const { db, report } = run;
   let operation = entry.operation;
   const waiting = awaited(operation.seq);
-  // F-57: the server landed the create on a row it already had (same name and type). The id moves
-  // everywhere this device wrote it — the mirror row, the rows that name it and the operations still
-  // queued — or the queue keeps pointing at an id the server does not have, and no pull fixes it.
+  // F-57: the re-mint moves the id everywhere this device wrote it; no pull would fix it later.
   if (answer.mergedInto !== undefined && answer.mergedInto !== operation.entityId) {
     await remint(db, operation.entity, operation.entityId, answer.mergedInto);
     operation = { ...operation, entityId: answer.mergedInto };
@@ -471,12 +427,10 @@ async function applyConflict(run: BatchRun, entry: Collapsed, answer: BatchAnswe
   const { db, report } = run;
   const operation = entry.operation;
   const { seq, entity, entityId } = operation;
-  // The contract answers every conflict with a code; the OpenAPI cannot say "required for this
-  // status", so a missing one is not guessed — it falls through to the sheet with what came.
+  // The OpenAPI cannot say required-for-this-status, so a missing code is not guessed.
   const { code, current } = answer;
 
-  // O-B1 with D-17: the id belongs to ANOTHER user, so the row takes a new one and goes back in the
-  // queue instead of an error nobody can act on (F-21).
+  // O-B1 with D-17: the id belongs to another user, so the row takes a new one (F-21).
   if (code === "ID_TAKEN" && !operation.reminted) {
     const minted = newEntityId();
     await remint(db, entity, entityId, minted);
@@ -486,8 +440,7 @@ async function applyConflict(run: BatchRun, entry: Collapsed, answer: BatchAnswe
     return;
   }
   const stamp = stampOf(current);
-  // §6 O-F5a: an edit that only carries text merges by itself over the stamp the server answered
-  // with. A stamp that did not move would only conflict again, so it is not retried.
+  // §6 O-F5a: a stamp that did not move would only conflict again, so it is not retried.
   if (
     code === "STALE_UPDATE" &&
     conflictKind(operation) === "text" &&
@@ -501,18 +454,12 @@ async function applyConflict(run: BatchRun, entry: Collapsed, answer: BatchAnswe
     run.stale = true;
     return;
   }
-  // Everything else is the server saying no for a reason the queue cannot rebase away: a name
-  // already taken, a reference it will not accept, an id that is not this user's. If a form is
-  // waiting for it, that is where the answer belongs — a taken name is fixed by typing another one,
-  // not in a tray the user never opened, and it is what the route itself would have answered.
+  // A taken name is fixed by typing another one, not in a tray the user never opened.
   if (code !== "STALE_UPDATE" && awaited(seq)) {
     await applyRejected(run, entry, answer);
     return;
   }
-  // `RESOURCE_ARCHIVED` answers with the ARCHIVED ACCOUNT, not with the row the operation is about:
-  // it is not this operation's server version, it is the row its resolution acts on (F-58). The
-  // mirror learns the account is archived — which is true, and is what the sheet reads to offer
-  // restoring it — and the operation keeps only its id.
+  // F-58: `RESOURCE_ARCHIVED` answers with the archived account, not this operation's row.
   const archived = code === "RESOURCE_ARCHIVED" ? (current as Account | undefined) : undefined;
   const own = archived === undefined && (current as { id?: string } | undefined)?.id === entityId;
   await markOperation(
@@ -545,10 +492,7 @@ async function applyRejected(run: BatchRun, entry: Collapsed, answer: BatchAnswe
   const error = rejection(answer);
   const undos = takeRollbacks([seq, ...entry.absorbed].reverse());
   if (undos.length < 1 + entry.absorbed.length) {
-    // Nobody left to hand the error to — this operation, or one folded into it, outlived the tab
-    // that made it. The whole run stays in the queue as `failed` for the tray of O-F5a rather than
-    // vanishing, and undoing only the half it still can would leave the mirror at an edit the
-    // server never got.
+    // O-F5a: the run outlived its tab, so it stays `failed` rather than half-undone.
     await markOperation(db, seq, "failed", codeOf(error), {}, (tx) =>
       reconcileRow(tx, entity, entityId),
     );
@@ -591,9 +535,7 @@ async function applyAnswers(
     } else if (answer.status === "rejected") {
       await applyRejected(run, current, answer);
     } else {
-      // `blocked`: never attempted, because a row it names failed earlier in the same batch. It
-      // goes back in line untouched — counting an attempt would stop it from ever being folded
-      // again for a batch it was not part of — and its own row waits with it.
+      // `blocked` was never attempted, so counting one would stop it from ever being folded again.
       await holdOperations(run.db, [current.operation.seq]);
       run.holds.blocked.add(current.operation.entityId);
       run.report.set(current.operation.seq, {
@@ -603,16 +545,13 @@ async function applyAnswers(
     }
   }
   if (unanswered.length > 0) {
-    // The batch came back without a word about this operation. It is not taken for landed: it stays
-    // in the queue with the server's own failure on it, visible in Ajustes › Sync status.
+    // Not taken for landed: it stays in the queue with the server's own failure on it.
     await requeueOperations(run.db, unanswered, "INTERNAL");
     for (const seq of unanswered) run.report.set(seq, { kind: "queued", code: "INTERNAL" });
   }
 }
 
-// The queue leaves in one request (§6 O-F5b): `POST /sync` takes up to 200 operations of up to a
-// megabyte and answers one status per operation, over the same queue transitions the routes drove
-// one error code at a time. What it cannot take goes in the batch behind it, in `seq` order.
+// §6 O-F5b: up to 200 operations and a megabyte; what it cannot take goes behind, in `seq` order.
 async function sendBatch(
   db: VaultDb,
   entries: Collapsed[],
@@ -637,8 +576,7 @@ async function sendBatch(
   }
   if (sendable.length === 0) return result;
 
-  // Falls back to one request per operation with the queue as it stands, never with the plan: what
-  // an earlier batch already settled must not be sent a second time.
+  // The queue as it stands, never the plan: what an earlier batch settled must not go twice.
   const byRoute = async (): Promise<PassResult> =>
     sendPlanned(db, coalesce(await pendingOperations(db)).operations, report);
 
@@ -683,19 +621,16 @@ async function sendBatch(
       return result;
     }
     result.answered = true;
-    // The server's own clock, which is what the form of §8.2 warns against and the "Fix the date"
-    // sheet prefills with (F-66).
+    // F-66: the server's own clock, which the §8.2 warning and the Fix the date sheet use.
     await rememberServerTime(db, response.serverTime);
     await applyAnswers(run, sent, response);
-    // A guard moved or an id was re-minted: the batches behind this one describe a queue that has
-    // changed, and the pass builds the plan again.
+    // A moved guard or a re-minted id means the batches behind describe a queue that changed.
     if (run.stale) return result;
   }
   return result;
 }
 
-// The one timer the engine owns: the backoff. There is no periodic pull and no periodic push, so a
-// device that changes nothing makes no requests at all (§4.2).
+// §4.2: the backoff is the one timer — no periodic pull, no periodic push.
 export type Scheduler = (run: () => void, delayMs: number) => () => void;
 
 const timeoutScheduler: Scheduler = (run, delayMs) => {
@@ -705,9 +640,7 @@ const timeoutScheduler: Scheduler = (run, delayMs) => {
   };
 };
 
-// How the queue leaves. `POST /sync` is what the plan asks for (§6 O-F5b); the ordinary routes are
-// the fallback for a server that has no batch endpoint, and one 404 or 501 settles it for the rest
-// of the session (owner, 2026-09-06: the front can be deployed ahead of its backend).
+// §6 O-F5b, with routes as the fallback; one 404 or 501 settles it for the session (2026-09-06).
 export type SyncTransport = "batch" | "routes";
 
 interface EngineState {
@@ -766,8 +699,7 @@ async function pass(db: VaultDb): Promise<DrainReport> {
 
   try {
     for (;;) {
-      // Everything the queue held at this point is accounted for: a write that lands afterwards makes
-      // `wanted` run ahead of this, and `requestSync` asks for another pass rather than losing it.
+      // A write that lands after this runs `wanted` ahead, so `requestSync` asks for another pass.
       state.served = state.wanted;
       if (connectivityStore.getSnapshot() === "offline") break;
       const plan = coalesce(await pendingOperations(db));
@@ -784,8 +716,7 @@ async function pass(db: VaultDb): Promise<DrainReport> {
       await refreshOutboxStatus(db);
       answered ||= outcome.answered;
       if (outcome.stopped) {
-        // A dead session is not a slow network: waiting longer never fixes it, so the queue holds
-        // where it is until `resumeSyncEngine` says the user is back (F-26).
+        // F-26: a dead session is not a slow network, so the queue holds until `resumeSyncEngine`.
         if (outcome.unauthorized) {
           state.paused = true;
           clearRetry();
@@ -801,9 +732,7 @@ async function pass(db: VaultDb): Promise<DrainReport> {
     // §4.2: a pull after every round the server answered, and never on a background timer.
     if (answered && state.afterRound) await state.afterRound();
   } catch (error) {
-    // IndexedDB failing mid-pass, or a bug: the write is already queued and durable, so the pass
-    // ends like a cut network — report, back off, come back — instead of rejecting the caller and
-    // telling a form that a saved write failed (F-27).
+    // F-27: the write is queued and durable, so the pass ends like a cut network, not a failure.
     reportError(error, "vault");
     backOff = true;
     retryAfterMs = 0;
@@ -821,15 +750,12 @@ async function pass(db: VaultDb): Promise<DrainReport> {
   return report;
 }
 
-// Single flight: while one drain is running every other trigger joins it. A request that arrives
-// after the running pass took its last look at the queue is not lost — it asks for a pass of its own
-// once this one is done, which is what keeps a write queued mid-drain from waiting for a click.
+// Single flight: a request arriving after the pass's last look asks for a pass of its own.
 export function requestSync(): Promise<DrainReport> {
   const vault = currentVault();
   if (!vault) return Promise.resolve(EMPTY_REPORT);
   if (state.paused) return Promise.resolve(EMPTY_REPORT);
-  // Somebody else signed in on this device while this tab held a vault open: sending now would file
-  // one user's writes under another's session (§2.6). The queue waits for its own user to come back.
+  // §2.6: sending now would file one user's writes under another's session.
   const marker = readSessionMarker();
   if (marker && marker.userId !== vault.userId) return Promise.resolve(EMPTY_REPORT);
   state.wanted += 1;
@@ -868,9 +794,7 @@ export interface SyncEngineOptions {
   schedule?: Scheduler;
 }
 
-// Wires the four triggers the plan asks for: back online, app open (the caller's first request),
-// regaining focus, and Background Sync where it exists. There is no periodic timer — only the
-// backoff, and only while the queue still holds something.
+// The four triggers of the plan; there is no periodic timer, only the backoff.
 export function startSyncEngine(options: SyncEngineOptions = {}): () => void {
   state.stop?.();
   state.afterRound = options.afterRound ?? null;
@@ -915,8 +839,7 @@ export function startSyncEngine(options: SyncEngineOptions = {}): () => void {
   return stop;
 }
 
-// The session is back: a refresh landed, or the user signed in again. Nothing was lost while the
-// engine was paused, so the queue goes out now (F-26).
+// F-26: nothing was lost while the engine was paused, so the queue goes out now.
 export function resumeSyncEngine(): void {
   if (!state.paused) return;
   state.paused = false;
@@ -928,17 +851,14 @@ export function isSyncPaused(): boolean {
   return state.paused;
 }
 
-// Which transport the queue is leaving by, and the switch the 404 answer throws. Ajustes › Sync
-// status (O-F6) is the screen that has to say it, and the fallback's own tests set it.
+// O-F6: Ajustes › Sync status has to say it, and the fallback's own tests set it.
 export const syncTransport = (): SyncTransport => state.transport;
 
 export function setSyncTransport(transport: SyncTransport): void {
   state.transport = transport;
 }
 
-// A write that went straight to the server never touched the mirror, so the screen that reads the
-// mirror would not see what it just saved until something else pulled (F-33). It is the same pull a
-// round makes, asked for by the one caller that has no round.
+// F-33: a direct send never touched the mirror, so the one caller with no round asks for a pull.
 export async function pullAfterDirectSend(): Promise<void> {
   await state.afterRound?.();
 }

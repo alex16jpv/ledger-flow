@@ -82,8 +82,7 @@ describe("the one-off “ready to use offline”", () => {
     expect(screen.queryByText("Ready to use offline")).not.toBeInTheDocument();
   });
 
-  // Once per device, not once per session: after the first time it is noise, and Sync status is
-  // where it can be looked up.
+  // Once per device, not once per session: after the first time it is noise.
   it("never says it twice on the same device", async () => {
     await deviceWith({ screens: SHELL_SCREENS, synced: true });
     const first = render();
