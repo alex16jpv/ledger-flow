@@ -129,11 +129,9 @@ that never reached the server must show its pending badge).
 - Is every finding you are **not** fixing registered as a row, not just mentioned? (see below)
 
 **If you break it, you fix it — now.** A defect you cause along the way, and a broken thing you find
-that stands between you and what you have to do, are both fixed in the same branch, and the commit says
-so. A finding is not a place to park what is blocking you. And when what you find belongs to a piece of
-work that already has its own item on the owner's list, it goes **on that item**, not in a separate
-findings row: that way whoever opens that work reads it at the start, and they are the one who will
-close it. What follows is for what lies outside your work and does not affect it.
+that stands between you and what you have to do, are both fixed in the same branch, and the commit
+says so. A finding is not a place to park what is blocking you. What follows is for what lies outside
+your work and does not affect it.
 
 If you find a problem outside the requested scope, do not fix it silently — and do not merely
 mention it either. **Report it to the owner as a finding**, so it lands in the project's task list:
