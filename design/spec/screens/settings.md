@@ -52,7 +52,10 @@ Then a list of rows, each with a grey sm tile, a label, help text and a value on
   value is "This device only", the help "You chose to keep working here. Nothing is syncing.", and the
   same button.
 - **Sync cursor** — "Where the next pull starts from" → "Set" or "Never synced".
-- **Last full sync** — a date, or "Never".
+- **Last updated** — "The last time this copy caught up with the server" → a date, or "Never".
+  **It is not the date of the last full download** (H-11): the mirror stamps it every time it
+  drains the change feed, which is what a user asking "how fresh is what I am reading" needs, and
+  the label used to promise the other thing.
 - **Offline ready** (`#sync-status-preparing`) — help "Your data and the app's screens are on this
   device", value "Ready". While it prepares, "Preparing…" with both halves and their progress,
   "Copying your data and the app's screens · 18 of 25 screens". If something is missing and there is no
@@ -69,7 +72,7 @@ Then a list of rows, each with a grey sm tile, a label, help text and a value on
 
 ### The three state rows never show a value they do not have (`#sync-status-loading`)
 
-"Sync cursor", "Last full sync" and "Offline ready" are fed by the mirror and by the worker's cache, and
+"Sync cursor", "Last updated" and "Offline ready" are fed by the mirror and by the worker's cache, and
 neither is ready the instant the screen mounts. Until they are, the value is a **64px skeleton** — not
 "Never", not "Preparing…": telling a device that synced yesterday that it never synced is a lie — and
 the rows fill in when the fact arrives. **"Never synced" and "Never" are only painted once the mirror
