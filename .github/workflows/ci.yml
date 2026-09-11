@@ -74,6 +74,11 @@ jobs:
           JWT_SECRET: ci-only-secret
           CORS_ORIGIN: http://localhost:3001
           NODE_ENV: test
+          # The suite registers a user per test, so the defaults (10 auth attempts per IP per
+          # 15 min) answer 429 from the eleventh on. Same values `tools/e2e-backend.mjs` uses (H-39).
+          AUTH_RATE_LIMIT_MAX: "1000"
+          REFRESH_RATE_LIMIT_MAX: "1000"
+          RATE_LIMIT_MAX: "10000"
       - run: npm run gen:api-types && git diff --exit-code -- types/api.d.ts endpoints.md
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
@@ -99,3 +104,6 @@ jobs:
         with:
           name: lighthouse
           path: .lighthouseci
+          # upload-artifact skips dotfiles since v4.4, so this one uploaded nothing — not even on
+          # the runs where the job passed, which is why no failure here could be read without a token.
+          include-hidden-files: true

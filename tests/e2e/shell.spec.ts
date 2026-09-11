@@ -34,7 +34,7 @@ test("unknown routes answer a real 404", async ({ page, request }) => {
   await page.context().addCookies((await request.storageState()).cookies);
   const response = await page.goto("/this-route-does-not-exist");
   expect(response?.status()).toBe(404);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Page not found");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Page not found");
 });
 
 test("the app segment is noindex", async ({ page, request }) => {
