@@ -11,6 +11,7 @@ const suspectListeners = new Set<Listener>();
 let phase: ConnectivityPhase = "online";
 let timer: ReturnType<typeof setTimeout> | null = null;
 let started = false;
+let reported = false;
 
 function emit(): void {
   for (const listener of listeners) listener();
@@ -26,6 +27,7 @@ function setPhase(next: ConnectivityPhase): void {
 // P-32: a device the user put in "this device only" is offline by decision, so nothing may talk it
 // back into being online. Turning the choice off is what lets the next answer through.
 export function reportOnline(online: boolean): void {
+  reported = true;
   if (online && isLocalOnly()) {
     setPhase("offline");
     return;
@@ -98,7 +100,8 @@ function start(): void {
   // P-32: the choice comes first. Measured the hard way — with `navigator.onLine` deciding here, a
   // reload in "this device only" started online and the next write went to the server, which is the
   // one thing the mode promises not to do.
-  phase = isLocalOnly() || !navigator.onLine ? "offline" : "online";
+  // H-08: and only if nobody decided yet — `navigator.onLine` is a hint and may not undo a report.
+  if (!reported) phase = isLocalOnly() || !navigator.onLine ? "offline" : "online";
   window.addEventListener("online", () => {
     reportOnline(true);
   });
@@ -121,5 +124,6 @@ export const connectivityStore = {
     if (timer) clearTimeout(timer);
     timer = null;
     phase = "online";
+    reported = false;
   },
 };

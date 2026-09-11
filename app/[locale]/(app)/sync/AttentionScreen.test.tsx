@@ -254,7 +254,10 @@ describe("the Needs your attention tray", () => {
 
     // The rename lives inside the comparison sheet, not in a sheet of its own.
     const sheet = await screen.findByRole("dialog");
-    expect(sheet).toHaveTextContent("The name is taken.");
+    // H-08: the dialog exists before it has read the queue, so the text has to be waited for.
+    await waitFor(() => {
+      expect(sheet).toHaveTextContent("The name is taken.");
+    });
     expect(within(sheet).getByRole("textbox", { name: "New name" })).toHaveValue("Cash (old)");
   });
 
