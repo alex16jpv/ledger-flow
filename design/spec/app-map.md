@@ -71,7 +71,11 @@ the curated set, with search) and colour. ✅ Archiving confirms and explains wh
 
 The list · ✅ Detail (progress, the current period and earlier ones through `?reference=`, the
 period's transactions, the amount override: set / 0 "does not apply this period" / remove, categories
-flagged when archived, note, `effectiveFrom`). ✅ New and edit: name, type EXPENSE (INCOME hidden,
+flagged when archived, note, `effectiveFrom`). ⬜ **What the period is doing**: spending per day over
+the budget's own period, the cumulative curve against the pace with where it ends at this rate, the
+last six periods against their limits, the biggest movements, and — for a budget of several categories
+— which of them is eating it. All but the pace curve need the backend first (`categoryIds` on
+`GET /stats/spending`, an order on `GET /transactions`). ✅ New and edit: name, type EXPENSE (INCOME hidden,
 backend-ready), several categories or global, period (WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY,
 CUSTOM with dates), amount, colour, note, effective from; warnings when the period or the dates change
 (overrides are cleared); errors `BUDGET_PERIOD_OVERLAP` and `CATEGORY_TYPE_MISMATCH` (TRANSFER
@@ -81,9 +85,21 @@ rollover, an alert threshold, SEMIMONTHLY.
 ## Stats ✅
 
 A navigable period (a month by default), spending by category (a stacked bar plus a list that drills
-down into the filtered transactions), by day (bars with gaps filled), by tag (with a note about double
-counting), and a switchable flow type; archived categories resolved with `includeArchived`; ADJUSTMENT
-excluded unless explicitly selected. 🔮 Consolidated multi-currency reports.
+down into the filtered transactions), by day (bars with gaps filled, every bar naming its day and
+opening it), by tag (with a note about double counting), and a switchable flow type; archived
+categories resolved with `includeArchived`; ADJUSTMENT excluded unless explicitly selected.
+⬜ **By day as a calendar** (a toggle over the same data), ⬜ **the average by weekday**, ⬜ **the
+biggest movements of the period** and ⬜ **by account** — the last two need the backend first (an order
+on `GET /transactions`, and `groupBy=account`). 🔮 Consolidated multi-currency reports.
+
+## Trends ⬜
+
+`/stats/trends`, reached from Stats: a range of six or twelve months ending on the month Stats was
+showing; income against spending per month with what was saved and the savings rate over the complete
+months only; this month against the same days of the last one; and spending per category month by
+month. Needs `groupBy=month` on `GET /stats/spending`. 🔮 **Recurring expenses** — found by the app,
+set up by the user, or both: the question is written up in `screens/trends.md` and drawn in
+`variants.html`, and it is the owner's to answer.
 
 ## Settings ✅
 
