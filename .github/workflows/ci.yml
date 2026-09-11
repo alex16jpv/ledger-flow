@@ -74,8 +74,7 @@ jobs:
           JWT_SECRET: ci-only-secret
           CORS_ORIGIN: http://localhost:3001
           NODE_ENV: test
-          # The suite registers a user per test, so the defaults (10 auth attempts per IP per
-          # 15 min) answer 429 from the eleventh on. Same values `tools/e2e-backend.mjs` uses (H-39).
+          # The suite registers a user per test and the default of 10 per IP 429s it (H-39).
           AUTH_RATE_LIMIT_MAX: "1000"
           REFRESH_RATE_LIMIT_MAX: "1000"
           RATE_LIMIT_MAX: "10000"
@@ -104,6 +103,5 @@ jobs:
         with:
           name: lighthouse
           path: .lighthouseci
-          # upload-artifact skips dotfiles since v4.4, so this one uploaded nothing — not even on
-          # the runs where the job passed, which is why no failure here could be read without a token.
+          # upload-artifact skips dotfiles since v4.4, and this path is one.
           include-hidden-files: true
