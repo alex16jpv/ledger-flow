@@ -104,3 +104,6 @@ jobs:
         with:
           name: lighthouse
           path: .lighthouseci
+          # upload-artifact skips dotfiles since v4.4, so this one uploaded nothing — not even on
+          # the runs where the job passed, which is why no failure here could be read without a token.
+          include-hidden-files: true
