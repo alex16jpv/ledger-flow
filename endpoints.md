@@ -37,21 +37,21 @@ Archived accounts are hidden unless includeArchived=true.
 
 **Query**
 
-| Name              | Type                         | Required | Description                                                   |
-| ----------------- | ---------------------------- | -------- | ------------------------------------------------------------- |
-| `limit`           | integer, 1–100, default `20` | no       | Maximum number of items to return                             |
-| `offset`          | integer, 0–, default `0`     | no       | Number of items to skip (offset-based pagination)             |
-| `cursor`          | string (uuid)                | no       | Cursor ID for cursor-based pagination (overrides offset)      |
-| `ids`             | string                       | no       | Comma-separated list of account UUIDs to filter by ID (1-100) |
-| `includeArchived` | `true` \| `false`            | no       | Include archived accounts in the listing                      |
+| Name              | Type                         | Required | Description                                                                                                           |
+| ----------------- | ---------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| `limit`           | integer, 1–100, default `20` | no       | Maximum number of items to return                                                                                     |
+| `offset`          | integer, 0–, default `0`     | no       | Number of items to skip (offset-based pagination)                                                                     |
+| `cursor`          | string (uuid)                | no       | ID of the last item of the previous page; must name a row of the caller's (cursor-based pagination; overrides offset) |
+| `ids`             | string                       | no       | Comma-separated list of account UUIDs to filter by ID (1-100)                                                         |
+| `includeArchived` | `true` \| `false`            | no       | Include archived accounts in the listing                                                                              |
 
 **Responses**
 
-| Status | Schema          | Description                                |
-| ------ | --------------- | ------------------------------------------ |
-| `200`  | `AccountList`   | Paginated list of accounts                 |
-| `400`  | `ErrorResponse` | Invalid query parameters (code VALIDATION) |
-| `401`  | `ErrorResponse` | Unauthorized                               |
+| Status | Schema          | Description                                                                                                         |
+| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `AccountList`   | Paginated list of accounts                                                                                          |
+| `400`  | `ErrorResponse` | Invalid query parameters (code VALIDATION), or a cursor that names no account of the caller's (code INVALID_CURSOR) |
+| `401`  | `ErrorResponse` | Unauthorized                                                                                                        |
 
 ### `POST /accounts`
 
@@ -318,22 +318,22 @@ AFTER pagination, so a page can hold fewer than `limit` items even when
 
 **Query**
 
-| Name              | Type                         | Required | Description                                                                          |
-| ----------------- | ---------------------------- | -------- | ------------------------------------------------------------------------------------ |
-| `reference`       | string (date-time)           | no       | Any instant inside the period to resolve (default: now)                              |
-| `includeArchived` | `true` \| `false`            | no       | Also include archived budgets                                                        |
-| `includeExpired`  | `true` \| `false`            | no       | Also include expired CUSTOM budgets                                                  |
-| `limit`           | integer, 1–100, default `20` | no       | Maximum number of items to return                                                    |
-| `offset`          | integer, 0–, default `0`     | no       | Number of items to skip (offset-based pagination)                                    |
-| `cursor`          | string (uuid)                | no       | ID of the last item of the previous page (cursor-based pagination; overrides offset) |
+| Name              | Type                         | Required | Description                                                                                                           |
+| ----------------- | ---------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| `reference`       | string (date-time)           | no       | Any instant inside the period to resolve (default: now)                                                               |
+| `includeArchived` | `true` \| `false`            | no       | Also include archived budgets                                                                                         |
+| `includeExpired`  | `true` \| `false`            | no       | Also include expired CUSTOM budgets                                                                                   |
+| `limit`           | integer, 1–100, default `20` | no       | Maximum number of items to return                                                                                     |
+| `offset`          | integer, 0–, default `0`     | no       | Number of items to skip (offset-based pagination)                                                                     |
+| `cursor`          | string (uuid)                | no       | ID of the last item of the previous page; must name a row of the caller's (cursor-based pagination; overrides offset) |
 
 **Responses**
 
-| Status | Schema          | Description                    |
-| ------ | --------------- | ------------------------------ |
-| `200`  | `BudgetList`    | Paginated list of budget views |
-| `400`  | `ErrorResponse` | Invalid query parameters       |
-| `401`  | —               | Unauthorized                   |
+| Status | Schema          | Description                                                                                                        |
+| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `200`  | `BudgetList`    | Paginated list of budget views                                                                                     |
+| `400`  | `ErrorResponse` | Invalid query parameters (code VALIDATION), or a cursor that names no budget of the caller's (code INVALID_CURSOR) |
+| `401`  | —               | Unauthorized                                                                                                       |
 
 ### `POST /budgets`
 
@@ -565,22 +565,22 @@ Archived categories are hidden unless includeArchived=true.
 
 **Query**
 
-| Name              | Type                                | Required | Description                                                    |
-| ----------------- | ----------------------------------- | -------- | -------------------------------------------------------------- |
-| `limit`           | integer, 1–100, default `20`        | no       | Maximum number of items to return                              |
-| `offset`          | integer, 0–, default `0`            | no       | Number of items to skip (offset-based pagination)              |
-| `cursor`          | string (uuid)                       | no       | Cursor ID for cursor-based pagination (overrides offset)       |
-| `ids`             | string                              | no       | Comma-separated list of category UUIDs to filter by ID (1-100) |
-| `type`            | `INCOME` \| `EXPENSE` \| `TRANSFER` | no       | Filter categories by type                                      |
-| `includeArchived` | `true` \| `false`                   | no       | Include archived categories in the listing                     |
+| Name              | Type                                | Required | Description                                                                                                           |
+| ----------------- | ----------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| `limit`           | integer, 1–100, default `20`        | no       | Maximum number of items to return                                                                                     |
+| `offset`          | integer, 0–, default `0`            | no       | Number of items to skip (offset-based pagination)                                                                     |
+| `cursor`          | string (uuid)                       | no       | ID of the last item of the previous page; must name a row of the caller's (cursor-based pagination; overrides offset) |
+| `ids`             | string                              | no       | Comma-separated list of category UUIDs to filter by ID (1-100)                                                        |
+| `type`            | `INCOME` \| `EXPENSE` \| `TRANSFER` | no       | Filter categories by type                                                                                             |
+| `includeArchived` | `true` \| `false`                   | no       | Include archived categories in the listing                                                                            |
 
 **Responses**
 
-| Status | Schema          | Description                                |
-| ------ | --------------- | ------------------------------------------ |
-| `200`  | `CategoryList`  | Paginated list of categories               |
-| `400`  | `ErrorResponse` | Invalid query parameters (code VALIDATION) |
-| `401`  | `ErrorResponse` | Unauthorized                               |
+| Status | Schema          | Description                                                                                                          |
+| ------ | --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `CategoryList`  | Paginated list of categories                                                                                         |
+| `400`  | `ErrorResponse` | Invalid query parameters (code VALIDATION), or a cursor that names no category of the caller's (code INVALID_CURSOR) |
+| `401`  | `ErrorResponse` | Unauthorized                                                                                                         |
 
 ### `POST /categories`
 
@@ -753,7 +753,7 @@ says what happened to it.
 | status      | meaning                                                                                                                                                                                                                                                           | what the client does                         |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | `applied`   | landed now; `result` is what the route would have answered                                                                                                                                                                                                        | drop the operation, keep `result`            |
-| `duplicate` | already landed: a resent `opId`, or a create whose `id` the user already owns (`result` carries the row in that case)                                                                                                                                             | drop the operation                           |
+| `duplicate` | already landed: a resent `opId`, a create whose `id` the user already owns (`result` carries the row in that case), or a write whose `baseUpdatedAt` no longer matches but whose state the row already carries                                                    | drop the operation                           |
 | `conflict`  | the route would have answered 409 (`STALE_UPDATE` with `current`, `DUPLICATE`, `ID_TAKEN`), or a row the server has explains it: a `DUPLICATE` whose name an active row holds, and `RESOURCE_ARCHIVED` for an account archived online. `current` carries that row | keep it; resolve                             |
 | `rejected`  | the route would have answered another 4xx (`VALIDATION`, `NOT_FOUND`, `CATEGORY_ARCHIVED`, `BUDGET_PERIOD_OVERLAP`, `FUTURE_DATE`…)                                                                                                                               | keep it; the user fixes or discards          |
 | `blocked`   | a row it names (`dependsOn`, or its own `id`) had an operation fail earlier in this batch; `blockedBy` is that opId                                                                                                                                               | keep it; resend once the blocker is resolved |
@@ -769,7 +769,11 @@ archived online is saved WITHOUT it, flagged `pendingDetails`, with
 dropped (no categories means a global budget). A movement whose account
 was archived online is a `conflict` `RESOURCE_ARCHIVED` and is never
 lost. Archiving an already-archived row lands, and deleting a movement
-another device deleted answers `duplicate`.
+another device deleted answers `duplicate`. A guard that no longer
+matches is not a conflict when the row already carries what the
+operation asked for — its own write landed and the registry row did
+not, or another device made the same change: the state it wanted holds,
+so it answers `duplicate`.
 
 **Actions per entity:** account: create, update, archive, restore,
 setDefault · category: create, update, archive, restore · transaction:
@@ -864,7 +868,7 @@ page); it stays consistent when transactions are backdated.
 | ---------------- | --------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `limit`          | integer, 1–100, default `20`                        | no       | Maximum number of items to return                                                                                                                                                                                                    |
 | `offset`         | integer, 0–, default `0`                            | no       | Number of items to skip (offset-based pagination)                                                                                                                                                                                    |
-| `cursor`         | string (uuid)                                       | no       | ID of the last item of the previous page (cursor-based pagination; overrides offset)                                                                                                                                                 |
+| `cursor`         | string (uuid)                                       | no       | ID of the last item of the previous page; must name a row of the caller's (cursor-based pagination; overrides offset)                                                                                                                |
 | `ids`            | string                                              | no       | Comma-separated list of UUIDs to filter by ID (max 100)                                                                                                                                                                              |
 | `accountId`      | string (uuid)                                       | no       | Filter transactions by account ID (matches fromAccountId or toAccountId)                                                                                                                                                             |
 | `categoryId`     | string (uuid)                                       | no       | Filter transactions by category ID                                                                                                                                                                                                   |
