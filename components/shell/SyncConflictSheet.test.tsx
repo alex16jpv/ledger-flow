@@ -4,7 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { ToastProvider } from "@/components/ui/Toast";
 import { dayKey } from "@/lib/format/dates";
 import { rememberServerTime, resetClockOffset } from "@/lib/local/clock";
-import { pendingOperations, refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
+import {
+  pendingOperations,
+  refreshOutboxStatus,
+  resetOutboxStatus,
+  resetSyncEngine,
+} from "@/lib/local/outbox";
 import { setCurrentVault } from "@/lib/local/repository/read";
 import {
   accountRecord,
@@ -40,6 +45,9 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  // H-08: a drain one test started outlives it and calls the next test's fetch mock, which then
+  // sees a request nobody in it made.
+  resetSyncEngine();
   resetOutboxStatus();
   setCurrentVault(null);
   vi.unstubAllGlobals();

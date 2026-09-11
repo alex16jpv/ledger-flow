@@ -17,6 +17,20 @@ describe("connectivityStore", () => {
     vi.useRealTimers();
   });
 
+  // H-08: `start()` runs on the first subscriber and used to overwrite the phase with
+  // `navigator.onLine`, throwing away whatever had already been decided. It made every test that
+  // went offline before its first render fail whenever the run order put it first in its file.
+  it("keeps a phase reported before the first subscriber ever arrives", async () => {
+    vi.resetModules();
+    const fresh = await import("./connectivity");
+    fresh.reportOnline(false);
+
+    const stop = fresh.connectivityStore.subscribe(() => undefined);
+
+    expect(fresh.connectivityStore.getSnapshot()).toBe("offline");
+    stop();
+  });
+
   it("goes offline, shows back-online briefly and settles on online", () => {
     const listener = vi.fn();
     connectivityStore.subscribe(listener);
