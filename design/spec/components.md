@@ -46,15 +46,18 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
 17. **Stat** — a 12px label, a 20px value, an 11px delta with an icon.
 18. **Bars** — a daily series, one bar per day: brand at 35% opacity, the highest day and today at
     100%, a day with nothing spent in `--surface-3`, and **a day that has not arrived yet as a 1px rule
-    in `--border`** — a day with no spending and a day that has not happened are not the same fact, and
-    the chart may not draw them the same. **Every bar is a control**: its accessible name is its day and
-    its amount, it takes keyboard focus, it shows the same text on hover and on focus in a `Tooltip`
-    (23), it repeats it in the `readout` (29), and it opens that day's transactions. The chart keeps a
-    bubble's height of room above the tallest bar so the bubble never covers the card's title, and at
-    either end the bubble aligns to that edge instead of centring. A day that has not arrived is not a
-    control and is hidden from readers. **One component**: Home, Stats, the budget detail and the
-    weekday average are the same `Bars` with a different height, different labels and a different place
-    to go — never a copy.
+    in `--text-3`** — a day with no spending and a day that has not happened are not the same fact, and
+    the chart may not draw them the same; a day that has not arrived is not a control and is hidden
+    from readers. **Two modes, one component.** Where the slots lead somewhere — a day opens that day's
+    transactions — each bar is a control: its accessible name is its day and its amount, it takes
+    keyboard focus through the chart's roving `tabindex`, and it shows the same text on hover and on
+    focus in a `Tooltip` (23) and in the `readout` (29). Where they lead nowhere — the average by
+    weekday: there is no "all Wednesdays" to open — the chart is one `role="img"` whose accessible name
+    reads every slot, and the bubble is a pointer convenience only; seven buttons that do nothing are
+    worse than one image. The chart keeps a bubble's height of room above the tallest bar so the bubble
+    never covers the card's title, and at either end the bubble aligns to that edge instead of
+    centring. Home, Stats, the budget detail and the weekday average are this one component with a
+    different height, different labels and a different mode — never a copy.
 19. **Account card** — a 3px stripe of the colour on the left, a dot plus the name plus the Main badge,
     a 24px balance (negative with `−`) and an 11px type. On mobile it is a snapping carousel (72% of the
     width, 260px maximum); at 600px and up, an auto-fill grid.
@@ -72,8 +75,9 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
 23. **Tooltip** — a bubble over `--ink` with 11px medium text and an arrow, above the element, shown on
     hover and on keyboard focus; it is visual only (`aria-hidden`) because the control that carries it
     already has an accessible name. Used for: the colour's name in the swatches, the icon's name in the
-    grid, the category of each segment of the stacked bar in Stats, **every slot of every chart** (18,
-    30, 31, 32), the projection mark, and the pace mark. The exception to `aria-hidden` is the pace
+    grid, the category of each segment of the stacked bar in Stats, **every slot of every chart that has
+    slots** (18, 30, 32, 33 — 31 is a line, not slots, and puts its reading in the sentence and the
+    `readout` beside it), the projection mark, and the pace mark. The exception to `aria-hidden` is the pace
     mark, which is not a control with a name of its own, so it carries its `aria-label` with the same
     text.
 24. **Projection mark (`projected`)** — a 16px `cloud-off` icon in `--warning` next to a figure (aligned

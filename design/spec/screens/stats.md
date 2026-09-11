@@ -55,11 +55,13 @@ above need more, and each is a task on the backend's side, not a copy of the ari
 
 The average by weekday needs nothing new: it is the day buckets read a second way.
 
-**Who computes what.** House rule 4 stands: the API returns the buckets and the totals, and the client
-only divides, ratios and picks a maximum over figures the API already added — the daily average, the
-weekday average, the percentages, the priciest day, the no-spend count. Offline every one of them comes
-from `lib/local/derive` over the mirror and carries the projection mark (component 24). Nothing on this
-screen adds money the server did not add.
+**Who computes what.** House rule 4 stands. The API returns the buckets and the totals; over them the
+client divides, ratios and picks a maximum — the daily average, the percentages, the priciest day, the
+no-spend count — and in one place it **adds** buckets the server returned but did not add together: the
+average by weekday sums the three or four buckets of each weekday before dividing. That addition is
+integers in minor units over figures the server produced, never over anything the client invented.
+Offline all of it comes from `lib/local/derive` over the mirror and carries the projection mark
+(component 24). No figure here is money the server never saw.
 
 **The four states**, per card: data; **empty** — one `Empty`, "No transactions in this period", never a
 chart of zeros; **loading** — a `Skeleton` at each card's own height; **error** — the shared `Empty` in

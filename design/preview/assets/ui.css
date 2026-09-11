@@ -440,7 +440,6 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .chart .plot { margin-top: 22px; }
 .chart .axis.marked { position: relative; display: block; height: 1em; }
 .chart .axis.marked span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
-.bars .tip, .gbars .tip, .colbars .tip { font-style: normal; }
 .bars .slot.future > i { background: transparent; opacity: 1; min-height: 1px; border-top: 1px solid var(--text-3); border-radius: 0; }
 .heat .d.future { background: transparent; color: var(--text-3); box-shadow: inset 0 0 0 1px var(--text-3); }
 .heat .d.future:hover { box-shadow: inset 0 0 0 1px var(--text-3); }
@@ -460,8 +459,8 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .gbars .slot:hover i, .gbars .slot:focus-visible i, .gbars .slot.sel i { opacity: 1; }
 
 .colbars { display: flex; align-items: flex-end; gap: var(--sp-2); }
-.colbars .col { flex: 1; min-width: 0; align-self: stretch; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; padding: 0; border: 0; background: none; cursor: pointer; position: relative; }
-.colbars .col i { display: block; background: var(--f); min-height: 2px; border-radius: 2px; opacity: 0.85; }
+.colbars .col { flex: 1; min-width: 0; align-self: stretch; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; border: 0; background: none; cursor: pointer; position: relative; }
+.colbars .col i { display: block; background: var(--f); min-height: 2px; border-radius: 2px; opacity: 0.85; box-shadow: inset 0 -1px 0 var(--surface); }
 .colbars .col i:first-child { border-radius: 3px 3px 2px 2px; }
 .colbars .col:hover i, .colbars .col:focus-visible i, .colbars .col.sel i { opacity: 1; }
 
@@ -497,4 +496,20 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .bars .slot:first-child .tip::after, .gbars .slot:first-child .tip::after, .colbars .col:first-child .tip::after, .heat .d:nth-child(7n+1) .tip::after { left: 10px; transform: none; }
 .bars .slot:last-child .tip, .gbars .slot:last-child .tip, .colbars .col:last-child .tip, .heat .d:nth-child(7n) .tip { left: auto; right: 0; transform: none; }
 .bars .slot:last-child .tip::after, .gbars .slot:last-child .tip::after, .colbars .col:last-child .tip::after, .heat .d:nth-child(7n) .tip::after { left: auto; right: 10px; transform: none; }
-.colbars .col.partial i, .gbars .slot.partial i { opacity: 0.55; }
+.colbars .col.partial i,
+.gbars .slot.partial i {
+  position: relative;
+}
+.colbars .col.partial i::after,
+.gbars .slot.partial i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 3px,
+    var(--surface) 3px 5px
+  );
+  opacity: 0.75;
+}

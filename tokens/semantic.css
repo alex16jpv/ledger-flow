@@ -24,7 +24,7 @@
   --brand-text:    light-dark(oklch(from var(--seed-brand) 0.40 c h), oklch(from var(--seed-brand) 0.84 calc(c * 0.7) h));
   --focus-ring:    oklch(from var(--brand) l c h / 0.45);
 
-  --heat-1:        light-dark(oklch(from var(--seed-brand) 0.94 calc(c * 0.35) h), oklch(from var(--seed-brand) 0.26 calc(c * 0.40) h));
+  --heat-1:        var(--brand-soft);
   --heat-2:        light-dark(oklch(from var(--seed-brand) 0.88 calc(c * 0.55) h), oklch(from var(--seed-brand) 0.36 calc(c * 0.55) h));
   --heat-3:        light-dark(oklch(from var(--seed-brand) 0.80 calc(c * 0.75) h), oklch(from var(--seed-brand) 0.48 calc(c * 0.75) h));
   --heat-4:        var(--brand);

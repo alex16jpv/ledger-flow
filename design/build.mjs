@@ -188,7 +188,10 @@ const stackCols = (cols, o = {}) => {
   const totals = cols.map(([, parts]) => parts.reduce((a, [, v]) => a + v, 0));
   const caps = cols.map(([, , opts = {}]) => opts.cap ?? 0);
   const top = Math.max(0, ...totals, ...caps);
-  const tip = o.tip ?? ((name, total) => `${name} · ${moneyText(total)}`);
+  const tip =
+    o.tip ??
+    ((name, total, i) =>
+      `${name} · ${moneyText(total)}${cols[i][2]?.partial ? ", in progress" : ""}`);
   const items = cols
     .map(([name, parts, opts = {}], i) => {
       const cap = opts.cap ? `<span class="cap" style="bottom:${pct(opts.cap, top)}%"></span>` : "";
@@ -213,7 +216,10 @@ const trend = (series, o = {}) => {
   const span = o.span ?? Math.max(...series.map((s) => s.points.length));
   const values = series.flatMap((s) => s.points).filter((v) => v !== null);
   const top = mx ?? Math.max(0, ...values, ...marks.map((m) => m.at));
-  const at = (v, i) => [round((i / (span - 1)) * W * 10) / 10, round((H - pct(v, top)) * 10) / 10];
+  const at = (v, i) => [
+    span > 1 ? round((i / (span - 1)) * W * 10) / 10 : W / 2,
+    round((H - pct(v, top)) * 10) / 10,
+  ];
   const path = (pts) => {
     let d = "";
     let drawing = false;
@@ -1434,7 +1440,7 @@ const weekdayCard = () => {
   const wk = weekdayAverages();
   const peak = wk.indexOf(Math.max(...wk));
   return `<div class="card chart"><span class="eyebrow">Average by weekday</span>
-${barsChart(wk, { height: 64, active: peak, interactive: false, label: `Average spending per weekday. ${WD_LONG[peak]} is the highest at ${moneyText(wk[peak])}.`, tip: (i, v) => `${WD_LONG[i - 1]} · ${moneyText(v)} on average` })}
+${barsChart(wk, { height: 64, active: peak, interactive: false, label: `Average spending per weekday: ${wk.map((v, i) => `${WD_LONG[i]} ${moneyText(v)}`).join(", ")}.`, tip: (i, v) => `${WD_LONG[i - 1]} · ${moneyText(v)} on average` })}
 ${axis(...WD)}
 ${readout(`${WD_LONG[peak]} is your most expensive day`, money(wk[peak]))}</div>`;
 };
@@ -1509,10 +1515,10 @@ ${biggestCard()}
 ${trendsLink()}`;
   } else {
     const tags = [
-      ["latte", 286400, 41],
-      ["groceries", 312000, 4],
-      ["monthly", 165900, 6],
-      ["work", 88200, 9],
+      ["groceries", 268000, 9],
+      ["latte", 61300, 7],
+      ["monthly", 55900, 4],
+      ["work", 42400, 5],
     ];
     const lis = tags
       .map(
@@ -1520,7 +1526,7 @@ ${trendsLink()}`;
           `<a class="row" href="#"><span class="tile"><span style="font-weight:600;color:var(--text-2)">#</span></span><span class="body"><span class="title">#${t}</span><span class="meta">${n} transactions</span></span><span class="right">${amount(v)}</span></a>`,
       )
       .join("");
-    content = `<div class="alert neutral">${iconSvg("info")}<span>A transaction with several tags counts in each of them, so tag totals can add up to more than the total. <b class="amount">${money(1162300)}</b> of spending has no tags.</span></div><div class="list card flush">${lis}</div>
+    content = `<div class="alert neutral">${iconSvg("info")}<span>A transaction with several tags counts in each of them, so tag totals can add up to more than the total. <b class="amount">${money(SEP_TOTAL - 361400)}</b> of spending has no tags.</span></div><div class="list card flush">${lis}</div>
 ${trendsLink()}`;
   }
   return screen(intro + content, {
@@ -1554,8 +1560,11 @@ const trends = ({ months = 6 } = {}) => {
     { partial },
   ]);
   const short = months < 6;
-  const body = `<div class="segment"><button aria-pressed="true">Last 6 months</button><button${short ? " disabled" : ""}>Last 12 months</button></div>
-${short ? `<div class="alert neutral">${iconSvg("info")}<span>This account has ${months} months of history, so that is what these show. The tiles count the ${complete.length} that finished.</span></div>` : ""}
+  const body = `${
+    short
+      ? `<div class="alert neutral">${iconSvg("info")}<span>This account has <b>${months} months</b> of history, so that is the whole range there is. The tiles count the ${complete.length} that finished.</span></div>`
+      : `<div class="segment"><button aria-pressed="true">Last 6 months</button><button>Last 12 months</button></div>`
+  }
 <div class="card chart"><div class="card-head" style="margin:0"><span class="eyebrow">Income and spending</span><span class="legend row"><span class="li"><i class="dot inc"></i>Income</span><span class="li"><i class="dot exp"></i>Spending</span></span></div>
 ${gbars(rows, { height: 128, active: last })}
 ${axis(...MONTHS.map(([n]) => n.slice(0, 3)))}
