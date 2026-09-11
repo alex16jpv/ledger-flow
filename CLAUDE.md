@@ -16,8 +16,8 @@ what he gives you, and ask him if you have none. Read `DECISIONS.md` before chan
 
 A change is not done until all of these hold. If one does not apply, say so and why.
 
-1. **`npm run ci` is green**: typecheck, lint, format check, token check, unit and component
-   tests, build. Never report "done" without running it.
+1. **`npm run ci` is green**: typecheck, lint, format check, token check, contrast check, unit
+   and component tests, build. Never report "done" without running it.
 2. **Tests for what you added**: happy path and edges (empty, invalid, offline, 401/429,
    `INVALID_CURSOR`). A bug fix starts with the failing test.
 3. **Verified against the real API** (backend running locally), not only against mocks.
@@ -26,7 +26,8 @@ A change is not done until all of these hold. If one does not apply, say so and 
    (`npm run design`, or `npm run design:shoot` for a capture) in mobile and desktop, light and dark,
    and renders its four states (data, empty, loading, error).
 5. **Docs updated** (§4). `DECISIONS.md` has an entry for every non-obvious choice.
-6. **One commit per backlog item** (`W-nn`), in English, describing only what was actually done.
+6. **One commit per item of the owner's list** (`T-nn`, or `H-nn` for a finding), in English,
+   describing only what was actually done.
 
 ---
 
@@ -34,10 +35,11 @@ A change is not done until all of these hold. If one does not apply, say so and 
 
 - **English everywhere**: identifiers, files, message keys, commits, docs, decisions. Spanish
   exists only as content inside `messages/es.json`.
-- **No comments** unless a single line documents an external constraint the code cannot
-  express (browser bug, backend rule, non-obvious decision). No JSDoc decoration, no TODOs
-  without a ticket, no commented-out code, no separators. If a comment can be deleted without
-  losing a constraint, delete it.
+- **No comments, by default.** Write one only when it is strictly necessary, and then it is
+  **one physical line** documenting a constraint the code cannot express (a browser bug, a rule
+  the backend imposes). Never wrapped over two lines, never a paragraph, and never the why of a
+  decision — that goes to `DECISIONS.md`. No JSDoc decoration, no TODOs, no commented-out code,
+  no separators. If a comment can be deleted without losing a constraint, delete it.
 - **No color outside tokens** (`bg-surface`, `text-c-red-text`…). No hex, no Tailwind default
   palette classes. `npm run check-tokens` fails the build.
 - **No user-visible text outside `messages/`**. Lint fails on JSX literals.
@@ -55,11 +57,13 @@ A change is not done until all of these hold. If one does not apply, say so and 
 - **Never branch on the server's `message`**, only on `code`.
 - **Never silence an error.** If something fails it must be visible and the message must be true.
 - **Never claim work you did not do** in a commit, a summary or a doc.
+- **Never `git push` and never deploy.** The owner pushes and opens every pull request; say
+  which branch the work is on and stop there. Reading the remote (`fetch`, `pull`) is free.
 - **Do not delete the previous branch or force-push** without the owner's explicit approval.
 
 ---
 
-## 3. Code standards (summary; details in HANDOFF §3)
+## 3. Code standards
 
 - Architecture by features: `app → features → components/ui | lib`. Never `features/a →
 features/b`; shared code moves up.
@@ -94,8 +98,9 @@ features/b`; shared code moves up.
 
 ## 5. Commits
 
-- `type(scope): imperative description (W-nn)`; body explains why and what broke before.
-- One backlog item per commit. Related but independent changes are separate commits.
+- `type(scope): imperative description (T-nn)`; body explains why and what broke before.
+  `commitlint` rejects a message with no reference.
+- One item per commit. Related but independent changes are separate commits.
 - `lefthook` runs lint, format, typecheck, token check and related tests before every commit
   and `commitlint` validates the message. Do not bypass hooks (`--no-verify` is forbidden).
 
@@ -134,7 +139,7 @@ If something in your change is incomplete or doubtful, say so.
 
 ```bash
 npm run dev            # Next dev server (backend must be running locally)
-npm run ci             # full gate: typecheck, lint, format:check, check-tokens, test, build
+npm run ci             # full gate: typecheck, lint, format:check, check-tokens, contrast-check, test, build
 npm run test           # vitest + Testing Library
 npm run test:e2e       # Playwright against the local backend
 npm run check-tokens   # fails on raw colors

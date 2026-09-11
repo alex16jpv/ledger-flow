@@ -9,7 +9,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 
 - **Decision:** the previous client was removed in one reset commit; nothing was copied. Only the
   design tokens, the Geist fonts and the `front-guardrails/` files enter from outside.
-- **Alternatives:** incremental migration of the old code. Rejected in HANDOFF §2 (≈5 % would survive).
+- **Alternatives:** incremental migration of the old code. Rejected after measuring the old code: about 5 % of it would have survived.
 - **Consequence:** the old code stays readable with `git show audit/fase-2-frontend:<path>` for
   behaviour reference only.
 
@@ -29,7 +29,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 
 - **Decision:** `tokens/*.css` carry the exact values of the design's original token files (verified
   by a whitespace-and-comment-insensitive diff) but the explanatory Spanish comments were dropped.
-- **Why:** HANDOFF §3.0 forbids comments and non-English text in the repo; §0 of DESIGN.md protects
+- **Why:** the hard rules forbid comments and non-English text in the repo; §0 of DESIGN.md protects
   the values, not the prose. `tokens/` is excluded from Prettier so the files stay diffable
   against the design source.
 
@@ -44,7 +44,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 ## 2026-09-01 · Bundle budgets measure route-owned JS on top of the framework runtime (W-01)
 
 - **Decision:** `npm run size-limit` reads Turbopack's `build-manifest.json` (shared runtime) and
-  each route's `page_client-reference-manifest.js` and enforces the HANDOFF budgets (landing
+  each route's `page_client-reference-manifest.js` and enforces the agreed bundle budgets (landing
   ≤ 60 kB, app shell ≤ 200 kB gz) on the JS that the route adds beyond the shared runtime, which is
   reported separately.
 - **Why:** an empty Next 16 App Router page already ships 126.7 kB gz of React + Next runtime, so a
@@ -79,7 +79,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **Context:** the development machine is WSL (Debian 13) without the Chromium system libraries
   and without password-less `sudo`, so `npx playwright test` cannot launch a browser locally until
   the owner runs `sudo npx playwright install-deps chromium` once.
-- **Decision:** keep Playwright (HANDOFF §3.12); the `e2e` job in `ci.yml` installs the browser
+- **Decision:** keep Playwright, the end-to-end runner this repo standardised on; the `e2e` job in `ci.yml` installs the browser
   with its dependencies and runs against a backend with a single-node Mongo replica set started via
   `docker run` (service containers cannot pass `--replSet`).
 - **Consequence:** local runs of `npm run test:e2e` are optional; every PR runs the suite in CI.
@@ -97,7 +97,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 
 - **Decision:** `<meta name="theme-color">` is written at runtime from the computed value of `--bg`
   after the palette or mode changes, instead of a static `media`-split pair.
-- **Why:** a static meta needs literal colors, which HANDOFF §3.0 forbids outside `tokens/`, and a
+- **Why:** a static meta needs literal colors, which the no-raw-colour rule forbids outside `tokens/`, and a
   per-palette hex table would duplicate the OKLCH seeds. The computed value already reflects the
   palette, the explicit mode and `light-dark()`.
 - **Consequence:** the very first paint uses the browser default until hydration; the inline theme
@@ -110,7 +110,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   layout. It was first inlined as the Script's children, but React re-renders the root layout on the
   client for the not-found boundary and warns about inline script children; an external blocking
   script keeps the before-paint guarantee without that warning.
-- **Why:** HANDOFF §3.7 requires the attributes before the first paint and §3.9 forbids
+- **Why:** the theming rule requires the attributes before the first paint and the session rules forbid
   `dangerouslySetInnerHTML`. `next/script` injects the inline code in `<head>` and will receive the
   CSP nonce from `proxy.ts` in W-07. `<html suppressHydrationWarning>` covers the attributes the
   script adds before React hydrates.
@@ -217,7 +217,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 ## 2026-09-01 · Session BFF, cookies and headers (W-07)
 
 - **Cookie names:** `__Host-access` (15 min, `Path=/`, Strict) and `__Host-session` (30 days, `Path=/`,
-  Lax, value `1`) follow HANDOFF §3.9. The refresh cookie is **`__Secure-refresh`** instead of
+  Lax, value `1`) follow the BFF cookie rules: the browser only ever sees httpOnly cookies. The refresh cookie is **`__Secure-refresh`** instead of
   `__Host-refresh`: the `__Host-` prefix requires `Path=/` (RFC 6265bis), and the handoff's own rule
   that the refresh token must never leave `/api/auth` matters more than the prefix. `__Secure-` still
   forbids non-HTTPS delivery and any `Domain` override.
@@ -252,7 +252,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   persisted change and applies remote changes without persisting them again; `SessionProvider`
   consumes the rest.
 - **Session state** lives in React Query (`["session","me"]` → `GET /api/auth/me`) under
-  `lib/session/SessionProvider`, per HANDOFF §3.4 (small contexts in `lib`, no global store). Logout
+  `lib/session/SessionProvider`: small contexts in `lib`, no global store. Logout
   and logout-all clear the QueryClient, delete every `lf-cache-*` IndexedDB database (the future
   per-user persisted cache) and notify the other tabs. `status: "expired"` is what W-10 renders as the
   blocking session sheet.
@@ -274,8 +274,8 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 
 ## 2026-09-01 · App shell, routes and base states (W-10)
 
-- **`/home` is the authenticated home.** HANDOFF §3.2 puts Inicio at `(app)/page.tsx` while §3.13
-  reserves `/` for the static landing; both cannot own `/`. The landing keeps `/` (indexable, static)
+- **`/home` is the authenticated home.** The folder plan put Inicio at `(app)/page.tsx` while the
+  public surface reserved `/` for the static landing; both cannot own `/`. The landing keeps `/` (indexable, static)
   and the app starts at `/home`; guests hitting any app route are redirected to `/login?next=…`.
 - **Shell composition:** `components/shell` is presentational (Sidebar, TabBar with the FAB slot,
   PageHeader, ConnectionBanner, SessionExpiredSheet, AppShell with skip link). Data enters through
@@ -311,7 +311,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   disables the button until it reaches zero. The Playwright suite covers success and the uniform
   401 message only: reproducing the limit needs ten failed logins, which would also exhaust the
   per-IP budget of the CI backend for every later test, so the countdown is covered by a Testing
-  Library test with a mocked 429 (the mocks-as-fallback rule of HANDOFF §3.12).
+  Library test with a mocked 429 (mocks are a fallback: the suite tests against the real API wherever it can).
 - **"Forgot your password?"** is rendered inactive with "(soon)" behind the `forgotPassword` flag
   until the backend has email delivery (TRACKING-R2 future tasks).
 - **Element boundaries** now match full paths (`partialMatch: false`): the previous tail matching
@@ -319,7 +319,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 
 ## 2026-09-01 · Registration (W-12)
 
-- **Consent is front-end only** (owner decision, HANDOFF §3.18): the checkbox is required by the Zod
+- **Consent is front-end only** (owner decision): the checkbox is required by the Zod
   schema and the button stays disabled until it is checked, but the flag is never sent to the backend.
 - **Detected defaults:** currency comes from the device language's region through a small
   region→currency table (`lib/format/currency.ts`, fallback COP); the time zone from
@@ -339,7 +339,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **No `features/onboarding`.** The two steps are an `AccountForm` owned by `features/accounts`
   (reused by W-23) and a `GlobalBudgetForm` owned by `features/budgets`; the step flow and the
   redirects live in `app/[locale]/(auth)/onboarding/OnboardingFlow.tsx`, because a feature must not
-  import another feature (HANDOFF §3.1). `AuthFrame`/`AuthHeading` moved to `components/shell` and
+  import another feature. `AuthFrame`/`AuthHeading` moved to `components/shell` and
   `StepDots` to `components/ui` for the same reason.
 - **Global budget name:** the backend requires a name, so the onboarding budget is created as the
   localized "Monthly budget" (`budgets.global.defaultName`) with the brand-like INDIGO color.
@@ -351,8 +351,8 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 ## 2026-09-01 · Home skeleton with real data (W-14)
 
 - **`features/home` owns its queries** (`home.*` keys over `/stats/spending`, `/accounts`,
-  `/budgets`) instead of importing the accounts and budgets features: HANDOFF §3.3 already lists
-  `home` as its own invalidation domain, and a feature must not import another.
+  `/budgets`) instead of importing the accounts and budgets features: `home` is its own invalidation
+  domain, and a feature must not import another.
 - **Derived display values:** the server stays the source of money truth (`spent`, `total`, balances,
   `amount`), but the screen shows two figures the API does not expose: the daily average
   (`total / dayOfMonth`) and the total balance (sum of active account balances), both mandated by
@@ -413,7 +413,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   (name prefilled with the search text, icon grid, color) and selects the created category on
   success, so the transaction form underneath is never unmounted. The type is inherited from the
   picker and not editable there.
-- **Date and time are native inputs** (`DateTimeField`), the only exception HANDOFF §3.5 allows.
+- **Date and time are native inputs** (`DateTimeField`), the only exception the component rules allow.
   The value is a pair `{ date, time | null }`; `dateTimeInstant()` combines the chosen day with the
   **current local time** when no time was typed (owner decision of 2026-09-01, replacing the
   design's local noon), so a movement logged for today lands at the moment it was captured.
@@ -568,7 +568,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **`API_SECRET` travels only server-side.** The backend's `gatewaySecretMiddleware` rejects every
   request without `x-api-secret` once the secret is configured, and fails closed in production
   without it. `backendFetch`, the single place that knows the backend URL, now adds the header from
-  the optional `API_SECRET` server variable; the browser never sees it, in line with HANDOFF §3.15.
+  the optional `API_SECRET` server variable; the browser never sees it, in line with the security rules.
   Locally the variable stays unset because the local backend runs without a secret.
 - **The amount input takes the focus itself.** `showModal()` moves the focus to the first focusable
   element (the close button) and browsers differ on honouring `autofocus` inside a dialog, so the
@@ -616,7 +616,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **Zod locations are stripped from `details[].field`.** The API reports `body.amount`; forms know
   `amount`. `fieldErrors` removes the `body.` / `query.` / `params.` prefix.
 - **A server detail never shows raw.** `validationMessage` translates our keys and maps anything else to
-  the generic `validation.invalid`, per HANDOFF §3.8.
+  the generic `validation.invalid`, per the error taxonomy in `lib/api/errors.ts`.
 
 ## 2026-09-02 · Focus on entry (owner reports P-22, P-23)
 
@@ -685,7 +685,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   unchanged type never trips `CATEGORY_TYPE_LOCKED`. The server error is still mapped in case the
   counts are stale.
 - **The type tab lives in the URL** (`/categories?type=INCOME`), as every list filter does
-  (HANDOFF §3.4); "New category" carries the current type into the form and saving returns to the
+  (filters live in the URL); "New category" carries the current type into the form and saving returns to the
   tab of the saved category.
 - **Archived categories are one folded list for all types**, not one per tab: a user who archives
   a category and switches tabs should still find it. Restore on a taken name opens the same kind of
@@ -755,7 +755,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   Oct 15" and the form sends the local midnight of Oct 16, because `resolvePeriod` treats the CUSTOM
   window as `[start, end)` like every other period; `effectiveFrom` is the local midnight of the date.
 - **Native `<input type="date">` for the custom window and "Effective from"**: dates are the one
-  control HANDOFF §3.5 lets stay native (as `DateTimeField` already does).
+  control the component rules let stay native (as `DateTimeField` already does).
 - **`PUT` only carries the period when it changed**, because the backend clears every override
   whenever `periodType` (or the CUSTOM dates) is written; the form warns before that happens.
 - **"Create again" reuses the form with `?from=<id>`**: name, scope, categories, amount, color and
@@ -861,7 +861,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **Deleting the account** requires typing the localized word, calls `DELETE /users/:id`, signs out and
   lands on `/login?deleted=1`, which explains that registering again with the same email reactivates it.
 - **Policy version is a constant (v1)** shown with the sign-up date: the backend records no acceptance
-  (owner decision in HANDOFF §3.18); it will become a field the day a new version needs re-acceptance.
+  (owner decision); it will become a field the day a new version needs re-acceptance.
 
 ## 2026-09-02 · Public surface (W-31)
 
@@ -875,7 +875,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   the Spanish landing shows a Spanish phone.
 - **Privacy doubles as the Ley 1581 data-processing policy** (section anchored as
   `#data-processing`, linked from every footer), and `/terms` shares the `LegalPage` template. Both
-  are drafts for the owner to review before F5 closes, as HANDOFF §6 foresees.
+  are drafts for the owner to review before F5 closes, as the plan left open.
 - **404 is a real 404** rendered inside the public frame; `error.tsx` at the locale root covers the
   public pages with the same `Empty` composition.
 
@@ -883,7 +883,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 
 - **One helper builds every public page's metadata** (`lib/seo.ts`): canonical, `hreflang` for
   `en`, `es` and `x-default`, Open Graph and Twitter card, all derived from `NEXT_PUBLIC_APP_URL`
-  (`metadataBase` in the root layout); the domain never appears in code, as HANDOFF §3.17 requires.
+  (`metadataBase` in the root layout); the domain never appears in code, as the environment rules require.
 - **`robots.ts` allows only the public surface** and disallows the BFF, the app routes and the dev
   screens in both locales; `sitemap.ts` lists the five public paths with their language alternates.
   The proxy adds `X-Robots-Tag: noindex, nofollow` to app and dev routes, on the redirect to login too.
@@ -938,7 +938,7 @@ cover` is set once in the root layout for the standalone display.
   filters live in query strings), console breadcrumbs are discarded and numbers of four or more
   characters are redacted from messages. `sendDefaultPii` is off and tracing is off (0 %): Web Vitals
   go to Vercel Speed Insights, page views to Vercel Analytics (cookie-less, production only, paths
-  only), both behind `lib/analytics`, as decided in HANDOFF §6.
+  only), both behind `lib/analytics`, as decided with the owner.
 - **Events tunnel through `/monitoring`** (`withSentryConfig`, a rewrite to the ingest host) so CSP
   keeps `connect-src 'self'`; the middleware matcher skips that path so next-intl does not swallow it.
 - **`lib/env` stays out of the client instrumentation path.** `instrumentation-client.ts`,
@@ -962,7 +962,7 @@ cover` is set once in the root layout for the standalone display.
   Previews answer `x-robots-tag: noindex` on every response and a `robots.txt` that disallows all,
   because Vercel only adds its own header on `*.vercel.app` hosts.
 - **Lighthouse CI is the fourth CI job**, running `lhci autorun` against a production build of the
-  public pages (`/`, `/es`, `/login`, `/privacy`) with the HANDOFF thresholds as assertions and the
+  public pages (`/`, `/es`, `/login`, `/privacy`) with the agreed thresholds as assertions and the
   reports kept as an artifact. The build for that job uses the audited origin as
   `NEXT_PUBLIC_APP_URL`: a canonical pointing elsewhere costs eight SEO points. The Spanish CTA
   changed from "Empezar" to "Crear cuenta gratis" because Lighthouse counts the former as generic
@@ -2551,7 +2551,7 @@ cover` is set once in the root layout for the standalone display.
   remaining 27 kB on the screens with no form; (c) `optimizePackageImports: ["zod"]` — tried and
   measured: **no change at all**. This one changes a single file and no behaviour.
 - **Consequence:** the `(app)` budget in `tools/size-limit.mjs` drops from 250 to **200 kB gz**, the
-  figure HANDOFF §3.11 asked for from W-01 and that the app had never met. F-70 is closed.
+  figure the performance budget asked for from W-01 and that the app had never met. F-70 is closed.
 
 ## 2026-09-07 · A spinner that cannot spin closes into a ring (F-74, W-38)
 
@@ -2693,7 +2693,7 @@ cover` is set once in the root layout for the standalone display.
   so the design could be worked on from any machine, and asked that only what he actually looks at
   come along.
 - **What moved and what did not.** In: the preview and its generator, the icon build, the screenshot
-  tool, and the specification. Out: `HANDOFF.md`, which is the phase's plan and not the design;
+  tool, and the specification. Out: the phase's own plan document, which is a plan and not the design;
   `front-guardrails/`, installed here since W-01; the second copy of `tokens/`; and the second copy of
   `tools/contrast-check.mjs`. The 14 MB of captures are not versioned — they are regenerated with
   `npm run design:shoot`, because a PNG goes stale the moment its page changes and the repo's `.git`

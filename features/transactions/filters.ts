@@ -53,7 +53,7 @@ function isPreset(value: string | null): value is PeriodPreset {
   return value !== null && (PERIOD_PRESETS as readonly string[]).includes(value);
 }
 
-// Filters live in the URL so a list can be shared and survives a reload (HANDOFF §3.4).
+// Filters live in the URL so a list can be shared and survives a reload.
 export function parseFilters(params: URLSearchParams): TransactionFilters {
   const period = params.get("period");
   const from = params.get("from");

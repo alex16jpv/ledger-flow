@@ -12,7 +12,7 @@ const BUDGETS = [
   // `dev/` is the component playground, built but never linked from the app. Every `(app)` screen
   // sits within 10 kB of every other, because they share the shell, the providers and the offline
   // stack; the heaviest measures 183.5 kB gz since F-70 took Zod's locales out of the bundle, so the
-  // 200 kB HANDOFF §3.11 always asked for is a real limit again and not an aspiration.
+  // 200 kB budget is a real limit again and not an aspiration.
   { name: "app screen", route: /^(?:\/\[locale\])?\/\(app\)\/(?!dev\/).+\/page$/, limitKb: 200 },
 ];
 
