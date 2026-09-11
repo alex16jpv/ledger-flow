@@ -16,6 +16,8 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // H-08: three order dependencies hid behind the fixed order; every run prints its seed.
+    sequence: { shuffle: true },
     env: {
       API_URL: "http://backend.test",
       NEXT_PUBLIC_APP_URL: "http://localhost:3001",
