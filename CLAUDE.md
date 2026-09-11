@@ -128,12 +128,14 @@ that never reached the server must show its pending badge).
 - Did an independent reviewer see the task and the result, and did you act on what it said (§8)?
 - Is every finding you are **not** fixing registered as a row, not just mentioned? (see below)
 
-**If you break it, you fix it — now.** A defect you cause along the way, and a broken thing you find
-that stands between you and what you have to do, are both fixed in the same branch, and the commit
-says so. A finding is not a place to park what is blocking you. What follows is for what lies outside
-your work and does not affect it.
+**What you find while working an item, you fix — now.** A defect you cause along the way, and any
+finding you hit while resolving an item, are fixed in the same branch, and the commit says so; that
+covers anything that blocks you or gets in the way of what you are doing, and it is the default rather
+than the exception. **A finding is not a place to park work you could have done.** You report one only
+for what you genuinely cannot close in that session: it needs the owner's decision, it belongs to the
+other repository, or it is a piece of work of its own.
 
-If you find a problem outside the requested scope, do not fix it silently — and do not merely
+For what is left — a problem outside the requested scope that you are not going to fix — do not fix it silently, and do not merely
 mention it either. **Report it to the owner as a finding**, so it lands in the project's task list:
 what it is, where, and what it would take. This covers bugs, dead code, missing guards, rough edges
 and ideas alike, whether or not he asked for them, and it covers what the backend owns as much as
