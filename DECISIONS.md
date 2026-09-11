@@ -2990,3 +2990,25 @@ cover` is set once in the root layout for the standalone display.
 - **Alternative:** branching on the response body's `code` alone. Rejected: the BFF answers
   `REFRESH_INVALID` for its own no-cookie case, so the code cannot say who decided, which is
   exactly what had to be told apart.
+
+## 2026-09-11 · The BFF states the client address the backend counts against (H-33)
+
+- **Problem:** every request of this client reaches the API from this app's own server, so the
+  address the backend sees is the same one for every user. Its login limiter keyed on that address
+  with a budget of ten attempts per fifteen minutes, which all users shared: the eleventh login of
+  the window was refused to someone who had done nothing.
+- **Decision:** the BFF sends the real client address in `x-client-ip` (`lib/api/client-ip.ts`,
+  carried by `backendFetch`), and the backend believes that header only on a request that also
+  carried the gateway secret, so a caller reaching the API directly cannot claim to be someone
+  else. It goes on every backend call that has an incoming request, not only on login: the
+  backend's general limiter falls back to the address wherever there is no session yet.
+- **Where the address comes from:** `x-real-ip`, and the first entry of `x-forwarded-for` when
+  there is no single address — both written by the platform. Never a header of the incoming
+  browser request, `x-client-ip` included: that one is whatever the client typed. In local
+  development neither exists, so nothing is sent and the backend uses the connection's address.
+- **Alternative:** rate-limiting the login attempts here, in the BFF, where the client address is
+  already known. Rejected: a limiter needs a counter shared by every serverless instance, and this
+  repository has no store of its own — the backend already has one in MongoDB.
+- **Alternative:** forwarding `x-forwarded-for` instead of a header of our own. Rejected: the
+  Lambda Function URL in front of the backend writes that header itself, so what we sent would not
+  survive the hop.

@@ -31,6 +31,22 @@ describe("backendFetch", () => {
     expect(headers.get("authorization")).toBe("Bearer jwt");
   });
 
+  it("states the client address the gateway is allowed to vouch for", async () => {
+    fetchMock.mockResolvedValue(new Response("{}"));
+    const backendFetch = await loadBackendFetch("top-secret");
+    await backendFetch("/auth/login", { method: "POST", body: {}, clientIp: "203.0.113.7" });
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("x-client-ip")).toBe(
+      "203.0.113.7",
+    );
+  });
+
+  it("sends no client address when there is none to report", async () => {
+    fetchMock.mockResolvedValue(new Response("{}"));
+    const backendFetch = await loadBackendFetch("top-secret");
+    await backendFetch("/auth/login", { method: "POST", body: {}, clientIp: null });
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).has("x-client-ip")).toBe(false);
+  });
+
   it("omits the header locally, where the backend runs without a secret", async () => {
     fetchMock.mockResolvedValue(new Response("{}"));
     const backendFetch = await loadBackendFetch(undefined);

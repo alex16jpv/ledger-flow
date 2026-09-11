@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import { backendFetch } from "@/lib/api/backend";
+import { clientIpOf } from "@/lib/api/client-ip";
 import { ACCESS_COOKIE } from "@/lib/auth/cookies";
 import {
   endSessionResponse,
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest) {
         method: "POST",
         accessToken,
         requestId,
+        clientIp: clientIpOf(request),
       });
       if (!upstream.ok && upstream.status !== 401) return passThroughError(upstream, requestId);
     }

@@ -7,6 +7,7 @@ import { unavailableResponse, untrustedOriginResponse } from "@/lib/auth/handler
 import { logRequest } from "@/lib/observability/log";
 
 import { backendFetch, BackendUnavailableError } from "./backend";
+import { clientIpOf } from "./client-ip";
 import { IDEMPOTENCY_HEADER } from "./idempotency";
 import { REQUEST_ID_HEADER } from "./request-id";
 
@@ -76,6 +77,7 @@ export async function proxyToBackend(
       method: request.method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
       accessToken,
       requestId: request.headers.get(REQUEST_ID_HEADER),
+      clientIp: clientIpOf(request),
       userAgent: request.headers.get("user-agent"),
       headers,
       ...(body.length > 0 ? { rawBody: body } : {}),

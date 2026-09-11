@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { backendFetch, readBackendJson } from "@/lib/api/backend";
+import { clientIpOf } from "@/lib/api/client-ip";
 import { REQUEST_ID_HEADER } from "@/lib/api/request-id";
 import { ACCESS_COOKIE } from "@/lib/auth/cookies";
 import { forwardedRequestId, passThroughError, withBackend } from "@/lib/auth/handlers";
@@ -15,7 +16,11 @@ export async function GET(request: NextRequest) {
   }
   const requestId = forwardedRequestId(request);
   return withBackend(async () => {
-    const upstream = await backendFetch(`/users/${claims.userId}`, { accessToken, requestId });
+    const upstream = await backendFetch(`/users/${claims.userId}`, {
+      accessToken,
+      requestId,
+      clientIp: clientIpOf(request),
+    });
     if (!upstream.ok) return passThroughError(upstream, requestId);
     const user = await readBackendJson<User>(upstream);
     const response = NextResponse.json({ user }, { headers: { "cache-control": "no-store" } });

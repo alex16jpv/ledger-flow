@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import { backendFetch } from "@/lib/api/backend";
+import { clientIpOf } from "@/lib/api/client-ip";
 import { REFRESH_COOKIE } from "@/lib/auth/cookies";
 import {
   endSessionResponse,
@@ -18,6 +19,7 @@ export async function POST(request: NextRequest) {
         method: "POST",
         body: { refreshToken },
         requestId: forwardedRequestId(request),
+        clientIp: clientIpOf(request),
       });
     } catch {
       // The device session may outlive this request; the local cookies are cleared regardless.

@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { backendFetch, readBackendJson } from "@/lib/api/backend";
+import { clientIpOf } from "@/lib/api/client-ip";
 import { REFRESH_COOKIE } from "@/lib/auth/cookies";
 import {
   endExpiredSessionResponse,
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       body: { refreshToken },
       requestId,
+      clientIp: clientIpOf(request),
       userAgent: request.headers.get("user-agent"),
     });
     if (upstream.status === 401) {
