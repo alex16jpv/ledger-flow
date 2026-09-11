@@ -23,7 +23,7 @@ export function ping(check: () => Promise<boolean> = checkHealth): Promise<boole
   return pinging;
 }
 
-// React Query pauses fetches while offline; the store, not navigator.onLine, is what says so (HANDOFF §3.19).
+// React Query pauses fetches while offline; the store, not navigator.onLine, is what says so.
 export function startHeartbeat(check: () => Promise<boolean> = checkHealth): () => void {
   let timer: ReturnType<typeof setInterval> | null = null;
   const sync = () => {
