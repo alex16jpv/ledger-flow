@@ -128,6 +128,13 @@ that never reached the server must show its pending badge).
 - Did an independent reviewer see the task and the result, and did you act on what it said (§8)?
 - Is every finding you are **not** fixing registered as a row, not just mentioned? (see below)
 
+**If you break it, you fix it — now.** A defect you cause along the way, and a broken thing you find
+that stands between you and what you have to do, are both fixed in the same branch, and the commit says
+so. A finding is not a place to park what is blocking you. And when what you find belongs to a piece of
+work that already has its own item on the owner's list, it goes **on that item**, not in a separate
+findings row: that way whoever opens that work reads it at the start, and they are the one who will
+close it. What follows is for what lies outside your work and does not affect it.
+
 If you find a problem outside the requested scope, do not fix it silently — and do not merely
 mention it either. **Report it to the owner as a finding**, so it lands in the project's task list:
 what it is, where, and what it would take. This covers bugs, dead code, missing guards, rough edges
@@ -252,7 +259,7 @@ nothing does yet.
 - Every rule has something that enforces it. A rule whose _Enforced by_ says manual is checked by
   the independent review below, and saying so here is the minimum. _Enforced by: this list._
 - A change is not done until §1 holds: gate green and read, verified against the real thing, one
-  commit per item, no known defect kept quiet. What is found and not fixed is reported to the owner
+  commit per item, no known defect kept quiet. What is found, not fixed and not in the way is reported to the owner
   as a finding (§7), who numbers it in his list. _Enforced by: the gate, `commitlint`, `lefthook`._
 - Every finished change is reviewed by an independent reviewer before it is closed: a fresh subagent
   when an agent did the work, another person when a human did. The reviewer gets the task and what
