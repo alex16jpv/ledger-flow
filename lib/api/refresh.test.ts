@@ -1,6 +1,8 @@
+import { SESSION_END_HEADER } from "@/lib/auth/session-end";
 import { tabChannel } from "@/lib/session/channel";
 
 import { api, setUnauthorizedHandler } from "./client";
+import { NetworkError } from "./errors";
 import { noteRefreshedElsewhere, refreshSession, resetRefreshState } from "./refresh";
 
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -22,6 +24,14 @@ afterEach(() => {
   setUnauthorizedHandler(null);
   vi.unstubAllGlobals();
 });
+
+function listen(): string[] {
+  const received: string[] = [];
+  tabChannel.subscribe((message) => {
+    received.push(message.type);
+  });
+  return received;
+}
 
 describe("refresh single-flight", () => {
   it("turns five concurrent 401s into exactly one refresh and retries all of them", async () => {
@@ -59,15 +69,56 @@ describe("refresh single-flight", () => {
   });
 
   it("announces the expired session locally and to other tabs on REFRESH_REVOKED", async () => {
-    const received: string[] = [];
-    tabChannel.subscribe((message) => {
-      received.push(message.type);
-    });
+    const received = listen();
     fetchMock.mockResolvedValue(
-      json({ error: "Unauthorized", message: "x", code: "REFRESH_REVOKED" }, { status: 401 }),
+      json(
+        { error: "Unauthorized", message: "x", code: "REFRESH_REVOKED" },
+        { status: 401, headers: { [SESSION_END_HEADER]: "backend" } },
+      ),
     );
     await expect(refreshSession()).resolves.toBe(false);
     expect(received).toContain("session:expired");
+  });
+
+  it("ends the session when the BFF says no refresh cookie arrived [H-10]", async () => {
+    const received = listen();
+    fetchMock.mockResolvedValue(
+      json(
+        { error: "Unauthorized", message: "No session", code: "REFRESH_INVALID" },
+        { status: 401, headers: { [SESSION_END_HEADER]: "no-cookie" } },
+      ),
+    );
+    await expect(refreshSession()).resolves.toBe(false);
+    expect(received).toContain("session:expired");
+  });
+
+  it("keeps the session on a 401 nobody signed, and asks once more [H-10]", async () => {
+    const received = listen();
+    fetchMock.mockResolvedValue(json({ error: "Unauthorized", message: "x" }, { status: 401 }));
+    await expect(refreshSession()).resolves.toBe(false);
+    expect(received).not.toContain("session:expired");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the session when the answer is not the session's to give [H-10]", async () => {
+    const received = listen();
+    fetchMock.mockResolvedValue(json({ error: "Bad gateway" }, { status: 502 }));
+    await expect(refreshSession()).resolves.toBe(false);
+    expect(received).not.toContain("session:expired");
+  });
+
+  it("recovers when the first attempt never lands [H-10]", async () => {
+    const received = listen();
+    fetchMock.mockRejectedValueOnce(new TypeError("Load failed")).mockResolvedValueOnce(json({}));
+    await expect(refreshSession()).resolves.toBe(true);
+    expect(received).not.toContain("session:expired");
+  });
+
+  it("fails as a network error, not as a dead session, when nothing lands [H-10]", async () => {
+    const received = listen();
+    fetchMock.mockRejectedValue(new TypeError("Load failed"));
+    await expect(refreshSession()).rejects.toBeInstanceOf(NetworkError);
+    expect(received).not.toContain("session:expired");
   });
 
   it("uses the Web Lock when the browser offers one", async () => {

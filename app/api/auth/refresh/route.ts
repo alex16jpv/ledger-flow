@@ -10,6 +10,7 @@ import {
   untrustedOriginResponse,
   withBackend,
 } from "@/lib/auth/handlers";
+import { isSessionVerdict, SESSION_END_HEADER } from "@/lib/auth/session-end";
 import type { AuthTokens } from "@/types/api";
 
 export async function POST(request: NextRequest) {
@@ -18,6 +19,7 @@ export async function POST(request: NextRequest) {
   const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
   if (!refreshToken) {
     const response = endExpiredSessionResponse();
+    response.headers.set(SESSION_END_HEADER, "no-cookie");
     return NextResponse.json(
       { error: "Unauthorized", message: "No session", code: "REFRESH_INVALID" },
       { status: 401, headers: response.headers },
@@ -33,11 +35,21 @@ export async function POST(request: NextRequest) {
     });
     if (upstream.status === 401) {
       const error = await passThroughError(upstream, requestId);
+      const body = (await error
+        .clone()
+        .json()
+        .catch(() => null)) as {
+        code?: unknown;
+      } | null;
+      // A 401 nobody signed is not the session's: it costs the cookies, and with them the way
+      // back, for what may be an edge or a gateway having a bad minute (H-10).
+      if (!isSessionVerdict(body?.code)) return error;
       const ended = endExpiredSessionResponse();
       ended.headers.forEach((value, key) => {
         if (key.toLowerCase() === "set-cookie") error.headers.append(key, value);
         else error.headers.set(key, value);
       });
+      error.headers.set(SESSION_END_HEADER, "backend");
       return error;
     }
     if (!upstream.ok) return passThroughError(upstream, requestId);

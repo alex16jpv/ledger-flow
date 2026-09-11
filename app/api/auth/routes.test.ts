@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import { POST as logout } from "@/app/api/auth/logout/route";
 import { POST as refresh } from "@/app/api/auth/refresh/route";
 import { authenticate } from "@/lib/auth/handlers";
+import { SESSION_END_HEADER } from "@/lib/auth/session-end";
 
 vi.mock("server-only", () => ({}));
 
@@ -128,6 +129,25 @@ describe("refresh handler", () => {
     expect(cookies.some((c) => c.startsWith("__Host-session="))).toBe(false);
     expect(cookies.filter((c) => /Max-Age=0/i.test(c))).toHaveLength(2);
     expect(response.headers.get("clear-site-data")).toBeNull();
+    expect(response.headers.get(SESSION_END_HEADER)).toBe("backend");
+  });
+
+  it("keeps the cookies when the 401 is not the session's [H-10]", async () => {
+    fetchMock.mockResolvedValue(
+      new Response("<html>gateway</html>", {
+        status: 401,
+        headers: { "content-type": "text/html" },
+      }),
+    );
+    const request = new NextRequest(`${APP}/api/auth/refresh`, {
+      method: "POST",
+      headers: { origin: APP, cookie: "__Secure-refresh=alive" },
+    });
+    const response = await refresh(request);
+    expect(response.status).toBe(401);
+    // Nobody said this token is over, so the way back is not taken away (H-10).
+    expect(setCookies(response)).toHaveLength(0);
+    expect(response.headers.get(SESSION_END_HEADER)).toBeNull();
   });
 
   it("answers 401 without a refresh cookie", async () => {
@@ -138,6 +158,8 @@ describe("refresh handler", () => {
     const response = await refresh(request);
     expect(response.status).toBe(401);
     expect(fetchMock).not.toHaveBeenCalled();
+    // Its own answer, and it says so: the client must not read it as the backend's verdict (H-10).
+    expect(response.headers.get(SESSION_END_HEADER)).toBe("no-cookie");
   });
 });
 

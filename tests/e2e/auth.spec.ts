@@ -21,6 +21,26 @@ test("the attention screen is protected like the rest of the app", async ({ requ
   expect(response.headers()["x-robots-tag"]).toBe("noindex, nofollow");
 });
 
+// H-10: only an answer one of the two sides signs may end a session, and each says which it is.
+test("the BFF signs the 401s that end a session", async ({ playwright }) => {
+  const clean = await playwright.request.newContext({ baseURL: APP });
+  const noCookie = await clean.post("/api/auth/refresh", { headers: { origin: APP } });
+  expect(noCookie.status()).toBe(401);
+  expect(noCookie.headers()["x-lf-session-end"]).toBe("no-cookie");
+
+  const dead = await playwright.request.newContext({
+    baseURL: APP,
+    extraHTTPHeaders: { cookie: "__Secure-refresh=not-a-jwt" },
+  });
+  const refused = await dead.post("/api/auth/refresh", { headers: { origin: APP } });
+  expect(refused.status()).toBe(401);
+  const body = (await refused.json()) as { code?: string };
+  expect(body.code).toBe("REFRESH_INVALID");
+  expect(refused.headers()["x-lf-session-end"]).toBe("backend");
+  await clean.dispose();
+  await dead.dispose();
+});
+
 test("the BFF refuses cross-origin session calls", async ({ request }) => {
   const response = await request.post("/api/auth/login", {
     headers: { origin: "https://evil.example", "content-type": "application/json" },
