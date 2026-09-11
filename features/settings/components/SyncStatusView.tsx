@@ -190,6 +190,7 @@ export function SyncStatusView() {
           <StatusRow
             icon={<RefreshCw {...iconProps("sm")} />}
             title={t("lastSync.label")}
+            meta={t("lastSync.help")}
             value={
               snapshot.read
                 ? snapshot.syncedAt

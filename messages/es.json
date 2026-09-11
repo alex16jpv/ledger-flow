@@ -369,7 +369,8 @@
         "never": "Nunca sincronizado"
       },
       "lastSync": {
-        "label": "Última sincronización completa",
+        "label": "Última actualización",
+        "help": "La última vez que esta copia se puso al día con el servidor",
         "never": "Nunca"
       },
       "offlineReady": {

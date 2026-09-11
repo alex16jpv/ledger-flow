@@ -115,6 +115,22 @@ describe("Sync status", () => {
     expect(screen.getByText("Browser tab")).toBeInTheDocument();
   });
 
+  // H-11: the pull stamps `syncedAt` every time it drains the feed, not only when a whole snapshot
+  // comes down, and the row used to be called "Last full sync".
+  it("says its date is when the copy caught up, not when it was downloaded whole", async () => {
+    const vault = await openTestVault("u1");
+    await vault.db.put("meta", { key: "syncedAt", value: "2026-09-10T12:00:00.000Z" });
+    setCurrentVault(vault);
+    await refreshOutboxStatus(vault.db);
+
+    view();
+
+    expect(await screen.findByText("Last updated")).toBeInTheDocument();
+    expect(
+      screen.getByText("The last time this copy caught up with the server"),
+    ).toBeInTheDocument();
+  });
+
   // F-65: `openVault` said the queue was blocked and no screen said it.
   it("says the queue is blocked by an app update, and where to see it", async () => {
     const vault = await openTestVault("u1");
