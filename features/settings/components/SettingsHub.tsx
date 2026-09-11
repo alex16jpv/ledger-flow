@@ -40,6 +40,8 @@ import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { useOffline } from "@/lib/network/useOffline";
 import { useInstallPrompt } from "@/lib/pwa/install";
+import { devicePlatform } from "@/lib/pwa/platform";
+import { useMounted } from "@/lib/react/useMounted";
 import { useSession } from "@/lib/session/SessionProvider";
 import { useAppUser } from "@/lib/session/useAppUser";
 import { useTheme } from "@/lib/theme";
@@ -133,6 +135,8 @@ export function SettingsHub() {
   const deleteAccount = useDeleteAccount();
   const install = useInstallPrompt();
   const [installing, setInstalling] = useState(false);
+  // A desktop has no home screen, so the row may not tell its user to add the app to one.
+  const onDesktop = useMounted() && devicePlatform() === "desktop";
   const outbox = useOutbox();
   // The session lives on the server: with no network a sign-out could only clear this device and
   // leave the cookies — and the account — signed in. It waits and says so (R-3b §C).
@@ -297,7 +301,9 @@ export function SettingsHub() {
           meta={
             install.state === "installed"
               ? t("settings.install.installed")
-              : t("settings.install.durability")
+              : onDesktop
+                ? t("settings.install.durabilityDesktop")
+                : t("settings.install.durability")
           }
           onClick={
             install.state === "installed"

@@ -1,14 +1,24 @@
+import type { Platform } from "./platform";
+
 const KEY = "lf.installNotice";
-const SNOOZE_DAYS = 7;
-const GIVE_UP_AFTER = 3;
+
+export interface NoticePolicy {
+  snoozeDays: number;
+  giveUpAfter: number | null;
+}
+
+// iOS never gives up: Safari deletes the copy and has no install prompt, so this is the only lever.
+export const NOTICE_POLICY: Record<Platform, NoticePolicy | null> = {
+  ios: { snoozeDays: 3, giveUpAfter: null },
+  android: { snoozeDays: 7, giveUpAfter: 3 },
+  desktop: null,
+};
 
 interface NoticeState {
   dismissals: number;
   until: number;
 }
 
-// P-34: "Not now" hides it for a week, and the third time it never comes back. The rows in Settings
-// keep saying the same thing without insisting, so this can afford to give up.
 function read(): NoticeState {
   try {
     const raw = window.localStorage.getItem(KEY);
@@ -23,19 +33,20 @@ function read(): NoticeState {
   }
 }
 
-export function installNoticeSilenced(now = Date.now()): boolean {
+export function installNoticeSilenced(policy: NoticePolicy, now = Date.now()): boolean {
   const state = read();
-  return state.dismissals >= GIVE_UP_AFTER || state.until > now;
+  if (policy.giveUpAfter !== null && state.dismissals >= policy.giveUpAfter) return true;
+  return state.until > now;
 }
 
-export function snoozeInstallNotice(now = Date.now()): void {
+export function snoozeInstallNotice(policy: NoticePolicy, now = Date.now()): void {
   const state = read();
   try {
     window.localStorage.setItem(
       KEY,
       JSON.stringify({
         dismissals: state.dismissals + 1,
-        until: now + SNOOZE_DAYS * 24 * 60 * 60 * 1000,
+        until: now + policy.snoozeDays * 24 * 60 * 60 * 1000,
       }),
     );
   } catch {

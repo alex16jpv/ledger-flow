@@ -16,11 +16,13 @@ eyebrows:
   link to the policy.
 - **Data** — **Sync status** with a badge showing the number of queued changes; Export and Import,
   inactive and badged "soon".
-- **About** — **Install app**, with the durability explanation "Add Ledger Flow to your home screen so
-  the browser doesn't delete what you record offline", and "Installed" once it is. **The row no longer
-  hides itself where the browser does not offer the prompt**: it used to disappear on iOS and on any
-  browser that never fires `beforeinstallprompt`, which is exactly where the user most needs to be told
-  how. Then the app's version.
+- **About** — **Install app**, and "Installed" once it is. **The row no longer hides itself where the
+  browser does not offer the prompt**: it used to disappear on iOS and on any browser that never fires
+  `beforeinstallprompt`, which is exactly where the user most needs to be told how. **Its wording
+  follows the device** (owner, 2026-09-11): on a phone or tablet, "Add Ledger Flow to your home screen
+  so the browser doesn't delete what you record offline"; on a desktop, "Install Ledger Flow so the
+  browser doesn't delete what you record offline" — a desktop has no home screen, and the app may not
+  call it one. Then the app's version.
 
 "Sign out" (`POST /auth/logout` with the device's refresh token) and "Delete my account" in red close
 the page, with a footer carrying the version and the zone.
@@ -126,15 +128,20 @@ shapes, and the browser decides which**:
    call to action **"Install"**, which fires the browser's prompt. On acceptance the sheet closes and the
    row turns to "Installed".
 2. **Where it does not** (iOS/Safari, and any browser that never fires the event): the same alert and,
-   instead of the button, **the steps with the real name of each thing**, in a short numbered list.
-   iOS/Safari: "1. Tap Share. 2. Choose “Add to Home Screen”. 3. Confirm with “Add”." Desktop without a
-   prompt: "Look for the install icon in the address bar, or the browser menu › “Install Ledger Flow”."
+   instead of the button, **the steps with the real name of each thing**, in a short numbered list —
+   **one set per platform, and never another platform's** (owner, 2026-09-11):
+   - **iOS:** "1. Tap Share. 2. Choose “Add to Home Screen”. 3. Confirm with “Add”."
+   - **Android:** "1. Open the browser menu. 2. Choose “Install app” or “Add to Home screen”."
+   - **Desktop:** "1. Look for the install icon in the address bar. 2. Or open the browser menu and
+     choose “Install Ledger Flow”."
+
    And one honest closing line: **"Some browsers don't offer this. If yours doesn't, keep a connection
    when you record and nothing will be waiting here."**
 
 **What the sheet does not do:** guess the browser to show off. Shape 1 is chosen **only** when the
-browser already said it can install — the event arrived. In every other case, shape 2, which also works
-when detection fails. The steps of a browser other than the one in use are never shown.
+browser already said it can install — the event arrived. In every other case, shape 2. **Which set of
+steps is decided by the platform, not by whether the screen is touched:** a Windows laptop with a touch
+screen used to be given the iPhone's steps, and an Android without the event was given them too.
 
 ## The rest of the screens
 

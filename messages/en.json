@@ -203,8 +203,9 @@
     "budgetOver": "Over by {amount}",
     "budgetOf": "/ {amount}",
     "installNotice": {
-      "title": "Keep your data on this phone",
-      "body": "This browser can delete what you record offline after a few days without opening the site. Installing the app stops that.",
+      "title": "For when there’s no connection",
+      "body": "Ledger Flow already keeps a copy on this device, so it works with no signal. Installed, it opens on its own, outside the browser.",
+      "risk": "This browser can also delete what you record offline after a few days without opening the site. Installing the app stops that.",
       "install": "Install",
       "how": "How",
       "dismiss": "Not now"
@@ -320,6 +321,7 @@
       "subtitle": "Add Ledger Flow to your home screen",
       "installed": "Installed",
       "durability": "Add Ledger Flow to your home screen so the browser doesn’t delete what you record offline",
+      "durabilityDesktop": "Install Ledger Flow so the browser doesn’t delete what you record offline",
       "sheet": {
         "title": "Install this app",
         "intro": "Installing keeps your offline data safe: the browser stops treating it as something it can delete.",
@@ -328,6 +330,8 @@
         "iosStep1": "Tap Share",
         "iosStep2": "Choose “Add to Home Screen”",
         "iosStep3": "Confirm with “Add”",
+        "androidStep1": "Open the browser menu",
+        "androidStep2": "Choose “Install app” or “Add to Home screen”",
         "desktopStep1": "Look for the install icon in the address bar",
         "desktopStep2": "Or open the browser menu and choose “Install Ledger Flow”",
         "fallback": "Some browsers don’t offer this at all. If yours doesn’t, keep a connection when you record and nothing will be waiting here."
