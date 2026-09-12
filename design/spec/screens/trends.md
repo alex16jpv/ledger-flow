@@ -56,12 +56,14 @@ it never draws a zero for a month it cannot see.
 - **Error**: the shared `Empty` in `danger` with `LoadErrorBody` and Retry, per card — one card
   failing does not blank the screen.
 
-## Recurring — proposed, not decided
+## Recurring — decided: both, detection first
 
 `preview/variants.html#recurring-found-by-the-app` · `#recurring-set-up-by-you` · `#recurring-both`
 
 A recurring expense can be two different features, and the owner asked for the question to be thought
-through rather than answered by default (2026-09-11):
+through rather than answered by default (2026-09-11). Asked, he chose **both, in this order**: the
+three routes are kept below because the order is the decision. Nothing here is drawn yet — the
+plates and the spec of each half come in its own design pass, and declaring needs one of its own.
 
 - **Found by the app.** Nothing new to fill in: the history is read, what repeats is grouped, and what
   always arrives and has not is flagged. It changes no data and works on what is already there — and
@@ -74,5 +76,4 @@ through rather than answered by default (2026-09-11):
   set up is an offer, never a figure. Detection first, because it changes no data and answers the case
   the owner named — the expense that repeats every month and was never declared.
 
-Detection would need a grouping by description over a range, which the backend does not have; nothing
-here is drawn as decided.
+Detection would need a grouping by description over a range, which the backend does not have.
