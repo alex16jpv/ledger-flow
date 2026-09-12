@@ -6,25 +6,26 @@ import { useTranslations } from "next-intl";
 import { ADD_HREF } from "@/components/shell/nav";
 import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
-import { Bars } from "@/components/ui/Bars";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { DayBars } from "@/components/ui/DayBars";
 import { Progress } from "@/components/ui/Progress";
 import { Projected } from "@/components/ui/Projected";
-import { Link } from "@/lib/i18n/navigation";
+import type { DaySlot } from "@/lib/charts/days";
+import { Link, useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import type { Budget } from "@/types/api";
 
-import { type DayBar, type MonthContext } from "../hooks";
+import { type MonthContext } from "../hooks";
 
 interface HeroCardProps {
   month: MonthContext;
   spent: number;
   yesterdaySpent: number | null;
   globalBudget: Budget | null;
-  bars: readonly DayBar[];
+  bars: readonly DaySlot[];
   onCreateBudget: () => void;
 }
 
@@ -37,11 +38,17 @@ export function HeroCard({
   onCreateBudget,
 }: HeroCardProps) {
   const t = useTranslations("home");
+  const charts = useTranslations("charts");
   const pace = useTranslations("budgets.pace");
   const outbox = useOutbox();
   const money = useMoney();
   const dates = useDates();
+  const router = useRouter();
   const dailyAverage = month.dayOfMonth > 0 ? spent / month.dayOfMonth : 0;
+  const highest = bars.reduce<DaySlot | null>(
+    (top, bar) => (bar.value > 0 && (!top || bar.value > top.value) ? bar : top),
+    null,
+  );
   const percent =
     globalBudget && globalBudget.amount > 0
       ? Math.round((globalBudget.spent / globalBudget.amount) * 100)
@@ -84,7 +91,27 @@ export function HeroCard({
         )}
       </p>
       <Projected when={outbox.projected.spending} align="center" className="mt-1 w-full">
-        <Bars bars={bars} label={t("spendingPerDay")} className="flex-1" />
+        <DayBars
+          days={bars}
+          label={t("spendingPerDay")}
+          summary={
+            highest
+              ? {
+                  label: charts("highestDay", {
+                    day: dates.formatLong(dates.fromDayKey(highest.key)),
+                  }),
+                  amount: money.format(highest.value),
+                }
+              : undefined
+          }
+          onOpen={(key) => {
+            router.push({
+              pathname: "/transactions",
+              query: { period: "custom", from: key, to: key, type: "EXPENSE" },
+            });
+          }}
+          className="flex-1"
+        />
       </Projected>
       {globalBudget && percent !== null ? (
         <div className="mt-1 flex items-center gap-3">

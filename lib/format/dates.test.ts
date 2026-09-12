@@ -2,6 +2,7 @@ import {
   dateTimeInstant,
   dateTimeParts,
   dayKey,
+  daysWindow,
   dayWindow,
   isSameLocalDay,
   localDateTime,
@@ -32,6 +33,27 @@ describe("monthWindow", () => {
     expect(toIsoWindow(monthWindow(new Date("2026-03-15T12:00:00Z"), "Europe/Madrid"))).toEqual({
       from: "2026-02-28T23:00:00.000Z",
       to: "2026-03-31T22:00:00.000Z",
+    });
+  });
+});
+
+describe("daysWindow", () => {
+  it("spans whole days in the user's zone whatever zone the device is in", () => {
+    const device = process.env.TZ;
+    for (const zone of ["UTC", "America/New_York", "Australia/Lord_Howe"]) {
+      process.env.TZ = zone;
+      expect(toIsoWindow(daysWindow("2025-11-02", "2025-11-02", BOGOTA)), zone).toEqual({
+        from: "2025-11-02T05:00:00.000Z",
+        to: "2025-11-03T05:00:00.000Z",
+      });
+    }
+    process.env.TZ = device;
+  });
+
+  it("follows the user's own daylight change", () => {
+    expect(toIsoWindow(daysWindow("2026-03-28", "2026-03-29", "Europe/Madrid"))).toEqual({
+      from: "2026-03-27T23:00:00.000Z",
+      to: "2026-03-29T22:00:00.000Z",
     });
   });
 });

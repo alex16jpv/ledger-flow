@@ -30,8 +30,17 @@ describe("stats model", () => {
       226_500,
     );
     expect(series.bars).toHaveLength(30);
-    expect(series.bars[8]).toMatchObject({ key: "2026-09-09", value: 214_000 });
+    expect(series.bars[8]).toEqual({
+      key: "2026-09-09",
+      value: 214_000,
+      count: 3,
+      today: false,
+      future: false,
+    });
     expect(series.bars[9]?.today).toBe(true);
+    expect(series.bars[9]?.future).toBe(false);
+    expect(series.bars[10]?.future).toBe(true);
+    expect(series.bars.filter((bar) => bar.future)).toHaveLength(20);
     expect(series.highest?.key).toBe("2026-09-09");
     expect(series.noSpendDays).toBe(8);
     expect(series.dailyAverage).toBeCloseTo(226_500 / 10);

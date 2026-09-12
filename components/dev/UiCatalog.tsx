@@ -13,12 +13,12 @@ import {
   AmountInput,
   Badge,
   Banner,
-  Bars,
   Button,
   Card,
   CategoryChip,
   Chip,
   ChipRow,
+  DayBars,
   DayHeader,
   Dot,
   Empty,
@@ -45,6 +45,8 @@ import {
   ToastProvider,
   useToast,
 } from "@/components/ui";
+import { useDates } from "@/lib/i18n/useDates";
+import { useMoney } from "@/lib/i18n/useMoney";
 import { CATEGORY_ICON_KEYS, CategoryIcon } from "@/lib/icons";
 import { iconProps } from "@/lib/icons/sizes";
 import {
@@ -155,19 +157,30 @@ export function UiCatalog() {
   const t = useTranslations("dev");
   const tc = useTranslations("common");
   const tColors = useTranslations("colors");
+  const charts = useTranslations("charts");
+  const dates = useDates();
+  const money = useMoney();
   const [segment, setSegment] = useState<(typeof SEGMENT_OPTIONS)[number]["value"]>("EXPENSE");
   const [swatch, setSwatch] = useState<ColorToken | null>("BLUE");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [checked, setChecked] = useState(true);
   const [chip, setChip] = useState("food");
 
-  const bars = Array.from({ length: 22 }, (_, index) => ({
-    value:
-      [12, 30, 0, 45, 22, 60, 15, 0, 38, 80, 25, 10, 44, 0, 70, 33, 18, 52, 0, 90, 41, 20][index] ??
-      0,
-    label: `${index + 1}`,
-    today: index === 21,
-  }));
+  const days = Array.from({ length: 30 }, (_, index) => {
+    const value =
+      [
+        12_000, 30_000, 0, 45_000, 22_000, 60_000, 15_000, 0, 38_000, 80_000, 25_000, 10_000,
+        44_000, 0, 70_000, 33_000, 18_000, 52_000, 0, 90_000, 41_000, 20_000,
+      ][index] ?? 0;
+    return {
+      key: `2026-09-${String(index + 1).padStart(2, "0")}`,
+      value,
+      count: value > 0 ? 2 : 0,
+      today: index === 21,
+      future: index > 21,
+    };
+  });
+  const topDay = days.reduce((top, day) => (day.value > top.value ? day : top));
 
   return (
     <ToastProvider>
@@ -420,7 +433,17 @@ export function UiCatalog() {
                 value={<Amount value={1284300} signed={false} size="lg" />}
               />
             </div>
-            <Bars bars={bars} label={t("sample.spendingPerDay")} />
+            <DayBars
+              days={days}
+              label={t("sample.spendingPerDay")}
+              height={140}
+              summary={{
+                label: charts("highestDay", {
+                  day: dates.formatLong(dates.fromDayKey(topDay.key)),
+                }),
+                amount: money.format(topDay.value),
+              }}
+            />
           </Card>
         </Section>
 

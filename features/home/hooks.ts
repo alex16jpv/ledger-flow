@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import type { DaySlot } from "@/lib/charts/days";
 import { dayKey, toIsoWindow } from "@/lib/format/dates";
 import { useDates } from "@/lib/i18n/useDates";
 import type { Budget, StatsBucket } from "@/types/api";
@@ -47,24 +48,23 @@ export function isGlobalMonthlyBudget(budget: Budget): boolean {
   );
 }
 
-export interface DayBar {
-  value: number;
-  label: string;
-  today?: boolean;
-}
-
 // The API returns only the days with spending; the chart shows every day of the month with gaps at 0.
 export function dayBars(
   buckets: readonly StatsBucket[],
   month: Pick<MonthContext, "from" | "daysInMonth" | "dayOfMonth">,
   timeZone: string,
-): DayBar[] {
+): DaySlot[] {
   const byDay = new Map(buckets.map((bucket) => [bucket.key, bucket.total]));
   const prefix = dayKey(new Date(month.from), timeZone).slice(0, 8);
   return Array.from({ length: month.daysInMonth }, (_, index) => {
     const day = index + 1;
     const key = `${prefix}${String(day).padStart(2, "0")}`;
-    return { value: byDay.get(key) ?? 0, label: key, today: day === month.dayOfMonth };
+    return {
+      key,
+      value: byDay.get(key) ?? 0,
+      today: day === month.dayOfMonth,
+      future: day > month.dayOfMonth,
+    };
   });
 }
 

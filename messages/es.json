@@ -1360,7 +1360,6 @@
     "noSpendDays": "Días sin gasto",
     "quietDays": "Días sin movimientos",
     "highest": "{day} · el más alto",
-    "dayBar": "{day}: {amount}",
     "tagsNote": "Un movimiento con varias etiquetas cuenta en cada una, así que los totales por etiqueta pueden sumar más que el total.",
     "untagged": "{amount} no tiene etiquetas.",
     "tagRow": "#{tag}",
@@ -1370,6 +1369,11 @@
       "body": "Prueba otro mes u otro tipo de movimiento."
     },
     "adjustmentsNote": "Los ajustes concilian saldos; nunca cuentan como gasto ni ingreso."
+  },
+  "charts": {
+    "daySlot": "{day} · {amount}",
+    "dayDetail": "{day} · {count, plural, one {# movimiento} other {# movimientos}}",
+    "highestDay": "Día más alto · {day}"
   },
   "public": {
     "nav": {
@@ -1425,6 +1429,7 @@
       "pending": "3 gastos rápidos por revisar · {amount} en total",
       "spending": "Gasto de septiembre",
       "dayOf": "Día 22 de 30",
+      "barDay": "{day} sept · {amount}",
       "average": "Promedio diario {amount} · Ayer gastaste {yesterday}",
       "progress": "64 % del presupuesto mensual",
       "totalBalance": "Balance total",

@@ -1360,7 +1360,6 @@
     "noSpendDays": "No-spend days",
     "quietDays": "Quiet days",
     "highest": "{day} · highest",
-    "dayBar": "{day}: {amount}",
     "tagsNote": "A transaction with several tags counts in each of them, so tag totals can add up to more than the total.",
     "untagged": "{amount} has no tags.",
     "tagRow": "#{tag}",
@@ -1370,6 +1369,11 @@
       "body": "Try another month or another type of movement."
     },
     "adjustmentsNote": "Adjustments reconcile balances; they’re never counted as spending or income."
+  },
+  "charts": {
+    "daySlot": "{day} · {amount}",
+    "dayDetail": "{day} · {count, plural, one {# transaction} other {# transactions}}",
+    "highestDay": "Highest day · {day}"
   },
   "public": {
     "nav": {
@@ -1400,7 +1404,7 @@
       "trust": "Works offline · English & Español · Your data stays yours",
       "whyEyebrow": "Why Ledger Flow",
       "whyTitle": "Built for the small stuff",
-      "whyLede": "Ledger Flow is a free expense tracker and budget app for everyday personal finance. You log what you spend, it keeps your account balances right, and it shows you where your money goes \u2014 by category, by month, and against the ceiling you set.",
+      "whyLede": "Ledger Flow is a free expense tracker and budget app for everyday personal finance. You log what you spend, it keeps your account balances right, and it shows you where your money goes — by category, by month, and against the ceiling you set.",
       "why1Title": "Three-second capture",
       "why1Body": "Tap, type the amount, done. Add the category later from your review inbox: the expense already counts.",
       "why2Title": "Budgets that talk back",
@@ -1425,6 +1429,7 @@
       "pending": "3 quick expenses to review · {amount} in total",
       "spending": "September spending",
       "dayOf": "Day 22 of 30",
+      "barDay": "Sep {day} · {amount}",
       "average": "Daily average {amount} · Yesterday you spent {yesterday}",
       "progress": "64% of monthly budget",
       "totalBalance": "Total balance",

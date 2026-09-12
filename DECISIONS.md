@@ -5,6 +5,47 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-12 · One chart contract, and `Bars` becomes a client component (T-26)
+
+- **Decision:** every slot of a chart carries its day and its amount as its accessible name, shows
+  the same text in a `Tooltip` on hover **and** on keyboard focus, repeats it in a `Readout` line
+  underneath, and opens what is behind it. The chart is one tab stop with a roving `tabindex`
+  (arrows, `Home`, `End`, `Enter`); a day that has not arrived is a 1px rule, not a control, and is
+  hidden from readers; where the slots lead nowhere the chart is one `role="img"` whose name reads
+  every slot. `DayBars` is the one place that turns day keys into those labels, so Home and Stats
+  cannot drift apart.
+- **Alternatives:** leaving `Bars` presentational and wiring the tooltip, the readout and the
+  keyboard at each call site. Rejected: it is the copy-paste the owner asked us to remove, and the
+  two screens had already diverged (Stats showed nothing on hover, Home showed the raw day key).
+- **Consequence:** `Bars` holds the pointed slot in state, so it is `"use client"` and the landing's
+  `PhoneMock` now pulls it into the browser bundle. Measured: the landing goes from 36.7 kB to
+  38.2 kB gzipped, against a 60 kB budget. The chart now owns its `Readout`, so the projection mark
+  that wraps it (`Projected align="center"`) centres against the bars **and** their line rather than
+  against the bars alone.
+
+## 2026-09-12 · A day label is built at local noon, never at noon UTC (T-26)
+
+- **Decision:** a `YYYY-MM-DD` day key becomes an instant through `dates.fromDayKey` (local noon in
+  the user's zone) and a window through `dates.dayKeyWindow`. `new Date(`${key}T12:00:00Z`)` is
+  gone from the screens.
+- **Alternatives:** keeping noon UTC, which is right for every zone within ±12. Rejected: at
+  UTC+13 and UTC+14 (`Pacific/Apia`, `Pacific/Kiritimati`) noon UTC is already the next local day,
+  so the bar, the name of the priciest day and the window the drill-down opened were all off by one.
+- **Consequence:** the regression test renders in `Pacific/Kiritimati`. `LegalPage` keeps the
+  pattern on purpose: its date is a fixed string in a legal text, not a day in the user's calendar.
+
+## 2026-09-12 · The gate rebuilds the design preview and fails on drift (T-26)
+
+- **Decision:** `npm run ci` runs `design:check`, which rebuilds `design/build.mjs` into a temporary
+  directory and compares it with `design/preview`.
+- **Alternatives:** `git diff --exit-code design/preview`, the shape the generated API types already
+  use. Rejected: it answers a question about git, not about the build — a stale preview that happens
+  to be staged passes it, and a correctly rebuilt one that is not yet staged fails it. Comparing
+  against a fresh build in a temporary directory answers the question actually being asked.
+- **Consequence:** `design/build.mjs` honours `DESIGN_OUT`. Only the generated pages and
+  `assets/plates.js` are compared; the rest of `assets/` is written by hand. `lefthook` does not run
+  it, so a partial `git add` is still caught only by CI.
+
 ## 2026-09-01 · Rebuild from scratch on `redesign/fase-2` (W-01)
 
 - **Decision:** the previous client was removed in one reset commit; nothing was copied. Only the

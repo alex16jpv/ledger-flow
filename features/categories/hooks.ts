@@ -3,7 +3,7 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { dayKey, toIsoWindow, trailingDaysWindow } from "@/lib/format/dates";
+import { dayKey, localNoon, toIsoWindow, trailingDaysWindow } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { QUERY_DOMAINS } from "@/lib/query/domains";
 import type { Category, RestoreInput, StatsBucket, UpdateCategoryInput } from "@/types/api";
@@ -131,7 +131,7 @@ export function useRecentCategories(
   const { timeZone } = useFormatSettings();
   const today = dayKey(new Date(), timeZone);
   const window = useMemo(
-    () => toIsoWindow(trailingDaysWindow(new Date(`${today}T12:00:00Z`), RECENT_DAYS, timeZone)),
+    () => toIsoWindow(trailingDaysWindow(localNoon(today, timeZone), RECENT_DAYS, timeZone)),
     [today, timeZone],
   );
   const statsType = spendingType(type);

@@ -6,3 +6,8 @@ derived them from the mirror since O-F3 part 2 and answers them there with netwo
 into shares of the API total and fills the missing days of the month with zeros. The presentational
 pieces live in `components/StatsCards.tsx`; the screen is composed in the app layer because it
 resolves category names and lists the transactions of the biggest day.
+
+Since T-26 `daySeries` also reports each day's transaction count and whether the day has arrived, and
+the by-day card draws the same `DayBars` Home does — the hover that showed nothing was the one
+component used two different ways. The priciest day, its window and its heading are built from the
+day key at local noon (`dates.fromDayKey`, `dates.dayKeyWindow`), not at noon UTC.

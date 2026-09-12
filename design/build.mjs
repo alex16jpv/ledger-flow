@@ -1,7 +1,11 @@
 // Builds design/preview/*.html. The HTML pages are the deliverable; this file is the tool that writes them.
 import { mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
-const OUT = new URL("./preview/", import.meta.url);
+const OUT = process.env.DESIGN_OUT
+  ? pathToFileURL(`${resolve(process.env.DESIGN_OUT)}/`)
+  : new URL("./preview/", import.meta.url);
 const TOKENS = "../../tokens";
 
 const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
@@ -128,10 +132,17 @@ const axis = (...marks) =>
 // F-90 · one slot is one control: it names what it is and what it cost, and opens it.
 const pct = (value, top) => (top > 0 ? round((value / top) * 100) : 0);
 
+// The bubble's width is unknown until it paints, so a slot this near an end aligns to it instead.
+const EDGE = 0.15;
+const tipAlign = (index, total) => {
+  const place = index / Math.max(total - 1, 1);
+  return place < EDGE ? " tip-start" : place > 1 - EDGE ? " tip-end" : "";
+};
+
 const chartSlot = (cls, label, inner, o = {}) =>
   o.interactive === false
-    ? `<span class="${cls} tooltip${o.active ? " show" : ""}" aria-hidden="true">${inner}<span class="tip">${label}</span></span>`
-    : `<button class="${cls} tooltip${o.active ? " show sel" : ""}" aria-label="${label}">${inner}<span class="tip">${label}</span></button>`;
+    ? `<span class="${cls} tooltip${o.align ?? ""}${o.active ? " show" : ""}" aria-hidden="true">${inner}<span class="tip">${label}</span></span>`
+    : `<button class="${cls} tooltip${o.align ?? ""}${o.active ? " show sel" : ""}" aria-label="${label}">${inner}<span class="tip">${label}</span></button>`;
 
 const chartCard = (eyebrow, body, o = {}) =>
   `<div class="card chart"><div class="card-head" style="margin:0"><span class="eyebrow">${eyebrow}</span>${o.right ?? ""}</div>${body}</div>`;
@@ -163,7 +174,11 @@ const barsChart = (values, o = {}) => {
         .filter(Boolean)
         .join(" ");
       const bar = `<i class="${cls}" style="height:${Math.max(pct(v, top), 2)}%"></i>`;
-      return chartSlot("slot", tip(day, v), bar, { active: i === active, interactive });
+      return chartSlot("slot", tip(day, v), bar, {
+        active: i === active,
+        interactive,
+        align: tipAlign(i, values.length),
+      });
     })
     .join("");
   return plot("bars", height, label, items, interactive);
@@ -2745,7 +2760,7 @@ const PAGES = [
         "Hero chart · the day under the pointer",
         "Every bar is a control: it says its day and its amount on hover, on focus and in the line underneath, and it opens that day. The month's figures are now the sum of the bars.",
         home({ chart: true }),
-        { added: "2026-09-11", review: true },
+        { added: "2026-09-11" },
       ),
       plate(
         "home-without-a-name",
@@ -3022,14 +3037,14 @@ const PAGES = [
         "Detail · what the period is doing",
         "The same chart Home has, over the budget's own period, plus the curve against the pace with where it ends at this rate, the last six periods against their limit, and the biggest movements.",
         budgetDetail({ charts: true }),
-        { added: "2026-09-11", review: true },
+        { added: "2026-09-11" },
       ),
       plate(
         "budget-by-category",
         "Where it went · a budget of several categories",
         "One more card, and only when the budget covers more than one: which of them is eating it. A budget over Lifestyle and Coffee holds the whole of both for the period, so the figures are Stats' own.",
         budgetCategoryCard(),
-        { frame: false, added: "2026-09-11", review: true },
+        { frame: false, added: "2026-09-11" },
       ),
       plate("archived", "Archived · Restore", "", budgetDetail({ archived: true }), {
         added: "2026-09-06",
@@ -3054,35 +3069,35 @@ const PAGES = [
         "By category",
         "A stacked bar whose segments name themselves on hover or focus, plus a list with percentages. It gains the way into Trends, and its sample figures now add up: the six rows are the 48 transactions the card above counts, and the month Home shows.",
         stats("cat"),
-        { added: "2026-09-01", updated: "2026-09-11", review: true },
+        { added: "2026-09-01", updated: "2026-09-11" },
       ),
       plate(
         "by-day",
         "By day",
         "Every bar says its day and its amount on hover, on focus and in the line underneath. Underneath: the average by weekday, the biggest movements of the period, and the way into Trends.",
         stats("day"),
-        { added: "2026-09-01", updated: "2026-09-11", review: true },
+        { added: "2026-09-01", updated: "2026-09-11" },
       ),
       plate(
         "spending-calendar",
         "By day · as a calendar",
         "The same days read as a month instead of a series: the shape of a week shows up where a row of bars hides it. One toggle switches between the two.",
         stats("cal"),
-        { added: "2026-09-11", review: true },
+        { added: "2026-09-11" },
       ),
       plate(
         "by-account",
         "By account",
         "Which card or account the spending leaves from, with the same stacked bar and list as categories. Transfers between your own accounts are never counted here.",
         stats("acct"),
-        { added: "2026-09-11", review: true },
+        { added: "2026-09-11" },
       ),
       plate(
         "by-tag",
         "By tag",
         "Warns about double counting and says how much spending carries no tag; it also carries the way into Trends.",
         stats("tag"),
-        { added: "2026-09-01", updated: "2026-09-11", review: true },
+        { added: "2026-09-01", updated: "2026-09-11" },
       ),
     ],
   },
@@ -3097,14 +3112,14 @@ const PAGES = [
         "Trends · not enough history yet",
         "The common case for a new account, and the one that breaks charts: three months where the range asks for six. The axis starts where the data starts, the twelve-month range is not offered, and the tiles say over how many finished months they counted — nothing is padded with zeros.",
         trends({ months: 3 }),
-        { added: "2026-09-11", review: true },
+        { added: "2026-09-11" },
       ),
       plate(
         "trends",
         "Trends over time",
         "Income against spending month by month, what was saved and at what rate, this month against the same days of the last one, and where the money went as the months pass.",
         trends(),
-        { added: "2026-09-11", review: true },
+        { added: "2026-09-11" },
       ),
     ],
   },
@@ -3537,35 +3552,35 @@ const PAGES = [
         "The day under the pointer · bubble only",
         "The bubble says the day and the amount on hover and on keyboard focus. On a phone there is no pointer: the only way left to read a day is to open it.",
         dayReadoutVariant(false),
-        { frame: false, added: "2026-09-11", review: true },
+        { frame: false, added: "2026-09-11", verdict: "discarded" },
       ),
       plate(
         "day-readout-with-a-line",
         "The day under the pointer · bubble and a line",
         "The same bubble, plus a fixed line under the chart that a finger can read. It is the pace mark's answer applied again: a tooltip does not exist for a finger.",
         dayReadoutVariant(true),
-        { frame: false, added: "2026-09-11", review: true },
+        { frame: false, added: "2026-09-11", verdict: "chosen" },
       ),
       plate(
         "recurring-found-by-the-app",
         "Recurring · found by the app",
         "Nothing new to fill in: the app reads the history, groups what repeats and warns when something that always arrives has not. It can be wrong, and it can only see what has already happened at least twice.",
         recurringVariant("detected"),
-        { frame: false, added: "2026-09-11", review: true },
+        { frame: false, added: "2026-09-11" },
       ),
       plate(
         "recurring-set-up-by-you",
         "Recurring · set up by you",
         "A recurring transaction is a thing you create, with its own schedule, and the app writes it on its day. It is exact, and it is a feature of its own: a new entity in the backend, occurrences that can be skipped or edited, and money written without anybody pressing save.",
         recurringVariant("declared"),
-        { frame: false, added: "2026-09-11", review: true },
+        { frame: false, added: "2026-09-11" },
       ),
       plate(
         "recurring-both",
         "Recurring · both, in this order",
         "What you set up is the truth; what the app finds and you never set up is an offer, never a figure. Detection ships first because it changes no data; declaring comes after, with its own design.",
         recurringVariant("both"),
-        { frame: false, added: "2026-09-11", review: true },
+        { frame: false, added: "2026-09-11", verdict: "chosen" },
       ),
       plate(
         "pace-mark-tooltip-only",

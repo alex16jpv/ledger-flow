@@ -99,12 +99,13 @@ function routeFetch() {
   });
 }
 
-function renderScreen(query = "") {
+function renderScreen(query = "", timeZone = "America/Bogota") {
   search = query;
   renderWithProviders(
     <QueryProvider>
       <StatsScreen />
     </QueryProvider>,
+    { timeZone },
   );
 }
 
@@ -159,16 +160,29 @@ describe("StatsScreen", () => {
     renderScreen("groupBy=day");
     const chart = await screen.findByRole("group", { name: "Per day" });
     const bars = within(chart).getAllByRole("button");
-    expect(bars).toHaveLength(30);
+    expect(bars).toHaveLength(22);
     expect(screen.getByText("Priciest day")).toBeInTheDocument();
     expect(screen.getByText("No-spend days")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Wednesday 9 · highest/ })).toBeInTheDocument();
+    expect(screen.getByText("Highest day · Wednesday, September 9")).toBeInTheDocument();
     const [, , , , , , , , ninth] = bars as HTMLElement[] & { 8: HTMLElement };
+    expect(ninth).toHaveAccessibleName("Wed, Sep 9 · $214,000");
     await userEvent.click(ninth);
     expect(push).toHaveBeenCalledWith({
       pathname: "/transactions",
       query: { period: "custom", from: "2026-09-09", to: "2026-09-09", type: "EXPENSE" },
     });
+  });
+
+  it("asks for the highest day in the user's zone, not around noon UTC", async () => {
+    routeFetch();
+    renderScreen("groupBy=day", "Pacific/Kiritimati");
+    await screen.findByRole("group", { name: "Per day" });
+    const listed = fetchMock.mock.calls
+      .map((call) => new URL(urlOf(call[0]), "http://localhost"))
+      .find((url) => url.pathname === "/api/transactions" && url.searchParams.has("from"));
+    expect(listed?.searchParams.get("from")).toBe("2026-09-08T10:00:00.000Z");
+    expect(listed?.searchParams.get("to")).toBe("2026-09-09T10:00:00.000Z");
   });
 
   it("warns about double counting and lists the tags without the untagged bucket", async () => {

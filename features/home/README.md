@@ -16,3 +16,8 @@ O-F3 part 2 the month's spending and the budgets answer there too, so all five r
 well: opening Home on a device whose mirror is filled makes **no data request at all**. The figures
 it paints offline are projections and none of them is marked yet — the amber tone arrives with the
 outbox in O-F4/O-F5a.
+
+T-26 gave the hero chart the contract every chart obeys: `dayBars` now returns the day key, its
+count and whether the day has arrived, and `DayBars` turns that into a slot that names its day and
+its amount, shows it on hover and on focus, repeats it in the line underneath and opens that day in
+Transactions. Days still to come are drawn as a rule, never as a zero.

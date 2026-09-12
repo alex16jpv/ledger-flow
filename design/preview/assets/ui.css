@@ -492,10 +492,10 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .colbars .col .cap { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--text-3); }
 .colbars .col i.over { background: var(--danger); }
 
-.bars .slot:first-child .tip, .gbars .slot:first-child .tip, .colbars .col:first-child .tip, .heat .d:nth-child(7n+1) .tip { left: 0; right: auto; transform: none; }
-.bars .slot:first-child .tip::after, .gbars .slot:first-child .tip::after, .colbars .col:first-child .tip::after, .heat .d:nth-child(7n+1) .tip::after { left: 10px; transform: none; }
-.bars .slot:last-child .tip, .gbars .slot:last-child .tip, .colbars .col:last-child .tip, .heat .d:nth-child(7n) .tip { left: auto; right: 0; transform: none; }
-.bars .slot:last-child .tip::after, .gbars .slot:last-child .tip::after, .colbars .col:last-child .tip::after, .heat .d:nth-child(7n) .tip::after { left: auto; right: 10px; transform: none; }
+.tooltip.tip-start .tip, .gbars .slot:first-child .tip, .colbars .col:first-child .tip, .heat .d:nth-child(7n+1) .tip { left: 0; right: auto; transform: none; }
+.tooltip.tip-start .tip::after, .gbars .slot:first-child .tip::after, .colbars .col:first-child .tip::after, .heat .d:nth-child(7n+1) .tip::after { left: 10px; transform: none; }
+.tooltip.tip-end .tip, .gbars .slot:last-child .tip, .colbars .col:last-child .tip, .heat .d:nth-child(7n) .tip { left: auto; right: 0; transform: none; }
+.tooltip.tip-end .tip::after, .gbars .slot:last-child .tip::after, .colbars .col:last-child .tip::after, .heat .d:nth-child(7n) .tip::after { left: auto; right: 10px; transform: none; }
 .colbars .col.partial i,
 .gbars .slot.partial i {
   position: relative;
