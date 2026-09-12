@@ -14,16 +14,17 @@ const CURRENCY = "COP";
 const SAMPLE = {
   spent: 1_284_300,
   pending: 47_900,
-  average: 42_800,
-  yesterday: 38_500,
+  average: 58_400,
+  yesterday: 47_200,
   balance: 11_258_600,
   income: 4_200_000,
   food: { spent: 412_000, limit: 600_000, left: 188_000 },
   transport: { spent: 185_500, limit: 200_000 },
   bars: [
-    12, 31, 18, 22, 9, 26, 40, 38, 14, 20, 33, 12, 18, 25, 66, 20, 15, 29, 32, 12, 21, 58, 14, 9, 7,
-    18, 12, 10, 8, 6,
+    27_000, 69_700, 40_500, 49_500, 20_200, 58_500, 90_000, 85_500, 31_500, 45_000, 74_200, 27_000,
+    40_500, 56_200, 148_400, 45_000, 33_700, 65_200, 72_000, 27_000, 47_200, 130_500,
   ],
+  daysInMonth: 30,
 };
 
 // The landing shows the real home screen composition with fixed sample figures, as static HTML.
@@ -67,11 +68,15 @@ export async function PhoneMock() {
             {t("average", { amount: money(SAMPLE.average), yesterday: money(SAMPLE.yesterday) })}
           </span>
           <Bars
-            bars={SAMPLE.bars.map((value, index) => ({
-              value,
-              label: String(index + 1),
-              today: index === 21,
-            }))}
+            bars={Array.from({ length: SAMPLE.daysInMonth }, (_, index) => {
+              const value = SAMPLE.bars[index] ?? 0;
+              return {
+                value,
+                label: t("barDay", { day: index + 1, amount: money(value) }),
+                today: index === SAMPLE.bars.length - 1,
+                future: index >= SAMPLE.bars.length,
+              };
+            })}
             label={t("spending")}
             height={44}
           />

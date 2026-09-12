@@ -2,7 +2,15 @@
 
 import { useMemo } from "react";
 
-import { dayKey, dayWindow, isSameLocalDay, monthWindow, shiftMonth } from "@/lib/format/dates";
+import {
+  dayKey,
+  daysWindow,
+  dayWindow,
+  isSameLocalDay,
+  localNoon,
+  monthWindow,
+  shiftMonth,
+} from "@/lib/format/dates";
 
 import { useFormatSettings } from "./FormatSettingsProvider";
 
@@ -23,6 +31,8 @@ export function useDates() {
       formatDay: (date: Date) => dateTime({ month: "short", day: "numeric" }).format(date),
       formatWeekdayDay: (date: Date) =>
         `${dateTime({ weekday: "long" }).format(date)} ${dateTime({ day: "numeric" }).format(date)}`,
+      formatWeekdayDayShort: (date: Date) =>
+        dateTime({ weekday: "short", month: "short", day: "numeric" }).format(date),
       formatRange: (from: Date, to: Date) =>
         dateTime({ month: "short", day: "numeric" }).formatRange(from, to),
       formatTime: (date: Date) => dateTime({ hour: "numeric", minute: "2-digit" }).format(date),
@@ -30,6 +40,8 @@ export function useDates() {
       dayWindow: (reference: Date) => dayWindow(reference, timeZone),
       shiftMonth: (reference: Date, months: number) => shiftMonth(reference, months, timeZone),
       dayKey: (date: Date) => dayKey(date, timeZone),
+      fromDayKey: (key: string) => localNoon(key, timeZone),
+      dayKeyWindow: (key: string) => daysWindow(key, key, timeZone),
       isSameDay: (a: Date, b: Date) => isSameLocalDay(a, b, timeZone),
     };
   }, [formatLocale, timeZone]);

@@ -49,7 +49,7 @@ describe("home", () => {
     expect(isGlobalMonthlyBudget({ ...base, periodType: "WEEKLY" })).toBe(false);
   });
 
-  it("fills the month with one bar per day and marks today", () => {
+  it("fills the month with one bar per day, marks today and the days still to come", () => {
     const bars = dayBars(
       [
         { key: "2026-09-02", total: 5000, count: 1, avg: 5000 },
@@ -59,9 +59,19 @@ describe("home", () => {
       "America/Bogota",
     );
     expect(bars).toHaveLength(30);
-    expect(bars[1]).toEqual({ value: 5000, label: "2026-09-02", today: false });
-    expect(bars[21]).toEqual({ value: 12500, label: "2026-09-22", today: true });
+    expect(bars[1]).toEqual({ key: "2026-09-02", value: 5000, today: false, future: false });
+    expect(bars[21]).toEqual({ key: "2026-09-22", value: 12500, today: true, future: false });
     expect(bars.filter((bar) => bar.value === 0)).toHaveLength(28);
+    expect(bars.filter((bar) => bar.future).map((bar) => bar.key)).toEqual([
+      "2026-09-23",
+      "2026-09-24",
+      "2026-09-25",
+      "2026-09-26",
+      "2026-09-27",
+      "2026-09-28",
+      "2026-09-29",
+      "2026-09-30",
+    ]);
   });
 
   it("ranks the non-global budgets by share consumed and describes their status", () => {

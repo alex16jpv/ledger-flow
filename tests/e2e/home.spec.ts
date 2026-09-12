@@ -23,7 +23,9 @@ test("home shows the pending alert, the day bars, the top budgets and the latest
   const alert = page.getByRole("link", { name: /quick expenses? to review/ });
   await expect(alert).toBeVisible();
   await expect(alert).toContainText(/\$\d/);
-  await expect(page.getByRole("img", { name: "Spending per day" })).toBeVisible();
+  const chart = page.getByRole("group", { name: "Spending per day" });
+  await expect(chart).toBeVisible();
+  await expect(chart.getByRole("button").first()).toHaveAccessibleName(/ · \$/);
 
   const budgets = page.getByRole("heading", { level: 2, name: "Budgets" });
   await expect(budgets).toBeVisible();
@@ -39,4 +41,9 @@ test("home shows the pending alert, the day bars, the top budgets and the latest
   await page.goBack();
   await recent.getByRole("button").first().click();
   await expect(page).toHaveURL(/\/transactions\/[0-9a-f-]{36}$/);
+  await page.goBack();
+  await chart.getByRole("button").first().click();
+  await expect(page).toHaveURL(
+    /\/transactions\?period=custom&from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}&type=EXPENSE$/,
+  );
 });

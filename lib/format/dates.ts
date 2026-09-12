@@ -43,7 +43,7 @@ export function yearWindow(reference: Date, timeZone: string): DateWindow {
 export function daysWindow(fromDate: string, toDate: string, timeZone: string): DateWindow {
   return {
     from: fromZonedTime(`${fromDate}T00:00:00`, timeZone),
-    to: addDays(fromZonedTime(`${toDate}T00:00:00`, timeZone), 1),
+    to: fromZonedTime(`${shiftDayKey(toDate, 1)}T00:00:00`, timeZone),
   };
 }
 

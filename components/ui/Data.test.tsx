@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/lib/testing/render";
 
 import { AccountCard } from "./AccountCard";
-import { Bars } from "./Bars";
 import { PeriodNav } from "./PeriodNav";
 import { DayHeader, List, Row, RowBody, RowMeta, RowRight, RowTitle } from "./Row";
 import { Stat } from "./Stat";
@@ -32,31 +31,16 @@ describe("Row", () => {
   });
 });
 
-describe("Stat and Bars", () => {
-  it("renders delta direction and an accessible chart", async () => {
-    const onSelect = vi.fn();
+describe("Stat", () => {
+  it("renders delta direction", () => {
     render(
-      <div>
-        <Stat
-          label="Total balance"
-          value="$11,258,600"
-          delta={{ direction: "up", label: "4 accounts" }}
-        />
-        <Bars
-          label="Spending per day"
-          onSelect={onSelect}
-          bars={[
-            { value: 0, label: "Sep 1" },
-            { value: 50, label: "Sep 2", today: true },
-            { value: 100, label: "Sep 3" },
-          ]}
-        />
-      </div>,
+      <Stat
+        label="Total balance"
+        value="$11,258,600"
+        delta={{ direction: "up", label: "4 accounts" }}
+      />,
     );
     expect(screen.getByText("4 accounts").className).toContain("text-income");
-    expect(screen.getByRole("group", { name: "Spending per day" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Sep 3" }));
-    expect(onSelect).toHaveBeenCalledWith(2);
   });
 });
 

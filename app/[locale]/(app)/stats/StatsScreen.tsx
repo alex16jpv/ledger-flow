@@ -8,10 +8,10 @@ import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
-import { Bars } from "@/components/ui/Bars";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip, ChipRow } from "@/components/ui/Chip";
+import { DayBars } from "@/components/ui/DayBars";
 import { Empty } from "@/components/ui/Empty";
 import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { PeriodNav } from "@/components/ui/PeriodNav";
@@ -47,7 +47,7 @@ import { TransactionDayList } from "@/features/transactions/components/Transacti
 import type { TransactionLookups } from "@/features/transactions/components/TransactionRow";
 import { useTransactionsInfinite } from "@/features/transactions/hooks";
 import { isEnabled } from "@/lib/flags";
-import { dayKey, dayWindow, monthWindow, toIsoWindow } from "@/lib/format/dates";
+import { dayKey, monthWindow, toIsoWindow } from "@/lib/format/dates";
 import { useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
@@ -103,9 +103,8 @@ export function StatsScreen() {
     [stats.data, groupBy, window, dates.timeZone, now],
   );
   const highestKey = series?.highest?.key ?? null;
-  const highestWindow = highestKey
-    ? toIsoWindow(dayWindow(new Date(`${highestKey}T12:00:00Z`), dates.timeZone))
-    : null;
+  const highestDate = highestKey ? dates.fromDayKey(highestKey) : null;
+  const highestWindow = highestKey ? toIsoWindow(dates.dayKeyWindow(highestKey)) : null;
   const highestRows = useTransactionsInfinite(
     highestWindow ? { ...highestWindow, type } : {},
     highestWindow !== null,
@@ -279,20 +278,20 @@ export function StatsScreen() {
             <>
               <Card className="flex flex-col gap-2">
                 <Projected when={outbox.projected.spending} align="center" className="w-full">
-                  <Bars
-                    bars={series.bars.map((bar) => ({
-                      value: bar.value,
-                      today: bar.today,
-                      label: t("stats.dayBar", {
-                        day: dates.formatDay(new Date(`${bar.key}T12:00:00Z`)),
-                        amount: money.format(bar.value),
-                      }),
-                    }))}
+                  <DayBars
+                    days={series.bars}
                     label={t("stats.perDay")}
                     height={140}
-                    onSelect={(index) => {
-                      const key = series.bars[index]?.key;
-                      if (key) openTransactions({ from: key, to: key });
+                    summary={
+                      highestDate
+                        ? {
+                            label: t("charts.highestDay", { day: dates.formatLong(highestDate) }),
+                            amount: money.format(series.highest?.total ?? 0),
+                          }
+                        : undefined
+                    }
+                    onOpen={(key) => {
+                      openTransactions({ from: key, to: key });
                     }}
                     className="flex-1"
                   />
@@ -300,9 +299,7 @@ export function StatsScreen() {
                 <div className="flex justify-between text-xs text-text-3">
                   <span>{dates.formatDay(window.from)}</span>
                   <span>
-                    {series.bars[14]
-                      ? dates.formatDay(new Date(`${series.bars[14].key}T12:00:00Z`))
-                      : ""}
+                    {series.bars[14] ? dates.formatDay(dates.fromDayKey(series.bars[14].key)) : ""}
                   </span>
                   <span>{dates.formatDay(new Date(window.to.getTime() - 1))}</span>
                 </div>
@@ -318,11 +315,7 @@ export function StatsScreen() {
                       className="text-lg font-semibold"
                     />
                   }
-                  sub={
-                    highestKey
-                      ? dates.formatWeekdayDay(new Date(`${highestKey}T12:00:00Z`))
-                      : undefined
-                  }
+                  sub={highestDate ? dates.formatWeekdayDay(highestDate) : undefined}
                 />
                 <StatTile
                   label={t("stats.dailyAverage")}
@@ -340,13 +333,11 @@ export function StatsScreen() {
                   value={series.noSpendDays}
                 />
               </div>
-              {highestKey && (
+              {highestDate && (
                 <section className="flex flex-col gap-2">
                   <div className="flex items-baseline justify-between gap-3">
                     <h2 className="text-md font-semibold">
-                      {t("stats.highest", {
-                        day: dates.formatWeekdayDay(new Date(`${highestKey}T12:00:00Z`)),
-                      })}
+                      {t("stats.highest", { day: dates.formatWeekdayDay(highestDate) })}
                     </h2>
                     <Amount
                       value={series.highest?.total ?? 0}

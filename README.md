@@ -40,32 +40,32 @@ the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no envir
 
 ## Scripts
 
-| Script                     | What it does                                                                                   |
-| -------------------------- | ---------------------------------------------------------------------------------------------- |
-| `npm run dev`              | Next dev server on port 3001                                                                   |
-| `npm run build` / `start`  | Production build (`next build` + `serwist build` → `public/sw.js`, git-ignored) / server       |
-| `npm run ci`               | Full gate: typecheck, lint, format:check, check-tokens, contrast-check, test, `build:gate`     |
-| `npm run build:gate`       | The gate's build (`.next-gate`, `public/sw-gate.js`), then `size-limit` and `check-dev-routes` |
-| `npm run check-dev-routes` | Starts the gate build on port 3004 and proves the dev-only URLs answer 404 (W-39)              |
-| `npm run typecheck`        | `tsc --noEmit`                                                                                 |
-| `npm run lint`             | ESLint with zero warnings allowed                                                              |
-| `npm run format`           | Prettier (`format:check` verifies)                                                             |
-| `npm run check-tokens`     | Fails on hex, raw color functions or Tailwind palette classes                                  |
-| `npm run contrast-check`   | WCAG AA over every `tokens/palette.*.css` in light and dark                                    |
-| `npm run test`             | Vitest + Testing Library (`test:watch`, `test:coverage`)                                       |
-| `npm run test:e2e`         | Playwright smoke tests against the local backend                                               |
-| `npm run e2e:backend`      | Starts the sibling backend on port 3200 against the Docker Mongo `lag_money_test`, seeded      |
-| `npm run demo:offline`     | The demo of gate O-A: three days with no network and one clean drain (`tests/gate/`)           |
-| `npm run demo:offline:b`   | The demo of gate O-B: two devices, a conflict and the tray that resolves it                    |
-| `demo:offline:watch`       | The same demos, headed and slowed down, so they can be watched as they happen (`:b:watch`)     |
-| `demo:offline:report`      | Opens the demo's report: one video per cold start, and a trace with every request              |
-| `npm run measure:banner`   | Times the pending stripe against a slow network (`tests/measure/`, F-72)                       |
-| `npm run size-limit`       | Route JS budgets over the production build                                                     |
-| `npm run lighthouse`       | Lighthouse CI against a production build with the thresholds in `lighthouserc.json`            |
-| `npm run lighthouse:app`   | The same, over the 25 authenticated screens with a real session (`lighthouserc.app.json`)      |
-| `npm run gen:api-types`    | Regenerates `types/api.d.ts` and `endpoints.md` from the backend OpenAPI                       |
-| `npm run fixtures:sync`    | Refreshes the backend's parity fixtures under `lib/local/derive/fixtures/`                     |
-| `npm run gen:feature`      | Scaffolds `features/<name>/{api,keys,hooks,schemas,components}`                                |
+| Script                     | What it does                                                                                             |
+| -------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `npm run dev`              | Next dev server on port 3001                                                                             |
+| `npm run build` / `start`  | Production build (`next build` + `serwist build` → `public/sw.js`, git-ignored) / server                 |
+| `npm run ci`               | Full gate: typecheck, lint, format:check, check-tokens, contrast-check, design:check, test, `build:gate` |
+| `npm run build:gate`       | The gate's build (`.next-gate`, `public/sw-gate.js`), then `size-limit` and `check-dev-routes`           |
+| `npm run check-dev-routes` | Starts the gate build on port 3004 and proves the dev-only URLs answer 404 (W-39)                        |
+| `npm run typecheck`        | `tsc --noEmit`                                                                                           |
+| `npm run lint`             | ESLint with zero warnings allowed                                                                        |
+| `npm run format`           | Prettier (`format:check` verifies)                                                                       |
+| `npm run check-tokens`     | Fails on hex, raw color functions or Tailwind palette classes                                            |
+| `npm run contrast-check`   | WCAG AA over every `tokens/palette.*.css` in light and dark                                              |
+| `npm run test`             | Vitest + Testing Library (`test:watch`, `test:coverage`)                                                 |
+| `npm run test:e2e`         | Playwright smoke tests against the local backend                                                         |
+| `npm run e2e:backend`      | Starts the sibling backend on port 3200 against the Docker Mongo `lag_money_test`, seeded                |
+| `npm run demo:offline`     | The demo of gate O-A: three days with no network and one clean drain (`tests/gate/`)                     |
+| `npm run demo:offline:b`   | The demo of gate O-B: two devices, a conflict and the tray that resolves it                              |
+| `demo:offline:watch`       | The same demos, headed and slowed down, so they can be watched as they happen (`:b:watch`)               |
+| `demo:offline:report`      | Opens the demo's report: one video per cold start, and a trace with every request                        |
+| `npm run measure:banner`   | Times the pending stripe against a slow network (`tests/measure/`, F-72)                                 |
+| `npm run size-limit`       | Route JS budgets over the production build                                                               |
+| `npm run lighthouse`       | Lighthouse CI against a production build with the thresholds in `lighthouserc.json`                      |
+| `npm run lighthouse:app`   | The same, over the 25 authenticated screens with a real session (`lighthouserc.app.json`)                |
+| `npm run gen:api-types`    | Regenerates `types/api.d.ts` and `endpoints.md` from the backend OpenAPI                                 |
+| `npm run fixtures:sync`    | Refreshes the backend's parity fixtures under `lib/local/derive/fixtures/`                               |
+| `npm run gen:feature`      | Scaffolds `features/<name>/{api,keys,hooks,schemas,components}`                                          |
 
 ## Test data and sessions
 

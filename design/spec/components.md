@@ -55,8 +55,8 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     weekday: there is no "all Wednesdays" to open — the chart is one `role="img"` whose accessible name
     reads every slot, and the bubble is a pointer convenience only; seven buttons that do nothing are
     worse than one image. The chart keeps a bubble's height of room above the tallest bar so the bubble
-    never covers the card's title, and at either end the bubble aligns to that edge instead of
-    centring. Home, Stats, the budget detail and the weekday average are this one component with a
+    never covers the card's title, and near either end the bubble aligns to that end instead of
+    centring, so it never hangs outside the card. Home, Stats, the budget detail and the weekday average are this one component with a
     different height, different labels and a different mode — never a copy.
 19. **Account card** — a 3px stripe of the colour on the left, a dot plus the name plus the Main badge,
     a 24px balance (negative with `−`) and an 11px type. On mobile it is a snapping carousel (72% of the

@@ -28,7 +28,12 @@ test("stats show the seed month by category, by day and by tag, and drill into t
 
   await page.getByRole("button", { name: "Days" }).click();
   await expect(page).toHaveURL(/groupBy=day/);
-  await expect(page.getByRole("group", { name: "Per day" })).toBeVisible();
+  const days = page.getByRole("group", { name: "Per day" });
+  await expect(days).toBeVisible();
+  const line = days.locator("xpath=following-sibling::p[1]");
+  await expect(line).toHaveText(/^Highest day · /);
+  await days.getByRole("button").nth(8).focus();
+  await expect(line).toHaveText(/· \d+ transactions?\n?\$/);
   await expect(page.getByText("Priciest day")).toBeVisible();
   await expect(page.getByRole("heading", { name: /· highest$/ })).toBeVisible();
   await expectNoAxeViolations(page);

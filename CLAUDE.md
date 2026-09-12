@@ -16,8 +16,9 @@ what he gives you, and ask him if you have none. Read `DECISIONS.md` before chan
 
 A change is not done until all of these hold. If one does not apply, say so and why.
 
-1. **`npm run ci` is green**: typecheck, lint, format check, token check, contrast check, unit
-   and component tests, build. Never report "done" without running it.
+1. **`npm run ci` is green**: typecheck, lint, format check, token check, contrast check, the
+   design preview rebuilt with no drift, unit and component tests, build. Never report "done"
+   without running it.
 2. **Tests for what you added**: happy path and edges (empty, invalid, offline, 401/429,
    `INVALID_CURSOR`). A bug fix starts with the failing test.
 3. **Verified against the real API** (backend running locally), not only against mocks.
@@ -274,7 +275,7 @@ nothing does yet.
 
 ```bash
 npm run dev            # Next dev server (backend must be running locally)
-npm run ci             # full gate: typecheck, lint, format:check, check-tokens, contrast-check, test, build
+npm run ci             # full gate: typecheck, lint, format:check, check-tokens, contrast-check, design:check, test, build
 npm run test           # vitest + Testing Library
 npm run test:e2e       # Playwright against the local backend
 npm run check-tokens   # fails on raw colors

@@ -1,3 +1,4 @@
+import type { DaySlot } from "@/lib/charts/days";
 import { dayKey } from "@/lib/format/dates";
 import type { StatsBucket } from "@/types/api";
 
@@ -28,7 +29,7 @@ export function transactionCount(buckets: readonly StatsBucket[]): number {
 }
 
 export interface DaySeries {
-  bars: { value: number; label: string; today?: boolean; key: string }[];
+  bars: DaySlot[];
   highest: StatsBucket | null;
   noSpendDays: number;
   dailyAverage: number;
@@ -44,7 +45,7 @@ export function daySeries(
 ): DaySeries {
   const byDay = new Map(buckets.map((bucket) => [bucket.key, bucket]));
   const todayKey = dayKey(now, timeZone);
-  const bars: DaySeries["bars"] = [];
+  const bars: DaySlot[] = [];
   for (
     let cursor = new Date(window.from);
     cursor < window.to;
@@ -52,9 +53,16 @@ export function daySeries(
   ) {
     const key = dayKey(cursor, timeZone);
     if (bars.some((bar) => bar.key === key)) continue;
-    bars.push({ key, value: byDay.get(key)?.total ?? 0, label: key, today: key === todayKey });
+    const bucket = byDay.get(key);
+    bars.push({
+      key,
+      value: bucket?.total ?? 0,
+      count: bucket?.count ?? 0,
+      today: key === todayKey,
+      future: key > todayKey,
+    });
   }
-  const elapsed = bars.filter((bar) => bar.key <= todayKey);
+  const elapsed = bars.filter((bar) => !bar.future);
   const counted = elapsed.length > 0 ? elapsed : bars;
   const highest = [...buckets].sort((a, b) => b.total - a.total)[0] ?? null;
   return {
