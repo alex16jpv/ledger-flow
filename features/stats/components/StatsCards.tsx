@@ -1,6 +1,6 @@
 "use client";
 
-import { Hash } from "lucide-react";
+import { ChartLine, ChevronRight, Hash } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
@@ -12,6 +12,7 @@ import { Projected } from "@/components/ui/Projected";
 import { List, Row, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Tile } from "@/components/ui/Tile";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { Link } from "@/lib/i18n/navigation";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
@@ -270,6 +271,25 @@ export function TagRows({
         ))}
       </List>
     </Card>
+  );
+}
+
+export function TrendsLink({ reference }: { reference?: string }) {
+  const t = useTranslations("stats");
+  return (
+    <Link
+      href={{ pathname: "/stats/trends", query: reference ? { reference } : {} }}
+      className="flex items-center gap-3 rounded-lg border border-border bg-surface p-4 shadow-1 transition-colors duration-(--dur-1) ease-(--ease) hover:bg-surface-2"
+    >
+      <Tile color="INDIGO">
+        <ChartLine {...iconProps("md")} />
+      </Tile>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="font-medium">{t("trendsLink.title")}</span>
+        <span className="truncate text-sm text-text-3">{t("trendsLink.body")}</span>
+      </span>
+      <ChevronRight {...iconProps("sm")} className="shrink-0 text-text-3" />
+    </Link>
   );
 }
 

@@ -13,7 +13,7 @@ Stats was showing.
 ## The cards (`#trends`)
 
 - **Income and spending**: `gbars`, income against spending, one pair per month, with a legend and the
-  `readout`. **A month still running is drawn at 55% and its readout says "in progress"**, and it is
+  `readout`. **A month still running is drawn hatched and its readout says "in progress"**, and it is
   left out of every figure that claims to be a month's: the two tiles underneath, _Saved_ and _Savings
   rate_, count complete months only and say how many. A savings rate worked out from three weeks of
   spending against a whole salary is a lie the chart would tell for free.
@@ -23,7 +23,7 @@ Stats was showing.
   week is the mistake this card exists to prevent.
 - **Where it goes**: stacked columns (component 33), one column per month with the top five categories and
   "Other", so a category that is quietly growing shows up as a band that widens. The running month is
-  drawn at 55% here too.
+  hatched here too.
 - A closing line: a month is counted in the user's time zone, like every other figure in the app.
 
 ## Who computes each figure
@@ -31,13 +31,13 @@ Stats was showing.
 House rule 4: the client computes no money except the offline projection in `lib/local/derive`, and
 whatever is projected says so. Every figure on this screen, and where it comes from:
 
-| Figure                                 | Where it comes from                                                                                    |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Income and spending per month          | `GET /stats/spending` with `groupBy=month`, one call per flow type. Does not exist yet — see stats.md. |
-| _Saved_, _Savings rate_                | Subtraction and a ratio over totals the API returned, over complete months only. Never over buckets.   |
-| This month's curve, last month's curve | Two calls with `groupBy=day`; the running total is a cumulative sum of buckets the API returned.       |
-| "n% less than at this point"           | A ratio of the two last points of those curves.                                                        |
-| Per category and month                 | `groupBy=month` crossed with `groupBy=category`. Does not exist yet.                                   |
+| Figure                                 | Where it comes from                                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Income and spending per month          | `GET /stats/spending` with `groupBy=month`, one call per flow type. Served since T-24.               |
+| _Saved_, _Savings rate_                | Subtraction and a ratio over totals the API returned, over complete months only. Never over buckets. |
+| This month's curve, last month's curve | Two calls with `groupBy=day`; the running total is a cumulative sum of buckets the API returned.     |
+| "n% less than at this point"           | A ratio of the two last points of those curves.                                                      |
+| Per category and month                 | `groupBy=month` with `splitBy=category`, one call. Served since T-24.                                |
 
 Offline, the whole screen reads the mirror through `lib/local/derive`, which is the only place
 allowed to add money in the client — and everything it produces carries the projection mark
@@ -47,14 +47,24 @@ it never draws a zero for a month it cannot see.
 
 ## The four states
 
-- **Data**: as above.
-- **Empty**: an account with nothing in the range — one `Empty`, "Not enough history yet", with the
-  line "Come back when you have a full month." A chart with no data is never drawn as flat zeros.
-- **Partial** (the common one): fewer months than the range asks for. The chart shows the months that
-  exist, the axis starts where the data starts, and the tiles say over how many months they counted.
-- **Loading**: one `Skeleton` per card, at the card's own height, so the page does not jump.
-- **Error**: the shared `Empty` in `danger` with `LoadErrorBody` and Retry, per card — one card
-  failing does not blank the screen.
+- **Data** (`#trends`): as above.
+- **Empty** (`#trends-empty`): an account with nothing in the range — one `Empty`, "Not enough history
+  yet", with the line "Come back when you have a full month." A chart with no data is never drawn as
+  flat zeros. It is one `Empty` for the whole screen and not one per card, because every card here
+  answers the same question over the same range: if there is nothing to compare, there is nothing to
+  compare three times.
+- **Partial** (`#trends-short-history`, the common one): fewer months than the range asks for. The
+  chart shows the months that exist, the axis starts where the data starts, and the tiles say over how
+  many months they counted. The range control stays **above** the notice and stays usable: a range the
+  history cannot fill is still a range the reader may want to leave.
+- **Loading** (`#trends-loading`): one `Skeleton` per card, at the card's own height, so the page does
+  not jump. The range control is already usable.
+- **Error** (`#trends-error`): the shared `Empty` in `danger` with `LoadErrorBody` and Retry, per card
+  — one card failing does not blank the screen. **Which cards fall together** is what the reads decide:
+  _Income and spending_ and the two tiles under it are one read per flow type and fail as one card;
+  _This month against last_ is its own pair of day reads; _Where it goes_ is the month × category
+  cross, its own read, and the plate is drawn with that one failing while the two above it keep their
+  figures.
 
 ## Recurring — decided: both, detection first
 

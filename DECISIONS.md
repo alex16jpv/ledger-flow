@@ -5,12 +5,56 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
-## 2026-09-13 · The second place the client adds the API's own buckets (T-30)
+## 2026-09-13 · Trends counts complete months by subtraction, not by adding buckets (T-31)
+
+- **Decision:** _Saved_ and _Savings rate_ take the running month **off** the two range totals
+  `GET /stats/spending` returned — `savings` in `features/stats/trends.ts` — instead of adding the
+  complete months' buckets up. Two subtractions and one ratio over figures the API produced.
+- **Alternatives:** summing the complete months' buckets, which is a third place the client adds money
+  while the wording of house rule 4 is already under question. And a second pair of reads whose window
+  stops at the last complete month, which is two more requests for a figure already on the screen
+  (house rule 24).
+- **Consequence:** the tiles are exact and they cost nothing. It works because only the last month of
+  the range can be running: `trendMonths` marks it and nothing else.
+
+## 2026-09-13 · The month × category ranking is the API's, never the splits added up (T-31)
+
+- **Decision:** the five categories stacked in every column of _Where it goes_ are the top five of a
+  `groupBy=category` read over the same range, and "Other" is what the month's own total has left after
+  them (`categoryMix`). One extra read, and no category total the client worked out.
+- **Alternatives:** ranking by adding each category's splits across the months, which is the client
+  adding money to decide what to draw — and getting it wrong the day a split is missing. And dropping
+  "Other", which would make a column shorter than the month it names.
+- **Consequence:** a column's segments add up to exactly the month total the API returned, and the
+  legend names the same five for every month, which is what makes a band that widens legible.
+
+## 2026-09-13 · The range lives in the address (T-31)
+
+- **Decision:** `/stats/trends?range=12` — six or twelve months is a filter, and house rule "filters
+  and period in the URL" (§3) puts it there. `reference` travels with it from Stats, and both are
+  omitted when they are the default.
+- **Alternative:** `lib/storage/choice.ts`, where the Bars ⇄ Calendar toggle lives. Rejected: that one
+  is how the same data is drawn, this one is which data is read — and a Trends link someone shares has
+  to open on what its sender was looking at.
+
+## 2026-09-13 · Every client-side addition of money now goes through `lib/local/derive` (T-31)
+
+- **Decision:** `runningTotals` moved out of `features/budgets/charts.ts` and into
+  `lib/local/derive/money.ts`, where `sumAmounts` already lives. `paceSeries` (T-30) and the two
+  comparison curves of Trends both call it; `savings` and `categoryMix` call `sumAmounts`.
+- **Consequence:** there is one implementation of a cumulative total instead of two, and the arithmetic
+  of every screen that adds the API's own buckets happens inside the module house rule 4 names. **It
+  does not close the question put to the owner on 2026-09-13**: the rule also says whatever is computed
+  is marked as a projection, and these figures are not projections — they are arithmetic about a
+  drawing. Where the code lives changed; what the rule should say is still his.
+
+## 2026-09-13 · The second place the client adds the API's own buckets (T-30) — moved the same day
 
 - **Decision:** `paceSeries` (`features/budgets/charts.ts`) runs the day buckets `/stats/spending`
   returned into a cumulative total, and divides it by the elapsed days to say where the period ends at
-  this rate. Added with `toCents`/`fromCents` from `lib/local/derive`, divided once, and the result is
-  never painted where an amount goes: it is a dashed line and a sentence.
+  this rate. Added in minor units, divided once, and the result is never painted where an amount goes:
+  it is a dashed line and a sentence. **Since T-31 the cumulative total itself is `runningTotals` in
+  `lib/local/derive`**, shared with Trends, instead of a loop of its own here.
 - **Alternatives:** asking the backend for the curve, which is the same buckets read a second way — a
   new aggregation for a figure the client already holds. And keeping it inside `lib/local/derive`,
   which is the mirror's derivation of what the server would have answered; this is neither offline nor

@@ -8,3 +8,13 @@ export function sumAmounts(amounts: Iterable<number>): number {
   for (const amount of amounts) cents += toCents(amount);
   return fromCents(cents);
 }
+
+export function runningTotals(amounts: Iterable<number>): number[] {
+  let cents = 0;
+  const totals: number[] = [];
+  for (const amount of amounts) {
+    cents += toCents(amount);
+    totals.push(fromCents(cents));
+  }
+  return totals;
+}

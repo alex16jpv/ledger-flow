@@ -1669,7 +1669,7 @@ ${trendsLink()}`;
   return frame(intro + content);
 };
 
-const trends = ({ months = 6 } = {}) => {
+const trends = ({ months = 6, state = "" } = {}) => {
   const MONTHS = MONTHS6.slice(-months);
   const complete = MONTHS.filter(([, , , partial]) => !partial);
   const saved = complete.reduce((a, [, inc, exp]) => a + inc - exp, 0);
@@ -1692,11 +1692,26 @@ const trends = ({ months = 6 } = {}) => {
     { partial },
   ]);
   const short = months < 6;
-  const body = `${
-    short
-      ? `<div class="alert neutral">${iconSvg("info")}<span>This account has <b>${months} months</b> of history, so that is the whole range there is. The tiles count the ${complete.length} that finished.</span></div>`
-      : `<div class="segment"><button aria-pressed="true">Last 6 months</button><button>Last 12 months</button></div>`
+  const frame = (body) =>
+    screen(body, { tab: "", side: "stats", back: true, title: "Trends", narrow: true });
+  if (state == "loading") {
+    return frame(`<div class="segment"><button aria-pressed="true">Last 6 months</button><button>Last 12 months</button></div>
+<div class="card chart">${skel("height:10px;width:150px")}${skel("height:128px;margin-top:22px")}${skel("height:12px;width:60%")}</div>
+<div class="stats" style="grid-template-columns:repeat(2,1fr)">${skel("height:68px;border-radius:14px")}${skel("height:68px;border-radius:14px")}</div>
+<div class="card chart">${skel("height:10px;width:170px")}${skel("height:120px;margin-top:22px")}${skel("height:12px;width:75%")}${skel("height:12px;width:45%")}</div>
+<div class="card chart">${skel("height:10px;width:110px")}${skel("height:132px;margin-top:22px")}${skel("height:12px;width:85%")}</div>`);
   }
+  if (state == "empty") {
+    return frame(
+      `<div class="card"><div class="empty">${tile("trending-up", "NONE", "lg")}<span class="h3">Not enough history yet</span><p class="small muted" style="margin:0;max-width:280px">Come back when you have a full month. A chart with no data is not drawn as a row of zeros.</p></div></div>`,
+    );
+  }
+  const body = `<div class="segment"><button aria-pressed="true">Last 6 months</button><button>Last 12 months</button></div>
+${
+  short
+    ? `<div class="alert neutral">${iconSvg("info")}<span>This account has <b>${months} months</b> of history, so that is the whole range there is. The tiles count the ${complete.length} that finished.</span></div>`
+    : ""
+}
 <div class="card chart"><div class="card-head" style="margin:0"><span class="eyebrow">Income and spending</span><span class="legend row"><span class="li"><i class="dot inc"></i>Income</span><span class="li"><i class="dot exp"></i>Spending</span></span></div>
 ${gbars(rows, { height: 128, active: last })}
 ${axis(...MONTHS.map(([n]) => n.slice(0, 3)))}
@@ -1713,12 +1728,16 @@ ${trend(
 ${axis("Day 1", "Day 22")}
 <p class="small muted" style="margin:0">You have spent <b class="amount">${money(sepCum[TODAY - 1])}</b> so far — <b>${Math.abs(diff)}% ${diff < 0 ? "less" : "more"}</b> than at this point in August.</p>
 <span class="legend row"><span class="li"><i class="dot exp"></i>September</span><span class="li"><i class="dot line"></i>August, same days</span></span></div>
-<div class="card chart"><span class="eyebrow">Where it goes</span>
+${
+  state == "cardError"
+    ? `<div class="card">${statsError("where your money went")}</div>`
+    : `<div class="card chart"><span class="eyebrow">Where it goes</span>
 ${stackCols(mix, { height: 132, active: last })}
 ${axis(...MONTHS.map(([n]) => n.slice(0, 3)))}
-<span class="legend row">${CAT_MIX.map(([n, c]) => `<span class="li"><i class="dot color-${c}" style="background:var(--f)"></i>${n}</span>`).join("")}</span></div>
+<span class="legend row">${CAT_MIX.map(([n, c]) => `<span class="li"><i class="dot color-${c}" style="background:var(--f)"></i>${n}</span>`).join("")}</span></div>`
+}
 <p class="xs faint" style="margin:0">A month is counted in your time zone, the same way every other figure in the app is.</p>`;
-  return screen(body, { tab: "", side: "stats", back: true, title: "Trends", narrow: true });
+  return frame(body);
 };
 
 const settingsRow = (icon, title, meta, right = "", color = "NONE") => {
@@ -3307,6 +3326,27 @@ const PAGES = [
         "Income against spending month by month, what was saved and at what rate, this month against the same days of the last one, and where the money went as the months pass.",
         trends(),
         { added: "2026-09-11" },
+      ),
+      plate(
+        "trends-empty",
+        "Trends · nothing in the range",
+        "An account with nothing to compare yet. One Empty for the whole screen, because every card here answers the same question over the same range: a chart with no data is never drawn as flat zeros.",
+        trends({ state: "empty" }),
+        { added: "2026-09-13" },
+      ),
+      plate(
+        "trends-loading",
+        "Trends · loading",
+        "One Skeleton per card, each at its own card's height, so nothing jumps when the figures arrive. The range control is already usable.",
+        trends({ state: "loading" }),
+        { added: "2026-09-13" },
+      ),
+      plate(
+        "trends-error",
+        "Trends · one card failed",
+        "Each card is its own read, so one failure replaces that card and not the screen. Where it goes is the month \u00d7 category cross; the two above it keep their figures.",
+        trends({ state: "cardError" }),
+        { added: "2026-09-13" },
       ),
     ],
   },

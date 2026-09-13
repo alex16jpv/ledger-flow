@@ -1420,7 +1420,50 @@
       "label": "How to show the days",
       "bars": "Bars",
       "calendar": "Calendar"
+    },
+    "trendsLink": {
+      "title": "Trends over time",
+      "body": "Income, savings and categories month by month"
     }
+  },
+  "trends": {
+    "title": "Trends",
+    "rangeLabel": "Range",
+    "range": "Last {months} months",
+    "shortHistory": "This account has {months, plural, one {# month} other {# months}} of history, so that is the whole range there is. The tiles count the {complete, plural, one {# that finished} other {# that finished}}.",
+    "incomeAndSpending": "Income and spending",
+    "incomeAndSpendingReading": "Income against spending, month by month",
+    "monthPair": "{month} · {income} in, {spending} out",
+    "monthPairRunning": "{month} · {income} in, {spending} out, in progress",
+    "legendIncome": "Income",
+    "legendSpending": "Spending",
+    "saved": "Saved",
+    "savedSub": "{count, plural, one {# complete month} other {# complete months}}",
+    "savingsRate": "Savings rate",
+    "savingsRateSub": "of what came in",
+    "percent": "{percent} %",
+    "noRate": "No income yet",
+    "thisAgainstLast": "This month against last",
+    "comparisonReading": "Spending so far this month against the same days of the previous month",
+    "axisDay": "Day {day}",
+    "spentLess": "You have spent <b>{amount}</b> so far — <b>{percent} % less</b> than at this point in {month}.",
+    "spentMore": "You have spent <b>{amount}</b> so far — <b>{percent} % more</b> than at this point in {month}.",
+    "spentNoComparison": "You have spent <b>{amount}</b> so far. There is nothing recorded in {month} to compare it with.",
+    "legendPrevious": "{month}, same days",
+    "emptyComparison": "There is nothing to compare until something is spent this month.",
+    "whereItGoes": "Where it goes",
+    "whereItGoesReading": "Spending per month, split by category",
+    "monthSlot": "{month} · {amount}",
+    "monthSlotRunning": "{month} · {amount}, in progress",
+    "other": "Other",
+    "timeZoneNote": "A month is counted in your time zone, the same way every other figure in the app is.",
+    "empty": {
+      "title": "Not enough history yet",
+      "body": "Come back when you have a full month. A chart with no data is not drawn as a row of zeros."
+    },
+    "errorMonths": "We couldn’t load income and spending",
+    "errorComparison": "We couldn’t load this month against last",
+    "errorMix": "We couldn’t load where your money went"
   },
   "charts": {
     "daySlot": "{day} · {amount}",

@@ -27,6 +27,7 @@ export const SHELL_PATHS = [
   "/categories",
   "/categories/new",
   "/stats",
+  "/stats/trends",
   "/settings",
   "/settings/appearance",
   "/settings/profile",

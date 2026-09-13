@@ -40,6 +40,7 @@ import {
   StatTile,
   TagRows,
   TotalCard,
+  TrendsLink,
 } from "@/features/stats/components/StatsCards";
 import { useStatsQuery } from "@/features/stats/hooks";
 import {
@@ -616,6 +617,9 @@ export function StatsScreen() {
               )}
             </>
           )}
+          <TrendsLink
+            reference={monthKey === currentMonthKey(now, dates.timeZone) ? undefined : monthKey}
+          />
         </>
       )}
     </div>

@@ -18,9 +18,12 @@ vi.mock("@/lib/i18n/navigation", () => ({
   Link: ({
     href,
     ...rest
-  }: { href: { query: Record<string, string> } } & Omit<ComponentProps<"a">, "href">) => (
-    <a href={`/transactions?${new URLSearchParams(href.query).toString()}`} {...rest} />
-  ),
+  }: {
+    href: { pathname: string; query: Record<string, string> };
+  } & Omit<ComponentProps<"a">, "href">) => {
+    const query = new URLSearchParams(href.query).toString();
+    return <a href={query ? `${href.pathname}?${query}` : href.pathname} {...rest} />;
+  },
 }));
 
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -446,5 +449,22 @@ describe("StatsScreen", () => {
     expect(screen.getByText(/\$500,000 has no tags/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /#latte/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /untagged/ })).not.toBeInTheDocument();
+  });
+
+  it.each(["", "groupBy=day", "groupBy=account", "groupBy=tag"])(
+    "ends the %s view with the way into Trends",
+    async (query) => {
+      routeFetch();
+      renderScreen(query);
+      const link = await screen.findByRole("link", { name: /Trends over time/ });
+      expect(link).toHaveAttribute("href", "/stats/trends");
+    },
+  );
+
+  it("takes the month being read into Trends, and only when it is not this one", async () => {
+    routeFetch();
+    renderScreen("reference=2026-07");
+    const link = await screen.findByRole("link", { name: /Trends over time/ });
+    expect(link).toHaveAttribute("href", "/stats/trends?reference=2026-07");
   });
 });

@@ -26,3 +26,15 @@ same row list as categories, sharing `ShareRows`, with the account's colour and 
 line under it says that transfers between the user's own accounts are never counted here. Which of
 the two day views is showing lives in `localStorage` (`lib/charts/day-view.ts`), beside the palette
 and the language, by the owner's decision of 2026-09-12.
+
+T-31 adds **Trends** (`/stats/trends`), the one screen here that reads a range of months instead of
+one. `trends.ts` holds its model: `trendWindow` builds the six- or twelve-month window, `trendMonths`
+starts the series where the data starts instead of padding the months before it with zeros,
+`monthComparison` walks this month and the previous one from their own day one so day 12 is compared
+with day 12, and `categoryMix` stacks each month out of the top five categories — ranked by the API's
+own `groupBy=category` totals, never by adding splits up — leaving the rest of the month's total in
+`Other`. `savings` is the rule-4 care: it takes the running month **off** the two range totals the API
+returned rather than adding the month buckets, so _Saved_ and _Savings rate_ count complete months
+only without the client ever summing money. The one addition it does make, the running total of the two
+comparison curves, goes through `runningTotals` in `lib/local/derive`, which is the only place allowed
+to add money in the client.

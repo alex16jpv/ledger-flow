@@ -52,8 +52,9 @@ user's own accounts lands here and has to say why.
 ## Trends lives next door
 
 `/stats/trends` is its own screen with its own spec, [trends.md](trends.md): a range of months cannot
-share a period navigator with a single month. Every Stats view ends with the way into it, and the
-question about **Recurring expenses** — proposed, not decided — is written up there.
+share a period navigator with a single month. Every Stats view ends with the way into it, carrying the
+month being read when it is not this one, and **Recurring expenses** — decided on 2026-09-11, detection
+first — is written up there.
 
 ## What this needs from the backend
 
