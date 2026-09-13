@@ -2,9 +2,10 @@ import { screen, waitFor } from "@testing-library/react";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { setCurrentVault } from "@/lib/local/repository";
+import { profileRecord } from "@/lib/local/schema";
 import { SHELL_SCREENS, shellCacheKey, shellUrls } from "@/lib/pwa/shell";
 import { renderWithProviders } from "@/lib/testing/render";
-import { openTestVault, wipeVaults } from "@/lib/testing/vault";
+import { openTestVault, profile, wipeVaults } from "@/lib/testing/vault";
 
 import { OfflineReadyAnnouncement } from "./OfflineReadyAnnouncement";
 
@@ -24,10 +25,19 @@ const warmScreens = (count: number): void => {
   }
 };
 
-async function deviceWith({ screens, synced }: { screens: number; synced: boolean }) {
+async function deviceWith({
+  screens,
+  synced,
+  answers = true,
+}: {
+  screens: number;
+  synced: boolean;
+  answers?: boolean;
+}) {
   warmScreens(screens);
   const vault = await openTestVault("u1");
   if (synced) await vault.db.put("meta", { key: "syncedAt", value: "2026-09-06T10:00:00.000Z" });
+  if (answers) await vault.db.put("profile", profileRecord(profile()));
   setCurrentVault(vault);
 }
 
@@ -73,6 +83,18 @@ describe("the one-off “ready to use offline”", () => {
 
   it("says nothing before the data has landed", async () => {
     await deviceWith({ screens: SHELL_SCREENS, synced: false });
+
+    render();
+
+    await waitFor(() => {
+      expect(shellCache.size).toBe(SHELL_SCREENS);
+    });
+    expect(screen.queryByText("Ready to use offline")).not.toBeInTheDocument();
+  });
+
+  // H-14: the copy looked complete and every read with a date window still went to the server.
+  it("says nothing while the copy cannot answer a read", async () => {
+    await deviceWith({ screens: SHELL_SCREENS, synced: true, answers: false });
 
     render();
 

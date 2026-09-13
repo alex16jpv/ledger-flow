@@ -387,7 +387,10 @@
         "incompleteHelp": "Paused: it needs a connection to finish",
         "retry": "Retry",
         "notAvailable": "Not available",
-        "notAvailableHelp": "The app’s screens are only saved in the installed app"
+        "notAvailableHelp": "The app’s screens are only saved in the installed app",
+        "finishing": "Almost ready",
+        "finishingHelp": "Your data is here but the app still needs one detail from the server to read it offline",
+        "finish": "Finish now"
       },
       "queue": {
         "label": "Waiting to send"
@@ -1040,7 +1043,39 @@
       "archivedInfo": "This budget is archived and no longer tracks spending. Restore it to bring it back exactly as it was.",
       "endedInfo": "This custom budget ended on {date}.",
       "restore": "Restore",
-      "restored": "Budget restored"
+      "restored": "Budget restored",
+      "charts": {
+        "perDay": "Spending per day",
+        "pace": "Against the pace",
+        "history": "Last {count} periods",
+        "biggest": "Biggest this period",
+        "breakdown": "Where it went",
+        "breakdownTotal": "{amount} of {limit}",
+        "over": "Over",
+        "endsOver": "At this rate you finish the period at <b>{amount}</b> — <over>{difference}</over> over the limit.",
+        "endsUnder": "At this rate you finish the period at <b>{amount}</b> — <b>{difference}</b> under the limit.",
+        "noProjection": "It’s day {day} of the period: one day of spending says nothing about where it ends.",
+        "paceReading": "Spent so far against the period’s pace",
+        "paceReadingProjected": "Spent so far against the period’s pace, and where it ends at this rate",
+        "legendSpent": "Spent",
+        "legendPace": "Pace",
+        "legendProjection": "Where it ends",
+        "legendLimit": "Limit",
+        "periodSlot": "{period} · {amount} of {limit}",
+        "periodSlotRunning": "{period} · {amount} of {limit}, in progress",
+        "historyReading": "Spent against the limit, period by period",
+        "wentOver": "{over} of the {complete, plural, one {# finished period} other {# finished periods}} went over.",
+        "wentOverNone": "None of the {complete, plural, one {# finished period} other {# finished periods}} went over.",
+        "currentOver": "This one already has.",
+        "emptyTitle": "Nothing spent yet this period",
+        "emptyDay": "The days fill in as the money moves; a period with nothing in it is not a row of zeros.",
+        "emptyPace": "There is no curve until there is something to add up, and no end to project from.",
+        "emptyBiggest": "Nothing has been spent against this budget yet.",
+        "errorDay": "We couldn’t load the days of this period",
+        "errorHistory": "We couldn’t load the previous periods",
+        "errorBiggest": "We couldn’t load the biggest movements",
+        "today": "today"
+      }
     },
     "form": {
       "newTitle": "New budget",

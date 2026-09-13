@@ -54,6 +54,8 @@ import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
 import type { Budget } from "@/types/api";
 
+import { BudgetCharts } from "./BudgetCharts";
+
 type OpenSheet = "override" | "archive" | "conflict" | null;
 const PREVIEW_ROWS = 5;
 
@@ -100,19 +102,18 @@ export function BudgetDetailScreen({ id }: { id: string }) {
           from: row.periodFrom,
           to: row.periodTo,
           type: row.type,
-          categoryId: single,
+          limit: PREVIEW_ROWS,
+          ...(row.categoryIds.length > 1
+            ? { categoryIds: row.categoryIds.join(",") }
+            : { categoryId: single }),
         }
       : {},
     Boolean(row),
   );
-  const rows = useMemo(() => {
-    const all = transactions.data?.pages.flatMap((page) => page.data) ?? [];
-    const ids = new Set(row?.categoryIds ?? []);
-    return (row && ids.size > 1 ? all.filter((item) => ids.has(item.categoryId ?? "")) : all).slice(
-      0,
-      PREVIEW_ROWS,
-    );
-  }, [transactions.data, row]);
+  const rows = useMemo(
+    () => (transactions.data?.pages.flatMap((page) => page.data) ?? []).slice(0, PREVIEW_ROWS),
+    [transactions.data],
+  );
 
   function navigate(nextKey: string) {
     router.replace({ pathname: `/budgets/${id}`, query: { reference: nextKey } });
@@ -287,7 +288,11 @@ export function BudgetDetailScreen({ id }: { id: string }) {
           )}
           <Card className="flex flex-col gap-3">
             <h2 className="text-md font-semibold">{t("budgets.detail.categories")}</h2>
-            <ChipRow className="flex-wrap overflow-visible">
+            <ChipRow
+              role="group"
+              aria-label={t("budgets.detail.categories")}
+              className="flex-wrap overflow-visible"
+            >
               {isGlobalBudget(row) ? (
                 <CategoryChip color={row.color} icon={<ChartPie aria-hidden="true" />} disabled>
                   {t("budgets.detail.allSpending")}
@@ -318,9 +323,12 @@ export function BudgetDetailScreen({ id }: { id: string }) {
               <p className="text-sm text-text-2">{row.note}</p>
             </Card>
           )}
-          <section className="flex flex-col gap-2">
+          <BudgetCharts budget={row} now={now} categories={categoryMap} lookups={lookups} />
+          <section aria-labelledby="budget-transactions" className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-md font-semibold">{t("budgets.detail.transactions")}</h2>
+              <h2 id="budget-transactions" className="text-md font-semibold">
+                {t("budgets.detail.transactions")}
+              </h2>
               {seeAllHref && (
                 <Link href={seeAllHref} className="text-sm font-medium text-brand-text">
                   {t("budgets.detail.seeAll")}

@@ -18,6 +18,7 @@ import {
   CategoryChip,
   Chip,
   ChipRow,
+  ColBars,
   DayBars,
   DayHeader,
   DayHeat,
@@ -44,6 +45,7 @@ import {
   Tile,
   Toast,
   ToastProvider,
+  Trend,
   useToast,
 } from "@/components/ui";
 import { useDates } from "@/lib/i18n/useDates";
@@ -454,6 +456,25 @@ export function UiCatalog() {
                 }),
                 amount: money.format(topDay.value),
               }}
+            />
+            <Trend
+              lines={[
+                { points: [0, 25, 50, 75, 100], tone: "pace" },
+                { points: [null, null, 60, 90, 120], tone: "projection" },
+                { points: [0, 30, 60, null, null], tone: "over", dot: true },
+              ]}
+              limit={100}
+              label={t("sample.spendingPerDay")}
+            />
+            <ColBars
+              columns={[0.7, 0.55, 0.95, 1.2, 0.8, 0.6].map((share, index) => ({
+                label: `${String(index + 1)} · ${money.format(Math.round(share * 100))}`,
+                amount: money.format(Math.round(share * 100)),
+                segments: [{ value: share * 100, over: share > 1 }],
+                cap: 100,
+                partial: index === 5,
+              }))}
+              label={t("sample.spendingPerDay")}
             />
           </Card>
         </Section>

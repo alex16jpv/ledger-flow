@@ -46,14 +46,16 @@ Then the period's transactions (`?categoryId=…&from&to`, or `?from&to` when gl
 filtered list, and the actions Edit and Archive (confirmed, with the footer "You can restore it later
 from Past budgets.").
 
-**What this needs from the backend.** `GET /stats/spending` takes no category filter, so the per-day
-chart and the per-category breakdown exist today **only for a global budget**. For every other budget
-they need `categoryIds` on that endpoint — a task on the backend's side. The pace curve and the
-projection are that same series added up, and the six-period history is the budget read six times with
-`?reference=`, one request per period until the backend offers a cheaper shape. The five biggest need an
-order on `GET /transactions`, which does not exist either — and that same endpoint takes **one**
-`categoryId`, so for a budget of several categories the filtered list is still narrowed in the client,
-exactly as the transactions preview already does today. None of this is worked around by adding up money
+**What this asks the backend for.** `GET /stats/spending` takes `categoryIds` (T-24) and
+`GET /transactions` takes `sort=amount` with `order` and `categoryIds` (T-25), so the per-day chart, the
+per-category breakdown and the five biggest exist for **any** budget, not only a global one, and the
+five biggest are one page of five rather than every page sorted in the client. The pace curve and the
+projection are that same day series added up. The **six-period history is the budget read six times**
+with `?reference=`: with `READ_SOURCE = "mirror"` those are six reads of the local copy and no requests
+at all, and only a copy that cannot answer falls back to six of them — accepted as it is (owner's
+decision, 2026-09-13) rather than held back for a cheaper shape on the backend. What is still one
+`categoryId` is the **Transactions screen's own filter**, so "See all" from a budget of several
+categories opens the period without narrowing to them. None of this is worked around by adding up money
 in the client: what the backend cannot answer, the screen does not claim.
 
 **Who computes each figure.** The API returns `spent`, `amount` and the day buckets; the client only
@@ -63,16 +65,28 @@ projection (`spent ÷ elapsed days × days in the period`). Offline all of it co
 end-of-period figure is a projection twice over** — it is arithmetic, not a promise — so it is drawn
 dashed, said in words, and never put where a real amount goes.
 
-**The four states.** Data as above; **empty** — a budget whose period has no spending yet shows the
-cards with an `Empty` inside each chart, "Nothing spent yet this period", never a chart of zeros; a
-budget in its **first period** has no six-period history, so that card is absent rather than a single
-lonely column; the projection is **absent on day 1** of a period, where dividing by one elapsed day
-says nothing. **Loading** — one `Skeleton` per card at its own height. **Error** — the shared `Empty`
-in `danger` with `LoadErrorBody` and Retry, per card.
+**The four states.** Data as above (`#detail-with-charts`); **empty** (`#detail-charts-empty`) — a
+budget whose period has no spending yet shows the cards with an `Empty` inside each chart, "Nothing
+spent yet this period", never a chart of zeros, while the six previous periods did happen and keep
+their figures. A budget in its **first period** has no six-period history, so that card is absent
+rather than a single lonely column, and the projection is **absent on day 1** of a period, where
+dividing by one elapsed day says nothing — the two together are `#detail-first-period`, and the pace
+card says why in words instead of drawing a dashed end. **Loading** (`#detail-charts-loading`) — one
+`Skeleton` per card at its own height. **Error** (`#detail-charts-error`) — the previous periods and
+the biggest movements are each their own reading, so their failure takes their own card, with the
+shared `Empty` in `danger`, `LoadErrorBody` and Retry, and leaves the rest standing; the day chart and
+the pace curve are **one** reading — the curve is that day series added up — so they fall together.
 
-**Keyboard.** Same contract as Stats: the day chart and the six-period chart are one tab stop each,
-arrows move between slots, `Enter` opens what the slot leads to, and the focused slot drives the
-`readout`.
+**A period that is over still says what it did.** The four cards are a reading, not an action, so they
+are drawn for a past period, for an ended budget and for an archived one (`#archived`), which is the
+period a user most wants to look back at. The projection disappears on its own there: with no days left
+there is nothing to project.
+
+**Keyboard.** Same contract as Stats: the day chart is one tab stop, arrows move between slots,
+`Enter` opens the day, and the focused slot drives the `readout`. The six-period chart is the same
+where a column leads somewhere — a MONTHLY budget, whose period `reference` in the URL can name; for
+every other period type the URL cannot name the column, so the chart is one `role="img"` that reads
+all six columns, exactly as the weekday average of Stats does (component 18).
 
 **An archived budget** (`#archived`): a `neutral` alert on top — "This budget is archived and no longer
 tracks spending. Restore it to bring it back exactly as it was." — with a "Restore" button

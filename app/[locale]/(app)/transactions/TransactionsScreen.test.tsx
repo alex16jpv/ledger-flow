@@ -167,6 +167,21 @@ describe("TransactionsScreen", () => {
     });
   });
 
+  // H-17: the read used to pause here and leave the skeleton up until the network came back.
+  it("says it is offline instead of waiting for ever when the list cannot be read", async () => {
+    listResponses = [
+      () => {
+        throw new TypeError("Failed to fetch");
+      },
+      () => {
+        throw new TypeError("Failed to fetch");
+      },
+    ];
+    render();
+    expect(await screen.findByText("You\u2019re offline")).toBeVisible();
+    expect(screen.queryByLabelText("Loading")).not.toBeInTheDocument();
+  });
+
   it("restarts from the first page and says so when the cursor is rejected", async () => {
     listResponses = [() => json({ code: "INVALID_CURSOR", message: "stale" }, { status: 400 })];
     render();

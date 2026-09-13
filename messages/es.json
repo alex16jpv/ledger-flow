@@ -387,7 +387,10 @@
         "incompleteHelp": "En pausa: necesita conexión para terminar",
         "retry": "Reintentar",
         "notAvailable": "No disponible",
-        "notAvailableHelp": "Las pantallas de la app solo se guardan en la app instalada"
+        "notAvailableHelp": "Las pantallas de la app solo se guardan en la app instalada",
+        "finishing": "Casi listo",
+        "finishingHelp": "Tus datos ya están aquí, pero a la app le falta un detalle del servidor para poder leerlos sin conexión",
+        "finish": "Terminar ahora"
       },
       "queue": {
         "label": "Esperando a enviarse"
@@ -1040,7 +1043,39 @@
       "archivedInfo": "Este presupuesto está archivado y ya no sigue el gasto. Restáuralo para recuperarlo tal como estaba.",
       "endedInfo": "Este presupuesto personalizado terminó el {date}.",
       "restore": "Restaurar",
-      "restored": "Presupuesto restaurado"
+      "restored": "Presupuesto restaurado",
+      "charts": {
+        "perDay": "Gasto por día",
+        "pace": "Frente al ritmo",
+        "history": "Últimos {count} periodos",
+        "biggest": "Lo más grande del periodo",
+        "breakdown": "En qué se fue",
+        "breakdownTotal": "{amount} de {limit}",
+        "over": "Pasado",
+        "endsOver": "A este ritmo terminas el periodo en <b>{amount}</b>: <over>{difference}</over> por encima del límite.",
+        "endsUnder": "A este ritmo terminas el periodo en <b>{amount}</b>: <b>{difference}</b> por debajo del límite.",
+        "noProjection": "Es el día {day} del periodo: un día de gasto no dice nada de dónde acaba.",
+        "paceReading": "Lo gastado hasta ahora frente al ritmo del periodo",
+        "paceReadingProjected": "Lo gastado hasta ahora frente al ritmo del periodo, y dónde acaba a este ritmo",
+        "legendSpent": "Gastado",
+        "legendPace": "Ritmo",
+        "legendProjection": "Dónde acaba",
+        "legendLimit": "Límite",
+        "periodSlot": "{period} · {amount} de {limit}",
+        "periodSlotRunning": "{period} · {amount} de {limit}, en curso",
+        "historyReading": "Lo gastado frente al límite, periodo a periodo",
+        "wentOver": "{over} de {complete, plural, one {# periodo terminado} other {# periodos terminados}} se pasaron.",
+        "wentOverNone": "Ninguno de {complete, plural, one {# periodo terminado} other {# periodos terminados}} se pasó.",
+        "currentOver": "Este ya se pasó.",
+        "emptyTitle": "Aún no se ha gastado nada en este periodo",
+        "emptyDay": "Los días se llenan según se mueve el dinero; un periodo sin nada no es una fila de ceros.",
+        "emptyPace": "No hay curva hasta que hay algo que sumar, ni final que proyectar.",
+        "emptyBiggest": "Todavía no se ha gastado nada contra este presupuesto.",
+        "errorDay": "No pudimos cargar los días de este periodo",
+        "errorHistory": "No pudimos cargar los periodos anteriores",
+        "errorBiggest": "No pudimos cargar los movimientos más grandes",
+        "today": "hoy"
+      }
     },
     "form": {
       "newTitle": "Nuevo presupuesto",

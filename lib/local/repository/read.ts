@@ -6,6 +6,7 @@ import type { Pagination } from "@/types/api";
 
 import type { VaultHandle } from "../db";
 import type { VaultSchema } from "../schema";
+import { mirrorTimeZone } from "./window";
 
 type ReadSource = "server" | "mirror";
 
@@ -62,6 +63,12 @@ export function resetVaultGate(): void {
 async function mirrorReady(vault: VaultHandle): Promise<boolean> {
   const record = await vault.db.get("meta", "syncedAt");
   return typeof record?.value === "string";
+}
+
+// H-14: what "Offline ready" may promise — a copy with the zone every windowed read asks it for.
+export async function vaultCanAnswer(vault: VaultHandle): Promise<boolean> {
+  const [synced, timeZone] = await Promise.all([mirrorReady(vault), mirrorTimeZone(vault.db)]);
+  return synced && timeZone !== undefined;
 }
 
 export async function read<T>(

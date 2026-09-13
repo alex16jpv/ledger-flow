@@ -51,9 +51,11 @@ cases the metadata adds "Saved on this device".
 
 ## Offline with no local copy (`#offline-without-a-copy`)
 
-An honest empty state with a `wifi-off` tile, "You're offline" and "The list will load when you're back
-online.", under the amber stripe. It only happens on a device that never finished its first copy; with
-a copy, the list is answered from the device.
+An honest empty state with a `wifi-off` tile, "You're offline", "The list will load when you're back
+online." and a Retry, under the amber stripe. It happens when the read reached the network and there
+was none — a device whose copy cannot answer this list — and **only** then: a request that left and ran
+out of time is a slow server, not a missing network, and says so with its own reference. With a copy
+that can answer, the list never leaves the device.
 
 ## Review inbox (`#review-inbox`)
 

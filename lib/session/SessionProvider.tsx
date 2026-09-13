@@ -73,6 +73,8 @@ export function SessionProvider({
     staleTime: 5 * 60_000,
     retry: false,
     enabled: !localOnly,
+    // The only read with nothing local to fall back on: with no network there is nothing to ask.
+    networkMode: "online",
   });
 
   useEffect(() => {

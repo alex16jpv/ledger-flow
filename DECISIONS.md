@@ -5,6 +5,97 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-13 · The second place the client adds the API's own buckets (T-30)
+
+- **Decision:** `paceSeries` (`features/budgets/charts.ts`) runs the day buckets `/stats/spending`
+  returned into a cumulative total, and divides it by the elapsed days to say where the period ends at
+  this rate. Added with `toCents`/`fromCents` from `lib/local/derive`, divided once, and the result is
+  never painted where an amount goes: it is a dashed line and a sentence.
+- **Alternatives:** asking the backend for the curve, which is the same buckets read a second way — a
+  new aggregation for a figure the client already holds. And keeping it inside `lib/local/derive`,
+  which is the mirror's derivation of what the server would have answered; this is neither offline nor
+  a server answer, it is arithmetic about a drawing.
+- **Consequence:** the entry of 2026-09-12 said the client adds buckets in **exactly one place**
+  (`weekdayAverages`); as of today there are **two**, and this is the second. House rule 4 in
+  `CLAUDE.md` still names only `lib/local/derive` as the declared exception, so the wording of the rule
+  is out of step with the code and only the owner changes his rulebook — put to him on 2026-09-13.
+
+## 2026-09-13 · The budget's charts are composed in the app layer (T-30)
+
+- **Decision:** `BudgetCharts` lives next to `BudgetDetailScreen` in `app/`, not in
+  `features/budgets/components/`, and reuses `StackBar`, `CategoryRows` and `shares` from
+  `features/stats` and `useBiggestTransactions` from `features/transactions`.
+- **Alternatives:** putting it in `features/budgets`, which ESLint's `boundaries/dependencies`
+  refuses — a feature may not import another. Then the choice was to move `ShareRows`, `StackBar`,
+  `Share` and `AMOUNT_KIND` up into `components/ui` and `lib/`, or to compose at the app layer where
+  `StatsScreen` and `BudgetDetailScreen` already compose four and five features each. The second is
+  what the repository already does (house rule 14), and it copies nothing.
+- **Consequence:** the presentational pieces stay where their own screen defines them and there is
+  exactly one implementation of each. If a third screen ever needs them, that is the moment they move
+  up, and moving them is a rename.
+
+## 2026-09-13 · The six-period history is six reads, and that is cheap here (T-30)
+
+- **Decision:** "Last six periods" is `fetchBudgetHistory`, which reads `GET /budgets/:id?reference=`
+  once per period, walking back from one millisecond before each period's own `periodFrom`.
+- **Alternatives:** a backend shape that serves the history in one response, which the spec had been
+  holding the card for. Put to the owner with the measurement and accepted as it is on 2026-09-13:
+  with `READ_SOURCE = "mirror"` these are six reads of the local copy and **no** requests, and only a
+  copy that cannot answer falls back to six real ones. And computing the six references client-side
+  with `resolvePeriod` instead of chaining: rejected because H-55 records that the two sides can
+  disagree about where a period starts, and the chain asks the authority instead of guessing.
+- **Consequence:** one query, one loading state and one error state for the whole card. The walk
+  stops on a window that is not earlier than the last one, so a server that repeated itself draws one
+  column rather than six identical ones or looping for ever.
+
+## 2026-09-13 · A column opens a period only where the URL can name it (T-30)
+
+- **Decision:** the six-period chart takes `onSelect` for a MONTHLY budget and none for the other
+  five period types, so there it is one `role="img"` that reads every column instead of six controls.
+- **Alternatives:** opening every column. Rejected: `reference` in `/budgets/[id]` is a month key, so
+  a weekly column would open the week containing the 15th of its month — a different period from the
+  one clicked, which is rule 18. And widening `reference` to a full day, which changes the screen's
+  navigation contract and its period nav, and is a task rather than a line.
+- **Consequence:** the same rule component 18 already states for the weekday average — where slots
+  lead nowhere, the chart is one image — and the same shape as T-29's "No account" row. Widening the
+  reference later turns the image back into controls by passing one prop.
+
+## 2026-09-13 · "Offline ready" asks the copy, not the clock (H-14)
+
+- **Decision:** the Sync status row and the one-off toast require `vaultCanAnswer(vault)` — a
+  `syncedAt` **and** a profile row carrying the time zone — instead of `syncedAt` alone.
+- **Alternatives:** leaving it, since `ensureProfile` (`bd757c4`) fills the row on the first read
+  with network. Rejected: the promise is made before that read happens, and until it does every
+  budget, every month filter and every spending summary declines in the mirror and goes to the
+  server. Promising offline to a device that will not answer is rule 18 again.
+- **Consequence:** the window where the copy is full but unreadable gets a state of its own,
+  **"Almost ready"**, with a "Finish now" that asks the mirror for one more pass — because the
+  independent review caught the first version saying "Preparing… · 25 of 25 screens", which is a
+  contradiction and a wait with no way out. The backend could close it for good by sending the profile
+  in every snapshot.
+
+## 2026-09-13 · A mirror-backed read never pauses, so it can never hang (H-17)
+
+- **Decision:** every domain in `MIRROR_BACKED_DOMAINS` gets `networkMode: "always"` instead of
+  `"offlineFirst"`, and `LoadErrorBody` says "You seem to be offline" for a `NetworkError` rather
+  than "The server didn't respond".
+- **Alternatives:** keeping `"offlineFirst"` and rendering `fetchStatus === "paused"` as a state of
+  its own in every view, which is what Transactions alone did. Rejected: a paused read is a limbo
+  that resolves only if the network comes back, so nineteen more screens would each have to paint a
+  state that house rule 18 says should not exist. And refusing the retry outright, which does not
+  close the race — the pause is decided when the retry timer fires, not when it is granted.
+- **Consequence:** with `READ_SOURCE = "mirror"` every read already runs against the local copy, so
+  "there is no point fetching while offline" was never true here. It is the **global** query default,
+  not a per-domain one, because the three Settings reads were outside `MIRROR_BACKED_DOMAINS` and
+  paused exactly the same way. Two things the independent review measured and this entry would
+  otherwise have got wrong: React Query **derives `refetchOnReconnect` from `networkMode`**, so
+  `"always"` silently turned it off and it is now declared explicitly; and a read can still pause on a
+  hidden tab, because the retryer waits for focus as well as for the network — that one resumes on its
+  own, which the network one never did. The one read left on `"online"` is the session itself: it has
+  nothing local to fall back on, so with no network there is nothing to ask, and `SessionProvider`
+  already counts a paused question as answered. `TransactionsScreen`'s offline empty state keys off a
+  `NetworkError` that is not a timeout, and carries a Retry.
+
 ## 2026-09-12 · A bucket no filter can narrow is a figure, not a control (T-29)
 
 - **Decision:** the "No account" row of Stats › Accounts — the server's `unassigned` bucket — renders
@@ -29,7 +120,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   month whose only movements were transfers looks exactly like a month with nothing in it, and the
   line is what tells them apart.
 
-## 2026-09-12 · The client adds buckets in exactly one place (T-27)
+## 2026-09-12 · The client adds buckets in exactly one place (T-27) — widened on 2026-09-13
 
 - **Decision:** `weekdayAverages` (`features/stats/model.ts`) sums the three or four day buckets of
   each weekday with `sumAmounts` from `lib/local/derive` — in minor units, before dividing.

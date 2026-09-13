@@ -52,16 +52,26 @@ export class ResyncUnavailableError extends Error {
   }
 }
 
-// Invariant 7: the queue is the only place unsent work exists, so a resync leaves it alone.
-export async function forceFullResync(userId: string): Promise<void> {
-  if (isLocalOnly()) throw new ResyncUnavailableError("this device is working on its own");
-  const pull = activePull;
-  await purgeVault(userId, { discardPendingWork: false });
+async function runPull(pull: (() => Promise<void>) | null): Promise<void> {
   if (!pull) throw new ResyncUnavailableError("no mirror is open on this device");
   takeLastPullError();
   await pull();
   const failure = takeLastPullError();
   if (failure) throw failure;
+}
+
+// H-14: a copy that cannot answer yet is one pass away, and asking for it is not a resync.
+export async function pullNow(): Promise<void> {
+  if (isLocalOnly()) throw new ResyncUnavailableError("this device is working on its own");
+  await runPull(activePull);
+}
+
+// Invariant 7: the queue is the only place unsent work exists, so a resync leaves it alone.
+export async function forceFullResync(userId: string): Promise<void> {
+  if (isLocalOnly()) throw new ResyncUnavailableError("this device is working on its own");
+  const pull = activePull;
+  await purgeVault(userId, { discardPendingWork: false });
+  await runPull(pull);
 }
 
 export function startMirror(userId: string, options: MirrorOptions = {}): () => void {

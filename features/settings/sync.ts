@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { appEnvironment } from "@/lib/flags";
 import { readStorageDurability, type StorageDurability } from "@/lib/local/persist";
-import { vaultReady } from "@/lib/local/repository";
+import { vaultCanAnswer, vaultReady } from "@/lib/local/repository";
 import { type DisplayMode, displayMode } from "@/lib/pwa/mode";
 import { type ShellReadiness, shellReadiness } from "@/lib/pwa/readiness";
 import { onShellWarmed } from "@/lib/pwa/service-worker";
@@ -20,6 +20,8 @@ export interface SyncSnapshot {
   userId: string | null;
   cursor: string | null;
   syncedAt: string | null;
+  // H-14: `syncedAt` alone is a copy that may still decline every read with a date window.
+  mirrorAnswers: boolean;
   storage: StorageDurability | null;
   mode: DisplayMode;
   // F-54: the other half of offline ready — the screens the worker cached.
@@ -32,6 +34,7 @@ const EMPTY: SyncSnapshot = {
   userId: null,
   cursor: null,
   syncedAt: null,
+  mirrorAnswers: false,
   storage: null,
   mode: "browser",
   shell: { cached: 0, expected: SHELL_SCREENS },
@@ -46,12 +49,14 @@ export function useSyncSnapshot(): { snapshot: SyncSnapshot; reload: () => void 
   useEffect(() => {
     const state = { cancelled: false };
     const load = () => {
+      // A vault closing under a read would otherwise leave every row in its skeleton for good.
       void (async () => {
         // F-31: `startMirror` opens the vault with a promise, so at mount the handle is still null.
         const vault = await vaultReady();
-        const [cursor, syncedAt, storage, shell] = await Promise.all([
+        const [cursor, syncedAt, mirrorAnswers, storage, shell] = await Promise.all([
           vault ? vault.db.get("meta", "syncCursor") : undefined,
           vault ? vault.db.get("meta", "syncedAt") : undefined,
+          vault ? vaultCanAnswer(vault) : false,
           readStorageDurability(),
           shellReadiness(locale),
         ]);
@@ -62,11 +67,14 @@ export function useSyncSnapshot(): { snapshot: SyncSnapshot; reload: () => void 
           userId: vault?.userId ?? null,
           cursor: typeof cursor?.value === "string" ? cursor.value : null,
           syncedAt: typeof syncedAt?.value === "string" ? syncedAt.value : null,
+          mirrorAnswers,
           storage,
           mode: displayMode(),
           shell,
         });
-      })();
+      })().catch(() => {
+        if (!state.cancelled) setSnapshot((current) => ({ ...current, read: true }));
+      });
     };
     load();
     // F-85 was a Preparing… that never became Ready because the warm finishes after the mount.

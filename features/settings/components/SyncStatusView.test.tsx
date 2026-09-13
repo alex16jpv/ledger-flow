@@ -4,14 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { ToastProvider } from "@/components/ui/Toast";
 import { refreshOutboxStatus, resetOutboxStatus, setBlockedOperations } from "@/lib/local/outbox";
 import { setCurrentVault } from "@/lib/local/repository";
-import { accountRecord, type OutboxOperation } from "@/lib/local/schema";
+import { accountRecord, type OutboxOperation, profileRecord } from "@/lib/local/schema";
 import { reportOnline } from "@/lib/network/connectivity";
 import { SHELL_SCREENS, shellCacheKey, shellUrls } from "@/lib/pwa/shell";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { tabChannel } from "@/lib/session/channel";
 import { SessionProvider } from "@/lib/session/SessionProvider";
 import { renderWithProviders } from "@/lib/testing/render";
-import { account, openTestVault, wipeVaults } from "@/lib/testing/vault";
+import { account, openTestVault, profile, wipeVaults } from "@/lib/testing/vault";
 
 import { SyncStatusView } from "./SyncStatusView";
 
@@ -156,6 +156,7 @@ describe("Sync status", () => {
     warmScreens(SHELL_SCREENS);
     const vault = await openTestVault("u1");
     await vault.db.put("meta", { key: "syncedAt", value: "2026-09-06T10:00:00.000Z" });
+    await vault.db.put("profile", profileRecord(profile()));
     setCurrentVault(vault);
 
     view();
@@ -164,6 +165,22 @@ describe("Sync status", () => {
     expect(
       screen.getByText("Your data and the app’s screens are on this device"),
     ).toBeInTheDocument();
+  });
+
+  // H-14: without the profile row every read with a date window goes to the server, ready or not.
+  it("says what is missing, and offers the pass that fixes it, when the copy cannot answer", async () => {
+    warmScreens(SHELL_SCREENS);
+    const vault = await openTestVault("u1");
+    await vault.db.put("meta", { key: "syncedAt", value: "2026-09-06T10:00:00.000Z" });
+    setCurrentVault(vault);
+
+    view();
+
+    expect(await screen.findByText("Almost ready")).toBeInTheDocument();
+    expect(screen.queryByText("Ready")).not.toBeInTheDocument();
+    // Not "Preparing… · 25 of 25 screens": the screens are all here and none of them is the problem.
+    expect(screen.queryByText(/25 of 25 screens/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Finish now" })).toBeVisible();
   });
 
   // F-85: a build with no worker has no screens to copy, so the row says so.

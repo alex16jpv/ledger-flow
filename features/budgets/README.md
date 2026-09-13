@@ -13,7 +13,7 @@ archived ones with "Create again". The screens are composed in the app layer bec
 the category icons. W-27 adds the detail (`/budgets/[id]?reference=`): `BudgetHero` (remaining, pace per elapsed day,
 days left), `PeriodAmountCard` with the override actions (`OverrideSheet` → `PUT …/amount?reference=`,
 skip = amount 0, remove = `DELETE …/amount`), the categories chips with the archived mark, the note,
-the period's transactions (client-side filtered when the budget spans several categories) and
+the period's transactions and
 `ArchiveBudgetSheet`. Archived budgets come back through `POST /budgets/:id/restore` (Restore on the
 archived detail and on Past › Archived, Undo on the archive toast); an overlapping restore is refused
 by the API and `RestoreBudgetConflictSheet` names the budget in the way and offers "Create again". W-28 adds `BudgetForm` (`/budgets/new?from=`, `/budgets/[id]/edit`): scope segment (global or by
@@ -34,7 +34,8 @@ that invitation, so the line does not repeat it.
 O-F2a routed the list and the detail through `lib/local/repository`, and since O-F3 part 2 the mirror
 answers both — with network too, since O-F2b: it stores the saved shape (`SyncBudget`) and builds the
 view on top, `spent` included, over the rows the `dateCursor` index selects for the period.
-`fetchSpendingTotal` goes through the same stats seam as the other five call sites. With no profile in
+`fetchSpendingTotal` and `fetchBudgetSpending` go through the same stats seam as the other call
+sites. With no profile in
 the mirror there is no zone to cut the period on, so the read reaches the server and fails honestly
 instead of showing a figure nobody computed.
 
@@ -49,3 +50,22 @@ detail. Only the detail repeats it as a fixed line under the bar, because a tool
 for a finger and it is the one screen with room. `budgetProgress` returns the `day` and `days` that
 text says out loud. The CUSTOM dates and "Effective from" use the app's own calendar (F-05), so the
 end can never be set before the start: that day is not offered.
+
+T-30 adds **what the period is doing** to the detail (`BudgetCharts`, in the app layer because the
+cards compose budgets, stats and transactions). Four cards: the day chart over the budget's own
+period (`categoryIds` on `/stats/spending`, T-24); the cumulative curve against the period's pace
+with the end-of-period projection (`paceSeries` in `charts.ts` — the API's own day buckets added in
+minor units, divided once, and drawn dashed from today, never joined to the real line); the last six
+periods, each against **its own** limit, because an adjusted period does not share the base amount;
+and the five biggest movements (`sort=amount`, T-25). A fifth card, "Where it went", appears only
+when the budget covers more than one category, where a breakdown says something the total does not.
+
+`fetchBudgetHistory` reads the budget once per period, walking back from one millisecond before each
+`periodFrom`, which lands inside the period before it whatever its length — so the client never
+re-derives the period algebra and a server that answers with the same or a later window stops the
+walk. With `READ_SOURCE = "mirror"` those are six local reads and no requests; the owner accepted
+that cost on 2026-09-13 rather than wait for a backend shape that serves them together. A CUSTOM
+budget is one window that never repeats, so the card and its reads are skipped; a budget in its first
+period has one column and the card is absent. A column opens its period only for a MONTHLY budget,
+which is what `reference` in the URL can name; elsewhere the chart reads itself as one image, like
+the weekday average of Stats.
