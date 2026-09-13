@@ -1592,7 +1592,8 @@ ${cards}`);
         ? '<p class="xs faint" style="margin:6px 0 0;max-width:280px">Transfers between your own accounts are not spending, so a month of only transfers looks like this.</p>'
         : "";
     return frame(`${controls}
-<div class="card">${statsEmpty(note)}</div>`);
+<div class="card">${statsEmpty(note)}</div>
+${trendsLink()}`);
   }
   if (state == "error") {
     return frame(`${controls}
@@ -1701,39 +1702,69 @@ const trends = ({ months = 6, state = "" } = {}) => {
 <div class="card chart">${skel("height:10px;width:170px")}${skel("height:120px;margin-top:22px")}${skel("height:12px;width:75%")}${skel("height:12px;width:45%")}</div>
 <div class="card chart">${skel("height:10px;width:110px")}${skel("height:132px;margin-top:22px")}${skel("height:12px;width:85%")}</div>`);
   }
+  if (state == "firstMonth") {
+    return frame(`<div class="segment"><button aria-pressed="true">Last 6 months</button><button>Last 12 months</button></div>
+<div class="alert neutral">${iconSvg("info")}<span>Only 1 month of this range has anything in it, so the chart starts where the data starts. No month in it has finished yet.</span></div>
+<div class="card chart"><span class="eyebrow">Income and spending</span>
+${gbars([["September", 4200000, 0, true]], { height: 128, active: 0 })}
+${axis("Sep")}
+${readout(`September · ${moneyText(4200000, "+")} in, ${moneyText(0, "−")} out, in progress`)}
+<span class="legend row"><span class="li"><i class="dot inc"></i>Income</span><span class="li"><i class="dot exp"></i>Spending</span></span></div>
+<div class="stats" style="grid-template-columns:repeat(2,1fr)">${statTile("Saved", "Not yet", "No month in this range has finished")}${statTile("Savings rate", "Not yet", "No month in this range has finished")}</div>
+<div class="card chart"><span class="eyebrow">This month against last</span>
+<div class="empty">${tile("chart-line", "NONE", "lg")}<span class="h3">Nothing spent in September</span><p class="small muted" style="margin:0;max-width:280px">There is nothing to compare until something is spent.</p></div></div>
+<p class="xs faint" style="margin:0">A month is counted in your time zone, the same way every other figure in the app is.</p>`);
+  }
   if (state == "empty") {
     return frame(
-      `<div class="card"><div class="empty">${tile("trending-up", "NONE", "lg")}<span class="h3">Not enough history yet</span><p class="small muted" style="margin:0;max-width:280px">Come back when you have a full month. A chart with no data is not drawn as a row of zeros.</p></div></div>`,
+      `<div class="segment"><button aria-pressed="true">Last 6 months</button><button>Last 12 months</button></div>
+<div class="card"><div class="empty">${tile("trending-up", "NONE", "lg")}<span class="h3">Not enough history yet</span><p class="small muted" style="margin:0;max-width:280px">Come back when you have a full month and this page will compare it with the ones before.</p></div></div>`,
     );
   }
   const body = `<div class="segment"><button aria-pressed="true">Last 6 months</button><button>Last 12 months</button></div>
 ${
   short
-    ? `<div class="alert neutral">${iconSvg("info")}<span>This account has <b>${months} months</b> of history, so that is the whole range there is. The tiles count the ${complete.length} that finished.</span></div>`
+    ? `<div class="alert neutral">${iconSvg("info")}<span>Only ${months} months of this range has anything in it, so the chart starts where the data starts. Saved and Savings rate count the ${complete.length} that finished.</span></div>`
     : ""
 }
-<div class="card chart"><div class="card-head" style="margin:0"><span class="eyebrow">Income and spending</span><span class="legend row"><span class="li"><i class="dot inc"></i>Income</span><span class="li"><i class="dot exp"></i>Spending</span></span></div>
+<div class="card chart"><span class="eyebrow">Income and spending</span>
 ${gbars(rows, { height: 128, active: last })}
 ${axis(...MONTHS.map(([n]) => n.slice(0, 3)))}
-${readout("September · in progress, 22 of 30 days", money(SEP_TOTAL))}</div>
-<div class="stats" style="grid-template-columns:repeat(2,1fr)">${statTile("Saved", money(saved), `${complete.length} complete months`)}${statTile("Savings rate", `${rate}%`, "of what came in")}</div>
-<div class="card chart"><span class="eyebrow">This month against last</span>
+${readout(`September · ${moneyText(4200000, "+")} in, ${moneyText(SEP_TOTAL, "−")} out, in progress`)}
+<span class="legend row"><span class="li"><i class="dot inc"></i>Income</span><span class="li"><i class="dot exp"></i>Spending</span></span></div>
+<div class="stats" style="grid-template-columns:repeat(2,1fr)">${statTile("Saved", money(saved), `${complete.length} complete months`)}${statTile("Savings rate", `${rate} %`, "of what came in")}</div>
+${
+  state == "finished"
+    ? `<div class="card chart"><span class="eyebrow">August against July</span>
 ${trend(
   [
     { points: augCum, cls: "ghost" },
     { points: sepCum, dot: true },
   ],
-  { height: 120, label: "Spending so far this month against the same days last month" },
+  { height: 120, label: "Spending in August against the same days of July" },
+)}
+${axis("Day 1", "Day 31")}
+<p class="small muted" style="margin:0">You spent <b class="amount">${money(1855000)}</b> in August — <b>12 % less</b> than in July.</p>
+<span class="legend row"><span class="li"><i class="dot exp"></i>August</span><span class="li"><i class="dot line"></i>July, same days</span></span></div>`
+    : `<div class="card chart"><span class="eyebrow">This month against last</span>
+${trend(
+  [
+    { points: augCum, cls: "ghost" },
+    { points: sepCum, dot: true },
+  ],
+  { height: 120, label: "Spending in September against the same days of August" },
 )}
 ${axis("Day 1", "Day 22")}
-<p class="small muted" style="margin:0">You have spent <b class="amount">${money(sepCum[TODAY - 1])}</b> so far — <b>${Math.abs(diff)}% ${diff < 0 ? "less" : "more"}</b> than at this point in August.</p>
-<span class="legend row"><span class="li"><i class="dot exp"></i>September</span><span class="li"><i class="dot line"></i>August, same days</span></span></div>
+<p class="small muted" style="margin:0">You have spent <b class="amount">${money(sepCum[TODAY - 1])}</b> so far — <b>${Math.abs(diff)} % ${diff < 0 ? "less" : "more"}</b> than at this point in August.</p>
+<span class="legend row"><span class="li"><i class="dot exp"></i>September</span><span class="li"><i class="dot line"></i>August, same days</span></span></div>`
+}
 ${
   state == "cardError"
     ? `<div class="card">${statsError("where your money went")}</div>`
     : `<div class="card chart"><span class="eyebrow">Where it goes</span>
 ${stackCols(mix, { height: 132, active: last })}
 ${axis(...MONTHS.map(([n]) => n.slice(0, 3)))}
+${readout("Food is the biggest of these months", money(round(SEP_TOTAL * 0.32 * MONTHS.length)))}
 <span class="legend row">${CAT_MIX.map(([n, c]) => `<span class="li"><i class="dot color-${c}" style="background:var(--f)"></i>${n}</span>`).join("")}</span></div>`
 }
 <p class="xs faint" style="margin:0">A month is counted in your time zone, the same way every other figure in the app is.</p>`;
@@ -3316,7 +3347,7 @@ const PAGES = [
       plate(
         "trends-short-history",
         "Trends · not enough history yet",
-        "The common case for a new account, and the one that breaks charts: three months where the range asks for six. The axis starts where the data starts, the twelve-month range is not offered, and the tiles say over how many finished months they counted — nothing is padded with zeros.",
+        "The common case for a new account, and the one that breaks charts: three months where the range asks for six. The axis starts where the data starts, the range control stays above the notice — a range the history cannot fill is still one the reader may want to leave — and the notice says over how many finished months the tiles counted; nothing is padded with zeros.",
         trends({ months: 3 }),
         { added: "2026-09-11" },
       ),
@@ -3342,9 +3373,23 @@ const PAGES = [
         { added: "2026-09-13" },
       ),
       plate(
+        "trends-finished-month",
+        "Trends · a month that already ended",
+        "Arriving from a past month in Stats. Nothing is so far in a finished month and there is no this point in it, so the middle card is named after the two months and says what was spent, not what has been spent.",
+        trends({ state: "finished" }),
+        { added: "2026-09-13" },
+      ),
+      plate(
+        "trends-first-month",
+        "Trends · the account's first month",
+        "One month, still running: no month has finished, so Saved and Savings rate say so instead of painting a zero, and with nothing spent yet the middle card has nothing to compare.",
+        trends({ months: 1, state: "firstMonth" }),
+        { added: "2026-09-13" },
+      ),
+      plate(
         "trends-error",
         "Trends · one card failed",
-        "Each card is its own read, so one failure replaces that card and not the screen. Where it goes is the month \u00d7 category cross; the two above it keep their figures.",
+        "One failure replaces the card that needed the read and not the screen. Here the category ranking fell: Where it goes cannot rank its five, and the two cards above it — which do not need it — keep their figures.",
         trends({ state: "cardError" }),
         { added: "2026-09-13" },
       ),

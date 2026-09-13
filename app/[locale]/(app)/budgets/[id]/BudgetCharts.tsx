@@ -1,20 +1,24 @@
 "use client";
 
-import { ChartColumn, CircleAlert, TrendingUp } from "lucide-react";
+import { ChartColumn, TrendingUp } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
 import { useMemo } from "react";
 
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import {
+  ChartCard,
+  ChartError,
+  ChartLegend,
+  ChartSkeleton,
+  LegendKey,
+} from "@/components/ui/ChartCard";
 import { ColBars, type Column } from "@/components/ui/ColBars";
 import { DayBars } from "@/components/ui/DayBars";
 import { Empty } from "@/components/ui/Empty";
-import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Projected } from "@/components/ui/Projected";
 import { List } from "@/components/ui/Row";
-import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
+import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Trend, type TrendLine } from "@/components/ui/Trend";
 import { hasPeriodHistory, paceSeries } from "@/features/budgets/charts";
 import { useBudgetHistoryQuery, useBudgetSpendingQuery } from "@/features/budgets/hooks";
@@ -35,83 +39,16 @@ import type { Budget, Category } from "@/types/api";
 
 const PREVIOUS_PERIODS = 5;
 
-interface ChartCardProps {
-  title: string;
-  right?: ReactNode;
-  children: ReactNode;
-}
-
-function ChartCard({ title, right, children }: ChartCardProps) {
-  return (
-    <Card className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-medium tracking-caps text-text-3 uppercase">{title}</span>
-        {right}
-      </div>
-      {children}
-    </Card>
-  );
-}
-
-function LegendKey({
-  tone,
-  label,
-}: {
-  tone: "spent" | "pace" | "projection" | "limit";
-  label: string;
-}) {
-  const paint =
-    tone === "spent"
-      ? "h-2 w-2 rounded-[2px] bg-brand"
-      : tone === "pace"
-        ? "h-0.5 w-3.5 rounded-full bg-text-3"
-        : tone === "projection"
-          ? "h-0.5 w-3.5 rounded-full bg-danger opacity-55"
-          : "h-0.5 w-3.5 rounded-full bg-danger";
-  return (
-    <span className="flex items-center gap-1.5">
-      <i aria-hidden="true" className={paint} />
-      {label}
-    </span>
-  );
-}
+const PACE_PAINT = {
+  spent: "h-2 w-2 rounded-[2px] bg-brand",
+  pace: "h-0.5 w-3.5 rounded-full bg-text-3",
+  projection: "h-0.5 w-3.5 rounded-full bg-danger opacity-55",
+  limit: "h-0.5 w-3.5 rounded-full bg-danger",
+} as const;
 
 function CardEmpty({ body }: { body: string }) {
   const t = useTranslations("budgets.detail.charts");
   return <Empty icon={<ChartColumn {...iconProps("lg")} />} title={t("emptyTitle")} body={body} />;
-}
-
-function CardError({
-  title,
-  error,
-  onRetry,
-}: {
-  title: string;
-  error: unknown;
-  onRetry: () => void;
-}) {
-  const t = useTranslations("common");
-  return (
-    <Empty
-      tone="danger"
-      icon={<CircleAlert {...iconProps("lg")} />}
-      title={title}
-      body={<LoadErrorBody error={error} />}
-      action={<Button onClick={onRetry}>{t("retry")}</Button>}
-    />
-  );
-}
-
-function ChartSkeleton({ height, lines = 1 }: { height: number; lines?: number }) {
-  const t = useTranslations("common");
-  return (
-    <Card className="flex flex-col gap-2" aria-busy="true" aria-label={t("loading")}>
-      <Skeleton className="h-2.5 w-28" />
-      <Skeleton className="mt-[22px]" style={{ height }} />
-      <Skeleton className="h-3 w-3/5" />
-      {lines > 1 && <Skeleton className="h-3 w-2/5" />}
-    </Card>
-  );
 }
 
 export interface BudgetChartsProps {
@@ -264,7 +201,7 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
         </>
       ) : perDay.isError || !series || !pace ? (
         <Card>
-          <CardError
+          <ChartError
             title={t("budgets.detail.charts.errorDay")}
             error={perDay.error}
             onRetry={() => {
@@ -369,17 +306,26 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
                     </span>
                   </span>
                 </Projected>
-                <div className="flex flex-wrap gap-x-3.5 gap-y-1 text-xs text-text-2">
-                  <LegendKey tone="spent" label={t("budgets.detail.charts.legendSpent")} />
-                  <LegendKey tone="pace" label={t("budgets.detail.charts.legendPace")} />
+                <ChartLegend>
+                  <LegendKey
+                    paint={PACE_PAINT.spent}
+                    label={t("budgets.detail.charts.legendSpent")}
+                  />
+                  <LegendKey
+                    paint={PACE_PAINT.pace}
+                    label={t("budgets.detail.charts.legendPace")}
+                  />
                   {pace.projection && (
                     <LegendKey
-                      tone="projection"
+                      paint={PACE_PAINT.projection}
                       label={t("budgets.detail.charts.legendProjection")}
                     />
                   )}
-                  <LegendKey tone="limit" label={t("budgets.detail.charts.legendLimit")} />
-                </div>
+                  <LegendKey
+                    paint={PACE_PAINT.limit}
+                    label={t("budgets.detail.charts.legendLimit")}
+                  />
+                </ChartLegend>
               </>
             )}
           </ChartCard>
@@ -390,7 +336,7 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
         <ChartSkeleton height={110} />
       ) : history.isError ? (
         <Card>
-          <CardError
+          <ChartError
             title={t("budgets.detail.charts.errorHistory")}
             error={history.error}
             onRetry={() => {
@@ -447,7 +393,7 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
             </Card>
           ) : perCategory.isError ? (
             <Card>
-              <CardError
+              <ChartError
                 title={t("stats.breakdown")}
                 error={perCategory.error}
                 onRetry={() => {
@@ -509,7 +455,7 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
               <SkeletonRow />
             </div>
           ) : biggest.isError ? (
-            <CardError
+            <ChartError
               title={t("budgets.detail.charts.errorBiggest")}
               error={biggest.error}
               onRetry={() => {

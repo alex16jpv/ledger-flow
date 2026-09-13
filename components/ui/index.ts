@@ -13,6 +13,15 @@ export {
   type ButtonVariant,
 } from "./Button";
 export { Card, Inset } from "./Card";
+export {
+  ChartCard,
+  type ChartCardProps,
+  ChartError,
+  ChartLegend,
+  ChartSkeleton,
+  LegendKey,
+} from "./ChartCard";
+export { type ChartSlot, ChartSlots, type ChartSlotsProps, HATCH } from "./ChartSlots";
 export { Checkbox } from "./Checkbox";
 export { CategoryChip, Chip, ChipRow } from "./Chip";
 export { cn } from "./cn";

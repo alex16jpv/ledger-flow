@@ -13,17 +13,25 @@ Stats was showing.
 ## The cards (`#trends`)
 
 - **Income and spending**: `gbars`, income against spending, one pair per month, with a legend and the
-  `readout`. **A month still running is drawn hatched and its readout says "in progress"**, and it is
-  left out of every figure that claims to be a month's: the two tiles underneath, _Saved_ and _Savings
-  rate_, count complete months only and say how many. A savings rate worked out from three weeks of
-  spending against a whole salary is a lie the chart would tell for free.
+  `readout` — which reads the month still running when nothing is pointed at, per component 29. **A
+  month still running is drawn hatched and its readout says "in progress"**, and it is left out of
+  every figure that claims to be a month's: the two tiles underneath, _Saved_ and _Savings rate_, count
+  complete months only and say how many. A savings rate worked out from three weeks of spending against
+  a whole salary is a lie the chart would tell for free. When **no month in the range has finished**
+  (`#trends-first-month`) the two tiles say so — "Not yet" — instead of painting a zero, which would be
+  the same lie in the other direction.
 - **This month against last**: `trend` with two lines over the same days of the month — this one
   solid, the same days of the previous month dashed — and one sentence: "You have spent $1,284,300 so
-  far — 2% less than at this point in August." Comparing a finished month against one in its third
-  week is the mistake this card exists to prevent.
+  far — 2 % less than at this point in August." Comparing a finished month against one in its third
+  week is the mistake this card exists to prevent. Two cases change the wording rather than the
+  arithmetic. **A previous month shorter than the days already elapsed** — 31 March against February —
+  has no "this point" to answer: the two are read at the last day they share and the sentence says
+  which, rather than claiming there is nothing to compare. And **a month that already ended**
+  (`#trends-finished-month`), which is what arriving from a past month in Stats gives: nothing in it is
+  "so far", so the card is named "August against July" and the sentence says what was spent.
 - **Where it goes**: stacked columns (component 33), one column per month with the top five categories and
-  "Other", so a category that is quietly growing shows up as a band that widens. The running month is
-  hatched here too.
+  "Other", so a category that is quietly growing shows up as a band that widens. Its `readout` names the
+  biggest category of the whole range. The running month is hatched here too.
 - A closing line: a month is counted in the user's time zone, like every other figure in the app.
 
 ## Who computes each figure
@@ -31,28 +39,34 @@ Stats was showing.
 House rule 4: the client computes no money except the offline projection in `lib/local/derive`, and
 whatever is projected says so. Every figure on this screen, and where it comes from:
 
-| Figure                                 | Where it comes from                                                                                  |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Income and spending per month          | `GET /stats/spending` with `groupBy=month`, one call per flow type. Served since T-24.               |
-| _Saved_, _Savings rate_                | Subtraction and a ratio over totals the API returned, over complete months only. Never over buckets. |
-| This month's curve, last month's curve | Two calls with `groupBy=day`; the running total is a cumulative sum of buckets the API returned.     |
-| "n% less than at this point"           | A ratio of the two last points of those curves.                                                      |
-| Per category and month                 | `groupBy=month` with `splitBy=category`, one call. Served since T-24.                                |
+| Figure                                 | Where it comes from                                                                                                                                                                                                                                                       |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Spending per month, and its categories | One `GET /stats/spending` with `groupBy=month&splitBy=category`. `splitBy` only **adds** the splits, so the same read is the spending series and the stack: two would be the same question asked twice (rule 24). Served since T-24.                                      |
+| Income per month                       | `GET /stats/spending` with `groupBy=month`, its own flow type. Served since T-24.                                                                                                                                                                                         |
+| _Saved_, _Savings rate_                | Subtraction and a ratio over totals the API returned, over complete months only. Never over buckets.                                                                                                                                                                      |
+| The five categories stacked            | `groupBy=category` over the same range: the ranking is the API's own totals, never the splits added up. "Other" is the month's own total less the five, so a column adds up to exactly the figure its name says — which holds because an expense split is never negative. |
+| This month's curve, last month's curve | Two calls with `groupBy=day`; the running total is a cumulative sum of buckets the API returned.                                                                                                                                                                          |
+| "n % less than at this point"          | A ratio of the two curves at the last day both months have.                                                                                                                                                                                                               |
 
-Offline, the whole screen reads the mirror through `lib/local/derive`, which is the only place
-allowed to add money in the client — and everything it produces carries the projection mark
-(component 24) exactly as Home's hero does. A range the mirror does not hold (the twelve-month range
-on a device that only pulled three) shows the months it has and says the rest are not on this device;
-it never draws a zero for a month it cannot see.
+Five reads, each a different question. Offline, all of them come from the mirror through
+`lib/local/derive`, which is the only place allowed to add money in the client — and every figure it
+produces carries the projection mark (component 24) exactly as Home's hero does: the three charts and
+the two tiles alike. A range the mirror does not hold (the twelve-month range on a device that only
+pulled three) shows the months it has and starts the axis there; it never draws a zero for a month it
+cannot see. **It cannot yet tell a month the device never pulled from a month with nothing in it**, so
+the notice says the second — which is true of the common case and understates the rare one.
 
 ## The four states
 
 - **Data** (`#trends`): as above.
 - **Empty** (`#trends-empty`): an account with nothing in the range — one `Empty`, "Not enough history
-  yet", with the line "Come back when you have a full month." A chart with no data is never drawn as
-  flat zeros. It is one `Empty` for the whole screen and not one per card, because every card here
-  answers the same question over the same range: if there is nothing to compare, there is nothing to
-  compare three times.
+  yet", with a line that says what to do next. A chart with no data is never drawn as flat zeros. It is
+  one `Empty` for the whole screen and not one per card, because every card here answers the same
+  question over the same range: if there is nothing to compare, there is nothing to compare three
+  times. The range control stays above it, since another range is the way out.
+- **The first month** (`#trends-first-month`): one month, still running. Nothing has finished, so the
+  two tiles say "Not yet"; and with nothing spent yet the middle card carries its own `Empty`,
+  "Nothing spent in September", which is the only per-card empty on this screen.
 - **Partial** (`#trends-short-history`, the common one): fewer months than the range asks for. The
   chart shows the months that exist, the axis starts where the data starts, and the tiles say over how
   many months they counted. The range control stays **above** the notice and stays usable: a range the
@@ -60,11 +74,12 @@ it never draws a zero for a month it cannot see.
 - **Loading** (`#trends-loading`): one `Skeleton` per card, at the card's own height, so the page does
   not jump. The range control is already usable.
 - **Error** (`#trends-error`): the shared `Empty` in `danger` with `LoadErrorBody` and Retry, per card
-  — one card failing does not blank the screen. **Which cards fall together** is what the reads decide:
-  _Income and spending_ and the two tiles under it are one read per flow type and fail as one card;
-  _This month against last_ is its own pair of day reads; _Where it goes_ is the month × category
-  cross, its own read, and the plate is drawn with that one failing while the two above it keep their
-  figures.
+  — one card failing does not blank the screen. **Which cards fall together** is what the five reads
+  decide, and it is not one read per card: _Income and spending_ and its tiles need the income read and
+  the spending read; _This month against last_ needs its own two day reads and nothing else; _Where it
+  goes_ needs the spending read and the category ranking. So the spending read takes the first and the
+  third down together, while the income read, the ranking and the two day reads each take one card. The
+  plate draws the ranking failing, which is the case that isolates one card cleanly.
 
 ## Recurring — decided: both, detection first
 

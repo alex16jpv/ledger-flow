@@ -91,9 +91,10 @@ export interface MonthComparison {
   current: (number | null)[];
   previous: (number | null)[];
   spentSoFar: number;
-  previousSoFar: number | null;
+  previousSoFar: number;
   difference: number | null;
   days: number;
+  comparedDays: number;
 }
 
 // The two months are walked day by day from their own first day, so day 12 is compared with day 12.
@@ -109,20 +110,20 @@ export function monthComparison(
   const there = daySeries(previous, previousWindow, timeZone, now, 0);
   const elapsed = here.bars.filter((bar) => !bar.future);
   const days = elapsed.length;
+  // A shorter previous month runs out first, so both are read at the last day the two of them have.
+  const comparedDays = Math.min(days, there.bars.length);
   const hereTotals = runningTotals(elapsed.map((bar) => bar.value));
-  const thereTotals = runningTotals(there.bars.slice(0, days).map((bar) => bar.value));
-  const spentSoFar = hereTotals.at(-1) ?? 0;
-  const previousSoFar = thereTotals.length === days ? (thereTotals.at(-1) ?? 0) : null;
+  const thereTotals = runningTotals(there.bars.slice(0, comparedDays).map((bar) => bar.value));
+  const previousSoFar = thereTotals.at(-1) ?? 0;
+  const hereCompared = hereTotals[comparedDays - 1] ?? 0;
   return {
     current: [0, ...hereTotals],
     previous: [0, ...thereTotals],
-    spentSoFar,
+    spentSoFar: hereTotals.at(-1) ?? 0,
     previousSoFar,
-    difference:
-      previousSoFar !== null && previousSoFar > 0
-        ? (spentSoFar - previousSoFar) / previousSoFar
-        : null,
+    difference: previousSoFar > 0 ? (hereCompared - previousSoFar) / previousSoFar : null,
     days,
+    comparedDays,
   };
 }
 

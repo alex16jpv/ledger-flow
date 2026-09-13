@@ -1,19 +1,25 @@
 "use client";
 
-import { ChartLine, CircleAlert } from "lucide-react";
+import { ChartLine, TrendingUp } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import type { ComponentProps } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Alert } from "@/components/ui/Alert";
-import { Button } from "@/components/ui/Button";
+import { Amount } from "@/components/ui/Amount";
 import { Card } from "@/components/ui/Card";
+import {
+  ChartCard,
+  ChartError,
+  ChartLegend,
+  ChartSkeleton,
+  LegendKey,
+} from "@/components/ui/ChartCard";
 import { ColBars, type Column } from "@/components/ui/ColBars";
 import { Empty } from "@/components/ui/Empty";
 import { GBars, type Pair } from "@/components/ui/GBars";
-import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Projected } from "@/components/ui/Projected";
 import { Segment } from "@/components/ui/Segment";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -26,6 +32,7 @@ import { UNCATEGORIZED_KEY } from "@/features/stats/model";
 import {
   categoryMix,
   isTrendRange,
+  type MonthComparison,
   monthComparison,
   OTHER_KEY,
   savings,
@@ -42,75 +49,57 @@ import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { useBackNavigation } from "@/lib/navigation/history";
-import { type ColorToken, featureColorStyle } from "@/lib/theme/feature-color";
+import type { ColorToken } from "@/lib/theme/feature-color";
 
 const DEFAULT_RANGE: TrendRange = 6;
 const OTHER_COLOR: ColorToken = "GRAY";
+
+const SWATCH = "h-2 w-2 rounded-[2px]";
+const INCOME_SWATCH = `${SWATCH} bg-income`;
+const SPENDING_SWATCH = `${SWATCH} bg-brand`;
+const PREVIOUS_SWATCH = "h-0.5 w-3.5 rounded-full bg-text-3";
+const CATEGORY_SWATCH = `${SWATCH} bg-(--f)`;
 
 function parseRange(value: string | null): TrendRange {
   const months = Number(value);
   return isTrendRange(months) ? months : DEFAULT_RANGE;
 }
 
-function ChartCard({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Card className="flex flex-col gap-2">
-      <span className="text-xs font-medium tracking-caps text-text-3 uppercase">{title}</span>
-      {children}
-    </Card>
-  );
-}
-
-function CardError({
-  title,
-  error,
-  onRetry,
-}: {
-  title: string;
-  error: unknown;
-  onRetry: () => void;
-}) {
-  const t = useTranslations("common");
+function ErrorCard(props: ComponentProps<typeof ChartError>) {
   return (
     <Card>
-      <Empty
-        tone="danger"
-        icon={<CircleAlert {...iconProps("lg")} />}
-        title={title}
-        body={<LoadErrorBody error={error} />}
-        action={<Button onClick={onRetry}>{t("retry")}</Button>}
-      />
+      <ChartError {...props} />
     </Card>
   );
 }
 
-function ChartSkeleton({ height, lines = 1 }: { height: number; lines?: number }) {
-  const t = useTranslations("common");
-  return (
-    <Card className="flex flex-col gap-2" aria-busy="true" aria-label={t("loading")}>
-      <Skeleton className="h-2.5 w-28" />
-      <Skeleton className="mt-[22px]" style={{ height }} />
-      <Skeleton className="h-3 w-3/5" />
-      {lines > 1 && <Skeleton className="h-3 w-2/5" />}
-    </Card>
-  );
-}
+const COMPARISON_MESSAGES = {
+  running: {
+    none: "trends.spentNoComparison",
+    less: "trends.spentLess",
+    more: "trends.spentMore",
+    lessShort: "trends.spentLessShort",
+    moreShort: "trends.spentMoreShort",
+  },
+  finished: {
+    none: "trends.spentFinishedNoComparison",
+    less: "trends.spentFinishedLess",
+    more: "trends.spentFinishedMore",
+    lessShort: "trends.spentFinishedLessShort",
+    moreShort: "trends.spentFinishedMoreShort",
+  },
+} as const;
 
-function LegendKey({
-  paint,
-  color,
-  label,
-}: {
-  paint: string;
-  color?: ColorToken | null;
-  label: string;
-}) {
-  return (
-    <span className="flex items-center gap-1.5">
-      <i aria-hidden="true" className={paint} style={featureColorStyle(color)} />
-      {label}
-    </span>
-  );
+type ComparisonSet = (typeof COMPARISON_MESSAGES)[keyof typeof COMPARISON_MESSAGES];
+type ComparisonMessage = ComparisonSet[keyof ComparisonSet];
+
+// A finished month has no "so far", and a month shorter than the days elapsed has no "this point".
+function comparisonMessage(comparison: MonthComparison, running: boolean): ComparisonMessage {
+  const set = running ? COMPARISON_MESSAGES.running : COMPARISON_MESSAGES.finished;
+  if (comparison.difference === null) return set.none;
+  const short = comparison.comparedDays < comparison.days;
+  if (comparison.difference < 0) return short ? set.lessShort : set.less;
+  return short ? set.moreShort : set.more;
 }
 
 export function TrendsScreen() {
@@ -126,7 +115,8 @@ export function TrendsScreen() {
   const monthKey = parseMonthKey(params.get("reference"), now, dates.timeZone);
   const range = parseRange(params.get("range"));
   const { reference } = monthReference(monthKey, dates.timeZone, now);
-  const runningKey = monthKey === currentMonthKey(now, dates.timeZone) ? monthKey : null;
+  const thisMonthKey = currentMonthKey(now, dates.timeZone);
+  const runningKey = monthKey === thisMonthKey ? monthKey : null;
 
   const window = useMemo(
     () => trendWindow(reference, range, dates.timeZone),
@@ -139,20 +129,17 @@ export function TrendsScreen() {
     [reference, dates.timeZone],
   );
 
-  const spending = useStatsQuery({ type: "EXPENSE", groupBy: "month", ...iso });
+  // One read per datum (rule 24): `splitBy` only adds the splits, so this is also the spending series.
+  const spending = useStatsQuery({
+    type: "EXPENSE",
+    groupBy: "month",
+    splitBy: "category",
+    ...iso,
+  });
   const income = useStatsQuery({ type: "INCOME", groupBy: "month", ...iso });
-  const mix = useStatsQuery({ type: "EXPENSE", groupBy: "month", splitBy: "category", ...iso });
   const ranking = useStatsQuery({ type: "EXPENSE", groupBy: "category", ...iso });
-  const thisMonth = useStatsQuery({
-    type: "EXPENSE",
-    groupBy: "day",
-    ...toIsoWindow(here),
-  });
-  const lastMonth = useStatsQuery({
-    type: "EXPENSE",
-    groupBy: "day",
-    ...toIsoWindow(before),
-  });
+  const thisMonth = useStatsQuery({ type: "EXPENSE", groupBy: "day", ...toIsoWindow(here) });
+  const lastMonth = useStatsQuery({ type: "EXPENSE", groupBy: "day", ...toIsoWindow(before) });
   const categories = useCategoriesQuery(undefined, true, true);
   const categoryMap = useMemo(
     () => new Map((categories.data ?? []).map((category) => [category.id, category])),
@@ -172,6 +159,14 @@ export function TrendsScreen() {
           )
         : [],
     [income.data, spending.data, window, range, dates.timeZone, runningKey],
+  );
+  // Its own months, so a failed income read takes this card's neighbour and not this card.
+  const mixMonths = useMemo(
+    () =>
+      spending.data
+        ? trendMonths([], spending.data.buckets, window, range, dates.timeZone, runningKey)
+        : [],
+    [spending.data, window, range, dates.timeZone, runningKey],
   );
 
   const totals = useMemo(
@@ -195,10 +190,20 @@ export function TrendsScreen() {
     [thisMonth.data, lastMonth.data, here, before, dates.timeZone, now],
   );
 
+  const categoryName = useCallback(
+    (key: string): string =>
+      key === OTHER_KEY
+        ? t("trends.other")
+        : key === UNCATEGORIZED_KEY
+          ? t("stats.uncategorized")
+          : (categoryMap.get(key)?.name ?? t("stats.unknownCategory")),
+    [categoryMap, t],
+  );
+
   const columns = useMemo<Column[]>(() => {
-    if (!mix.data || !ranking.data) return [];
+    if (!spending.data || !ranking.data) return [];
     const top = ranking.data.buckets.slice(0, TOP_CATEGORIES).map((bucket) => bucket.key);
-    return categoryMix(months, mix.data.buckets, top).map((column) => ({
+    return categoryMix(mixMonths, spending.data.buckets, top).map((column) => ({
       label: t(column.running ? "trends.monthSlotRunning" : "trends.monthSlot", {
         month: dates.formatMonth(column.from),
         amount: money.format(column.total),
@@ -211,22 +216,19 @@ export function TrendsScreen() {
           segment.key === OTHER_KEY ? OTHER_COLOR : (categoryMap.get(segment.key)?.color ?? null),
       })),
     }));
-  }, [mix.data, ranking.data, months, categoryMap, dates, money, t]);
+  }, [spending.data, ranking.data, mixMonths, categoryMap, dates, money, t]);
 
   const legend = useMemo(() => {
     if (!ranking.data) return [];
     const named = ranking.data.buckets.slice(0, TOP_CATEGORIES).map((bucket) => ({
       key: bucket.key,
       color: categoryMap.get(bucket.key)?.color ?? null,
-      name:
-        bucket.key === UNCATEGORIZED_KEY
-          ? t("stats.uncategorized")
-          : (categoryMap.get(bucket.key)?.name ?? t("stats.unknownCategory")),
+      name: categoryName(bucket.key),
     }));
     return ranking.data.buckets.length > TOP_CATEGORIES
       ? [...named, { key: OTHER_KEY, color: OTHER_COLOR, name: t("trends.other") }]
       : named;
-  }, [ranking.data, categoryMap, t]);
+  }, [ranking.data, categoryMap, categoryName, t]);
 
   const pairs: Pair[] = months.map((month) => ({
     label: t(month.running ? "trends.monthPairRunning" : "trends.monthPair", {
@@ -239,15 +241,18 @@ export function TrendsScreen() {
     partial: month.running,
   }));
 
-  const openMonth = (index: number) => {
-    const month = months[index];
+  const openMonth = (from: readonly { key: string }[]) => (index: number) => {
+    const month = from[index];
     if (!month) return;
     router.push({ pathname: "/stats", query: { reference: month.key } });
   };
 
+  const biggest = ranking.data?.buckets[0];
   const rangeLoading = income.isPending || spending.isPending;
   const rangeError = income.isError || spending.isError;
   const nothing = !rangeLoading && !rangeError && months.length === 0;
+  const complete = totals?.complete ?? 0;
+  const running = runningKey !== null;
 
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
@@ -264,7 +269,7 @@ export function TrendsScreen() {
           router.replace({
             pathname: "/stats/trends",
             query: {
-              ...(monthKey === currentMonthKey(now, dates.timeZone) ? {} : { reference: monthKey }),
+              ...(monthKey === thisMonthKey ? {} : { reference: monthKey }),
               ...(Number(next) === DEFAULT_RANGE ? {} : { range: next }),
             },
           });
@@ -276,14 +281,14 @@ export function TrendsScreen() {
       />
       {months.length > 0 && months.length < range && (
         <Alert tone="neutral">
-          {t("trends.shortHistory", { months: months.length, complete: totals?.complete ?? 0 })}
+          {t("trends.shortHistory", { months: months.length, complete })}
         </Alert>
       )}
 
       {nothing ? (
         <Card>
           <Empty
-            icon={<ChartLine {...iconProps("lg")} />}
+            icon={<TrendingUp {...iconProps("lg")} />}
             title={t("trends.empty.title")}
             body={t("trends.empty.body")}
           />
@@ -299,7 +304,7 @@ export function TrendsScreen() {
               </div>
             </>
           ) : rangeError ? (
-            <CardError
+            <ErrorCard
               title={t("trends.errorMonths")}
               error={income.error ?? spending.error}
               onRetry={() => {
@@ -314,7 +319,8 @@ export function TrendsScreen() {
                   <GBars
                     pairs={pairs}
                     label={t("trends.incomeAndSpendingReading")}
-                    onSelect={openMonth}
+                    onSelect={openMonth(months)}
+                    summary={{ label: pairs.at(-1)?.label ?? "" }}
                     className="flex-1"
                   />
                 </Projected>
@@ -325,32 +331,52 @@ export function TrendsScreen() {
                     </span>
                   ))}
                 </div>
-                <div className="flex flex-wrap gap-x-3.5 gap-y-1 text-xs text-text-2">
-                  <LegendKey
-                    paint="h-2 w-2 rounded-[2px] bg-income"
-                    label={t("trends.legendIncome")}
-                  />
-                  <LegendKey
-                    paint="h-2 w-2 rounded-[2px] bg-brand"
-                    label={t("trends.legendSpending")}
-                  />
-                </div>
+                <ChartLegend>
+                  <LegendKey paint={INCOME_SWATCH} label={t("trends.legendIncome")} />
+                  <LegendKey paint={SPENDING_SWATCH} label={t("trends.legendSpending")} />
+                </ChartLegend>
               </ChartCard>
               {totals && (
                 <div className="grid grid-cols-2 gap-3">
                   <StatTile
                     label={t("trends.saved")}
-                    value={money.format(totals.saved)}
-                    sub={t("trends.savedSub", { count: totals.complete })}
+                    value={
+                      complete === 0 ? (
+                        t("trends.noComplete")
+                      ) : (
+                        <Projected when={outbox.projected.spending}>
+                          <Amount value={totals.saved} signed={false} size="base" />
+                        </Projected>
+                      )
+                    }
+                    sub={
+                      complete === 0
+                        ? t("trends.noCompleteSub")
+                        : t("trends.savedSub", { count: complete })
+                    }
                   />
                   <StatTile
                     label={t("trends.savingsRate")}
                     value={
-                      totals.rate === null
-                        ? t("trends.noRate")
-                        : t("trends.percent", { percent: Math.round(totals.rate * 100) })
+                      complete === 0 ? (
+                        t("trends.noComplete")
+                      ) : totals.rate === null ? (
+                        t("trends.noRate")
+                      ) : (
+                        <Projected when={outbox.projected.spending}>
+                          <span>
+                            {t("trends.percent", { percent: Math.round(totals.rate * 100) })}
+                          </span>
+                        </Projected>
+                      )
                     }
-                    sub={totals.rate === null ? undefined : t("trends.savingsRateSub")}
+                    sub={
+                      complete === 0
+                        ? t("trends.noCompleteSub")
+                        : totals.rate === null
+                          ? undefined
+                          : t("trends.savingsRateSub")
+                    }
                   />
                 </div>
               )}
@@ -360,7 +386,7 @@ export function TrendsScreen() {
           {thisMonth.isPending || lastMonth.isPending ? (
             <ChartSkeleton height={120} lines={2} />
           ) : thisMonth.isError || lastMonth.isError ? (
-            <CardError
+            <ErrorCard
               title={t("trends.errorComparison")}
               error={thisMonth.error ?? lastMonth.error}
               onRetry={() => {
@@ -370,12 +396,23 @@ export function TrendsScreen() {
             />
           ) : (
             comparison && (
-              <ChartCard title={t("trends.thisAgainstLast")}>
+              <ChartCard
+                title={
+                  running
+                    ? t("trends.thisAgainstLast")
+                    : t("trends.monthAgainst", {
+                        month: dates.formatMonth(here.from),
+                        previous: dates.formatMonth(before.from),
+                      })
+                }
+              >
                 {comparison.spentSoFar === 0 ? (
                   <Empty
                     icon={<ChartLine {...iconProps("lg")} />}
-                    title={t("trends.empty.title")}
-                    body={t("trends.emptyComparison")}
+                    title={t("trends.comparisonEmptyTitle", {
+                      month: dates.formatMonth(here.from),
+                    })}
+                    body={t("trends.comparisonEmptyBody")}
                   />
                 ) : (
                   <>
@@ -386,61 +423,52 @@ export function TrendsScreen() {
                             { points: comparison.previous, tone: "pace" },
                             { points: comparison.current, tone: "spent", dot: true },
                           ]}
-                          label={t("trends.comparisonReading")}
+                          label={t("trends.comparisonReading", {
+                            month: dates.formatMonth(here.from),
+                            previous: dates.formatMonth(before.from),
+                          })}
                         />
                         <span className="flex justify-between text-xs text-text-3">
                           <span>{t("trends.axisDay", { day: 1 })}</span>
                           <span>{t("trends.axisDay", { day: comparison.days })}</span>
                         </span>
                         <span className="block text-sm text-text-2">
-                          {comparison.difference === null
-                            ? t.rich("trends.spentNoComparison", {
-                                amount: money.format(comparison.spentSoFar),
-                                month: dates.formatMonth(before.from),
-                                b: (chunks) => (
-                                  <b className="font-medium text-text tabular-nums">{chunks}</b>
-                                ),
-                              })
-                            : t.rich(
-                                comparison.difference < 0 ? "trends.spentLess" : "trends.spentMore",
-                                {
-                                  amount: money.format(comparison.spentSoFar),
-                                  percent: Math.abs(Math.round(comparison.difference * 100)),
-                                  month: dates.formatMonth(before.from),
-                                  b: (chunks) => (
-                                    <b className="font-medium text-text tabular-nums">{chunks}</b>
-                                  ),
-                                },
-                              )}
+                          {t.rich(comparisonMessage(comparison, running), {
+                            amount: money.format(comparison.spentSoFar),
+                            percent: Math.abs(Math.round((comparison.difference ?? 0) * 100)),
+                            days: comparison.comparedDays,
+                            month: dates.formatMonth(before.from),
+                            current: dates.formatMonth(here.from),
+                            b: (chunks) => (
+                              <b className="font-medium text-text tabular-nums">{chunks}</b>
+                            ),
+                          })}
                         </span>
                       </span>
                     </Projected>
-                    <div className="flex flex-wrap gap-x-3.5 gap-y-1 text-xs text-text-2">
+                    <ChartLegend>
+                      <LegendKey paint={SPENDING_SWATCH} label={dates.formatMonth(here.from)} />
                       <LegendKey
-                        paint="h-2 w-2 rounded-[2px] bg-brand"
-                        label={dates.formatMonth(here.from)}
-                      />
-                      <LegendKey
-                        paint="h-0.5 w-3.5 rounded-full bg-text-3"
+                        paint={PREVIOUS_SWATCH}
                         label={t("trends.legendPrevious", {
                           month: dates.formatMonth(before.from),
                         })}
                       />
-                    </div>
+                    </ChartLegend>
                   </>
                 )}
               </ChartCard>
             )
           )}
 
-          {mix.isPending || ranking.isPending ? (
+          {spending.isPending || ranking.isPending ? (
             <ChartSkeleton height={132} />
-          ) : mix.isError || ranking.isError ? (
-            <CardError
+          ) : spending.isError || ranking.isError ? (
+            <ErrorCard
               title={t("trends.errorMix")}
-              error={mix.error ?? ranking.error}
+              error={spending.error ?? ranking.error}
               onRetry={() => {
-                void mix.refetch();
+                void spending.refetch();
                 void ranking.refetch();
               }}
             />
@@ -452,31 +480,35 @@ export function TrendsScreen() {
                     columns={columns}
                     label={t("trends.whereItGoesReading")}
                     height={132}
-                    onSelect={openMonth}
+                    onSelect={openMonth(mixMonths)}
+                    summary={
+                      biggest
+                        ? {
+                            label: t("trends.topCategory", { name: categoryName(biggest.key) }),
+                            amount: money.format(biggest.total),
+                          }
+                        : undefined
+                    }
                     className="flex-1"
                   />
                 </Projected>
                 <div className="flex justify-between gap-2 text-xs text-text-3">
-                  {months.map((month) => (
+                  {mixMonths.map((month) => (
                     <span key={month.key} className="flex-1 truncate text-center">
                       {dates.formatMonthShort(month.from)}
                     </span>
                   ))}
                 </div>
-                <div className="flex flex-wrap gap-x-3.5 gap-y-1 text-xs text-text-2">
+                <ChartLegend>
                   {legend.map((entry) => (
                     <LegendKey
                       key={entry.key}
-                      paint={
-                        entry.color === null
-                          ? "h-2 w-2 rounded-[2px] bg-brand"
-                          : "h-2 w-2 rounded-[2px] bg-(--f)"
-                      }
+                      paint={entry.color === null ? SPENDING_SWATCH : CATEGORY_SWATCH}
                       color={entry.color}
                       label={entry.name}
                     />
                   ))}
-                </div>
+                </ChartLegend>
               </ChartCard>
             )
           )}

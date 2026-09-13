@@ -51,13 +51,16 @@ const RANKING = [
   at("uncategorized", 280_900),
 ];
 
+type Buckets = ReturnType<typeof at>[];
+
 interface Fixture {
-  incomeMonths?: typeof INCOME_MONTHS;
-  spendingMonths?: typeof SPENDING_MONTHS;
-  fails?: "mix" | "months" | "days";
+  incomeMonths?: Buckets;
+  spendingMonths?: Buckets;
+  days?: Record<string, Buckets>;
+  fails?: "income" | "spending" | "ranking" | "days";
 }
 
-function routeFetch({ incomeMonths, spendingMonths, fails }: Fixture = {}) {
+function routeFetch({ incomeMonths, spendingMonths, days, fails }: Fixture = {}) {
   const income = incomeMonths ?? INCOME_MONTHS;
   const spending = spendingMonths ?? SPENDING_MONTHS;
   const sum = (buckets: { total: number }[]) =>
@@ -67,10 +70,9 @@ function routeFetch({ incomeMonths, spendingMonths, fails }: Fixture = {}) {
     const url = new URL(urlOf(input), "http://localhost");
     if (url.pathname === "/api/stats/spending") {
       const groupBy = url.searchParams.get("groupBy");
-      const type = url.searchParams.get("type");
       const splitBy = url.searchParams.get("splitBy");
       if (groupBy === "month" && splitBy === "category") {
-        if (fails === "mix") return Promise.resolve(boom);
+        if (fails === "spending") return Promise.resolve(boom);
         return Promise.resolve(
           json({
             groupBy,
@@ -87,18 +89,22 @@ function routeFetch({ incomeMonths, spendingMonths, fails }: Fixture = {}) {
         );
       }
       if (groupBy === "month") {
-        if (fails === "months") return Promise.resolve(boom);
-        const buckets = type === "INCOME" ? income : spending;
-        return Promise.resolve(json({ groupBy, splitBy: null, total: sum(buckets), buckets }));
+        if (fails === "income") return Promise.resolve(boom);
+        return Promise.resolve(
+          json({ groupBy, splitBy: null, total: sum(income), buckets: income }),
+        );
       }
       if (groupBy === "day") {
         if (fails === "days") return Promise.resolve(boom);
-        const september = url.searchParams.get("from")?.startsWith("2026-09") === true;
-        const buckets = september
-          ? [at("2026-09-01", 200_000), at("2026-09-09", 214_000)]
-          : [at("2026-08-01", 300_000), at("2026-08-02", 128_000)];
+        const month = url.searchParams.get("from")?.slice(0, 7) ?? "";
+        const byMonth = days ?? {
+          "2026-09": [at("2026-09-01", 200_000), at("2026-09-09", 214_000)],
+          "2026-08": [at("2026-08-01", 300_000), at("2026-08-02", 128_000)],
+        };
+        const buckets = byMonth[month] ?? [];
         return Promise.resolve(json({ groupBy, splitBy: null, total: sum(buckets), buckets }));
       }
+      if (fails === "ranking") return Promise.resolve(boom);
       return Promise.resolve(
         json({ groupBy: "category", splitBy: null, total: sum(RANKING), buckets: RANKING }),
       );
@@ -133,6 +139,12 @@ function renderScreen(query = "") {
   );
 }
 
+const tile = (label: string): HTMLElement => {
+  const card = screen.getByText(label).parentElement;
+  if (!card) throw new Error(`no tile for ${label}`);
+  return card;
+};
+
 beforeEach(() => {
   vi.setSystemTime(new Date("2026-09-22T15:00:00.000Z"));
   fetchMock.mockReset();
@@ -154,9 +166,23 @@ describe("TrendsScreen", () => {
     renderScreen();
     expect(await screen.findByText("Saved")).toBeInTheDocument();
     // September is still running, so it is off both totals: 25,200,000 − 4,200,000 against 10,680,900 − 815,900.
-    expect(screen.getByText("$11,135,000")).toBeInTheDocument();
+    expect(tile("Saved")).toHaveTextContent("$11,135,000");
     expect(screen.getByText("5 complete months")).toBeInTheDocument();
-    expect(screen.getByText("53 %")).toBeInTheDocument();
+    expect(tile("Savings rate")).toHaveTextContent("53 %");
+  });
+
+  it("says so instead of painting a zero when no month in the range has finished", async () => {
+    routeFetch({
+      incomeMonths: [at("2026-09", 4_200_000)],
+      spendingMonths: [at("2026-09", 815_900)],
+    });
+    renderScreen();
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
+    expect(tile("Saved")).toHaveTextContent("Not yet");
+    expect(tile("Savings rate")).toHaveTextContent("Not yet");
+    expect(screen.getAllByText("No month in this range has finished")).toHaveLength(2);
+    expect(screen.getByText(/No month in it has finished yet/)).toBeInTheDocument();
+    expect(screen.queryByText(/complete month/)).not.toBeInTheDocument();
   });
 
   it("draws the month still running as in progress and opens Stats for the month tapped", async () => {
@@ -174,6 +200,10 @@ describe("TrendsScreen", () => {
       "August 2026 · $4,200,000 in, $1,855,000 out",
       "September 2026 · $4,200,000 in, $815,900 out, in progress",
     ]);
+    // Component 29: with nothing pointed at, the line reads the month still running.
+    expect(chart.parentElement?.lastElementChild).toHaveTextContent(
+      "September 2026 · $4,200,000 in, $815,900 out, in progress",
+    );
     await userEvent.click(within(chart).getByRole("button", { name: /^April/ }));
     expect(push).toHaveBeenCalledWith({ pathname: "/stats", query: { reference: "2026-04" } });
   });
@@ -189,6 +219,39 @@ describe("TrendsScreen", () => {
     expect(screen.getByText("Day 22")).toBeInTheDocument();
   });
 
+  it("says which day the two months are read at when the previous one is shorter", async () => {
+    vi.setSystemTime(new Date("2026-03-31T15:00:00.000Z"));
+    routeFetch({
+      incomeMonths: [at("2026-02", 4_200_000), at("2026-03", 4_200_000)],
+      spendingMonths: [at("2026-02", 1_000_000), at("2026-03", 1_000_000)],
+      days: {
+        // The 400,000 of 31 March is after the last day February had, so it is not in the comparison.
+        "2026-03": [at("2026-03-05", 100_000), at("2026-03-31", 400_000)],
+        "2026-02": [at("2026-02-05", 200_000)],
+      },
+    });
+    renderScreen("reference=2026-03");
+    expect(await screen.findByText(/February 2026 was shorter/)).toBeInTheDocument();
+    expect(screen.getByText(/read at day 28/)).toBeInTheDocument();
+    expect(screen.getByText(/50 % less/)).toBeInTheDocument();
+    expect(screen.getByText("$500,000")).toBeInTheDocument();
+    expect(screen.queryByText(/at this point in/)).not.toBeInTheDocument();
+  });
+
+  it("does not say 'so far' about a month that already ended", async () => {
+    routeFetch();
+    renderScreen("reference=2026-08");
+    expect(await screen.findByText("August 2026 against July 2026")).toBeInTheDocument();
+    expect(screen.getByText(/You spent/)).toBeInTheDocument();
+    expect(screen.queryByText(/so far/)).not.toBeInTheDocument();
+    expect(screen.queryByText("This month against last")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: "Spending in August 2026 against the same days of July 2026",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("stacks the categories of each month and names what is left Other", async () => {
     routeFetch();
     renderScreen();
@@ -200,6 +263,10 @@ describe("TrendsScreen", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Other")).toBeInTheDocument();
     expect(screen.getByText("Food")).toBeInTheDocument();
+    // Component 29 again: the whole-chart reading is the biggest category of the range.
+    expect(chart.parentElement?.lastElementChild).toHaveTextContent(
+      "Food is the biggest of these months",
+    );
   });
 
   it("says so when the range holds more months than this account has", async () => {
@@ -208,10 +275,10 @@ describe("TrendsScreen", () => {
       spendingMonths: [at("2026-08", 1_855_000), at("2026-09", 815_900)],
     });
     renderScreen();
-    expect(await screen.findByText(/This account has 2 months of history/)).toBeInTheDocument();
+    expect(await screen.findByText(/Only 2 months of this range/)).toBeInTheDocument();
     const chart = screen.getByRole("group", { name: "Income against spending, month by month" });
     expect(within(chart).getAllByRole("button")).toHaveLength(2);
-    expect(screen.getByText("1 complete month")).toBeInTheDocument();
+    expect(screen.getByText(/count the one that finished/)).toBeInTheDocument();
   });
 
   it("draws nothing rather than a row of zeros when the range is empty", async () => {
@@ -222,19 +289,38 @@ describe("TrendsScreen", () => {
       screen.queryByRole("group", { name: "Income against spending, month by month" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("Where it goes")).not.toBeInTheDocument();
+    // The range control is the way out of an empty range, so it never goes away.
+    expect(screen.getByRole("button", { name: "Last 12 months" })).toBeInTheDocument();
   });
 
-  it("replaces only the card that failed", async () => {
-    routeFetch({ fails: "mix" });
+  it("shows a skeleton per card while the figures are on their way", async () => {
+    routeFetch();
+    renderScreen();
+    expect(screen.getAllByLabelText("Loading").length).toBeGreaterThan(0);
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
+  });
+
+  it("replaces only the card whose read failed", async () => {
+    routeFetch({ fails: "ranking" });
     renderScreen();
     expect(await screen.findByText("We couldn’t load where your money went")).toBeInTheDocument();
     expect(screen.getByText("Income and spending")).toBeInTheDocument();
     expect(screen.getByText("This month against last")).toBeInTheDocument();
-    expect(screen.getByText("$11,135,000")).toBeInTheDocument();
+    expect(tile("Saved")).toHaveTextContent("$11,135,000");
+  });
+
+  it("keeps where it goes when the income read is the one that failed", async () => {
+    routeFetch({ fails: "income" });
+    renderScreen();
+    expect(await screen.findByText("We couldn’t load income and spending")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Spending per month, split by category" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("This month against last")).toBeInTheDocument();
   });
 
   // Invariant 2: a chart drawn from an unsent write is marked, exactly like a number.
-  it("marks all three charts as projections while a movement is still queued", async () => {
+  it("marks the three charts and the two tiles as projections while a movement is queued", async () => {
     routeFetch();
     // fake-indexeddb commits its transactions on real time; the frozen clock comes back after.
     vi.useRealTimers();
@@ -259,9 +345,9 @@ describe("TrendsScreen", () => {
 
     renderScreen();
 
-    // The mark belongs to each chart, not to the screen: it is looked for inside its own wrapper.
-    const marked = (chart: HTMLElement) =>
-      chart
+    // The mark belongs to each figure, not to the screen: it is looked for inside its own wrapper.
+    const marked = (figure: HTMLElement) =>
+      figure
         .closest("span.inline-flex")
         ?.querySelector('[aria-label="Includes changes not yet synced"]') ?? null;
 
@@ -274,12 +360,18 @@ describe("TrendsScreen", () => {
     expect(
       marked(
         screen.getByRole("img", {
-          name: "Spending so far this month against the same days of the previous month",
+          name: "Spending in September 2026 against the same days of August 2026",
         }),
       ),
     ).not.toBeNull();
     expect(
       marked(screen.getByRole("group", { name: "Spending per month, split by category" })),
+    ).not.toBeNull();
+    expect(
+      tile("Saved").querySelector('[aria-label="Includes changes not yet synced"]'),
+    ).not.toBeNull();
+    expect(
+      tile("Savings rate").querySelector('[aria-label="Includes changes not yet synced"]'),
     ).not.toBeNull();
   });
 
@@ -303,5 +395,20 @@ describe("TrendsScreen", () => {
       .filter((url) => url.searchParams.get("groupBy") === "month");
     expect(windows[0]?.searchParams.get("from")).toBe("2025-09-01T05:00:00.000Z");
     expect(windows[0]?.searchParams.get("to")).toBe("2026-09-01T05:00:00.000Z");
+  });
+
+  it("asks one question per read and never the same one twice", async () => {
+    routeFetch();
+    renderScreen();
+    await screen.findByText("Saved");
+    await waitFor(() => {
+      expect(screen.getByText("Where it goes")).toBeInTheDocument();
+    });
+    const asked = fetchMock.mock.calls
+      .map(([input]) => new URL(urlOf(input), "http://localhost"))
+      .filter((url) => url.pathname === "/api/stats/spending")
+      .map((url) => url.search);
+    expect(new Set(asked).size).toBe(asked.length);
+    expect(asked).toHaveLength(5);
   });
 });

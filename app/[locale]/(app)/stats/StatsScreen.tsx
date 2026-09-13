@@ -336,18 +336,25 @@ export function StatsScreen() {
           }
         />
       ) : empty ? (
-        <Empty
-          icon={<ChartPie {...iconProps("lg")} />}
-          title={t("stats.empty.title")}
-          body={
-            <>
-              {t("stats.empty.body")}
-              {groupBy === "account" && type === "EXPENSE" && (
-                <span className="mt-2 block text-xs text-text-3">{t("stats.emptyTransfers")}</span>
-              )}
-            </>
-          }
-        />
+        <>
+          <Empty
+            icon={<ChartPie {...iconProps("lg")} />}
+            title={t("stats.empty.title")}
+            body={
+              <>
+                {t("stats.empty.body")}
+                {groupBy === "account" && type === "EXPENSE" && (
+                  <span className="mt-2 block text-xs text-text-3">
+                    {t("stats.emptyTransfers")}
+                  </span>
+                )}
+              </>
+            }
+          />
+          <TrendsLink
+            reference={monthKey === currentMonthKey(now, dates.timeZone) ? undefined : monthKey}
+          />
+        </>
       ) : (
         <>
           <TotalCard

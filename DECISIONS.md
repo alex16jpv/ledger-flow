@@ -5,11 +5,34 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-13 · One read serves the spending series and the stack (T-31)
+
+- **Decision:** Trends asks `GET /stats/spending` with `groupBy=month&splitBy=category` **once** and
+  feeds both _Income and spending_ and _Where it goes_ from it. `splitBy` only adds a `splits` array to
+  each bucket; the bucket totals and the range total are identical with and without it.
+- **Alternative:** two reads, one plain and one split, so that the two cards fail independently. That is
+  the same question asked twice, which house rule 24 names outright, and independence bought with a
+  duplicate request is not independence worth paying for.
+- **Consequence:** the screen makes five reads, not six, and the first and third cards fall together
+  when that one fails. `screens/trends.md` says which card needs which read, and the error plate draws
+  the ranking failing instead, which isolates one card.
+
+## 2026-09-13 · A short history keeps its range control (T-31)
+
+- **Decision:** the twelve-month range is offered whatever the history holds; the notice about a short
+  history sits **under** it.
+- **Reverses:** the design of 2026-09-11 (`#trends-short-history`), which replaced the range control
+  with the notice. The plate and its caption are redrawn.
+- **Why:** the control was the only way back out of a range the history cannot fill. A reader who
+  reached twelve months on a device with three had no way to return to six.
+- **Consequence:** the notice has to be true on its own, since it no longer implies "and that is all
+  there is": it now says how many months of **this range** hold anything.
+
 ## 2026-09-13 · Trends counts complete months by subtraction, not by adding buckets (T-31)
 
 - **Decision:** _Saved_ and _Savings rate_ take the running month **off** the two range totals
   `GET /stats/spending` returned — `savings` in `features/stats/trends.ts` — instead of adding the
-  complete months' buckets up. Two subtractions and one ratio over figures the API produced.
+  complete months' buckets up. Three subtractions and one ratio over figures the API produced.
 - **Alternatives:** summing the complete months' buckets, which is a third place the client adds money
   while the wording of house rule 4 is already under question. And a second pair of reads whose window
   stops at the last complete month, which is two more requests for a figure already on the screen
@@ -28,6 +51,20 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **Consequence:** a column's segments add up to exactly the month total the API returned, and the
   legend names the same five for every month, which is what makes a band that widens legible.
 
+## 2026-09-13 · One frame for every chart made of slots (T-31)
+
+- **Decision:** `ChartSlots` (`components/ui/ChartSlots.tsx`) owns what every slotted chart shares — one
+  tab stop with `useRovingSlots`, the `role="group"`/`role="img"` container, the `Tooltip` per slot, the
+  bubble's headroom, the hatch of a period still running and the `readout` line. `ColBars` and `GBars`
+  are now their body and their scale, nothing else.
+- **Alternative:** a third copy, which is what `GBars` was when it was written: `BUBBLE_ROOM`, `step`,
+  `alignFor` and the whole slot block were `ColBars` verbatim. The independent review named it, and
+  components.md already says every shape has exactly one implementation.
+- **Consequence:** the chart contract is enforced in one file rather than repeated in three, and both
+  components' tests pass unchanged, which is what said the extraction kept the DOM. `Bars` stays out of
+  it: its slots are only the days that have arrived and it enters on today, so its roving is not this
+  one.
+
 ## 2026-09-13 · The range lives in the address (T-31)
 
 - **Decision:** `/stats/trends?range=12` — six or twelve months is a filter, and house rule "filters
@@ -36,12 +73,18 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **Alternative:** `lib/storage/choice.ts`, where the Bars ⇄ Calendar toggle lives. Rejected: that one
   is how the same data is drawn, this one is which data is read — and a Trends link someone shares has
   to open on what its sender was looking at.
+- **Consequence:** the range survives a reload and a shared link with no storage of its own, and the
+  screen has no state the address cannot express.
 
 ## 2026-09-13 · Every client-side addition of money now goes through `lib/local/derive` (T-31)
 
 - **Decision:** `runningTotals` moved out of `features/budgets/charts.ts` and into
   `lib/local/derive/money.ts`, where `sumAmounts` already lives. `paceSeries` (T-30) and the two
   comparison curves of Trends both call it; `savings` and `categoryMix` call `sumAmounts`.
+- **Alternative:** leaving it in `features/budgets/charts.ts` and importing it from `features/stats`.
+  Not available: a feature may not import another (house rule 12, enforced by ESLint `boundaries`), so
+  the only ways out were a second copy or a move up — and `lib/local/derive` is where the rule already
+  says money may be added.
 - **Consequence:** there is one implementation of a cumulative total instead of two, and the arithmetic
   of every screen that adds the API's own buckets happens inside the module house rule 4 names. **It
   does not close the question put to the owner on 2026-09-13**: the rule also says whatever is computed

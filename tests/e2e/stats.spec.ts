@@ -96,20 +96,22 @@ test("Trends reads the months the seed has, and reads them off the local copy", 
   await expect(page.getByRole("heading", { level: 1, name: "Trends" })).toBeVisible();
 
   // Three months where the range asks for six: the partial case, and the axis starts at the data.
-  await expect(page.getByText(/This account has 3 months of history/)).toBeVisible();
+  await expect(page.getByText(/Only 3 months of this range/)).toBeVisible();
   const pairs = page.getByRole("group", { name: "Income against spending, month by month" });
   await expect(pairs).toBeVisible();
   await expect(pairs.getByRole("button")).toHaveCount(3);
   await expect(pairs.getByRole("button").first()).toHaveAccessibleName(/^June 2026 · /);
   await expect(page.getByText("3 complete months")).toBeVisible();
-  await expect(page.getByText("Savings rate")).toBeVisible();
+  await expect(page.getByText("of what came in")).toBeVisible();
 
+  // The seed's reference month has ended, so nothing here is "so far" and there is no "this point".
   await expect(
     page.getByRole("img", {
-      name: "Spending so far this month against the same days of the previous month",
+      name: "Spending in August 2026 against the same days of July 2026",
     }),
   ).toBeVisible();
-  await expect(page.getByText(/than at this point in July 2026/)).toBeVisible();
+  await expect(page.getByText(/^You spent /)).toBeVisible();
+  await expect(page.getByText("August 2026 against July 2026")).toBeVisible();
 
   const mix = page.getByRole("group", { name: "Spending per month, split by category" });
   await expect(mix).toBeVisible();

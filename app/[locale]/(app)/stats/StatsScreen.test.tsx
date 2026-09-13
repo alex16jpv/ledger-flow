@@ -461,6 +461,21 @@ describe("StatsScreen", () => {
     },
   );
 
+  it("offers Trends from an empty period too, which is when the question gets asked", async () => {
+    fetchMock.mockImplementation((input) => {
+      const url = new URL(urlOf(input), "http://localhost");
+      if (url.pathname === "/api/stats/spending")
+        return Promise.resolve(json({ groupBy: "category", total: 0, buckets: [] }));
+      return Promise.resolve(empty());
+    });
+    renderScreen();
+    expect(await screen.findByText("Nothing recorded in this period")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Trends over time/ })).toHaveAttribute(
+      "href",
+      "/stats/trends",
+    );
+  });
+
   it("takes the month being read into Trends, and only when it is not this one", async () => {
     routeFetch();
     renderScreen("reference=2026-07");

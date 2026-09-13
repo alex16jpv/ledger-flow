@@ -120,6 +120,7 @@ describe("monthComparison", () => {
     expect(comparison.days).toBe(22);
     expect(comparison.spentSoFar).toBe(150);
     expect(comparison.previousSoFar).toBe(300);
+    expect(comparison.comparedDays).toBe(22);
     expect(comparison.difference).toBeCloseTo(-0.5);
     // One point per day boundary, starting at zero, so both lines share an x axis of 23 points.
     expect(comparison.current).toHaveLength(23);
@@ -127,25 +128,29 @@ describe("monthComparison", () => {
     expect(comparison.current.slice(0, 4)).toEqual([0, 100, 100, 150]);
   });
 
-  it("has nothing to compare when the previous month ran out of days first", () => {
-    const january = new Date("2026-01-30T15:00:00.000Z");
-    const short = monthWindow(shiftMonth(january, -1, TZ), TZ);
+  it("reads both at the last day they share when the previous month is shorter", () => {
+    // 31 March against February: the comparison stops at day 28, and the spending after it is not in it.
+    const march = new Date("2026-03-31T15:00:00.000Z");
+    const february = monthWindow(shiftMonth(march, -1, TZ), TZ);
     const comparison = monthComparison(
-      [bucket("2026-01-05", 10)],
-      [bucket("2025-12-05", 20)],
-      monthWindow(january, TZ),
-      short,
+      [bucket("2026-03-05", 100), bucket("2026-03-30", 900)],
+      [bucket("2026-02-05", 200)],
+      monthWindow(march, TZ),
+      february,
       TZ,
-      january,
+      march,
     );
-    expect(comparison.days).toBe(30);
-    expect(comparison.previousSoFar).toBe(20);
+    expect(comparison.days).toBe(31);
+    expect(comparison.comparedDays).toBe(28);
+    expect(comparison.spentSoFar).toBe(1_000);
+    expect(comparison.previousSoFar).toBe(200);
     expect(comparison.difference).toBeCloseTo(-0.5);
   });
 
   it("cannot work out a share of nothing", () => {
     const comparison = monthComparison([bucket("2026-09-01", 10)], [], here, before, TZ, SEPTEMBER);
     expect(comparison.previousSoFar).toBe(0);
+    expect(comparison.comparedDays).toBe(22);
     expect(comparison.difference).toBeNull();
   });
 });
