@@ -1,5 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
-
+import { expect, type Page, test, uniqueEmail } from "../fixtures";
+import { vaultState } from "../offline";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -62,15 +62,17 @@ test("Save all completes the categorized cards, one guarded operation per row", 
   request,
 }) => {
   // A fresh user: the batch sweeps every categorized card, so a shared inbox would be swallowed.
-  const email = `e2e-saveall-${Date.now()}-${Math.random().toString(16).slice(2)}@ledgerflow.test`;
-  await request.post("/api/auth/register", {
+  const email = uniqueEmail("saveall");
+  const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: { name: "Save All E2E", email, password: "LedgerFlow!2026" },
   });
-  await request.post("/api/accounts", {
+  expect(registered.ok(), await registered.text()).toBe(true);
+  const wallet = await request.post("/api/accounts", {
     headers: { origin: APP },
     data: { name: "Wallet", type: "CASH", color: "GRAY", balance: 100_000 },
   });
+  expect(wallet.ok(), await wallet.text()).toBe(true);
   const ids: string[] = [];
   for (const amount of [12_500, 15_400]) {
     const created = (await (
@@ -83,6 +85,10 @@ test("Save all completes the categorized cards, one guarded operation per row", 
   await page.goto("/transactions/review");
   const cards = ids.map((id) => page.locator(`[data-transaction-id="${id}"]`));
   await expect(cards[0]!).toBeVisible();
+  // H-08: with no mirror yet `writeAll` sends each row direct (O-F4), which is not the route asserted below.
+  await expect
+    .poll(async () => (await vaultState(page))?.syncedAt, { timeout: 30_000 })
+    .toEqual(expect.any(String));
   await expect(page.getByRole("button", { name: /^Save all/ })).toHaveCount(0);
   for (const [index, name] of [
     [0, "Food"],

@@ -1,5 +1,4 @@
-import { type BrowserContext, expect, type Page, test } from "@playwright/test";
-
+import { type BrowserContext, expect, type Page, test } from "../fixtures";
 import {
   APP,
   type Credentials,

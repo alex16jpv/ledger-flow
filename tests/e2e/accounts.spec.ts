@@ -1,5 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
-
+import { expect, type Page, test, uniqueEmail } from "../fixtures";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -19,7 +18,7 @@ async function signUp(page: Page, request: Request) {
     headers: { origin: APP },
     data: {
       name: "Accounts E2E",
-      email: `e2e-accounts-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@ledgerflow.test`,
+      email: uniqueEmail("accounts"),
       password: "LedgerFlow!2026",
     },
   });

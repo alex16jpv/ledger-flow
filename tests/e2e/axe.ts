@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page } from "@playwright/test";
+
+import { expect, type Page } from "../fixtures";
 
 // F-45: Next sets the title after a client navigation, so a scan before it reports document-title.
 export async function expectNoAxeViolations(page: Page): Promise<void> {

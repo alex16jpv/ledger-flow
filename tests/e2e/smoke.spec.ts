@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test, uniqueEmail } from "../fixtures";
 import { expectNoAxeViolations } from "./axe";
 
 test("the root page responds and has no accessibility violations", async ({ page }) => {
@@ -14,7 +13,7 @@ test("an address that cannot name a row answers 404, not a rendered screen", asy
   page,
   request,
 }) => {
-  const email = `e2e-404-${Date.now()}-${Math.random().toString(16).slice(2)}@ledgerflow.test`;
+  const email = uniqueEmail("404");
   await request.post("/api/auth/register", {
     headers: { origin: process.env.E2E_APP_URL ?? "http://localhost:3002" },
     data: { name: "Not Found E2E", email, password: "LedgerFlow!2026", locale: "en" },

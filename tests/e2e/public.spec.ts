@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test, uniqueEmail } from "../fixtures";
 import { expectNoAxeViolations } from "./axe";
 
 test("the landing is static, bilingual and links to sign-up, sign-in and the legal pages", async ({
@@ -79,11 +78,12 @@ test("the root opens the app for a device that carries the session marker", asyn
   page,
   request,
 }) => {
-  const email = `e2e-root-${Date.now()}-${Math.random().toString(16).slice(2)}@ledgerflow.test`;
-  await request.post("/api/auth/register", {
+  const email = uniqueEmail("root");
+  const registered = await request.post("/api/auth/register", {
     headers: { origin: process.env.E2E_APP_URL ?? "http://localhost:3002" },
     data: { name: "Root E2E", email, password: "LedgerFlow!2026", locale: "en" },
   });
+  expect(registered.ok(), await registered.text()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
 
   await page.goto("/");

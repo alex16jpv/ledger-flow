@@ -1,7 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 
-import { type Browser, type BrowserContext, expect, type Page, test } from "@playwright/test";
+import type { Browser } from "@playwright/test";
 
+import { type BrowserContext, expect, type Page, test } from "../fixtures";
 import {
   APP,
   type Credentials,

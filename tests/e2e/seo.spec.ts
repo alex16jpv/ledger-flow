@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 test("robots, sitemap, canonical, hreflang, JSON-LD and the OG image are served", async ({
   request,

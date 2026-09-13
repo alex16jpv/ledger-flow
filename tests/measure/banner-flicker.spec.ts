@@ -1,5 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
-
+import { expect, type Page, test } from "../fixtures";
 import { addButton, freshUser, signInAs, uniqueAmount } from "../offline";
 
 // F-72: sampled with requestAnimationFrame — a change that never survives a frame is not painted.
