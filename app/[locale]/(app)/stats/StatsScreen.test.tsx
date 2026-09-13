@@ -1,10 +1,12 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 
 import { dayViewStore } from "@/lib/charts/day-view";
+import { refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
+import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 
 import { StatsScreen } from "./StatsScreen";
 
@@ -225,8 +227,10 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
+  resetOutboxStatus();
+  await wipeVaults();
 });
 
 describe("StatsScreen", () => {
@@ -460,6 +464,41 @@ describe("StatsScreen", () => {
       expect(link).toHaveAttribute("href", "/stats/trends");
     },
   );
+
+  it("marks the day figures as projections while a movement is still queued", async () => {
+    routeFetch();
+    vi.useRealTimers();
+    const vault = await openTestVault("u-stats-projected");
+    await vault.db.put("outbox", {
+      seq: 1,
+      opId: "op-1",
+      opVersion: 1,
+      entity: "transaction",
+      entityId: "t1",
+      action: "create",
+      occurredAt: "2026-09-22T10:00:00.000Z",
+      payload: {},
+      dependsOn: [],
+      status: "pending",
+      attempts: 0,
+      lastError: null,
+    });
+    await refreshOutboxStatus(vault.db);
+    vi.useFakeTimers({ shouldAdvanceTime: true, now: NOW });
+
+    renderScreen("groupBy=day");
+    await screen.findByRole("group", { name: "Per day" });
+    // Invariant 2: the tiles are the same response as the chart above them, so they carry the mark too.
+    const tile = (label: string) => screen.getByText(label).parentElement;
+    await waitFor(() => {
+      expect(
+        tile("Daily average")?.querySelector('[aria-label="Includes changes not yet synced"]'),
+      ).not.toBeNull();
+    });
+    expect(
+      tile("Priciest day")?.querySelector('[aria-label="Includes changes not yet synced"]'),
+    ).not.toBeNull();
+  });
 
   it("offers Trends from an empty period too, which is when the question gets asked", async () => {
     fetchMock.mockImplementation((input) => {

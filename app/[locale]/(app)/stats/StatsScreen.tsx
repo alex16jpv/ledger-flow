@@ -471,24 +471,28 @@ export function StatsScreen() {
                 <StatTile
                   label={type === "EXPENSE" ? t("stats.priciestDay") : t("stats.biggestDay")}
                   value={
-                    <Amount
-                      value={series.highest?.total ?? 0}
-                      signed={false}
-                      size="base"
-                      className="text-lg font-semibold"
-                    />
+                    <Projected when={outbox.projected.spending}>
+                      <Amount
+                        value={series.highest?.total ?? 0}
+                        signed={false}
+                        size="base"
+                        className="text-lg font-semibold"
+                      />
+                    </Projected>
                   }
                   sub={highestDate ? dates.formatWeekdayDay(highestDate) : undefined}
                 />
                 <StatTile
                   label={t("stats.dailyAverage")}
                   value={
-                    <Amount
-                      value={money.round(series.dailyAverage)}
-                      signed={false}
-                      size="base"
-                      className="text-lg font-semibold"
-                    />
+                    <Projected when={outbox.projected.spending}>
+                      <Amount
+                        value={money.round(series.dailyAverage)}
+                        signed={false}
+                        size="base"
+                        className="text-lg font-semibold"
+                      />
+                    </Projected>
                   }
                 />
                 <StatTile

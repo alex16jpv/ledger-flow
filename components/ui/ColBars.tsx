@@ -66,6 +66,12 @@ export function ColBars({
                 style={{ bottom: `${String(share(column.cap))}%` }}
               />
             )}
+            {column.segments.length === 0 && (
+              <i
+                className={cn(SEGMENT, "rounded-t-[3px] bg-surface-3")}
+                style={{ height: "2px" }}
+              />
+            )}
             {column.segments.map((segment, at) => (
               <i
                 key={at}
