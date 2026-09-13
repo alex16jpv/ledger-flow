@@ -12,6 +12,7 @@ import { type Bar, Bars } from "@/components/ui/Bars";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip, ChipRow } from "@/components/ui/Chip";
+import { cn } from "@/components/ui/cn";
 import { DayBars } from "@/components/ui/DayBars";
 import { DayHeat } from "@/components/ui/DayHeat";
 import { useWeekdayNames } from "@/components/ui/dayReading";
@@ -100,7 +101,9 @@ export function StatsScreen() {
   const window = useMemo(() => monthWindow(reference, dates.timeZone), [reference, dates.timeZone]);
   const iso = toIsoWindow(window);
   const stats = useStatsQuery({ type, groupBy, ...iso });
-  const byCategory = useStatsQuery({ type, groupBy: "category", ...iso });
+  // Only tag buckets overlap, so only there does the count need a second, disjoint grouping.
+  const overlaps = groupBy === "tag";
+  const byCategory = useStatsQuery({ type, groupBy: "category", ...iso }, overlaps);
   const categories = useCategoriesQuery(undefined, true, true);
   const accounts = useAccountsQuery(true);
   const categoryMap = useMemo(
@@ -129,7 +132,8 @@ export function StatsScreen() {
     highestWindow ? { ...highestWindow, type } : {},
     highestWindow !== null,
   );
-  const wantsBiggest = groupBy === "day" || groupBy === "account";
+  const hasBuckets = stats.isSuccess && stats.data.buckets.length > 0;
+  const wantsBiggest = (groupBy === "day" || groupBy === "account") && hasBuckets;
   const biggest = useBiggestTransactions({ ...iso, type }, wantsBiggest);
   // An empty page is not a state of its own here: the screen is already showing its own Empty.
   const showsBiggest = wantsBiggest && biggest.data?.data.length !== 0;
@@ -176,8 +180,9 @@ export function StatsScreen() {
   }
 
   const total = stats.data?.total ?? 0;
-  const count = byCategory.data ? transactionCount(byCategory.data.buckets) : 0;
-  const empty = stats.isSuccess && stats.data.buckets.length === 0;
+  const counted = overlaps ? byCategory.data : stats.data;
+  const count = counted ? transactionCount(counted.buckets) : 0;
+  const empty = stats.isSuccess && !hasBuckets;
   const categoryShares =
     stats.data && groupBy === "category" ? shares(stats.data.buckets, total) : [];
   const accountShares =
@@ -190,6 +195,12 @@ export function StatsScreen() {
         )
       : [];
   const untagged = stats.data?.buckets.find((bucket) => bucket.key === UNTAGGED_KEY)?.total ?? 0;
+
+  function accountName(key: string): string {
+    const account = accountMap.get(key);
+    if (account) return account.name;
+    return t(key === UNASSIGNED_ACCOUNT_KEY ? "stats.unassignedAccount" : "stats.unknownAccount");
+  }
 
   const weekStart = weekStartFor(formatLocale);
   const weekdayNames = useWeekdayNames();
@@ -205,6 +216,7 @@ export function StatsScreen() {
           weekday: weekdayNames.long(weekday),
           amount: money.format(average),
         }),
+        future: (entry?.days ?? 0) === 0,
       };
     });
   }, [weekdays, weekStart, weekdayNames, money, t]);
@@ -266,18 +278,25 @@ export function StatsScreen() {
           label: t(`stats.groups.${option}`),
         }))}
       />
-      {stats.isPending || byCategory.isPending ? (
+      {stats.isPending || (overlaps && byCategory.isPending) ? (
         <div className="flex flex-col gap-3" aria-busy="true" aria-label={t("common.loading")}>
           <Card className="flex flex-col gap-2">
             <Skeleton className="h-2.5 w-24" />
             <Skeleton className="h-9 w-48" />
             <Skeleton className="h-3 w-56" />
           </Card>
+          {groupBy === "account" && (
+            <Card className="p-3">
+              <Skeleton className="h-2.5 rounded-full" />
+            </Card>
+          )}
           {groupBy === "day" && (
             <>
               <Card className="flex flex-col gap-2">
                 <Skeleton className="h-2.5 w-28" />
-                <Skeleton className="mt-[22px] h-[140px]" />
+                <Skeleton
+                  className={cn("mt-[22px]", view === "calendar" ? "h-[300px]" : "h-[140px]")}
+                />
                 <Skeleton className="h-3 w-3/5" />
               </Card>
               <div className="grid grid-cols-3 gap-3">
@@ -298,7 +317,7 @@ export function StatsScreen() {
             <SkeletonRow />
           </Card>
         </div>
-      ) : stats.isError || byCategory.isError ? (
+      ) : stats.isError || (overlaps && byCategory.isError) ? (
         <Empty
           tone="danger"
           icon={<ChartPie {...iconProps("lg")} />}
@@ -320,9 +339,12 @@ export function StatsScreen() {
           icon={<ChartPie {...iconProps("lg")} />}
           title={t("stats.empty.title")}
           body={
-            groupBy === "account"
-              ? `${t("stats.empty.body")} ${t("stats.transfersNote")}`
-              : t("stats.empty.body")
+            <>
+              {t("stats.empty.body")}
+              {groupBy === "account" && type === "EXPENSE" && (
+                <span className="mt-2 block text-xs text-text-3">{t("stats.emptyTransfers")}</span>
+              )}
+            </>
           }
         />
       ) : (
@@ -363,7 +385,7 @@ export function StatsScreen() {
               <StackBar
                 shares={accountShares}
                 colors={(key) => accountMap.get(key)?.color ?? null}
-                names={(key) => accountMap.get(key)?.name ?? t("stats.unassignedAccount")}
+                names={accountName}
                 label={t("stats.breakdownByAccount")}
               />
               <AccountRows
@@ -371,10 +393,12 @@ export function StatsScreen() {
                 type={type}
                 accounts={accountMap}
                 onOpen={(key) => {
-                  openTransactions(key === UNASSIGNED_ACCOUNT_KEY ? {} : { account: key });
+                  openTransactions({ account: key });
                 }}
               />
-              <p className="text-xs text-text-3">{t("stats.transfersNote")}</p>
+              {type === "EXPENSE" && (
+                <p className="text-xs text-text-3">{t("stats.transfersNote")}</p>
+              )}
             </>
           )}
           {groupBy === "day" && series && (

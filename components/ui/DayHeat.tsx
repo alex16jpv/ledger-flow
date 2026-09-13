@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 
 import { calendarLeading, type DaySlot, weekColumns, weekStartFor } from "@/lib/charts/days";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
@@ -23,11 +24,21 @@ export function DayHeat({ days, label, onOpen, summary, className }: DayHeatProp
   const reading = useDayReading();
   const weekdays = useWeekdayNames();
   const weekStart = weekStartFor(formatLocale);
-  const columns = weekColumns(weekStart).map(weekdays.short);
-  const cells: HeatCell[] = days.map((day) => {
-    const { dayOfMonth, ...slot } = reading(day);
-    return { value: day.value, text: dayOfMonth, ...slot, today: day.today, future: day.future };
-  });
+  const columns = useMemo(() => weekColumns(weekStart).map(weekdays.short), [weekStart, weekdays]);
+  const cells = useMemo<HeatCell[]>(
+    () =>
+      days.map((day) => {
+        const { dayOfMonth, ...slot } = reading(day);
+        return {
+          value: day.value,
+          text: dayOfMonth,
+          ...slot,
+          today: day.today,
+          future: day.future,
+        };
+      }),
+    [days, reading],
+  );
   const select = onOpen
     ? (index: number) => {
         const key = days[index]?.key;

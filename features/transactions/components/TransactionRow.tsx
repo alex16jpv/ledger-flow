@@ -58,9 +58,10 @@ export function TransactionRow({ transaction, lookups, dated, onOpen }: Transact
   const queued = outbox.queuedRows.has(transaction.id);
   const stuck = outbox.attentionRows.has(transaction.id);
   const when = new Date(transaction.date);
-  // A list that spans days answers "when" with the day; inside one day the time is what is left.
+  // A list that spans days answers "when" with the day the row froze, never with the instant.
+  const frozen = transaction.dayKey ?? dates.dayKey(when);
   const meta = [
-    dated ? dates.formatWeekdayDayShort(when) : dates.formatTime(when),
+    dated ? dates.formatWeekdayDayShort(dates.fromDayKey(frozen)) : dates.formatTime(when),
     transaction.type === "TRANSFER" ? t("transactionTypes.TRANSFER") : account?.name,
     queued ? t("states.savedHere") : undefined,
   ];

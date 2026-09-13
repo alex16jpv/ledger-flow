@@ -33,7 +33,7 @@ export interface SpendingWindow {
 
 const UNCATEGORIZED = "uncategorized";
 const UNTAGGED = "untagged";
-const UNASSIGNED = "unassigned";
+export const UNASSIGNED = "unassigned";
 
 interface Total {
   cents: number;

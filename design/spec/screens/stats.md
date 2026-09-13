@@ -11,8 +11,12 @@ for **Categories / Days / Accounts / Tags** (`groupBy`); and a total card (`tota
 transactions, the average).
 
 - **By category** (`#by-category`): a proportional stacked bar (`stackbar`, each category in its
-  colour; **every segment names its category in a tooltip** on hover or focus) plus a `row` list with a
-  mini progress bar, the percentage, the amount and the count; `uncategorized` appears as
+  colour; **every segment names its category in a bubble** on hover). The bar is not a set of
+  controls — the list underneath is the way in, so making six segments six tab stops would only add
+  noise — which means the bubble is pointer-only and **the bar's own accessible name reads every
+  segment with its share**: that is what a keyboard and a reader get, and it is the whole reading and
+  not a headline. Then a `row` list with a mini progress bar, the percentage, the amount and the
+  count; `uncategorized` appears as
   "Uncategorized" with a `hash` tile; archived categories are resolved with `includeArchived` and
   badged. Tapping a row opens Transactions filtered by that category and range.
 - **By day** (`#by-day`): `Bars` 140px tall, **every bar a control that says its day and its amount**
@@ -29,13 +33,21 @@ transactions, the average).
   it is a per-browser choice, like the other two, and it costs the backend nothing. The consequence is
   written down rather than hidden: the phone and the laptop can sit on different views.
 - **By account** (`#by-account`): which card or account the money left from — the same `stackbar` and
-  the same `row` list as categories, with the account's colour and icon. Transfers between the user's
-  own accounts are **not** spending and never appear here; a line under the list says so.
+  the same `row` list as categories, with the account's colour and the icon of its type. Archived
+  accounts are resolved with `includeArchived` and badged, exactly as categories are; the server's own
+  bucket for a row with no account on either side appears as "No account" and an account the device
+  cannot resolve as "Unknown account". **"No account" is the one row that does not open anything**:
+  `/transactions` has no filter that could narrow it, so it is a figure and not a control. Transfers
+  between the user's own accounts are **not** spending and never appear here; a line under the list
+  says so **when the flow chip is Expenses**, which is the only reading it is true of — under the
+  Transfers chip this view is, by definition, listing transfers.
 - **By tag** (`#by-tag`): an alert about double counting and the untagged amount (`untagged`); a list
   per tag with its count; tapping opens Transactions `?tag=`.
 
-Every view ends with the way into Trends. Export is visible and inactive ("soon"). Empty: "No
-transactions in this period".
+Every view ends with the way into Trends. Export is visible and inactive ("soon"). Empty: "Nothing
+recorded in this period", "Try another month or another type of movement" — and under Accounts, with
+Expenses chosen, one more line, because a month whose only movements were transfers between the
+user's own accounts lands here and has to say why.
 
 ## Trends lives next door
 

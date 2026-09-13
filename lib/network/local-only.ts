@@ -1,44 +1,19 @@
-const KEY = "lf.localOnly";
+import { createStoredChoice } from "@/lib/storage/choice";
 
-type Listener = () => void;
-
-const listeners = new Set<Listener>();
-let cached: boolean | null = null;
-
-function read(): boolean {
-  try {
-    return window.localStorage.getItem(KEY) === "1";
-  } catch {
-    // A browser that refuses storage cannot remember the choice, so it does not have one.
-    return false;
-  }
-}
+// The stored value stays "1", because a device that already chose this must not lose it.
+const store = createStoredChoice("lf.localOnly", ["1", "0"] as const, "0");
 
 // P-32 (owner, 2026-09-08): a device decision, so it lives beside the palette, not on the server.
 export function isLocalOnly(): boolean {
-  if (typeof window === "undefined") return false;
-  cached ??= read();
-  return cached;
+  return store.get() === "1";
 }
 
 export function setLocalOnly(value: boolean): void {
-  cached = value;
-  try {
-    if (value) window.localStorage.setItem(KEY, "1");
-    else window.localStorage.removeItem(KEY);
-  } catch {
-    // Nothing to do: the flag stays for this visit and the app still behaves as chosen.
-  }
-  for (const listener of listeners) listener();
+  store.set(value ? "1" : "0");
 }
 
 export const localOnlyStore = {
-  subscribe: (listener: Listener): (() => void) => {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  },
+  subscribe: store.subscribe,
   getSnapshot: isLocalOnly,
   getServerSnapshot: (): boolean => false,
 };

@@ -20,7 +20,8 @@ T-27 and T-29 spend that: **Days** gains a Bars ⇄ Calendar toggle (`DayHeat`, 
 month), the **average by weekday** — `weekdayAverages`, the one place the client adds buckets the
 server returned without adding, in minor units, before dividing — and the **biggest movements of the
 period**, which is `useBiggestTransactions`: one page of five with `sort=amount&order=desc`, its own
-request and therefore its own loading, error and Retry. **Accounts** is the same stacked bar and the
+request and therefore its own loading, error and Retry, and which **Accounts shows too**. Its rows
+date themselves by the day the movement froze, never by the device's reading of the instant. **Accounts** is the same stacked bar and the
 same row list as categories, sharing `ShareRows`, with the account's colour and its type icon; the
 line under it says that transfers between the user's own accounts are never counted here. Which of
 the two day views is showing lives in `localStorage` (`lib/charts/day-view.ts`), beside the palette

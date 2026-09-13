@@ -20,4 +20,5 @@ export {
   type SpendingSplitBy,
   type SpendingTransaction,
   type SpendingWindow,
+  UNASSIGNED,
 } from "./spending";

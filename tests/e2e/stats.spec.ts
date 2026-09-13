@@ -54,7 +54,11 @@ test("stats show the seed month by category, by day and by tag, and drill into t
 
   await page.getByRole("button", { name: "Accounts" }).click();
   await expect(page).toHaveURL(/groupBy=account/);
-  await expect(page.getByRole("img", { name: "Share by account" })).toBeVisible();
+  const bar = page.getByRole("img", { name: /^Share by account: / });
+  await expect(bar).toBeVisible();
+  const accountRows = page.getByRole("button", { name: /\d+ %/ });
+  await expect(accountRows.first()).toContainText(/txns?$/);
+  expect(await accountRows.count()).toBeGreaterThan(0);
   await expect(
     page.getByText(/Transfers between your own accounts are not spending/),
   ).toBeVisible();

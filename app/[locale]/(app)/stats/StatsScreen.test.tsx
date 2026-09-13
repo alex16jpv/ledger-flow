@@ -69,7 +69,10 @@ function routeFetch() {
             total: 815_900,
             buckets: [
               { key: "visa", total: 612_400, count: 27, avg: 22_681 },
-              { key: "cash", total: 203_500, count: 11, avg: 18_500 },
+              { key: "cash", total: 140_000, count: 8, avg: 17_500 },
+              { key: "nu", total: 60_000, count: 2, avg: 30_000 },
+              { key: "unassigned", total: 3_500, count: 1, avg: 3_500 },
+              { key: "ghost", total: 0, count: 1, avg: 0 },
             ],
           }),
         );
@@ -102,6 +105,20 @@ function routeFetch() {
             isDefault: true,
             currency: "COP",
             archivedAt: null,
+            createdAt: "",
+            updatedAt: "",
+          },
+          {
+            id: "nu",
+            name: "Nu (old card)",
+            type: "CARD",
+            color: "GRAY",
+            balance: 0,
+            openingBalance: 0,
+            userId: "u",
+            isDefault: false,
+            currency: "COP",
+            archivedAt: "2026-08-01T00:00:00Z",
             createdAt: "",
             updatedAt: "",
           },
@@ -178,8 +195,12 @@ function routeFetch() {
 }
 
 function renderScreen(query = "", timeZone = "America/Bogota") {
+  renderScreenWith(query, timeZone);
+}
+
+function renderScreenWith(query = "", timeZone = "America/Bogota") {
   search = query;
-  renderWithProviders(
+  return renderWithProviders(
     <QueryProvider>
       <StatsScreen />
     </QueryProvider>,
@@ -187,7 +208,11 @@ function renderScreen(query = "", timeZone = "America/Bogota") {
   );
 }
 
+const NOW = new Date("2026-09-22T15:00:00.000Z");
+
 beforeEach(() => {
+  // Rule 22: a test that moves the clock must not decide what the next one reads.
+  vi.setSystemTime(NOW);
   fetchMock.mockReset();
   biggestUrls.length = 0;
   window.localStorage.clear();
@@ -309,6 +334,28 @@ describe("StatsScreen", () => {
     expect(row).toHaveTextContent("Wed, Sep 9");
   });
 
+  it("draws a weekday no day has reached as a rule, and refuses to call a future day the priciest", async () => {
+    vi.setSystemTime(new Date("2026-09-02T15:00:00.000Z"));
+    routeFetch();
+    renderScreen("groupBy=day");
+    // September 2026 opens on a Tuesday, so by the 2nd only Tuesday and Wednesday have happened.
+    const week = await screen.findByRole("img", { name: /^Average by weekday/ });
+    expect(week).toHaveAccessibleName(expect.stringContaining("Tuesday"));
+    expect(week).toHaveAccessibleName(expect.stringContaining("Wednesday"));
+    expect(week).not.toHaveAccessibleName(expect.stringContaining("Friday"));
+    // The 9th is the biggest bucket but has not arrived, so the priciest day is the 2nd.
+    expect(screen.getByText("Highest day · Wednesday, September 2")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Wednesday 2 · highest" })).toBeInTheDocument();
+  });
+
+  it("dates a biggest movement by the day it froze, not by the device's reading of the instant", async () => {
+    routeFetch();
+    renderScreen("groupBy=day", "Pacific/Kiritimati");
+    await screen.findByRole("heading", { name: "Biggest this period" });
+    // 2026-09-09T18:00Z is already the 10th in Kiritimati; the row froze on the 9th and says so.
+    expect(screen.getByRole("button", { name: /Zara/ })).toHaveTextContent("Wed, Sep 9");
+  });
+
   it("splits the month by account, says transfers are not spending, and filters by the account", async () => {
     routeFetch();
     renderScreen("groupBy=account");
@@ -329,6 +376,50 @@ describe("StatsScreen", () => {
         account: "visa",
       },
     });
+  });
+
+  it("names the bucket with no account, badges an archived one, and resolves an unknown id", async () => {
+    routeFetch();
+    renderScreen("groupBy=account");
+    await screen.findByRole("button", { name: /^Visa Gold/ });
+    const archived = screen.getByRole("button", { name: /^Nu \(old card\)/ });
+    expect(within(archived).getByText("archived")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Unknown account/ })).toBeInTheDocument();
+    // No filter narrows it, so it is a figure and never a way into a list that is not its own.
+    expect(screen.queryByRole("button", { name: /^No account/ })).toBeNull();
+    const list = screen.getByRole("button", { name: /^Visa Gold/ }).parentElement ?? document.body;
+    const row = within(list).getByText("No account").closest("div.w-full");
+    expect(row).not.toBeNull();
+    expect(row?.textContent).toContain("3,500");
+    expect(row?.textContent).toContain("1 txn");
+    expect(screen.getByRole("img", { name: /^Share by account: / })).toHaveAccessibleName(
+      expect.stringContaining("No account 0 %"),
+    );
+  });
+
+  it("keeps the transfers line out of every reading it would be false in", async () => {
+    routeFetch();
+    renderScreen("groupBy=account");
+    await screen.findByRole("button", { name: /^Visa Gold/ });
+    expect(
+      screen.getByText(/Transfers between your own accounts are not spending/),
+    ).toBeInTheDocument();
+    renderScreen("groupBy=account&type=TRANSFER");
+    await screen.findAllByRole("button", { name: /^Visa Gold/ });
+    expect(
+      screen.queryAllByText(/Transfers between your own accounts are not spending/),
+    ).toHaveLength(1);
+  });
+
+  it("draws the account view with the icon of each account's type", async () => {
+    routeFetch();
+    const { container } = renderScreenWith("groupBy=account");
+    await screen.findByRole("button", { name: /^Visa Gold/ });
+    const visa = screen.getByRole("button", { name: /^Visa Gold/ });
+    expect(visa.querySelector(".lucide-credit-card")).not.toBeNull();
+    const cash = screen.getByRole("button", { name: /^Cash/ });
+    expect(cash.querySelector(".lucide-banknote")).not.toBeNull();
+    expect(container.querySelectorAll(".lucide-wallet").length).toBeGreaterThan(0);
   });
 
   it("lets the biggest movements fail on their own without blanking the screen", async () => {

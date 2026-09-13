@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import type { DaySlot } from "@/lib/charts/days";
 
 import { type Bar, Bars, type BarsSummary } from "./Bars";
@@ -16,12 +18,16 @@ export interface DayBarsProps {
 
 export function DayBars({ days, label, height, onOpen, summary, className }: DayBarsProps) {
   const reading = useDayReading();
-  const bars: Bar[] = days.map((day) => ({
-    value: day.value,
-    ...reading(day),
-    today: day.today,
-    future: day.future,
-  }));
+  const bars = useMemo<Bar[]>(
+    () =>
+      days.map((day) => ({
+        value: day.value,
+        ...reading(day),
+        today: day.today,
+        future: day.future,
+      })),
+    [days, reading],
+  );
   const select = onOpen
     ? (index: number) => {
         const key = days[index]?.key;

@@ -20,6 +20,7 @@ import {
   ChipRow,
   DayBars,
   DayHeader,
+  DayHeat,
   Dot,
   Empty,
   Field,
@@ -437,6 +438,16 @@ export function UiCatalog() {
               days={days}
               label={t("sample.spendingPerDay")}
               height={140}
+              summary={{
+                label: charts("highestDay", {
+                  day: dates.formatLong(dates.fromDayKey(topDay.key)),
+                }),
+                amount: money.format(topDay.value),
+              }}
+            />
+            <DayHeat
+              days={days}
+              label={t("sample.spendingPerDay")}
               summary={{
                 label: charts("highestDay", {
                   day: dates.formatLong(dates.fromDayKey(topDay.key)),

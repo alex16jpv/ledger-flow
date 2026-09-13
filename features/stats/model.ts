@@ -5,8 +5,7 @@ import type { StatsBucket } from "@/types/api";
 
 export const UNCATEGORIZED_KEY = "uncategorized";
 export const UNTAGGED_KEY = "untagged";
-// The server's own bucket for a row with no account on either side; the form never produces one.
-export const UNASSIGNED_ACCOUNT_KEY = "unassigned";
+export { UNASSIGNED as UNASSIGNED_ACCOUNT_KEY } from "@/lib/local/derive";
 
 export interface Share {
   key: string;
@@ -67,7 +66,11 @@ export function daySeries(
   }
   const elapsed = bars.filter((bar) => !bar.future);
   const counted = elapsed.length > 0 ? elapsed : bars;
-  const highest = [...buckets].sort((a, b) => b.total - a.total)[0] ?? null;
+  // A day drawn as not yet arrived cannot be the priciest one, however it got a movement.
+  const arrived = new Set(counted.map((bar) => bar.key));
+  const highest =
+    [...buckets].filter((bucket) => arrived.has(bucket.key)).sort((a, b) => b.total - a.total)[0] ??
+    null;
   return {
     bars,
     highest,

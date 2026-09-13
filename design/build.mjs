@@ -1422,7 +1422,9 @@ const STATS_CATS = [
 const STATS_ACCOUNTS = [
   ["Visa Gold", "PURPLE", "credit-card", 612400, 27],
   ["Bancolombia", "BLUE", "landmark", 487900, 14],
-  ["Cash", "GRAY", "banknote", 184000, 7],
+  ["Cash", "GRAY", "banknote", 172100, 6],
+  ["Nu (old card)", "GRAY", "credit-card", 8400, 1, { badge: "archived" }],
+  ["No account", "NONE", "wallet", 3500, 1, { flat: true }],
 ];
 const BIGGEST = [
   ["Zara", "shopping-bag", "PINK", "We 9 · Visa Gold", 98000],
@@ -1481,9 +1483,9 @@ const skelTotal = () =>
   `<div class="card stack-sm">${skel("height:10px;width:96px")}${skel("height:34px;width:190px")}${skel("height:12px;width:220px")}</div>`;
 
 const statsEmpty = (extra = "") =>
-  `<div class="empty">${tile("chart-pie", "NONE", "lg")}<span class="h3">No transactions in this period</span><p class="small muted" style="margin:0;max-width:280px">Nothing was recorded between 1 and 30 September. Try another month or another type of movement.</p>${extra}</div>`;
+  `<div class="empty">${tile("chart-pie", "NONE", "lg")}<span class="h3">Nothing recorded in this period</span><p class="small muted" style="margin:0;max-width:280px">Try another month or another type of movement.</p>${extra}</div>`;
 
-const statsError = (what) =>
+const statsError = (what = "this") =>
   `<div class="empty">${tile("circle-alert", "RED", "lg")}<span class="h3">We couldn’t load ${what}</span><p class="small muted" style="margin:0;max-width:280px">The server didn’t respond (503). Your data is safe; try again in a few seconds.</p><button class="btn secondary" style="margin-top:8px">${iconSvg("refresh-cw", "sm")}Retry</button><span class="xs faint mono">Reference: 8c1f4e2a-…-3b7d</span></div>`;
 
 const stats = (view = "cat", { state = "" } = {}) => {
@@ -1512,7 +1514,7 @@ ${totalCard}`;
   if (state == "loading") {
     const cards =
       view == "acct"
-        ? `<div class="card">${skel("height:10px;border-radius:5px")}</div><div class="list card flush">${skelRows(3)}</div>`
+        ? `<div class="card" style="padding:12px">${skel("height:10px;border-radius:999px")}</div><div class="list card flush">${skelRows(3)}</div>`
         : `<div class="card chart">${skel("height:10px;width:120px")}${skel("height:140px;margin-top:22px")}${skel("height:12px;width:60%")}</div>
 <div class="stats" style="grid-template-columns:repeat(3,1fr)">${skel("height:68px;border-radius:14px")}${skel("height:68px;border-radius:14px")}${skel("height:68px;border-radius:14px")}</div>
 <div class="card chart">${skel("height:10px;width:140px")}${skel("height:64px;margin-top:22px")}${skel("height:12px;width:55%")}</div>
@@ -1524,14 +1526,14 @@ ${cards}`);
   if (state == "empty") {
     const note =
       view == "acct"
-        ? '<p class="xs faint" style="margin:6px 0 0;max-width:280px">Transfers between your own accounts are not spending: a month of only transfers looks like this.</p>'
+        ? '<p class="xs faint" style="margin:6px 0 0;max-width:280px">Transfers between your own accounts are not spending, so a month of only transfers looks like this.</p>'
         : "";
     return frame(`${controls}
 <div class="card">${statsEmpty(note)}</div>`);
   }
   if (state == "error") {
     return frame(`${controls}
-<div class="card">${statsError("your spending by account")}</div>`);
+<div class="card">${statsError()}</div>`);
   }
   let content;
   if (view == "cat") {
@@ -1556,11 +1558,11 @@ ${trendsLink()}`;
           `<button aria-pressed="${String(view == k)}" aria-label="${k == "day" ? "Bars" : "Calendar"}">${iconSvg(ic, "sm")}</button>`,
       )
       .join("")}</div>`;
-    const head = `<div class="card-head" style="margin:0"><span class="eyebrow">Spending per day</span>${toggle}</div>`;
+    const head = `<div class="card-head" style="margin:0"><span class="eyebrow">Per day</span>${toggle}</div>`;
     const body =
       view == "day"
-        ? `${barsChart(SEP_SPEND, { height: 140, today: TODAY, until: TODAY, active: 8 })}${axis("Sep 1", "15", "30")}`
-        : `${heatCal(SEP_SPEND, { active: 8 })}${heatScale()}`;
+        ? `${barsChart(SEP_SPEND, { height: 140, today: TODAY, until: TODAY, active: 8, label: "Per day" })}${axis("Sep 1", "15", "30")}`
+        : `${heatCal(SEP_SPEND, { active: 8, label: "Per day" })}${heatScale()}`;
     content = `<div class="card chart">${head}${body}
 ${readout(`${WD_LONG[sepWeekday(9)]} 9 September · 3 transactions`, money(SEP_SPEND[8]))}</div>
 <div class="stats" style="grid-template-columns:repeat(3,1fr)">${statTile("Priciest day", money(SEP_SPEND[8]), `${WD_LONG[sepWeekday(9)]} 9`)}${statTile("Daily average", money(round(SEP_TOTAL / TODAY)))}${statTile("No-spend days", "2", "of 22 so far")}</div>
@@ -1572,10 +1574,14 @@ ${trendsLink()}`;
     const bar = STATS_ACCOUNTS.map(
       ([, c, , v]) => `<i class="color-${c}" style="flex:${v}"></i>`,
     ).join("");
-    const lis = STATS_ACCOUNTS.map(
-      ([n, c, ic, v, k]) =>
-        `<a class="row" href="#">${tile(ic, c)}<span class="body"><span class="title"><span class="truncate">${n}</span></span><span class="meta"><span class="progress thin color-${c}" style="width:120px"><span class="fill" style="width:${round((v / total) * 100)}%"></span></span>${round((v / total) * 100)} %</span></span><span class="right">${amount(v)}<span class="sub">${k} txns</span></span></a>`,
-    ).join("");
+    const lis = STATS_ACCOUNTS.map(([n, c, ic, v, k, o = {}]) => {
+      const badge = o.badge ? `<span class="badge warning">${o.badge}</span>` : "";
+      const body = `${tile(ic, c)}<span class="body"><span class="title"><span class="truncate">${n}</span>${badge}</span><span class="meta"><span class="progress thin color-${c}" style="width:120px"><span class="fill" style="width:${round((v / total) * 100)}%"></span></span>${round((v / total) * 100)} %</span></span><span class="right">${amount(v)}<span class="sub">${k} txns</span></span>`;
+      // No filter can narrow "no account", so that row is a figure and not a way in.
+      return o.flat
+        ? `<div class="row" style="cursor:default">${body}</div>`
+        : `<a class="row" href="#">${body}</a>`;
+    }).join("");
     content = `<div class="card stack-sm" style="position:relative;overflow:visible"><span class="tooltip show" style="position:absolute;left:22%;top:-4px"><span class="tip">Visa Gold</span></span><div class="stackbar" style="height:12px">${bar}</div></div>
 <div class="list card flush">${lis}</div>
 <p class="xs faint" style="margin:0">Transfers between your own accounts are not spending: they are counted under Transfers, never here.</p>
