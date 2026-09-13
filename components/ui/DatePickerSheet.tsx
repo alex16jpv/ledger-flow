@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type KeyboardEvent, useState } from "react";
 
-import { shiftDayKey } from "@/lib/format/dates";
+import { shiftDayKey, shiftDayKeyMonths } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { iconProps } from "@/lib/icons/sizes";
 
@@ -36,15 +36,6 @@ const key = (year: number, month: number, day: number): string =>
 const partsOf = (day: string): { year: number; month: number; day: number } => {
   const [year = 0, month = 1, date = 1] = day.split("-").map(Number);
   return { year, month: month - 1, day: date };
-};
-
-const shiftMonthKey = (day: string, months: number): string => {
-  const { year, month, day: date } = partsOf(day);
-  const first = new Date(Date.UTC(year, month + months, 1));
-  const lastDay = new Date(
-    Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0),
-  ).getUTCDate();
-  return key(first.getUTCFullYear(), first.getUTCMonth(), Math.min(date, lastDay));
 };
 
 // `getWeekInfo` is in every browser this app supports and not yet in TypeScript's lib.
@@ -135,12 +126,12 @@ export function DatePickerSheet({
     }
     if (event.key === "PageUp" || event.key === "PageDown") {
       event.preventDefault();
-      const next = shiftMonthKey(draft, event.key === "PageUp" ? -1 : 1);
+      const next = shiftDayKeyMonths(draft, event.key === "PageUp" ? -1 : 1);
       if (!outOfRange(next)) setDraft(next);
     }
   }
 
-  const nextMonthFirst = `${shiftMonthKey(`${draft.slice(0, 8)}01`, 1).slice(0, 8)}01`;
+  const nextMonthFirst = `${shiftDayKeyMonths(`${draft.slice(0, 8)}01`, 1).slice(0, 8)}01`;
   const chip = (day: string, label: string) =>
     outOfRange(day) ? null : (
       <Chip
@@ -190,7 +181,7 @@ export function DatePickerSheet({
             round
             aria-label={t("previousMonth")}
             onClick={() => {
-              setDraft(shiftMonthKey(draft, -1));
+              setDraft(shiftDayKeyMonths(draft, -1));
             }}
           >
             <ChevronLeft {...iconProps("sm")} />
@@ -204,7 +195,7 @@ export function DatePickerSheet({
             aria-label={t("nextMonth")}
             disabled={max !== undefined && nextMonthFirst > max}
             onClick={() => {
-              setDraft(shiftMonthKey(draft, 1));
+              setDraft(shiftDayKeyMonths(draft, 1));
             }}
           >
             <ChevronRight {...iconProps("sm")} />

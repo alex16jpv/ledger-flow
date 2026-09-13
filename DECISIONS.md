@@ -28,6 +28,44 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   `hasMore` by whether the page came back full, so the last page of a list always promised another
   one. It now answers, like the server, by whether a row exists past the page.
 
+## 2026-09-12 · A zone is read with `Intl`, never through a `Date` (H-54)
+
+- **Decision:** `lib/format/dates.ts` no longer uses `date-fns-tz`. Reading a zone is
+  `Intl.DateTimeFormat(…, { timeZone }).formatToParts`, and writing one is a two-pass offset
+  solve over that same reading; calendar arithmetic happens on `YYYY-MM-DD` strings
+  (`shiftDayKey`, `shiftDayKeyMonths`, `weekdayOf`, all over `Date.UTC`). The offline period
+  derivation (`lib/local/derive/period.ts`) keeps its `date-fns` calendar logic but anchors it at
+  **local noon** — the one wall clock no zone skips — and turns the result into an instant through
+  the same safe conversion.
+- **Alternatives:** keeping `toZonedTime`/`fromZonedTime`. Rejected after measuring: both round-trip
+  through a `Date` whose fields are read and written with the **device's** calendar, so the answer
+  depended on where the laptop was. Measured, device zone vs the same call in UTC:
+  `dayWindow` and `trailingDaysWindow` were an hour out in `America/Santiago`, `America/Havana`,
+  `Asia/Beirut` and `Africa/Cairo`; `daysWindow` and `monthWindow` an hour out for an
+  `America/Havana` user on any Asia-Pacific device; and on `America/Nuuk`, which jumps 22:59 to
+  00:00 every year, `dayKey` and `dateTimeParts` were a **whole day** out — that one reaches the
+  transaction form, so it is a wrong accounting day written into the ledger, not only a wrong
+  filter. `resolvePeriod` diverged in 488 of 153 300 sampled cases, on the offline money path.
+- **Ambiguity policy:** a wall clock its own zone **skipped** reads as the first one that exists
+  (`00:30` on the day Santiago jumps `23:59 → 01:00` is `01:30`, what `Temporal` calls
+  `compatible`), and one its zone **repeated** reads as the first of the two. Together they are what
+  makes `dayKey` grouping and `daysWindow` filtering agree — before, a day could begin an hour
+  before or after the day itself did. Verified over 5 661 500 instants around every transition of
+  twenty zones, 2015–2045: zero disagreements.
+- **Consequence:** zero divergence over the sweep the tests now run, and the sweep fails against the
+  previous implementation in eight places. `shiftMonth` keeps the wall clock to the minute rather
+  than to the second; no caller reads more than the month. An invalid date or an unknown zone now
+  throws where it used to yield `Invalid Date`, which is what §6 asks for. `DatePickerSheet` dropped
+  its own copy of the month arithmetic.
+- **What it does to the offline money path:** `resolvePeriod` is **not** byte-frozen. For a device
+  in UTC its answers change in one place — a period whose first local midnight its zone skipped now
+  resolves forward, as it does everywhere else. Measured against the backend's own Luxon rules over
+  192 864 references in twelve zones, the front and the server disagree in **190** where they used
+  to disagree in **319**: the fix moves the client _towards_ the server. The four vendored parity
+  fixtures (Bogotá, Madrid, Tokyo, New York) have no skipped or repeated midnight, so the guard sees
+  none of this and stays green. What is left is a contract question between the two repositories and
+  is registered as **H-55**.
+
 ## 2026-09-12 · One chart contract, and `Bars` becomes a client component (T-26)
 
 - **Decision:** every slot of a chart carries its day and its amount as its accessible name, shows
