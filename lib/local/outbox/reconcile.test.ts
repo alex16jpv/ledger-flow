@@ -38,7 +38,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  resetSyncEngine();
+  await resetSyncEngine();
   resetOutboxStatus();
   setCurrentVault(null);
   connectivityStore.reset();
@@ -142,7 +142,7 @@ describe("the row the mirror keeps while its queue is not empty", () => {
     reportOnline(false);
     await updateTransaction("t1", { date: "2027-01-01T00:00:00.000Z" });
     // The tab that made the write is gone: the rollback with it, which is what leaves `failed`.
-    resetSyncEngine();
+    await resetSyncEngine();
     answerBatch(fetchMock, () => rejectedWith("FUTURE_DATE"));
     reportOnline(true);
     await requestSync();

@@ -864,9 +864,12 @@ export async function pullAfterDirectSend(): Promise<void> {
 }
 
 // Test seam: the queue survives, the engine's in-memory bookkeeping does not.
-export function resetSyncEngine(): void {
+// H-47: dropping an in-flight drain does not stop it, so it lands on the next test's fetch mock.
+export async function resetSyncEngine(): Promise<void> {
   state.stop?.();
   clearRetry();
+  state.paused = true;
+  await state.inFlight?.catch(() => undefined);
   state.transport = "batch";
   state.inFlight = null;
   state.wanted = 0;

@@ -5,6 +5,18 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-12 · Resetting the sync engine waits for the drain it is stopping (H-47)
+
+- **Decision:** `resetSyncEngine` is `async`: it pauses, awaits `state.inFlight` and only then clears
+  the state. Every caller awaits it.
+- **Alternatives:** leaving it synchronous and dropping the promise, which is what it did. Rejected
+  after reproducing the consequence: a drain a test had started went on running past its own
+  teardown and called the **next** test's `fetch` mock, so `SyncConflictSheet.test.tsx` failed
+  **twice in twenty** runs of its own file with an account-restore operation no test in it had sent.
+- **Consequence:** zero failures in twenty-five runs of that file and five of the whole suite. This
+  is the flake H-47 recorded without a name; H-08 had closed the same family in the same file by
+  calling the reset, which stopped the engine but not the round already in the air.
+
 ## 2026-09-12 · The mirror declines what it cannot apply, and learns the rest (T-28)
 
 - **Decision:** `spendingFromMirror` gets the `SUPPORTED_PARAMS` guard `toMirrorFilter` already had,
