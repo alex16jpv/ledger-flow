@@ -13,6 +13,15 @@ export {
   type ButtonVariant,
 } from "./Button";
 export { Card, Inset } from "./Card";
+export {
+  ChartCard,
+  type ChartCardProps,
+  ChartError,
+  ChartLegend,
+  ChartSkeleton,
+  LegendKey,
+} from "./ChartCard";
+export { type ChartSlot, ChartSlots, type ChartSlotsProps, HATCH } from "./ChartSlots";
 export { Checkbox } from "./Checkbox";
 export { CategoryChip, Chip, ChipRow } from "./Chip";
 export { cn } from "./cn";
@@ -22,6 +31,7 @@ export { DayBars } from "./DayBars";
 export { DayHeat } from "./DayHeat";
 export { Empty } from "./Empty";
 export { Field, FieldGroup, Input, Switch, Textarea } from "./Field";
+export { GBars, type GBarsProps, type Pair } from "./GBars";
 export { IconGrid } from "./IconGrid";
 export { PeriodNav } from "./PeriodNav";
 export { Picker } from "./Picker";

@@ -44,7 +44,9 @@ transactions, the average).
 - **By tag** (`#by-tag`): an alert about double counting and the untagged amount (`untagged`); a list
   per tag with its count; tapping opens Transactions `?tag=`.
 
-Every view ends with the way into Trends. Export is visible and inactive ("soon"). Empty: "Nothing
+Every view with data ends with the way into Trends, **and so does an empty period** — a month with
+nothing in it is exactly the reader asking whether another one was better; a failed read offers Retry
+and nothing else. Export is visible and inactive ("soon"). Empty: "Nothing
 recorded in this period", "Try another month or another type of movement" — and under Accounts, with
 Expenses chosen, one more line, because a month whose only movements were transfers between the
 user's own accounts lands here and has to say why.
@@ -52,8 +54,9 @@ user's own accounts lands here and has to say why.
 ## Trends lives next door
 
 `/stats/trends` is its own screen with its own spec, [trends.md](trends.md): a range of months cannot
-share a period navigator with a single month. Every Stats view ends with the way into it, and the
-question about **Recurring expenses** — proposed, not decided — is written up there.
+share a period navigator with a single month. Every Stats view ends with the way into it, carrying the
+month being read when it is not this one, and **Recurring expenses** — decided on 2026-09-11, detection
+first — is written up there.
 
 ## What this needs from the backend
 

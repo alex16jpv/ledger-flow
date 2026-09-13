@@ -178,6 +178,7 @@ English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`)
 | `/budgets/new`, `/budgets/[id]/edit`                           | Budget form: scope, categories, six period types, amount, color, advanced options                                                             |
 | `/budgets/past`                                                | Ended and archived budgets with "Create again"                                                                                                |
 | `/stats`                                                       | Monthly stats by category, day or tag (`?reference&type&groupBy`) with drill-down                                                             |
+| `/stats/trends`                                                | Six or twelve months ending on the month Stats was showing (`?reference&range`)                                                               |
 | `/privacy`, `/terms`                                           | Privacy policy and terms of service (static, legal drafts pending the owner's review)                                                         |
 | `/dev/ui`                                                      | Component catalog (development only)                                                                                                          |
 | `/dev/pickers`                                                 | Category, account and date pickers against the real API (development only)                                                                    |

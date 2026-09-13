@@ -40,6 +40,7 @@ import {
   StatTile,
   TagRows,
   TotalCard,
+  TrendsLink,
 } from "@/features/stats/components/StatsCards";
 import { useStatsQuery } from "@/features/stats/hooks";
 import {
@@ -335,18 +336,25 @@ export function StatsScreen() {
           }
         />
       ) : empty ? (
-        <Empty
-          icon={<ChartPie {...iconProps("lg")} />}
-          title={t("stats.empty.title")}
-          body={
-            <>
-              {t("stats.empty.body")}
-              {groupBy === "account" && type === "EXPENSE" && (
-                <span className="mt-2 block text-xs text-text-3">{t("stats.emptyTransfers")}</span>
-              )}
-            </>
-          }
-        />
+        <>
+          <Empty
+            icon={<ChartPie {...iconProps("lg")} />}
+            title={t("stats.empty.title")}
+            body={
+              <>
+                {t("stats.empty.body")}
+                {groupBy === "account" && type === "EXPENSE" && (
+                  <span className="mt-2 block text-xs text-text-3">
+                    {t("stats.emptyTransfers")}
+                  </span>
+                )}
+              </>
+            }
+          />
+          <TrendsLink
+            reference={monthKey === currentMonthKey(now, dates.timeZone) ? undefined : monthKey}
+          />
+        </>
       ) : (
         <>
           <TotalCard
@@ -463,24 +471,28 @@ export function StatsScreen() {
                 <StatTile
                   label={type === "EXPENSE" ? t("stats.priciestDay") : t("stats.biggestDay")}
                   value={
-                    <Amount
-                      value={series.highest?.total ?? 0}
-                      signed={false}
-                      size="base"
-                      className="text-lg font-semibold"
-                    />
+                    <Projected when={outbox.projected.spending}>
+                      <Amount
+                        value={series.highest?.total ?? 0}
+                        signed={false}
+                        size="base"
+                        className="text-lg font-semibold"
+                      />
+                    </Projected>
                   }
                   sub={highestDate ? dates.formatWeekdayDay(highestDate) : undefined}
                 />
                 <StatTile
                   label={t("stats.dailyAverage")}
                   value={
-                    <Amount
-                      value={money.round(series.dailyAverage)}
-                      signed={false}
-                      size="base"
-                      className="text-lg font-semibold"
-                    />
+                    <Projected when={outbox.projected.spending}>
+                      <Amount
+                        value={money.round(series.dailyAverage)}
+                        signed={false}
+                        size="base"
+                        className="text-lg font-semibold"
+                      />
+                    </Projected>
                   }
                 />
                 <StatTile
@@ -616,6 +628,9 @@ export function StatsScreen() {
               )}
             </>
           )}
+          <TrendsLink
+            reference={monthKey === currentMonthKey(now, dates.timeZone) ? undefined : monthKey}
+          />
         </>
       )}
     </div>

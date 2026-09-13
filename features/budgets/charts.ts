@@ -1,5 +1,5 @@
 import type { DaySlot } from "@/lib/charts/days";
-import { fromCents, toCents } from "@/lib/local/derive";
+import { fromCents, runningTotals, toCents } from "@/lib/local/derive";
 import type { Budget } from "@/types/api";
 
 export interface PaceSeries {
@@ -13,15 +13,6 @@ export interface PaceSeries {
   spentSoFar: number;
 }
 
-// Rule 4's exception: these are the API's own day buckets added up, never money the client invented.
-function runningTotals(bars: readonly DaySlot[]): number[] {
-  let cents = 0;
-  return bars.map((bar) => {
-    cents += toCents(bar.value);
-    return fromCents(cents);
-  });
-}
-
 // One elapsed day is not a rate, so day 1 has nothing to project from.
 const MIN_DAYS_TO_PROJECT = 2;
 
@@ -29,7 +20,7 @@ export function paceSeries(bars: readonly DaySlot[], amount: number): PaceSeries
   const days = bars.length;
   const elapsed = bars.filter((bar) => !bar.future);
   const elapsedDays = elapsed.length;
-  const totals = runningTotals(elapsed);
+  const totals = runningTotals(elapsed.map((bar) => bar.value));
   const spentSoFar = totals.at(-1) ?? 0;
   const spent: (number | null)[] = [
     0,

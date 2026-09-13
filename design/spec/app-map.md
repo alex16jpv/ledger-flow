@@ -88,18 +88,19 @@ A navigable period (a month by default), spending by category (a stacked bar plu
 down into the filtered transactions), by day (bars with gaps filled, every bar naming its day and
 opening it), by tag (with a note about double counting), and a switchable flow type; archived
 categories resolved with `includeArchived`; ADJUSTMENT excluded unless explicitly selected.
-⬜ **By day as a calendar** (a toggle over the same data), ⬜ **the average by weekday**, ⬜ **the
-biggest movements of the period** and ⬜ **by account** — the last two need the backend first (an order
-on `GET /transactions`, and `groupBy=account`). 🔮 Consolidated multi-currency reports.
+✅ **By day as a calendar** (a toggle over the same data), ✅ **the average by weekday**, ✅ **the
+biggest movements of the period** and ✅ **by account** — all four since T-27 and T-29, on the order and
+the `groupBy=account` the backend gained in T-25 and T-24. Every view ends with the way into Trends.
+🔮 Consolidated multi-currency reports.
 
-## Trends ⬜
+## Trends ✅
 
 `/stats/trends`, reached from Stats: a range of six or twelve months ending on the month Stats was
 showing; income against spending per month with what was saved and the savings rate over the complete
 months only; this month against the same days of the last one; and spending per category month by
-month. Needs `groupBy=month` on `GET /stats/spending`. 🔮 **Recurring expenses** — found by the app,
-set up by the user, or both: the question is written up in `screens/trends.md` and drawn in
-`variants.html`, and it is the owner's to answer.
+month. Rides on the `groupBy=month` and the month × category cross the backend gained in T-24. 🔮
+**Recurring expenses** — found by the app, set up by the user, or both: the question is written up in
+`screens/trends.md` and drawn in `variants.html`, and the owner chose detection first (2026-09-11).
 
 ## Settings ✅
 
