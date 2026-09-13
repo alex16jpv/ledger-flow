@@ -109,7 +109,7 @@ export function shiftDayKeyMonths(day: string, months: number): string {
   );
 }
 
-function weekdayOf(day: string): number {
+export function weekdayOf(day: string): number {
   const { year, month, date } = dayParts(day);
   return new Date(Date.UTC(year, month, date)).getUTCDay();
 }

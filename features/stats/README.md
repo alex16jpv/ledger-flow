@@ -15,3 +15,11 @@ day key at local noon (`dates.fromDayKey`, `dates.dayKeyWindow`), not at noon UT
 T-28 taught the mirror the rest: `readSpending` now carries `categoryIds`, `groupBy=month`,
 `groupBy=account` and `splitBy=category` through to `lib/local/derive`, and declines anything it
 does not know instead of answering without it.
+
+T-27 spends that: **Days** gains a Bars ⇄ Calendar toggle (`DayHeat`, the same slots read as a
+month), the **average by weekday** — `weekdayAverages`, the one place the client adds buckets the
+server returned without adding, in minor units, before dividing — and the **biggest movements of the
+period**, which is `useBiggestTransactions`: one page of five with `sort=amount&order=desc`, its own
+request and therefore its own loading, error and Retry. Which of
+the two day views is showing lives in `localStorage` (`lib/charts/day-view.ts`), beside the palette
+and the language, by the owner's decision of 2026-09-12.

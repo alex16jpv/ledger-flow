@@ -16,6 +16,10 @@
   --color-on-brand: var(--on-brand);
   --color-brand-soft: var(--brand-soft);
   --color-brand-text: var(--brand-text);
+  --color-heat-1: var(--heat-1);
+  --color-heat-2: var(--heat-2);
+  --color-heat-3: var(--heat-3);
+  --color-heat-4: var(--heat-4);
   --color-income: var(--income);
   --color-income-soft: var(--income-soft);
   --color-expense: var(--expense);

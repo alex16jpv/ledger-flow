@@ -99,6 +99,18 @@ export function useTransactionsInfinite(query: ListQuery, enabled = true) {
   });
 }
 
+// T-25 gave the list an order, so the five biggest are one page of five, never every page sorted here.
+export const BIGGEST_LIMIT = 5;
+
+export function useBiggestTransactions(query: ListQuery, enabled = true) {
+  const ordered: ListQuery = { ...query, sort: "amount", order: "desc" };
+  return useQuery({
+    queryKey: transactionKeys.list({ ...ordered, latest: BIGGEST_LIMIT }),
+    queryFn: () => fetchLatestTransactions(ordered, BIGGEST_LIMIT),
+    enabled,
+  });
+}
+
 // Home shows the latest movements with the ones still to review first: two small lists, merged.
 export function useRecentTransactions(limit = 5) {
   const pending = useQuery({

@@ -25,9 +25,9 @@ transactions, the average).
 - **By day, as a calendar** (`#spending-calendar`): the same data and the same card, one toggle apart
   — `heat`, a cell per day in four steps, a Less/More scale, weeks starting on the language's first
   day. A row of bars hides which weeks and which weekdays were expensive; the calendar shows it. The
-  toggle is remembered. Where: the only preference store the app has today is
-  `localStorage`, which is per browser and not per user — whether this one deserves a row in the
-  profile is a decision, not an assumption.
+  toggle is remembered **in `localStorage`, beside the palette and the language** (owner, 2026-09-12):
+  it is a per-browser choice, like the other two, and it costs the backend nothing. The consequence is
+  written down rather than hidden: the phone and the laptop can sit on different views.
 - **By account** (`#by-account`): which card or account the money left from — the same `stackbar` and
   the same `row` list as categories, with the account's colour and icon. Transfers between the user's
   own accounts are **not** spending and never appear here; a line under the list says so.
@@ -45,15 +45,19 @@ question about **Recurring expenses** — proposed, not decided — is written u
 
 ## What this needs from the backend
 
-`GET /stats/spending` takes `groupBy`, `type`, `from` and `to`, and nothing else. Four of the views
-above need more, and each is a task on the backend's side, not a copy of the arithmetic in the client:
+Four of the views above need more than `groupBy`, `type`, `from` and `to`, and each of them was a task
+on the backend's side rather than a copy of the arithmetic in the client. Three are already served:
 
-| View                                       | What is missing                                                                                                                                                                                                                                  |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| By account                                 | `groupBy=account`.                                                                                                                                                                                                                               |
-| Trends: income and spending, where it goes | `groupBy=month` (and `groupBy=category` within a month range), so twelve months are one request instead of one per month.                                                                                                                        |
-| Biggest movements                          | An order on `GET /transactions`. Today the list only comes back newest first and takes no sort, so "the five biggest" cannot be asked for — and reading every page of a period to sort them in the client is exactly what house rule 24 forbids. |
-| Recurring, if it is ever detected          | Grouping by description over a range; nothing exists today.                                                                                                                                                                                      |
+| View                                       | What it needs                                                                                                                                                                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| By account                                 | `groupBy=account` — **served since T-24**, and derived by the mirror since T-28.                                                                                                                                    |
+| Trends: income and spending, where it goes | `groupBy=month` and the month × category cross (`splitBy=category`) — **served since T-24**, so twelve months are one request instead of twelve.                                                                    |
+| Biggest movements                          | `sort=amount&order=desc` on `GET /transactions` — **served since T-25**, so the five biggest are one page of five and not every page of the period read to sort in the client, which is what house rule 24 forbids. |
+| Recurring, if it is ever detected          | Grouping by description over a range; nothing exists today.                                                                                                                                                         |
+
+`GET /stats/spending` does **not** paginate or cap its buckets, so `groupBy=day` with no `from`/`to`
+would answer a bucket per day of the whole history in one body. The window is always the screen's to
+send, and this screen always sends the month it is showing.
 
 The average by weekday needs nothing new: it is the day buckets read a second way.
 
@@ -69,7 +73,10 @@ Offline all of it comes from `lib/local/derive` over the mirror and carries the 
 chart of zeros; **loading** — a `Skeleton` at each card's own height; **error** — the shared `Empty` in
 `danger` with `LoadErrorBody` and Retry, per card, so one failure does not blank the screen. The day
 chart and the calendar have a case of their own: a month before the account existed is **empty**, not a
-month of no-spend days.
+month of no-spend days. Drawn in `#days-loading`, `#days-empty` and `#days-card-error`:
+the period navigator, the flow chips and the segmented control never go away, because they are what the user needs to get out of an empty or a
+broken period. The **biggest movements** are their own request — an ordered page of five, not the
+buckets — so they are the one card that can fail on its own while the rest of the view has figures.
 
 **Keyboard**, for every chart here: the chart is one tab stop, not thirty. Focus enters on the selected
 slot, the arrow keys move between slots (up and down move a week at a time inside the calendar), `Home`

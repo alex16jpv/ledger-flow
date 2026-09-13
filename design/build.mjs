@@ -1460,14 +1460,33 @@ ${axis(...WD)}
 ${readout(`${WD_LONG[peak]} is your most expensive day`, money(wk[peak]))}</div>`;
 };
 
-const biggestCard = () =>
+const biggestCard = (failed = false) =>
   `<div class="section-head"><h3 class="h3">Biggest this period</h3><a class="link" href="#">See all</a></div>
-<div class="list card flush">${BIGGEST.map(([n, ic, c, meta, v]) => row(ic, c, n, meta, v)).join("")}</div>`;
+<div class="card${failed ? "" : " list flush"}">${failed ? statsError("the biggest movements") : BIGGEST.map(([n, ic, c, meta, v]) => row(ic, c, n, meta, v)).join("")}</div>`;
 
 const trendsLink = () =>
   `<a class="card hstack" href="#" style="gap:12px;align-items:center;text-decoration:none;color:inherit">${tile("chart-line", "INDIGO")}<span class="body" style="flex:1;display:flex;flex-direction:column"><span style="font-weight:500">Trends over time</span><span class="small faint">Income, savings and categories month by month</span></span>${iconSvg("chevron-right", "sm")}</a>`;
 
-const stats = (view = "cat") => {
+const skel = (style) => `<span class="skeleton" style="display:block;${style}"></span>`;
+
+const skelRows = (n) =>
+  range(0, n)
+    .map(
+      () =>
+        '<div class="row" style="cursor:default"><span class="skeleton" style="width:40px;height:40px;border-radius:12px"></span><span class="body" style="gap:6px"><span class="skeleton" style="height:12px;width:55%"></span><span class="skeleton" style="height:10px;width:35%"></span></span><span class="skeleton" style="height:12px;width:64px"></span></div>',
+    )
+    .join("");
+
+const skelTotal = () =>
+  `<div class="card stack-sm">${skel("height:10px;width:96px")}${skel("height:34px;width:190px")}${skel("height:12px;width:220px")}</div>`;
+
+const statsEmpty = (extra = "") =>
+  `<div class="empty">${tile("chart-pie", "NONE", "lg")}<span class="h3">No transactions in this period</span><p class="small muted" style="margin:0;max-width:280px">Nothing was recorded between 1 and 30 September. Try another month or another type of movement.</p>${extra}</div>`;
+
+const statsError = (what) =>
+  `<div class="empty">${tile("circle-alert", "RED", "lg")}<span class="h3">We couldn’t load ${what}</span><p class="small muted" style="margin:0;max-width:280px">The server didn’t respond (503). Your data is safe; try again in a few seconds.</p><button class="btn secondary" style="margin-top:8px">${iconSvg("refresh-cw", "sm")}Retry</button><span class="xs faint mono">Reference: 8c1f4e2a-…-3b7d</span></div>`;
+
+const stats = (view = "cat", { state = "" } = {}) => {
   const total = SEP_TOTAL;
   const selected = view === "cal" ? "day" : view;
   const seg = `<div class="segment">${[
@@ -1478,9 +1497,31 @@ const stats = (view = "cat") => {
   ]
     .map(([t, k]) => `<button aria-pressed="${String(selected == k)}">${t}</button>`)
     .join("")}</div>`;
-  const intro = `<div class="period-nav"><button class="btn ghost icon-only round">${iconSvg("chevron-left")}</button><span class="label">September 2026</span><button class="btn ghost icon-only round" disabled>${iconSvg("chevron-right")}</button></div>
-<div class="chips"><button class="chip selected">Expenses</button><button class="chip">Income</button><button class="chip">Transfers</button><button class="chip">${iconSvg("scale", "sm")}Adjustments</button></div>${seg}
-<div class="card"><span class="eyebrow">Total spent</span><div class="amount-hero" style="font-size:34px">${money(total)}</div><span class="small muted">48 transactions · average <b class="amount">${money(round(total / 48))}</b></span></div>`;
+  const controls = `<div class="period-nav"><button class="btn ghost icon-only round">${iconSvg("chevron-left")}</button><span class="label">September 2026</span><button class="btn ghost icon-only round" disabled>${iconSvg("chevron-right")}</button></div>
+<div class="chips"><button class="chip selected">Expenses</button><button class="chip">Income</button><button class="chip">Transfers</button><button class="chip">${iconSvg("scale", "sm")}Adjustments</button></div>${seg}`;
+  const totalCard = `<div class="card"><span class="eyebrow">Total spent</span><div class="amount-hero" style="font-size:34px">${money(total)}</div><span class="small muted">48 transactions · average <b class="amount">${money(round(total / 48))}</b></span></div>`;
+  const intro = `${controls}
+${totalCard}`;
+  const frame = (body) =>
+    screen(body, {
+      tab: "",
+      side: "stats",
+      title: "Stats",
+      actions: `<button class="btn ghost icon-only round" aria-label="Export" disabled>${iconSvg("download")}</button>`,
+    });
+  if (state == "loading") {
+    const cards = `<div class="card chart">${skel("height:10px;width:120px")}${skel("height:140px;margin-top:22px")}${skel("height:12px;width:60%")}</div>
+<div class="stats" style="grid-template-columns:repeat(3,1fr)">${skel("height:68px;border-radius:14px")}${skel("height:68px;border-radius:14px")}${skel("height:68px;border-radius:14px")}</div>
+<div class="card chart">${skel("height:10px;width:140px")}${skel("height:64px;margin-top:22px")}${skel("height:12px;width:55%")}</div>
+<div class="list card flush">${skelRows(3)}</div>`;
+    return frame(`${controls}
+${skelTotal()}
+${cards}`);
+  }
+  if (state == "empty") {
+    return frame(`${controls}
+<div class="card">${statsEmpty()}</div>`);
+  }
   let content;
   if (view == "cat") {
     const bar = STATS_CATS.map(([, c, v]) => `<i class="color-${c}" style="flex:${v}"></i>`).join(
@@ -1514,7 +1555,7 @@ ${readout(`${WD_LONG[sepWeekday(9)]} 9 September · 3 transactions`, money(SEP_S
 <div class="stats" style="grid-template-columns:repeat(3,1fr)">${statTile("Priciest day", money(SEP_SPEND[8]), `${WD_LONG[sepWeekday(9)]} 9`)}${statTile("Daily average", money(round(SEP_TOTAL / TODAY)))}${statTile("No-spend days", "2", "of 22 so far")}</div>
 ${weekdayCard()}
 <div class="list card flush"><div class="day-head"><span>We 9 · highest</span><span class="amount">${money(SEP_SPEND[8], "−")}</span></div>${row("shopping-bag", "PINK", "Zara", "Visa Gold", 98000)}${row("car", "BLUE", "Uber", "Visa Gold", 11000)}${row("coffee", "BROWN", "Pergamino Coffee", "Cash", SEP_SPEND[8] - 109000)}</div>
-${biggestCard()}
+${biggestCard(state == "cardError")}
 ${trendsLink()}`;
   } else if (view == "acct") {
     const bar = STATS_ACCOUNTS.map(
@@ -1527,7 +1568,7 @@ ${trendsLink()}`;
     content = `<div class="card stack-sm" style="position:relative;overflow:visible"><span class="tooltip show" style="position:absolute;left:22%;top:-4px"><span class="tip">Visa Gold</span></span><div class="stackbar" style="height:12px">${bar}</div></div>
 <div class="list card flush">${lis}</div>
 <p class="xs faint" style="margin:0">Transfers between your own accounts are not spending: they are counted under Transfers, never here.</p>
-${biggestCard()}
+${biggestCard(state == "cardError")}
 ${trendsLink()}`;
   } else {
     const tags = [
@@ -1545,12 +1586,7 @@ ${trendsLink()}`;
     content = `<div class="alert neutral">${iconSvg("info")}<span>A transaction with several tags counts in each of them, so tag totals can add up to more than the total. <b class="amount">${money(SEP_TOTAL - 361400)}</b> of spending has no tags.</span></div><div class="list card flush">${lis}</div>
 ${trendsLink()}`;
   }
-  return screen(intro + content, {
-    tab: "",
-    side: "stats",
-    title: "Stats",
-    actions: `<button class="btn ghost icon-only round" aria-label="Export" disabled>${iconSvg("download")}</button>`,
-  });
+  return frame(intro + content);
 };
 
 const trends = ({ months = 6 } = {}) => {
@@ -3098,6 +3134,27 @@ const PAGES = [
         "Warns about double counting and says how much spending carries no tag; it also carries the way into Trends.",
         stats("tag"),
         { added: "2026-09-01", updated: "2026-09-11" },
+      ),
+      plate(
+        "days-loading",
+        "By day · loading",
+        "Every card keeps the height it will have with figures in it — the chart, the three tiles, the weekday strip and the list — so nothing jumps when they land.",
+        stats("day", { state: "loading" }),
+        { added: "2026-09-12" },
+      ),
+      plate(
+        "days-empty",
+        "By day · nothing in the period",
+        "A month before the account existed is empty, not thirty no-spend days: neither the bars nor the calendar are drawn as a grid of zeros.",
+        stats("day", { state: "empty" }),
+        { added: "2026-09-12" },
+      ),
+      plate(
+        "days-card-error",
+        "By day · one card failed",
+        "The biggest movements are their own request, so their failure is their own: it takes the card, keeps its reference and its Retry, and leaves the rest of the screen standing.",
+        stats("day", { state: "cardError" }),
+        { added: "2026-09-12" },
       ),
     ],
   },

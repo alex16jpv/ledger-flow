@@ -1368,12 +1368,25 @@
       "title": "Nothing recorded in this period",
       "body": "Try another month or another type of movement."
     },
-    "adjustmentsNote": "Adjustments reconcile balances; they’re never counted as spending or income."
+    "adjustmentsNote": "Adjustments reconcile balances; they’re never counted as spending or income.",
+    "weekdayAverage": "Average by weekday",
+    "weekdayPeak": "{weekday} is your most expensive day",
+    "weekdayNone": "No spending yet this period",
+    "biggest": "Biggest this period",
+    "biggestError": "We couldn’t load the biggest movements",
+    "dayView": {
+      "label": "How to show the days",
+      "bars": "Bars",
+      "calendar": "Calendar"
+    }
   },
   "charts": {
     "daySlot": "{day} · {amount}",
     "dayDetail": "{day} · {count, plural, one {# transaction} other {# transactions}}",
-    "highestDay": "Highest day · {day}"
+    "highestDay": "Highest day · {day}",
+    "less": "Less",
+    "more": "More",
+    "weekdaySlot": "{weekday} · {amount} on average"
   },
   "public": {
     "nav": {

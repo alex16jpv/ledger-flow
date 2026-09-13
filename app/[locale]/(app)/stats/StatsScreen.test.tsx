@@ -1,6 +1,8 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ComponentProps } from "react";
 
+import { dayViewStore } from "@/lib/charts/day-view";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
 
@@ -13,11 +15,18 @@ vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(s
 vi.mock("@/lib/i18n/navigation", () => ({
   useRouter: () => ({ push, back: vi.fn(), replace }),
   usePathname: () => "/stats",
+  Link: ({
+    href,
+    ...rest
+  }: { href: { query: Record<string, string> } } & Omit<ComponentProps<"a">, "href">) => (
+    <a href={`/transactions?${new URLSearchParams(href.query).toString()}`} {...rest} />
+  ),
 }));
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { headers: { "content-type": "application/json" }, ...init });
 const fetchMock = vi.fn<typeof fetch>();
+const biggestUrls: URL[] = [];
 vi.useFakeTimers({ shouldAdvanceTime: true, now: new Date("2026-09-22T15:00:00.000Z") });
 
 const empty = (data: unknown[] = []) =>
@@ -68,6 +77,39 @@ function routeFetch() {
         json({ groupBy: "category", total: 815_900, buckets: categoryBuckets }),
       );
     }
+    if (url.pathname.startsWith("/api/accounts"))
+      return Promise.resolve(
+        empty([
+          {
+            id: "visa",
+            name: "Visa Gold",
+            type: "CARD",
+            color: "PURPLE",
+            balance: 0,
+            openingBalance: 0,
+            userId: "u",
+            isDefault: true,
+            currency: "COP",
+            archivedAt: null,
+            createdAt: "",
+            updatedAt: "",
+          },
+          {
+            id: "cash",
+            name: "Cash",
+            type: "CASH",
+            color: "GRAY",
+            balance: 0,
+            openingBalance: 0,
+            userId: "u",
+            isDefault: false,
+            currency: "COP",
+            archivedAt: null,
+            createdAt: "",
+            updatedAt: "",
+          },
+        ]),
+      );
     if (url.pathname.startsWith("/api/categories"))
       return Promise.resolve(
         empty([
@@ -95,6 +137,31 @@ function routeFetch() {
           },
         ]),
       );
+    if (url.pathname === "/api/transactions" && url.searchParams.get("sort") === "amount") {
+      biggestUrls.push(url);
+      return Promise.resolve(
+        empty([
+          {
+            id: "t1",
+            type: "EXPENSE",
+            amount: 98_000,
+            date: "2026-09-09T18:00:00.000Z",
+            dayKey: "2026-09-09",
+            description: "Zara",
+            note: null,
+            categoryId: "lifestyle",
+            fromAccountId: "visa",
+            toAccountId: null,
+            tags: [],
+            source: "FORM",
+            pendingDetails: false,
+            userId: "u",
+            createdAt: "",
+            updatedAt: "",
+          },
+        ]),
+      );
+    }
     return Promise.resolve(empty());
   });
 }
@@ -111,6 +178,9 @@ function renderScreen(query = "", timeZone = "America/Bogota") {
 
 beforeEach(() => {
   fetchMock.mockReset();
+  biggestUrls.length = 0;
+  window.localStorage.clear();
+  dayViewStore.reset();
   push.mockReset();
   replace.mockReset();
   vi.stubGlobal("fetch", fetchMock);
@@ -180,9 +250,52 @@ describe("StatsScreen", () => {
     await screen.findByRole("group", { name: "Per day" });
     const listed = fetchMock.mock.calls
       .map((call) => new URL(urlOf(call[0]), "http://localhost"))
-      .find((url) => url.pathname === "/api/transactions" && url.searchParams.has("from"));
+      .find(
+        (url) =>
+          url.pathname === "/api/transactions" &&
+          url.searchParams.has("from") &&
+          !url.searchParams.has("sort"),
+      );
     expect(listed?.searchParams.get("from")).toBe("2026-09-08T10:00:00.000Z");
     expect(listed?.searchParams.get("to")).toBe("2026-09-09T10:00:00.000Z");
+  });
+
+  it("reads the same days as a calendar, and remembers which one was chosen", async () => {
+    routeFetch();
+    renderScreen("groupBy=day");
+    expect(await screen.findByRole("group", { name: "Per day" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Wed, Sep 9 · $214,000" })).toHaveTextContent("");
+    await userEvent.click(screen.getByRole("button", { name: "Calendar" }));
+    const cell = screen.getByRole("button", { name: "Wed, Sep 9 · $214,000" });
+    expect(cell).toHaveTextContent("9");
+    expect(window.localStorage.getItem("lf.dayView")).toBe("calendar");
+    await userEvent.click(cell);
+    expect(push).toHaveBeenCalledWith({
+      pathname: "/transactions",
+      query: { period: "custom", from: "2026-09-09", to: "2026-09-09", type: "EXPENSE" },
+    });
+  });
+
+  it("averages the days of each weekday and names the most expensive one", async () => {
+    routeFetch();
+    renderScreen("groupBy=day");
+    // By the 22nd three Wednesdays have gone: $12,500 on the 2nd, $214,000 on the 9th, nothing on the 16th.
+    const chart = await screen.findByRole("img", { name: /Average by weekday/ });
+    expect(chart).toHaveAccessibleName(expect.stringContaining("Wednesday · $75,500 on average"));
+    expect(screen.getByText("Wednesday is your most expensive day")).toBeInTheDocument();
+    expect(within(chart).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("asks the server for the five biggest and lists them with the day they fell on", async () => {
+    routeFetch();
+    renderScreen("groupBy=day");
+    expect(await screen.findByRole("heading", { name: "Biggest this period" })).toBeInTheDocument();
+    const [asked] = biggestUrls;
+    expect(asked?.searchParams.get("order")).toBe("desc");
+    expect(asked?.searchParams.get("limit")).toBe("5");
+    expect(asked?.searchParams.get("from")).toBe("2026-09-01T05:00:00.000Z");
+    const row = screen.getByRole("button", { name: /Zara/ });
+    expect(row).toHaveTextContent("Wed, Sep 9");
   });
 
   it("warns about double counting and lists the tags without the untagged bucket", async () => {

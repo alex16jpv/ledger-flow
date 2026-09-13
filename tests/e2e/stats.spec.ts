@@ -36,7 +36,21 @@ test("stats show the seed month by category, by day and by tag, and drill into t
   await expect(line).toHaveText(/· \d+ transactions?\n?\$/);
   await expect(page.getByText("Priciest day")).toBeVisible();
   await expect(page.getByRole("heading", { name: /· highest$/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: /^Average by weekday: / })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Biggest this period" })).toBeVisible();
   await expectNoAxeViolations(page);
+
+  await page.getByRole("button", { name: "Calendar" }).click();
+  const calendar = page.getByRole("group", { name: "Per day" });
+  await expect(calendar).toBeVisible();
+  await expect(calendar.getByRole("button").first()).toHaveText("1");
+  await expect(page.getByText("Less")).toBeVisible();
+  await expectNoAxeViolations(page);
+  await page.reload();
+  await expect(page.getByRole("group", { name: "Per day" }).getByRole("button").first()).toHaveText(
+    "1",
+  );
+  await page.getByRole("button", { name: "Bars" }).click();
 
   await page.getByRole("button", { name: "Tags" }).click();
   await expect(page).toHaveURL(/groupBy=tag/);

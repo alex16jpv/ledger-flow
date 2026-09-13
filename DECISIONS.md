@@ -5,6 +5,34 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-12 · The Bars ⇄ Calendar toggle is a browser preference, not a profile row (T-27)
+
+- **Decision:** which of the two day views Stats shows is kept in `localStorage`
+  (`lib/charts/day-view.ts`), the same place as the palette, the mode, the language and "this device
+  only". The owner chose it on 2026-09-12.
+- **Alternatives:** a row in the profile, so the choice follows the user between devices. Rejected
+  for now because it does not exist: the backend has no preferences field, so it would need a new
+  entity, its OpenAPI, the mirror and an outbox operation to be writable offline — a backend task of
+  its own, blocking a front-end one. And URL-only, which the spec rules out: the toggle is
+  remembered.
+- **Consequence:** the phone and the laptop can sit on different views, and that is written in
+  `design/spec/screens/stats.md` rather than left to be discovered. The store answers `bars` on the
+  server, so the first paint matches the markup and the stored choice arrives with hydration.
+
+## 2026-09-12 · One roving-focus hook for every chart of slots (T-27)
+
+- **Decision:** `useRovingSlots` owns what `Bars` had inline — the hovered slot, the focused slot,
+  the roving `tabIndex`, the arrow/`Home`/`End` movement, and handing focus to the nearest slot on
+  the left when the one under focus stops existing. `Bars` and `Heat` both use it; each supplies its
+  own `step`, because a calendar's vertical arrows move a week and a row of bars' move one slot.
+- **Alternatives:** copying the thirty lines into `Heat`. Rejected: the three defects the reviewer
+  found in `Bars` during T-26 — two states for pointer and focus, focus lost at midnight, the line
+  that was not fixed — are all in that block, and a copy would have carried none of the fixes and
+  every chance of drifting from them.
+- **Consequence:** the calendar is one tab stop with the same keyboard contract as the bars, and a
+  fix to either lands in both. `Heat`'s own test covers the week-at-a-time arrows, which `Bars` has
+  no meaning for.
+
 ## 2026-09-12 · Resetting the sync engine waits for the drain it is stopping (H-47)
 
 - **Decision:** `resetSyncEngine` is `async`: it pauses, awaits `state.inFlight` and only then clears

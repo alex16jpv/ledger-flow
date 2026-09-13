@@ -1,5 +1,6 @@
-import type { DaySlot } from "@/lib/charts/days";
+import { type DaySlot, type IsoWeekday, isoWeekday, WEEK_LENGTH } from "@/lib/charts/days";
 import { dayKey } from "@/lib/format/dates";
+import { sumAmounts } from "@/lib/local/derive";
 import type { StatsBucket } from "@/types/api";
 
 export const UNCATEGORIZED_KEY = "uncategorized";
@@ -71,4 +72,21 @@ export function daySeries(
     noSpendDays: counted.filter((bar) => bar.value === 0).length,
     dailyAverage: counted.length > 0 ? total / counted.length : 0,
   };
+}
+
+export interface WeekdayAverage {
+  weekday: IsoWeekday;
+  average: number;
+  days: number;
+}
+
+// Rule 4's one client-side addition: the server's own day buckets, summed per weekday before dividing.
+export function weekdayAverages(bars: readonly DaySlot[]): WeekdayAverage[] {
+  const elapsed = bars.filter((bar) => !bar.future);
+  return Array.from({ length: WEEK_LENGTH }, (_, offset) => {
+    const weekday = (offset + 1) as IsoWeekday;
+    const days = elapsed.filter((bar) => isoWeekday(bar.key) === weekday);
+    const total = sumAmounts(days.map((bar) => bar.value));
+    return { weekday, average: days.length > 0 ? total / days.length : 0, days: days.length };
+  });
 }
