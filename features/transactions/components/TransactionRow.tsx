@@ -23,6 +23,7 @@ export interface TransactionLookups {
 export interface TransactionRowProps {
   transaction: Transaction;
   lookups: TransactionLookups;
+  dated?: boolean;
   onOpen: (transaction: Transaction) => void;
 }
 
@@ -47,7 +48,7 @@ export function transactionTitle(
     : t(`transactionTypes.${transaction.type}`);
 }
 
-export function TransactionRow({ transaction, lookups, onOpen }: TransactionRowProps) {
+export function TransactionRow({ transaction, lookups, dated, onOpen }: TransactionRowProps) {
   const t = useTranslations();
   const dates = useDates();
   const outbox = useOutbox();
@@ -56,8 +57,11 @@ export function TransactionRow({ transaction, lookups, onOpen }: TransactionRowP
   // F-16 (a): an unconfirmed movement says so on its own row, since the figures include it.
   const queued = outbox.queuedRows.has(transaction.id);
   const stuck = outbox.attentionRows.has(transaction.id);
+  const when = new Date(transaction.date);
+  // A list that spans days answers "when" with the day the row froze, never with the instant.
+  const frozen = transaction.dayKey ?? dates.dayKey(when);
   const meta = [
-    dates.formatTime(new Date(transaction.date)),
+    dated ? dates.formatWeekdayDayShort(dates.fromDayKey(frozen)) : dates.formatTime(when),
     transaction.type === "TRANSFER" ? t("transactionTypes.TRANSFER") : account?.name,
     queued ? t("states.savedHere") : undefined,
   ];

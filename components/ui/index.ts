@@ -18,6 +18,7 @@ export { CategoryChip, Chip, ChipRow } from "./Chip";
 export { cn } from "./cn";
 export { DateTimeField, type DateTimeValue } from "./DateTimeField";
 export { DayBars } from "./DayBars";
+export { DayHeat } from "./DayHeat";
 export { Empty } from "./Empty";
 export { Field, FieldGroup, Input, Switch, Textarea } from "./Field";
 export { IconGrid } from "./IconGrid";

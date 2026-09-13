@@ -1,10 +1,9 @@
 "use client";
 
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
-
 import { cn } from "./cn";
 import { Readout } from "./Readout";
 import { Tooltip, type TooltipAlign } from "./Tooltip";
+import { useRovingSlots } from "./useRovingSlots";
 
 export interface Bar {
   value: number;
@@ -41,59 +40,16 @@ function step(key: string): number | null {
 }
 
 export function Bars({ bars, label, height = 56, onSelect, summary, className }: BarsProps) {
-  const [hovered, setHovered] = useState<number | null>(null);
-  const [focused, setFocused] = useState<number | null>(null);
-  const [entered, setEntered] = useState<number | null>(null);
-  const slots = useRef(new Map<number, HTMLButtonElement>());
-
   const happened = bars.flatMap((bar, index) => (bar.future ? [] : [index]));
   const max = Math.max(0, ...happened.map((index) => bars[index]?.value ?? 0));
-  const first = happened[0] ?? null;
-  const last = happened[happened.length - 1] ?? null;
-  const todayIndex = happened.find((index) => bars[index]?.today) ?? null;
-  const nearest = (index: number) => happened.findLast((slot) => slot <= index) ?? first;
-  const rover =
-    entered === null
-      ? (todayIndex ?? first)
-      : happened.includes(entered)
-        ? entered
-        : nearest(entered);
-  const lostFocus = focused !== null && !happened.includes(focused);
-
-  useEffect(() => {
-    if (!lostFocus || rover === null) return;
-    slots.current.get(rover)?.focus();
-  }, [lostFocus, rover]);
-
-  function move(target: number | null) {
-    if (target === null) return;
-    setEntered(target);
-    slots.current.get(target)?.focus();
-  }
-
-  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const from = happened.indexOf(rover ?? -1);
-    if (from < 0) return;
-    const delta = step(event.key);
-    const target =
-      delta !== null
-        ? (happened[Math.min(Math.max(from + delta, 0), happened.length - 1)] ?? null)
-        : event.key === "Home"
-          ? first
-          : event.key === "End"
-            ? last
-            : undefined;
-    if (target === undefined) return;
-    event.preventDefault();
-    move(target);
-  }
+  const today = happened.find((index) => bars[index]?.today) ?? null;
+  const slots = useRovingSlots(happened, step, today);
 
   const interactive = onSelect !== undefined;
   const reading = interactive
     ? label
     : `${label}: ${happened.map((index) => bars[index]?.label ?? "").join(", ")}`;
-  const active = hovered ?? focused;
-  const pointed = active !== null ? bars[active] : undefined;
+  const pointed = slots.active !== null ? bars[slots.active] : undefined;
   const line = pointed
     ? { label: pointed.detail ?? pointed.label, amount: pointed.amount }
     : summary;
@@ -106,10 +62,8 @@ export function Bars({ bars, label, height = 56, onSelect, summary, className }:
         aria-label={reading}
         className="flex items-end gap-1"
         style={{ height, marginTop: BUBBLE_ROOM }}
-        onKeyDown={interactive ? onKeyDown : undefined}
-        onMouseLeave={() => {
-          setHovered(null);
-        }}
+        onKeyDown={interactive ? slots.onKeyDown : undefined}
+        onMouseLeave={slots.onMouseLeave}
       >
         {bars.map((bar, index) => {
           if (bar.future)
@@ -131,6 +85,7 @@ export function Bars({ bars, label, height = 56, onSelect, summary, className }:
           const place = index / Math.max(bars.length - 1, 1);
           const align: TooltipAlign = place < EDGE ? "start" : place > 1 - EDGE ? "end" : "center";
           const body = <i className={fill} style={style} />;
+          const { onMouseEnter, ...roving } = slots.slotProps(index);
           return (
             <Tooltip
               key={index}
@@ -141,25 +96,12 @@ export function Bars({ bars, label, height = 56, onSelect, summary, className }:
               {interactive ? (
                 <button
                   type="button"
-                  ref={(node) => {
-                    if (node) slots.current.set(index, node);
-                    else slots.current.delete(index);
-                  }}
                   aria-label={bar.label}
-                  tabIndex={index === rover ? 0 : -1}
                   onClick={() => {
                     onSelect(index);
                   }}
-                  onFocus={() => {
-                    setEntered(index);
-                    setFocused(index);
-                  }}
-                  onBlur={() => {
-                    setFocused((current) => (current === index ? null : current));
-                  }}
-                  onMouseEnter={() => {
-                    setHovered(index);
-                  }}
+                  onMouseEnter={onMouseEnter}
+                  {...roving}
                   className="group/slot flex h-full w-full cursor-pointer items-end"
                 >
                   {body}
@@ -167,9 +109,7 @@ export function Bars({ bars, label, height = 56, onSelect, summary, className }:
               ) : (
                 <span
                   aria-hidden="true"
-                  onMouseEnter={() => {
-                    setHovered(index);
-                  }}
+                  onMouseEnter={onMouseEnter}
                   className="group/slot flex h-full w-full items-end"
                 >
                   {body}

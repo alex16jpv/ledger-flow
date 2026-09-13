@@ -36,6 +36,32 @@ test("stats show the seed month by category, by day and by tag, and drill into t
   await expect(line).toHaveText(/· \d+ transactions?\n?\$/);
   await expect(page.getByText("Priciest day")).toBeVisible();
   await expect(page.getByRole("heading", { name: /· highest$/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: /^Average by weekday: / })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Biggest this period" })).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  await page.getByRole("button", { name: "Calendar" }).click();
+  const calendar = page.getByRole("group", { name: "Per day" });
+  await expect(calendar).toBeVisible();
+  await expect(calendar.getByRole("button").first()).toHaveText("1");
+  await expect(page.getByText("Less")).toBeVisible();
+  await expectNoAxeViolations(page);
+  await page.reload();
+  await expect(page.getByRole("group", { name: "Per day" }).getByRole("button").first()).toHaveText(
+    "1",
+  );
+  await page.getByRole("button", { name: "Bars" }).click();
+
+  await page.getByRole("button", { name: "Accounts" }).click();
+  await expect(page).toHaveURL(/groupBy=account/);
+  const bar = page.getByRole("img", { name: /^Share by account: / });
+  await expect(bar).toBeVisible();
+  const accountRows = page.getByRole("button", { name: /\d+ %/ });
+  await expect(accountRows.first()).toContainText(/txns?$/);
+  expect(await accountRows.count()).toBeGreaterThan(0);
+  await expect(
+    page.getByText(/Transfers between your own accounts are not spending/),
+  ).toBeVisible();
   await expectNoAxeViolations(page);
 
   await page.getByRole("button", { name: "Tags" }).click();

@@ -5,6 +5,82 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-12 · A bucket no filter can narrow is a figure, not a control (T-29)
+
+- **Decision:** the "No account" row of Stats › Accounts — the server's `unassigned` bucket — renders
+  as a plain `Row`, not as a `RowButton`. Every other row there opens `/transactions?account=<id>`.
+- **Alternatives:** opening the period with no account filter, which is what it did first and what
+  the independent reviewer caught: a row reading "1 txn · $3,500" opened all 45 movements of the
+  month. And adding a `noAccount=1` filter, like categories have `uncategorized=1` — that is a real
+  answer, but it is a filter in the backend, in the mirror and in the Transactions screen, so it is a
+  task and not a line.
+- **Consequence:** the figure is still shown and still adds up, and nothing promises a list it cannot
+  give. If the filter is ever built, the row becomes a control again by dropping one flag.
+
+## 2026-09-12 · The transfers line is only true under Expenses (T-29)
+
+- **Decision:** "Transfers between your own accounts are not spending" is painted only when the flow
+  chip is Expenses, in the list and in the empty state alike.
+- **Alternatives:** painting it always, which is what it did first. Rejected because with the
+  Transfers chip selected this view is, by definition, listing transfers grouped by the account they
+  left — so the sentence contradicted the rows above it. Rule 18: a message that lies is a defect,
+  not a nuance.
+- **Consequence:** the empty state under Accounts has its own second line for the same reason — a
+  month whose only movements were transfers looks exactly like a month with nothing in it, and the
+  line is what tells them apart.
+
+## 2026-09-12 · The client adds buckets in exactly one place (T-27)
+
+- **Decision:** `weekdayAverages` (`features/stats/model.ts`) sums the three or four day buckets of
+  each weekday with `sumAmounts` from `lib/local/derive` — in minor units, before dividing.
+- **Alternatives:** asking the backend for a weekday grouping. Rejected: it is the day buckets read a
+  second way, so it would be a new aggregation, a new index and a request for a figure the client
+  already holds. And adding as floats, which `model.test.ts` shows is wrong: 10.01 + 0.01 over two
+  days is 5.01, not 5.010000000000001.
+- **Consequence:** house rule 4 has one more named exception, and it is named here and in
+  `design/spec/screens/stats.md`. It adds figures the server produced; it never invents one.
+
+## 2026-09-12 · One store for a choice that lives in this browser (T-27)
+
+- **Decision:** `lib/storage/choice.ts` holds the reading, the caching, the `useSyncExternalStore`
+  shape and the try/catch a browser that refuses storage needs. The Bars ⇄ Calendar toggle and "this
+  device only" are both built on it.
+- **Alternatives:** a second copy of `local-only.ts`, which is what the toggle was at first and what
+  the independent reviewer caught — the same thirty lines down to the comment. Rejected for the
+  reason the roving-focus hook was: two copies drift, and the fix lands in one of them.
+- **Consequence:** `lf.localOnly` still stores the literal `"1"`, because a device that already chose
+  it must not lose it on an upgrade; the helper takes the stored values as its argument for exactly
+  that. The palette and the language keep their own stores: they are written by an inline script
+  before hydration and read across tabs, which this shape does not do.
+
+## 2026-09-12 · The Bars ⇄ Calendar toggle is a browser preference, not a profile row (T-27)
+
+- **Decision:** which of the two day views Stats shows is kept in `localStorage`
+  (`lib/charts/day-view.ts`), the same place as the palette, the mode, the language and "this device
+  only". The owner chose it on 2026-09-12.
+- **Alternatives:** a row in the profile, so the choice follows the user between devices. Rejected
+  for now because it does not exist: the backend has no preferences field, so it would need a new
+  entity, its OpenAPI, the mirror and an outbox operation to be writable offline — a backend task of
+  its own, blocking a front-end one. And URL-only, which the spec rules out: the toggle is
+  remembered.
+- **Consequence:** the phone and the laptop can sit on different views, and that is written in
+  `design/spec/screens/stats.md` rather than left to be discovered. The store answers `bars` on the
+  server, so the first paint matches the markup and the stored choice arrives with hydration.
+
+## 2026-09-12 · One roving-focus hook for every chart of slots (T-27)
+
+- **Decision:** `useRovingSlots` owns what `Bars` had inline — the hovered slot, the focused slot,
+  the roving `tabIndex`, the arrow/`Home`/`End` movement, and handing focus to the nearest slot on
+  the left when the one under focus stops existing. `Bars` and `Heat` both use it; each supplies its
+  own `step`, because a calendar's vertical arrows move a week and a row of bars' move one slot.
+- **Alternatives:** copying the thirty lines into `Heat`. Rejected: the three defects the reviewer
+  found in `Bars` during T-26 — two states for pointer and focus, focus lost at midnight, the line
+  that was not fixed — are all in that block, and a copy would have carried none of the fixes and
+  every chance of drifting from them.
+- **Consequence:** the calendar is one tab stop with the same keyboard contract as the bars, and a
+  fix to either lands in both. `Heat`'s own test covers the week-at-a-time arrows, which `Bars` has
+  no meaning for.
+
 ## 2026-09-12 · Resetting the sync engine waits for the drain it is stopping (H-47)
 
 - **Decision:** `resetSyncEngine` is `async`: it pauses, awaits `state.inFlight` and only then clears

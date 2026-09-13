@@ -9,18 +9,19 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/cn";
 import { Projected } from "@/components/ui/Projected";
-import { List, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
+import { List, Row, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Tile } from "@/components/ui/Tile";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useMoney } from "@/lib/i18n/useMoney";
+import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { type ColorToken, featureColorStyle } from "@/lib/theme/feature-color";
-import type { Category } from "@/types/api";
+import type { Account, Category } from "@/types/api";
 
 import type { StatsType } from "../api";
-import { type Share, UNCATEGORIZED_KEY } from "../model";
+import { type Share, UNASSIGNED_ACCOUNT_KEY, UNCATEGORIZED_KEY } from "../model";
 
 export const AMOUNT_KIND: Record<StatsType, AmountKind> = {
   EXPENSE: "expense",
@@ -69,9 +70,20 @@ export function StackBar({
   names: (key: string) => string;
   label: string;
 }) {
+  const t = useTranslations("stats");
+  // The bubbles are pointer-only, so the bar's own name is what a reader and a keyboard get.
+  const reading = shares
+    .map((share) =>
+      t("stackSegment", { name: names(share.key), percent: Math.round(share.share * 100) }),
+    )
+    .join(", ");
   return (
     <Card className="p-3">
-      <div role="img" aria-label={label} className="flex h-2.5 gap-0.5 rounded-full">
+      <div
+        role="img"
+        aria-label={shares.length > 0 ? `${label}: ${reading}` : label}
+        className="flex h-2.5 gap-0.5 rounded-full"
+      >
         {shares.map((share) => (
           <Tooltip
             key={share.key}
@@ -93,6 +105,80 @@ export function StackBar({
   );
 }
 
+interface ShareRow {
+  share: Share;
+  name: string;
+  color: ColorToken | null;
+  icon: ReactNode;
+  badge?: ReactNode;
+  // A bucket no filter can narrow is still a figure, but it is not a way into anything.
+  opens?: boolean;
+}
+
+function ShareRows({
+  rows,
+  type,
+  onOpen,
+}: {
+  rows: readonly ShareRow[];
+  type: StatsType;
+  onOpen: (key: string) => void;
+}) {
+  const t = useTranslations("stats");
+  return (
+    <Card flush>
+      <List>
+        {rows.map((row) => {
+          const body = (
+            <>
+              {row.color ? (
+                <Tile color={row.color}>{row.icon}</Tile>
+              ) : (
+                <Tile className="bg-surface-2 text-text-2">{row.icon}</Tile>
+              )}
+              <RowBody>
+                <RowTitle>
+                  <span>{row.name}</span>
+                  {row.badge}
+                </RowTitle>
+                <span className="flex items-center gap-2">
+                  <span
+                    className="h-1 w-24 overflow-hidden rounded-full bg-surface-3"
+                    style={featureColorStyle(row.color)}
+                  >
+                    <span
+                      className={cn(
+                        "block h-full rounded-full",
+                        row.color ? "bg-(--f)" : "bg-text-3",
+                      )}
+                      style={{ width: `${Math.round(row.share.share * 100)}%` }}
+                    />
+                  </span>
+                  <RowMeta items={[t("share", { percent: Math.round(row.share.share * 100) })]} />
+                </span>
+              </RowBody>
+              <RowRight sub={t("txns", { count: row.share.count })}>
+                <Amount value={row.share.total} kind={AMOUNT_KIND[type]} />
+              </RowRight>
+            </>
+          );
+          if (row.opens === false) return <Row key={row.share.key}>{body}</Row>;
+          return (
+            <RowButton
+              key={row.share.key}
+              onClick={() => {
+                onOpen(row.share.key);
+              }}
+            >
+              {body}
+            </RowButton>
+          );
+        })}
+      </List>
+    </Card>
+  );
+}
+
 export function CategoryRows({
   shares,
   type,
@@ -105,61 +191,47 @@ export function CategoryRows({
   onOpen: (key: string) => void;
 }) {
   const t = useTranslations("stats");
-  return (
-    <Card flush>
-      <List>
-        {shares.map((share) => {
-          const category = categories.get(share.key);
-          const uncategorized = share.key === UNCATEGORIZED_KEY;
-          const name = uncategorized
-            ? t("uncategorized")
-            : (category?.name ?? t("unknownCategory"));
-          return (
-            <RowButton
-              key={share.key}
-              onClick={() => {
-                onOpen(share.key);
-              }}
-            >
-              {category ? (
-                <Tile color={category.color}>
-                  <CategoryIcon icon={category.icon} />
-                </Tile>
-              ) : (
-                <Tile className="bg-surface-2 text-text-2">
-                  <Hash {...iconProps("md")} />
-                </Tile>
-              )}
-              <RowBody>
-                <RowTitle>
-                  <span>{name}</span>
-                  {category?.archivedAt && <Badge tone="warning">{t("archived")}</Badge>}
-                </RowTitle>
-                <span className="flex items-center gap-2">
-                  <span
-                    className="h-1 w-24 overflow-hidden rounded-full bg-surface-3"
-                    style={featureColorStyle(category?.color)}
-                  >
-                    <span
-                      className={cn(
-                        "block h-full rounded-full",
-                        category ? "bg-(--f)" : "bg-text-3",
-                      )}
-                      style={{ width: `${Math.round(share.share * 100)}%` }}
-                    />
-                  </span>
-                  <RowMeta items={[t("share", { percent: Math.round(share.share * 100) })]} />
-                </span>
-              </RowBody>
-              <RowRight sub={t("txns", { count: share.count })}>
-                <Amount value={share.total} kind={AMOUNT_KIND[type]} />
-              </RowRight>
-            </RowButton>
-          );
-        })}
-      </List>
-    </Card>
-  );
+  const rows = shares.map((share) => {
+    const category = categories.get(share.key);
+    const uncategorized = share.key === UNCATEGORIZED_KEY;
+    return {
+      share,
+      name: uncategorized ? t("uncategorized") : (category?.name ?? t("unknownCategory")),
+      color: category?.color ?? null,
+      icon: category ? <CategoryIcon icon={category.icon} /> : <Hash {...iconProps("md")} />,
+      badge: category?.archivedAt ? <Badge tone="warning">{t("archived")}</Badge> : undefined,
+    };
+  });
+  return <ShareRows rows={rows} type={type} onOpen={onOpen} />;
+}
+
+export function AccountRows({
+  shares,
+  type,
+  accounts,
+  onOpen,
+}: {
+  shares: readonly Share[];
+  type: StatsType;
+  accounts: ReadonlyMap<string, Account>;
+  onOpen: (key: string) => void;
+}) {
+  const t = useTranslations("stats");
+  const rows = shares.map((share) => {
+    const account = accounts.get(share.key);
+    const unassigned = share.key === UNASSIGNED_ACCOUNT_KEY;
+    const Icon = accountTypeIcon(account?.type ?? "");
+    return {
+      share,
+      name: account?.name ?? t(unassigned ? "unassignedAccount" : "unknownAccount"),
+      color: account?.color ?? null,
+      icon: <Icon {...iconProps("md")} />,
+      badge: account?.archivedAt ? <Badge tone="warning">{t("archived")}</Badge> : undefined,
+      // `/transactions` has no filter for "no account", so that row would open the whole period.
+      opens: !unassigned,
+    };
+  });
+  return <ShareRows rows={rows} type={type} onOpen={onOpen} />;
 }
 
 export function TagRows({
