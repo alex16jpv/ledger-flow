@@ -2,7 +2,7 @@
 
 # lag-money-manager API endpoints
 
-Version 1.0.0 · 43 operations · 47 schemas.
+Version 1.0.0 · 43 operations · 48 schemas.
 
 Regenerate with `npm run gen:api-types` against a running backend. The client never calls these
 URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), which adds the
@@ -260,7 +260,7 @@ No token required.
 | `201`  | `AuthTokens`    | User registered and logged in                                                                                                                           |
 | `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                      |
 | `409`  | `ErrorResponse` | Email is already registered (code DUPLICATE from the unique index, or EMAIL_TAKEN when a concurrent register reactivated the same soft-deleted account) |
-| `429`  | `ErrorResponse` | Too many attempts from this IP (code RATE_LIMITED)                                                                                                      |
+| `429`  | `ErrorResponse` | Too many attempts from this client IP (code RATE_LIMITED)                                                                                               |
 
 ### `GET /auth/sessions`
 
@@ -695,9 +695,9 @@ Creates only the missing defaults. Archived seed categories count as present and
 
 ## Stats
 
-| Endpoint              | Auth   | Summary                                            |
-| --------------------- | ------ | -------------------------------------------------- |
-| `GET /stats/spending` | bearer | Aggregate spending grouped by category, day or tag |
+| Endpoint              | Auth   | Summary                                                    |
+| --------------------- | ------ | ---------------------------------------------------------- |
+| `GET /stats/spending` | bearer | Aggregate spending by category, day, month, account or tag |
 
 ### `GET /stats/spending`
 
@@ -709,30 +709,41 @@ transactions are excluded, and ADJUSTMENT ones only appear when asked
 for explicitly with `type=ADJUSTMENT` (they are balance
 reconciliations, not spending).
 
-Bucket semantics: `groupBy=day` comes back ascending by date and skips
-days without transactions (the client fills the gaps); the other
-groupings come back by total descending. With `groupBy=tag` a
-multi-tag transaction contributes to EVERY one of its tag buckets, so
-the buckets can add up to more than `total` — `total` is always the
-real, non-double-counted sum. Transactions without tags land in the
-`untagged` bucket and those without a category in `uncategorized`.
+Bucket semantics: `groupBy=day` and `groupBy=month` come back ascending
+by key and skip the days or months without transactions (the client
+fills the gaps); the other groupings come back by total descending,
+ties broken by key. With `groupBy=tag` a multi-tag transaction
+contributes to EVERY one of its tag buckets, so the buckets can add up
+to more than `total` — `total` is always the real, non-double-counted
+sum. Transactions without tags land in the `untagged` bucket and those
+without a category in `uncategorized`.
+
+A `month` bucket is the first seven characters of the same frozen
+accounting day, so a month and its days can never disagree about where
+a row belongs. An `account` bucket is the account the money left —
+`fromAccountId` — except for INCOME and for an increase-only
+ADJUSTMENT, which only have the other side. Every type the API accepts
+carries at least one account, so the `unassigned` bucket only ever
+holds a row written before that was enforced.
 
 **Query**
 
-| Name      | Type                                                | Required | Description                                                                                                          |
-| --------- | --------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
-| `groupBy` | `category` \| `day` \| `tag`                        | no       | Bucket dimension                                                                                                     |
-| `type`    | `INCOME` \| `EXPENSE` \| `TRANSFER` \| `ADJUSTMENT` | no       | Transaction type to aggregate                                                                                        |
-| `from`    | string (date-time)                                  | no       | Start of the range, inclusive (ISO 8601, offsets accepted)                                                           |
-| `to`      | string (date-time)                                  | no       | End of the range, EXCLUSIVE — the range is half-open [from, to) and is matched as the whole calendar days it covers. |
+| Name          | Type                                                 | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------- | ---------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `groupBy`     | `category` \| `day` \| `month` \| `account` \| `tag` | no       | Bucket dimension                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `splitBy`     | `category`                                           | no       | Adds a second dimension INSIDE each bucket (`splits`), so one request answers "per category and month" instead of twelve. Only with `groupBy=month` or `account`, and only with `from` and `to`: `category` is that dimension already, `tag` unwinds each row into several buckets, and `day` would grow a split per category per day of the window. Those two are bounded — months fit in a window, and a user has a handful of accounts. |
+| `categoryIds` | string                                               | no       | Comma-separated category ids (at most 20): aggregates only those. A budget of several categories is one request, not one per category. Rows with no category never match it, quick-adds included.                                                                                                                                                                                                                                          |
+| `type`        | `INCOME` \| `EXPENSE` \| `TRANSFER` \| `ADJUSTMENT`  | no       | Transaction type to aggregate                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `from`        | string (date-time)                                   | no       | Start of the range, inclusive (ISO 8601, offsets accepted)                                                                                                                                                                                                                                                                                                                                                                                 |
+| `to`          | string (date-time)                                   | no       | End of the range, EXCLUSIVE — the range is half-open [from, to) and is matched as the whole calendar days it covers.                                                                                                                                                                                                                                                                                                                       |
 
 **Responses**
 
-| Status | Schema          | Description                                                              |
-| ------ | --------------- | ------------------------------------------------------------------------ |
-| `200`  | `StatsResponse` | Spending buckets with totals                                             |
-| `400`  | `ErrorResponse` | Invalid query parameters, including from later than to (code VALIDATION) |
-| `401`  | `ErrorResponse` | Unauthorized                                                             |
+| Status | Schema          | Description                                                                                                                                                                                         |
+| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `StatsResponse` | Spending buckets with totals                                                                                                                                                                        |
+| `400`  | `ErrorResponse` | Invalid query parameters (code VALIDATION): from later than to, a categoryIds that is not a list of at most 20 uuids, a splitBy over a grouping that cannot take one, or a splitBy with no from/to. |
+| `401`  | `ErrorResponse` | Unauthorized                                                                                                                                                                                        |
 
 ## Sync
 
@@ -858,9 +869,16 @@ stops a write from being missed forever.
 
 ### `GET /transactions`
 
-Paginated listing sorted by date descending. For infinite scroll use
-cursor pagination (`cursor` = `pagination.nextCursor` of the previous
-page); it stays consistent when transactions are backdated.
+Paginated listing, newest first unless `sort` says otherwise. For
+infinite scroll use cursor pagination (`cursor` =
+`pagination.nextCursor` of the previous page); it stays consistent
+when transactions are backdated.
+
+The cursor is a keyset over `(sort, _id)`, so it belongs to the order
+it was minted under: keep `sort` and `order` on every page of the
+same scroll. "The five biggest of the period" is
+`?sort=amount&from=&to=&limit=5`, never every page read and sorted in
+the client.
 
 **Query**
 
@@ -872,7 +890,10 @@ page); it stays consistent when transactions are backdated.
 | `ids`            | string                                              | no       | Comma-separated list of UUIDs to filter by ID (max 100)                                                                                                                                                                              |
 | `accountId`      | string (uuid)                                       | no       | Filter transactions by account ID (matches fromAccountId or toAccountId)                                                                                                                                                             |
 | `categoryId`     | string (uuid)                                       | no       | Filter transactions by category ID                                                                                                                                                                                                   |
-| `uncategorized`  | `true` \| `false`                                   | no       | Only transactions without a category. Cannot be combined with categoryId.                                                                                                                                                            |
+| `categoryIds`    | string                                              | no       | Comma-separated category ids (at most 20), for a budget that covers several. Cannot be combined with categoryId or with uncategorized=true.                                                                                          |
+| `sort`           | `date` \| `amount`                                  | no       | Field the page is ordered by.                                                                                                                                                                                                        |
+| `order`          | `asc` \| `desc`                                     | no       | Direction of `sort`. Ties are broken by id, in the same direction.                                                                                                                                                                   |
+| `uncategorized`  | `true` \| `false`                                   | no       | Only transactions without a category. Cannot be combined with categoryId or categoryIds.                                                                                                                                             |
 | `pendingDetails` | `true` \| `false`                                   | no       | Filter by the pendingDetails flag (true = quick-adds awaiting detailing)                                                                                                                                                             |
 | `source`         | `MANUAL` \| `QUICK` \| `IMPORT`                     | no       | Only transactions created through this channel (QUICK = quick-add)                                                                                                                                                                   |
 | `from`           | string (date-time)                                  | no       | Start of the range, inclusive. The range is matched as the run of calendar days it covers in the account's time zone, against each transaction's frozen `dayKey`, so a bound that is not local midnight is widened to the whole day. |
@@ -883,11 +904,11 @@ page); it stays consistent when transactions are backdated.
 
 **Responses**
 
-| Status | Schema            | Description                                                                                                                           |
-| ------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `TransactionList` | Paginated list of transactions                                                                                                        |
-| `400`  | `ErrorResponse`   | Invalid query. Codes include INVALID_CURSOR (unknown or foreign cursor id); combining uncategorized=true with categoryId is rejected. |
-| `401`  | —                 | Unauthorized                                                                                                                          |
+| Status | Schema            | Description                                                                                                                                                                           |
+| ------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `TransactionList` | Paginated list of transactions                                                                                                                                                        |
+| `400`  | `ErrorResponse`   | Invalid query. Codes include INVALID_CURSOR (unknown or foreign cursor id); combining uncategorized=true with categoryId or categoryIds, or categoryId with categoryIds, is rejected. |
+| `401`  | —                 | Unauthorized                                                                                                                                                                          |
 
 ### `POST /transactions`
 

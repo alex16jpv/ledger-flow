@@ -159,6 +159,32 @@ It stamps the defaults `StatsController` stamps on an absent parameter: `groupBy
 `type` is **EXPENSE**, which is not the service's "everything but ADJUSTMENT" — no URL can ask for
 that one, only a fixture can.
 
+Since T-28 it **declines** rather than ignores. It used to read four parameters and drop the rest, so
+the day a screen sent `categoryIds` the mirror would have answered the unfiltered month and nobody
+would have known; now any parameter outside its list sends the read to the server, exactly as
+`toMirrorFilter` already did for `/transactions`. What it does know is `groupBy=month` (the first
+seven characters of the same frozen day key, so a month and its own days cannot disagree),
+`groupBy=account` (income is keyed by the account it reached and everything else by the one it left,
+falling to the other side for an adjustment that only raises a balance, and `unassigned` for
+neither — the server's own `$cond`, transcribed), `categoryIds`, and
+`splitBy=category`, which it accepts only over `month` or `account` and only with both bounds —
+over days the splits would grow with the window, which is why the server refuses it too.
+`/transactions` learned the same period: several `categoryIds`, and `sort=amount` with `order`. Any
+order but the index's own (date, descending) is read whole and sorted rather than streamed — the
+sort itself is 19 ms over 60 000 rows, and the walk that feeds it is the one the default path
+already does to count a filtered set — and the tie follows the direction, like the server's keyset
+over (field, `_id`), broken on the key itself rather than on a locale's idea of order. Both reads
+decline rather than guess where the server answers with a 400: a value outside an enum, a bound
+that is not ISO 8601 with an offset, an inverted window, a limit outside 1–100, a list that is
+empty or names more than twenty, and the pairs the schema refuses (`uncategorized` with
+`categoryIds`, `categoryId` with `categoryIds`). An id that is well formed but not a UUID is the one
+shape they still answer, because it filters to nothing either way.
+
+The cursor is the server's own: it is looked up by id, not found among the rows the filter kept, so
+a pivot that was filtered out or deleted still places the page — and `hasMore` is whether a row
+exists past the page, not whether the page came back full, which is what the server answers and what
+the mirror used to get wrong whenever the last page was exactly full.
+
 `lib/query/domains.ts` lists the domains whose **list and detail** reads answer locally, and its
 prefix covers every key of a domain. All six are in it: `budgets`, `home` and `stats` joined when
 O-F3 part 2 derived `spent` and the buckets, which were the last server-only reads any of them had,

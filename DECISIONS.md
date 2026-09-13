@@ -5,6 +5,29 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-12 · The mirror declines what it cannot apply, and learns the rest (T-28)
+
+- **Decision:** `spendingFromMirror` gets the `SUPPORTED_PARAMS` guard `toMirrorFilter` already had,
+  and then learns the aggregations the backend grew in T-24: `groupBy=month`, `groupBy=account`,
+  `categoryIds` and `splitBy=category`. `/transactions` learns several `categoryIds` and
+  `sort=amount` with `order`.
+- **Alternatives:** teaching the derivations first and the guard later. Rejected: `READ_SOURCE` is
+  `mirror`, so **every** read passes here even with a connection — a parameter the mirror ignores is
+  not a gap that shows up offline, it is a wrong figure on every screen, silently. The guard is what
+  makes the next unknown parameter a request to the server instead of a lie.
+- **Consequence:** each new figure is checked against the backend's own fixtures — the four
+  scenarios now carry the month, account, `categoryIds` and month × category queries, and a new
+  `expected.lists` block with ordered pages, ties included. Any order but the index's own (date,
+  descending) is read whole and sorted instead of streamed, so the `F-15` count shortcut stays on
+  the default path only; the sort itself is 19 ms over 60 000 rows, and the walk that feeds it is the
+  one the default path already does to count a filtered set. Both reads now decline rather than
+  guess wherever the server answers with a 400, because a mirror that guesses is worse than a
+  request: a value outside an enum, a bound that is not ISO 8601 with an offset, an inverted window,
+  a limit outside 1–100, an empty or oversized id list, and the pairs the schema refuses. Fixing
+  that turned up one the mirror had been getting wrong all along: with a cursor it answered
+  `hasMore` by whether the page came back full, so the last page of a list always promised another
+  one. It now answers, like the server, by whether a row exists past the page.
+
 ## 2026-09-12 · One chart contract, and `Bars` becomes a client component (T-26)
 
 - **Decision:** every slot of a chart carries its day and its amount as its accessible name, shows

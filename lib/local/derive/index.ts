@@ -17,6 +17,7 @@ export { type PeriodDefinition, type ResolvedPeriod, resolvePeriod } from "./per
 export {
   deriveSpending,
   type SpendingGroupBy,
+  type SpendingSplitBy,
   type SpendingTransaction,
   type SpendingWindow,
 } from "./spending";

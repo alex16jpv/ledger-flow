@@ -1,4 +1,4 @@
-import type { StatsResponse, SyncBudget, SyncTransaction } from "@/types/api";
+import type { StatsResponse, StatsSplit, SyncBudget, SyncTransaction } from "@/types/api";
 
 import copBogota from "./fixtures/cop-bogota.json";
 import eurMadrid from "./fixtures/eur-madrid.json";
@@ -62,13 +62,32 @@ export interface ExpectedSpending {
   name: string;
   query: {
     groupBy: StatsResponse["groupBy"];
+    splitBy: StatsResponse["splitBy"];
+    categoryIds: string[] | null;
     type: SyncTransaction["type"] | null;
     from: string;
     to: string;
     timezone: string;
   };
   total: number;
-  buckets: { key: string; total: number; count: number; avg: number }[];
+  buckets: { key: string; total: number; count: number; avg: number; splits?: StatsSplit[] }[];
+}
+
+// A page the server can serve in one request, which is what the client is not allowed to walk to.
+export interface ExpectedList {
+  name: string;
+  query: {
+    sort: "date" | "amount";
+    order: "asc" | "desc";
+    categoryIds: string[] | null;
+    type: SyncTransaction["type"] | null;
+    from: string;
+    to: string;
+    timezone: string;
+    limit: number;
+  };
+  transactionIds: string[];
+  note?: string;
 }
 
 export interface ExpectedBudgetView {
@@ -97,6 +116,7 @@ export interface ParityFixture {
     balances: { key: string; accountId: string; balance: number }[];
     pending: { count: number; total: number; transactionIds: string[] };
     spending: ExpectedSpending[];
+    lists: ExpectedList[];
     budgets: { reference: string; views: ExpectedBudgetView[] };
   };
 }
