@@ -5,6 +5,98 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-13 · The five causes behind the e2e suite's shifting failure (H-08)
+
+- **Measured first, over ten full passes with every log kept:** it fell three times, and the three were
+  two different things — `offline-hardening.spec.ts:74` twice and `budgets.spec.ts:118` once, all on the
+  mobile project. Three more appeared in the passes that verified those fixes (see (c), (d) and (e)), which is the
+  argument for running it many times rather than twice. None of them is
+  "load": each has a mechanism, and load only decides which pass shows it. Three in ten is not a rate —
+  the 95% interval around it runs from 7% to 65% — so what follows names mechanisms, not a percentage.
+  Locally `retries` is 0, so each of these was red; in CI, where it is 1, all three would have been
+  reported as flaky and the job would have stayed green.
+- **Decision (a), the queue test stops racing the retry it is waiting for.** It cut the first two
+  `POST /api/sync` and then read the outbox to prove the operation was still queued. `backoffDelay`
+  gives **1–2 s** after a second failure, and in that window the test has to notice `cut === 2`
+  (`expect.poll` is on 1 s intervals by then), do a `listTransactions` round trip (up to **2.9 s**
+  under sixteen workers) and open IndexedDB. The third attempt won, the queue drained, and the read
+  found nothing. The log says so on its own: line 108 passed with the server still empty and line 111
+  timed out. Now the route keeps cutting until the queue has been read and is released only for the
+  drain the next line waits for, so the number of cut attempts no longer has to be guessed.
+- **Decision (b), a loading state is `role="status"`, and that is a real defect, not a test artifact.**
+  Eighteen skeletons carried `aria-busy="true"` and `aria-label` on a role-less `div` or `Card`.
+  `aria-label` is prohibited ARIA on a generic, so axe reports `aria-prohibited-attr` and a reader gets
+  no name at all. Seven siblings written during T-30 and T-31 already had `role="status"`; the other
+  eighteen never caught up. The e2e only sees it when a scan lands while the skeleton is still up,
+  which is why it looked like a flake.
+- **Alternatives for (b):** drop the `aria-label` — that silences axe and loses the name, which is the
+  opposite of what rule 27 asks for. Or `role="progressbar"` with no `aria-valuenow`, the indeterminate
+  role, which is **not** a live region and so never multiplies when a screen shows three skeletons at
+  once; `status` wins only because seven siblings already use it and rule 14 says do it the way it is
+  done. The multiplication costs nothing today precisely because these regions are silent: `Skeleton` is
+  `aria-hidden`, so there is no text for a polite region to announce. They are named, not announced, and
+  `design/spec/accessibility.md` now says exactly that.
+- **Decision (c), one `request` fixture that tolerates a reset, instead of a hundred call sites.** The
+  first verifying pass died on `apiRequestContext.post: read ECONNRESET` against the front server —
+  a keep-alive socket the server closed while Playwright's pool still held it, after a test spent
+  twenty seconds in the browser between two API calls. This is F-11, which `tests/offline.ts` had
+  already diagnosed and fixed with a private `retryOnReset` covering its own five calls and nothing
+  else. Now `tests/fixtures.ts` wraps the `request` fixture once, every spec takes `test` and `expect`
+  from there, and that private helper is gone. Raising the server's keep-alive was the alternative: it
+  cannot work, because the idle gap is however long a test spends in the browser, which is unbounded.
+- **Consequence:** a `no-restricted-syntax` selector in `eslint.config.mjs`, beside the other house
+  restrictions, fails on any opening tag with `aria-busy` and an `aria-label*` and no `role`, so the next
+  one is caught where it is typed and not by chance in a parallel run; `design/spec/accessibility.md` and
+  `screens/states.md` state the convention. It was first written as a source-scanning vitest test, and
+  the review killed that: `lefthook` runs `vitest related`, which never relates a screen edit to a test
+  that reads files with `fs`, so the hook would have let it through; and a regex over tag text is blind
+  to a `>` inside an arrow function and to `aria-labelledby`. The lint rule is AST-based, runs in the
+  editor, in the pre-commit on the staged file and in the gate, and both holes were checked against it.
+  What no static rule can see is a `role` that arrives from a wrapper component — for that there is
+  still only axe.
+- **Not done, and on purpose:** capping `workers` or giving each projection its own backend. Both would
+  have hidden all three mechanisms instead of removing them, and two of the three are defects a user
+  meets — the prohibited ARIA on every loading screen, and a reset the suite had already decided to
+  tolerate. One thing the fixture does carry: the retry is blind to the method, so a reset raised
+  _after_ the server processed a `POST` would double-create. These posts send no `Idempotency-Key`. The
+  behaviour is not new — it is what `retryOnReset` did — but it now covers every call site instead of
+  five, and an idle keep-alive close is pre-request, which is the case F-11 measured.
+- **Decision (d), a test that asserts the queue's route first waits for the queue to exist.** The
+  seventeenth verifying pass dropped `review.spec.ts` — one of the two specs H-08 has named since
+  2026-09-09 without ever explaining. Its "Save all" assertion demands one `POST /api/sync` carrying
+  both rows; the saved trace shows two `PUT /api/transactions/<id>` and no sync at all, sent 570 ms
+  after the vault's first `sync/changes`. That is not a defect: `writeAll` (`lib/local/outbox/write.ts`)
+  falls back to `sendDirect` per row when `vaultReady()` is still null, which is O-F4's documented path
+  for a device that has no mirror yet. The test was asserting the mirror's route on a device that did
+  not have one. It now waits for the first snapshot to have drained before it clicks, the same
+  condition `readyForOffline` polls for in the offline specs — and it is the only spec outside those
+  that asserts the sync route at all.
+- **Decision (e), the e2e front server holds an idle socket for two minutes, not five seconds.** The
+  last one standing is `settings.spec.ts` — the other spec H-08 named in 2026-09-09 and never
+  explained. It fell **twice in nineteen passes**, both on mobile, both with the output kept this time:
+  the trace shows **no `DELETE` at all** from the browser and a `GET /api/auth/sessions` with
+  **status −1**, a request that died without a response; the backend never saw the delete, and the
+  dialog carries the app's own "Something unexpected happened". So the page is losing requests to the
+  front server, and only a **mutation** shows it — `shouldRetryQuery` retries a query, and nothing
+  retries a mutation, which is rule 18 working as written. Node closes an idle keep-alive socket at 5 s
+  and a client that reuses it at that instant loses the request, so `next start` now runs with
+  `--keepAliveTimeout 120000`. This changes nothing about the product: the e2e front server is the
+  harness, and in production the app sits behind another server entirely.
+- **The window is measured, not assumed:** an agent that reuses one socket after ten seconds idle keeps
+  the **same local port** against the flagged front server and gets a **new** one against the backend,
+  which still runs on Node's default — the old socket was closed under it, which is the race. What is
+  not proven is that closing this window removes the last failure: at the observed 2-in-19 rate, twenty
+  clean passes happen by luck about one time in nine. It is written here as what it is.
+- **A fourth change went in with these and is not one of the causes:** seven generated e2e emails were
+  minted from `Date.now()` alone while both projections run the same spec at once, and eight setup
+  calls never checked their own response, so a failed `register` surfaced thirty seconds later as an
+  unrelated locator timeout. That is why two of the three falls H-08 recorded in 2026-09 have no cause
+  written next to them. It is a real fix, but it landed in the same measurement, so a clean run after
+  this cannot be attributed to (a), (b) and (c) alone.
+- **Left open:** `settings.spec.ts` never fell in these passes. H-08 has named it since 2026-09-09 and
+  it has no captured output; it is the one part of the ficha that is still only an observation, and the
+  only thing this change gives it is that its next fall will say why.
+
 ## 2026-09-13 · One read serves the spending series and the stack (T-31)
 
 - **Decision:** Trends asks `GET /stats/spending` with `groupBy=month&splitBy=category` **once** and
