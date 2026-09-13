@@ -3,7 +3,7 @@ import type { StatsResponse } from "@/types/api";
 
 export const STATS_TYPES = ["EXPENSE", "INCOME", "TRANSFER", "ADJUSTMENT"] as const;
 export type StatsType = (typeof STATS_TYPES)[number];
-export const STATS_GROUPS = ["category", "day", "tag"] as const;
+export const STATS_GROUPS = ["category", "day", "account", "tag"] as const;
 export type StatsGroup = (typeof STATS_GROUPS)[number];
 
 export interface StatsParams {

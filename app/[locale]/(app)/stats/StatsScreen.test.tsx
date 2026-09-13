@@ -62,6 +62,17 @@ function routeFetch() {
             ],
           }),
         );
+      if (groupBy === "account")
+        return Promise.resolve(
+          json({
+            groupBy,
+            total: 815_900,
+            buckets: [
+              { key: "visa", total: 612_400, count: 27, avg: 22_681 },
+              { key: "cash", total: 203_500, count: 11, avg: 18_500 },
+            ],
+          }),
+        );
       if (groupBy === "tag")
         return Promise.resolve(
           json({
@@ -296,6 +307,45 @@ describe("StatsScreen", () => {
     expect(asked?.searchParams.get("from")).toBe("2026-09-01T05:00:00.000Z");
     const row = screen.getByRole("button", { name: /Zara/ });
     expect(row).toHaveTextContent("Wed, Sep 9");
+  });
+
+  it("splits the month by account, says transfers are not spending, and filters by the account", async () => {
+    routeFetch();
+    renderScreen("groupBy=account");
+    const visa = await screen.findByRole("button", { name: /^Visa Gold/ });
+    expect(within(visa).getByText("75 %")).toBeInTheDocument();
+    expect(within(visa).getByText("27 txns")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Transfers between your own accounts are not spending/),
+    ).toBeInTheDocument();
+    await userEvent.click(visa);
+    expect(push).toHaveBeenCalledWith({
+      pathname: "/transactions",
+      query: {
+        period: "custom",
+        from: "2026-09-01",
+        to: "2026-09-30",
+        type: "EXPENSE",
+        account: "visa",
+      },
+    });
+  });
+
+  it("lets the biggest movements fail on their own without blanking the screen", async () => {
+    routeFetch();
+    const routed = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) => {
+      const url = new URL(urlOf(input), "http://localhost");
+      if (url.pathname === "/api/transactions" && url.searchParams.get("sort") === "amount") {
+        return Promise.resolve(json({ code: "DB_UNAVAILABLE", message: "no" }, { status: 503 }));
+      }
+      return routed?.(input, init) ?? Promise.resolve(empty());
+    });
+    renderScreen("groupBy=account");
+    expect(
+      await screen.findByText("We couldn\u2019t load the biggest movements"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Visa Gold/ })).toBeInTheDocument();
   });
 
   it("warns about double counting and lists the tags without the untagged bucket", async () => {

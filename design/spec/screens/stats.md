@@ -73,8 +73,9 @@ Offline all of it comes from `lib/local/derive` over the mirror and carries the 
 chart of zeros; **loading** — a `Skeleton` at each card's own height; **error** — the shared `Empty` in
 `danger` with `LoadErrorBody` and Retry, per card, so one failure does not blank the screen. The day
 chart and the calendar have a case of their own: a month before the account existed is **empty**, not a
-month of no-spend days. Drawn in `#days-loading`, `#days-empty` and `#days-card-error`:
-the period navigator, the flow chips and the segmented control never go away, because they are what the user needs to get out of an empty or a
+month of no-spend days. Drawn in `#days-loading`, `#days-empty`, `#days-card-error`,
+`#accounts-loading`, `#accounts-empty` and `#accounts-error`: the period navigator, the flow chips and
+the segmented control never go away, because they are what the user needs to get out of an empty or a
 broken period. The **biggest movements** are their own request — an ordered page of five, not the
 buckets — so they are the one card that can fail on its own while the rest of the view has figures.
 

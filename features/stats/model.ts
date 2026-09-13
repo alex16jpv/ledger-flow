@@ -5,6 +5,8 @@ import type { StatsBucket } from "@/types/api";
 
 export const UNCATEGORIZED_KEY = "uncategorized";
 export const UNTAGGED_KEY = "untagged";
+// The server's own bucket for a row with no account on either side; the form never produces one.
+export const UNASSIGNED_ACCOUNT_KEY = "unassigned";
 
 export interface Share {
   key: string;

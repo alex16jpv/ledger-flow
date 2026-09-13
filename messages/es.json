@@ -1338,6 +1338,7 @@
     "groups": {
       "category": "Categorías",
       "day": "Días",
+      "account": "Cuentas",
       "tag": "Etiquetas"
     },
     "totals": {
@@ -1369,6 +1370,10 @@
       "body": "Prueba otro mes u otro tipo de movimiento."
     },
     "adjustmentsNote": "Los ajustes concilian saldos; nunca cuentan como gasto ni ingreso.",
+    "breakdownByAccount": "Reparto por cuenta",
+    "transfersNote": "Las transferencias entre tus propias cuentas no son gasto: se cuentan en Transferencias, nunca aquí.",
+    "unassignedAccount": "Sin cuenta",
+    "unknownAccount": "Cuenta desconocida",
     "weekdayAverage": "Media por día de la semana",
     "weekdayPeak": "El {weekday} es tu día más caro",
     "weekdayNone": "Todavía no hay gasto en este periodo",

@@ -32,6 +32,7 @@ import {
 import { useCategoriesQuery } from "@/features/categories/hooks";
 import { STATS_GROUPS, STATS_TYPES, type StatsGroup, type StatsType } from "@/features/stats/api";
 import {
+  AccountRows,
   AMOUNT_KIND,
   CategoryRows,
   StackBar,
@@ -44,6 +45,7 @@ import {
   daySeries,
   shares,
   transactionCount,
+  UNASSIGNED_ACCOUNT_KEY,
   UNCATEGORIZED_KEY,
   UNTAGGED_KEY,
   weekdayAverages,
@@ -105,12 +107,13 @@ export function StatsScreen() {
     () => new Map((categories.data ?? []).map((category) => [category.id, category])),
     [categories.data],
   );
+  const accountMap = useMemo(
+    () => new Map((accounts.data ?? []).map((account) => [account.id, account])),
+    [accounts.data],
+  );
   const lookups = useMemo<TransactionLookups>(
-    () => ({
-      accounts: new Map((accounts.data ?? []).map((account) => [account.id, account])),
-      categories: categoryMap,
-    }),
-    [accounts.data, categoryMap],
+    () => ({ accounts: accountMap, categories: categoryMap }),
+    [accountMap, categoryMap],
   );
   const series = useMemo(
     () =>
@@ -126,7 +129,7 @@ export function StatsScreen() {
     highestWindow ? { ...highestWindow, type } : {},
     highestWindow !== null,
   );
-  const wantsBiggest = groupBy === "day";
+  const wantsBiggest = groupBy === "day" || groupBy === "account";
   const biggest = useBiggestTransactions({ ...iso, type }, wantsBiggest);
   // An empty page is not a state of its own here: the screen is already showing its own Empty.
   const showsBiggest = wantsBiggest && biggest.data?.data.length !== 0;
@@ -177,6 +180,8 @@ export function StatsScreen() {
   const empty = stats.isSuccess && stats.data.buckets.length === 0;
   const categoryShares =
     stats.data && groupBy === "category" ? shares(stats.data.buckets, total) : [];
+  const accountShares =
+    stats.data && groupBy === "account" ? shares(stats.data.buckets, total) : [];
   const tagShares =
     stats.data && groupBy === "tag"
       ? shares(
@@ -314,7 +319,11 @@ export function StatsScreen() {
         <Empty
           icon={<ChartPie {...iconProps("lg")} />}
           title={t("stats.empty.title")}
-          body={t("stats.empty.body")}
+          body={
+            groupBy === "account"
+              ? `${t("stats.empty.body")} ${t("stats.transfersNote")}`
+              : t("stats.empty.body")
+          }
         />
       ) : (
         <>
@@ -347,6 +356,25 @@ export function StatsScreen() {
                   );
                 }}
               />
+            </>
+          )}
+          {groupBy === "account" && (
+            <>
+              <StackBar
+                shares={accountShares}
+                colors={(key) => accountMap.get(key)?.color ?? null}
+                names={(key) => accountMap.get(key)?.name ?? t("stats.unassignedAccount")}
+                label={t("stats.breakdownByAccount")}
+              />
+              <AccountRows
+                shares={accountShares}
+                type={type}
+                accounts={accountMap}
+                onOpen={(key) => {
+                  openTransactions(key === UNASSIGNED_ACCOUNT_KEY ? {} : { account: key });
+                }}
+              />
+              <p className="text-xs text-text-3">{t("stats.transfersNote")}</p>
             </>
           )}
           {groupBy === "day" && series && (

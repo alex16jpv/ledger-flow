@@ -1510,7 +1510,10 @@ ${totalCard}`;
       actions: `<button class="btn ghost icon-only round" aria-label="Export" disabled>${iconSvg("download")}</button>`,
     });
   if (state == "loading") {
-    const cards = `<div class="card chart">${skel("height:10px;width:120px")}${skel("height:140px;margin-top:22px")}${skel("height:12px;width:60%")}</div>
+    const cards =
+      view == "acct"
+        ? `<div class="card">${skel("height:10px;border-radius:5px")}</div><div class="list card flush">${skelRows(3)}</div>`
+        : `<div class="card chart">${skel("height:10px;width:120px")}${skel("height:140px;margin-top:22px")}${skel("height:12px;width:60%")}</div>
 <div class="stats" style="grid-template-columns:repeat(3,1fr)">${skel("height:68px;border-radius:14px")}${skel("height:68px;border-radius:14px")}${skel("height:68px;border-radius:14px")}</div>
 <div class="card chart">${skel("height:10px;width:140px")}${skel("height:64px;margin-top:22px")}${skel("height:12px;width:55%")}</div>
 <div class="list card flush">${skelRows(3)}</div>`;
@@ -1519,8 +1522,16 @@ ${skelTotal()}
 ${cards}`);
   }
   if (state == "empty") {
+    const note =
+      view == "acct"
+        ? '<p class="xs faint" style="margin:6px 0 0;max-width:280px">Transfers between your own accounts are not spending: a month of only transfers looks like this.</p>'
+        : "";
     return frame(`${controls}
-<div class="card">${statsEmpty()}</div>`);
+<div class="card">${statsEmpty(note)}</div>`);
+  }
+  if (state == "error") {
+    return frame(`${controls}
+<div class="card">${statsError("your spending by account")}</div>`);
   }
   let content;
   if (view == "cat") {
@@ -3154,6 +3165,27 @@ const PAGES = [
         "By day · one card failed",
         "The biggest movements are their own request, so their failure is their own: it takes the card, keeps its reference and its Retry, and leaves the rest of the screen standing.",
         stats("day", { state: "cardError" }),
+        { added: "2026-09-12" },
+      ),
+      plate(
+        "accounts-loading",
+        "By account · loading",
+        "The same silhouette the view will have: the stacked bar and one row per account.",
+        stats("acct", { state: "loading" }),
+        { added: "2026-09-12" },
+      ),
+      plate(
+        "accounts-empty",
+        "By account · nothing in the period",
+        "A month where the only movements were transfers between your own accounts lands here, and the sentence says why.",
+        stats("acct", { state: "empty" }),
+        { added: "2026-09-12" },
+      ),
+      plate(
+        "accounts-error",
+        "By account · the request failed",
+        "This view is one request, so its failure replaces the view and not the screen: the period, the flow chips and the segmented control stay usable.",
+        stats("acct", { state: "error" }),
         { added: "2026-09-12" },
       ),
     ],

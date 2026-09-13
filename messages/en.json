@@ -1338,6 +1338,7 @@
     "groups": {
       "category": "Categories",
       "day": "Days",
+      "account": "Accounts",
       "tag": "Tags"
     },
     "totals": {
@@ -1369,6 +1370,10 @@
       "body": "Try another month or another type of movement."
     },
     "adjustmentsNote": "Adjustments reconcile balances; they’re never counted as spending or income.",
+    "breakdownByAccount": "Share by account",
+    "transfersNote": "Transfers between your own accounts are not spending: they are counted under Transfers, never here.",
+    "unassignedAccount": "No account",
+    "unknownAccount": "Unknown account",
     "weekdayAverage": "Average by weekday",
     "weekdayPeak": "{weekday} is your most expensive day",
     "weekdayNone": "No spending yet this period",

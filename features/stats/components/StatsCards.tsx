@@ -1,8 +1,8 @@
 "use client";
 
-import { Hash } from "lucide-react";
+import { Hash, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
 
 import { Amount, type AmountKind } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
@@ -13,14 +13,15 @@ import { List, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/compone
 import { Tile } from "@/components/ui/Tile";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useMoney } from "@/lib/i18n/useMoney";
+import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { type ColorToken, featureColorStyle } from "@/lib/theme/feature-color";
-import type { Category } from "@/types/api";
+import type { Account, Category } from "@/types/api";
 
 import type { StatsType } from "../api";
-import { type Share, UNCATEGORIZED_KEY } from "../model";
+import { type Share, UNASSIGNED_ACCOUNT_KEY, UNCATEGORIZED_KEY } from "../model";
 
 export const AMOUNT_KIND: Record<StatsType, AmountKind> = {
   EXPENSE: "expense",
@@ -93,6 +94,70 @@ export function StackBar({
   );
 }
 
+interface ShareRow {
+  share: Share;
+  name: string;
+  color: ColorToken | null;
+  icon: ReactNode;
+  badge?: ReactNode;
+}
+
+function ShareRows({
+  rows,
+  type,
+  onOpen,
+}: {
+  rows: readonly ShareRow[];
+  type: StatsType;
+  onOpen: (key: string) => void;
+}) {
+  const t = useTranslations("stats");
+  return (
+    <Card flush>
+      <List>
+        {rows.map((row) => (
+          <RowButton
+            key={row.share.key}
+            onClick={() => {
+              onOpen(row.share.key);
+            }}
+          >
+            {row.color ? (
+              <Tile color={row.color}>{row.icon}</Tile>
+            ) : (
+              <Tile className="bg-surface-2 text-text-2">{row.icon}</Tile>
+            )}
+            <RowBody>
+              <RowTitle>
+                <span>{row.name}</span>
+                {row.badge}
+              </RowTitle>
+              <span className="flex items-center gap-2">
+                <span
+                  className="h-1 w-24 overflow-hidden rounded-full bg-surface-3"
+                  style={featureColorStyle(row.color)}
+                >
+                  <span
+                    className={cn(
+                      "block h-full rounded-full",
+                      row.color ? "bg-(--f)" : "bg-text-3",
+                    )}
+                    style={{ width: `${Math.round(row.share.share * 100)}%` }}
+                  />
+                </span>
+                <RowMeta items={[t("share", { percent: Math.round(row.share.share * 100) })]} />
+              </span>
+            </RowBody>
+            <RowRight sub={t("txns", { count: row.share.count })}>
+              <Amount value={row.share.total} kind={AMOUNT_KIND[type]} />
+            </RowRight>
+          </RowButton>
+        ))}
+      </List>
+    </Card>
+  );
+}
+
 export function CategoryRows({
   shares,
   type,
@@ -105,61 +170,44 @@ export function CategoryRows({
   onOpen: (key: string) => void;
 }) {
   const t = useTranslations("stats");
-  return (
-    <Card flush>
-      <List>
-        {shares.map((share) => {
-          const category = categories.get(share.key);
-          const uncategorized = share.key === UNCATEGORIZED_KEY;
-          const name = uncategorized
-            ? t("uncategorized")
-            : (category?.name ?? t("unknownCategory"));
-          return (
-            <RowButton
-              key={share.key}
-              onClick={() => {
-                onOpen(share.key);
-              }}
-            >
-              {category ? (
-                <Tile color={category.color}>
-                  <CategoryIcon icon={category.icon} />
-                </Tile>
-              ) : (
-                <Tile className="bg-surface-2 text-text-2">
-                  <Hash {...iconProps("md")} />
-                </Tile>
-              )}
-              <RowBody>
-                <RowTitle>
-                  <span>{name}</span>
-                  {category?.archivedAt && <Badge tone="warning">{t("archived")}</Badge>}
-                </RowTitle>
-                <span className="flex items-center gap-2">
-                  <span
-                    className="h-1 w-24 overflow-hidden rounded-full bg-surface-3"
-                    style={featureColorStyle(category?.color)}
-                  >
-                    <span
-                      className={cn(
-                        "block h-full rounded-full",
-                        category ? "bg-(--f)" : "bg-text-3",
-                      )}
-                      style={{ width: `${Math.round(share.share * 100)}%` }}
-                    />
-                  </span>
-                  <RowMeta items={[t("share", { percent: Math.round(share.share * 100) })]} />
-                </span>
-              </RowBody>
-              <RowRight sub={t("txns", { count: share.count })}>
-                <Amount value={share.total} kind={AMOUNT_KIND[type]} />
-              </RowRight>
-            </RowButton>
-          );
-        })}
-      </List>
-    </Card>
-  );
+  const rows = shares.map((share) => {
+    const category = categories.get(share.key);
+    const uncategorized = share.key === UNCATEGORIZED_KEY;
+    return {
+      share,
+      name: uncategorized ? t("uncategorized") : (category?.name ?? t("unknownCategory")),
+      color: category?.color ?? null,
+      icon: category ? <CategoryIcon icon={category.icon} /> : <Hash {...iconProps("md")} />,
+      badge: category?.archivedAt ? <Badge tone="warning">{t("archived")}</Badge> : undefined,
+    };
+  });
+  return <ShareRows rows={rows} type={type} onOpen={onOpen} />;
+}
+
+export function AccountRows({
+  shares,
+  type,
+  accounts,
+  onOpen,
+}: {
+  shares: readonly Share[];
+  type: StatsType;
+  accounts: ReadonlyMap<string, Account>;
+  onOpen: (key: string) => void;
+}) {
+  const t = useTranslations("stats");
+  const rows = shares.map((share) => {
+    const account = accounts.get(share.key);
+    const unassigned = share.key === UNASSIGNED_ACCOUNT_KEY;
+    return {
+      share,
+      name: account?.name ?? t(unassigned ? "unassignedAccount" : "unknownAccount"),
+      color: account?.color ?? null,
+      icon: createElement(account ? accountTypeIcon(account.type) : Wallet, iconProps("md")),
+      badge: account?.archivedAt ? <Badge tone="warning">{t("archived")}</Badge> : undefined,
+    };
+  });
+  return <ShareRows rows={rows} type={type} onOpen={onOpen} />;
 }
 
 export function TagRows({
