@@ -5,6 +5,18 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-13 · "Offline ready" asks the copy, not the clock (H-14)
+
+- **Decision:** the Sync status row and the one-off toast require `vaultCanAnswer(vault)` — a
+  `syncedAt` **and** a profile row carrying the time zone — instead of `syncedAt` alone.
+- **Alternatives:** leaving it, since `ensureProfile` (`bd757c4`) fills the row on the first read
+  with network. Rejected: the promise is made before that read happens, and until it does every
+  budget, every month filter and every spending summary declines in the mirror and goes to the
+  server. Promising offline to a device that will not answer is rule 18 again.
+- **Consequence:** the row says "Preparing…" (or "Incomplete" with no network) for the short window
+  where the copy is full but cannot be read, which is the truth. The backend could close it for good
+  by sending the profile in every snapshot.
+
 ## 2026-09-13 · A mirror-backed read never pauses, so it can never hang (H-17)
 
 - **Decision:** every domain in `MIRROR_BACKED_DOMAINS` gets `networkMode: "always"` instead of

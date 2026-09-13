@@ -22,6 +22,7 @@ export {
   read,
   resetVaultGate,
   setCurrentVault,
+  vaultCanAnswer,
   vaultReady,
 } from "./read";
 export { readSpending, type SpendingQuery } from "./stats";

@@ -117,7 +117,8 @@ export function SyncStatusView() {
   // F-54: offline ready is two halves, the vault and the warmed screens, and needs both.
   const blocked = outbox.blocked.length;
   const shell = snapshot.shell;
-  const offlineReady = Boolean(snapshot.syncedAt) && shell.cached >= shell.expected;
+  // H-14: a copy that cannot answer a read is not ready, however full it looks.
+  const offlineReady = snapshot.mirrorAnswers && shell.cached >= shell.expected;
 
   const persisted = !storage?.supported
     ? t("persisted.unsupported")

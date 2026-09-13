@@ -5,7 +5,7 @@ import { useEffect } from "react";
 
 import { useToast } from "@/components/ui/Toast";
 import { useRouter } from "@/lib/i18n/navigation";
-import { currentVault } from "@/lib/local/repository";
+import { vaultCanAnswer, vaultReady } from "@/lib/local/repository";
 import {
   markOfflineReadyAnnounced,
   offlineReadyAnnounced,
@@ -29,8 +29,8 @@ export function OfflineReadyAnnouncement({ enabled }: { enabled: boolean }) {
       void (async () => {
         const shell = await shellReadiness(locale);
         if (shell.cached < shell.expected) return;
-        const syncedAt = await currentVault()?.db.get("meta", "syncedAt");
-        if (typeof syncedAt?.value !== "string") return;
+        const vault = await vaultReady();
+        if (!vault || !(await vaultCanAnswer(vault))) return;
         // Checked once, here: the only thing that must not happen after the unmount is the toast.
         if (state.cancelled || offlineReadyAnnounced()) return;
         markOfflineReadyAnnounced();
