@@ -76,12 +76,66 @@ function urlOf(input: string | URL | Request): string {
   return input instanceof URL ? input.href : input.url;
 }
 
+// The six-period card reads the budget once per period, so the route has to move with `reference`.
+const HISTORY_SPENT = [268_000, 212_000, 241_000, 305_000, 276_000];
+
+// COP is UTC-5, so the month a reference falls in is read on the period's own clock, not UTC.
+const OFFSET_MS = 5 * 60 * 60 * 1000;
+
+function periodOf(budget: Budget, reference: string | null): Budget {
+  if (!reference || budget.periodType !== "MONTHLY") return budget;
+  const at = new Date(Date.parse(reference) - OFFSET_MS);
+  if (Number.isNaN(at.getTime())) return budget;
+  const start = new Date(Date.parse(budget.periodFrom) - OFFSET_MS);
+  const back =
+    (start.getUTCFullYear() - at.getUTCFullYear()) * 12 + (start.getUTCMonth() - at.getUTCMonth());
+  if (back <= 0) return budget;
+  const from = Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), 1) + OFFSET_MS;
+  const to = Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1) + OFFSET_MS;
+  return {
+    ...budget,
+    periodKey: new Date(from).toISOString().slice(0, 7),
+    periodFrom: new Date(from).toISOString(),
+    periodTo: new Date(to).toISOString(),
+    amount: budget.baseAmount,
+    hasOverride: false,
+    spent: HISTORY_SPENT.at(-back) ?? 0,
+  };
+}
+
+const spending = (buckets: { key: string; total: number; count: number }[]) =>
+  json({
+    groupBy: "day",
+    total: buckets.reduce((sum, bucket) => sum + bucket.total, 0),
+    buckets: buckets.map((bucket) => ({ ...bucket, avg: bucket.total / bucket.count })),
+  });
+
 function routeFetch(budget: Budget, onMutation?: (url: string, init: RequestInit) => Response) {
   fetchMock.mockImplementation((input, init) => {
     const url = urlOf(input);
     const method = init?.method ?? "GET";
     if (method !== "GET" && onMutation) return Promise.resolve(onMutation(url, init ?? {}));
-    if (url.startsWith("/api/budgets/")) return Promise.resolve(json(budget));
+    if (url.includes("/api/stats/spending"))
+      return Promise.resolve(
+        url.includes("groupBy=category")
+          ? json({
+              groupBy: "category",
+              total: 356_000,
+              buckets: [
+                { key: "lifestyle", total: 260_000, count: 4, avg: 65_000 },
+                { key: "vacation", total: 96_000, count: 2, avg: 48_000 },
+              ],
+            })
+          : spending([
+              { key: "2026-09-09", total: 98_000, count: 1 },
+              { key: "2026-09-21", total: 48_000, count: 1 },
+              { key: "2026-09-22", total: 210_000, count: 3 },
+            ]),
+      );
+    if (url.startsWith("/api/budgets/"))
+      return Promise.resolve(
+        json(periodOf(budget, new URL(url, "http://t").searchParams.get("reference"))),
+      );
     if (url.startsWith("/api/categories"))
       return Promise.resolve(
         empty([
@@ -157,14 +211,99 @@ describe("BudgetDetailScreen", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("base $250,000")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remove adjustment" })).toBeInTheDocument();
-    const vacation = await screen.findByRole("button", { name: /Vacation/ });
+    const chips = await screen.findByRole("group", { name: "Categories" });
+    const vacation = within(chips).getByRole("button", { name: /Vacation/ });
     expect(within(vacation).getByText("archived")).toBeInTheDocument();
     expect(screen.getByText("Clothes, going out and treats.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See all" })).toHaveAttribute(
+    const period = screen.getByRole("region", { name: "Transactions this period" });
+    expect(within(period).getByRole("link", { name: "See all" })).toHaveAttribute(
       "href",
       "/transactions?period=custom&from=2026-09-01&to=2026-09-30&type=EXPENSE",
     );
     expect(screen.getByRole("link", { name: "Edit" })).toHaveAttribute("href", "/budgets/b1/edit");
+  });
+
+  // T-30: the four cards of "what the period is doing", against a period that is 22 days in.
+  it("says how the period got here and where it ends at this rate", async () => {
+    routeFetch(lifestyle);
+    renderScreen();
+
+    const day = await screen.findByRole("group", { name: "Spending per day" });
+    expect(within(day).getByRole("button", { name: /Sep 9 · \$98,000/ })).toBeInTheDocument();
+    // A day that has not arrived is not a control: the period has 30 days and 22 have passed.
+    expect(within(day).getAllByRole("button")).toHaveLength(22);
+
+    expect(
+      screen.getByText("At this rate you finish the period at $485,455 — $185,455 over the limit."),
+    ).toBeVisible();
+    expect(screen.getByRole("img", { name: /where it ends at this rate/ })).toBeInTheDocument();
+
+    const history = await screen.findByRole("group", {
+      name: "Spent against the limit, period by period",
+    });
+    expect(within(history).getAllByRole("button")).toHaveLength(6);
+    expect(
+      within(history).getByRole("button", { name: "August 2026 · $276,000 of $250,000" }),
+    ).toBeInTheDocument();
+    expect(
+      within(history).getByRole("button", {
+        name: "September 2026 · $356,000 of $300,000, in progress",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("3 of the 5 finished periods went over. This one already has."),
+    ).toBeVisible();
+  });
+
+  it("splits a budget of several categories and opens the day it is asked about", async () => {
+    routeFetch(lifestyle);
+    renderScreen();
+
+    const breakdown = await screen.findByRole("region", { name: "Where it went" });
+    expect(within(breakdown).getByText("$356,000 of $300,000")).toBeInTheDocument();
+    expect(within(breakdown).getByRole("button", { name: /Lifestyle/ })).toHaveTextContent(
+      "$260,000",
+    );
+
+    const day = await screen.findByRole("group", { name: "Spending per day" });
+    await userEvent.click(within(day).getByRole("button", { name: /Sep 9 · \$98,000/ }));
+    // Several categories are more than the Transactions filter can carry, so the day opens unnarrowed.
+    expect(push).toHaveBeenCalledWith({
+      pathname: "/transactions",
+      query: { period: "custom", from: "2026-09-09", to: "2026-09-09", type: "EXPENSE" },
+    });
+  });
+
+  it("neither compares a first period nor projects from a single day", async () => {
+    const first = {
+      ...lifestyle,
+      categoryIds: ["lifestyle"],
+      archivedCategoryIds: [],
+      effectiveFrom: "2026-09-01T05:00:00.000Z",
+    };
+    fetchMock.mockImplementation((input) => {
+      const url = urlOf(input);
+      if (url.includes("/api/stats/spending"))
+        return Promise.resolve(spending([{ key: "2026-09-01", total: 12_400, count: 1 }]));
+      if (url.startsWith("/api/budgets/")) return Promise.resolve(json(first));
+      return Promise.resolve(empty());
+    });
+    vi.setSystemTime(new Date("2026-09-01T15:00:00.000Z"));
+    renderScreen();
+
+    expect(
+      await screen.findByText(
+        "It’s day 1 of the period: one day of spending says nothing about where it ends.",
+      ),
+    ).toBeVisible();
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("group", { name: "Spent against the limit, period by period" }),
+      ).not.toBeInTheDocument();
+    });
+    // One category repeats the total, so the breakdown is absent too.
+    expect(screen.queryByRole("region", { name: "Where it went" })).not.toBeInTheDocument();
+    vi.setSystemTime(new Date("2026-09-22T15:00:00.000Z"));
   });
 
   it("changes, skips and removes the period override against the reference month", async () => {
@@ -243,6 +382,7 @@ describe("BudgetDetailScreen", () => {
         return Promise.resolve(
           json({ code: "BUDGET_PERIOD_OVERLAP", message: "overlap" }, { status: 400 }),
         );
+      if (url.includes("/api/stats/spending")) return Promise.resolve(spending([]));
       if (url.startsWith("/api/budgets?")) return Promise.resolve(empty([other]));
       if (url.startsWith("/api/budgets/"))
         return Promise.resolve(json({ ...lifestyle, archivedAt: "2026-09-10T00:00:00Z" }));

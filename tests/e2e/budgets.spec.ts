@@ -342,3 +342,121 @@ test("a custom budget for today shows in the current month only", async ({ page,
   await expect(page).toHaveURL(/reference=\d{4}-\d{2}/);
   await expect(page.getByRole("link", { name: "Two days" })).toHaveCount(0);
 });
+
+// T-30: the four cards of the detail, against the real aggregations and its own months.
+test("the detail says how the period got here, where it ends and how it compares", async ({
+  page,
+  request,
+}) => {
+  const registered = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: {
+      name: "Budget charts",
+      email: `e2e-charts-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@ledgerflow.test`,
+      password: "LedgerFlow!2026",
+      timezone: "UTC",
+    },
+  });
+  expect(registered.ok(), await registered.text()).toBe(true);
+  await page.context().addCookies((await request.storageState()).cookies);
+  const { user } = (await registered.json()) as { user: { id: string } };
+  expect(user.id).toBeTruthy();
+
+  const account = await request.post("/api/accounts", {
+    headers: { origin: APP },
+    data: { name: "Charts cash", type: "CASH", balance: 5_000_000 },
+  });
+  expect(account.ok(), await account.text()).toBe(true);
+  const accountId = ((await account.json()) as { id: string }).id;
+
+  const categoryIds: string[] = [];
+  for (const name of ["Charts food", "Charts travel"]) {
+    const made = await request.post("/api/categories", {
+      headers: { origin: APP },
+      data: { name, icon: "utensils", color: "ORANGE", type: "EXPENSE" },
+    });
+    expect(made.ok(), await made.text()).toBe(true);
+    categoryIds.push(((await made.json()) as { id: string }).id);
+  }
+
+  const today = new Date();
+  const monthStart = (back: number) =>
+    new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - back, 1, 12));
+  const spend = async (back: number, day: number, amount: number, category: number) => {
+    const at = monthStart(back);
+    at.setUTCDate(day);
+    const made = await request.post("/api/transactions", {
+      headers: { origin: APP },
+      data: {
+        type: "EXPENSE",
+        amount,
+        date: at.toISOString(),
+        fromAccountId: accountId,
+        categoryId: categoryIds[category],
+        description: `Charts ${String(back)}-${String(day)}`,
+      },
+    });
+    expect(made.ok(), await made.text()).toBe(true);
+  };
+  // Last month went over its 400,000; the one before it did not.
+  await spend(1, 5, 450_000, 0);
+  await spend(2, 5, 200_000, 0);
+  await spend(0, 1, 120_000, 0);
+  await spend(0, 2, 60_000, 1);
+
+  const effectiveFrom = monthStart(8);
+  const created = await request.post("/api/budgets", {
+    headers: { origin: APP },
+    data: {
+      name: "Charts",
+      color: "PINK",
+      categoryIds,
+      type: "EXPENSE",
+      periodType: "MONTHLY",
+      amount: 400_000,
+      effectiveFrom: effectiveFrom.toISOString(),
+    },
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+
+  await page.goto(`/budgets/${id}`);
+  await expect(page.getByRole("heading", { level: 1, name: "Budget" })).toBeVisible();
+
+  const days = page.getByRole("group", { name: "Spending per day" });
+  await expect(days).toBeVisible();
+  await expect(days.getByRole("button", { name: /\$120,000$/ })).toBeVisible();
+
+  await expect(page.getByRole("img", { name: /against the period’s pace/ })).toBeVisible();
+  await expect(page.getByText(/At this rate you finish the period at/)).toBeVisible();
+
+  const history = page.getByRole("group", { name: "Spent against the limit, period by period" });
+  await expect(history).toBeVisible();
+  const columns = history.getByRole("button");
+  await expect(columns).toHaveCount(6);
+  await expect(columns.nth(4)).toHaveAccessibleName(/\$450,000 of \$400,000$/);
+  await expect(columns.last()).toHaveAccessibleName(/\$180,000 of \$400,000, in progress$/);
+  await expect(page.getByText("1 of the 5 finished periods went over.")).toBeVisible();
+
+  const breakdown = page.getByRole("region", { name: "Where it went" });
+  await expect(breakdown).toBeVisible();
+  await expect(breakdown.getByText("$180,000 of $400,000")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Biggest this period" })).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  // Every figure of the four cards comes from the local copy: a reload reads nothing of its own.
+  // The session and the sync feed are the shell's, not this screen's, and they go out either way.
+  const shell = new Set(["/api/auth/me", "/api/sync/changes"]);
+  const reads: string[] = [];
+  page.on("request", (sent) => {
+    const { pathname } = new URL(sent.url());
+    if (pathname.startsWith("/api/") && !shell.has(pathname)) reads.push(pathname);
+  });
+  await page.reload();
+  await expect(page.getByRole("group", { name: "Spending per day" })).toBeVisible();
+  expect(reads).toEqual([]);
+
+  // A column is a control: it opens the period it names.
+  await columns.first().click();
+  await expect(page).toHaveURL(/reference=\d{4}-\d{2}$/);
+});

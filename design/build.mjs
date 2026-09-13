@@ -1318,7 +1318,61 @@ const budgetBiggestCard = () =>
   `<div class="section-head"><h3 class="h3">Biggest this period</h3><a class="link" href="#">See all</a></div>
 <div class="list card flush">${BUD_BIGGEST.map(([n, ic, c, meta, v]) => row(ic, c, n, meta, v)).join("")}</div>`;
 
-const budgetDetail = ({ archived = false, conflict = false, charts = false } = {}) => {
+const chartEmptyBlock = (line) =>
+  `<div class="empty" style="padding:18px 12px">${tile("chart-column", "NONE", "lg")}<span class="h3">Nothing spent yet this period</span><p class="small muted" style="margin:0;max-width:280px">${line}</p></div>`;
+
+const budgetChartsEmpty = () =>
+  `${chartCard("Spending per day", chartEmptyBlock("The days fill in as the money moves; a period with nothing in it is not thirty days of zero."))}
+${chartCard("Against the pace", chartEmptyBlock("There is no curve until there is something to add up, and no end to project from."))}
+${budgetHistoryCard()}
+<div class="section-head"><h3 class="h3">Biggest this period</h3></div>
+<div class="card">${chartEmptyBlock("Nothing has been spent against this budget yet.")}</div>`;
+
+const budgetChartsLoading = () =>
+  `<div class="card chart">${skel("height:10px;width:120px")}${skel("height:120px;margin-top:22px")}${skel("height:12px;width:60%")}</div>
+<div class="card chart">${skel("height:10px;width:110px")}${skel("height:128px;margin-top:22px")}${skel("height:12px;width:70%")}${skel("height:12px;width:45%")}</div>
+<div class="card chart">${skel("height:10px;width:118px")}${skel("height:110px;margin-top:22px")}${skel("height:12px;width:52%")}</div>
+<div class="section-head"><h3 class="h3">Biggest this period</h3></div>
+<div class="list card flush">${skelRows(3)}</div>`;
+
+const budgetChartsError = () =>
+  `${budgetDayCard()}
+${chartCard("Against the pace", statsError("the pace of this period"))}
+${budgetHistoryCard()}
+${budgetBiggestCard()}`;
+
+// Day 1 of the first period: no six columns to compare against, and one elapsed day projects nothing.
+const budgetFirstPeriodCards = () => {
+  const pace = range(0, SEP_DAYS + 1).map((d) => round((BUD_LIMIT * d) / SEP_DAYS));
+  const spend = [0, 12400, ...range(2, SEP_DAYS).map(() => 0)];
+  return `${chartCard(
+    "Spending per day",
+    `${barsChart(spend, { height: 120, today: 1, until: 1, active: 0, label: "Budget spending per day" })}
+${axis("Sep 1", "15", "30")}
+${readout(`${WD_LONG[sepWeekday(1)]} 1 September \u00b7 1 transaction`, money(12400))}`,
+  )}
+${chartCard(
+  "Against the pace",
+  `${trend(
+    [
+      { points: pace, cls: "pace" },
+      { points: [0, 12400, ...range(2, SEP_DAYS + 1).map(() => null)], dot: true },
+    ],
+    {
+      height: 128,
+      span: SEP_DAYS + 1,
+      marks: [{ at: BUD_LIMIT }],
+      label: "Spent so far against the period's pace",
+    },
+  )}
+<div class="axis marked"><span style="left:0;transform:none">Sep 1</span><span style="left:100%;transform:translateX(-100%)">Sep 30</span></div>
+<p class="small muted" style="margin:0">It is day 1 of the period: one day of spending says nothing about where it ends.</p>
+<span class="legend row"><span class="li"><i class="dot" style="background:var(--brand)"></i>Spent</span><span class="li"><i class="dot line"></i>Pace</span><span class="li"><i class="dot line" style="background:var(--danger)"></i>Limit</span></span>`,
+)}
+${budgetBiggestCard()}`;
+};
+
+const budgetDetail = ({ archived = false, conflict = false, charts = false, state = "" } = {}) => {
   const arch = archived
     ? `<div class="alert neutral" style="align-items:center">${iconSvg("archive")}<span style="flex:1">This budget is archived and no longer tracks spending. Restore it to bring it back exactly as it was.</span><button class="btn sm secondary">${iconSvg("archive-restore", "sm")}Restore</button></div>`
     : "";
@@ -1341,7 +1395,7 @@ const budgetDetail = ({ archived = false, conflict = false, charts = false } = {
 <div class="hstack" style="gap:8px;flex-wrap:wrap"><button class="btn secondary sm">${iconSvg("pencil", "sm")}Change adjustment</button><button class="btn secondary sm">Skip this month</button><button class="btn ghost sm">Remove adjustment</button></div></div>
 <div class="card stack-sm"><h3 class="h3">Categories</h3><div class="chips" style="flex-wrap:wrap">${catChip("Lifestyle")}<button class="chip cat color-CYAN" style="opacity:.7"><span class="dot">${iconSvg("plane")}</span>Vacation <span class="badge warning" style="height:16px">${iconSvg("archive")}archived</span></button></div></div>
 <div class="card stack-sm"><h3 class="h3">Note</h3><p class="small muted" style="margin:0">Clothes, going out and treats. Review in December.</p></div>
-${charts ? budgetDayCard() + budgetPaceCard() + budgetHistoryCard() + budgetBiggestCard() : ""}
+${chartsBlock(charts, state)}
 <div class="section-head"><h3 class="h3">Transactions this period</h3><a class="link" href="#">See all</a></div>
 <div class="list card flush">${row("wine", "PINK", "Vinos y Licores", "Tu 22 · Visa Gold", 38000)}${row("shopping-bag", "PINK", "Falabella", "Mo 21 · Visa Gold", 48000)}${row("film", "PINK", "Cine Colombia", "Fr 18 · Cash", 42000)}</div>
 <div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn danger lg" style="flex:1">${iconSvg("archive", "sm")}Archive</button></div>
@@ -1354,6 +1408,15 @@ ${charts ? budgetDayCard() + budgetPaceCard() + budgetHistoryCard() + budgetBigg
     narrow: true,
     sheet: sh,
   });
+};
+
+const chartsBlock = (charts, state) => {
+  if (!charts) return "";
+  if (state == "loading") return budgetChartsLoading();
+  if (state == "empty") return budgetChartsEmpty();
+  if (state == "cardError") return budgetChartsError();
+  if (state == "first") return budgetFirstPeriodCards();
+  return budgetDayCard() + budgetPaceCard() + budgetHistoryCard() + budgetBiggestCard();
 };
 
 const budgetForm = (edit = false) => {
@@ -3099,8 +3162,37 @@ const PAGES = [
         budgetCategoryCard(),
         { frame: false, added: "2026-09-11" },
       ),
-      plate("archived", "Archived · Restore", "", budgetDetail({ archived: true }), {
+      plate(
+        "detail-charts-loading",
+        "What the period is doing · loading",
+        "Each card holds the height it will have with figures in it — the day chart, the pace curve, the six columns and the list — so nothing jumps when they land.",
+        budgetDetail({ charts: true, state: "loading" }),
+        { added: "2026-09-13" },
+      ),
+      plate(
+        "detail-charts-empty",
+        "What the period is doing · nothing spent yet",
+        "A period with no spending is not a row of zeros: the day chart and the pace curve say so in words. The six previous periods did happen, so that card keeps its figures.",
+        budgetDetail({ charts: true, state: "empty" }),
+        { added: "2026-09-13" },
+      ),
+      plate(
+        "detail-charts-error",
+        "What the period is doing · one card failed",
+        "Each card is its own request, so a failure takes that card, keeps its reference and its Retry, and leaves the other three standing.",
+        budgetDetail({ charts: true, state: "cardError" }),
+        { added: "2026-09-13" },
+      ),
+      plate(
+        "detail-first-period",
+        "First period, day one",
+        "The two cases that break these charts, in the one situation where they happen together: a budget in its first period has no six periods to compare against, so that card is absent rather than a single lonely column; and one elapsed day projects nothing, so there is no dashed end and the sentence says why.",
+        budgetDetail({ charts: true, state: "first" }),
+        { added: "2026-09-13" },
+      ),
+      plate("archived", "Archived · Restore", "", budgetDetail({ archived: true, charts: true }), {
         added: "2026-09-06",
+        updated: "2026-09-13",
       }),
       plate(
         "restore-blocked",

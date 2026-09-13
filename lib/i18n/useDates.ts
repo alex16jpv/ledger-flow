@@ -45,6 +45,8 @@ export function useDates() {
       formatMonth: (date: Date) =>
         capitalize(dateTime({ month: "long", year: "numeric" }).format(date)),
       formatDay: (date: Date) => dateTime({ month: "short", day: "numeric" }).format(date),
+      formatMonthShort: (date: Date) => capitalize(dateTime({ month: "short" }).format(date)),
+      formatYear: (date: Date) => dateTime({ year: "numeric" }).format(date),
       formatDayOfMonth: (date: Date) => dateTime({ day: "numeric" }).format(date),
       formatWeekdayDay: (date: Date) =>
         `${dateTime({ weekday: "long" }).format(date)} ${dateTime({ day: "numeric" }).format(date)}`,

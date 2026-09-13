@@ -5,6 +5,46 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-13 · The budget's charts are composed in the app layer (T-30)
+
+- **Decision:** `BudgetCharts` lives next to `BudgetDetailScreen` in `app/`, not in
+  `features/budgets/components/`, and reuses `StackBar`, `CategoryRows` and `shares` from
+  `features/stats` and `useBiggestTransactions` from `features/transactions`.
+- **Alternatives:** putting it in `features/budgets`, which ESLint's `boundaries/dependencies`
+  refuses — a feature may not import another. Then the choice was to move `ShareRows`, `StackBar`,
+  `Share` and `AMOUNT_KIND` up into `components/ui` and `lib/`, or to compose at the app layer where
+  `StatsScreen` and `BudgetDetailScreen` already compose four and five features each. The second is
+  what the repository already does (house rule 14), and it copies nothing.
+- **Consequence:** the presentational pieces stay where their own screen defines them and there is
+  exactly one implementation of each. If a third screen ever needs them, that is the moment they move
+  up, and moving them is a rename.
+
+## 2026-09-13 · The six-period history is six reads, and that is cheap here (T-30)
+
+- **Decision:** "Last six periods" is `fetchBudgetHistory`, which reads `GET /budgets/:id?reference=`
+  once per period, walking back from one millisecond before each period's own `periodFrom`.
+- **Alternatives:** a backend shape that serves the history in one response, which the spec had been
+  holding the card for. Put to the owner with the measurement and accepted as it is on 2026-09-13:
+  with `READ_SOURCE = "mirror"` these are six reads of the local copy and **no** requests, and only a
+  copy that cannot answer falls back to six real ones. And computing the six references client-side
+  with `resolvePeriod` instead of chaining: rejected because H-55 records that the two sides can
+  disagree about where a period starts, and the chain asks the authority instead of guessing.
+- **Consequence:** one query, one loading state and one error state for the whole card. The walk
+  stops on a window that is not earlier than the last one, so a server that repeated itself draws one
+  column rather than six identical ones or looping for ever.
+
+## 2026-09-13 · A column opens a period only where the URL can name it (T-30)
+
+- **Decision:** the six-period chart takes `onSelect` for a MONTHLY budget and none for the other
+  five period types, so there it is one `role="img"` that reads every column instead of six controls.
+- **Alternatives:** opening every column. Rejected: `reference` in `/budgets/[id]` is a month key, so
+  a weekly column would open the week containing the 15th of its month — a different period from the
+  one clicked, which is rule 18. And widening `reference` to a full day, which changes the screen's
+  navigation contract and its period nav, and is a task rather than a line.
+- **Consequence:** the same rule component 18 already states for the weekday average — where slots
+  lead nowhere, the chart is one image — and the same shape as T-29's "No account" row. Widening the
+  reference later turns the image back into controls by passing one prop.
+
 ## 2026-09-13 · "Offline ready" asks the copy, not the clock (H-14)
 
 - **Decision:** the Sync status row and the one-off toast require `vaultCanAnswer(vault)` — a

@@ -11,9 +11,12 @@ import type { UpdateBudgetInput } from "@/types/api";
 import {
   archiveBudget,
   type BudgetFilters,
+  type BudgetSpendingParams,
   createBudget,
   fetchBudget,
+  fetchBudgetHistory,
   fetchBudgets,
+  fetchBudgetSpending,
   fetchSpendingTotal,
   removeBudgetOverride,
   restoreBudget,
@@ -35,6 +38,28 @@ export function useBudgetQuery(id: string, reference?: string) {
     queryKey: budgetKeys.detail(id, reference),
     queryFn: () => fetchBudget(id, reference),
     enabled: id !== "",
+  });
+}
+
+export function useBudgetSpendingQuery(id: string, params: BudgetSpendingParams, enabled = true) {
+  return useQuery({
+    queryKey: budgetKeys.spending(id, params),
+    queryFn: () => fetchBudgetSpending(params),
+    enabled,
+  });
+}
+
+// T-30: one query for the whole card, because each period says where the one before it starts.
+export function useBudgetHistoryQuery(
+  id: string,
+  periodFrom: string,
+  count: number,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: budgetKeys.history(id, periodFrom, count),
+    queryFn: () => fetchBudgetHistory(id, periodFrom, count),
+    enabled,
   });
 }
 
