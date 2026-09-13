@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, uniqueEmail } from "../fixtures";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
@@ -6,11 +6,12 @@ test("onboarding creates the first account and the global budget, then lands on 
   page,
   request,
 }) => {
-  const email = `e2e-onboarding-${Date.now()}@ledgerflow.test`;
-  await request.post("/api/auth/register", {
+  const email = uniqueEmail("onboarding");
+  const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: { name: "Onboarding E2E", email, password: "LedgerFlow!2026" },
   });
+  expect(registered.ok(), await registered.text()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
 
   await page.goto("/onboarding");

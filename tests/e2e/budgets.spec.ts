@@ -1,5 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
-
+import { expect, type Page, test, uniqueEmail } from "../fixtures";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -17,7 +16,7 @@ async function signUp(page: Page, request: Request) {
     headers: { origin: APP },
     data: {
       name: "Budgets E2E",
-      email: `e2e-budgets-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@ledgerflow.test`,
+      email: uniqueEmail("budgets"),
       password: "LedgerFlow!2026",
     },
   });
@@ -288,7 +287,7 @@ test("a Los Angeles user in USD sees the global budget they just created, format
     headers: { origin: APP },
     data: {
       name: "Budgets LA",
-      email: `e2e-budgets-la-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@ledgerflow.test`,
+      email: uniqueEmail("budgets-la"),
       password: "LedgerFlow!2026",
       timezone: "America/Los_Angeles",
       currency: "USD",
@@ -352,7 +351,7 @@ test("the detail says how the period got here, where it ends and how it compares
     headers: { origin: APP },
     data: {
       name: "Budget charts",
-      email: `e2e-charts-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@ledgerflow.test`,
+      email: uniqueEmail("charts"),
       password: "LedgerFlow!2026",
       timezone: "UTC",
     },

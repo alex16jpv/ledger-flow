@@ -1,5 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
-
+import { expect, type Page, test } from "../fixtures";
 import { freshUser, keptDocument, markDocument, readyForOffline, signInAs } from "../offline";
 import { SW_PATH } from "../sw-path";
 

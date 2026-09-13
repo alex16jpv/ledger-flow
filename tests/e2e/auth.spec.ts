@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, uniqueEmail } from "../fixtures";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
@@ -51,7 +51,7 @@ test("the BFF refuses cross-origin session calls", async ({ request }) => {
 test("register sets httpOnly session cookies, refresh rotates them and logout clears everything", async ({
   request,
 }) => {
-  const email = `e2e-${Date.now()}@ledgerflow.test`;
+  const email = uniqueEmail("auth");
   const register = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: { name: "E2E", email, password: "LedgerFlow!2026", locale: "en" },
@@ -91,11 +91,12 @@ test("register sets httpOnly session cookies, refresh rotates them and logout cl
 });
 
 test("the refresh cookie never travels to pages", async ({ page, request }) => {
-  const email = `e2e-${Date.now()}-b@ledgerflow.test`;
-  await request.post("/api/auth/register", {
+  const email = uniqueEmail("auth-refresh");
+  const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: { name: "E2E", email, password: "LedgerFlow!2026" },
   });
+  expect(registered.ok(), await registered.text()).toBe(true);
   const state = await request.storageState();
   await page.context().addCookies(state.cookies);
   const [pageRequest] = await Promise.all([

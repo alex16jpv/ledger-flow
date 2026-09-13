@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test, uniqueEmail } from "../fixtures";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -8,12 +7,13 @@ test("a user can sign in and lands on home; a wrong password shows one message",
   page,
   request,
 }) => {
-  const email = `e2e-login-${Date.now()}@ledgerflow.test`;
+  const email = uniqueEmail("login");
   const password = "LedgerFlow!2026";
-  await request.post("/api/auth/register", {
+  const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: { name: "Login E2E", email, password },
   });
+  expect(registered.ok(), await registered.text()).toBe(true);
   await request.post("/api/auth/logout", { headers: { origin: APP } });
 
   await page.goto("/login?next=%2Fhome");

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, uniqueEmail } from "../fixtures";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
@@ -6,11 +6,12 @@ async function signedInPage(
   page: Parameters<Parameters<typeof test>[2]>[0]["page"],
   request: Parameters<Parameters<typeof test>[2]>[0]["request"],
 ) {
-  const email = `e2e-settings-${Date.now()}-${Math.random().toString(16).slice(2)}@ledgerflow.test`;
-  await request.post("/api/auth/register", {
+  const email = uniqueEmail("settings");
+  const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: { name: "Settings E2E", email, password: "LedgerFlow!2026", locale: "en" },
   });
+  expect(registered.ok(), await registered.text()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
 }
 
@@ -65,7 +66,7 @@ test("a new user edits the profile, changes currency and time zone, reviews sess
 }) => {
   // F-83: seven screens plus a delete do not fit in Playwright's default 30 s under eight workers.
   test.setTimeout(120_000);
-  const email = `e2e-settings-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@ledgerflow.test`;
+  const email = uniqueEmail("settings");
   const password = "LedgerFlow!2026";
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },

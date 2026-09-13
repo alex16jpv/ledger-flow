@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test } from "../fixtures";
 import {
   addButton,
   APP,
@@ -96,21 +95,23 @@ test("a request cut before the server sees it leaves the queue exactly as it was
   await expect(sheet).toBeHidden();
 
   let cut = 0;
+  let letThrough = false;
   await context.route("**/api/sync", async (route) => {
-    if (cut >= 2) return route.continue();
+    if (letThrough) return route.continue();
     cut += 1;
     await route.abort("connectionfailed");
   });
 
   await context.setOffline(false);
-  // The two cut attempts leave the operation where it was, with its place in the queue.
-  await expect.poll(() => cut, { timeout: 60_000 }).toBe(2);
+  // H-08: cutting until the queue has been read — the backoff is 1–2 s and a loaded round trip is longer.
+  await expect.poll(() => cut, { timeout: 60_000 }).toBeGreaterThanOrEqual(2);
   expect(await listTransactions(request)).toEqual([]);
   await expect
     .poll(async () => (await outbox(page))[0], { timeout: 30_000 })
     .toMatchObject({ entity: "transaction", status: "pending" });
 
   // And the backoff brings it back on its own: nothing here asks for a retry.
+  letThrough = true;
   await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
   const after = await listTransactions(request);
   expect(after).toHaveLength(1);

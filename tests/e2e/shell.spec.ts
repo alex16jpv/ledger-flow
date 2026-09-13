@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test, uniqueEmail } from "../fixtures";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -8,7 +7,7 @@ async function signUp(
   request: Parameters<Parameters<typeof test>[2]>[0]["request"],
   name = "John Doe",
 ) {
-  const email = `e2e-shell-${Date.now()}-${Math.random().toString(16).slice(2)}@ledgerflow.test`;
+  const email = uniqueEmail("shell");
   const response = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: { name, email, password: "LedgerFlow!2026", locale: "en" },

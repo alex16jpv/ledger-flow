@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page, test } from "@playwright/test";
+
+import { expect, type Page, test, uniqueEmail } from "../fixtures";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -124,11 +125,12 @@ test("without a main account the sheet asks for one instead of failing silently"
   page,
   request,
 }) => {
-  const email = `e2e-quick-${Date.now()}@ledgerflow.test`;
-  await request.post("/api/auth/register", {
+  const email = uniqueEmail("quick");
+  const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: { name: "Quick E2E", email, password: "LedgerFlow!2026" },
   });
+  expect(registered.ok(), await registered.text()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
   await page.goto("/home");
   await addButton(page).click();

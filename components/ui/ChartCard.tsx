@@ -36,7 +36,7 @@ export function ChartCard({ title, right, children, className }: ChartCardProps)
 export function ChartSkeleton({ height, lines = 1 }: { height: number; lines?: number }) {
   const t = useTranslations("common");
   return (
-    <Card className="flex flex-col gap-2" aria-busy="true" aria-label={t("loading")}>
+    <Card className="flex flex-col gap-2" role="status" aria-busy="true" aria-label={t("loading")}>
       <Skeleton className="h-2.5 w-28" />
       <Skeleton className="mt-[22px]" style={{ height }} />
       <Skeleton className="h-3 w-3/5" />

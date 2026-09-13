@@ -4,8 +4,8 @@ import {
   expect,
   type Page,
   test,
-} from "@playwright/test";
-
+  uniqueEmail,
+} from "./fixtures";
 import { SW_PATH } from "./sw-path";
 
 // In CI the app is on another port, and a wrong origin is a `403 UNTRUSTED_ORIGIN`.
@@ -47,16 +47,6 @@ export interface Fixture extends Credentials {
   openingBalance: number;
 }
 
-// F-11: a keep-alive socket the server is closing answers `read ECONNRESET`; one retry is enough.
-async function retryOnReset<T>(call: () => Promise<T>): Promise<T> {
-  try {
-    return await call();
-  } catch (error) {
-    if (!String(error).includes("ECONNRESET")) throw error;
-    return await call();
-  }
-}
-
 export interface FreshUserOptions {
   openingBalance?: number;
   // Left out, the backend's defaults — the same the app falls back to, which is what hides F-63.
@@ -69,28 +59,24 @@ export async function freshUser(
   tag: string,
   { openingBalance = 5_000_000, currency, timezone }: FreshUserOptions = {},
 ): Promise<Fixture> {
-  const email = `e2e-${tag}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}@ledgerflow.test`;
+  const email = uniqueEmail(tag);
   const password = "LedgerFlow!2026";
-  const registered = await retryOnReset(() =>
-    request.post("/api/auth/register", {
-      headers: { origin: APP },
-      data: {
-        name: `Offline ${tag}`,
-        email,
-        password,
-        ...(currency ? { currency } : {}),
-        ...(timezone ? { timezone } : {}),
-      },
-    }),
-  );
+  const registered = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: {
+      name: `Offline ${tag}`,
+      email,
+      password,
+      ...(currency ? { currency } : {}),
+      ...(timezone ? { timezone } : {}),
+    },
+  });
   expect(registered.ok(), await registered.text()).toBe(true);
   const accountName = "Cash";
-  const created = await retryOnReset(() =>
-    request.post("/api/accounts", {
-      headers: { origin: APP },
-      data: { name: accountName, type: "CASH", balance: openingBalance },
-    }),
-  );
+  const created = await request.post("/api/accounts", {
+    headers: { origin: APP },
+    data: { name: accountName, type: "CASH", balance: openingBalance },
+  });
   expect(created.ok(), await created.text()).toBe(true);
   const account = (await created.json()) as { id: string };
   return { email, password, accountId: account.id, accountName, openingBalance };
@@ -102,23 +88,22 @@ export async function signInAs(
   request: APIRequestContext,
   who: Credentials,
 ): Promise<void> {
-  const response = await retryOnReset(() =>
-    request.post("/api/auth/login", { headers: { origin: APP }, data: who }),
-  );
+  const response = await request.post("/api/auth/login", {
+    headers: { origin: APP },
+    data: who,
+  });
   expect(response.ok()).toBe(true);
   await context.addCookies((await request.storageState()).cookies);
 }
 
 export async function listTransactions(request: APIRequestContext): Promise<Row[]> {
-  const response = await retryOnReset(() => request.get("/api/transactions?limit=100"));
+  const response = await request.get("/api/transactions?limit=100");
   expect(response.ok()).toBe(true);
   return ((await response.json()) as { data: Row[] }).data;
 }
 
 export async function listAccounts(request: APIRequestContext): Promise<AccountRow[]> {
-  const response = await retryOnReset(() =>
-    request.get("/api/accounts?includeArchived=true&limit=100"),
-  );
+  const response = await request.get("/api/accounts?includeArchived=true&limit=100");
   expect(response.ok()).toBe(true);
   return ((await response.json()) as { data: AccountRow[] }).data;
 }

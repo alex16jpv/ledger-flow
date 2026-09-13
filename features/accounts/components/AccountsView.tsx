@@ -84,7 +84,12 @@ export function AccountsView() {
         }
       />
       {accounts.isPending ? (
-        <div className="flex flex-col gap-4" aria-busy="true" aria-label={t("common.loading")}>
+        <div
+          className="flex flex-col gap-4"
+          role="status"
+          aria-busy="true"
+          aria-label={t("common.loading")}
+        >
           <Card className="flex flex-col gap-3">
             <Skeleton className="h-2.5 w-24" />
             <Skeleton className="h-9 w-48" />

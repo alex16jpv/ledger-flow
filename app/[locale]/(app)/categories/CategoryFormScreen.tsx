@@ -136,7 +136,12 @@ export function EditCategoryScreen({ id }: { id: string }) {
         }
       />
       {category.isPending || (row && !row.archivedAt && usage.isPending) ? (
-        <div className="flex flex-col gap-4" aria-busy="true" aria-label={t("common.loading")}>
+        <div
+          className="flex flex-col gap-4"
+          role="status"
+          aria-busy="true"
+          aria-label={t("common.loading")}
+        >
           <Skeleton className="h-20 w-full rounded-lg" />
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-10 w-full" />

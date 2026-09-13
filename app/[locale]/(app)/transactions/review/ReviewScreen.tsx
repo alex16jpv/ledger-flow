@@ -147,7 +147,12 @@ export function ReviewScreen() {
         }
       />
       {list.isPending ? (
-        <div className="flex flex-col gap-3" aria-busy="true" aria-label={t("common.loading")}>
+        <div
+          className="flex flex-col gap-3"
+          role="status"
+          aria-busy="true"
+          aria-label={t("common.loading")}
+        >
           <Skeleton className="h-12 w-full rounded-md" />
           <Skeleton className="h-44 w-full rounded-lg" />
           <Skeleton className="h-44 w-full rounded-lg" />

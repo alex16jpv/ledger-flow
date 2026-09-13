@@ -1,4 +1,4 @@
-import { expect, type Locator, test } from "@playwright/test";
+import { expect, type Locator, test } from "../fixtures";
 
 const CATALOG = "/en/dev/ui";
 const SPINNER = ".animate-spin";

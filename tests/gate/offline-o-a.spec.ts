@@ -1,7 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 
-import { type BrowserContext, expect, type Page, test } from "@playwright/test";
-
+import { type BrowserContext, expect, type Page, test } from "../fixtures";
 import { SW_PATH } from "../sw-path";
 import { batches, health, pulls, pushes, reads, Tally } from "./tally";
 

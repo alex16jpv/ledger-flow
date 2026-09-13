@@ -107,7 +107,12 @@ export function TransactionDetailScreen({ id }: { id: string }) {
         }}
       />
       {transaction.isPending ? (
-        <div className="flex flex-col gap-4" aria-busy="true" aria-label={t("common.loading")}>
+        <div
+          className="flex flex-col gap-4"
+          role="status"
+          aria-busy="true"
+          aria-label={t("common.loading")}
+        >
           <Skeleton className="h-40 w-full rounded-lg" />
           <Skeleton className="h-64 w-full rounded-lg" />
         </div>

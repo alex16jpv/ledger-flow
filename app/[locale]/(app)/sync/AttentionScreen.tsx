@@ -365,7 +365,12 @@ export function AttentionScreen() {
         }}
       />
       {view.kind === "loading" ? (
-        <div className="flex flex-col gap-3" aria-busy="true" aria-label={t("states.loading")}>
+        <div
+          className="flex flex-col gap-3"
+          role="status"
+          aria-busy="true"
+          aria-label={t("states.loading")}
+        >
           <Skeleton className="h-12 w-full rounded-md" />
           <Skeleton className="h-40 w-full rounded-lg" />
         </div>

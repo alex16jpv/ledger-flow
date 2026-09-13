@@ -75,7 +75,12 @@ export function PastBudgetsView({
         ]}
       />
       {budgets.isPending ? (
-        <div className="flex flex-col gap-3" aria-busy="true" aria-label={tc("common.loading")}>
+        <div
+          className="flex flex-col gap-3"
+          role="status"
+          aria-busy="true"
+          aria-label={tc("common.loading")}
+        >
           <Card className="flex flex-col gap-3">
             <Skeleton className="h-10 w-2/3" />
             <Skeleton className="h-7 w-1/2" />

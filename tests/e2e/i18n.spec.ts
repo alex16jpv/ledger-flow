@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 test("English has no prefix and sets <html lang>", async ({ page }) => {
   await page.goto("/");

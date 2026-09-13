@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test, uniqueEmail } from "../fixtures";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -10,9 +9,7 @@ test("registration needs the consent box, then lands on onboarding", async ({ pa
   const submit = page.getByRole("button", { name: "Create account" });
   await expect(submit).toBeDisabled();
   await page.getByRole("textbox", { name: "Name" }).fill("Register E2E");
-  await page
-    .getByLabel("Email", { exact: true })
-    .fill(`e2e-register-${Date.now()}@ledgerflow.test`);
+  await page.getByLabel("Email", { exact: true }).fill(uniqueEmail("register"));
   await page.getByLabel("Password", { exact: true }).fill("LedgerFlow!2026");
   await expect(page.getByText(/Detected from your region/)).toBeVisible();
   await page.getByRole("checkbox").check({ force: true });
@@ -22,7 +19,7 @@ test("registration needs the consent box, then lands on onboarding", async ({ pa
 });
 
 test("a taken email shows the inline error with a sign-in link", async ({ page, request }) => {
-  const email = `e2e-taken-${Date.now()}@ledgerflow.test`;
+  const email = uniqueEmail("taken");
   await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: { name: "Taken", email, password: "LedgerFlow!2026" },

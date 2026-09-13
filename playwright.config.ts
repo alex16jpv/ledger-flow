@@ -52,7 +52,8 @@ export default defineConfig({
         ]),
     {
       // Next 16 allows one dev server per directory, so the e2e front is a production build on its own port.
-      command: `npm run build && npx next start --port ${appPort}`,
+      // H-08: Node closes an idle socket at 5 s, and a client reusing it right then loses the request.
+      command: `npm run build && npx next start --port ${appPort} --keepAliveTimeout 120000`,
       url: baseURL,
       reuseExistingServer: !isCI,
       timeout: 180_000,
