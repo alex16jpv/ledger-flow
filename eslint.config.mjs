@@ -58,6 +58,15 @@ export default defineConfig([
         { object: "window", property: "fetch", message: "Use lib/api." },
         { object: "globalThis", property: "fetch", message: "Use lib/api." },
       ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            'JSXOpeningElement:has(JSXAttribute[name.name="aria-busy"]):has(JSXAttribute[name.name=/^aria-label/]):not(:has(JSXAttribute[name.name="role"]))',
+          message:
+            'A loading container is role="status": aria-label is prohibited ARIA on a generic, so a reader gets no name (axe aria-prohibited-attr, H-08).',
+        },
+      ],
     },
   },
   {

@@ -241,7 +241,12 @@ export function TransactionsScreen() {
         />
       )}
       {list.isPending ? (
-        <div className="flex flex-col gap-2" aria-busy="true" aria-label={t("common.loading")}>
+        <div
+          className="flex flex-col gap-2"
+          role="status"
+          aria-busy="true"
+          aria-label={t("common.loading")}
+        >
           <Skeleton className="h-4 w-32" />
           {Array.from({ length: 6 }, (_, index) => (
             <SkeletonRow key={index} />

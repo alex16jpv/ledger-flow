@@ -202,7 +202,12 @@ export function BudgetDetailScreen({ id }: { id: string }) {
         }}
       />
       {budget.isPending ? (
-        <div className="flex flex-col gap-4" aria-busy="true" aria-label={t("common.loading")}>
+        <div
+          className="flex flex-col gap-4"
+          role="status"
+          aria-busy="true"
+          aria-label={t("common.loading")}
+        >
           <Skeleton className="h-56 w-full rounded-lg" />
           <Skeleton className="h-32 w-full rounded-lg" />
           <Skeleton className="h-24 w-full rounded-lg" />

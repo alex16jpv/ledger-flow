@@ -10,7 +10,9 @@ server fails and when something has to be confirmed.
   "No categories of this type", Budgets "Put a ceiling on your small spending", Stats "No transactions in
   this period", To review "All detailed".
 - **Loading** (`#loading-list`): skeletons in the real silhouette of the screen — search, chips, summary,
-  six rows. Never a full-page spinner; a spinner only inside a button.
+  six rows. Never a full-page spinner; a spinner only inside a button. The container that holds them is
+  `role="status"` with `aria-busy` and the name "Loading" — see `../accessibility.md` for why the role is
+  not optional.
 - **Error** (`#server-error`): a 503, `DB_UNAVAILABLE` or a network failure shows a red tile, a title, an
   explanation and "Retry", and underneath the mono line "Reference: {requestId}" for support. An error
   while saving shows a red toast with "Retry" that keeps the form. **When the error replaces the whole

@@ -157,7 +157,7 @@ export function CategoriesView() {
         }))}
       />
       {categories.isPending ? (
-        <div className={GRID} aria-busy="true" aria-label={t("common.loading")}>
+        <div className={GRID} role="status" aria-busy="true" aria-label={t("common.loading")}>
           {Array.from({ length: 6 }, (_, index) => (
             <Card key={index} className="flex min-h-[132px] flex-col items-center gap-2">
               <Skeleton className="size-14 rounded-[16px]" />

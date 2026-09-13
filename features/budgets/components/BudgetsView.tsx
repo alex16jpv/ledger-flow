@@ -157,7 +157,12 @@ export function BudgetsView({
         ))}
       </ChipRow>
       {budgets.isPending ? (
-        <div className="flex flex-col gap-3" aria-busy="true" aria-label={t("common.loading")}>
+        <div
+          className="flex flex-col gap-3"
+          role="status"
+          aria-busy="true"
+          aria-label={t("common.loading")}
+        >
           <Card className="flex flex-col gap-3">
             <Skeleton className="h-2.5 w-40" />
             <Skeleton className="h-9 w-48" />

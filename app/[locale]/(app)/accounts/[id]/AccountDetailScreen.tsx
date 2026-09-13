@@ -152,7 +152,12 @@ export function AccountDetailScreen({ id }: { id: string }) {
         }}
       />
       {account.isPending ? (
-        <div className="flex flex-col gap-4" aria-busy="true" aria-label={t("common.loading")}>
+        <div
+          className="flex flex-col gap-4"
+          role="status"
+          aria-busy="true"
+          aria-label={t("common.loading")}
+        >
           <Skeleton className="h-44 w-full rounded-lg" />
           <div className="grid grid-cols-2 gap-3">
             <Skeleton className="h-12 rounded-lg" />

@@ -32,7 +32,7 @@ const LIST_PATH = "/budgets";
 
 function FormSkeleton({ label }: { label: string }) {
   return (
-    <div className="flex flex-col gap-4" aria-busy="true" aria-label={label}>
+    <div className="flex flex-col gap-4" role="status" aria-busy="true" aria-label={label}>
       <Skeleton className="h-12 w-full" />
       <Skeleton className="h-10 w-full" />
       <Skeleton className="h-20 w-full" />

@@ -7,6 +7,12 @@
   in light mode (amber, yellow, lime, teal and cyan).
 - Every control has an accessible name; `aria-pressed` on chips, segments and swatches; `aria-current`
   on navigation; sheets are `role="dialog"` with focus trapped and returned.
+- **A loading state carries a role, not a bare label.** Every skeleton that stands in for a screen or
+  a card is `role="status"` with `aria-busy="true"` and the name "Loading": on a `div` with no role,
+  `aria-label` is prohibited ARIA and a reader gets **nothing at all** (axe `aria-prohibited-attr`).
+  `no-restricted-syntax` in `eslint.config.mjs` fails on any that is missing it. What this buys is the
+  name — a reader that reaches the region hears "Loading". It is **not** an announcement: `Skeleton` is
+  `aria-hidden`, so the live region has no text to announce and nothing is read out on its own.
 - Keyboard: a logical order, `Enter` saves in quick capture, `Esc` closes sheets.
 - **A chart is one tab stop, not one per slot.** Thirty bars would be thirty stops between the period
   and the rest of the page, so the charts that have slots (components 18, 30, 32, 33) use the roving `tabindex`

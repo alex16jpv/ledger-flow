@@ -47,7 +47,7 @@ export function RecentTransactions() {
       </div>
       <Card flush>
         {recent.isPending ? (
-          <div aria-busy="true" aria-label={t("common.loading")}>
+          <div role="status" aria-busy="true" aria-label={t("common.loading")}>
             <SkeletonRow />
             <SkeletonRow />
             <SkeletonRow />
