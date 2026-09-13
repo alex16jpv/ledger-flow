@@ -5,6 +5,21 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-13 · A mirror-backed read never pauses, so it can never hang (H-17)
+
+- **Decision:** every domain in `MIRROR_BACKED_DOMAINS` gets `networkMode: "always"` instead of
+  `"offlineFirst"`, and `LoadErrorBody` says "You seem to be offline" for a `NetworkError` rather
+  than "The server didn't respond".
+- **Alternatives:** keeping `"offlineFirst"` and rendering `fetchStatus === "paused"` as a state of
+  its own in every view, which is what Transactions alone did. Rejected: a paused read is a limbo
+  that resolves only if the network comes back, so nineteen more screens would each have to paint a
+  state that house rule 18 says should not exist. And refusing the retry outright, which does not
+  close the race — the pause is decided when the retry timer fires, not when it is granted.
+- **Consequence:** with `READ_SOURCE = "mirror"` every read already runs against the local copy, so
+  "there is no point fetching while offline" was never true here. A read the mirror cannot answer now
+  fails loudly with the right sentence, and `TransactionsScreen`'s offline empty state keys off the
+  error instead of a `fetchStatus` that no longer occurs.
+
 ## 2026-09-12 · A bucket no filter can narrow is a figure, not a control (T-29)
 
 - **Decision:** the "No account" row of Stats › Accounts — the server's `unassigned` bucket — renders

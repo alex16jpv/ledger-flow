@@ -37,7 +37,7 @@ import {
   useTransactionsInfinite,
 } from "@/features/transactions/hooks";
 import { transactionKeys } from "@/features/transactions/keys";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError, NetworkError } from "@/lib/api/errors";
 import { isEnabled } from "@/lib/flags";
 import { toIsoWindow } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
@@ -131,7 +131,8 @@ export function TransactionsScreen() {
       : filters.period === "custom" && window
         ? dates.formatRange(window.from, new Date(window.to.getTime() - 1))
         : t(`transactions.list.periods.${filters.period}`);
-  const offline = list.fetchStatus === "paused" && !list.data;
+  // H-17: the read is no longer paused, so being offline arrives here as the failure it is.
+  const offline = list.error instanceof NetworkError && !list.data;
 
   return (
     <div className="flex flex-col gap-4">
@@ -239,7 +240,7 @@ export function TransactionsScreen() {
           count={total}
         />
       )}
-      {list.isPending && !offline ? (
+      {list.isPending ? (
         <div className="flex flex-col gap-2" aria-busy="true" aria-label={t("common.loading")}>
           <Skeleton className="h-4 w-32" />
           {Array.from({ length: 6 }, (_, index) => (

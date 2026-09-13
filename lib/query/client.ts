@@ -37,7 +37,8 @@ export function createQueryClient(): QueryClient {
     },
   });
   for (const queryKey of MIRROR_BACKED_DOMAINS) {
-    client.setQueryDefaults(queryKey, { networkMode: "offlineFirst" });
+    // H-17: `offlineFirst` pauses a retry the heartbeat overtakes, and the screen waits for ever.
+    client.setQueryDefaults(queryKey, { networkMode: "always" });
   }
   return client;
 }
