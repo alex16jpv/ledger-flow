@@ -111,7 +111,7 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     finger**, which is the answer the pace mark already got (F-08); on a touch screen the line is the
     only reading, and it is never the only place a figure appears.
 30. **Grouped bars (`gbars`)** — two series in one slot: income in `--income`, spending in `--brand`,
-    one pair per month. A period still running is drawn at 55% and its readout says "in progress"; it
+    one pair per month. A period still running is **hatched** and its readout says "in progress"; it
     is **never** counted into an average, a total or a rate that claims to be a finished period's.
 31. **Trend (`trend`)** — one or more lines over the same x axis: solid is what happened, dashed
     `--text-3` is a reference (the period's pace, the same days of the previous month), dashed
@@ -127,7 +127,7 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     implementation: the top categories stacked inside each month, and a **single** segment with the
     period's limit drawn as a dashed cap across the column (an adjusted month does not share the base
     amount, so the cap is per column, never one rule across the chart) and the segment in `--danger`
-    when it is over. A period still running is drawn at 55% and is excluded from any count in the line
+    when it is over. A period still running is **hatched** and is excluded from any count in the line
     underneath.
 
 **Every chart obeys the same contract**, and every shape has exactly one implementation: a slot — a

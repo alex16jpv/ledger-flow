@@ -96,7 +96,6 @@ export function BudgetDetailScreen({ id }: { id: string }) {
     [accounts.data, categoryMap],
   );
   const single = row?.categoryIds.length === 1 ? row.categoryIds[0] : undefined;
-  // T-25: several categories are a filter the endpoint takes, so the page is already the budget's.
   const transactions = useTransactionsInfinite(
     row
       ? {

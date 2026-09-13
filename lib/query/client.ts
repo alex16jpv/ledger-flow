@@ -3,8 +3,6 @@ import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { ApiError, NetworkError } from "@/lib/api/errors";
 import { connectivityStore } from "@/lib/network/connectivity";
 
-import { MIRROR_BACKED_DOMAINS } from "./domains";
-
 export const DEFAULT_STALE_TIME_MS = 30_000;
 export const MAX_RETRY_DELAY_MS = 8_000;
 
@@ -15,7 +13,7 @@ export function retryDelayWithJitter(attempt: number): number {
 
 export function shouldRetryQuery(failureCount: number, error: unknown): boolean {
   if (failureCount >= 1) return false;
-  // `offlineFirst` pauses the retry, so an invalidation awaiting it never resolves.
+  // A retry nobody can grant is a failure the screen waits for instead of showing.
   if (connectivityStore.getSnapshot() === "offline") return false;
   if (error instanceof ApiError) return error.status >= 500 || error.status === 429;
   return error instanceof NetworkError;
@@ -31,14 +29,14 @@ export function createQueryClient(): QueryClient {
         retry: shouldRetryQuery,
         retryDelay: retryDelayWithJitter,
         refetchOnWindowFocus: true,
+        // H-17: pausing a read leaves the screen waiting for ever; every read fails out loud instead.
+        networkMode: "always",
+        // React Query derives this from `networkMode`, and "always" would turn it off.
+        refetchOnReconnect: true,
       },
       // A paused mutation never runs its mutationFn, so the outbox of O-F4 was never reached.
       mutations: { retry: 0, networkMode: "offlineFirst" },
     },
   });
-  for (const queryKey of MIRROR_BACKED_DOMAINS) {
-    // H-17: `offlineFirst` pauses a retry the heartbeat overtakes, and the screen waits for ever.
-    client.setQueryDefaults(queryKey, { networkMode: "always" });
-  }
   return client;
 }

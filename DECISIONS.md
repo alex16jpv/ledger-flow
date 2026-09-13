@@ -5,6 +5,21 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-13 · The second place the client adds the API's own buckets (T-30)
+
+- **Decision:** `paceSeries` (`features/budgets/charts.ts`) runs the day buckets `/stats/spending`
+  returned into a cumulative total, and divides it by the elapsed days to say where the period ends at
+  this rate. Added with `toCents`/`fromCents` from `lib/local/derive`, divided once, and the result is
+  never painted where an amount goes: it is a dashed line and a sentence.
+- **Alternatives:** asking the backend for the curve, which is the same buckets read a second way — a
+  new aggregation for a figure the client already holds. And keeping it inside `lib/local/derive`,
+  which is the mirror's derivation of what the server would have answered; this is neither offline nor
+  a server answer, it is arithmetic about a drawing.
+- **Consequence:** the entry of 2026-09-12 said the client adds buckets in **exactly one place**
+  (`weekdayAverages`); as of today there are **two**, and this is the second. House rule 4 in
+  `CLAUDE.md` still names only `lib/local/derive` as the declared exception, so the wording of the rule
+  is out of step with the code and only the owner changes his rulebook — put to him on 2026-09-13.
+
 ## 2026-09-13 · The budget's charts are composed in the app layer (T-30)
 
 - **Decision:** `BudgetCharts` lives next to `BudgetDetailScreen` in `app/`, not in
@@ -53,9 +68,11 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   with network. Rejected: the promise is made before that read happens, and until it does every
   budget, every month filter and every spending summary declines in the mirror and goes to the
   server. Promising offline to a device that will not answer is rule 18 again.
-- **Consequence:** the row says "Preparing…" (or "Incomplete" with no network) for the short window
-  where the copy is full but cannot be read, which is the truth. The backend could close it for good
-  by sending the profile in every snapshot.
+- **Consequence:** the window where the copy is full but unreadable gets a state of its own,
+  **"Almost ready"**, with a "Finish now" that asks the mirror for one more pass — because the
+  independent review caught the first version saying "Preparing… · 25 of 25 screens", which is a
+  contradiction and a wait with no way out. The backend could close it for good by sending the profile
+  in every snapshot.
 
 ## 2026-09-13 · A mirror-backed read never pauses, so it can never hang (H-17)
 
@@ -68,9 +85,16 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   state that house rule 18 says should not exist. And refusing the retry outright, which does not
   close the race — the pause is decided when the retry timer fires, not when it is granted.
 - **Consequence:** with `READ_SOURCE = "mirror"` every read already runs against the local copy, so
-  "there is no point fetching while offline" was never true here. A read the mirror cannot answer now
-  fails loudly with the right sentence, and `TransactionsScreen`'s offline empty state keys off the
-  error instead of a `fetchStatus` that no longer occurs.
+  "there is no point fetching while offline" was never true here. It is the **global** query default,
+  not a per-domain one, because the three Settings reads were outside `MIRROR_BACKED_DOMAINS` and
+  paused exactly the same way. Two things the independent review measured and this entry would
+  otherwise have got wrong: React Query **derives `refetchOnReconnect` from `networkMode`**, so
+  `"always"` silently turned it off and it is now declared explicitly; and a read can still pause on a
+  hidden tab, because the retryer waits for focus as well as for the network — that one resumes on its
+  own, which the network one never did. The one read left on `"online"` is the session itself: it has
+  nothing local to fall back on, so with no network there is nothing to ask, and `SessionProvider`
+  already counts a paused question as answered. `TransactionsScreen`'s offline empty state keys off a
+  `NetworkError` that is not a timeout, and carries a Retry.
 
 ## 2026-09-12 · A bucket no filter can narrow is a figure, not a control (T-29)
 
@@ -96,7 +120,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   month whose only movements were transfers looks exactly like a month with nothing in it, and the
   line is what tells them apart.
 
-## 2026-09-12 · The client adds buckets in exactly one place (T-27)
+## 2026-09-12 · The client adds buckets in exactly one place (T-27) — widened on 2026-09-13
 
 - **Decision:** `weekdayAverages` (`features/stats/model.ts`) sums the three or four day buckets of
   each weekday with `sumAmounts` from `lib/local/derive` — in minor units, before dividing.

@@ -65,7 +65,6 @@ function lastPoint(
   };
 }
 
-// Component 31: a line is not slots, so it reads itself as one image and the card says it in words.
 export function Trend({ lines, label, limit, height = 128, className }: TrendProps) {
   const span = Math.max(1, ...lines.map((line) => line.points.length));
   const values = lines.flatMap((line) => line.points).filter((value) => value !== null);
@@ -78,7 +77,7 @@ export function Trend({ lines, label, limit, height = 128, className }: TrendPro
       viewBox={`0 0 ${String(WIDTH)} ${String(HEIGHT)}`}
       preserveAspectRatio="none"
       style={{ height }}
-      className={cn("w-full", className)}
+      className={cn("w-full overflow-visible", className)}
     >
       {rule !== null && (
         <path

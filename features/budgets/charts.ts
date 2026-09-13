@@ -22,7 +22,7 @@ function runningTotals(bars: readonly DaySlot[]): number[] {
   });
 }
 
-// The projection needs a rate, and one elapsed day is not a rate: on day 1 there is nothing to draw.
+// One elapsed day is not a rate, so day 1 has nothing to project from.
 const MIN_DAYS_TO_PROJECT = 2;
 
 export function paceSeries(bars: readonly DaySlot[], amount: number): PaceSeries {
@@ -53,7 +53,6 @@ export function paceSeries(bars: readonly DaySlot[], amount: number): PaceSeries
   return { spent, pace, projection, endsAt, elapsedDays, days, spentSoFar };
 }
 
-// A CUSTOM budget is one window that never repeats, so it has no history to line up against.
 export function hasPeriodHistory(budget: Pick<Budget, "periodType">): boolean {
   return budget.periodType !== "CUSTOM";
 }

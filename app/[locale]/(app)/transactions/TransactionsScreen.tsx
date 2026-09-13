@@ -131,8 +131,8 @@ export function TransactionsScreen() {
       : filters.period === "custom" && window
         ? dates.formatRange(window.from, new Date(window.to.getTime() - 1))
         : t(`transactions.list.periods.${filters.period}`);
-  // H-17: the read is no longer paused, so being offline arrives here as the failure it is.
-  const offline = list.error instanceof NetworkError && !list.data;
+  // A request that left and timed out is a slow server, not a device with no network.
+  const offline = list.error instanceof NetworkError && !list.error.timedOut && !list.data;
 
   return (
     <div className="flex flex-col gap-4">
@@ -252,6 +252,16 @@ export function TransactionsScreen() {
           icon={<WifiOff {...iconProps("lg")} />}
           title={t("transactions.list.offline.title")}
           body={t("transactions.list.offline.body")}
+          action={
+            <Button
+              variant="secondary"
+              onClick={() => {
+                void list.refetch();
+              }}
+            >
+              {t("common.retry")}
+            </Button>
+          }
         />
       ) : list.isError && !invalidCursor ? (
         <Empty

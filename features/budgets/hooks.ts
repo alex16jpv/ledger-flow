@@ -49,16 +49,22 @@ export function useBudgetSpendingQuery(id: string, params: BudgetSpendingParams,
   });
 }
 
-// T-30: one query for the whole card, because each period says where the one before it starts.
 export function useBudgetHistoryQuery(
   id: string,
   periodFrom: string,
   count: number,
   enabled = true,
 ) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: budgetKeys.history(id, periodFrom, count),
-    queryFn: () => fetchBudgetHistory(id, periodFrom, count),
+    queryFn: () =>
+      fetchBudgetHistory(id, periodFrom, count, (reference) =>
+        queryClient.query({
+          queryKey: budgetKeys.detail(id, reference),
+          queryFn: () => fetchBudget(id, reference),
+        }),
+      ),
     enabled,
   });
 }

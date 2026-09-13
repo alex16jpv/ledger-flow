@@ -444,8 +444,7 @@ test("the detail says how the period got here, where it ends and how it compares
   await expect(page.getByRole("heading", { name: "Biggest this period" })).toBeVisible();
   await expectNoAxeViolations(page);
 
-  // Every figure of the four cards comes from the local copy: a reload reads nothing of its own.
-  // The session and the sync feed are the shell's, not this screen's, and they go out either way.
+  // The session and the sync feed are the shell's, not this screen's, and go out either way.
   const shell = new Set(["/api/auth/me", "/api/sync/changes"]);
   const reads: string[] = [];
   page.on("request", (sent) => {

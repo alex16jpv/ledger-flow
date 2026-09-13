@@ -72,18 +72,21 @@ their figures. A budget in its **first period** has no six-period history, so th
 rather than a single lonely column, and the projection is **absent on day 1** of a period, where
 dividing by one elapsed day says nothing — the two together are `#detail-first-period`, and the pace
 card says why in words instead of drawing a dashed end. **Loading** (`#detail-charts-loading`) — one
-`Skeleton` per card at its own height. **Error** (`#detail-charts-error`) — each card is its own
-request, so a failure takes that card, with the shared `Empty` in `danger`, `LoadErrorBody` and Retry,
-and leaves the others standing.
+`Skeleton` per card at its own height. **Error** (`#detail-charts-error`) — the previous periods and
+the biggest movements are each their own reading, so their failure takes their own card, with the
+shared `Empty` in `danger`, `LoadErrorBody` and Retry, and leaves the rest standing; the day chart and
+the pace curve are **one** reading — the curve is that day series added up — so they fall together.
 
 **A period that is over still says what it did.** The four cards are a reading, not an action, so they
 are drawn for a past period, for an ended budget and for an archived one (`#archived`), which is the
 period a user most wants to look back at. The projection disappears on its own there: with no days left
 there is nothing to project.
 
-**Keyboard.** Same contract as Stats: the day chart and the six-period chart are one tab stop each,
-arrows move between slots, `Enter` opens what the slot leads to, and the focused slot drives the
-`readout`.
+**Keyboard.** Same contract as Stats: the day chart is one tab stop, arrows move between slots,
+`Enter` opens the day, and the focused slot drives the `readout`. The six-period chart is the same
+where a column leads somewhere — a MONTHLY budget, whose period `reference` in the URL can name; for
+every other period type the URL cannot name the column, so the chart is one `role="img"` that reads
+all six columns, exactly as the weekday average of Stats does (component 18).
 
 **An archived budget** (`#archived`): a `neutral` alert on top — "This budget is archived and no longer
 tracks spending. Restore it to bring it back exactly as it was." — with a "Restore" button

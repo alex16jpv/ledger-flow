@@ -67,7 +67,6 @@ async function mirrorReady(vault: VaultHandle): Promise<boolean> {
 
 // H-14: what "Offline ready" may promise — a copy with the zone every windowed read asks it for.
 export async function vaultCanAnswer(vault: VaultHandle): Promise<boolean> {
-  // Both reads leave in the same tick: a second one would outlive a vault that is being closed.
   const [synced, timeZone] = await Promise.all([mirrorReady(vault), mirrorTimeZone(vault.db)]);
   return synced && timeZone !== undefined;
 }

@@ -49,6 +49,7 @@ export function useSyncSnapshot(): { snapshot: SyncSnapshot; reload: () => void 
   useEffect(() => {
     const state = { cancelled: false };
     const load = () => {
+      // A vault closing under a read would otherwise leave every row in its skeleton for good.
       void (async () => {
         // F-31: `startMirror` opens the vault with a promise, so at mount the handle is still null.
         const vault = await vaultReady();
@@ -71,7 +72,9 @@ export function useSyncSnapshot(): { snapshot: SyncSnapshot; reload: () => void 
           mode: displayMode(),
           shell,
         });
-      })();
+      })().catch(() => {
+        if (!state.cancelled) setSnapshot((current) => ({ ...current, read: true }));
+      });
     };
     load();
     // F-85 was a Preparing… that never became Ready because the warm finishes after the mount.

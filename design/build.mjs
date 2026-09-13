@@ -1337,8 +1337,8 @@ const budgetChartsLoading = () =>
 
 const budgetChartsError = () =>
   `${budgetDayCard()}
-${chartCard("Against the pace", statsError("the pace of this period"))}
-${budgetHistoryCard()}
+${budgetPaceCard()}
+${chartCard("Last six periods", statsError("the previous periods"))}
 ${budgetBiggestCard()}`;
 
 // Day 1 of the first period: no six columns to compare against, and one elapsed day projects nothing.
@@ -3179,7 +3179,7 @@ const PAGES = [
       plate(
         "detail-charts-error",
         "What the period is doing · one card failed",
-        "Each card is its own request, so a failure takes that card, keeps its reference and its Retry, and leaves the other three standing.",
+        "The previous periods are their own reading, so their failure takes that card, keeps its reference and its Retry, and leaves the rest of the period standing. The day chart and the pace curve are one reading and fall together.",
         budgetDetail({ charts: true, state: "cardError" }),
         { added: "2026-09-13" },
       ),

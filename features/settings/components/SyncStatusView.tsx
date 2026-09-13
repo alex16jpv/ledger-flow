@@ -31,7 +31,7 @@ import { localePrefix } from "@/lib/i18n/locales";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
-import { forceFullResync } from "@/lib/local/mirror";
+import { forceFullResync, pullNow } from "@/lib/local/mirror";
 import { syncTransport } from "@/lib/local/outbox/engine";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { wipeThisDevice } from "@/lib/local/wipe";
@@ -94,6 +94,7 @@ export function SyncStatusView() {
   const [installing, setInstalling] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [resyncing, setResyncing] = useState(false);
+  const [finishingNow, setFinishingNow] = useState(false);
 
   const storage = snapshot.storage;
   const userId = snapshot.userId;
@@ -119,6 +120,9 @@ export function SyncStatusView() {
   const shell = snapshot.shell;
   // H-14: a copy that cannot answer a read is not ready, however full it looks.
   const offlineReady = snapshot.mirrorAnswers && shell.cached >= shell.expected;
+  // The screens are all here and the data has landed: what is missing is one read from the server.
+  const finishing =
+    Boolean(snapshot.syncedAt) && !snapshot.mirrorAnswers && shell.cached >= shell.expected;
 
   const persisted = !storage?.supported
     ? t("persisted.unsupported")
@@ -203,10 +207,12 @@ export function SyncStatusView() {
                   ? t("offlineReady.help")
                   : offline
                     ? t("offlineReady.incompleteHelp")
-                    : t("offlineReady.preparingHelp", {
-                        cached: shell.cached,
-                        expected: shell.expected,
-                      })
+                    : finishing
+                      ? t("offlineReady.finishingHelp")
+                      : t("offlineReady.preparingHelp", {
+                          cached: shell.cached,
+                          expected: shell.expected,
+                        })
             }
             value={
               !snapshot.read
@@ -219,7 +225,9 @@ export function SyncStatusView() {
                     ? t("offlineReady.ready")
                     : offline
                       ? t("offlineReady.incomplete")
-                      : t("offlineReady.preparing")
+                      : finishing
+                        ? t("offlineReady.finishing")
+                        : t("offlineReady.preparing")
             }
             action={
               snapshot.workerSupported && !offlineReady && offline ? (
@@ -232,6 +240,23 @@ export function SyncStatusView() {
                   }}
                 >
                   {t("offlineReady.retry")}
+                </Button>
+              ) : snapshot.workerSupported && finishing ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={finishingNow}
+                  onClick={() => {
+                    setFinishingNow(true);
+                    pullNow()
+                      .catch(() => undefined)
+                      .finally(() => {
+                        setFinishingNow(false);
+                        reload();
+                      });
+                  }}
+                >
+                  {t("offlineReady.finish")}
                 </Button>
               ) : undefined
             }

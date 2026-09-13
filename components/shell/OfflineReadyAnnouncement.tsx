@@ -43,7 +43,7 @@ export function OfflineReadyAnnouncement({ enabled }: { enabled: boolean }) {
             },
           },
         });
-      })();
+      })().catch(() => undefined);
     };
     // The two halves finish in either order, so both the worker's answer and the mount are checked.
     const stop = onShellWarmed(check);

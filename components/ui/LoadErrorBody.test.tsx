@@ -28,7 +28,18 @@ describe("LoadErrorBody", () => {
 
   it("omits the reference when the error carries none", () => {
     renderWithProviders(<LoadErrorBody error={new Error("render")} />);
-    expect(screen.getByText(/try again/i)).toBeInTheDocument();
+    expect(screen.getByText(/Something unexpected happened/)).toBeInTheDocument();
     expect(screen.queryByText(/Reference/)).not.toBeInTheDocument();
+  });
+
+  // One error presenter for the whole app: this line is `presentError`, not a second copy of it.
+  it("says what the code means, not what a server outage means", () => {
+    renderWithProviders(
+      <LoadErrorBody
+        error={new ApiError({ status: 429, code: "RATE_LIMITED", message: "x", requestId: "r" })}
+      />,
+    );
+    expect(screen.getByText(/Too many attempts/)).toBeInTheDocument();
+    expect(screen.queryByText(/didn’t respond/)).not.toBeInTheDocument();
   });
 });

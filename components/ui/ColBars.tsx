@@ -50,7 +50,6 @@ function alignFor(index: number, count: number): TooltipAlign {
   return "center";
 }
 
-// Component 33: one column per period, and the limit is a cap per column because it can differ.
 export function ColBars({
   columns,
   label,

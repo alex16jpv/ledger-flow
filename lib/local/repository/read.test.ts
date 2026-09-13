@@ -1,7 +1,15 @@
+import { profileRecord } from "@/lib/local/schema";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { openTestVault, wipeVaults } from "@/lib/testing/vault";
+import { openTestVault, profile, wipeVaults } from "@/lib/testing/vault";
 
-import { expectVault, mirrorPage, read, resetVaultGate, setCurrentVault } from "./read";
+import {
+  expectVault,
+  mirrorPage,
+  read,
+  resetVaultGate,
+  setCurrentVault,
+  vaultCanAnswer,
+} from "./read";
 
 afterEach(async () => {
   setCurrentVault(null);
@@ -90,6 +98,23 @@ describe("read", () => {
       "Network request failed",
     );
     expect(fromServer).toHaveBeenCalledOnce();
+  });
+});
+
+// H-14: both halves, because a copy that is missing either of them declines every windowed read.
+describe("vaultCanAnswer", () => {
+  it("needs the pull to have finished and the zone the reads cut days on", async () => {
+    const vault = await openTestVault("u-answer");
+    expect(await vaultCanAnswer(vault)).toBe(false);
+
+    await vault.db.put("profile", profileRecord(profile()));
+    expect(await vaultCanAnswer(vault)).toBe(false);
+
+    await vault.db.put("meta", { key: "syncedAt", value: "2026-09-06T10:00:00.000Z" });
+    expect(await vaultCanAnswer(vault)).toBe(true);
+
+    await vault.db.delete("profile", "me");
+    expect(await vaultCanAnswer(vault)).toBe(false);
   });
 });
 

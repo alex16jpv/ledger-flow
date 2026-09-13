@@ -168,7 +168,7 @@ describe("Sync status", () => {
   });
 
   // H-14: without the profile row every read with a date window goes to the server, ready or not.
-  it("does not call the device ready while the copy cannot answer a read", async () => {
+  it("says what is missing, and offers the pass that fixes it, when the copy cannot answer", async () => {
     warmScreens(SHELL_SCREENS);
     const vault = await openTestVault("u1");
     await vault.db.put("meta", { key: "syncedAt", value: "2026-09-06T10:00:00.000Z" });
@@ -176,8 +176,11 @@ describe("Sync status", () => {
 
     view();
 
-    expect(await screen.findByText("Preparing…")).toBeInTheDocument();
+    expect(await screen.findByText("Almost ready")).toBeInTheDocument();
     expect(screen.queryByText("Ready")).not.toBeInTheDocument();
+    // Not "Preparing… · 25 of 25 screens": the screens are all here and none of them is the problem.
+    expect(screen.queryByText(/25 of 25 screens/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Finish now" })).toBeVisible();
   });
 
   // F-85: a build with no worker has no screens to copy, so the row says so.

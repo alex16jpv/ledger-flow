@@ -7,6 +7,13 @@ import { createQueryClient, retryDelayWithJitter, shouldRetryQuery } from "./cli
 import { MIRROR_BACKED_DOMAINS, QUERY_DOMAINS } from "./domains";
 import { cacheDatabaseName } from "./purge";
 
+// H-08: these two are process-wide singletons, so a test that moves them puts them back.
+afterEach(() => {
+  onlineManager.setOnline(true);
+  connectivityStore.reset();
+  vi.useRealTimers();
+});
+
 describe("query client defaults", () => {
   it("retries once, only for transient failures", () => {
     const server = new ApiError({
@@ -46,8 +53,6 @@ describe("query client defaults", () => {
     await vi.advanceTimersByTimeAsync(500);
     const result = observer.getCurrentResult();
     unsubscribe();
-    onlineManager.setOnline(true);
-    vi.useRealTimers();
     expect(result.fetchStatus).not.toBe("paused");
     expect(result.status).toBe("error");
   });
@@ -69,12 +74,20 @@ describe("query client defaults", () => {
     expect(cacheDatabaseName("u1")).toBe("lf-cache-u1");
   });
 
-  // O-F2a: a domain added without a local read has to stay out of the list.
-  it("lets every mirror-backed domain fetch while offline", () => {
+  // H-17: no read of this app has a reason to wait for the network instead of failing.
+  it("lets every read fetch while offline, and still refetches when the network returns", () => {
     const client = createQueryClient();
-    for (const queryKey of Object.values(QUERY_DOMAINS)) {
-      expect(client.getQueryDefaults(queryKey).networkMode).toBe("always");
-    }
+    const defaults = client.defaultQueryOptions({ queryKey: [...QUERY_DOMAINS.budgets, "x"] });
+    expect(defaults.networkMode).toBe("always");
+    // React Query derives this from networkMode, so "always" turns it off unless it is declared.
+    expect(defaults.refetchOnReconnect).toBe(true);
+    expect(client.defaultQueryOptions({ queryKey: ["settings", "sessions"] }).networkMode).toBe(
+      "always",
+    );
+  });
+
+  // O-F2a: a domain added without a local read has to stay out of the invalidation list.
+  it("invalidates every mirror-backed domain and no other", () => {
     expect([...MIRROR_BACKED_DOMAINS].flat().sort()).toEqual(
       Object.values(QUERY_DOMAINS).flat().sort(),
     );

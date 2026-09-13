@@ -33,7 +33,6 @@ import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import type { Budget, Category } from "@/types/api";
 
-// Six columns is the card: the period on screen plus the five that came before it.
 const PREVIOUS_PERIODS = 5;
 
 interface ChartCardProps {
@@ -51,6 +50,29 @@ function ChartCard({ title, right, children }: ChartCardProps) {
       </div>
       {children}
     </Card>
+  );
+}
+
+function LegendKey({
+  tone,
+  label,
+}: {
+  tone: "spent" | "pace" | "projection" | "limit";
+  label: string;
+}) {
+  const paint =
+    tone === "spent"
+      ? "h-2 w-2 rounded-[2px] bg-brand"
+      : tone === "pace"
+        ? "h-0.5 w-3.5 rounded-full bg-text-3"
+        : tone === "projection"
+          ? "h-0.5 w-3.5 rounded-full bg-danger opacity-55"
+          : "h-0.5 w-3.5 rounded-full bg-danger";
+  return (
+    <span className="flex items-center gap-1.5">
+      <i aria-hidden="true" className={paint} />
+      {label}
+    </span>
   );
 }
 
@@ -80,13 +102,14 @@ function CardError({
   );
 }
 
-function ChartSkeleton({ height }: { height: number }) {
+function ChartSkeleton({ height, lines = 1 }: { height: number; lines?: number }) {
   const t = useTranslations("common");
   return (
     <Card className="flex flex-col gap-2" aria-busy="true" aria-label={t("loading")}>
       <Skeleton className="h-2.5 w-28" />
       <Skeleton className="mt-[22px]" style={{ height }} />
       <Skeleton className="h-3 w-3/5" />
+      {lines > 1 && <Skeleton className="h-3 w-2/5" />}
     </Card>
   );
 }
@@ -116,14 +139,12 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
     to: budget.periodTo,
   };
   const perDay = useBudgetSpendingQuery(budget.id, { ...spendingParams, groupBy: "day" });
-  // Only a budget of several categories has a share to split: one category would repeat the total.
   const splits = budget.categoryIds.length > 1;
   const perCategory = useBudgetSpendingQuery(
     budget.id,
     { ...spendingParams, groupBy: "category" },
     splits,
   );
-  // A CUSTOM budget is one window that never repeats: there is nothing earlier to read.
   const history = useBudgetHistoryQuery(
     budget.id,
     budget.periodFrom,
@@ -206,14 +227,13 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
       },
     ),
     amount: money.format(period.spent),
-    segments: [{ value: period.spent, over: period.spent > period.amount }],
+    segments: [{ value: period.spent, color: budget.color, over: period.spent > period.amount }],
     cap: period.amount,
     partial: running(period),
   }));
   const finished = periods.filter((period) => !running(period));
 
-  // The reference in the URL is a month, so only a monthly period is a column the screen can open;
-  // anywhere else the chart is one image, like the weekday average of Stats.
+  // `reference` in the URL is a month key, so no other period type has a column it can name.
   const openPeriod =
     budget.periodType === "MONTHLY"
       ? (index: number) => {
@@ -238,7 +258,10 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
   return (
     <>
       {perDay.isPending ? (
-        <ChartSkeleton height={120} />
+        <>
+          <ChartSkeleton height={120} />
+          <ChartSkeleton height={128} lines={2} />
+        </>
       ) : perDay.isError || !series || !pace ? (
         <Card>
           <CardError
@@ -299,36 +322,64 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
             ) : (
               <>
                 <Projected when={outbox.projected.spending} align="center" className="w-full">
-                  <Trend
-                    lines={paceLines(pace, budget.amount)}
-                    limit={budget.amount}
-                    label={t(
-                      pace.projection
-                        ? "budgets.detail.charts.paceReadingProjected"
-                        : "budgets.detail.charts.paceReading",
-                    )}
-                    className="flex-1"
-                  />
-                </Projected>
-                <div className="flex justify-between text-xs text-text-3">
-                  <span>{dates.formatDay(window.from)}</span>
-                  <span>{dates.formatDay(new Date(window.to.getTime() - 1))}</span>
-                </div>
-                <p className="text-sm text-text-2">
-                  {pace.endsAt === null
-                    ? t("budgets.detail.charts.noProjection", { day: pace.elapsedDays })
-                    : t(
-                        pace.endsAt > budget.amount
-                          ? "budgets.detail.charts.endsOver"
-                          : "budgets.detail.charts.endsUnder",
-                        {
-                          amount: money.format(money.round(pace.endsAt)),
-                          difference: money.format(
-                            money.round(Math.abs(pace.endsAt - budget.amount)),
-                          ),
-                        },
+                  <span className="flex w-full flex-col gap-2">
+                    <Trend
+                      lines={paceLines(pace, budget.amount)}
+                      limit={budget.amount}
+                      label={t(
+                        pace.projection
+                          ? "budgets.detail.charts.paceReadingProjected"
+                          : "budgets.detail.charts.paceReading",
                       )}
-                </p>
+                    />
+                    <span className="relative block h-4 text-xs text-text-3">
+                      <span className="absolute left-0">{dates.formatDay(window.from)}</span>
+                      {pace.elapsedDays < pace.days && (
+                        <span
+                          className="absolute -translate-x-1/2"
+                          style={{ left: `${String((pace.elapsedDays / pace.days) * 100)}%` }}
+                        >
+                          {t("budgets.detail.charts.today")}
+                        </span>
+                      )}
+                      <span className="absolute right-0">
+                        {dates.formatDay(new Date(window.to.getTime() - 1))}
+                      </span>
+                    </span>
+                    <span className="block text-sm text-text-2">
+                      {pace.endsAt === null
+                        ? t("budgets.detail.charts.noProjection", { day: pace.elapsedDays })
+                        : t.rich(
+                            pace.endsAt > budget.amount
+                              ? "budgets.detail.charts.endsOver"
+                              : "budgets.detail.charts.endsUnder",
+                            {
+                              amount: money.format(money.round(pace.endsAt)),
+                              difference: money.format(
+                                money.round(Math.abs(pace.endsAt - budget.amount)),
+                              ),
+                              b: (chunks) => (
+                                <b className="font-medium text-text tabular-nums">{chunks}</b>
+                              ),
+                              over: (chunks) => (
+                                <b className="font-medium text-danger tabular-nums">{chunks}</b>
+                              ),
+                            },
+                          )}
+                    </span>
+                  </span>
+                </Projected>
+                <div className="flex flex-wrap gap-x-3.5 gap-y-1 text-xs text-text-2">
+                  <LegendKey tone="spent" label={t("budgets.detail.charts.legendSpent")} />
+                  <LegendKey tone="pace" label={t("budgets.detail.charts.legendPace")} />
+                  {pace.projection && (
+                    <LegendKey
+                      tone="projection"
+                      label={t("budgets.detail.charts.legendProjection")}
+                    />
+                  )}
+                  <LegendKey tone="limit" label={t("budgets.detail.charts.legendLimit")} />
+                </div>
               </>
             )}
           </ChartCard>
@@ -348,7 +399,6 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
           />
         </Card>
       ) : (
-        // A budget in its first period has no history: one lonely column compares with nothing.
         columns.length > 1 && (
           <ChartCard title={t("budgets.detail.charts.history", { count: columns.length })}>
             <Projected when={outbox.projected.budgets} align="center" className="w-full">
@@ -377,7 +427,7 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
         )
       )}
 
-      {splits && (perCategory.isSuccess || perCategory.isError) && (
+      {splits && (
         <section aria-labelledby="budget-breakdown" className="flex flex-col gap-2">
           <div className="flex items-baseline justify-between gap-3 px-1">
             <h2 id="budget-breakdown" className="text-md font-semibold">
@@ -390,7 +440,12 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
               })}
             </span>
           </div>
-          {perCategory.isError ? (
+          {perCategory.isPending ? (
+            <Card flush role="status" aria-busy="true" aria-label={t("common.loading")}>
+              <SkeletonRow />
+              <SkeletonRow />
+            </Card>
+          ) : perCategory.isError ? (
             <Card>
               <CardError
                 title={t("stats.breakdown")}

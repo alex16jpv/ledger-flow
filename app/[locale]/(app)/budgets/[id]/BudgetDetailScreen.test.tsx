@@ -2,8 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
+import type { OutboxOperation } from "@/lib/local/schema";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
+import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 import type { Budget } from "@/types/api";
 
 import { BudgetDetailScreen } from "./BudgetDetailScreen";
@@ -186,8 +189,10 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
+  resetOutboxStatus();
+  await wipeVaults();
 });
 
 describe("BudgetDetailScreen", () => {
@@ -233,10 +238,17 @@ describe("BudgetDetailScreen", () => {
     // A day that has not arrived is not a control: the period has 30 days and 22 have passed.
     expect(within(day).getAllByRole("button")).toHaveLength(22);
 
+    // The figure is split by the marks that paint it, so the sentence is read whole.
     expect(
-      screen.getByText("At this rate you finish the period at $485,455 — $185,455 over the limit."),
+      screen.getByText((_, node) =>
+        node?.textContent ===
+        "At this rate you finish the period at $485,455 — $185,455 over the limit."
+          ? node.className.includes("text-sm")
+          : false,
+      ),
     ).toBeVisible();
     expect(screen.getByRole("img", { name: /where it ends at this rate/ })).toBeInTheDocument();
+    expect(screen.getByText("Where it ends")).toBeVisible();
 
     const history = await screen.findByRole("group", {
       name: "Spent against the limit, period by period",
@@ -304,6 +316,111 @@ describe("BudgetDetailScreen", () => {
     // One category repeats the total, so the breakdown is absent too.
     expect(screen.queryByRole("region", { name: "Where it went" })).not.toBeInTheDocument();
     vi.setSystemTime(new Date("2026-09-22T15:00:00.000Z"));
+  });
+
+  // The owner's decision of 2026-09-13: a period that is over is the one worth looking back at.
+  it("keeps the four cards on an archived budget and on one whose period ended", async () => {
+    routeFetch({ ...lifestyle, archivedAt: "2026-09-10T00:00:00Z" });
+    const archived = renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <BudgetDetailScreen id="b1" />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    expect(await screen.findByRole("group", { name: "Spending per day" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Biggest this period" })).toBeVisible();
+    archived.unmount();
+
+    routeFetch({ ...lifestyle, periodType: "CUSTOM", expired: true });
+    renderScreen();
+    expect(await screen.findByRole("group", { name: "Spending per day" })).toBeVisible();
+  });
+
+  // A CUSTOM window never repeats, so there is no earlier period to read or to draw.
+  it("neither reads nor draws a history for a budget whose window never repeats", async () => {
+    routeFetch({ ...lifestyle, periodType: "CUSTOM" });
+    renderScreen();
+    await screen.findByRole("group", { name: "Spending per day" });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("group", { name: "Spent against the limit, period by period" }),
+      ).not.toBeInTheDocument();
+    });
+    const earlier = fetchMock.mock.calls
+      .map(([input]) => new URL(urlOf(input), "http://t"))
+      .filter((url) => url.pathname.startsWith("/api/budgets/"))
+      .map((url) => url.searchParams.get("reference") ?? "")
+      .filter((reference) => Date.parse(reference) < Date.parse(lifestyle.periodFrom));
+    expect(earlier).toEqual([]);
+  });
+
+  // A global budget is every expense of the period, so a breakdown would repeat its own total.
+  it("leaves the breakdown out of a global budget and out of a single-category one", async () => {
+    routeFetch({ ...lifestyle, categoryIds: [], archivedCategoryIds: [] });
+    renderScreen();
+    await screen.findByRole("group", { name: "Spending per day" });
+    expect(screen.queryByRole("region", { name: "Where it went" })).not.toBeInTheDocument();
+    const byCategory = fetchMock.mock.calls
+      .map(([input]) => urlOf(input))
+      .filter((url) => url.includes("groupBy=category"));
+    expect(byCategory).toEqual([]);
+  });
+
+  // Without the lifetime guard the card would draw periods the budget did not live through.
+  it("stops the walk at the period the budget began in", async () => {
+    routeFetch({ ...lifestyle, effectiveFrom: "2026-07-01T05:00:00.000Z" });
+    renderScreen();
+    const history = await screen.findByRole("group", {
+      name: "Spent against the limit, period by period",
+    });
+    // July, August and September: June ends before the budget existed, so it is not a period of it.
+    await waitFor(() => {
+      expect(within(history).getAllByRole("button")).toHaveLength(3);
+    });
+    expect(within(history).getByRole("button", { name: /^July 2026 · / })).toBeInTheDocument();
+  });
+
+  // Invariant 2: a chart drawn from an unsent write is marked, exactly like a number.
+  it("marks all three charts as projections while a movement is still queued", async () => {
+    routeFetch(lifestyle);
+    // fake-indexeddb commits its transactions on real time; the frozen clock comes back after.
+    vi.useRealTimers();
+    const vault = await openTestVault("u-projected");
+    const queued: OutboxOperation = {
+      seq: 1,
+      opId: "op-1",
+      opVersion: 1,
+      entity: "transaction",
+      entityId: "t1",
+      action: "create",
+      occurredAt: "2026-09-22T10:00:00.000Z",
+      payload: {},
+      dependsOn: [],
+      status: "pending",
+      attempts: 0,
+      lastError: null,
+    };
+    await vault.db.put("outbox", queued);
+    await refreshOutboxStatus(vault.db);
+    vi.useFakeTimers({ shouldAdvanceTime: true, now: new Date("2026-09-22T15:00:00.000Z") });
+
+    renderScreen();
+
+    // The mark belongs to each chart, not to the screen: it is looked for inside its own wrapper.
+    const marked = (chart: HTMLElement) =>
+      chart
+        .closest("span.inline-flex")
+        ?.querySelector('[aria-label="Includes changes not yet synced"]') ?? null;
+
+    await screen.findByRole("group", { name: "Spending per day" });
+    await waitFor(() => {
+      expect(marked(screen.getByRole("group", { name: "Spending per day" }))).not.toBeNull();
+    });
+    expect(marked(screen.getByRole("img", { name: /against the period’s pace/ }))).not.toBeNull();
+    expect(
+      marked(screen.getByRole("group", { name: "Spent against the limit, period by period" })),
+    ).not.toBeNull();
   });
 
   it("changes, skips and removes the period override against the reference month", async () => {

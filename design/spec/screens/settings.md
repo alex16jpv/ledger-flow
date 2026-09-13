@@ -62,8 +62,14 @@ Then a list of rows, each with a grey sm tile, a label, help text and a value on
   device", value "Ready". While it prepares, "Preparing…" with both halves and their progress,
   "Copying your data and the app's screens · 18 of 25 screens". If something is missing and there is no
   connection: "Incomplete", help "Paused: it needs a connection to finish", and a "Retry" button
-  disabled offline. The row is fed by the mirror's `syncedAt` and by the worker's answer about how many
-  entries `app-shell` holds against the 25 expected.
+  disabled offline. And when the data has landed and every screen is cached but the copy still cannot
+  be **read** — the profile row, and with it the time zone every windowed read cuts days on, has not
+  arrived — the row says **"Almost ready"**, help "Your data is here but the app still needs one detail
+  from the server to read it offline", with a "Finish now" button that asks the mirror for one more
+  pass. It is not "Preparing… · 25 of 25 screens": no screen is missing, and a wait with no end is
+  what this row exists not to show. The row is fed by `vaultCanAnswer` — the mirror's `syncedAt` **and**
+  its profile row — and by the worker's answer about how many entries `app-shell` holds against the 25
+  expected.
 - **Waiting to send** — the count, with "Last error: {code}" as help when there was one. With the queue
   blocked by an app update (`#sync-status-blocked-queue`), the value is "n · blocked" and the help
   "Blocked by an app update".
