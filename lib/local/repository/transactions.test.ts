@@ -151,6 +151,161 @@ describe("the transaction list through the repository", () => {
     expect(ids(await readTransactions({ limit: 30 }))).toEqual(["t7b", "t7a", "t6"]);
   });
 
+  it("orders by amount when asked, with the tie following the direction", async () => {
+    const cheap = transaction({ id: "t8a", amount: 12000, date: "2026-08-05T10:00:00.000Z" });
+    const same = transaction({ id: "t8b", amount: 12000, date: "2026-08-28T10:00:00.000Z" });
+    const big = transaction({ id: "t8c", amount: 90000, date: "2026-08-02T10:00:00.000Z" });
+    await mirrorOf([cheap, same, big]);
+
+    expect(ids(await readTransactions({ sort: "amount", order: "desc", limit: 30 }))).toEqual([
+      "t8c",
+      "t8b",
+      "t8a",
+    ]);
+    expect(ids(await readTransactions({ sort: "amount", order: "asc", limit: 30 }))).toEqual([
+      "t8a",
+      "t8b",
+      "t8c",
+    ]);
+  });
+
+  it("pages an amount-sorted list from a cursor the filter itself left out", async () => {
+    const one = transaction({ id: "x1", amount: 10, categoryId: "c1" });
+    const two = transaction({ id: "x2", amount: 20, categoryId: "c2" });
+    const three = transaction({ id: "x3", amount: 30, categoryId: "c1" });
+    await mirrorOf([one, two, three]);
+
+    const first = await readTransactions({ sort: "amount", order: "desc", limit: 1 });
+    expect(ids(first)).toEqual(["x3"]);
+    expect(first.pagination).toMatchObject({ total: 3, hasMore: true, nextCursor: "x3" });
+
+    // The pivot is x2, which the category filter drops: the server still places it, and so must this.
+    expect(
+      ids(
+        await readTransactions({
+          sort: "amount",
+          order: "desc",
+          categoryIds: "c1",
+          cursor: "x2",
+          limit: 30,
+        }),
+      ),
+    ).toEqual(["x1"]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sums the whole ordered set, not the page it hands back", async () => {
+    await mirrorOf([transaction({ id: "x1", amount: 10 }), transaction({ id: "x2", amount: 20 })]);
+
+    await expect(
+      readTransactions({ sort: "amount", order: "asc", includeSummary: true, limit: 1 }),
+    ).resolves.toMatchObject({
+      pagination: { total: 2, hasMore: true, nextCursor: "x1" },
+      summary: { totalAmount: 30 },
+    });
+  });
+
+  it("refuses the pairs the server refuses instead of deciding which one wins", async () => {
+    await mirrorOf(ALL);
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        json({ data: [], pagination: { limit: 30, offset: 0, total: 0, hasMore: false } }),
+      ),
+    );
+
+    await readTransactions({ uncategorized: true, categoryIds: "c1", limit: 30 });
+    await readTransactions({ categoryId: "c1", categoryIds: "c2", limit: 30 });
+    await readTransactions({ categoryIds: ",", limit: 30 });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  // The page being full is not the same as there being another row, and the server answers the second.
+  it("says there is no more when the last page is exactly full", async () => {
+    const rows = [1, 2, 3, 4].map((n) =>
+      transaction({
+        id: `y${String(n)}`,
+        amount: n * 10,
+        date: `2026-08-0${String(n)}T10:00:00.000Z`,
+      }),
+    );
+    await mirrorOf(rows);
+
+    await expect(readTransactions({ cursor: "y4", limit: 3 })).resolves.toMatchObject({
+      pagination: { total: 4, hasMore: false, nextCursor: null },
+    });
+    await expect(
+      readTransactions({ sort: "amount", order: "desc", cursor: "y4", limit: 3 }),
+    ).resolves.toMatchObject({ pagination: { total: 4, hasMore: false, nextCursor: null } });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not hand the pivot row back on the page that follows it", async () => {
+    await mirrorOf([
+      transaction({ id: "z1", amount: 10 }),
+      transaction({ id: "z2", amount: 20 }),
+      transaction({ id: "z3", amount: 30 }),
+    ]);
+
+    const first = await readTransactions({ sort: "amount", order: "asc", limit: 2 });
+    expect(ids(first)).toEqual(["z1", "z2"]);
+    expect(
+      ids(await readTransactions({ sort: "amount", order: "asc", cursor: "z2", limit: 2 })),
+    ).toEqual(["z3"]);
+  });
+
+  it("asks the server for a pivot the mirror never saw, ordered or not", async () => {
+    await mirrorOf(ALL);
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        json({ data: [], pagination: { limit: 30, offset: 0, total: 0, hasMore: false } }),
+      ),
+    );
+
+    await readTransactions({ sort: "amount", cursor: "nothing-here", limit: 30 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // Every one of these the server answers with a 400, so answering here would be another question.
+  it.each([
+    ["an order it does not have", { order: "sideways" }],
+    ["a type it does not have", { type: "NONSENSE" }],
+    ["a source it does not have", { source: "BOGUS" }],
+    ["a flag that is not a boolean", { pendingDetails: "maybe" }],
+    ["an uncategorized that is not a boolean", { uncategorized: "maybe" }],
+    ["a limit of none", { limit: 0 }],
+    ["a limit that is not a number", { limit: "abc" }],
+    ["a limit past the maximum", { limit: 1000 }],
+    ["a bound with no offset", { from: "2026-08-01" }],
+  ])("declines %s instead of answering without it", async (_name, extra) => {
+    await mirrorOf(ALL);
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        json({ data: [], pagination: { limit: 30, offset: 0, total: 0, hasMore: false } }),
+      ),
+    );
+
+    await readTransactions({ ...(extra as Record<string, string | number>) });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks the server for an order it cannot serve, instead of serving another one", async () => {
+    await mirrorOf(ALL);
+    fetchMock.mockResolvedValue(
+      json({ data: [], pagination: { limit: 30, offset: 0, total: 0, hasMore: false } }),
+    );
+
+    await readTransactions({ sort: "description", limit: 30 });
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("sort=description");
+  });
+
+  it("keeps only the categories a list names", async () => {
+    await mirrorOf(ALL);
+
+    const page = await readTransactions({ categoryIds: "c1", limit: 30 });
+    expect(page.data.every((row) => row.categoryId === "c1")).toBe(true);
+    expect(page.data.length).toBeGreaterThan(0);
+  });
+
   // F-15: with nothing to ask of each row the index counts the set and the walk stops at the page.
   it("counts the same filtered set whether or not the walk stops at the page", async () => {
     await mirrorOf(ALL);

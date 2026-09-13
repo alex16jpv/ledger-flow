@@ -11,3 +11,7 @@ Since T-26 `daySeries` also reports each day's transaction count and whether the
 the by-day card draws the same `DayBars` Home does — the hover that showed nothing was the one
 component used two different ways. The priciest day, its window and its heading are built from the
 day key at local noon (`dates.fromDayKey`, `dates.dayKeyWindow`), not at noon UTC.
+
+T-28 taught the mirror the rest: `readSpending` now carries `categoryIds`, `groupBy=month`,
+`groupBy=account` and `splitBy=category` through to `lib/local/derive`, and declines anything it
+does not know instead of answering without it.

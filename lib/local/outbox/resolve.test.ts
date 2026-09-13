@@ -27,7 +27,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  resetSyncEngine();
+  await resetSyncEngine();
   resetOutboxStatus();
   setCurrentVault(null);
   connectivityStore.reset();

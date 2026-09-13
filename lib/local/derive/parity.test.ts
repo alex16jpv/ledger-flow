@@ -160,6 +160,8 @@ describe.each(PARITY_FIXTURES)("$id", (fixture) => {
       deriveSpending(fixture.transactions, {
         groupBy: expected.query.groupBy,
         type: expected.query.type,
+        categoryIds: expected.query.categoryIds ?? undefined,
+        splitBy: expected.query.splitBy,
         from: expected.query.from,
         to: expected.query.to,
         timeZone: expected.query.timezone,
@@ -209,16 +211,34 @@ describe.each(PARITY_FIXTURES)("$id", (fixture) => {
         readSpending({
           groupBy: expected.query.groupBy,
           type: expected.query.type ?? undefined,
+          categoryIds: expected.query.categoryIds?.join(","),
+          splitBy: expected.query.splitBy ?? undefined,
           from: expected.query.from,
           to: expected.query.to,
         }),
       ).resolves.toEqual({
         groupBy: expected.query.groupBy,
+        splitBy: expected.query.splitBy,
         total: expected.total,
         buckets: expected.buckets,
       });
     },
   );
+
+  // The five biggest of a period is one request on purpose: walking every page is what rule 24 forbids.
+  it.each(fixture.expected.lists)("answers the $name page through the repository", async (list) => {
+    await vaultOf(fixture);
+    const page = await readTransactions({
+      sort: list.query.sort,
+      order: list.query.order,
+      type: list.query.type ?? undefined,
+      categoryIds: list.query.categoryIds?.join(","),
+      from: list.query.from,
+      to: list.query.to,
+      limit: list.query.limit,
+    });
+    expect(page.data.map((row) => row.id)).toEqual(list.transactionIds);
+  });
 
   it("answers every budget's spent through the repository", async () => {
     await vaultOf(fixture);
@@ -303,8 +323,8 @@ describe("the rules the fixtures fix", () => {
     const withoutAdjustments = bogota.transactions.filter(
       (transaction) => transaction.type !== "ADJUSTMENT",
     );
-    expect(balanceOf(bogota, "cash")).toBe(181000);
-    expect(balanceOf(bogota, "cash", withoutAdjustments)).toBe(173500);
+    expect(balanceOf(bogota, "cash")).toBe(169000);
+    expect(balanceOf(bogota, "cash", withoutAdjustments)).toBe(161500);
   });
 
   it("moves both ends of a TRANSFER", () => {

@@ -13,8 +13,8 @@ import {
   startOfYear,
   subWeeks,
 } from "date-fns";
-import { fromZonedTime, toZonedTime } from "date-fns-tz";
 
+import { dayKey, localDateTime } from "@/lib/format/dates";
 import type { SyncBudget } from "@/types/api";
 
 export type PeriodDefinition = Pick<SyncBudget, "periodType" | "periodStartDate" | "periodEndDate">;
@@ -29,6 +29,22 @@ export interface ResolvedPeriod {
 const BIWEEKLY_ANCHOR = new Date(2024, 0, 1);
 
 const MONDAY = { weekStartsOn: 1 } as const;
+
+const pad = (value: number): string => String(value).padStart(2, "0");
+
+// Noon is the one wall clock no zone skips, so the device's own daylight change cannot move the date.
+function localNoonOf(day: string): Date {
+  const [year = 0, month = 1, date = 1] = day.split("-").map(Number);
+  return new Date(year, month - 1, date, 12);
+}
+
+function dayOf(naive: Date): string {
+  return `${naive.getFullYear()}-${pad(naive.getMonth() + 1)}-${pad(naive.getDate())}`;
+}
+
+function startOfLocalDay(naive: Date, timeZone: string): Date {
+  return localDateTime(dayOf(naive), "00:00", timeZone);
+}
 
 // Same rules as the server's `shared/budgetPeriod.ts`: the key is a $set path, so never a dot.
 export function resolvePeriod(
@@ -45,7 +61,7 @@ export function resolvePeriod(
     return { from, to, key: `${from.getTime()}_${to.getTime()}` };
   }
 
-  const local = toZonedTime(reference, timeZone);
+  const local = localNoonOf(dayKey(reference, timeZone));
 
   if (budget.periodType === "BIWEEKLY") {
     const weekStart = startOfWeek(local, MONDAY);
@@ -56,16 +72,16 @@ export function resolvePeriod(
     );
     const start = subWeeks(weekStart, ((weeks % 2) + 2) % 2);
     return {
-      from: fromZonedTime(start, timeZone),
-      to: fromZonedTime(addWeeks(start, 2), timeZone),
+      from: startOfLocalDay(start, timeZone),
+      to: startOfLocalDay(addWeeks(start, 2), timeZone),
       key: format(start, "RRRR-'BW'II"),
     };
   }
 
   const start = startOf(budget.periodType, local);
   return {
-    from: fromZonedTime(start, timeZone),
-    to: fromZonedTime(endOf(budget.periodType, start), timeZone),
+    from: startOfLocalDay(start, timeZone),
+    to: startOfLocalDay(endOf(budget.periodType, start), timeZone),
     key: periodKey(budget.periodType, start),
   };
 }

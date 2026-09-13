@@ -810,7 +810,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Too many attempts from this IP (code RATE_LIMITED) */
+                /** @description Too many attempts from this client IP (code RATE_LIMITED) */
                 429: {
                     headers: {
                         [name: string]: unknown;
@@ -2024,7 +2024,7 @@ export type paths = {
             cookie?: never;
         };
         /**
-         * Aggregate spending grouped by category, day or tag
+         * Aggregate spending by category, day, month, account or tag
          * @description A `day` bucket is the transaction's own accounting day (`dayKey`),
          *     frozen when it was written, so a later change of the account's time
          *     zone cannot move past spending between buckets or months; the zone
@@ -2033,19 +2033,32 @@ export type paths = {
          *     for explicitly with `type=ADJUSTMENT` (they are balance
          *     reconciliations, not spending).
          *
-         *     Bucket semantics: `groupBy=day` comes back ascending by date and skips
-         *     days without transactions (the client fills the gaps); the other
-         *     groupings come back by total descending. With `groupBy=tag` a
-         *     multi-tag transaction contributes to EVERY one of its tag buckets, so
-         *     the buckets can add up to more than `total` — `total` is always the
-         *     real, non-double-counted sum. Transactions without tags land in the
-         *     `untagged` bucket and those without a category in `uncategorized`.
+         *     Bucket semantics: `groupBy=day` and `groupBy=month` come back ascending
+         *     by key and skip the days or months without transactions (the client
+         *     fills the gaps); the other groupings come back by total descending,
+         *     ties broken by key. With `groupBy=tag` a multi-tag transaction
+         *     contributes to EVERY one of its tag buckets, so the buckets can add up
+         *     to more than `total` — `total` is always the real, non-double-counted
+         *     sum. Transactions without tags land in the `untagged` bucket and those
+         *     without a category in `uncategorized`.
+         *
+         *     A `month` bucket is the first seven characters of the same frozen
+         *     accounting day, so a month and its days can never disagree about where
+         *     a row belongs. An `account` bucket is the account the money left —
+         *     `fromAccountId` — except for INCOME and for an increase-only
+         *     ADJUSTMENT, which only have the other side. Every type the API accepts
+         *     carries at least one account, so the `unassigned` bucket only ever
+         *     holds a row written before that was enforced.
          */
         get: {
             parameters: {
                 query?: {
                     /** @description Bucket dimension */
-                    groupBy?: "category" | "day" | "tag";
+                    groupBy?: "category" | "day" | "month" | "account" | "tag";
+                    /** @description Adds a second dimension INSIDE each bucket (`splits`), so one request answers "per category and month" instead of twelve. Only with `groupBy=month` or `account`, and only with `from` and `to`: `category` is that dimension already, `tag` unwinds each row into several buckets, and `day` would grow a split per category per day of the window. Those two are bounded — months fit in a window, and a user has a handful of accounts. */
+                    splitBy?: "category";
+                    /** @description Comma-separated category ids (at most 20): aggregates only those. A budget of several categories is one request, not one per category. Rows with no category never match it, quick-adds included. */
+                    categoryIds?: string;
                     /** @description Transaction type to aggregate */
                     type?: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
                     /** @description Start of the range, inclusive (ISO 8601, offsets accepted) */
@@ -2068,7 +2081,7 @@ export type paths = {
                         "application/json": components["schemas"]["StatsResponse"];
                     };
                 };
-                /** @description Invalid query parameters, including from later than to (code VALIDATION) */
+                /** @description Invalid query parameters (code VALIDATION): from later than to, a categoryIds that is not a list of at most 20 uuids, a splitBy over a grouping that cannot take one, or a splitBy with no from/to. */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2319,9 +2332,16 @@ export type paths = {
         };
         /**
          * Get all transactions
-         * @description Paginated listing sorted by date descending. For infinite scroll use
-         *     cursor pagination (`cursor` = `pagination.nextCursor` of the previous
-         *     page); it stays consistent when transactions are backdated.
+         * @description Paginated listing, newest first unless `sort` says otherwise. For
+         *     infinite scroll use cursor pagination (`cursor` =
+         *     `pagination.nextCursor` of the previous page); it stays consistent
+         *     when transactions are backdated.
+         *
+         *     The cursor is a keyset over `(sort, _id)`, so it belongs to the order
+         *     it was minted under: keep `sort` and `order` on every page of the
+         *     same scroll. "The five biggest of the period" is
+         *     `?sort=amount&from=&to=&limit=5`, never every page read and sorted in
+         *     the client.
          */
         get: {
             parameters: {
@@ -2338,7 +2358,13 @@ export type paths = {
                     accountId?: string;
                     /** @description Filter transactions by category ID */
                     categoryId?: string;
-                    /** @description Only transactions without a category. Cannot be combined with categoryId. */
+                    /** @description Comma-separated category ids (at most 20), for a budget that covers several. Cannot be combined with categoryId or with uncategorized=true. */
+                    categoryIds?: string;
+                    /** @description Field the page is ordered by. */
+                    sort?: "date" | "amount";
+                    /** @description Direction of `sort`. Ties are broken by id, in the same direction. */
+                    order?: "asc" | "desc";
+                    /** @description Only transactions without a category. Cannot be combined with categoryId or categoryIds. */
                     uncategorized?: "true" | "false";
                     /** @description Filter by the pendingDetails flag (true = quick-adds awaiting detailing) */
                     pendingDetails?: "true" | "false";
@@ -2370,7 +2396,7 @@ export type paths = {
                         "application/json": components["schemas"]["TransactionList"];
                     };
                 };
-                /** @description Invalid query. Codes include INVALID_CURSOR (unknown or foreign cursor id); combining uncategorized=true with categoryId is rejected. */
+                /** @description Invalid query. Codes include INVALID_CURSOR (unknown or foreign cursor id); combining uncategorized=true with categoryId or categoryIds, or categoryId with categoryIds, is rejected. */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -3376,18 +3402,33 @@ export type components = {
             data: components["schemas"]["Session"][];
         };
         StatsBucket: {
-            /** @description Category id, day (YYYY-MM-DD) or tag; 'uncategorized'/'untagged' for the catch-all buckets. */
+            /** @description Category id, day (YYYY-MM-DD), month (YYYY-MM), account id or tag; 'uncategorized' and 'untagged' for the catch-all buckets, and 'unassigned' for a row with no account at all, which validation no longer allows. */
             key: string;
             total: number;
             count: number;
             avg: number;
+            /** @description Present only when splitBy was given. The splits of a bucket add up to its own total: no row lands in two of them. */
+            splits?: components["schemas"]["StatsSplit"][];
         };
         StatsResponse: {
             /** @enum {string} */
-            groupBy: "category" | "day" | "tag";
+            groupBy: "category" | "day" | "month" | "account" | "tag";
+            /**
+             * @description The second dimension asked for, or null.
+             * @enum {string|null}
+             */
+            splitBy: "category" | null;
             buckets: components["schemas"]["StatsBucket"][];
             /** @description Real total without double counting (multi-tag buckets can sum higher). */
             total: number;
+        };
+        /** @description One category inside a bucket, when splitBy asked for them. */
+        StatsSplit: {
+            /** @description Category id, or 'uncategorized'. */
+            key: string;
+            total: number;
+            count: number;
+            avg: number;
         };
         SyncBatchInput: {
             operations: {
@@ -3749,6 +3790,7 @@ export type Session = components['schemas']['Session'];
 export type SessionList = components['schemas']['SessionList'];
 export type StatsBucket = components['schemas']['StatsBucket'];
 export type StatsResponse = components['schemas']['StatsResponse'];
+export type StatsSplit = components['schemas']['StatsSplit'];
 export type SyncBatchInput = components['schemas']['SyncBatchInput'];
 export type SyncBatchResponse = components['schemas']['SyncBatchResponse'];
 export type SyncBudget = components['schemas']['SyncBudget'];

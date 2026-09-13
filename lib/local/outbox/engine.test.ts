@@ -108,7 +108,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   setErrorReporter(null);
-  resetSyncEngine();
+  await resetSyncEngine();
   resetOutboxStatus();
   setCurrentVault(null);
   connectivityStore.reset();

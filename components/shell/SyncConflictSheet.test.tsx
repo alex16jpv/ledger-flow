@@ -46,7 +46,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   // H-08: a drain one test started outlives it and calls the next test's fetch mock.
-  resetSyncEngine();
+  await resetSyncEngine();
   resetOutboxStatus();
   setCurrentVault(null);
   vi.unstubAllGlobals();

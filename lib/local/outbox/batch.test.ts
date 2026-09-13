@@ -57,7 +57,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  resetSyncEngine();
+  await resetSyncEngine();
   resetOutboxStatus();
   setCurrentVault(null);
   vi.unstubAllGlobals();
