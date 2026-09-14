@@ -1,11 +1,4 @@
-import {
-  decimalSeparators,
-  formatMoney,
-  fractionDigits,
-  moneyParts,
-  parseDecimal,
-  roundToCurrency,
-} from "./money";
+import { decimalSeparators, formatMoney, moneyParts, parseDecimal, roundToCurrency } from "./money";
 
 const nbsp = (value: string) => value.replace(/[  ]/g, " ");
 
@@ -17,9 +10,28 @@ describe("formatMoney", () => {
 
   it("keeps two decimals for USD and none for JPY", () => {
     expect(formatMoney(12.5, { currency: "USD", locale: "en-US" })).toBe("$12.50");
-    expect(fractionDigits("USD")).toBe(2);
-    expect(fractionDigits("COP")).toBe(0);
-    expect(fractionDigits("JPY")).toBe(0);
+    expect(formatMoney(1284.5, { currency: "JPY", locale: "en-US" })).toBe("¥1,285");
+  });
+
+  it("drops the decimals of a zero-decimal currency whatever the device would say", () => {
+    expect(nbsp(formatMoney(1284300.5, { currency: "COP", locale: "en-US" }))).toBe("$1,284,301");
+    expect(nbsp(formatMoney(1284300.5, { currency: "COP", locale: "es-CO" }))).toBe("$ 1.284.301");
+    const parts = moneyParts(1284300.5, { currency: "COP", locale: "en-US" });
+    expect(parts.integer).toBe("1,284,301");
+    expect(parts.fraction).toBe("");
+    expect(parts.decimal).toBe("");
+  });
+
+  it("gives a zero-decimal currency two decimals never, and a three-decimal one only two", () => {
+    expect(nbsp(formatMoney(10000, { currency: "HUF", locale: "en-US" }))).toBe("Ft 10,000");
+    expect(nbsp(formatMoney(12.345, { currency: "KWD", locale: "en-US" }))).toBe("KWD 12.35");
+  });
+
+  it("keeps the sign outside the parts of a negative zero-decimal amount", () => {
+    const parts = moneyParts(-1000.5, { currency: "COP", locale: "en-US" });
+    expect(parts.integer).toBe("1,001");
+    expect(parts.fraction).toBe("");
+    expect(parts.formatted).toBe("-$1,001");
   });
 });
 

@@ -1,3 +1,5 @@
+import { currencyFractionDigits } from "./currency";
+
 export interface MoneyFormat {
   currency: string;
   locale: string;
@@ -16,23 +18,21 @@ export const MAX_AMOUNT = 10_000_000_000_000;
 
 const formatters = new Map<string, Intl.NumberFormat>();
 
-function formatter(locale: string, currency: string, options: Intl.NumberFormatOptions = {}) {
-  const key = `${locale}|${currency}|${JSON.stringify(options)}`;
+function formatter(locale: string, currency: string) {
+  const key = `${locale}|${currency}`;
   let cached = formatters.get(key);
   if (!cached) {
+    const digits = currencyFractionDigits(currency);
     cached = new Intl.NumberFormat(locale, {
       style: "currency",
       currency,
       currencyDisplay: "narrowSymbol",
-      ...options,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
     });
     formatters.set(key, cached);
   }
   return cached;
-}
-
-export function fractionDigits(currency: string): number {
-  return formatter("en-US", currency).resolvedOptions().maximumFractionDigits ?? 2;
 }
 
 export function formatMoney(amount: number, { currency, locale }: MoneyFormat): string {
@@ -82,6 +82,6 @@ export function parseDecimal(input: string, locale: string): number | null {
 }
 
 export function roundToCurrency(amount: number, currency: string): number {
-  const factor = 10 ** fractionDigits(currency);
+  const factor = 10 ** currencyFractionDigits(currency);
   return Math.round(amount * factor) / factor;
 }
