@@ -1,5 +1,6 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 
+import { releaseName } from "./observability/release";
 // Relative on purpose: `next.config.ts` loads this through a transpiler with no `@/` alias.
 import { z } from "./validation/zod";
 
@@ -30,9 +31,7 @@ export const env = createEnv({
         ? `https://${process.env.NEXT_PUBLIC_VERCEL_BRANCH_URL}`
         : undefined),
     NEXT_PUBLIC_CONTACT_EMAIL: process.env.NEXT_PUBLIC_CONTACT_EMAIL,
-    NEXT_PUBLIC_APP_VERSION:
-      process.env.NEXT_PUBLIC_APP_VERSION ??
-      process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7),
+    NEXT_PUBLIC_APP_VERSION: releaseName(),
     NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
     NEXT_PUBLIC_SW_PATH: process.env.NEXT_PUBLIC_SW_PATH,
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,

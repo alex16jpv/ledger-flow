@@ -5,6 +5,25 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-13 · One name for the release, computed once (H-60)
+
+- **Context:** every deploy created **two** records in Sentry. The browser reported `861cf22` —
+  `sentry-options.ts` cut the commit sha to seven — while the build registered the deploy and its
+  artifacts under the whole sha, `861cf22e33e2…`. Checked against the API on 2026-09-13: the short
+  record has the events and `deployCount 0`; the long one has `deployCount 1` and has never seen an
+  event. Source maps still resolved, because those travel by `debug_id`; what broke is everything
+  Sentry hangs off a release — which commits shipped, whether an issue is a regression of this
+  deploy, release health.
+- **Decision:** `lib/observability/release.ts` computes the name, and both sides import it: the
+  runtime through `sentryOptions()`, and the build through `release: { name }` in the plugin's
+  options in `next.config.ts`. Whole sha, never cut. Settings › About keeps showing the short one —
+  that is a label for a person, not a key.
+- **Alternatives:** cut the sha on the build side too (same single name, but a name that no longer
+  matches the commit anyone would `git show`); or set `NEXT_PUBLIC_APP_VERSION` in Vercel and hope
+  both sides keep reading the same variable — which is how the two names drifted apart to begin with.
+- **Consequence:** one record per deploy from the next build on. The records already split stay
+  split; nothing merges them.
+
 ## 2026-09-13 · GitHub runs nothing: every check is local (T-34)
 
 - **Context:** the owner's decision, in his words: «los CI desde GitHub nunca han funcionado, a partir

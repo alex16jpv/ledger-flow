@@ -39,6 +39,7 @@ import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { useOffline } from "@/lib/network/useOffline";
+import { shortRelease } from "@/lib/observability/release";
 import { useInstallPrompt } from "@/lib/pwa/install";
 import { devicePlatform } from "@/lib/pwa/platform";
 import { useMounted } from "@/lib/react/useMounted";
@@ -314,7 +315,7 @@ export function SettingsHub() {
           icon={<Info {...iconProps("sm")} />}
           color="GRAY"
           title={t("settings.about")}
-          meta={t("settings.version", { version: env.NEXT_PUBLIC_APP_VERSION })}
+          meta={t("settings.version", { version: shortRelease(env.NEXT_PUBLIC_APP_VERSION) })}
         />
       </Section>
 
@@ -351,7 +352,7 @@ export function SettingsHub() {
         </Button>
       </div>
       <p className="text-center text-xs text-text-3">
-        {t("settings.version", { version: env.NEXT_PUBLIC_APP_VERSION })}
+        {t("settings.version", { version: shortRelease(env.NEXT_PUBLIC_APP_VERSION) })}
         {" · "}
         <span className="font-mono">{timeZone}</span>
       </p>
