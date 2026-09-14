@@ -21,3 +21,7 @@ T-26 gave the hero chart the contract every chart obeys: `dayBars` now returns t
 count and whether the day has arrived, and `DayBars` turns that into a slot that names its day and
 its amount, shows it on hover and on focus, repeats it in the line underneath and opens that day in
 Transactions. Days still to come are drawn as a rule, never as a zero.
+
+T-64 made the accounts of the carousel links: `AccountCard` takes an `href` and renders as the link
+itself, so Home and the Accounts list are one control and the card — not a wrapper around it — is
+what carries the focus ring and the flex sizing of the carousel.

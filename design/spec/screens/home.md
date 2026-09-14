@@ -33,7 +33,8 @@
   "Estimated savings", only at 600px and up.
 - **Budgets:** up to three, the ones with the highest share consumed, each with its tile, amount over
   limit and a sentence of status; "See all".
-- **Accounts:** a carousel or grid of cards, the main account first; "See all".
+- **Accounts:** a carousel or grid of cards, the main account first; **each card opens that
+  account's detail**, the same as in Accounts, and "See all" opens the list.
 - **Recent transactions:** the last five (`limit=5`), items to review first; "See all".
 - **Desktop:** the left column holds the hero, the stats and the transactions; the right one holds
   budgets and accounts.

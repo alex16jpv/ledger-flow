@@ -30,24 +30,19 @@ function AccountLink({ account, archived = false }: { account: Account; archived
   const t = useTranslations();
   const outbox = useOutbox();
   return (
-    <Link
+    <AccountCard
       href={`/accounts/${account.id}`}
-      className="block rounded-lg focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] focus-visible:outline-none"
-    >
-      <AccountCard
-        name={account.name}
-        typeLabel={t(`accountTypes.${account.type}`)}
-        balance={
-          <Projected when={outbox.projected.balances}>
-            <Amount value={account.balance} signed={false} size="lg" />
-          </Projected>
-        }
-        color={account.color}
-        mainLabel={account.isDefault ? t("common.main") : undefined}
-        archivedLabel={archived ? t("accounts.list.archivedBadge") : undefined}
-        className="h-full transition-[border-color] duration-(--dur-1) ease-(--ease) hover:border-border-strong"
-      />
-    </Link>
+      name={account.name}
+      typeLabel={t(`accountTypes.${account.type}`)}
+      balance={
+        <Projected when={outbox.projected.balances}>
+          <Amount value={account.balance} signed={false} size="lg" />
+        </Projected>
+      }
+      color={account.color}
+      mainLabel={account.isDefault ? t("common.main") : undefined}
+      archivedLabel={archived ? t("accounts.list.archivedBadge") : undefined}
+    />
   );
 }
 

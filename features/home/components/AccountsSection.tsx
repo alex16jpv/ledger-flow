@@ -29,6 +29,7 @@ export function AccountsSection({ accounts }: AccountsSectionProps) {
         {ordered.map((account) => (
           <AccountCard
             key={account.id}
+            href={`/accounts/${account.id}`}
             name={account.name}
             typeLabel={t(`accountTypes.${account.type}`)}
             balance={
@@ -37,7 +38,7 @@ export function AccountsSection({ accounts }: AccountsSectionProps) {
               </Projected>
             }
             color={account.color}
-            mainLabel={account.isDefault ? t("home.main") : undefined}
+            mainLabel={account.isDefault ? t("common.main") : undefined}
           />
         ))}
       </AccountCardGrid>

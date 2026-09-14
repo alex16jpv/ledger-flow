@@ -8,7 +8,8 @@ A summary card (the total balance of active accounts, active and archived counts
 of negative balances of CARD, OVERDRAFT and LOAN), then an `acct-grid` of one, two or three columns.
 Each card carries a colour stripe, the type tile (a fixed icon per `type`), the name, the Main badge,
 the balance and the type. A folded "Archived (n)" section asks for `includeArchived=true` when opened;
-its cards sit at 60% with a badge.
+the contents of its cards sit at 60% with a badge, and the card's own box stays solid so the
+focus ring is not dimmed with it.
 
 ## Detail (`#detail`)
 

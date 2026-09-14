@@ -3550,3 +3550,22 @@ cover` is set once in the root layout for the standalone display.
 - **Alternative:** forwarding `x-forwarded-for` instead of a header of our own. Rejected: the
   Lambda Function URL in front of the backend writes that header itself, so what we sent would not
   survive the hop.
+
+## 2026-09-13 · A ui primitive that is a link takes the href itself (T-64)
+
+- **Problem:** Home and Accounts both list the same account card, and both had to open the account.
+  The repository's existing pattern for "a primitive that can be a link" is `buttonClasses`: the
+  primitive exports its classes and the feature puts them on its own `Link`. Applied here it meant
+  each screen wrapping `AccountCard` in an identical `Link` — and the wrapper became the flex item
+  of the mobile carousel, which the card's own `min-w-0` no longer protected, so a long account
+  name blew the slot from 258px to 292px and stopped truncating.
+- **Decision:** `AccountCard` takes an optional `href` and renders as the `Link` itself. The card
+  keeps the focus ring, the hover border and the flex sizing in one place, and the DOM matches the
+  design plate, where the anchor **is** the card.
+- **Why it does not break §3:** `components/ui` stays presentational — an href is a string, not
+  data access, and `components/shell` already imports the same `Link`. The card owns its internals,
+  which is what separates it from `Button`: a caller cannot compose the markup, so it cannot own
+  the anchor either.
+- **Consequence:** the archived dimming moved from the card's box to its contents
+  (`[&>*]:opacity-60`). Opacity on the focusable element dims its focus ring with it, and the ring
+  is already close to the contrast floor.

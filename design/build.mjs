@@ -1017,7 +1017,7 @@ const accountCard = (name, typ, color, bal, isDefault = false, neg = false, arch
     : archived
       ? "<span class='badge'>Archived</span>"
       : "";
-  return `<a class="account-card color-${color}" href="#" style="${archived ? "opacity:.6" : ""}"><div class="top">${tile(ACCT_TYPE_ICON[typ], color, "sm")}<span class="name truncate">${name}</span>${d}</div>
+  return `<a class="account-card color-${color}${archived ? " archived" : ""}" href="#"><div class="top">${tile(ACCT_TYPE_ICON[typ], color, "sm")}<span class="name truncate">${name}</span>${d}</div>
 <div><div class="amount-lg amount">${neg ? "−" : ""}${money(bal)}</div><div class="type">${ACCT_TYPE_LABEL[typ]}</div></div></a>`;
 };
 

@@ -59,8 +59,10 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     centring, so it never hangs outside the card. Home, Stats, the budget detail and the weekday average are this one component with a
     different height, different labels and a different mode — never a copy.
 19. **Account card** — a 3px stripe of the colour on the left, a dot plus the name plus the Main badge,
-    a 24px balance (negative with `−`) and an 11px type. On mobile it is a snapping carousel (72% of the
-    width, 260px maximum); at 600px and up, an auto-fill grid.
+    a 24px balance (negative with `−`) and an 11px type. **The card is the link to that account's
+    detail** — the whole card, wherever it is listed: Home and Accounts are the same control, and the
+    only card that is not a link is the preview inside the account form. On mobile it is a snapping
+    carousel (72% of the width, 260px maximum); at 600px and up, an auto-fill grid.
 20. **Period navigation** — 40px chevrons plus a 15px semibold label; "next" is disabled on the current
     period.
 21. **Tab bar, sidebar and FAB** — see [layout.md](layout.md).

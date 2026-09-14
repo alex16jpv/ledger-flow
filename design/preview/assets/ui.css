@@ -328,7 +328,8 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .account-card .top { display: flex; align-items: center; gap: var(--sp-2); }
 .account-card .name { font-weight: var(--fw-medium); flex: 1; min-width: 0; }
 .account-card .type { font-size: var(--fs-xs); color: var(--text-3); }
-.hscroll { display: flex; gap: var(--sp-3); overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--sp-4)); padding: 0 var(--sp-4) 2px; scroll-snap-type: x mandatory; }
+.account-card.archived > *, .account-card.archived::before { opacity: .6; }
+.hscroll { display: flex; gap: var(--sp-3); overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--sp-4)); padding: var(--sp-1) var(--sp-4); scroll-snap-type: x mandatory; }
 .hscroll::-webkit-scrollbar { display: none; }
 .hscroll > * { flex: 0 0 min(72%, 260px); scroll-snap-align: start; }
 .acct-grid { display: grid; grid-template-columns: 1fr; gap: var(--sp-3); }
