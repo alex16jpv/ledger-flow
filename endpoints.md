@@ -230,7 +230,7 @@ Bumps the user's token version, so every outstanding refresh token stops working
 
 ### `POST /auth/refresh`
 
-True rotation: the presented refresh token is invalidated and a new pair is issued (the response carries no `user`). Always store the new token — replaying an already-rotated one is treated as theft and revokes the whole device session family (401 REFRESH_REVOKED, re-login required). Rotation never extends the session past its original absolute expiry.
+True rotation: the presented refresh token is invalidated and a new pair is issued (the response carries no `user`). Always store the new token — replaying an already-rotated one is treated as theft and revokes the whole device session family (401 REFRESH_REVOKED, re-login required). One exception, for the answer that never arrives: while the successor of the presented token has not been used itself, the same pair is answered again — at any age, up to ten times — so a client that lost the response may simply ask again with the token it still has, and should not end its session on its own. The eleventh is refused with 401 REFRESH_REVOKED and the session family survives, so that answer means "this token is over", not "this device was logged out". Rotation never extends the session past its original absolute expiry.
 
 No token required.
 
@@ -238,12 +238,12 @@ No token required.
 
 **Responses**
 
-| Status | Schema          | Description                                                                                                                                                       |
-| ------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `AuthTokens`    | New token pair issued                                                                                                                                             |
-| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                                |
-| `401`  | `ErrorResponse` | Invalid or expired refresh token (code REFRESH_INVALID), or token revoked — reuse of a rotated token, password/email change, or logout-all (code REFRESH_REVOKED) |
-| `429`  | `ErrorResponse` | Too many attempts (code RATE_LIMITED)                                                                                                                             |
+| Status | Schema          | Description                                                                                                                                                                                                |
+| ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `AuthTokens`    | New token pair issued                                                                                                                                                                                      |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                                                                         |
+| `401`  | `ErrorResponse` | Invalid or expired refresh token (code REFRESH_INVALID), or token revoked — reuse of a rotated token whose successor is already spent, logout, password/email change, or logout-all (code REFRESH_REVOKED) |
+| `429`  | `ErrorResponse` | Too many attempts (code RATE_LIMITED)                                                                                                                                                                      |
 
 ### `POST /auth/register`
 
