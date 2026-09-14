@@ -40,32 +40,35 @@ the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no envir
 
 ## Scripts
 
-| Script                     | What it does                                                                                             |
-| -------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `npm run dev`              | Next dev server on port 3001                                                                             |
-| `npm run build` / `start`  | Production build (`next build` + `serwist build` → `public/sw.js`, git-ignored) / server                 |
-| `npm run ci`               | Full gate: typecheck, lint, format:check, check-tokens, contrast-check, design:check, test, `build:gate` |
-| `npm run build:gate`       | The gate's build (`.next-gate`, `public/sw-gate.js`), then `size-limit` and `check-dev-routes`           |
-| `npm run check-dev-routes` | Starts the gate build on port 3004 and proves the dev-only URLs answer 404 (W-39)                        |
-| `npm run typecheck`        | `tsc --noEmit`                                                                                           |
-| `npm run lint`             | ESLint with zero warnings allowed                                                                        |
-| `npm run format`           | Prettier (`format:check` verifies)                                                                       |
-| `npm run check-tokens`     | Fails on hex, raw color functions or Tailwind palette classes                                            |
-| `npm run contrast-check`   | WCAG AA over every `tokens/palette.*.css` in light and dark                                              |
-| `npm run test`             | Vitest + Testing Library (`test:watch`, `test:coverage`)                                                 |
-| `npm run test:e2e`         | Playwright smoke tests against the local backend                                                         |
-| `npm run e2e:backend`      | Starts the sibling backend on port 3200 against the Docker Mongo `lag_money_test`, seeded                |
-| `npm run demo:offline`     | The demo of gate O-A: three days with no network and one clean drain (`tests/gate/`)                     |
-| `npm run demo:offline:b`   | The demo of gate O-B: two devices, a conflict and the tray that resolves it                              |
-| `demo:offline:watch`       | The same demos, headed and slowed down, so they can be watched as they happen (`:b:watch`)               |
-| `demo:offline:report`      | Opens the demo's report: one video per cold start, and a trace with every request                        |
-| `npm run measure:banner`   | Times the pending stripe against a slow network (`tests/measure/`, F-72)                                 |
-| `npm run size-limit`       | Route JS budgets over the production build                                                               |
-| `npm run lighthouse`       | Lighthouse CI against a production build with the thresholds in `lighthouserc.json`                      |
-| `npm run lighthouse:app`   | The same, over the 25 authenticated screens with a real session (`lighthouserc.app.json`)                |
-| `npm run gen:api-types`    | Regenerates `types/api.d.ts` and `endpoints.md` from the backend OpenAPI                                 |
-| `npm run fixtures:sync`    | Refreshes the backend's parity fixtures under `lib/local/derive/fixtures/`                               |
-| `npm run gen:feature`      | Scaffolds `features/<name>/{api,keys,hooks,schemas,components}`                                          |
+| Script                     | What it does                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------------- |
+| `npm run dev`              | Next dev server on port 3001                                                                   |
+| `npm run build` / `start`  | Production build (`next build` + `serwist build` → `public/sw.js`, git-ignored) / server       |
+| `npm run check:all`        | **The gate** (see [Checks](#checks)): `ci` + `audit` + `test:e2e` + `check:contract`           |
+| `npm run ci`               | typecheck, lint, format:check, check-tokens, contrast-check, design:check, test, `build:gate`  |
+| `npm run audit`            | `npm audit` over production dependencies, high severity and above                              |
+| `npm run check:contract`   | Regenerates `types/api.d.ts` and fails on drift (needs the backend up)                         |
+| `npm run build:gate`       | The gate's build (`.next-gate`, `public/sw-gate.js`), then `size-limit` and `check-dev-routes` |
+| `npm run check-dev-routes` | Starts the gate build on port 3004 and proves the dev-only URLs answer 404 (W-39)              |
+| `npm run typecheck`        | `tsc --noEmit`                                                                                 |
+| `npm run lint`             | ESLint with zero warnings allowed                                                              |
+| `npm run format`           | Prettier (`format:check` verifies)                                                             |
+| `npm run check-tokens`     | Fails on hex, raw color functions or Tailwind palette classes                                  |
+| `npm run contrast-check`   | WCAG AA over every `tokens/palette.*.css` in light and dark                                    |
+| `npm run test`             | Vitest + Testing Library (`test:watch`, `test:coverage`)                                       |
+| `npm run test:e2e`         | Playwright smoke tests against the local backend                                               |
+| `npm run e2e:backend`      | Starts the sibling backend on port 3200 against the Docker Mongo `lag_money_test`, seeded      |
+| `npm run demo:offline`     | The demo of gate O-A: three days with no network and one clean drain (`tests/gate/`)           |
+| `npm run demo:offline:b`   | The demo of gate O-B: two devices, a conflict and the tray that resolves it                    |
+| `demo:offline:watch`       | The same demos, headed and slowed down, so they can be watched as they happen (`:b:watch`)     |
+| `demo:offline:report`      | Opens the demo's report: one video per cold start, and a trace with every request              |
+| `npm run measure:banner`   | Times the pending stripe against a slow network (`tests/measure/`, F-72)                       |
+| `npm run size-limit`       | Route JS budgets over the production build                                                     |
+| `npm run lighthouse`       | Builds into `.next-lh` with the audited origin and runs `lhci` with `lighthouserc.json`        |
+| `npm run lighthouse:app`   | The same, over the 25 authenticated screens with a real session (`lighthouserc.app.json`)      |
+| `npm run gen:api-types`    | Regenerates `types/api.d.ts` and `endpoints.md` from the backend OpenAPI                       |
+| `npm run fixtures:sync`    | Refreshes the backend's parity fixtures under `lib/local/derive/fixtures/`                     |
+| `npm run gen:feature`      | Scaffolds `features/<name>/{api,keys,hooks,schemas,components}`                                |
 
 ## Test data and sessions
 
@@ -86,8 +89,9 @@ only exists on mobile.
 
 Three environments: `development` (local backend), `preview` (one per PR) and `production`, all on
 Vercel from this repo (Node from `.nvmrc`, `npm run build` runs `next build` and the Serwist step).
-`main` is protected (PR + green CI) and deploys production; every pull request gets its own preview,
-and `ci.yml` also runs on pushes to `feat/**`. Production is cut from a tag: bump `version` in
+`main` deploys production and every pull request gets its own preview. Nothing gates a merge on
+GitHub any more (see below): the gate is `npm run check:all`, run before the branch is handed over.
+Production is cut from a tag: bump `version` in
 `package.json`, move the `Unreleased` notes in `CHANGELOG.md` under the version, `git tag -a vX.Y.Z`
 and push the tag.
 
@@ -110,15 +114,31 @@ Production adds `Strict-Transport-Security` (2 years, `includeSubDomains`, `prel
 domain at hstspreload.org once it has served HTTPS for a while. Changing the domain means a new
 `NEXT_PUBLIC_APP_URL` plus permanent redirects from the old one in Vercel.
 
-CI (`.github/workflows/ci.yml`): `quality` (typecheck, lint, format, tokens, contrast, tests,
-build, size budgets, `npm audit`), `security` (gitleaks, osv-scanner), `e2e` (Playwright against
-the backend repo on an ephemeral Mongo replica set; needs the `BACKEND_REPO_TOKEN` secret) and
-`lighthouse` (`lighthouserc.json`: performance ≥ 90, accessibility ≥ 95, best practices ≥ 90,
-SEO ≥ 95 on the public pages; the report is uploaded as an artifact). The 25 authenticated screens
-have a workflow of their own, `lighthouse-app.yml`: it checks out both repos, brings up the replica
-set and runs `npm run lighthouse:app` with a real session. It is `workflow_dispatch` and not
-nightly on purpose — the audit fails by design while F-78 is open (performance 78–86, accessibility
-100 on all 25), and a job that goes red every night is a job everyone learns to ignore.
+## Checks
+
+**Nothing runs on GitHub.** The workflows were deleted on 2026-09-13 by the owner's decision (T-34):
+`ci.yml` had not passed a single run since the repository had one, and a red light nobody can act on
+is worse than none. Every check lives here now:
+
+| Command                  | What it covers                                                                                      |
+| ------------------------ | --------------------------------------------------------------------------------------------------- |
+| `npm run check:all`      | **The gate**: the four below, in order, before handing a branch over                                |
+| `npm run ci`             | typecheck, lint, format, tokens, contrast, design preview drift, unit tests, build, size budgets    |
+| `npm run audit`          | production dependencies, high severity and above                                                    |
+| `npm run test:e2e`       | Playwright against a real backend on a Mongo replica set                                            |
+| `npm run check:contract` | regenerates `types/api.d.ts` and fails on drift (needs the backend up)                              |
+| `npm run lighthouse`     | public pages against `lighthouserc.json`; `npm run lighthouse:app` for the 25 authenticated screens |
+
+**What the workflows did and no command here does.** Said out loud instead of assumed:
+
+- **gitleaks** and **osv-scanner** — secret and vulnerability scanning. They run as one-off commands
+  (`gitleaks detect`, `osv-scanner --lockfile package-lock.json`); nothing here installs them.
+- **A clean install from the lockfile.** The `quality` job started from `npm ci --ignore-scripts` on a
+  fresh checkout, so a broken `package-lock.json` or a dependency that only exists in this machine's
+  `node_modules` used to surface there. Locally the gate runs on whatever is installed.
+- **Running on the pinned Node.** The job read `.nvmrc`; here nothing checks which Node you are on.
+- **Anything running by itself.** Nothing is triggered by a push or a pull request: `lefthook`
+  covers the commit (format, lint, tokens, typecheck, related tests) and the rest is typed by hand.
 
 ## Structure
 

@@ -6,7 +6,8 @@ if (dirty.length === 0) process.exit(0);
 console.error(
   [
     "Uncommitted changes detected. Before reporting this as done:",
-    "  1. npm run ci must be green (typecheck, lint, format:check, check-tokens, test, build).",
+    "  1. npm run check:all must be green: ci (typecheck, lint, format, tokens, test, build),",
+    "     then audit, the e2e suite and the contract check. Nothing runs on GitHub.",
     "  2. The flow was exercised against the running backend.",
     "  3. The screen matches its design capture in both modes and sizes.",
     "  4. messages/en.json and messages/es.json, README and DECISIONS.md are updated.",

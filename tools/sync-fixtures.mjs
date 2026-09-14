@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Vendored because CI checks out this repo alone; `parity.test.ts` fails on drift side by side.
+// Vendored because this repo is cloned alone; `parity.test.ts` fails on drift when both are side by side.
 import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 

@@ -6,7 +6,7 @@ W-nn — title
 
 ## Checklist
 
-- [ ] `npm run ci` is green locally
+- [ ] `npm run check:all` is green locally (or it says here what was skipped and why)
 - [ ] Exercised against the running backend (not only mocks)
 - [ ] Matches the design capture (mobile + desktop, light + dark) — screenshots below
 - [ ] Four states present: data, empty, loading, error

@@ -271,10 +271,12 @@ forbids painting one as if it were, so nothing renders these yet: the marking (t
 already designed) arrives with the outbox in O-F4/O-F5a.
 
 `fixtures/` is the backend's committed `lag-money-manager/fixtures/offline/` copied verbatim by
-`npm run fixtures:sync` (CI checks out this repo alone, so the copy has to travel with it).
+`npm run fixtures:sync` (this repo is cloned alone, so the copy has to travel with it).
 `parity.test.ts` compares the two byte for byte wherever both repos sit side by side and fails on
-drift; in CI it skips, saying so in its name. The backend's own CI fails when its generator and its
-committed files disagree, so the chain generator → backend files → this copy has a guard at each link.
+drift; where that repo is absent it skips, saying so in its name. `npm run ci` there fails when the
+backend's generator and its committed files disagree. So the chain generator → backend files → this
+copy has a guard at each link — but since T-34 **every link is a command somebody types**: clone this
+repo alone and nothing compares anything.
 
 ## Writing to it: `outbox/`
 
