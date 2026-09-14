@@ -13,6 +13,7 @@ import {
   ChartSkeleton,
   LegendKey,
 } from "@/components/ui/ChartCard";
+import type { ChartSlot } from "@/components/ui/ChartSlots";
 import { ColBars, type Column } from "@/components/ui/ColBars";
 import { DayBars } from "@/components/ui/DayBars";
 import { Empty } from "@/components/ui/Empty";
@@ -105,6 +106,25 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
   const pace = useMemo(
     () => (series ? paceSeries(series.bars, budget.amount) : null),
     [series, budget.amount],
+  );
+  // Index 0 is the period's start, not a day; past today the only curve left is the projection.
+  const pacePositions = useMemo<(ChartSlot | null)[]>(
+    () =>
+      (pace?.pace ?? []).map((expected, day) => {
+        if (day === 0 || !pace) return null;
+        const spent = pace.spent[day] ?? null;
+        const value = spent ?? pace.projection?.[day] ?? null;
+        if (value === null) return null;
+        return {
+          label: t(
+            spent === null
+              ? "budgets.detail.charts.pacePointProjected"
+              : "budgets.detail.charts.pacePoint",
+            { day, amount: money.format(value), pace: money.format(expected) },
+          ),
+        };
+      }),
+    [pace, money, t],
   );
 
   const single = budget.categoryIds.length === 1 ? budget.categoryIds[0] : undefined;
@@ -268,6 +288,7 @@ export function BudgetCharts({ budget, now, categories, lookups }: BudgetChartsP
                           ? "budgets.detail.charts.paceReadingProjected"
                           : "budgets.detail.charts.paceReading",
                       )}
+                      points={pacePositions}
                     />
                     <span className="relative block h-4 text-xs text-text-3">
                       <span className="absolute left-0">{dates.formatDay(window.from)}</span>

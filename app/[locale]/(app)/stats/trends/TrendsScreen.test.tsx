@@ -217,6 +217,8 @@ describe("TrendsScreen", () => {
     expect(screen.getByText("$414,000")).toBeInTheDocument();
     expect(screen.getByText("August 2026, same days")).toBeInTheDocument();
     expect(screen.getByText("Day 22")).toBeInTheDocument();
+    // Component 29: with nothing pointed at, the line reads the last day of the two curves.
+    expect(screen.getByText("Day 22 · Sep $414,000 · Aug $428,000 · −3 %")).toBeInTheDocument();
   });
 
   it("says which day the two months are read at when the previous one is shorter", async () => {

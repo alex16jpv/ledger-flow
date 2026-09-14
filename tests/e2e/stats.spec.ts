@@ -112,6 +112,20 @@ test("Trends reads the months the seed has, and reads them off the local copy", 
   await expect(page.getByText(/^You spent /)).toBeVisible();
   await expect(page.getByText("August 2026 against July 2026")).toBeVisible();
 
+  // The line reads a day at a time, and the readout is the reading a finger gets.
+  const comparison = page.getByRole("img", {
+    name: "Spending in August 2026 against the same days of July 2026",
+  });
+  const readout = comparison.locator("xpath=../following-sibling::p");
+  const bands = comparison.locator("xpath=..").locator("> span > span");
+  await expect(readout).toHaveText(/^Day \d+ · Aug \$[\d,]+ · Jul \$[\d,]+/);
+
+  await bands.nth(5).hover();
+  await expect(readout).toHaveText(/^Day 5 · Aug \$[\d,]+ · Jul \$[\d,]+/);
+  await expect(comparison.locator("path.stroke-border-strong")).toHaveCount(1);
+  await bands.nth(12).hover();
+  await expect(readout).toHaveText(/^Day 12 · Aug \$[\d,]+ · Jul \$[\d,]+/);
+
   const mix = page.getByRole("group", { name: "Spending per month, split by category" });
   await expect(mix).toBeVisible();
   await expect(mix.getByRole("button")).toHaveCount(3);

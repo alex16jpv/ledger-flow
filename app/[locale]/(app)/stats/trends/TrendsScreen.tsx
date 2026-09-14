@@ -17,6 +17,7 @@ import {
   ChartSkeleton,
   LegendKey,
 } from "@/components/ui/ChartCard";
+import type { ChartSlot } from "@/components/ui/ChartSlots";
 import { ColBars, type Column } from "@/components/ui/ColBars";
 import { Empty } from "@/components/ui/Empty";
 import { GBars, type Pair } from "@/components/ui/GBars";
@@ -31,6 +32,7 @@ import { useStatsQuery } from "@/features/stats/hooks";
 import { UNCATEGORIZED_KEY } from "@/features/stats/model";
 import {
   categoryMix,
+  comparisonPoints,
   isTrendRange,
   type MonthComparison,
   monthComparison,
@@ -59,6 +61,9 @@ const INCOME_SWATCH = `${SWATCH} bg-income`;
 const SPENDING_SWATCH = `${SWATCH} bg-brand`;
 const PREVIOUS_SWATCH = "h-0.5 w-3.5 rounded-full bg-text-3";
 const CATEGORY_SWATCH = `${SWATCH} bg-(--f)`;
+
+const percentOf = (difference: number | null): number =>
+  Math.abs(Math.round((difference ?? 0) * 100));
 
 function parseRange(value: string | null): TrendRange {
   const months = Number(value);
@@ -189,6 +194,39 @@ export function TrendsScreen() {
         : null,
     [thisMonth.data, lastMonth.data, here, before, dates.timeZone, now],
   );
+
+  // Index 0 of the curves is the origin, not a day: it reads nothing and shows no bubble.
+  const comparisonSlots = useMemo<(ChartSlot | null)[]>(() => {
+    if (!comparison) return [];
+    const month = dates.formatMonthShort(here.from);
+    const previous = dates.formatMonthShort(before.from);
+    return [
+      null,
+      ...comparisonPoints(comparison).map((point) => {
+        if (point.current === null) return null;
+        const amount = money.format(point.current);
+        if (point.previous === null)
+          return { label: t("trends.pointAlone", { day: point.day, month, amount }) };
+        const percent = percentOf(point.difference);
+        const previousAmount = money.format(point.previous);
+        const both = { day: point.day, month, amount, previous, previousAmount };
+        return {
+          label:
+            percent === 0
+              ? t("trends.pointFlat", both)
+              : t(
+                  point.difference !== null && point.difference < 0
+                    ? "trends.pointLess"
+                    : "trends.pointMore",
+                  {
+                    ...both,
+                    percent,
+                  },
+                ),
+        };
+      }),
+    ];
+  }, [comparison, here.from, before.from, dates, money, t]);
 
   const categoryName = useCallback(
     (key: string): string =>
@@ -427,6 +465,7 @@ export function TrendsScreen() {
                             month: dates.formatMonth(here.from),
                             previous: dates.formatMonth(before.from),
                           })}
+                          points={comparisonSlots}
                         />
                         <span className="flex justify-between text-xs text-text-3">
                           <span>{t("trends.axisDay", { day: 1 })}</span>
@@ -435,7 +474,7 @@ export function TrendsScreen() {
                         <span className="block text-sm text-text-2">
                           {t.rich(comparisonMessage(comparison, running), {
                             amount: money.format(comparison.spentSoFar),
-                            percent: Math.abs(Math.round((comparison.difference ?? 0) * 100)),
+                            percent: percentOf(comparison.difference),
                             days: comparison.comparedDays,
                             month: dates.formatMonth(before.from),
                             current: dates.formatMonth(here.from),

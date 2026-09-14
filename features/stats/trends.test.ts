@@ -3,6 +3,7 @@ import type { StatsBucket } from "@/types/api";
 
 import {
   categoryMix,
+  comparisonPoints,
   monthComparison,
   OTHER_KEY,
   savings,
@@ -101,6 +102,59 @@ describe("savings", () => {
       null,
     );
     expect(savings(10, 4, finished)).toEqual({ saved: 6, rate: 0.6, complete: 2 });
+  });
+});
+
+describe("comparisonPoints", () => {
+  const here = monthWindow(SEPTEMBER, TZ);
+  const before = monthWindow(shiftMonth(SEPTEMBER, -1, TZ), TZ);
+
+  it("reads each day of both curves and what separates them", () => {
+    const points = comparisonPoints(
+      monthComparison(
+        [bucket("2026-09-01", 100), bucket("2026-09-03", 50)],
+        [bucket("2026-08-01", 200), bucket("2026-08-02", 100)],
+        here,
+        before,
+        TZ,
+        SEPTEMBER,
+      ),
+    );
+    expect(points).toHaveLength(22);
+    expect(points[0]).toEqual({ day: 1, current: 100, previous: 200, difference: -0.5 });
+    expect(points[2]).toEqual({ day: 3, current: 150, previous: 300, difference: -0.5 });
+  });
+
+  it("gives no percentage where the previous month spent nothing yet", () => {
+    const points = comparisonPoints(
+      monthComparison(
+        [bucket("2026-09-01", 100)],
+        [bucket("2026-08-05", 200)],
+        here,
+        before,
+        TZ,
+        SEPTEMBER,
+      ),
+    );
+    expect(points[0]).toEqual({ day: 1, current: 100, previous: 0, difference: null });
+    expect(points[4]?.difference).toBeCloseTo(-0.5);
+  });
+
+  it("stops giving the previous month's figure once it runs out of days", () => {
+    const march = new Date("2026-03-31T15:00:00.000Z");
+    const points = comparisonPoints(
+      monthComparison(
+        [bucket("2026-03-05", 100)],
+        [bucket("2026-02-05", 200)],
+        monthWindow(march, TZ),
+        monthWindow(shiftMonth(march, -1, TZ), TZ),
+        TZ,
+        march,
+      ),
+    );
+    expect(points).toHaveLength(31);
+    expect(points[27]).toEqual({ day: 28, current: 100, previous: 200, difference: -0.5 });
+    expect(points[28]).toEqual({ day: 29, current: 100, previous: null, difference: null });
   });
 });
 

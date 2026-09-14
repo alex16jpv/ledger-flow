@@ -22,7 +22,12 @@ Stats was showing.
   the same lie in the other direction.
 - **This month against last**: `trend` with two lines over the same days of the month — this one
   solid, the same days of the previous month dashed — and one sentence: "You have spent $1,284,300 so
-  far — 2 % less than at this point in August." Comparing a finished month against one in its third
+  far — 2 % less than at this point in August." **Pointing at a day reads both lines at that day and
+  what separates them**: "Day 12 · September $1,240,000 · August $950,000 · +30%", in the bubble and
+  in the `readout` under the chart — the sentence answers the month, the slot answers the day, and a
+  card whose whole point is a comparison never reads one line alone. Where the previous month never
+  reached that day the slot reads this month only, and where it spent nothing there is no percentage
+  to give rather than a division by zero dressed up as one. Comparing a finished month against one in its third
   week is the mistake this card exists to prevent. Two cases change the wording rather than the
   arithmetic. **A previous month shorter than the days already elapsed** — 31 March against February —
   has no "this point" to answer: the two are read at the last day they share and the sentence says

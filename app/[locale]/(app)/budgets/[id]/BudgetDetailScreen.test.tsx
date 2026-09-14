@@ -215,6 +215,8 @@ describe("BudgetDetailScreen", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("base $250,000")).toBeInTheDocument();
+    // Past today the pace curve says the figure is the projection's, never what was spent.
+    expect(screen.getByText(/^Day 30 · At this rate /)).toBeVisible();
     expect(screen.getByRole("button", { name: "Remove adjustment" })).toBeInTheDocument();
     const chips = await screen.findByRole("group", { name: "Categories" });
     const vacation = within(chips).getByRole("button", { name: /Vacation/ });
@@ -308,6 +310,8 @@ describe("BudgetDetailScreen", () => {
         "It’s day 1 of the period: one day of spending says nothing about where it ends.",
       ),
     ).toBeVisible();
+    // The pace curve reads its last day that has a figure, which on day 1 is day 1, not day 30.
+    expect(screen.getByText("Day 1 · Spent $12,400 · Expected $10,000")).toBeVisible();
     await waitFor(() => {
       expect(
         screen.queryByRole("group", { name: "Spent against the limit, period by period" }),

@@ -465,6 +465,12 @@ export function UiCatalog() {
               ]}
               limit={100}
               label={t("sample.spendingPerDay")}
+              points={[
+                null,
+                ...[1, 2, 3, 4].map((day) => ({
+                  label: t("sample.trendPoint", { day, amount: money.format(day * 30) }),
+                })),
+              ]}
             />
             <ColBars
               columns={[0.7, 0.55, 0.95, 1.2, 0.8, 0.6].map((share, index) => ({

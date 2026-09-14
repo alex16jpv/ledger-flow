@@ -3550,3 +3550,34 @@ cover` is set once in the root layout for the standalone display.
 - **Alternative:** forwarding `x-forwarded-for` instead of a header of our own. Rejected: the
   Lambda Function URL in front of the backend writes that header itself, so what we sent would not
   survive the hop.
+
+## 2026-09-13 · The line chart gets slots, and its accessible name does not (T-65)
+
+- **Reverses:** the design of 2026-09-11, which wrote the exception into `design/spec/components.md`
+  §23 in as many words — "31 is a line, not slots, and puts its reading in the sentence and the
+  `readout` beside it". The owner asked for the opposite on 2026-09-13, looking at the screen: the
+  comparison chart had to say what it holds where the pointer is, like every other chart.
+- **Decision:** `Trend` takes one `ChartSlot` per x position and shows the pointed one in a bubble
+  and in the `readout`, with a rule and a dot marking it. The positions stay **pointer-only**: no
+  `tabindex`, no buttons, and the chart's `role="img"` keeps the card's sentence as its accessible
+  name.
+- **Why the name does not read the slots**, which is what rule 18 asks of a chart whose slots lead
+  nowhere: seven weekdays read aloud are a sentence; thirty-one days of a month, each with two
+  amounts and a percentage, are about six hundred words in one label, and a screen reader cannot
+  skim it. The card already carries the same answer in prose — "You have spent $1,284,300 so far —
+  2 % less than at this point in August" — which is the figure the chart exists to give. §18 and §31
+  now both say where the line parts from the bars.
+- **What is still missing, and is worth saying out loud:** a keyboard user with sight gets no
+  per-day reading. Giving them one means thirty-one tab stops or a roving `tabindex` over positions
+  that open nothing, which is exactly what rule 18 argues against. If it is wanted, it is a piece of
+  work of its own.
+- **The bubble is as wide as the card and has no arrow.** A day of a month is ~15px wide and its
+  reading is ~290px, so a bubble anchored to the position hangs outside the card on a phone —
+  measured at 390px: 144px of page overflow. Pinned to the card and truncated, it always fits; the
+  vertical rule and the dots point at the position, and the `readout` underneath carries the reading
+  in full, for a finger and for a long figure alike.
+- **The "Expected" figure in the pace reading is the client's own**, worked out from the limit and
+  the day (`(amount * day) / days`), and it is the only money on that line the server did not send.
+  It is a reference line, not a figure about the user's money — the same straight line the chart has
+  always drawn — and the reading names it as what is expected, never as what was spent. The figure
+  that **is** the user's money on that line comes from the API's day buckets.

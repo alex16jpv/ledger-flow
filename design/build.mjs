@@ -225,7 +225,7 @@ const stackCols = (cols, o = {}) => {
 };
 
 const trend = (series, o = {}) => {
-  const { height = 120, max: mx, marks = [], label = "Trend" } = o;
+  const { height = 120, max: mx, marks = [], label = "Trend", active = -1, tip = "" } = o;
   const W = 300;
   const H = 100;
   const span = o.span ?? Math.max(...series.map((s) => s.points.length));
@@ -266,7 +266,25 @@ const trend = (series, o = {}) => {
         `<path class="line ${m.cls ?? "limit"}" d="M0 ${round(H - pct(m.at, top))} L${W} ${round(H - pct(m.at, top))}"/>`,
     )
     .join("");
-  return `<svg class="trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${height}px" role="img" aria-label="${label}">${rules}${lines}${dots}</svg>`;
+  const marker =
+    active < 0
+      ? ""
+      : `<path class="line guide" d="M${at(0, active)[0]} 0 L${at(0, active)[0]} ${H}"/>` +
+        series
+          .filter((s) => s.points[active] !== null && s.points[active] !== undefined)
+          .map((s) => {
+            const [x, y] = at(s.points[active], active);
+            return `<circle class="dot ${s.cls ?? ""}" cx="${x}" cy="${y}" r="3.5"/>`;
+          })
+          .join("");
+  const svg = `<svg class="trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${height}px" role="img" aria-label="${label}">${rules}${lines}${marker}${dots}</svg>`;
+  const bubble = active < 0 ? "" : `<span class="trend-tip" aria-hidden="true">${tip}</span>`;
+  const half = 100 / (2 * (span - 1));
+  const bands = Array.from({ length: span }, (_, i) => {
+    const width = i === 0 || i === span - 1 ? half : half * 2;
+    return `<span class="band" style="width:${width}%" aria-hidden="true"></span>`;
+  }).join("");
+  return `<span class="trend-wrap" style="height:${height}px">${bubble}${svg}<span class="bands">${bands}</span></span>`;
 };
 
 const heatCal = (values, o = {}) => {
@@ -1262,9 +1280,13 @@ const budgetPaceCard = () => {
         span: SEP_DAYS + 1,
         marks: [{ at: BUD_LIMIT }],
         label: "Spent so far against the period's pace, and where it ends at this rate",
+        active: 12,
+        tip: `Day 12 \u00b7 Spent ${money(cum[12])} \u00b7 Expected ${money(pace[12])}`,
+        span: SEP_DAYS + 1,
       },
     )}
 <div class="axis marked"><span style="left:0;transform:none">Sep 1</span><span style="left:${round((TODAY / SEP_DAYS) * 100)}%">today</span><span style="left:100%;transform:translateX(-100%)">Sep 30</span></div>
+${readout(`Day 12 \u00b7 Spent ${money(cum[12])} \u00b7 Expected ${money(pace[12])}`)}
 <p class="small muted" style="margin:0">At this rate you finish the period at <b class="amount">${money(endsAt)}</b> — <b class="amount" style="color:var(--danger)">${money(endsAt - BUD_LIMIT)}</b> over the limit.</p>
 <span class="legend row"><span class="li"><i class="dot" style="background:var(--danger)"></i>Spent</span><span class="li"><i class="dot line"></i>Pace</span><span class="li"><i class="dot line" style="background:var(--danger);opacity:.55"></i>Where it ends</span><span class="li"><i class="dot line" style="background:var(--danger)"></i>Limit</span></span>`,
     { right: `<span class="badge danger">${iconSvg("trending-up")}Over</span>` },
@@ -1366,6 +1388,7 @@ ${chartCard(
     },
   )}
 <div class="axis marked"><span style="left:0;transform:none">Sep 1</span><span style="left:100%;transform:translateX(-100%)">Sep 30</span></div>
+${readout(`Day 1 \u00b7 Spent ${money(12400)} \u00b7 Expected ${money(round(BUD_LIMIT / SEP_DAYS))}`)}
 <p class="small muted" style="margin:0">It is day 1 of the period: one day of spending says nothing about where it ends.</p>
 <span class="legend row"><span class="li"><i class="dot" style="background:var(--brand)"></i>Spent</span><span class="li"><i class="dot line"></i>Pace</span><span class="li"><i class="dot line" style="background:var(--danger)"></i>Limit</span></span>`,
 )}
@@ -1685,6 +1708,16 @@ const trends = ({ months = 6, state = "" } = {}) => {
   let augRunning = 0;
   const augCum = scaleTo(augShape, round((1855000 * TODAY) / 31)).map((v) => (augRunning += v));
   const diff = round(((sepCum[TODAY - 1] - augCum[TODAY - 1]) / augCum[TODAY - 1]) * 100);
+  // Both curves start at the origin, like the app's: index n is the end of day n.
+  const sepLine = [0, ...sepCum];
+  const augLine = [0, ...augCum];
+  const comparisonTip = (day, month = "Sep", previous = "Aug") => {
+    const here = sepCum[day - 1];
+    const there = augCum[day - 1];
+    const change = there > 0 ? Math.round(((here - there) / there) * 100) : 0;
+    const sign = change === 0 ? "" : ` \u00b7 ${change < 0 ? "\u2212" : "+"}${Math.abs(change)} %`;
+    return `Day ${day} \u00b7 ${month} ${money(here)} \u00b7 ${previous} ${money(there)}${sign}`;
+  };
   const offset = MONTHS6.length - MONTHS.length;
   const last = MONTHS.length - 1;
   const mix = MONTHS.map(([n, , exp, partial], i) => [
@@ -1738,23 +1771,30 @@ ${
     ? `<div class="card chart"><span class="eyebrow">August against July</span>
 ${trend(
   [
-    { points: augCum, cls: "ghost" },
-    { points: sepCum, dot: true },
+    { points: augLine, cls: "ghost" },
+    { points: sepLine, dot: true },
   ],
   { height: 120, label: "Spending in August against the same days of July" },
 )}
 ${axis("Day 1", "Day 31")}
+${readout(comparisonTip(TODAY, "Aug", "Jul"))}
 <p class="small muted" style="margin:0">You spent <b class="amount">${money(1855000)}</b> in August — <b>12 % less</b> than in July.</p>
 <span class="legend row"><span class="li"><i class="dot exp"></i>August</span><span class="li"><i class="dot line"></i>July, same days</span></span></div>`
     : `<div class="card chart"><span class="eyebrow">This month against last</span>
 ${trend(
   [
-    { points: augCum, cls: "ghost" },
-    { points: sepCum, dot: true },
+    { points: augLine, cls: "ghost" },
+    { points: sepLine, dot: true },
   ],
-  { height: 120, label: "Spending in September against the same days of August" },
+  {
+    height: 120,
+    label: "Spending in September against the same days of August",
+    active: 12,
+    tip: comparisonTip(12),
+  },
 )}
 ${axis("Day 1", "Day 22")}
+${readout(comparisonTip(12))}
 <p class="small muted" style="margin:0">You have spent <b class="amount">${money(sepCum[TODAY - 1])}</b> so far — <b>${Math.abs(diff)} % ${diff < 0 ? "less" : "more"}</b> than at this point in August.</p>
 <span class="legend row"><span class="li"><i class="dot exp"></i>September</span><span class="li"><i class="dot line"></i>August, same days</span></span></div>`
 }
