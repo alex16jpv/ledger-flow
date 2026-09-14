@@ -54,7 +54,9 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     focus in a `Tooltip` (23) and in the `readout` (29). Where they lead nowhere — the average by
     weekday: there is no "all Wednesdays" to open — the chart is one `role="img"` whose accessible name
     reads every slot, and the bubble is a pointer convenience only; seven buttons that do nothing are
-    worse than one image. The chart keeps a bubble's height of room above the tallest bar so the bubble
+    worse than one image. **Reading every slot is for a chart with few of them.** Seven weekdays are a
+    sentence; thirty-one days of a line (31) are not, and there the accessible name is the card's own
+    sentence — see 31. The chart keeps a bubble's height of room above the tallest bar so the bubble
     never covers the card's title, and near either end the bubble aligns to that end instead of
     centring, so it never hangs outside the card. Home, Stats, the budget detail and the weekday average are this one component with a
     different height, different labels and a different mode — never a copy.
@@ -74,10 +76,12 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     Their copy and their priority live in [screens/sync-stripes.md](screens/sync-stripes.md).
 23. **Tooltip** — a bubble over `--ink` with 11px medium text and an arrow, above the element, shown on
     hover and on keyboard focus; it is visual only (`aria-hidden`) because the control that carries it
-    already has an accessible name. Used for: the colour's name in the swatches, the icon's name in the
-    grid, the category of each segment of the stacked bar in Stats, **every slot of every chart that has
-    slots** (18, 30, 32, 33 — 31 is a line, not slots, and puts its reading in the sentence and the
-    `readout` beside it), the projection mark, and the pace mark. The exception to `aria-hidden` is the pace
+    already has an accessible name. **One variant has no arrow**: the line chart's (31), which is as
+    wide as the card and truncates rather than hang outside it, because a day of a month is narrower
+    than the reading it carries. There the rule and the dot point at the position, not an arrow, and
+    the bubble follows the pointer only — a line has nothing to focus. Used for: the colour's name in the swatches, the icon's name in the
+    grid, the category of each segment of the stacked bar in Stats, **every slot of every chart**
+    (18, 30, 32, 33, and the x positions of 31), the projection mark, and the pace mark. The exception to `aria-hidden` is the pace
     mark, which is not a control with a name of its own, so it carries its `aria-label` with the same
     text.
 24. **Projection mark (`projected`)** — a 16px `cloud-off` icon in `--warning` next to a figure (aligned
@@ -117,6 +121,15 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     `--text-3` is a reference (the period's pace, the same days of the previous month), dashed
     `--danger` is a limit or a projection. The live line ends in a dot. A line may start late — a
     projection starts at today — and the gap is drawn as a gap, never interpolated backwards.
+    **The x positions are slots too.** Pointing at one names that day and reads **every line at it**,
+    in a `Tooltip` (23) and in the `readout` (29); a vertical rule in `--border-strong` marks the
+    position and each line takes a dot there, so the reading and the picture are the same point. With
+    nothing pointed at, the `readout` reads the last position that has one. The positions are **not**
+    controls — a day of a two-month comparison, or of a pace curve, opens nothing — so the chart stays
+    one `role="img"`, and **its accessible name is the card's sentence, not the thirty-one readings**:
+    that is where this piece parts from 18, and why the `readout` matters more here than anywhere
+    else. A position with nothing to read — the origin of a cumulative curve, a day the previous month
+    never reached — has no slot and no bubble.
 32. **Calendar heatmap (`heat`)** — the same days as `Bars`, laid out as the month: one cell per day in
     four steps of `--brand`, `--surface-3` for a day with nothing spent, an outline for a day that has
     not arrived, today ringed, and a Less/More scale. Weeks start on the language's first day, like the
@@ -131,7 +144,8 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     underneath.
 
 **Every chart obeys the same contract**, and every shape has exactly one implementation: a slot — a
-bar, a cell, a column, a pair — carries its name and its amount as its accessible name; it shows that
+bar, a cell, a column, a pair — carries its name and its amount as its accessible name (a position on
+a line is the exception 31 states); it shows that
 same text on hover and on keyboard focus through `Tooltip` (23); it repeats it in the `readout` (29)
 for a finger; and where there is a list behind the slot, the slot is a control that opens that list
 already filtered. A chart drawn from figures that include an unconfirmed write carries the projection

@@ -59,3 +59,9 @@ a calendar month and `DayHeat` doing the same over `Heat`. Around them: `ChartCa
 under a chart, and `lib/storage/choice.ts` to remember a per-screen choice (a range, a mode) without
 a store. Money is never added here: the only place the client adds it is `lib/local/derive`
 (`sumAmounts`, `runningTotals`).
+
+T-65 gave the line chart the same contract the bars already had: `comparisonPoints` turns the two
+cumulative curves into one reading per day — both months and what separates them — and `Trend` shows
+it in a bubble on hover and in the `readout` underneath, with a rule and a dot marking the position.
+Day 0 is the origin of the curves, not a day, and a day the previous month never reached reads this
+month alone, so neither gets a bubble that says nothing.

@@ -25,7 +25,7 @@ export interface ChartSlotsProps {
 }
 
 // The bubble's own height, kept clear above the tallest slot so it never covers the card's title.
-const BUBBLE_ROOM = 22;
+export const BUBBLE_ROOM = 22;
 
 // A period still running is hatched: the same reading in every chart that has one.
 export const HATCH =
@@ -37,7 +37,7 @@ function step(key: string): number | null {
   return null;
 }
 
-function alignFor(index: number, count: number): TooltipAlign {
+export function alignFor(index: number, count: number): TooltipAlign {
   if (index === 0) return "start";
   if (index === count - 1) return "end";
   return "center";

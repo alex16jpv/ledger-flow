@@ -428,6 +428,11 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 
 /* ── Gráficas ───────────────────────────────────────────────────────────── */
 .chart { display: flex; flex-direction: column; gap: var(--sp-2); }
+.trend-wrap { position: relative; display: block; width: 100%; margin-top: 22px; }
+.trend-tip { position: absolute; bottom: 100%; left: 0; right: 0; margin-bottom: 6px; background: var(--ink); color: var(--on-ink); font-size: var(--fs-xs); font-weight: var(--fw-medium); padding: 4px 8px; border-radius: var(--r-sm); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: var(--shadow-3); z-index: 20; }
+.trend-wrap .bands { position: absolute; inset: 0; display: flex; }
+.trend-wrap .band { height: 100%; flex: none; }
+.trend .guide { stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: none; }
 .chart .readout { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); min-height: 18px; font-size: var(--fs-sm); color: var(--text-2); }
 .chart .readout .v { font-variant-numeric: var(--num); font-weight: var(--fw-medium); color: var(--text); }
 .chart .axis { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--text-3); }

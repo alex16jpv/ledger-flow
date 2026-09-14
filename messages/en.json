@@ -748,7 +748,8 @@
       "bankAccount": "Bank account",
       "creditCard": "Credit card",
       "primary": "Primary",
-      "secondary": "Secondary"
+      "secondary": "Secondary",
+      "trendPoint": "Day {day} · Spent {amount}"
     },
     "pickersPlayground": {
       "title": "Pickers",
@@ -1074,7 +1075,9 @@
         "errorDay": "We couldn’t load the days of this period",
         "errorHistory": "We couldn’t load the previous periods",
         "errorBiggest": "We couldn’t load the biggest movements",
-        "today": "today"
+        "today": "today",
+        "pacePoint": "Day {day} · Spent {amount} · Expected {pace}",
+        "pacePointProjected": "Day {day} · At this rate {amount} · Expected {pace}"
       }
     },
     "form": {
@@ -1475,7 +1478,11 @@
     },
     "errorMonths": "We couldn’t load income and spending",
     "errorComparison": "We couldn’t load this month against last",
-    "errorMix": "We couldn’t load where your money went"
+    "errorMix": "We couldn’t load where your money went",
+    "pointMore": "Day {day} · {month} {amount} · {previous} {previousAmount} · +{percent} %",
+    "pointLess": "Day {day} · {month} {amount} · {previous} {previousAmount} · −{percent} %",
+    "pointFlat": "Day {day} · {month} {amount} · {previous} {previousAmount}",
+    "pointAlone": "Day {day} · {month} {amount}"
   },
   "charts": {
     "daySlot": "{day} · {amount}",

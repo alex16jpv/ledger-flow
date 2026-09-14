@@ -69,3 +69,6 @@ budget is one window that never repeats, so the card and its reads are skipped; 
 period has one column and the card is absent. A column opens its period only for a MONTHLY budget,
 which is what `reference` in the URL can name; elsewhere the chart reads itself as one image, like
 the weekday average of Stats.
+
+T-65 gave the pace curve a reading a day at a time too — spent against expected in a bubble and in the
+`readout` — and past today it says the figure is where the projection puts it, not what was spent.
