@@ -46,3 +46,16 @@ money in the client.
 The screen is composed in the app layer for the same reason the others are: it reads three features'
 hooks. Its charts are `GBars` and `ColBars`, both built on `ChartSlots`, which owns the one tab stop,
 the tooltip per slot and the readout line that every chart in `design/spec/components.md` promises.
+
+**Before drawing a new chart, these already exist**, and a screen that rebuilds one of them drifts
+from the rest. What every chart shares is not a component but a hook: **`useRovingSlots`** gives the
+chart its single tab stop and moves the selection with the arrows, and `Bars`, `Heat` and
+`ChartSlots` are the three that call it. `ChartSlots` is the generic one — slots, the tooltip per
+slot, the hatching of the period still running and the reading line (`Readout`) — and `ColBars` and
+`GBars` are built on it; `Bars` predates it and calls the hook itself, with `DayBars` wrapping it for
+a calendar month and `DayHeat` doing the same over `Heat`. Around them: `ChartCard` with
+`ChartSkeleton` and `ChartError` for the card's other two states, `LegendKey` for a legend swatch,
+`useDayReading` for the selected day a chart and its readout share, `ShareRows` for the row list
+under a chart, and `lib/storage/choice.ts` to remember a per-screen choice (a range, a mode) without
+a store. Money is never added here: the only place the client adds it is `lib/local/derive`
+(`sumAmounts`, `runningTotals`).
