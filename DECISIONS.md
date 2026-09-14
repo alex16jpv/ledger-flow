@@ -5,6 +5,26 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-13 · A session that is over is not asked for a token again (H-61)
+
+- **Context:** on 2026-09-14 at 00:33 UTC the owner signed out from Settings › Sessions — the
+  backend log has the `POST /auth/logout` — and a second later Sentry recorded
+  `SessionEndedError: session_ended by=no-cookie code=REFRESH_INVALID` from `/login`. A deliberate
+  logout was leaving an error behind, in the same issue as the sessions the backend really kills.
+  The same thing produced the second event of 2026-09-11: once a session is over, every later 401
+  posted `/api/auth/refresh` again and reported the same dead session again.
+- **Decision:** `refresh.ts` keeps a flag. It goes up when a signed answer says the session ended
+  and when the user signs out (both mutations, and the `session:logout` message from another tab),
+  and it comes down on a successful sign-in or when another tab announces a refresh. While it is up,
+  `refreshSession()` resolves `false` without a request — so there is no 401, no report, and no
+  round trip.
+- **Alternatives:** stop reporting `by=no-cookie` (silences the symptom and loses the real case,
+  cookies disappearing with no logout); or give it its own fingerprint so it lands in another issue
+  (keeps the pointless request and the noise, just files it elsewhere).
+- **Consequence:** the first session-end is still reported, which is the one worth having. What
+  disappears is the parade behind it. `noteSessionEnded` / `noteSessionStarted` are the two calls a
+  future sign-out or sign-in path must not forget; `resetRefreshState()` covers both in tests.
+
 ## 2026-09-13 · One name for the release, computed once (H-60)
 
 - **Context:** every deploy created **two** records in Sentry. The browser reported `861cf22` —

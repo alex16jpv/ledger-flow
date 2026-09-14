@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
@@ -98,30 +99,34 @@ export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<voi
                       />
                     </span>
                   </RowBody>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    iconOnly
-                    className="sm:w-auto sm:px-3"
-                    aria-label={t("settings.sessions.signOutDevice", { device: label })}
-                    loading={revoke.isPending && revoke.variables === session.id}
-                    onClick={() => {
-                      revoke
-                        .mutateAsync(session.id)
-                        .then(() => {
-                          toast.show({ message: t("settings.sessions.signedOut") });
-                        })
-                        .catch((error: unknown) => {
-                          toast.show({
-                            message: t(presentError(error).messageKey),
-                            tone: "danger",
+                  {session.current ? (
+                    <Badge tone="brand">{t("settings.sessions.thisDevice")}</Badge>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      iconOnly
+                      className="sm:w-auto sm:px-3"
+                      aria-label={t("settings.sessions.signOutDevice", { device: label })}
+                      loading={revoke.isPending && revoke.variables === session.id}
+                      onClick={() => {
+                        revoke
+                          .mutateAsync(session.id)
+                          .then(() => {
+                            toast.show({ message: t("settings.sessions.signedOut") });
+                          })
+                          .catch((error: unknown) => {
+                            toast.show({
+                              message: t(presentError(error).messageKey),
+                              tone: "danger",
+                            });
                           });
-                        });
-                    }}
-                  >
-                    <LogOut {...iconProps("sm")} />
-                    <span className="hidden sm:inline">{t("settings.sessions.signOut")}</span>
-                  </Button>
+                      }}
+                    >
+                      <LogOut {...iconProps("sm")} />
+                      <span className="hidden sm:inline">{t("settings.sessions.signOut")}</span>
+                    </Button>
+                  )}
                 </Row>
               );
             })}

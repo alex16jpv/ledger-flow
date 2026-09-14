@@ -13,7 +13,7 @@ import {
 } from "react";
 
 import { setUnauthorizedHandler } from "@/lib/api/client";
-import { noteRefreshedElsewhere, refreshSession } from "@/lib/api/refresh";
+import { noteRefreshedElsewhere, noteSessionEnded, refreshSession } from "@/lib/api/refresh";
 import { resumeSyncEngine } from "@/lib/local/outbox/engine";
 import { purgeVault } from "@/lib/local/purge";
 import { localOnlyStore } from "@/lib/network/local-only";
@@ -101,10 +101,13 @@ export function SessionProvider({
     return tabChannel.subscribe((message) => {
       switch (message.type) {
         case "session:expired":
+          // Every tab holds its own flag, or each one posts its own refresh and files its own report.
+          noteSessionEnded();
           setExpired(true);
           break;
         case "session:logout":
           // The tab that ran the logout already applied the user's choice to the shared vault.
+          noteSessionEnded();
           void endLocalSession({ discardPendingWork: false }).then(onSignedOut);
           break;
         case "session:refreshed":
@@ -129,7 +132,10 @@ export function SessionProvider({
   }, [endLocalSession, onSignedOut, onLocaleChanged]);
 
   const logoutMutation = useMutation({
-    mutationFn: ({ options }: { options: SignOutOptions }) => requestLogout().then(() => options),
+    mutationFn: ({ options }: { options: SignOutOptions }) => {
+      noteSessionEnded();
+      return requestLogout().then(() => options);
+    },
     onSettled: async (_data, _error, variables) => {
       await endLocalSession(variables.options);
       tabChannel.post({ type: "session:logout" });
@@ -138,8 +144,10 @@ export function SessionProvider({
   });
 
   const logoutAllMutation = useMutation({
-    mutationFn: ({ options }: { options: SignOutOptions }) =>
-      requestLogoutAll().then(() => options),
+    mutationFn: ({ options }: { options: SignOutOptions }) => {
+      noteSessionEnded();
+      return requestLogoutAll().then(() => options);
+    },
     onSettled: async (_data, _error, variables) => {
       await endLocalSession(variables.options);
       tabChannel.post({ type: "session:logout" });

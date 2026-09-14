@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { ApiError } from "@/lib/api/errors";
+import { noteSessionStarted } from "@/lib/api/refresh";
 import { readSessionMarker } from "@/lib/auth/marker";
 import { readVaultProfile } from "@/lib/local/db";
 import { reportOnline } from "@/lib/network/connectivity";
@@ -21,6 +22,7 @@ export function retryAfterOf(error: unknown): number | null {
 }
 
 function syncFromNowOn(): void {
+  noteSessionStarted();
   setLocalOnly(false);
   reportOnline(true);
 }
