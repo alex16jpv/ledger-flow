@@ -11,6 +11,15 @@ describe("AmountInput", () => {
     expect(screen.getByRole("textbox", { name: "Amount" })).toHaveAttribute("inputmode", "numeric");
   });
 
+  it("refuses a decimal under a zero-decimal currency, whatever the device thinks", async () => {
+    const onChange = vi.fn();
+    renderWithProviders(<AmountInput onChange={onChange} label="Amount" />, { currency: "COP" });
+    const input = screen.getByRole<HTMLInputElement>("textbox", { name: "Amount" });
+    await userEvent.type(input, "1000.50");
+    expect(input).toHaveValue("100,050");
+    expect(onChange).toHaveBeenLastCalledWith(100050);
+  });
+
   it("groups thousands while typing and reports the clean number", async () => {
     const onChange = vi.fn();
     renderWithProviders(<AmountInput onChange={onChange} label="Amount" />);

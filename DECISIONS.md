@@ -3550,3 +3550,45 @@ cover` is set once in the root layout for the standalone display.
 - **Alternative:** forwarding `x-forwarded-for` instead of a header of our own. Rejected: the
   Lambda Function URL in front of the backend writes that header itself, so what we sent would not
   survive the hop.
+
+## 2026-09-13 · The currency's minor unit is ours, not the device's (T-66)
+
+- **Problem:** the same COP balance read as `$1,284,300` on a desktop browser and `$1,284,300.00`
+  on a phone. `fractionDigits` asked `Intl.NumberFormat(...).resolvedOptions()`, and ICU versions
+  do not agree on COP: the recent one answers 0, older mobile ones answer 2. It was not only
+  painting — `useMoney().fractionDigits` also decides whether `AmountInput` offers a decimal
+  keypad and how many decimals it lets you type, and `roundToCurrency` rounds with it, so the
+  device was deciding a rule about money.
+- **Decision:** `currencyFractionDigits` in `lib/format/currency.ts` is the one answer, a set of
+  zero-decimal codes read from nowhere else, and the currency formatters pin
+  `minimumFractionDigits` and `maximumFractionDigits` to it. `Intl` still shapes the number —
+  groups, separators, symbol, the user's region — but never says how many decimals a currency has.
+- **What the set is:** every code a current CLDR paints with no decimals (33 of them, COP among
+  them), united with the ISO exponent-0 list the backend keeps in `src/shared/currency.ts` (17, of
+  which only UYI is not already in CLDR's). Thirty-four in all, frozen here so a phone from 2021 and
+  a desktop from today paint the same balance. Regenerate it, when a currency changes, from
+  `Intl.supportedValuesOf("currency")` on a current runtime; `currency.test.ts` fails when this
+  runtime's ICU stops agreeing, which is the signal to regenerate, not a regression.
+- **Why COP is in the set:** the owner's rule, stated on 2026-09-13 — Colombia does not use the
+  centavo, and a peso with decimals is not a figure anyone here writes. A current CLDR agrees; the
+  older ones on phones are what disagreed.
+- **What else moved, and it is not only COP:** six of the seven ISO three-decimal currencies (BHD,
+  JOD, KWD, LYD, OMR, TND) now read **two** decimals here instead of three — the seventh, IQD, reads
+  none, because CLDR treats the dinar as having no fils in practice. That is a fix, not a loss:
+  storage is integer cents on both sides and the backend rejects a third decimal with
+  `AMOUNT_PRECISION`, so `AmountInput` used to accept a keystroke the server would refuse. And the
+  sixteen currencies a current CLDR treats as zero-decimal in practice (HUF, IDR, PKR…) stay at
+  zero rather than gaining decimals they never had on any modern browser — two of them, HUF and
+  IDR, are reachable straight from `REGION_CURRENCY`.
+- **Alternative:** keeping `Intl` and normalising only what it returns. Rejected: there is nothing
+  to normalise — the platform answers a different number, and a rule about money cannot depend on
+  which browser the user opened the app in.
+- **Alternative:** generating the list from the backend, which has its own in
+  `src/shared/currency.ts`. It is the right end state and the reason the two lists do not match
+  today: the backend does **not** treat COP as zero-decimal, so its API would still accept
+  `1000,50 COP` that this client can no longer type. Aligning them, and putting the minor unit in
+  the OpenAPI contract so this table is generated instead of written, is the owner's call and lives
+  in his list. It is **seventeen** currencies, not one: every code in the table the backend does not
+  treat as zero-decimal — AFN, ALL, COP, HUF, IDR, IQD, IRR, KPW, LAK, LBP, MGA, MMK, PKR, SLL, SOS,
+  SYP, YER. For the sixteen that are not COP this is not new — a modern browser already painted them
+  that way — but freezing it makes it true on every device.

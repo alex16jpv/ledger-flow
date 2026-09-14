@@ -2,13 +2,8 @@
 
 import { useMemo } from "react";
 
-import {
-  formatMoney,
-  fractionDigits,
-  moneyParts,
-  parseDecimal,
-  roundToCurrency,
-} from "@/lib/format/money";
+import { currencyFractionDigits } from "@/lib/format/currency";
+import { formatMoney, moneyParts, parseDecimal, roundToCurrency } from "@/lib/format/money";
 
 import { useFormatSettings } from "./FormatSettingsProvider";
 
@@ -19,7 +14,7 @@ export function useMoney() {
     return {
       currency,
       locale: formatLocale,
-      fractionDigits: fractionDigits(currency),
+      fractionDigits: currencyFractionDigits(currency),
       format: (amount: number) => formatMoney(amount, options),
       parts: (amount: number) => moneyParts(amount, options),
       parse: (input: string) => parseDecimal(input, formatLocale),

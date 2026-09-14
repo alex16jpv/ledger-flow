@@ -70,6 +70,50 @@ const REGION_CURRENCY: Record<string, string> = {
   IL: "ILS",
 };
 
+// Frozen, not asked: a device's ICU says COP has 0 decimals here and 2 on an older phone.
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  "AFN",
+  "ALL",
+  "BIF",
+  "CLP",
+  "COP",
+  "DJF",
+  "GNF",
+  "HUF",
+  "IDR",
+  "IQD",
+  "IRR",
+  "ISK",
+  "JPY",
+  "KMF",
+  "KPW",
+  "KRW",
+  "LAK",
+  "LBP",
+  "MGA",
+  "MMK",
+  "PKR",
+  "PYG",
+  "RWF",
+  "SLL",
+  "SOS",
+  "SYP",
+  "UGX",
+  "UYI",
+  "VND",
+  "VUV",
+  "XAF",
+  "XOF",
+  "XPF",
+  "YER",
+]);
+
+const DEFAULT_FRACTION_DIGITS = 2;
+
+export function currencyFractionDigits(code: string): number {
+  return ZERO_DECIMAL_CURRENCIES.has(code.toUpperCase()) ? 0 : DEFAULT_FRACTION_DIGITS;
+}
+
 export function currencyForRegion(region: string | undefined | null): string {
   if (!region) return DEFAULT_CURRENCY_CODE;
   return REGION_CURRENCY[region.toUpperCase()] ?? DEFAULT_CURRENCY_CODE;
