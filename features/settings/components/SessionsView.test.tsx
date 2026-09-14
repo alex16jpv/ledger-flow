@@ -76,6 +76,25 @@ describe("SessionsView", () => {
   });
 
   // R-3b §C: with no network the sign-out would clear this device and leave the account in.
+  // The design says the current family reads "This device": revoking it here would kill the session
+  // that is asking, without the local sign-out that a real sign-out does (H-61).
+  it("never offers to sign this very device out [H-61]", async () => {
+    fetchMock.mockResolvedValue(json({ data: [sessions[0], { ...sessions[1], current: true }] }));
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <SessionsView onSignOutAll={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+
+    expect(await screen.findByText("This device")).toBeVisible();
+    const buttons = await screen.findAllByRole("button", { name: /^Sign out (Android|Windows)/ });
+    expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Sign out Android · Chrome",
+    ]);
+  });
+
   it("does not offer to sign out every device while offline", async () => {
     fetchMock.mockResolvedValue(json({ data: sessions }));
     reportOnline(false);

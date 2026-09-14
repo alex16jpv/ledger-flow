@@ -28,7 +28,7 @@ import { sumAmounts } from "./money";
 import { deriveSpending } from "./spending";
 
 const VENDORED = resolve(process.cwd(), "lib/local/derive/fixtures");
-// The guard below runs only where both repos are checked out side by side; in CI there is none.
+// The guard below runs only where both repos are checked out side by side; elsewhere there is none.
 const SOURCE = resolve(
   process.env.OFFLINE_FIXTURES_DIR ?? join(process.cwd(), "../lag-money-manager/fixtures/offline"),
 );
@@ -348,7 +348,7 @@ describe("the vendored copy", () => {
   });
 
   it.runIf(existsSync(SOURCE))(
-    "is byte for byte the backend's committed fixtures/offline (skipped where that repo is absent, as in CI)",
+    "is byte for byte the backend's committed fixtures/offline (skipped where that repo is absent)",
     () => {
       expect(readdirSync(VENDORED).sort()).toEqual(readdirSync(SOURCE).sort());
       for (const file of readdirSync(SOURCE)) {

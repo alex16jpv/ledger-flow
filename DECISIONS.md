@@ -5,6 +5,70 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-13 · A session that is over is not asked for a token again (H-61)
+
+- **Context:** on 2026-09-14 at 00:33 UTC the owner signed out from Settings › Sessions — the
+  backend log has the `POST /auth/logout` — and a second later Sentry recorded
+  `SessionEndedError: session_ended by=no-cookie code=REFRESH_INVALID` from `/login`. A deliberate
+  logout was leaving an error behind, in the same issue as the sessions the backend really kills.
+  The same thing produced the second event of 2026-09-11: once a session is over, every later 401
+  posted `/api/auth/refresh` again and reported the same dead session again.
+- **Decision:** `refresh.ts` keeps a flag. It goes up when a signed answer says the session ended
+  and when the user signs out (both mutations, and the `session:logout` message from another tab),
+  and it comes down on a successful sign-in or when another tab announces a refresh. While it is up,
+  `refreshSession()` resolves `false` without a request — so there is no 401, no report, and no
+  round trip.
+- **Alternatives:** stop reporting `by=no-cookie` (silences the symptom and loses the real case,
+  cookies disappearing with no logout); or give it its own fingerprint so it lands in another issue
+  (keeps the pointless request and the noise, just files it elsewhere).
+- **Consequence:** the first session-end is still reported, which is the one worth having. What
+  disappears is the parade behind it. `noteSessionEnded` / `noteSessionStarted` are the two calls a
+  future sign-out or sign-in path must not forget; `resetRefreshState()` covers both in tests.
+
+## 2026-09-13 · One name for the release, computed once (H-60)
+
+- **Context:** every deploy created **two** records in Sentry. The browser reported `861cf22` —
+  `sentry-options.ts` cut the commit sha to seven — while the build registered the deploy and its
+  artifacts under the whole sha, `861cf22e33e2…`. Checked against the API on 2026-09-13: the short
+  record has the events and `deployCount 0`; the long one has `deployCount 1` and has never seen an
+  event. Source maps still resolved, because those travel by `debug_id`; what broke is everything
+  Sentry hangs off a release — which commits shipped, whether an issue is a regression of this
+  deploy, release health.
+- **Decision:** `lib/observability/release.ts` computes the name, and both sides import it: the
+  runtime through `sentryOptions()`, and the build through `release: { name }` in the plugin's
+  options in `next.config.ts`. Whole sha, never cut. Settings › About keeps showing the short one —
+  that is a label for a person, not a key.
+- **Alternatives:** cut the sha on the build side too (same single name, but a name that no longer
+  matches the commit anyone would `git show`); or set `NEXT_PUBLIC_APP_VERSION` in Vercel and hope
+  both sides keep reading the same variable — which is how the two names drifted apart to begin with.
+- **Consequence:** one record per deploy from the next build on. The records already split stay
+  split; nothing merges them.
+
+## 2026-09-13 · GitHub runs nothing: every check is local (T-34)
+
+- **Context:** the owner's decision, in his words: «los CI desde GitHub nunca han funcionado, a partir
+  de ahora quiero que los elimines y que solo se hagan las comprobaciones en local». The record backs
+  him: of the 100 runs the API still lists, **100 are red**. Until 2026-09-11 it was `e2e` (H-39);
+  from 2026-09-12 the `quality` job itself started failing at `npm run ci`, and with it red the `e2e`
+  and `lighthouse` jobs never even started. Measured the same day: a clean `git clone` plus
+  `npm ci --ignore-scripts` runs `npm run ci` **green** here, so the failure was the runner's
+  environment, not this repository — and the logs that would say which need a token nobody has.
+- **Decision:** delete `.github/workflows/ci.yml` and `.github/workflows/lighthouse-app.yml`. Keep
+  every check as a local command, and bring inside the ones that only existed in the workflows:
+  `npm run audit`, `npm run check:contract`, and `npm run check:all` chaining gate → audit → e2e →
+  contract. `npm run lighthouse` now builds into `.next-lh` with the audited origin, which the
+  `lighthouse` job did in its own step and no local command did.
+- **Alternatives:** fix the runner blind (three sessions had already written three causes for `e2e`,
+  two of them wrong, without a single uploaded artifact); or keep the workflows red and ignore them,
+  which is how a red light stops meaning anything.
+- **Consequence:** nothing gates a merge automatically, so `npm run check:all` before handing a branch
+  over is the whole safety net — it is the first line of `CLAUDE.md` §1, the checklist of §7, the
+  README and the pull request template. **What is lost is written down instead of assumed**: gitleaks
+  and osv-scanner (nothing here installs them), the clean install from the lockfile that `npm ci`
+  gave on every run, running on the Node of `.nvmrc`, and anything happening without somebody typing
+  it. The _Enforced by_ notes of the house rules that named CI now name the command — and where the
+  command is only a command, they say **manual**, which is what the list itself demands.
+
 ## 2026-09-13 · The five causes behind the e2e suite's shifting failure (H-08)
 
 - **Measured first, over ten full passes with every log kept:** it fell three times, and the three were
@@ -463,7 +527,8 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   against a fresh build in a temporary directory answers the question actually being asked.
 - **Consequence:** `design/build.mjs` honours `DESIGN_OUT`. Only the generated pages and
   `assets/plates.js` are compared; the rest of `assets/` is written by hand. `lefthook` does not run
-  it, so a partial `git add` is still caught only by CI.
+  it, so a partial `git add` used to be caught only by CI — and since T-34 (2026-09-13) by nothing:
+  it surfaces the next time somebody runs `npm run ci`.
 
 ## 2026-09-01 · Rebuild from scratch on `redesign/fase-2` (W-01)
 
@@ -544,6 +609,10 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   `docker run` (service containers cannot pass `--replSet`).
 - **Consequence:** local runs of `npm run test:e2e` are optional; every PR runs the suite in CI.
   The `e2e` job needs the `BACKEND_REPO_TOKEN` secret to check out the backend.
+- **Reversed on 2026-09-13 (T-34):** there is no CI. The suite only runs where it is run by hand, so
+  `npm run test:e2e` is no longer optional — it is part of `npm run check:all`. The reason this
+  decision gave for leaning on CI is also gone: Chromium runs on this machine (H-08 drove the suite
+  twenty-four times on it).
 
 ## 2026-09-01 · `subject-case` allows the `(W-nn)` reference (W-01)
 
@@ -1642,11 +1711,12 @@ cover` is set once in the root layout for the standalone display.
   the pending summary land first; `spent` and the day buckets are part 2. The parity fixtures are
   copied verbatim into `lib/local/derive/fixtures/` and committed.
 - **Alternatives:** reading the parity fixtures from the shared folder they then lived in, outside
-  both repositories. Rejected because that folder is in no repository and CI checks out only this
+  both repositories. Rejected because that folder is in no repository and a clone brings only this
   one, so the parity test would never run where it
   matters. A test that skips when the folder is missing would have been green in CI while proving
   nothing. The vendored copy is guarded instead: on a machine that has the source folder, the test
-  compares the two byte for byte and fails on drift; in CI it skips with that reason in its name.
+  compares the two byte for byte and fails on drift; where the other repo is absent it skips with that
+  reason in its name.
 - **Consequence:** `repository/transactions.ts` no longer does arithmetic — `includeSummary` calls
   `sumAmounts`, the same adder every figure uses. Nothing paints a derived balance yet, and nothing
   may until the projection is marked (invariant 2). Refreshing the fixtures now means copying them
@@ -1676,7 +1746,7 @@ cover` is set once in the root layout for the standalone display.
   shared folder outside both repositories is no longer read by anyone.
 - **Alternatives:** the previous arrangement (see the 2026-09-04 O-F3 part 1 entry above), where the
   source of the copy was a folder in no repository. Rejected once the backend committed the files:
-  the contract can now be worked on from any machine, and the backend's CI fails when its generator
+  the contract can now be worked on from any machine, and `npm run ci` in the backend fails when its generator
   and its files disagree, so every link of generator → backend files → this copy has a guard.
 - **Consequence:** the chain is only as good as the sync step. Refreshing the fixtures is one command
   and the test says which file drifted.
@@ -2981,7 +3051,8 @@ cover` is set once in the root layout for the standalone display.
   both modes are covered. Verified: a full `npm run lighthouse` leaves the repo root clean.
 - **Local caveat, unchanged:** `npm run lighthouse` (public) serves whatever is in `.next`, so on a
   checkout built for another origin the `canonical` audit fails and SEO lands at 0.92. CI builds with
-  `NEXT_PUBLIC_APP_URL=http://localhost:3002` for exactly that reason (`ci.yml:84`).
+  `NEXT_PUBLIC_APP_URL=http://localhost:3002` for exactly that reason; since T-34 it is
+  `tools/lighthouse.mjs` that builds with the audited origin, and `ci.yml` no longer exists.
 - **Consequence:** `lighthouse:app` is not in `npm run ci` — it needs the backend, the Docker Mongo
   and about 25 minutes. Wiring it into CI is registered as F-76.
 
@@ -3040,7 +3111,8 @@ cover` is set once in the root layout for the standalone display.
 - **Decision:** `tools/gen-api-types.mjs` sorts the spec before it generates — paths alphabetically,
   the methods inside a path in HTTP order, `components.schemas` alphabetically. A regeneration now
   only shows what really moved. This commit carries the one-time reordering.
-- **Why it matters beyond the noise:** the `e2e` job of `ci.yml` regenerates the types and runs
+- **Why it matters beyond the noise (reversed on 2026-09-13, T-34: there is no `e2e` job; it is
+  `npm run check:contract`, inside `check:all`, that does this by hand):** the job regenerated the types and ran
   `git diff --exit-code` on them, so before this the job could fail on a rebuilt backend that had not
   changed a single endpoint — and, worse, a real change would have been invisible inside 2394 lines.
 - **`endpoints.md` comes back, generated.** W-39 asked for it "regenerated"; the one the old front
@@ -3048,7 +3120,8 @@ cover` is set once in the root layout for the standalone display.
   tool now writes it from the same spec: 43 operations in eight groups, each with its parameters,
   body schema and responses, plus the note that the client never calls those URLs directly — every
   request goes through the BFF under `/api/*`. It is Prettier-formatted by the generator so
-  `format:check` keeps watching it, and CI diffs it next to the types.
+  `format:check` keeps watching it, and `npm run check:contract` diffs it next to the types (it was CI
+  until T-34, 2026-09-13).
 - **Consequence:** running the generator twice leaves both files byte for byte identical. Descriptions
   keep their own markdown (the `POST /sync` one is a table), so they are written as blocks, not
   flattened into a cell.
@@ -3113,6 +3186,8 @@ cover` is set once in the root layout for the standalone display.
 
 ## 2026-09-07 · The authenticated audit runs when asked, not every night (F-76)
 
+- **Reversed on 2026-09-13 (T-34):** the workflow is gone with the rest of GitHub CI; what it did is
+  `npm run lighthouse:app`, run by hand.
 - **Decision:** `.github/workflows/lighthouse-app.yml` checks out both repositories, brings up the
   Mongo replica set, lets `tools/lighthouse.mjs` start and seed the backend the way it does locally,
   runs `npm run lighthouse:app` over the 25 screens and uploads `.lighthouseci` whatever the outcome.
@@ -3132,11 +3207,14 @@ cover` is set once in the root layout for the standalone display.
   never pushed), `redesign/fase-2` and `feat/offline` (both merged into `main` through pull requests
   #4 and #6, local and remote), `demo`, and the remotes `improvements` and `updateCache`. Deleting a
   remote branch would need a push, which the owner's rules forbid anyway.
+- **Reversed on 2026-09-13 (T-34):** `ci.yml` no longer exists, so no branch triggers anything.
 - **Consequence:** `ci.yml` no longer runs on pushes to `redesign/fase-2`, which is merged; it runs
   on `main`, on `feat/**` and on every pull request. The branches stay until the owner says otherwise.
 
 ## 2026-09-07 · CI builds the backend from main again (W-39)
 
+- **Reversed on 2026-09-13 (T-34):** both workflows are gone; the e2e suite builds the backend from
+  whatever `lag-money-manager` has checked out next door.
 - **Decision:** `BACKEND_REF` goes from `feat/offline` back to `main` in `ci.yml` and in the new
   `lighthouse-app.yml`. This was the single line the offline plan left for the end of the merge
   dance, backend first.

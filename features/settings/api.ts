@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { noteSessionStarted } from "@/lib/api/refresh";
 import { pullAfterDirectSend } from "@/lib/local/outbox";
 import { readAccounts, readCategoriesPage } from "@/lib/local/repository";
 import type {
@@ -39,6 +40,11 @@ export function revokeSession(id: string): Promise<unknown> {
 }
 
 // A credential change revokes every refresh token, this device's included: sign in again with the new pair.
-export function reauthenticate(email: string, password: string): Promise<AuthTokens> {
-  return api<AuthTokens>("/auth/login", { method: "POST", body: { email, password } });
+export async function reauthenticate(email: string, password: string): Promise<AuthTokens> {
+  const tokens = await api<AuthTokens>("/auth/login", {
+    method: "POST",
+    body: { email, password },
+  });
+  noteSessionStarted();
+  return tokens;
 }

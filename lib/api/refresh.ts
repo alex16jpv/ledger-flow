@@ -20,6 +20,7 @@ const RETRY_DELAY_MS = 500;
 
 let inFlight: Promise<boolean> | null = null;
 let lastRefreshAt = 0;
+let sessionOver = false;
 
 interface RefreshOptions {
   since?: number;
@@ -67,6 +68,7 @@ async function requestRefresh(): Promise<boolean> {
   }
   const by = endedBy(response);
   if (by && response) {
+    sessionOver = true;
     // Which side ended it is the difference between a token that is over and a bad minute.
     reportError(new SessionEndedError(by, await codeOf(response)), "session");
     tabChannel.emitLocal({ type: "session:expired" });
@@ -86,8 +88,12 @@ async function withLock<T>(run: () => Promise<T>): Promise<T> {
 
 // Every 401 in a tab funnels into one refresh; the Web Lock keeps two tabs from rotating the same token.
 export function refreshSession({ since = Date.now() }: RefreshOptions = {}): Promise<boolean> {
+  // H-61: a session that is over does not come back by asking again, and each ask is a false alarm.
+  if (sessionOver) return Promise.resolve(false);
   if (lastRefreshAt > since) return Promise.resolve(true);
   inFlight ??= withLock(async () => {
+    // The lock is shared between tabs: another one may have ended the session while this waited.
+    if (sessionOver) return false;
     if (lastRefreshAt > since) return true;
     return requestRefresh();
   }).finally(() => {
@@ -97,10 +103,21 @@ export function refreshSession({ since = Date.now() }: RefreshOptions = {}): Pro
 }
 
 export function noteRefreshedElsewhere(at: number): void {
+  sessionOver = false;
   lastRefreshAt = Math.max(lastRefreshAt, at);
+}
+
+export function noteSessionEnded(): void {
+  sessionOver = true;
+}
+
+export function noteSessionStarted(): void {
+  sessionOver = false;
+  lastRefreshAt = Date.now();
 }
 
 export function resetRefreshState(): void {
   inFlight = null;
   lastRefreshAt = 0;
+  sessionOver = false;
 }

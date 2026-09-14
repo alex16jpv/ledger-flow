@@ -2,6 +2,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { refreshSession, resetRefreshState } from "@/lib/api/refresh";
 import { countPendingOperations } from "@/lib/local/db";
 import { accountRecord, type OutboxOperation } from "@/lib/local/schema";
 import { QueryProvider } from "@/lib/query/QueryProvider";
@@ -37,6 +38,7 @@ beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
   tabChannel.reset();
+  resetRefreshState();
 });
 
 afterEach(async () => {
@@ -141,6 +143,25 @@ describe("SessionProvider", () => {
       expect(onSignedOut).toHaveBeenCalled();
     });
     expect(fetchMock.mock.calls.some(([url]) => urlOf(url) === "/api/auth/logout")).toBe(true);
+  });
+
+  // H-61: the owner signed out and a stray 401 posted a refresh a second later, filing a dead session
+  // in Sentry. What must not happen after a sign-out is the request, not just the report.
+  it("asks for no token after signing out [H-61]", async () => {
+    fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "A" } }));
+    renderSession();
+    await waitFor(() => {
+      expect(screen.getByTestId("status")).toHaveTextContent("authenticated");
+    });
+    fetchMock.mockResolvedValue(json({ ok: true }));
+    await userEvent.click(screen.getByRole("button", { name: "logout" }));
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([url]) => urlOf(url) === "/api/auth/logout")).toBe(true);
+    });
+
+    fetchMock.mockClear();
+    await expect(refreshSession()).resolves.toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("marks the session expired when the channel says so", async () => {

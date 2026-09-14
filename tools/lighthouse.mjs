@@ -23,6 +23,8 @@ const APP_URL = process.env.LH_APP_URL ?? `http://localhost:${APP_PORT}`;
 const BACKEND_PORT = process.env.E2E_BACKEND_PORT ?? "3200";
 const API_URL = process.env.E2E_API_URL ?? `http://localhost:${BACKEND_PORT}`;
 const DIST_DIR = ".next-lh";
+// 3002 twice on purpose: `lighthouserc.json` hardcodes it in its server command and in every url.
+const PUBLIC_URL = "http://localhost:3002";
 const SEED = {
   email: process.env.LH_EMAIL ?? "seed@ledgerflow.test",
   password: process.env.LH_PASSWORD ?? "LedgerFlow!2026",
@@ -240,12 +242,30 @@ try {
   if (APP_MODE) {
     process.exit(await authenticatedRun(flags, chrome));
   }
+  // The canonical must match the audited origin, or the SEO score drops below its threshold.
+  const publicEnv = {
+    NEXT_DIST_DIR: DIST_DIR,
+    SERWIST_SW_DEST: "public/sw-lh.js",
+    NEXT_PUBLIC_SW_PATH: "/sw-lh.js",
+    NEXT_PUBLIC_APP_URL: PUBLIC_URL,
+    NEXT_PUBLIC_CONTACT_EMAIL: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "ledgerflow@alexpiral.com",
+  };
+  if (REST.includes("--no-build") && existsSync(join(DIST_DIR, "build-manifest.json"))) {
+    console.log(`lighthouse: reusing the build in ${DIST_DIR}`);
+  } else {
+    run("npm", ["run", "build"], publicEnv);
+  }
   const result = spawnSync(
     "npx",
-    ["lhci", "autorun", `--collect.settings.chromeFlags=${flags}`, ...REST],
+    [
+      "lhci",
+      "autorun",
+      `--collect.settings.chromeFlags=${flags}`,
+      ...REST.filter((argument) => argument !== "--no-build"),
+    ],
     {
       stdio: "inherit",
-      env: { ...process.env, ...(chrome ? { CHROME_PATH: chrome } : {}) },
+      env: { ...process.env, ...publicEnv, ...(chrome ? { CHROME_PATH: chrome } : {}) },
     },
   );
   process.exit(result.status ?? 1);

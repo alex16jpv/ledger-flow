@@ -8,7 +8,7 @@ import {
 } from "./fixtures";
 import { SW_PATH } from "./sw-path";
 
-// In CI the app is on another port, and a wrong origin is a `403 UNTRUSTED_ORIGIN`.
+// The suite runs on its own port, and a wrong origin is a `403 UNTRUSTED_ORIGIN`.
 export const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
 export interface Row {

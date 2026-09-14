@@ -16,9 +16,11 @@ what he gives you, and ask him if you have none. Read `DECISIONS.md` before chan
 
 A change is not done until all of these hold. If one does not apply, say so and why.
 
-1. **`npm run ci` is green**: typecheck, lint, format check, token check, contrast check, the
-   design preview rebuilt with no drift, unit and component tests, build. Never report "done"
-   without running it.
+1. **`npm run check:all` is green**: `npm run ci` first — typecheck, lint, format check, token
+   check, contrast check, the design preview rebuilt with no drift, unit and component tests,
+   build — and behind it the dependency audit, the Playwright suite against a real backend and the
+   contract check. Since T-34 nothing runs on GitHub, so this is the whole gate. Never report
+   "done" without running it, and say which parts you could not run and why.
 2. **Tests for what you added**: happy path and edges (empty, invalid, offline, 401/429,
    `INVALID_CURSOR`). A bug fix starts with the failing test.
 3. **Verified against the real API** (backend running locally), not only against mocks.
@@ -120,7 +122,7 @@ that never reached the server must show its pending badge).
 
 ## 7. Before you say it is done
 
-- Did `npm run ci` pass, including format and token checks?
+- Did `npm run check:all` pass — gate, audit, e2e and contract — and did you say what you skipped?
 - Did you exercise the flow against the running backend, not just mocks?
 - Does the screen match the design capture in both modes and sizes?
 - Are both message files updated? Is `DECISIONS.md` updated?
@@ -181,7 +183,7 @@ nothing does yet.
    `localStorage` holds preferences only (§2). _Enforced by: `server-only` imports, cookie tests;
    new `localStorage` keys are manual._
 10. Secrets never appear in logs, in Sentry or in the repository. _Enforced by: `scrub.test.ts`;
-    gitleaks in CI._
+    secret scanning is manual since GitHub stopped running anything (T-34)._
 11. Configuration is read once and validated at startup; a missing variable stops the process.
     _Enforced by: `lib/env.ts`._
 
@@ -190,8 +192,9 @@ nothing does yet.
 12. Layers are respected and dependencies point inward: `app → features → components/ui | lib`, no
     feature imports another (§3). _Enforced by: ESLint `boundaries/dependencies`._
 13. One source for each truth: constants live once, API types and error codes are generated from the
-    backend OpenAPI, parity fixtures are generated. Nothing is copied by hand (§2). _Enforced by: CI
-    regenerates `types/api.d.ts` and fails on drift; `contract.test.ts`._
+    backend OpenAPI, parity fixtures are generated. Nothing is copied by hand (§2). _Enforced by:
+    `contract.test.ts`; and manual: `npm run check:contract`, inside `check:all`, regenerates
+    `types/api.d.ts` against the running backend and fails on drift._
 14. Do it the way it is already done: one HTTP client, one query-key factory per domain, one error
     presenter, one pagination helper. A new module has the same shape as the others (§3). _Enforced
     by: manual._
@@ -219,10 +222,11 @@ nothing does yet.
 20. Every change brings tests for the happy path and the edges, and a fix starts with the failing
     test (§1). _Enforced by: manual._
 21. What mocks cannot see is tested for real: the front against the real backend, the backend
-    against a real Mongo (§1). _Enforced by: the `e2e` job in CI._
+    against a real Mongo (§1). _Enforced by: manual: `npm run test:e2e` starts the real backend and
+    `npm run check:all` runs it, but since T-34 nobody types it for you._
 22. Tests are deterministic and order-independent, and coverage has a threshold that someone runs.
-    _Enforced by: vitest shuffle; `.only` fails in CI; the coverage threshold exists but nothing runs
-    it: manual._
+    _Enforced by: vitest shuffle; `forbidOnly` fails the e2e run on a stray `.only`; the coverage
+    threshold is manual._
 
 **Cheap to keep running**
 
@@ -233,7 +237,8 @@ nothing does yet.
     repeated requests and no timers that wake the cloud for nothing. _Enforced by: manual;
     `tests/gate` counts requests._
 25. The front respects its size and Lighthouse budgets, and nothing heavy loads without need.
-    _Enforced by: `size-limit` in the gate; the `lighthouse` job._
+    _Enforced by: `size-limit` in the gate; and manual: `npm run lighthouse` and
+    `npm run lighthouse:app`, which nothing runs for you._
 
 **The screen is the design**
 
@@ -273,11 +278,18 @@ nothing does yet.
 
 ## Commands
 
+**Nothing runs on GitHub.** The workflows were removed on 2026-09-13 (T-34, the owner's decision):
+every check is local, and `npm run check:all` is the one that has to be green before handing work over.
+
 ```bash
 npm run dev            # Next dev server (backend must be running locally)
-npm run ci             # full gate: typecheck, lint, format:check, check-tokens, contrast-check, design:check, test, build
+npm run ci             # gate: typecheck, lint, format:check, check-tokens, contrast-check, design:check, test, build
+npm run check:all      # the gate: ci + npm audit + the Playwright suite + the contract check
 npm run test           # vitest + Testing Library
 npm run test:e2e       # Playwright against the local backend
+npm run check:contract # regenerate types/api.d.ts and fail on drift (needs the backend up)
+npm run audit          # production dependencies, high and above
+npm run lighthouse     # public pages; `npm run lighthouse:app` for the 25 authenticated screens
 npm run check-tokens   # fails on raw colors
 npm run gen:api-types  # regenerate types/api.d.ts from the backend /docs
 npm run format         # apply Prettier

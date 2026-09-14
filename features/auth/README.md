@@ -13,7 +13,9 @@ A successful sign-in — a login or a registration — **ends "this device only"
 device choice, so nothing on the server can clear it, and the sheet of P-32 sends the user here to
 leave it: left set, the app came back with a live session and a stripe still saying nothing was
 syncing. The answer that arrived is also the proof of network the mode refuses to take from anywhere
-else, so the connectivity phase is reported with it.
+else, so the connectivity phase is reported with it. It also **lifts the flag of H-61**: a session
+that ended stops the app from asking for a token at all, and signing in is what puts it back within
+reach (`noteSessionStarted`).
 
 On a device that already holds someone's data **the email arrives written and the password takes the
 focus** (P-37): the marker says whose device this is (§2.6) and the mirror keeps that user's profile,
