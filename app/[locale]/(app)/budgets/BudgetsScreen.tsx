@@ -74,15 +74,17 @@ export function BudgetsScreen() {
         }}
         title={t("budgets.global.sheetTitle", { span: t(`budgets.periodSpan.${sheetPeriod}`) })}
       >
-        <GlobalBudgetForm
-          key={sheetPeriod}
-          periodType={sheetPeriod}
-          submitLabel={t("onboarding.budget.submit")}
-          skipLabel={t("common.cancel")}
-          onDone={() => {
-            setCreating(null);
-          }}
-        />
+        {creating !== null && (
+          <GlobalBudgetForm
+            key={sheetPeriod}
+            periodType={sheetPeriod}
+            submitLabel={t("onboarding.budget.submit")}
+            skipLabel={t("common.cancel")}
+            onDone={() => {
+              setCreating(null);
+            }}
+          />
+        )}
       </Sheet>
     </>
   );

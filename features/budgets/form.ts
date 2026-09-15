@@ -1,6 +1,6 @@
 import { dayKey, daysWindow, localDateTime } from "@/lib/format/dates";
 import { MAX_AMOUNT } from "@/lib/format/money";
-import { COLOR_TOKENS } from "@/lib/theme/feature-color";
+import { COLOR_TOKENS, type ColorToken } from "@/lib/theme/feature-color";
 import { type Infer, z } from "@/lib/validation/zod";
 import type { Budget, CreateBudgetInput, UpdateBudgetInput } from "@/types/api";
 
@@ -68,18 +68,26 @@ export const budgetFormSchema = z
 
 export type BudgetFormValues = Infer<typeof budgetFormSchema>;
 
-export function defaultBudgetValues(now: Date, timeZone: string): BudgetFormValues {
-  const start = dayKey(now, timeZone);
-  const end = dayKey(new Date(now.getTime() + DEFAULT_CUSTOM_DAYS * 86_400_000), timeZone);
+function defaultPeriodDates(now: Date, timeZone: string) {
+  return {
+    periodStartDate: dayKey(now, timeZone),
+    periodEndDate: dayKey(new Date(now.getTime() + DEFAULT_CUSTOM_DAYS * 86_400_000), timeZone),
+  };
+}
+
+export function defaultBudgetValues(
+  now: Date,
+  timeZone: string,
+  color: ColorToken,
+): BudgetFormValues {
   return {
     name: "",
     scope: "categories",
     categoryIds: [],
     periodType: "MONTHLY",
-    periodStartDate: start,
-    periodEndDate: end,
+    ...defaultPeriodDates(now, timeZone),
     amount: Number.NaN,
-    color: "TEAL",
+    color,
     effectiveFrom: "",
     note: "",
   };
@@ -141,7 +149,7 @@ export function fromBudget(
   mode: "edit" | "copy",
   now: Date,
 ): BudgetFormValues {
-  const defaults = defaultBudgetValues(now, timeZone);
+  const period = defaultPeriodDates(now, timeZone);
   const custom = budget.periodType === "CUSTOM";
   const start = new Date(budget.periodFrom);
   const end = new Date(new Date(budget.periodTo).getTime() - 1);
@@ -155,12 +163,12 @@ export function fromBudget(
       ? mode === "edit"
         ? dayKey(start, timeZone)
         : dayKey(now, timeZone)
-      : defaults.periodStartDate,
+      : period.periodStartDate,
     periodEndDate: custom
       ? mode === "edit"
         ? dayKey(end, timeZone)
         : dayKey(copyEnd, timeZone)
-      : defaults.periodEndDate,
+      : period.periodEndDate,
     amount: budget.baseAmount,
     color: budget.color,
     effectiveFrom: mode === "edit" ? dayKey(new Date(budget.effectiveFrom), timeZone) : "",
