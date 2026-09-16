@@ -1649,8 +1649,7 @@ const statsEmpty = (extra = "") =>
 const statsError = (what = "this") =>
   `<div class="empty">${tile("circle-alert", "RED", "lg")}<span class="h3">We couldn’t load ${what}</span><p class="small muted" style="margin:0;max-width:280px">The server didn’t respond (503). Your data is safe; try again in a few seconds.</p><button class="btn secondary" style="margin-top:8px">${iconSvg("refresh-cw", "sm")}Retry</button><span class="xs faint mono">Reference: 8c1f4e2a-…-3b7d</span></div>`;
 
-const stats = (view = "cat", { state = "" } = {}) => {
-  const total = SEP_TOTAL;
+const statsControls = (view) => {
   const selected = view === "cal" ? "day" : view;
   const seg = `<div class="segment">${[
     ["Categories", "cat"],
@@ -1660,11 +1659,43 @@ const stats = (view = "cat", { state = "" } = {}) => {
   ]
     .map(([t, k]) => `<button aria-pressed="${String(selected == k)}">${t}</button>`)
     .join("")}</div>`;
-  const controls = `<div class="period-nav"><button class="btn ghost icon-only round">${iconSvg("chevron-left")}</button><span class="label">September 2026</span><button class="btn ghost icon-only round" disabled>${iconSvg("chevron-right")}</button></div>
+  return `<div class="period-nav"><button class="btn ghost icon-only round">${iconSvg("chevron-left")}</button><span class="label">September 2026</span><button class="btn ghost icon-only round" disabled>${iconSvg("chevron-right")}</button></div>
 <div class="chips"><button class="chip selected">Expenses</button><button class="chip">Income</button><button class="chip">Transfers</button><button class="chip">${iconSvg("scale", "sm")}Adjustments</button></div>${seg}`;
-  const totalCard = `<div class="card"><span class="eyebrow">Total spent</span><div class="amount-hero" style="font-size:34px">${money(total)}</div><span class="small muted">48 transactions · average <b class="amount">${money(round(total / 48))}</b></span></div>`;
+};
+
+const statsTotalCard = (footer = "") =>
+  `<div class="card"><span class="eyebrow">Total spent</span><div class="amount-hero" style="font-size:34px">${money(SEP_TOTAL)}</div><span class="small muted">48 transactions · average <b class="amount">${money(round(SEP_TOTAL / 48))}</b></span>${footer}</div>`;
+
+const statsDayChartCard = (view) => {
+  const toggle = `<div class="segment" style="flex:none;width:96px">${[
+    ["chart-column", "day"],
+    ["calendar-days", "cal"],
+  ]
+    .map(
+      ([ic, k]) =>
+        `<button aria-pressed="${String(view == k)}" aria-label="${k == "day" ? "Bars" : "Calendar"}">${iconSvg(ic, "sm")}</button>`,
+    )
+    .join("")}</div>`;
+  const head = `<div class="card-head" style="margin:0"><span class="eyebrow">Per day</span>${toggle}</div>`;
+  const body =
+    view == "day"
+      ? `${barsChart(SEP_SPEND, { height: 140, today: TODAY, until: TODAY, active: 8, label: "Per day" })}${axis("Sep 1", "15", "30")}`
+      : `${heatCal(SEP_SPEND, { active: 8, label: "Per day" })}${heatScale()}`;
+  return `<div class="card chart">${head}${body}
+${readout(`${WD_LONG[sepWeekday(9)]} 9 September · 3 transactions`, money(SEP_SPEND[8]))}</div>`;
+};
+
+const statsDayTiles = () =>
+  `<div class="stats" style="grid-template-columns:repeat(3,1fr)">${statTile("Priciest day", money(SEP_SPEND[8]), `${WD_LONG[sepWeekday(9)]} 9`)}${statTile("Daily average", money(round(SEP_TOTAL / TODAY)))}${statTile("No-spend days", "2", "of 22 so far")}</div>`;
+
+const statsHighestDayCard = () =>
+  `<div class="list card flush"><div class="day-head"><span>We 9 · highest</span><span class="amount">${money(SEP_SPEND[8], "−")}</span></div>${row("shopping-bag", "PINK", "Zara", "Visa Gold", 98000)}${row("car", "BLUE", "Uber", "Visa Gold", 11000)}${row("coffee", "BROWN", "Pergamino Coffee", "Cash", SEP_SPEND[8] - 109000)}</div>`;
+
+const stats = (view = "cat", { state = "" } = {}) => {
+  const total = SEP_TOTAL;
+  const controls = statsControls(view);
   const intro = `${controls}
-${totalCard}`;
+${statsTotalCard()}`;
   const frame = (body) =>
     screen(body, {
       tab: "",
@@ -1711,25 +1742,10 @@ ${trendsLink()}`);
     content = `<div class="card stack-sm" style="position:relative;overflow:visible">${tip}<div class="stackbar" style="height:12px">${bar}</div></div><div class="list card flush">${lis}</div>
 ${trendsLink()}`;
   } else if (view == "day" || view == "cal") {
-    const toggle = `<div class="segment" style="flex:none;width:96px">${[
-      ["chart-column", "day"],
-      ["calendar-days", "cal"],
-    ]
-      .map(
-        ([ic, k]) =>
-          `<button aria-pressed="${String(view == k)}" aria-label="${k == "day" ? "Bars" : "Calendar"}">${iconSvg(ic, "sm")}</button>`,
-      )
-      .join("")}</div>`;
-    const head = `<div class="card-head" style="margin:0"><span class="eyebrow">Per day</span>${toggle}</div>`;
-    const body =
-      view == "day"
-        ? `${barsChart(SEP_SPEND, { height: 140, today: TODAY, until: TODAY, active: 8, label: "Per day" })}${axis("Sep 1", "15", "30")}`
-        : `${heatCal(SEP_SPEND, { active: 8, label: "Per day" })}${heatScale()}`;
-    content = `<div class="card chart">${head}${body}
-${readout(`${WD_LONG[sepWeekday(9)]} 9 September · 3 transactions`, money(SEP_SPEND[8]))}</div>
-<div class="stats" style="grid-template-columns:repeat(3,1fr)">${statTile("Priciest day", money(SEP_SPEND[8]), `${WD_LONG[sepWeekday(9)]} 9`)}${statTile("Daily average", money(round(SEP_TOTAL / TODAY)))}${statTile("No-spend days", "2", "of 22 so far")}</div>
+    content = `${statsDayChartCard(view)}
+${statsDayTiles()}
 ${weekdayCard()}
-<div class="list card flush"><div class="day-head"><span>We 9 · highest</span><span class="amount">${money(SEP_SPEND[8], "−")}</span></div>${row("shopping-bag", "PINK", "Zara", "Visa Gold", 98000)}${row("car", "BLUE", "Uber", "Visa Gold", 11000)}${row("coffee", "BROWN", "Pergamino Coffee", "Cash", SEP_SPEND[8] - 109000)}</div>
+${statsHighestDayCard()}
 ${biggestCard(state == "cardError")}
 ${trendsLink()}`;
   } else if (view == "acct") {
@@ -1766,6 +1782,77 @@ ${trendsLink()}`;
 ${trendsLink()}`;
   }
   return frame(intro + content);
+};
+
+// T-82 · every variant is drawn from the same pieces as `stats()`, so none of them can drift from it.
+const zoneHead = (label) =>
+  `<div class="hstack" style="gap:10px;margin-top:6px"><span class="eyebrow">${label}</span><span class="divider" style="flex:1"></span></div>`;
+
+const COMPLETE_MONTHS = MONTHS6.filter(([, , , partial]) => !partial);
+const MONTH_AVG = round(
+  COMPLETE_MONTHS.reduce((sum, [, , exp]) => sum + exp, 0) / COMPLETE_MONTHS.length,
+);
+
+const compareStrip = () => {
+  const usual = round((MONTH_AVG * TODAY) / SEP_DAYS);
+  const diff = round(((SEP_TOTAL - usual) / usual) * 100);
+  const spark = barsChart(
+    MONTHS6.map(([, , exp]) => exp),
+    {
+      height: 26,
+      today: MONTHS6.length,
+      interactive: false,
+      label: `Spending month by month: ${MONTHS6.map(([n, , exp]) => `${n} ${moneyText(exp)}`).join(", ")}.`,
+      tip: (i, v) => `${MONTHS6[i - 1][0]} · ${moneyText(v)}`,
+    },
+  );
+  return `<a href="#" class="hstack" style="gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);text-decoration:none;color:inherit">
+<span style="flex:none;width:72px">${spark}</span>
+<span class="small" style="flex:1;color:var(--text-2)">Day ${TODAY} · <b>${Math.abs(diff)} % ${diff < 0 ? "below" : "above"}</b> your usual by now</span>
+${iconSvg("chevron-right", "sm")}</a>`;
+};
+
+const statsAnswer = (view) =>
+  view == "day"
+    ? `${statsDayChartCard("day")}
+${statsDayTiles()}`
+    : `<div class="card stack-sm" style="position:relative;overflow:visible"><span class="tooltip show" style="position:absolute;left:14%;top:-4px"><span class="tip">Food</span></span><div class="stackbar" style="height:12px">${STATS_CATS.map(([, c, v]) => `<i class="color-${c}" style="flex:${v}"></i>`).join("")}</div></div>
+<div class="list card flush">${STATS_CATS.map(
+        ([n, c, v, k]) =>
+          `<a class="row" href="#">${tile(CATS[n][0], c)}<span class="body"><span class="title"><span class="truncate">${n}</span></span><span class="meta"><span class="progress thin color-${c}" style="width:120px"><span class="fill" style="width:${round((v / SEP_TOTAL) * 100)}%"></span></span>${round((v / SEP_TOTAL) * 100)} %</span></span><span class="right">${amount(v)}<span class="sub">${k} txns</span></span></a>`,
+      ).join("")}</div>`;
+
+const statsFollowUps = (view) =>
+  `${zoneHead("More about this month")}
+${biggestCard()}${view == "day" ? `\n${weekdayCard()}\n${statsHighestDayCard()}` : ""}`;
+
+const statsHeaderActions = (trendsButton) =>
+  `${trendsButton ? `<a class="btn ghost sm" href="#">${iconSvg("chart-line", "sm")}Trends</a>` : ""}<button class="btn ghost icon-only round" aria-label="Export" disabled>${iconSvg("download")}</button>`;
+
+const statsPageBody = (body, actions) =>
+  `<header class="page-header"><div class="title"><h1 class="h1">Stats</h1></div><div class="actions">${actions}</div></header>${body}`;
+
+const statsOrder = (kind, view = "day") => {
+  const inline = kind == "inline";
+  const actions = statsHeaderActions(kind == "top");
+  const closing = inline
+    ? ""
+    : `
+${zoneHead("Other months")}
+${trendsLink()}`;
+  const stack = `${statsControls(view)}
+${statsTotalCard(inline ? compareStrip() : "")}
+${statsAnswer(view)}
+${statsFollowUps(view)}${closing}`;
+  if (kind != "columns") return screen(stack, { tab: "", side: "stats", title: "Stats", actions });
+  const desk = `${statsControls(view)}
+<div class="grid-main"><div class="stack" style="gap:16px">${statsTotalCard()}
+${statsAnswer(view)}</div><div class="stack" style="gap:16px">${zoneHead("Other months")}
+${trendsLink()}
+${statsFollowUps(view)}</div></div>`;
+  return `<div class="shell">${sidebar("stats")}<main class="main">
+<div class="page mobile-only">${statsPageBody(stack, actions)}</div><div class="page desktop-only">${statsPageBody(desk, actions)}</div>
+</main>${tabbar("")}</div>`;
 };
 
 const trends = ({ months = 6, state = "" } = {}) => {
@@ -4170,6 +4257,41 @@ const PAGES = [
         "A fixed line underneath on the screens with room for it, because a tooltip does not exist for a finger. Legend in the budget detail, tooltip everywhere.",
         paceVariant(true),
         { frame: false, added: "2026-09-06", verdict: "chosen" },
+      ),
+      plate(
+        "stats-three-zones",
+        "Stats \u00b7 the page in three zones",
+        "Measured in this preview, on the phone frame: <b>Trends sits 1,701px down</b> on Days, 1,815px on the calendar, 1,248px under Accounts, 865px under Categories and 766px under Tags. It is the last block of a flat stack of eight to twelve cards that all look alike, and its distance from the top changes by <b>2.4×</b> depending on which tab you are on, so there is nowhere to learn where it is. This variant does not move it up. It gives the page the structure it never had — <b>the answer</b> (the total, the chart, and the tiles that summarise it), <b>More about this month</b> (the follow-ups, under an eyebrow and a rule) and <b>Other months</b> (Trends, alone under its own heading) — and it makes <b>Biggest this period appear in all four views</b>, not only under Days and Accounts, so the tail is the same shape everywhere. Be clear about what that costs: Trends ends up at <b>1,785px</b> here, 84px lower than today, and under Categories it drops from 865 to 1,345px. All it buys is legibility and a stable place. It is the honest floor of this task, and the two below should be priced against it.",
+        statsOrder("zones"),
+        { added: "2026-09-16", verdict: "open", asks: "T-82" },
+      ),
+      plate(
+        "stats-three-zones-and-a-way-in",
+        "Stats \u00b7 three zones, and a way in at the top",
+        "The same three zones, plus a <b>Trends</b> button in the page header beside Export: measured at <b>20px from the top</b>, on all four tabs, and it never moves. Trends is not a card of this month’s data — it is a sibling screen, and the header is where a sibling screen belongs; it costs one control and no vertical space at all, which is what “not simply at the start” asks for. The closing card stays where the first variant put it, at 1,785px: someone who reaches the end of the month has just run out of this month, and that is exactly when the next question is whether another one was better. Two ways into one destination on a 1,874px page is what “See all” already does on Home. The cost to weigh: a second entry point is a second thing to keep true, and the header of Stats stops being only Export.",
+        statsOrder("top"),
+        { added: "2026-09-16", verdict: "open", asks: "T-82" },
+      ),
+      plate(
+        "stats-a-line-instead-of-a-card",
+        "Stats \u00b7 the comparison answered in one line",
+        "The other reading of the problem: Trends is rarely opened not because it is hard to find but because it costs a screen change to answer one question — <i>is this month worse than usual</i>. Here that question is answered <b>on the total card</b>, in one line with the last six months as a sparkline, and the strip itself is the way in — measured at <b>355px</b>, on the first screenful, without taking a card’s worth of room from anything. The closing card goes away, because the answer no longer waits at the bottom; the page is 1,774px instead of 1,874. Three costs, all real. It is <b>one more request per Stats load</b> (<code>groupBy=month</code> over six months — the same one Trends already makes, served since T-24), which house rule 24 makes you justify. The comparison has to be <b>like with like</b>: September with 22 days in it against five whole months is the lie trends.md already refuses, so the line reads against the five-month average <b>scaled to the same day of the month</b> — a projection the client works out, which house rule 4 allows over API totals but which is one more figure to keep honest. And offline it needs six months in the mirror: on a device that only holds the recent window the strip would not be drawn at all.",
+        statsOrder("inline"),
+        { added: "2026-09-16", verdict: "open", asks: "T-82" },
+      ),
+      plate(
+        "stats-three-zones-on-the-shortest-view",
+        "Stats \u00b7 the same three zones on Categories",
+        "Not a choice: the structure of the variants above, drawn on the shortest of the four tabs, so the consistency change can be judged on its own. Categories goes from <b>954px to 1,434px</b> and its way into Trends from 865 to 1,345, because <b>Biggest this period</b> now appears here too. That is a separable decision — the zones work without it — and the argument for paying it is that a card being present under Days and Accounts and absent under Categories and Tags is a difference no reader can explain, and that the biggest five movements of a month are worth as much when you arrived by category as when you arrived by day.",
+        statsOrder("zones", "cat"),
+        { added: "2026-09-16" },
+      ),
+      plate(
+        "stats-two-columns-on-a-desktop",
+        "Stats \u00b7 two columns on a desktop",
+        "A separate question that applies to whichever of the three wins. Stats is a 640px column at every width today, so on a 1,400px screen the Days view is still <b>1,744px of scroll</b> with roughly 700px of empty gutter on each side; layout.md gives two columns to Home alone. Here Stats takes the same 1.6fr / 1fr split above 900px: the answer on the left, Trends and the follow-ups on the right. The page drops to <b>1,302px</b> and the way into Trends to <b>320px</b> — no scrolling at all. <b>Switch the preview to Desktop to see it</b>: below 900px this plate is the first variant, unchanged.",
+        statsOrder("columns"),
+        { added: "2026-09-16", verdict: "open", asks: "T-82" },
       ),
     ],
   },

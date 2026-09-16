@@ -59,6 +59,27 @@ share a period navigator with a single month. Every Stats view ends with the way
 month being read when it is not this one, and **Recurring expenses** — decided on 2026-09-11, detection
 first — is written up there.
 
+## The order of this page is an open question (T-82)
+
+Nothing below is settled, and **nothing is built until the owner chooses**: the alternatives are
+drawn in `preview/variants.html` (`#stats-three-zones`, `#stats-three-zones-and-a-way-in`,
+`#stats-a-line-instead-of-a-card`, `#stats-two-columns-on-a-desktop`) and marked "Waiting on you".
+
+What he asked, on 2026-09-16: Trends over time must stop being lost at the end, without simply being
+put at the start, because it is not read daily. Measured on the phone frame, the way into Trends sits
+**1,701px** down on Days, 1,815px on the calendar, 1,248px under Accounts, 865px under Categories and
+766px under Tags — a spread of 2.4x, so there is no stable place to learn. It is also the last block
+of a flat stack of eight to twelve cards that all look alike, with nothing saying where the answer to
+_where did this month's money go_ ended; and it is drawn as a card of content when what it does is
+change the range, which is the period navigator's job. On a 1,400px screen the page is still the same
+640px column with the same scroll.
+
+The three proposals share a backbone — the page in three zones (**the answer**, **More about this
+month**, **Other months**) and _Biggest this period_ in all four views instead of two — and differ in
+where the way into Trends goes: nowhere new, a button in the page header, or one line on the total
+card carrying a six-month sparkline. The two-column desktop layout is a separate question that
+applies to whichever wins. Each plate's note carries what it costs, measured.
+
 ## What this needs from the backend
 
 Four of the views above need more than `groupBy`, `type`, `from` and `to`, and each of them was a task
