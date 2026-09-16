@@ -19,5 +19,6 @@ the same rename sheet the accounts use.
 A live preview (lg tile plus name plus type), the name, the type as a segmented control (locked once
 there is history: the segment sits at 60% without interaction, with a `CATEGORY_TYPE_LOCKED` alert and
 a link to create a new category), the icon (searched by keyword over the curated set, in a grid of 40px
-tiles, the selected one tinted with a ring) and the colour (swatches). "Archive category" is the
+tiles, the selected one tinted with a ring) and the colour (swatches; a new category opens on one of
+the 16 drawn at random — see [color.md](../color.md)). "Archive category" is the
 secondary action in the footer, with a confirmation.

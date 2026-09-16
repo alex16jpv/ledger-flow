@@ -27,6 +27,7 @@ import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
+import { randomColorToken } from "@/lib/theme/feature-color";
 
 const LIST_PATH = "/budgets";
 
@@ -49,6 +50,7 @@ export function NewBudgetScreen() {
   const params = useSearchParams();
   const { timeZone } = useFormatSettings();
   const [now] = useState(() => new Date());
+  const [suggestedColor] = useState(() => randomColorToken());
   const from = params.get("from");
   const period = parseBudgetPeriod(params.get("period"));
   const source = useBudgetQuery(from ?? "", undefined);
@@ -58,7 +60,10 @@ export function NewBudgetScreen() {
   const defaults =
     from && source.data
       ? fromBudget(source.data, timeZone, "copy", now)
-      : { ...defaultBudgetValues(now, timeZone), ...(period ? { periodType: period } : {}) };
+      : {
+          ...defaultBudgetValues(now, timeZone, suggestedColor),
+          ...(period ? { periodType: period } : {}),
+        };
 
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-5">

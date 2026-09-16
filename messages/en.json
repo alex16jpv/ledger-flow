@@ -45,7 +45,13 @@
     "pm": "PM",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
-    "savedInZone": "Saved in your time zone, {zone}."
+    "savedInZone": "Saved in your time zone, {zone}.",
+    "unsaved": {
+      "title": "Are you sure you want to leave?",
+      "body": "What you have typed will be lost.",
+      "keep": "Keep editing",
+      "leave": "Leave"
+    }
   },
   "nav": {
     "label": "Navigation",

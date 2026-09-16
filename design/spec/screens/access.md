@@ -39,8 +39,10 @@
 
 - **Onboarding 1 · first account** (`#onboarding-first-account`): step dots on top; name, type (**the
   same `picker` row as the account form**, not chips), an optional current balance (sent as `balance`,
-  kept as `openingBalance`) and a colour. The copy says it will be the main account.
+  kept as `openingBalance`) and a colour, drawn at random like every create form
+  ([color.md](../color.md)). The copy says it will be the main account.
 - **Onboarding 2 · a ceiling for the month** (`#onboarding-monthly-ceiling`): the amount with three
   suggestions, an explanation of the global budget, and "Create budget" (`POST /budgets` with
-  `categoryIds: []` and `periodType: MONTHLY`) or "Not now". Both steps can be picked up again from Home
+  `categoryIds: []`, `periodType: MONTHLY` and a colour drawn at random, since this step shows no
+  swatches) or "Not now". Both steps can be picked up again from Home
   if they are skipped.

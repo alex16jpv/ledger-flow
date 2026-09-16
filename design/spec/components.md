@@ -35,8 +35,22 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
 11. **Picker** — a 48px row with an sm tile, an 11px label and a 14px value, plus a chevron; it opens a
     sheet or modal with search and a list of rows.
 12. **Bottom sheet / modal** — radius 28 on top, a 36×4 handle, a header with a title and a close
-    button; at 600px and up it becomes a 520px modal with radius 20. It closes on the scrim, on ESC and
-    on the drag gesture.
+    button; at 600px and up it becomes a 520px modal with radius 20. **The page behind it is tinted by
+    `--overlay` and blurred by `--overlay-blur`** (T-77), so the sheet reads as a layer and not as
+    something sitting inside the screen; those two tokens are the whole setting, and a blur of 0 turns
+    that half off. The same `--nav-blur`/`--overlay-blur` pair is what the tab bar and the preview's
+    `.scrim` read, so no overlay in the product carries a hardcoded radius. Both drop to 0 under
+    `prefers-reduced-transparency`. **It closes on a tap anywhere outside the sheet and on ESC**,
+    except in the two sheets that turn `dismissible` off: the three exits of local mode, where a
+    choice has to be made, and the expired-session sheet, which outside local mode has only one way
+    out. **A sheet whose form has something typed does not close on that tap, and ESC does not close
+    it either**: it asks in place, with "Keep editing" as the primary and focused action and "Leave"
+    as the quiet one, the body inert behind the question, and ESC answering "Keep editing". The close
+    button stays the deliberate exit that does not ask (T-78, drawn as `unsaved-before-leaving` in
+    [screens/states.md](screens/states.md)).
+    **The 36×4 bar is decoration in every sheet but quick add**, where it is 44×4 and is a control that
+    opens the full form: see [screens/add.md](screens/add.md). There is no other drag gesture in the
+    app.
 13. **Toast** — `--ink`, one action ("Undo"), five seconds, above the tab bar.
 14. **Alert** — inline, four variants; the main-account warning uses `warning`.
 15. **Empty** — an lg outline tile plus a title, a line and a call to action. The title is an `h2` at

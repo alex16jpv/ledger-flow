@@ -76,6 +76,7 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
     <Sheet
       open={open}
       onClose={onClose}
+      unsaved={input !== null || note !== ""}
       title={t("accounts.adjust.title")}
       footer={
         <>

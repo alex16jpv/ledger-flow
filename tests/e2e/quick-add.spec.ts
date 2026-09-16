@@ -55,6 +55,24 @@ test("an expense is captured in two interactions, lands in the inbox and can be 
   ).toBeVisible();
   await expect(sheet.getByRole("group", { name: "Category" }).getByRole("button")).toHaveCount(6);
   expect((await new AxeBuilder({ page }).include("dialog[open]").analyze()).violations).toEqual([]);
+  // T-77: the tint and the blur of a backdrop are resolved values, which jsdom cannot give.
+  const backdrop = await sheet.evaluate((node) => {
+    const probe = document.createElement("div");
+    probe.style.backgroundColor = "var(--overlay)";
+    document.documentElement.append(probe);
+    const wanted = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    const style = getComputedStyle(node, "::backdrop");
+    return {
+      blur: style.backdropFilter,
+      tint: style.backgroundColor,
+      wanted,
+      token: getComputedStyle(document.documentElement).getPropertyValue("--overlay-blur").trim(),
+    };
+  });
+  expect(backdrop.token).toMatch(/^\d+(\.\d+)?px$/);
+  expect(backdrop.blur).toBe(`blur(${backdrop.token})`);
+  expect(backdrop.tint).toBe(backdrop.wanted);
 
   const amount = uniqueAmount();
   await page.keyboard.type(String(amount));
@@ -166,4 +184,42 @@ test("holding the add button chains captures", async ({ page, request }) => {
   const created = await quickRow(request, amount);
   expect(created).toBeDefined();
   await request.delete(`/api/transactions/${created?.id}`, { headers: { origin: APP } });
+});
+
+// T-75: what broke was layout, and jsdom has none, so the guard has to be a real coordinate.
+test("a tap outside the quick sheet closes it, and a tap inside does not", async ({
+  page,
+  request,
+}) => {
+  const tap = async (x: number, y: number) => {
+    if (test.info().project.name === "mobile") await page.touchscreen.tap(x, y);
+    else await page.mouse.click(x, y);
+  };
+  await signIn(page, request);
+  await addButton(page).click();
+  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  await expect(sheet).toBeVisible();
+  const panel = sheet.getByRole("heading", { name: "Add expense" });
+
+  async function outside() {
+    const box = await panel.boundingBox();
+    expect(box).not.toBeNull();
+    // A scrim the test can aim at: if the panel starts at the top there is nothing outside to tap.
+    expect(box?.y ?? 0).toBeGreaterThan(40);
+    return box;
+  }
+
+  let box = await outside();
+  if (!box) return;
+  await tap(box.x + box.width / 2, box.y);
+  await expect(sheet).toBeVisible();
+
+  await tap(box.x + box.width / 2, Math.round(box.y / 2));
+  await expect(sheet).toBeHidden();
+
+  await addButton(page).click();
+  await expect(sheet).toBeVisible();
+  box = await outside();
+  if (box) await tap(box.x + box.width / 2, Math.round(box.y / 2));
+  await expect(sheet).toBeHidden();
 });

@@ -53,7 +53,7 @@ export function TabBar({ pendingCount, onAdd }: TabBarProps) {
   return (
     <nav
       aria-label={t("label")}
-      className="z-(--z-nav) grid h-(--tabbar-h) min-w-0 grid-cols-5 items-end border-t border-border bg-[color-mix(in_oklab,var(--surface)_88%,transparent)] px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+      className="z-(--z-nav) grid h-(--tabbar-h) min-w-0 grid-cols-5 items-end border-t border-border bg-[color-mix(in_oklab,var(--surface)_88%,transparent)] px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-(--nav-blur) md:hidden"
     >
       {tabs.map((item, index) =>
         item ? (

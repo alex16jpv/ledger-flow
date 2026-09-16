@@ -40,6 +40,7 @@ export function CurrencySheet({
     <Sheet
       open={open}
       onClose={onClose}
+      unsaved={!locked && value !== currency}
       title={t("settings.currency.sheetTitle")}
       footer={
         locked ? (
@@ -108,6 +109,7 @@ export function TimeZoneSheet({
     <Sheet
       open={open}
       onClose={onClose}
+      unsaved={value !== timeZone}
       title={t("settings.timeZone.sheetTitle")}
       footer={
         <>
@@ -157,6 +159,7 @@ export function DeleteAccountSheet({
     <Sheet
       open={open}
       onClose={onClose}
+      unsaved={typed !== ""}
       title={t("settings.delete.title")}
       footer={
         <>
