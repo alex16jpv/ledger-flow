@@ -3929,9 +3929,13 @@ cover` is set once in the root layout for the standalone display.
   name is the card's sentence and not thirty-one readings. A reader and a keyboard still get that
   sentence, which is the whole reading rather than a headline. The third option, leaving it, was
   rejected with him.
-- **Consequence:** the surface is `touch-pan-y`, so only the horizontal axis belongs to the chart and a
-  flick down the page still scrolls past it; a vertical pan the browser takes over arrives as
-  `pointercancel`, which ends the slide. The nearest-position arithmetic is the same rule the spans
+- **Consequence:** the surface is `touch-pan-y touch-pinch-zoom`, so only the horizontal axis belongs
+  to the chart: the page keeps its scroll **and** its pinch zoom, which `accessibility.md` requires and
+  `pan-y` alone would have taken away. A vertical pan the browser takes over arrives as `pointercancel`,
+  which ends the slide **and gives back the reading the chart had before the finger landed** — a flick
+  that starts on the chart must not leave it reading whatever the thumb touched on the way past. Only a
+  touch waits for contact: a hovering pen reads like a mouse, and a mouse's `pointerdown` changes
+  nothing, because a click should not change what hovering already says. The nearest-position arithmetic is the same rule the spans
   encoded — each position owned the half step either side of it — so a pointer reads exactly what it
   read before, with thirty-one fewer nodes. jsdom measures every element as zero, so a test that points
   at the chart has to give the surface a `getBoundingClientRect`.

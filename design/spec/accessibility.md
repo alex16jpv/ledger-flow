@@ -21,12 +21,13 @@
   focused slot shows its bubble and drives the `readout`, so the keyboard and the pointer read the
   same line. **A tap is not an activation** (T-80): where the pointer cannot hover, `(hover: none)`, a
   tap only takes the slot's focus and raises its reading, because it is the only reading a finger has —
-  `Enter` still opens, so the slot is never a control that does nothing. **A line chart has no slots to
-  focus** and is read by sliding a finger along it (T-81); what a reader and a keyboard get there is the
-  card's own sentence, which is the whole reading and not a headline, which is why the positions were
-  never made controls. A chart whose slots lead nowhere is not a set of controls at all: it is one `role="img"`
-  whose accessible name reads every slot, not only the headline, and a line chart has no slots at all —
-  its reading lives in the sentence and the `readout` beside it. Days that have not happened are neither, and are
+  `Enter` still opens, so the slot is never a control that does nothing. A chart whose slots lead
+  nowhere is not a set of controls at all: it is one `role="img"` whose accessible name reads every
+  slot, not only the headline, and a line chart has no slots at all — its reading lives in the sentence
+  and the `readout` beside it, which is the whole reading and not a headline, and is why its positions
+  were never made controls. **A finger reads a line chart by sliding along it** (T-81), which is the
+  only pointing a chart without slots can offer; the page keeps its own vertical scroll and its pinch
+  zoom over the chart, so neither costs the reading anything. Days that have not happened are neither, and are
   hidden from readers in every chart that shows them.
 - Font size respects the system zoom (rem); no text inside images.
 - **Zoom stays in the browser and is fixed in the installed app.** The document is served scalable,
