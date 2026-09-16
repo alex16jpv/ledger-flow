@@ -20,7 +20,8 @@ transactions, the average).
   "Uncategorized" with a `hash` tile; archived categories are resolved with `includeArchived` and
   badged. Tapping a row opens Transactions filtered by that category and range.
 - **By day** (`#by-day`): `Bars` 140px tall, **every bar a control that says its day and its amount**
-  on hover, on focus and in the `readout` line underneath, and opens that day; gaps at zero, the
+  on hover, on focus and in the `readout` line underneath, and opens that day where the pointer can
+  hover (T-80); gaps at zero, the
   highest day and today at full strength, and **the days that have not arrived drawn as a rule, not as
   a zero**; minimal axes (1, 15, the end). Under it: the priciest day, the daily average and the days
   with no spending; **the average by weekday** (`Bars` again, seven slots, the most expensive one

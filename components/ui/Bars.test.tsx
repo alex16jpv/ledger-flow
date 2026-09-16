@@ -159,6 +159,14 @@ describe("Bars", () => {
       expect(screen.getByText("$500")).toBeInTheDocument();
     });
 
+    it("still opens from the keyboard, because a key is not a tap", async () => {
+      const onSelect = vi.fn();
+      render(<Bars bars={DAYS} label="Spending per day" onSelect={onSelect} />);
+      await userEvent.tab();
+      await userEvent.keyboard("{Enter}");
+      expect(onSelect).toHaveBeenCalledWith(2);
+    });
+
     it("keeps every slot a control, because a tap has to focus it to be read", async () => {
       render(<Bars bars={DAYS} label="Spending per day" onSelect={vi.fn()} />);
       expect(screen.getAllByRole("button")).toHaveLength(3);

@@ -54,6 +54,8 @@ test("home shows the pending alert, the day bars, the top budgets and the latest
   const canHover = await page.evaluate(() => !window.matchMedia("(hover: none)").matches);
   expect(canHover).toBe(test.info().project.name === "desktop");
   const day = chart.getByRole("button").first();
+  const readout = chart.locator("xpath=following-sibling::p[1]");
+  const summary = await readout.textContent();
   await day.click();
   if (canHover) {
     await expect(page).toHaveURL(
@@ -62,6 +64,9 @@ test("home shows the pending alert, the day bars, the top budgets and the latest
   } else {
     await expect(page).toHaveURL(/\/home$/);
     await expect(day).toBeFocused();
-    await expect(chart.locator("xpath=following-sibling::p[1]")).toHaveText(/\$/);
+    await expect(readout).not.toHaveText(summary ?? "");
+    await expect(readout).toHaveText(/\$/);
+    // The tap has to leave the reading of the day it landed on, not of the highest day.
+    await expect(readout).not.toHaveText(/^Highest day/);
   }
 });

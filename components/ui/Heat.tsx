@@ -5,8 +5,8 @@ import { WEEK_LENGTH } from "@/lib/charts/days";
 import type { BarsSummary } from "./Bars";
 import { cn } from "./cn";
 import { Readout } from "./Readout";
+import { useSlotOpen } from "./slotOpen";
 import { Tooltip, type TooltipAlign } from "./Tooltip";
-import { useCanHover } from "./useCanHover";
 import { useRovingSlots } from "./useRovingSlots";
 
 export interface HeatCell {
@@ -80,7 +80,7 @@ export function Heat({
   const slots = useRovingSlots(happened, step, today);
 
   const interactive = onSelect !== undefined;
-  const opens = useCanHover() ? onSelect : undefined;
+  const open = useSlotOpen(onSelect);
   const reading = interactive
     ? label
     : `${label}: ${happened.map((index) => cells[index]?.label ?? "").join(", ")}`;
@@ -133,13 +133,7 @@ export function Heat({
                 <button
                   type="button"
                   aria-label={cell.label}
-                  onClick={
-                    opens
-                      ? () => {
-                          opens(index);
-                        }
-                      : undefined
-                  }
+                  onClick={open?.(index)}
                   onMouseEnter={onMouseEnter}
                   {...roving}
                   className={cn(paint, "cursor-pointer")}

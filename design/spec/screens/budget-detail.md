@@ -25,7 +25,8 @@ still be acted on.
 
 - **Spending per day**: the same `Bars` Home has, over the budget's own period instead of the month —
   same tooltip, same `readout`, same rule for the days that have not arrived — and a bar opens that day's
-  transactions, filtered to the budget's category where the backend can filter by one (see below).
+  transactions, filtered to the budget's category where the backend can filter by one (see below), where
+  the pointer can hover (T-80).
 - **Against the pace** (`trend`): what has been spent, cumulative, against the straight line of the
   period's pace, with the limit as a dashed `--danger` rule and, from today onwards, **where it ends at
   this rate**. One sentence says it in words: "At this rate you finish the period at $485,500 — $185,500

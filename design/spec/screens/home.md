@@ -24,8 +24,9 @@
 
   **The bars answer which day** (`#hero-day-tooltip`): each one is a control that says its day and its
   amount on hover, on keyboard focus and in the `readout` line under the chart, and opens that day's
-  transactions — the same `Bars` as Stats, with the same contract, because it is the same component and
-  always was. Days that have not arrived are drawn as a rule, not as a zero. The figures above the chart
+  transactions where the pointer can hover or the key is pressed — never on a bare tap, which is the
+  only reading a finger has (T-80, the chart contract in [components.md](../components.md)) — the same
+  `Bars` as Stats, with the same contract, because it is the same component and always was. Days that have not arrived are drawn as a rule, not as a zero. The figures above the chart
   — the hero amount, the daily average, yesterday — are the same series added up, so the chart and the
   numbers can never disagree.
 

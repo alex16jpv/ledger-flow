@@ -19,7 +19,9 @@
   pattern: the chart takes focus once, the arrows move between slots — inside the calendar, up and
   down move a week — `Home` and `End` jump to the ends, and `Enter` opens what the slot leads to. The
   focused slot shows its bubble and drives the `readout`, so the keyboard and the pointer read the
-  same line. A chart whose slots lead nowhere is not a set of controls at all: it is one `role="img"`
+  same line. **A tap is not an activation** (T-80): where the pointer cannot hover, `(hover: none)`, a
+  tap only takes the slot's focus and raises its reading, because it is the only reading a finger has —
+  `Enter` still opens, so the slot is never a control that does nothing. A chart whose slots lead nowhere is not a set of controls at all: it is one `role="img"`
   whose accessible name reads every slot, not only the headline, and a line chart has no slots at all —
   its reading lives in the sentence and the `readout` beside it. Days that have not happened are neither, and are
   hidden from readers in every chart that shows them.

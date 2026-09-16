@@ -3886,19 +3886,28 @@ cover` is set once in the root layout for the standalone display.
   navigated: the owner tried to read a day of the budget's spending on the phone and was taken to
   Transactions before the figure was legible. The `readout` was built precisely because "a tooltip does
   not exist for a finger", and the click was undoing it.
-- **Decision:** `useCanHover()` reads `(hover: none)` through `useSyncExternalStore`, and `Bars`,
-  `Heat` and `ChartSlots` — the three slot implementations every chart is built from — pass `onSelect`
-  to the slot's `onClick` only when the pointer can hover. Where it cannot, the tap takes the slot's
-  focus, raises the bubble and writes the `readout` line, and goes nowhere.
-- **Why the slot stays a `button` there:** it has to take focus to be read, and the markup has to be
-  the same on the server and after hydration — only the handler differs, so nothing remounts and
-  nothing mismatches. Turning the chart into the `role="img"` of its non-interactive mode would take
-  the reading away, which is the opposite of the point.
+- **Decision:** `useSlotOpen()` (`components/ui/slotOpen.ts`) wraps the chart's `onSelect` and is the
+  single `onClick` of every slot in `Bars`, `Heat` and `ChartSlots` — the three implementations every
+  chart in the app is built from. It opens when `useCanHover()` says the pointer can hover **or** when
+  the activation carries `detail === 0`, which is what a key press and an assistive activation carry
+  and a finger's tap does not. So on a phone the tap focuses the slot, raises the bubble, writes the
+  `readout` line and goes nowhere, while `Enter` still opens what the slot leads to.
+- **Why the gate is on the activation and not on the component:** cutting the handler off instead would
+  make the slot a control that does nothing on **any** activation, which is an accessibility regression
+  on a tablet driven by a keyboard or a switch, and it conflates "cannot hover" with "has no keyboard".
+- **Why the slot stays a `button`:** it has to take focus to be read, and the markup has to be the same
+  on the server and after hydration — `interactive` still derives from `onSelect` alone, so `role`, the
+  `button`/`span` branch, the accessible name, the roving `tabindex` and the `readout` are all
+  pointer-independent and only the handler's decision differs. Turning the chart into the `role="img"`
+  of its non-interactive mode would take the reading away, which is the opposite of the point.
 - **Alternatives:** the viewport (`md`, 900px), which is what the layout switches on — rejected because
   the width is not the cause: a desktop window narrowed below it still hovers, and a wide tablet still
   does not. Delaying the navigation until a second tap — two meanings on one target, and no way to tell
   the user which one they are about to get. The owner chose the pointer on 2026-09-16.
 - **Consequence:** the query is `(hover: none)` and not `not (hover: hover)`, so a device that declares
   nothing — an old WebView, jsdom — keeps today's behaviour instead of silently losing it. The default
-  on the server is that the pointer hovers. `lib/testing/pointer.ts` (`withTouchPointer()`) is how a
-  test asks for the other side.
+  on the server is that the pointer hovers. A phone still reaches a single day's list, through
+  Transactions and the filter sheet's custom range: several taps where there was one, which is the
+  price of the reading. A hybrid laptop reports `hover: hover`, so a finger on it still navigates —
+  the accepted cost of cutting on the pointer rather than on the screen. `lib/testing/pointer.ts`
+  (`withTouchPointer()`) is how a test asks for the other side.
