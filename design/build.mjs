@@ -3017,6 +3017,25 @@ const quickTypeVariant = (kind) => {
   return home({ sheet: quickSheet({ head, over: menu }) });
 };
 
+// T-75 · the 36×4 bar on top of every mobile sheet: gone, or made to mean something.
+const sheetHandleVariant = (kind) => {
+  if (kind === "none") return home({ sheet: quickSheet({ handle: "none" }) });
+  if (kind === "dismiss")
+    return home({
+      sheet: quickSheet({ handle: "grab" })
+        .replace(
+          '<div class="scrim">',
+          '<div class="scrim" style="background:color-mix(in oklab, var(--overlay) 55%, transparent)">',
+        )
+        .replace(
+          '<div class="sheet" role="dialog"',
+          '<div class="sheet" role="dialog" style="transform:translateY(96px)"',
+        ),
+    });
+  const extra = `${field("Date", "Today · 18:10", null, { icon: "calendar" })}${field("Description", "Uber to work", null, { icon: "pencil" })}`;
+  return home({ sheet: quickSheet({ handle: "wide", extra }) });
+};
+
 const plate = (id, title, note, html, o = {}) => ({ id, title, note, html, ...o });
 const plateDay = (p) => p.updated ?? p.added;
 
@@ -4079,6 +4098,27 @@ const PAGES = [
         "No segment: the title becomes a menu, drawn here open. It costs no vertical space, which on a phone with the keyboard up is the scarce thing, and the sheet keeps its height and its body — only the title gains a chevron. Its real price is drawn too: the app has no menu primitive — every overlay is a native dialog through `Sheet` — so choosing one of three types is a second sheet on top of the first, which is two taps to do what the segment does in one. And the obvious shortcut is already taken: holding the FAB means “keep the sheet open for another one” (`HOLD_TO_CHAIN_MS`), so a long-press cannot pick the type.",
         quickTypeVariant("title"),
         { added: "2026-09-15", verdict: "open", asks: "T-73" },
+      ),
+      plate(
+        "sheet-handle-removed",
+        "Sheet · no bar at all",
+        "The 36×4 bar goes from every mobile sheet — 38 of them across the app, not only this one. Nothing is promised, so nothing is broken: the rounded top and the close button carry the sheet on their own, and the app stops drawing a control that does nothing. It is the cheapest honest answer, and it also removes a gesture people will keep trying.",
+        sheetHandleVariant("none"),
+        { added: "2026-09-15", verdict: "open", asks: "T-75" },
+      ),
+      plate(
+        "sheet-handle-drag-to-dismiss",
+        "Sheet · the bar closes the sheet",
+        "The bar becomes what it looks like everywhere else: drag down and the sheet goes — drawn here 96px into the gesture, with the scrim already fading. One behaviour for all 38 sheets, the affordance people expect, and the bar gets a real accessible name (“Close”) so a keyboard and a screen reader get the same exit the finger does. Two costs to weigh: at 36×4 the bar is a 4px-tall target, so the close button has to stay whatever happens, and the drag needs the zero-motion branch the rest of the product honours for `prefers-reduced-motion`.",
+        sheetHandleVariant("dismiss"),
+        { added: "2026-09-15", verdict: "open", asks: "T-75" },
+      ),
+      plate(
+        "sheet-handle-drag-to-expand",
+        "Quick add · the bar opens the full form",
+        "The literal reading of what he suggested: drag up and quick add grows into the full transaction form — the date and the description arrive here, tags and the note come with a taller sheet — carrying the amount, the category and the note already typed. It is the same jump the “More details” button already makes, so the gesture is a shortcut and never the only way. Two catches. The bar would mean one thing in quick add and another in the other 37 sheets unless they all get it; and it is drawn wider here — 44×4 instead of 36×4 — because a bar that does two different things has to look different, which is still 4px tall, so “More details” stays either way.",
+        sheetHandleVariant("expand"),
+        { added: "2026-09-15", verdict: "open", asks: "T-75" },
       ),
       plate(
         "pace-mark-tooltip-only",

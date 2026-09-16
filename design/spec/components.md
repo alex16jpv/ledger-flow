@@ -35,8 +35,12 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
 11. **Picker** — a 48px row with an sm tile, an 11px label and a 14px value, plus a chevron; it opens a
     sheet or modal with search and a list of rows.
 12. **Bottom sheet / modal** — radius 28 on top, a 36×4 handle, a header with a title and a close
-    button; at 600px and up it becomes a 520px modal with radius 20. It closes on the scrim, on ESC and
-    on the drag gesture.
+    button; at 600px and up it becomes a 520px modal with radius 20. It closes on the scrim and on ESC,
+    except in the two sheets that turn `dismissible` off: the three exits of local mode, where a
+    choice has to be made, and the expired-session sheet, which outside local mode has only one way
+    out.
+    **The handle does nothing and there is no drag gesture anywhere in the app**; whether the bar goes
+    or starts meaning something is the open decision of T-75, drawn in `preview/variants.html`.
 13. **Toast** — `--ink`, one action ("Undo"), five seconds, above the tab bar.
 14. **Alert** — inline, four variants; the main-account warning uses `warning`.
 15. **Empty** — an lg outline tile plus a title, a line and a call to action. The title is an `h2` at
