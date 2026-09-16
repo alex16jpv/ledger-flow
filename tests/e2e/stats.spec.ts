@@ -117,14 +117,24 @@ test("Trends reads the months the seed has, and reads them off the local copy", 
     name: "Spending in August 2026 against the same days of July 2026",
   });
   const readout = comparison.locator("xpath=../following-sibling::p");
-  const bands = comparison.locator("xpath=..").locator("> span > span");
+  const surface = comparison.locator("xpath=..").locator("span.touch-pan-y");
+  const box = await surface.boundingBox();
+  if (!box) throw new Error("the comparison chart has no box to point at");
+  // August has 31 days and position 0 is the origin of the curves, so day n is n of 31 across.
+  const atDay = (day: number) => ({ x: (box.width * day) / 31, y: box.height / 2 });
   await expect(readout).toHaveText(/^Day \d+ · Aug \$[\d,]+ · Jul \$[\d,]+/);
 
-  await bands.nth(5).hover();
+  await surface.hover({ position: atDay(5) });
   await expect(readout).toHaveText(/^Day 5 · Aug \$[\d,]+ · Jul \$[\d,]+/);
   await expect(comparison.locator("path.stroke-border-strong")).toHaveCount(1);
-  await bands.nth(12).hover();
+  await surface.hover({ position: atDay(12) });
   await expect(readout).toHaveText(/^Day 12 · Aug \$[\d,]+ · Jul \$[\d,]+/);
+
+  // T-81: a finger is the only pointer a phone has, and it must read the day it lands on.
+  if (test.info().project.name === "mobile") {
+    await surface.tap({ position: atDay(20) });
+    await expect(readout).toHaveText(/^Day 20 · Aug \$[\d,]+ · Jul \$[\d,]+/);
+  }
 
   const mix = page.getByRole("group", { name: "Spending per month, split by category" });
   await expect(mix).toBeVisible();

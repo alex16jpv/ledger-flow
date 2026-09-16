@@ -3911,3 +3911,27 @@ cover` is set once in the root layout for the standalone display.
   price of the reading. A hybrid laptop reports `hover: hover`, so a finger on it still navigates —
   the accepted cost of cutting on the pointer rather than on the screen. `lib/testing/pointer.ts`
   (`withTouchPointer()`) is how a test asks for the other side.
+
+## 2026-09-16 · A line chart is read with a finger by sliding along it (T-81)
+
+- **Context:** `Trend` raised its bubble and its `readout` from `onMouseEnter` alone, over an overlay
+  of one span per position. A finger produces no hover, and the positions are not controls, so on a
+  phone the two line charts — "Against the pace" and the two-month comparison — could only ever be
+  read at their last day. Verified before it was written down: a `tap()` on a band in the Playwright
+  `mobile` project left the `readout` unchanged.
+- **Decision:** the overlay is one surface instead of thirty-one spans, and it turns the pointer's `x`
+  into the nearest position. A mouse drives it by moving, as before; a finger drives it by pressing and
+  sliding, and the reading stays where the finger was lifted. `pointerdown` from a mouse is ignored,
+  because a mouse already reads by moving and a click should not change what hovering says.
+- **Why the positions are still not controls:** the owner chose the gesture on 2026-09-16 over making
+  each position a slot. That would have put thirty-one controls in a card whose point is a shape, and
+  it would have contradicted point 31 of `design/spec/components.md`, which says the chart's accessible
+  name is the card's sentence and not thirty-one readings. A reader and a keyboard still get that
+  sentence, which is the whole reading rather than a headline. The third option, leaving it, was
+  rejected with him.
+- **Consequence:** the surface is `touch-pan-y`, so only the horizontal axis belongs to the chart and a
+  flick down the page still scrolls past it; a vertical pan the browser takes over arrives as
+  `pointercancel`, which ends the slide. The nearest-position arithmetic is the same rule the spans
+  encoded — each position owned the half step either side of it — so a pointer reads exactly what it
+  read before, with thirty-one fewer nodes. jsdom measures every element as zero, so a test that points
+  at the chart has to give the surface a `getBoundingClientRect`.

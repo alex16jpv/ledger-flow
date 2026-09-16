@@ -73,6 +73,8 @@ bare tap the reading and nothing more, for every chart in the app.
 
 T-65 gave the pace curve a reading a day at a time too — spent against expected in a bubble and in the
 `readout` — and past today it says the figure is where the projection puts it, not what was spent.
+T-81 made that reading reachable with a finger: pressing the chart and sliding along it moves the day,
+where before only a hovering pointer could.
 
 Since T-74 the colour a new budget opens with is drawn at random from the sixteen tokens instead of
 being `TEAL`. `defaultBudgetValues` takes it as an argument, so the draw happens once in
