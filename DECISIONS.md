@@ -3709,3 +3709,84 @@ cover` is set once in the root layout for the standalone display.
   is a length, the blur equals `blur(<the token>)`, and the tint is no longer the browser's
   `rgba(0, 0, 0, 0.1)`. It fails if either class is dropped and keeps passing if he changes the
   number — which is the point.
+
+## 2026-09-15 · A tap outside a sheet closes it, which it never did (T-75)
+
+- **Decision:** the scrim click moves from the `<dialog>` to the flex wrapper inside it, which is the
+  element a finger actually lands on. `Sheet` has always had `onClick` with the
+  `event.target === event.currentTarget` guard, but on the dialog that guard could never be true: the
+  wrapper is `h-full w-full`, so it covered every pixel of the backdrop and swallowed the tap.
+  Measured before the change in chromium at 390×840: the quick-add sheet starts at y=357, a tap at
+  y=178 left the dialog open, and ESC closed it.
+- **Why:** `components.md` §12 has claimed since the design was written that the sheet "closes on the
+  scrim", and the owner asked for it in his own words on 2026-09-15. Every one of the 38 sheets was
+  missing the way out that every mobile sheet has.
+- **Both ends of the gesture have to be on the scrim.** A `click` is dispatched at the nearest common
+  ancestor of the press and the release, so the wrapper receives one with `target === currentTarget`
+  whenever either end was inside the sheet: a mouse drag or a text selection out of a note dismissed
+  it, and so did a press on the scrim released on the `Save` button — which on quick add threw the
+  draft away without saving anything, since `close()` calls `resetEntry()`. `onPointerDown` and
+  `onPointerUp` on the same wrapper each check that their end landed on the scrim, and the click
+  closes only when both did. That is the rule the platform's own light dismiss (`closedby="any"`)
+  uses, and pointer events cover a finger, a pen and a mouse with one pair of handlers.
+- **Alternative:** closing on `pointerdown` alone. Rejected: it fires before the gesture is over, so a
+  press on the scrim that ends inside the sheet would already have closed it.
+- **Consequence:** `dismissible={false}` still holds — the guard is unchanged, only the element it
+  sits on — and a nested sheet closes alone, because each `<dialog>` brings its own wrapper and the
+  tap never reaches the one below. Five tests in `Sheet.test.tsx` cover it — a tap outside closes; a
+  tap inside does not; a drag out does not; a press outside released inside does not; a sheet that is
+  not dismissible does not — of which two fail if the handler goes back on the dialog. But what broke
+  was **layout**, and jsdom has none: the guard that would have caught it is the coordinate tap in
+  `tests/e2e/quick-add.spec.ts`, a real touch tap on the phone project, which fails on both projects
+  if the handler moves back.
+  This is also the first time `DECISIONS.md`'s F-41 entry, which says the scrim dismisses the local
+  mode sheet, is true. The handle on top of the sheet is still inert: what it should do is the half of
+  T-75 that is still a design question.
+
+## 2026-09-15 · A sheet with something typed asks before it lets go (T-78)
+
+- **Decision:** a tap outside a sheet, and ESC, stop closing it when the form inside has something to
+  lose. The sheet asks in place instead: a `warning` alert where the footer was, with **Keep editing**
+  as the primary action — focused, and what ESC answers while the question is up — and **Leave** as the
+  quiet one. **The body goes `inert` behind the question**, which is what actually makes Save
+  unreachable: four of the sheets that report keep their submit inside the body rather than in the
+  footer, so replacing the footer alone left a live Save and a live "Back to list" under the question.
+  The close button is unchanged: it is the deliberate exit and does not ask, which leaves ESC and the X
+  asymmetric on purpose — one is a dismissal, the other a decision.
+- **Why:** the owner's words, after the tap-outside close of T-75 landed the same day — "tocar fuera
+  de un formulario deberia de advertir antes de cerrarlo. algo como estas seguro que quieres salir?".
+  Closing was the new way out, and it threw a half-written movement away in silence.
+- **Only when there is something to lose.** An untouched sheet closes on the first tap. Asking on an
+  empty form would be friction with nothing behind it, and the owner asked for a warning, not a
+  gate. That is the one judgement call in here and the easiest to reverse: `requestClose` reads a
+  single boolean.
+- **Two ways in, because the state lives in two places.** Context flows downward, so a component that
+  renders `<Sheet>` can never report on itself with a hook. A form rendered as a sheet's **child** uses
+  `useUnsavedGuard(dirty)`: `AccountForm` and `CategoryForm` pass React Hook Form's `isDirty`, and
+  `GlobalBudgetForm`, which has no form library, passes `amount !== null`. All three are no-ops on the
+  pages where the same form is not in a sheet. A sheet whose **parent** owns the state takes the
+  `unsaved` prop: quick add, adjust balance, rename, the budget override, the currency and time-zone
+  sheets, the account deletion's typed word, and the sync-conflict sheet — whose typed rename and
+  corrected date resolve an operation written offline, which is the most expensive thing in the app to
+  throw away. The hook alone missed every parent-owned sheet, silently, until it was tried in a
+  browser; several children can report at once, so the sheet keeps a list of who is reporting rather
+  than one flag.
+- **Alternative:** a nested confirmation sheet over the first one. Rejected: a modal whose own
+  dismissal is the thing being questioned is a knot, and the app would have two scrims stacked.
+- **Consequence:** the question resets on the dialog's own `close` event, so a sheet closed by anything
+  else never reopens holding it, and it is also derived from what reported it — a picker that swaps its
+  create form for its list takes the question with it instead of leaving it hanging over the list.
+  `dismissible={false}` sheets are untouched: they never got the tap in the first place. Filters,
+  picker searches and the date and time wheels report nothing — losing a filter costs nothing — so they
+  still close on one tap. The **routes** that hold the big forms (`/transactions/new`, the account,
+  category and budget pages) are not sheets, so none of this reaches them: losing one of those to a
+  Back tap needs a route-level guard, and that is not built.
+- **What each sheet counts as "something to lose" is derived, not re-typed.** Adjust balance asks
+  `input !== null`, which is the same thing its Save button is gated on, so flipping the increase /
+  decrease segment counts; rename asks `!unchanged`, the trimmed and case-folded comparison the button
+  uses; quick add counts the chosen account as well as the amount, the category and the note. Hand-made
+  copies of those conditions were what dropped the sign and the account in the first attempt.
+- **Tested where it gets forgotten.** `Sheet.test.tsx` covers both ways in, both answers, the empty
+  form, the close button and the swap that used to leave the question hanging; and `QuickAddSheet`
+  has its own test that types an amount, taps the scrim and expects the question — the shape of test
+  that would have caught the original miss, which no amount of `Sheet`-in-isolation testing could.

@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Field";
 import { IconGrid } from "@/components/ui/IconGrid";
 import { Segment } from "@/components/ui/Segment";
+import { useUnsavedGuard } from "@/components/ui/Sheet";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { Tile } from "@/components/ui/Tile";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
@@ -69,7 +70,8 @@ export function CategoryForm({
       : { name: initialName, icon: "tag", color: suggestedColor, type },
   });
   // Read during render: `formState` is a Proxy that only tracks what the component subscribed to.
-  const { errors, dirtyFields } = form.formState;
+  const { errors, dirtyFields, isDirty } = form.formState;
+  useUnsavedGuard(isDirty);
   const serverFields = fieldErrors(mutation.error);
   const failure = mutation.error;
   const code = failure instanceof ApiError ? failure.code : null;

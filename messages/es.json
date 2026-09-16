@@ -45,7 +45,13 @@
     "pm": "PM",
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
-    "savedInZone": "Se guarda en tu zona horaria, {zone}."
+    "savedInZone": "Se guarda en tu zona horaria, {zone}.",
+    "unsaved": {
+      "title": "¿Seguro que quieres salir?",
+      "body": "Se perderá lo que has escrito.",
+      "keep": "Seguir editando",
+      "leave": "Salir"
+    }
   },
   "nav": {
     "label": "Navegación",

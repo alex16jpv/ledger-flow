@@ -157,6 +157,7 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
       <Sheet
         open={open}
         onClose={close}
+        unsaved={amount !== null || categoryId !== null || accountId !== null || description !== ""}
         title={t("transactions.quick.title")}
         footer={
           <div className="flex gap-3">

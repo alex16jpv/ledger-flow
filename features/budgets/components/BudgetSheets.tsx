@@ -41,6 +41,7 @@ export function OverrideSheet({
     <Sheet
       open={open}
       onClose={onClose}
+      unsaved={amount !== budget.amount}
       title={t("overrideTitle")}
       footer={
         <>

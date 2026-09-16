@@ -2011,6 +2011,17 @@ const state = (kind) => {
       sheet: sheetWrap(inner, "Session"),
     });
   }
+  if (kind == "sin-guardar") {
+    const inner = `${field("Amount", "$ 12,500")}
+<div class="alert warning">${iconSvg("triangle-alert")}<span><b>Are you sure you want to leave?</b> What you have typed will be lost.</span></div>
+<div class="hstack" style="gap:10px"><button class="btn primary lg" style="flex:1.2">Keep editing</button><button class="btn ghost lg" style="flex:1;color:var(--danger)">Leave</button></div>`;
+    return screen(settingsBodyDim(), {
+      tab: "",
+      side: "cuentas",
+      title: "Accounts",
+      sheet: sheetWrap(inner, "Adjust balance"),
+    });
+  }
   if (kind == "confirmar") {
     const inner = `<div class="alert warning">${iconSvg("archive")}<span><b>Archive “Lifestyle”.</b> Its 11 transactions are kept and the linked budget will show it as archived. You can restore it from Categories.</span></div><div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.2">Archive</button></div>`;
     return screen(settingsBodyDim(), {
@@ -3746,6 +3757,13 @@ const PAGES = [
         "Blocking, and it leads to the sign-in screen.",
         state("sesion"),
         { added: "2026-09-01" },
+      ),
+      plate(
+        "unsaved-before-leaving",
+        "Leaving a form with something typed",
+        "A tap outside a sheet closes it, so a half-written form would go with it. When there is something to lose, the tap does not close: the sheet asks, in place, and “Keep editing” is the primary action. The close button is the deliberate exit and does not ask. A sheet with nothing typed closes on the first tap, as it should.",
+        state("sin-guardar"),
+        { added: "2026-09-15" },
       ),
       plate(
         "archive-confirmation",

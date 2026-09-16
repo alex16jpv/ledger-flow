@@ -25,3 +25,6 @@ action (F-20).
 Since T-74 a **new** category's colour picker opens on one of the sixteen tokens drawn at random,
 not on `BLUE` — in the inline "New category" of the picker as much as on the page, since both are the
 same form. The edit form does not draw.
+
+Since T-78 `CategoryForm` reports React Hook Form's `isDirty` to the sheet around it
+(`useUnsavedGuard`), so the inline "New category" of the picker asks before a tap outside discards it.

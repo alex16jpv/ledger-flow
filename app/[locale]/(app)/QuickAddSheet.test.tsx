@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
@@ -113,6 +113,33 @@ const calls = (method: string) =>
   fetchMock.mock.calls.filter(([, init]) => (init?.method ?? "GET") === method);
 
 describe("QuickAddSheet", () => {
+  // T-78 was first wired with a hook that never reached this sheet, and only a call-site test sees that.
+  it("asks before a tap outside throws a half-typed capture away (T-78)", async () => {
+    routeFetch();
+    const { onClose } = renderSheet();
+    await screen.findByRole("button", { name: /From your main account.*Bancolombia/ });
+    const scrim = screen.getByRole("dialog", { name: "Add expense" }).firstElementChild;
+    expect(scrim).not.toBeNull();
+    if (!scrim) return;
+
+    const tapOutside = () => {
+      fireEvent.pointerDown(scrim);
+      fireEvent.pointerUp(scrim);
+      fireEvent.click(scrim);
+    };
+
+    tapOutside();
+    expect(onClose).toHaveBeenCalledOnce();
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "12500");
+    tapOutside();
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(screen.getByRole("alert")).toHaveTextContent("Are you sure you want to leave?");
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Leave" }));
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
   it("saves in two interactions against the main account, adds the note and offers undo", async () => {
     routeFetch();
     const { onClose } = renderSheet();
