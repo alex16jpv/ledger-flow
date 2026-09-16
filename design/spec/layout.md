@@ -2,8 +2,10 @@
 
 - **Below 900px (mobile, portrait tablet):** a 64px tab bar plus safe area with five positions: Home ·
   Transactions · **Add** (a raised 52px FAB) · Budgets · Accounts. An amber dot sits on Transactions
-  when something is waiting to be reviewed. Stats, Categories and Settings are reached from Home ("See
-  all"), from the header's avatar, and from Settings.
+  when something is waiting to be reviewed. **Categories and Settings are reached only through Home's
+  avatar → Settings, and Stats and Trends cannot be reached at all below 900px**: no screen links to
+  them, so the sidebar's six destinations are four on a phone. That is the open decision of T-72, and
+  its alternatives are drawn in `preview/variants.html`.
 - **900px and up:** a 240px sidebar with the brand, an "Add" button, Home, Transactions (with the
   count of items to review), Budgets, Accounts, Stats and Categories; the footer holds Settings and
   the user. Content is capped at 1120px, and Home splits into two columns (1.6fr / 1fr).

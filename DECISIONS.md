@@ -3581,6 +3581,7 @@ cover` is set once in the root layout for the standalone display.
   It is a reference line, not a figure about the user's money — the same straight line the chart has
   always drawn — and the reading names it as what is expected, never as what was spent. The figure
   that **is** the user's money on that line comes from the API's day buckets.
+
 ## 2026-09-13 · The currency's minor unit is ours, not the device's (T-66)
 
 - **Problem:** the same COP balance read as `$1,284,300` on a desktop browser and `$1,284,300.00`

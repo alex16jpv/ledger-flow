@@ -101,6 +101,7 @@
   .grid-main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); gap: var(--sp-5); align-items: start; }
 }
 @container app (max-width: 899.9px) { .desktop-only { display: none !important; } }
+@container app (max-width: 599.9px) { .wide-only { display: none !important; } }
 
 /* Sidebar (≥ 900) */
 .brand { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) var(--sp-5); font-weight: var(--fw-semibold); font-size: var(--fs-md); }
