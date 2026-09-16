@@ -30,6 +30,12 @@ test("home shows the pending alert, the day bars, the top budgets and the latest
   await expect(budgets).toBeVisible();
   await expect(page.getByText(/left · on track|with \d+ days? left|Over by/).first()).toBeVisible();
 
+  const accounts = page.getByRole("region", { name: "Accounts" });
+  const firstAccount = accounts.getByRole("link").first();
+  await expect(firstAccount).toBeVisible();
+  const accountHref = await firstAccount.getAttribute("href");
+  expect(accountHref).toMatch(/\/accounts\/[0-9a-f-]{36}$/);
+
   const recent = page.getByRole("region", { name: "Recent transactions" });
   await expect(recent.getByRole("button").first()).toContainText("To review");
   expect(await recent.getByRole("button").count()).toBe(5);
@@ -40,6 +46,9 @@ test("home shows the pending alert, the day bars, the top budgets and the latest
   await page.goBack();
   await recent.getByRole("button").first().click();
   await expect(page).toHaveURL(/\/transactions\/[0-9a-f-]{36}$/);
+  await page.goBack();
+  await firstAccount.click();
+  await expect(page).toHaveURL(new RegExp(`${String(accountHref)}$`));
   await page.goBack();
   await chart.getByRole("button").first().click();
   await expect(page).toHaveURL(
