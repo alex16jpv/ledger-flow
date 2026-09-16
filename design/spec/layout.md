@@ -18,7 +18,9 @@
   never stops saying where you are. Taking a destination closes the sheet.
 - **900px and up:** a 240px sidebar with the brand, an "Add" button, Home, Transactions (with the
   count of items to review), Budgets, Accounts, Stats and Categories; the footer holds Settings and
-  the user. Content is capped at 1120px, and Home splits into two columns (1.6fr / 1fr).
+  the user. Content is capped at 1120px, and **Home and Stats** split into two columns (1.6fr / 1fr) — Stats
+  since the owner's choice of 2026-09-16 (T-82): the answer on the left, the follow-ups and the way
+  into Trends on the right. Stats' empty, loading and error states stay one column.
 - **600px and up:** grids of two or three columns, and bottom sheets become a centred 520px modal.
 - **Page header:** eyebrow plus h1 on the left, actions on the right (40px icon-only, 36px avatar).
   Forms: a header with back and a centred title, a maximum width of 640px, and a 48px save button at

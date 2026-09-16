@@ -59,48 +59,59 @@ share a period navigator with a single month. Every Stats view ends with the way
 month being read when it is not this one, and **Recurring expenses** — decided on 2026-09-11, detection
 first — is written up there.
 
-## The order of this page is an open question (T-82)
+## How the page is ordered (T-82, the owner's choice of 2026-09-16)
 
-Nothing here is settled, and **nothing is built until the owner chooses**. Everything is drawn in
-`preview/variants.html` and listed on `preview/in-review.html`: the baseline
-`#stats-three-zones`, the four answers `#stats-other-months-in-the-middle`,
-`#stats-three-zones-and-a-way-in`, `#stats-the-month-opens-a-range` and
-`#stats-a-line-instead-of-a-card`, what the backbone costs on the shortest tab
-(`#stats-three-zones-on-the-shortest-view`), and the separate desktop question
-`#stats-two-columns-on-a-desktop`.
+The page is in **three zones**, and every view has the same shape:
 
-What he asked, on 2026-09-16: Trends over time must stop being lost at the end, without simply being
-put at the start, because it is not read daily. Measured on the phone frame, the way into Trends sits
-**1,701px** down on Days, 1,815px on the calendar, 1,248px under Accounts, 865px under Categories and
-766px under Tags — a spread of 2.4x, so there is no stable place to learn. It is also the last block
-of a flat stack of eight to twelve cards that all look alike, with nothing saying where the answer to
-_where did this month's money go_ ended; and it is drawn as a card of content when what it does is
-change the range, which is the period navigator's job.
+1. **The scope** — the period navigator, the flow chips and the segmented control. They never go
+   away, not even when the period is empty or the read failed, because they are how you get out.
+2. **The answer** — the total card and the breakdown for the chosen grouping, plus, under Days, the
+   three tiles that summarise the chart they sit under.
+3. **More about this month** — the follow-ups, under an `h2` with a rule: _Biggest this period_ in
+   **all four views**, and under Days also the average by weekday and the highest day's movements.
+4. **Other months** — the way into Trends, alone under its own `h2`.
 
-**The backbone all five share** is the page in zones under real headings — **the answer** (the total,
-the chart or the breakdown, and the tiles that summarise it), **More about this month**, and **Other
-months** — plus _Biggest this period_ in all four views instead of only Days and Accounts. That last
-part is a **separable decision with its own price**: Biggest is a second request
-(`sort=amount&order=desc` on `GET /transactions`), so putting it under Categories and Tags adds a
-request to two views that do not make one today, and it makes Categories 480px taller.
+The zone labels are real headings (`h2`, with each card's own title an `h3` under them), so a reader
+navigating by heading gets the same three landmarks a sighted reader gets from the rules.
 
-**They differ in where the way into Trends goes**: after the answer and before the follow-ups; a
-button in the page header; a menu on the month itself; or one line on the total card. The line is the
-only one that is not a link to the same card — it answers the comparison in place, at the cost of one
-`groupBy=month` read per Stats load, and it is the only one that has to say what an **empty period**
-does, because an empty period has no total card and `stats.md` requires it to keep its way into
-Trends.
+**The way into Trends is in the page header**, a labelled `Trends` button beside Export: measured
+16px from the top of the page on a phone and 28px on a desktop, on every view and every state,
+including an empty period and a failed read. Trends is a sibling screen, not a card of this month's
+data, and the header is where a sibling screen belongs — it costs one control and no vertical space.
+**The closing card stays** at the end of the page under _Other months_: someone who reaches the
+bottom has just run out of this month, and that is exactly when the next question is whether another
+one was better. The alternatives — the zone moved into the middle, a menu on the month itself, and a
+comparison line on the total card — stay drawn in `preview/variants.html` with the reason each was
+not taken.
 
-**A disagreement this has to settle.** The app caps Stats at `max-w-[640px]` at every width
-(`StatsScreen.tsx`), while this design draws it at the shared 1,120px content cap, and `layout.md`
-mentions neither. Whichever is right, it is one column: on a desktop the Days view is 1,744px of
-scroll here, and taller at 640px. `#stats-two-columns-on-a-desktop` is where that gets decided.
+**Why not simply at the top.** The owner's constraint was that Trends is not a daily read, so it may
+not take the room a daily read takes. A button in the header is the smallest affordance that is
+always in the same place; nothing about this month is pushed down by it.
 
-**What is drawn and what is not.** The variants are drawn on Days and, for the backbone, on
-Categories; Accounts and Tags keep their own footnote and alert and are not redrawn. Nor are the four
-states — data is drawn, empty, loading and error are not, and they matter here: the empty period and
-the loading skeleton both change under the line variant, and the error state carries no way into
-Trends today and keeps none.
+**What this replaced.** The way into Trends used to be the last block of a flat stack of eight to
+twelve cards that all looked alike, so its distance from the top ran from 766px under Tags to 1,815px
+on the calendar — a 2.4x spread, with nowhere to learn where it was. _Biggest this period_ appeared
+under Days and Accounts and not under Categories or Tags, a difference no reader could explain.
+
+**_Biggest this period_ costs a request in the two views that did not have it.** It is its own read
+(`sort=amount&order=desc` on `GET /transactions`, the table below), so Categories and Tags now make
+one request they did not make before, and Categories is about 480px taller. That is the price of the
+tail having one shape.
+
+## Two columns on a desktop (T-82, the same choice)
+
+Above 900px the page splits **1.6fr / 1fr**, the same split `layout.md` gives Home: the scope
+controls span the full width, the **answer** takes the left column, and **More about this month** and
+**Other months** take the right. Trends is then on screen without scrolling, and the Days view drops
+from 1,818px of scroll to 1,302px.
+
+Below 900px it is the single column it has always been, in the order above. **Empty, loading and
+error do not split**: there is nothing to put in a second column, and an error that blanked half a
+grid would read as a broken layout rather than a failed read.
+
+This also settles a disagreement: the screen used to cap itself at 640px at every width while this
+design drew it at the shared 1,120px content cap. It takes the content cap, like every other screen
+that is not a form.
 
 ## What this needs from the backend
 
