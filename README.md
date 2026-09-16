@@ -145,7 +145,7 @@ is worse than none. Every check lives here now:
 ```
 app/                 routes (App Router). Pages are shells that compose a feature view.
 components/ui/       the design-system components (DESIGN.md §7); no data access
-components/shell/    AppShell, Sidebar, TabBar, Fab, PageHeader, ConnectionBanner
+components/shell/    AppShell, Sidebar, TabBar, MoreSheet, PageHeader, ConnectionBanner, Avatar
 features/<domain>/   api.ts · keys.ts · hooks.ts · schemas.ts · components/ · README.md
 lib/api              HTTP client, ApiError, error taxonomy, idempotency, single-flight refresh
 lib/query            QueryClient defaults and persistence
@@ -174,6 +174,9 @@ shared code moves up to `lib` or `components/ui`. ESLint enforces it.
 ## Routes
 
 English has no prefix, Spanish lives under `/es/...` (`localePrefix: as-needed`).
+
+Below 900px the tab bar holds Home, Transactions, Add, Budgets and **More**; More opens a sheet with
+Accounts, Stats, Categories, Settings and the user (T-72). From 900px up the sidebar lists them all.
 
 | Route                                                          | Screen                                                                                                                                        |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |

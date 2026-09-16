@@ -78,7 +78,7 @@ test("how long the pending stripe lives, and how far it pushes the content", asy
   const rows: string[] = [];
   for (let run = 0; run < RUNS; run += 1) {
     await addButton(page).click();
-    const sheet = page.getByRole("dialog", { name: "Add expense" });
+    const sheet = page.getByRole("dialog", { name: "Add" });
     await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
     await page.keyboard.type(String(uniqueAmount()));
     await mark(page);
@@ -119,7 +119,7 @@ test("the same write over a slower link", async ({ page, request }) => {
   const rows: string[] = [];
   for (let run = 0; run < 3; run += 1) {
     await addButton(page).click();
-    const sheet = page.getByRole("dialog", { name: "Add expense" });
+    const sheet = page.getByRole("dialog", { name: "Add" });
     await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
     await page.keyboard.type(String(uniqueAmount()));
     await mark(page);

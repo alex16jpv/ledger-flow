@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Landmark } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { AccountCard } from "@/components/ui/AccountCard";
@@ -13,11 +13,13 @@ import { AmountInput } from "@/components/ui/AmountInput";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Field";
+import { useUnsavedGuard } from "@/components/ui/Sheet";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
 import { changedOnly, nothingChanged } from "@/lib/form/changes";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
+import { randomColorToken } from "@/lib/theme/feature-color";
 import type { Account } from "@/types/api";
 
 import { useCreateAccount, useUpdateAccount } from "../hooks";
@@ -43,14 +45,16 @@ export function AccountForm({
   const create = useCreateAccount();
   const update = useUpdateAccount(account?.id ?? "");
   const mutation = account ? update : create;
+  const [suggestedColor] = useState(() => randomColorToken());
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
     defaultValues: account
       ? { name: account.name, type: account.type, balance: null, color: account.color ?? "BLUE" }
-      : { name: "", type: "ACCOUNT", balance: null, color: "BLUE" },
+      : { name: "", type: "ACCOUNT", balance: null, color: suggestedColor },
   });
   // Read during render: `formState` is a Proxy that only tracks what the component subscribed to.
-  const { errors, dirtyFields } = form.formState;
+  const { errors, dirtyFields, isDirty } = form.formState;
+  useUnsavedGuard(isDirty);
   const serverFields = fieldErrors(mutation.error);
   const failure = mutation.error;
   const duplicate = failure instanceof ApiError && failure.code === "DUPLICATE";

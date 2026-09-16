@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "../fixtures";
 import { freshUser, keptDocument, markDocument, readyForOffline, signInAs } from "../offline";
 import { SW_PATH } from "../sw-path";
+import { goToSection } from "./nav";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -105,7 +106,7 @@ test("the shell navigates with no network, filters included, and falls back on a
   await page.getByRole("link", { name: "Budgets" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: "Budgets" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Accounts" }).first().click();
+  await goToSection(page, "Accounts");
   await expect(page.getByRole("heading", { level: 1, name: "Accounts" })).toBeVisible();
 
   await page.getByRole("link", { name: "Home" }).first().click();

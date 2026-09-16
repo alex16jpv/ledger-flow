@@ -12,7 +12,11 @@ export interface TooltipProps {
   children: ReactNode;
 }
 
-const BUBBLE: Record<TooltipAlign, string> = {
+// The bubble's own look, shared with the charts that place it themselves instead of over a slot.
+export const BUBBLE =
+  "pointer-events-none absolute bottom-full z-(--z-toast) mb-1.5 rounded-sm bg-ink px-2 py-1 text-xs font-medium text-on-ink shadow-2";
+
+const ANCHOR: Record<TooltipAlign, string> = {
   center: "left-1/2 -translate-x-1/2 after:left-1/2 after:-translate-x-1/2",
   start: "left-0 after:left-2.5",
   end: "right-0 after:right-2.5",
@@ -26,9 +30,10 @@ export function Tooltip({ label, align = "center", className, style, children }:
       <span
         aria-hidden="true"
         className={cn(
-          "pointer-events-none absolute bottom-full z-(--z-toast) mb-1.5 rounded-sm bg-ink px-2 py-1 text-xs font-medium whitespace-nowrap text-on-ink opacity-0 shadow-2 transition-opacity duration-(--dur-1) ease-(--ease)",
+          BUBBLE,
+          "whitespace-nowrap opacity-0 transition-opacity duration-(--dur-1) ease-(--ease)",
           "after:absolute after:top-full after:border-4 after:border-transparent after:border-t-ink after:content-['']",
-          BUBBLE[align],
+          ANCHOR[align],
           "group-focus-within/tip:opacity-100 group-hover/tip:opacity-100",
         )}
       >

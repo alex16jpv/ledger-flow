@@ -4,12 +4,40 @@
 
 ## Quick capture (`#quick-capture`)
 
+**The sheet records all three types.** A three-way `segment` — Expense · Income · Transfer, the same
+control the full form has minus Adjustment — sits at the top, above the amount, and the title is "Add"
+rather than "Add expense" (owner's choice of 2026-09-15; the alternative, the title as a menu, stays
+drawn in `preview/variants.html`). The type reconfigures what is underneath and never clears the
+amount:
+
+- **Expense** — the amount in `--text`, the category chips of the expense categories, one account row
+  reading "From your main account".
+- **Income** — the amount in `--income`, the income categories, and the account row reads "Into your
+  main account".
+- **Transfer** — no category at all: From and To with the swap button between them, the amount in
+  `--transfer`, and the check that the two accounts differ.
+
+`POST /transactions/quick` already accepts `type` (INCOME, EXPENSE, TRANSFER) and both account ids, and
+the offline queue already applies the same per-type defaults, so this costs no sync work.
+
+**The bar on top of the sheet opens the full form.** It is 44×4 here, not the decorative 36×4 of every
+other sheet, and it is a real control: dragging it up **or tapping it** turns quick add into "New
+transaction" carrying the amount, the type, the category and the note already entered — the same jump
+the "More details" button makes, so the gesture is a shortcut and never the only way (owner's choice
+of 2026-09-15). Its accessible name is "Open the full form"; at 4px tall it cannot be the only way in,
+which is why the button stays. Dismissing the sheet is a tap outside it, ESC or the close button, not
+the bar. The two alternatives — taking the bar out of every sheet, and turning it into
+drag-to-dismiss — stay drawn in `preview/variants.html`.
+
 A sheet: the amount focused with the numeric keyboard open; a row of chips with the five most used
 categories plus "More", which opens the full picker; an account picker preselected with the main
 account (with no main account, `NO_DEFAULT_ACCOUNT` → an empty, required picker); a quick note; and the
 buttons "More details" (which carries the state into the full form) and "Save".
 
-Saving posts to `/transactions/quick` with a UUID `Idempotency-Key` per opening of the sheet. When a
+Saving posts to `/transactions/quick` with a UUID `Idempotency-Key` per distinct payload
+(`IdempotencyKeyring`): a retry of the same amount, category and account reuses the key, and an
+edited one gets a new key, which is what makes a lost reply safe to repeat. The note is not part of
+that payload — it travels in the `PUT` that completes the movement. When a
 category was chosen it is sent as `categoryId` — the backend still marks `pendingDetails`, and the app
 may complete it with `PUT … pendingDetails:false` if the user gave both a category and a note. On save
 the sheet closes, a toast says "Transaction saved · Undo" (undo is a `DELETE`), the amount clears and

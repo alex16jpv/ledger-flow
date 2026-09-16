@@ -51,6 +51,13 @@ A grid of 16 circles of 28px showing each token's solid, a 2px `--text` ring on 
 `aria-pressed`, and the token's name as `aria-label`. A live preview of the tile with the chosen icon
 sits next to the picker. The same component serves account, category and budget.
 
+**A create form opens with one of the 16 drawn at random** (T-74), never on a fixed colour: whoever
+creates four accounts without opening the picker usually gets four different colours instead of four
+blues. It is a plain draw — nothing is checked against the colours already in use, so two items can
+come out the same — and it is drawn once, when the form opens, so the ring never moves on its own. An
+**edit** form does not draw: it shows the colour the item has. The plates show a colour selected
+because one always is; which one is the draw's business.
+
 ## Adding a palette
 
 1. Copy `palette.tinta.css` to `palette.<name>.css`, change the selector to

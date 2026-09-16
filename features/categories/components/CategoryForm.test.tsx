@@ -1,7 +1,8 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { drawOf } from "@/lib/testing/colors";
 import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 import type { Category } from "@/types/api";
@@ -31,6 +32,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 function renderForm(props: Partial<Parameters<typeof CategoryForm>[0]> = {}) {
@@ -44,6 +46,23 @@ function renderForm(props: Partial<Parameters<typeof CategoryForm>[0]> = {}) {
 }
 
 describe("CategoryForm", () => {
+  it("opens on a drawn colour and creates the category with it (T-74)", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(drawOf("TEAL"));
+    fetchMock.mockResolvedValue(json({ ...food, id: "new", name: "Gym" }, { status: 201 }));
+    renderForm({ type: "EXPENSE" });
+    const swatches = within(screen.getByRole("group", { name: "Color" }));
+    expect(
+      swatches.getAllByRole("button", { pressed: true }).map((b) => b.getAttribute("aria-label")),
+    ).toEqual(["Teal"]);
+    await userEvent.type(screen.getByLabelText("Name"), "Gym");
+    await userEvent.click(screen.getByRole("button", { name: "Create category" }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+    expect(JSON.parse(init?.body as string)).toMatchObject({ color: "TEAL" });
+  });
+
   it("creates with the chosen type and previews the result live", async () => {
     fetchMock.mockResolvedValue(json({ ...food, id: "new", name: "Gym" }, { status: 201 }));
     const onSaved = renderForm({ type: "EXPENSE", preview: true });
@@ -52,6 +71,7 @@ describe("CategoryForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Income" }));
     expect(screen.getByText("Income · preview")).toBeInTheDocument();
     expect(screen.getByText("Gym")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Purple" }));
     await userEvent.click(screen.getByRole("button", { name: "Create category" }));
     await waitFor(() => {
       expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: "new" }));
@@ -62,7 +82,7 @@ describe("CategoryForm", () => {
       id: expect.stringMatching(UUID),
       name: "Gym",
       icon: "tag",
-      color: "BLUE",
+      color: "PURPLE",
       type: "INCOME",
     });
   });

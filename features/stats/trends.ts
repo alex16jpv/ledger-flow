@@ -127,6 +127,27 @@ export function monthComparison(
   };
 }
 
+export interface ComparisonPoint {
+  day: number;
+  current: number | null;
+  previous: number | null;
+  difference: number | null;
+}
+
+// Index 0 of both curves is the origin, not a day, so the readings start at day 1.
+export function comparisonPoints(comparison: MonthComparison): ComparisonPoint[] {
+  return comparison.current.slice(1).map((current, index) => {
+    const previous = comparison.previous[index + 1] ?? null;
+    const comparable = current !== null && previous !== null && previous > 0;
+    return {
+      day: index + 1,
+      current,
+      previous,
+      difference: comparable ? (current - previous) / previous : null,
+    };
+  });
+}
+
 export interface MixSegment {
   key: string;
   total: number;

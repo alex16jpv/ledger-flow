@@ -35,8 +35,23 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
 11. **Picker** — a 48px row with an sm tile, an 11px label and a 14px value, plus a chevron; it opens a
     sheet or modal with search and a list of rows.
 12. **Bottom sheet / modal** — radius 28 on top, a 36×4 handle, a header with a title and a close
-    button; at 600px and up it becomes a 520px modal with radius 20. It closes on the scrim, on ESC and
-    on the drag gesture.
+    button; at 600px and up it becomes a 520px modal with radius 20. **The page behind it is tinted by
+    `--overlay` and blurred by `--overlay-blur`** (T-77), so the sheet reads as a layer and not as
+    something sitting inside the screen; those two tokens are the whole setting, and a blur of 0 turns
+    that half off. The same `--nav-blur`/`--overlay-blur` pair is what the tab bar and the preview's
+    `.scrim` read, so no overlay in the product carries a hardcoded radius. Both drop to 0 under
+    `prefers-reduced-transparency`. **It closes on a tap anywhere outside the sheet and on ESC**,
+    except in the two sheets that turn `dismissible` off: the three exits of local mode, where a
+    choice has to be made, and the expired-session sheet, which outside local mode has only one way
+    out. **A sheet whose form has something typed does not close on that tap, and ESC does not close
+    it either**: it asks in place, with "Keep editing" as the primary and focused action and "Leave"
+    as the quiet one, the body inert behind the question, and ESC answering "Keep editing". The close
+    button stays the deliberate exit that does not ask (T-78, drawn as `unsaved-before-leaving` in
+    [screens/states.md](screens/states.md)).
+    **The 36×4 bar is decoration in every sheet but quick add**, where it is 44×4 and is a control that
+    opens the full form: see [screens/add.md](screens/add.md). Its target is 64×28 around that bar, a
+    pull **downwards** does nothing at all, and while the unsaved question is up the bar is inert like
+    the body — it is not a third answer to it. There is no other drag gesture in the app.
 13. **Toast** — `--ink`, one action ("Undo"), five seconds, above the tab bar.
 14. **Alert** — inline, four variants; the main-account warning uses `warning`.
 15. **Empty** — an lg outline tile plus a title, a line and a call to action. The title is an `h2` at
@@ -54,7 +69,9 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     focus in a `Tooltip` (23) and in the `readout` (29). Where they lead nowhere — the average by
     weekday: there is no "all Wednesdays" to open — the chart is one `role="img"` whose accessible name
     reads every slot, and the bubble is a pointer convenience only; seven buttons that do nothing are
-    worse than one image. The chart keeps a bubble's height of room above the tallest bar so the bubble
+    worse than one image. **Reading every slot is for a chart with few of them.** Seven weekdays are a
+    sentence; thirty-one days of a line (31) are not, and there the accessible name is the card's own
+    sentence — see 31. The chart keeps a bubble's height of room above the tallest bar so the bubble
     never covers the card's title, and near either end the bubble aligns to that end instead of
     centring, so it never hangs outside the card. Home, Stats, the budget detail and the weekday average are this one component with a
     different height, different labels and a different mode — never a copy.
@@ -76,10 +93,12 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     Their copy and their priority live in [screens/sync-stripes.md](screens/sync-stripes.md).
 23. **Tooltip** — a bubble over `--ink` with 11px medium text and an arrow, above the element, shown on
     hover and on keyboard focus; it is visual only (`aria-hidden`) because the control that carries it
-    already has an accessible name. Used for: the colour's name in the swatches, the icon's name in the
-    grid, the category of each segment of the stacked bar in Stats, **every slot of every chart that has
-    slots** (18, 30, 32, 33 — 31 is a line, not slots, and puts its reading in the sentence and the
-    `readout` beside it), the projection mark, and the pace mark. The exception to `aria-hidden` is the pace
+    already has an accessible name. **One variant has no arrow**: the line chart's (31), which is as
+    wide as the card and truncates rather than hang outside it, because a day of a month is narrower
+    than the reading it carries. There the rule and the dot point at the position, not an arrow, and
+    the bubble follows the pointer only — a line has nothing to focus. Used for: the colour's name in the swatches, the icon's name in the
+    grid, the category of each segment of the stacked bar in Stats, **every slot of every chart**
+    (18, 30, 32, 33, and the x positions of 31), the projection mark, and the pace mark. The exception to `aria-hidden` is the pace
     mark, which is not a control with a name of its own, so it carries its `aria-label` with the same
     text.
 24. **Projection mark (`projected`)** — a 16px `cloud-off` icon in `--warning` next to a figure (aligned
@@ -119,6 +138,15 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     `--text-3` is a reference (the period's pace, the same days of the previous month), dashed
     `--danger` is a limit or a projection. The live line ends in a dot. A line may start late — a
     projection starts at today — and the gap is drawn as a gap, never interpolated backwards.
+    **The x positions are slots too.** Pointing at one names that day and reads **every line at it**,
+    in a `Tooltip` (23) and in the `readout` (29); a vertical rule in `--border-strong` marks the
+    position and each line takes a dot there, so the reading and the picture are the same point. With
+    nothing pointed at, the `readout` reads the last position that has one. The positions are **not**
+    controls — a day of a two-month comparison, or of a pace curve, opens nothing — so the chart stays
+    one `role="img"`, and **its accessible name is the card's sentence, not the thirty-one readings**:
+    that is where this piece parts from 18, and why the `readout` matters more here than anywhere
+    else. A position with nothing to read — the origin of a cumulative curve, a day the previous month
+    never reached — has no slot and no bubble.
 32. **Calendar heatmap (`heat`)** — the same days as `Bars`, laid out as the month: one cell per day in
     four steps of `--brand`, `--surface-3` for a day with nothing spent, an outline for a day that has
     not arrived, today ringed, and a Less/More scale. Weeks start on the language's first day, like the
@@ -133,7 +161,8 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     underneath.
 
 **Every chart obeys the same contract**, and every shape has exactly one implementation: a slot — a
-bar, a cell, a column, a pair — carries its name and its amount as its accessible name; it shows that
+bar, a cell, a column, a pair — carries its name and its amount as its accessible name (a position on
+a line is the exception 31 states); it shows that
 same text on hover and on keyboard focus through `Tooltip` (23); it repeats it in the `readout` (29)
 for a finger; and where there is a list behind the slot, the slot is a control that opens that list
 already filtered. A chart drawn from figures that include an unconfirmed write carries the projection

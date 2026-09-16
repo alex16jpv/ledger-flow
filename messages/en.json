@@ -45,19 +45,27 @@
     "pm": "PM",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
-    "savedInZone": "Saved in your time zone, {zone}."
+    "savedInZone": "Saved in your time zone, {zone}.",
+    "unsaved": {
+      "title": "Are you sure you want to leave?",
+      "body": "What you have typed will be lost.",
+      "keep": "Keep editing",
+      "leave": "Leave"
+    }
   },
   "nav": {
     "label": "Navigation",
     "home": "Home",
     "transactions": "Transactions",
     "add": "Add",
-    "addExpense": "Add expense",
     "budgets": "Budgets",
     "accounts": "Accounts",
     "stats": "Stats",
     "categories": "Categories",
     "settings": "Settings",
+    "more": "More",
+    "moreStats": "Where the money went",
+    "moreSettings": "Profile, currency, appearance",
     "search": "Search",
     "pendingCount": "{count, plural, one {# to review} other {# to review}}"
   },
@@ -747,7 +755,8 @@
       "bankAccount": "Bank account",
       "creditCard": "Credit card",
       "primary": "Primary",
-      "secondary": "Secondary"
+      "secondary": "Secondary",
+      "trendPoint": "Day {day} · Spent {amount}"
     },
     "pickersPlayground": {
       "title": "Pickers",
@@ -1073,7 +1082,9 @@
         "errorDay": "We couldn’t load the days of this period",
         "errorHistory": "We couldn’t load the previous periods",
         "errorBiggest": "We couldn’t load the biggest movements",
-        "today": "today"
+        "today": "today",
+        "pacePoint": "Day {day} · Spent {amount} · Expected {pace}",
+        "pacePointProjected": "Day {day} · At this rate {amount} · Expected {pace}"
       }
     },
     "form": {
@@ -1195,13 +1206,15 @@
   },
   "transactions": {
     "quick": {
-      "title": "Add expense",
+      "title": "Add",
       "amount": "Amount",
       "category": "Category",
       "categoryHint": "optional · you can add it later",
       "fromMain": "From your main account",
+      "intoMain": "Into your main account",
       "account": "Account",
       "note": "Quick note (optional)",
+      "expand": "Open the full form",
       "moreDetails": "More details",
       "save": "Save",
       "saved": "Transaction saved",
@@ -1474,7 +1487,11 @@
     },
     "errorMonths": "We couldn’t load income and spending",
     "errorComparison": "We couldn’t load this month against last",
-    "errorMix": "We couldn’t load where your money went"
+    "errorMix": "We couldn’t load where your money went",
+    "pointMore": "Day {day} · {month} {amount} · {previous} {previousAmount} · +{percent} %",
+    "pointLess": "Day {day} · {month} {amount} · {previous} {previousAmount} · −{percent} %",
+    "pointFlat": "Day {day} · {month} {amount} · {previous} {previousAmount}",
+    "pointAlone": "Day {day} · {month} {amount}"
   },
   "charts": {
     "daySlot": "{day} · {amount}",

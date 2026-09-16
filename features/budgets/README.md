@@ -69,3 +69,15 @@ budget is one window that never repeats, so the card and its reads are skipped; 
 period has one column and the card is absent. A column opens its period only for a MONTHLY budget,
 which is what `reference` in the URL can name; elsewhere the chart reads itself as one image, like
 the weekday average of Stats.
+
+T-65 gave the pace curve a reading a day at a time too — spent against expected in a bubble and in the
+`readout` — and past today it says the figure is where the projection puts it, not what was spent.
+
+Since T-74 the colour a new budget opens with is drawn at random from the sixteen tokens instead of
+being `TEAL`. `defaultBudgetValues` takes it as an argument, so the draw happens once in
+`NewBudgetScreen` and the defaults stay a pure function. `GlobalBudgetForm`, which shows no swatches
+at all, draws one the same way instead of always writing `INDIGO`.
+
+Since T-78 `GlobalBudgetForm` reports a typed amount to the sheet around it (`useUnsavedGuard`), and
+the period override sheet passes `unsaved` directly, so neither is thrown away by a tap outside
+without asking.

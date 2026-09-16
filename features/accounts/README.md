@@ -27,3 +27,12 @@ Since F-03 the type is chosen in one `picker` row that shows the type with the l
 "Bank account · a checking or current account" — and opens a sheet with the nine and a description
 each. The onboarding gets the same control by rendering the same `AccountForm`, so there is one way
 to choose the same thing (§8.4, §8.6).
+
+Since T-74 a **new** account's colour picker opens on one of the sixteen tokens drawn at random, not
+on `BLUE`, so accounts created without ever opening the picker no longer all come out the same
+colour. The edit form does not draw: an account whose `color` is `null` still falls back to `BLUE`,
+because an untouched field never reaches the `PUT`.
+
+Since T-78 `AccountForm` reports React Hook Form's `isDirty` to the sheet around it
+(`useUnsavedGuard`), so a tap outside asks before throwing a half-written account away. On the pages,
+where the form is not in a sheet, the hook does nothing.

@@ -3569,3 +3569,311 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** the archived dimming moved from the card's box to its contents
   (`[&>*]:opacity-60`). Opacity on the focusable element dims its focus ring with it, and the ring
   is already close to the contrast floor.
+
+## 2026-09-13 · The line chart gets slots, and its accessible name does not (T-65)
+
+- **Reverses:** the design of 2026-09-11, which wrote the exception into `design/spec/components.md`
+  §23 in as many words — "31 is a line, not slots, and puts its reading in the sentence and the
+  `readout` beside it". The owner asked for the opposite on 2026-09-13, looking at the screen: the
+  comparison chart had to say what it holds where the pointer is, like every other chart.
+- **Decision:** `Trend` takes one `ChartSlot` per x position and shows the pointed one in a bubble
+  and in the `readout`, with a rule and a dot marking it. The positions stay **pointer-only**: no
+  `tabindex`, no buttons, and the chart's `role="img"` keeps the card's sentence as its accessible
+  name.
+- **Why the name does not read the slots**, which is what rule 18 asks of a chart whose slots lead
+  nowhere: seven weekdays read aloud are a sentence; thirty-one days of a month, each with two
+  amounts and a percentage, are about six hundred words in one label, and a screen reader cannot
+  skim it. The card already carries the same answer in prose — "You have spent $1,284,300 so far —
+  2 % less than at this point in August" — which is the figure the chart exists to give. §18 and §31
+  now both say where the line parts from the bars.
+- **What is still missing, and is worth saying out loud:** a keyboard user with sight gets no
+  per-day reading. Giving them one means thirty-one tab stops or a roving `tabindex` over positions
+  that open nothing, which is exactly what rule 18 argues against. If it is wanted, it is a piece of
+  work of its own.
+- **The bubble is as wide as the card and has no arrow.** A day of a month is ~15px wide and its
+  reading is ~290px, so a bubble anchored to the position hangs outside the card on a phone —
+  measured at 390px: 144px of page overflow. Pinned to the card and truncated, it always fits; the
+  vertical rule and the dots point at the position, and the `readout` underneath carries the reading
+  in full, for a finger and for a long figure alike.
+- **The "Expected" figure in the pace reading is the client's own**, worked out from the limit and
+  the day (`(amount * day) / days`), and it is the only money on that line the server did not send.
+  It is a reference line, not a figure about the user's money — the same straight line the chart has
+  always drawn — and the reading names it as what is expected, never as what was spent. The figure
+  that **is** the user's money on that line comes from the API's day buckets.
+
+## 2026-09-13 · The currency's minor unit is ours, not the device's (T-66)
+
+- **Problem:** the same COP balance read as `$1,284,300` on a desktop browser and `$1,284,300.00`
+  on a phone. `fractionDigits` asked `Intl.NumberFormat(...).resolvedOptions()`, and ICU versions
+  do not agree on COP: the recent one answers 0, older mobile ones answer 2. It was not only
+  painting — `useMoney().fractionDigits` also decides whether `AmountInput` offers a decimal
+  keypad and how many decimals it lets you type, and `roundToCurrency` rounds with it, so the
+  device was deciding a rule about money.
+- **Decision:** `currencyFractionDigits` in `lib/format/currency.ts` is the one answer, a set of
+  zero-decimal codes read from nowhere else, and the currency formatters pin
+  `minimumFractionDigits` and `maximumFractionDigits` to it. `Intl` still shapes the number —
+  groups, separators, symbol, the user's region — but never says how many decimals a currency has.
+- **What the set is:** every code a current CLDR paints with no decimals (33 of them, COP among
+  them), united with the ISO exponent-0 list the backend keeps in `src/shared/currency.ts` (17, of
+  which only UYI is not already in CLDR's). Thirty-four in all, frozen here so a phone from 2021 and
+  a desktop from today paint the same balance. Regenerate it, when a currency changes, from
+  `Intl.supportedValuesOf("currency")` on a current runtime; `currency.test.ts` fails when this
+  runtime's ICU stops agreeing, which is the signal to regenerate, not a regression.
+- **Why COP is in the set:** the owner's rule, stated on 2026-09-13 — Colombia does not use the
+  centavo, and a peso with decimals is not a figure anyone here writes. A current CLDR agrees; the
+  older ones on phones are what disagreed.
+- **What else moved, and it is not only COP:** six of the seven ISO three-decimal currencies (BHD,
+  JOD, KWD, LYD, OMR, TND) now read **two** decimals here instead of three — the seventh, IQD, reads
+  none, because CLDR treats the dinar as having no fils in practice. That is a fix, not a loss:
+  storage is integer cents on both sides and the backend rejects a third decimal with
+  `AMOUNT_PRECISION`, so `AmountInput` used to accept a keystroke the server would refuse. And the
+  sixteen currencies a current CLDR treats as zero-decimal in practice (HUF, IDR, PKR…) stay at
+  zero rather than gaining decimals they never had on any modern browser — two of them, HUF and
+  IDR, are reachable straight from `REGION_CURRENCY`.
+- **Alternative:** keeping `Intl` and normalising only what it returns. Rejected: there is nothing
+  to normalise — the platform answers a different number, and a rule about money cannot depend on
+  which browser the user opened the app in.
+- **Alternative:** generating the list from the backend, which has its own in
+  `src/shared/currency.ts`. It is the right end state and the reason the two lists do not match
+  today: the backend does **not** treat COP as zero-decimal, so its API would still accept
+  `1000,50 COP` that this client can no longer type. Aligning them, and putting the minor unit in
+  the OpenAPI contract so this table is generated instead of written, is the owner's call and lives
+  in his list. It is **seventeen** currencies, not one: every code in the table the backend does not
+  treat as zero-decimal — AFN, ALL, COP, HUF, IDR, IQD, IRR, KPW, LAK, LBP, MGA, MMK, PKR, SLL, SOS,
+  SYP, YER. For the sixteen that are not COP this is not new — a modern browser already painted them
+  that way — but freezing it makes it true on every device.
+
+## 2026-09-15 · A create form opens with a random colour already picked (T-74)
+
+- **Decision:** `randomColorToken()` draws one of the 16 feature tokens and it is that draw, not a
+  constant, that every form which creates a coloured thing opens with: `AccountForm`, `CategoryForm`,
+  `NewBudgetScreen` through `defaultBudgetValues(now, timeZone, color)`, and `GlobalBudgetForm`, which
+  has no picker at all and used to hardcode `INDIGO`. The draw happens once per mount
+  (`useState(() => randomColorToken())`, the shape `NewBudgetScreen` already used for `now`) and lives
+  in the form's state from then on, so a re-render never moves the ring. Nothing is consulted and
+  nothing is remembered: the owner asked for a plain draw, not for a colour that avoids the ones
+  already in use.
+- **Why:** accounts and categories opened on `BLUE`, budgets on `TEAL` and global budgets on `INDIGO`.
+  Somebody who creates four accounts without opening the picker ends up with four cards of the same
+  colour, and the colour is the only thing that tells them apart at a glance in Home's carousel, in
+  Stats and in every tile. A random default costs nothing and makes the common path produce a usable
+  result.
+- **Alternative:** picking the colour least used by the user's existing items. Rejected, and by the
+  owner explicitly: it needs the full list of accounts, categories and budgets loaded before the form
+  can paint a default — three queries, an offline path and a rule to explain — to improve on a draw
+  that is already good enough. His words: "no hay que tener lógicas adicionales como comprobación de
+  que otros items tengan el color".
+- **Alternative:** drawing the colour when the form is submitted rather than when it opens. Rejected:
+  the swatch grid would open with nothing selected while `color` is a required field, so the screen
+  would lie about what it is going to save.
+- **Alternative:** a `useRandomColorToken()` hook so the four call sites share one line. Rejected:
+  `lib/theme/feature-color.ts` is a pure token module that server code imports, and
+  `useState(() => …)` is already the house shape for a value drawn once per mount. The tests pin
+  `Math.random` instead, which is one seam for all four.
+- **Consequence:** `defaultBudgetValues` takes the colour as its third argument, which makes the
+  budget form's default deterministic in a test and keeps the randomness at the one place that mounts
+  the screen. The two default period dates `fromBudget` wanted from it moved to `defaultPeriodDates`,
+  so `fromBudget` no longer asks for defaults it overwrites. **Only creation draws**: an edit form
+  still falls back to `BLUE` for an item whose `color` is `null`, because `changedOnly` leaves an
+  untouched field out of the `PUT` — a drawn ring there would show a colour the item has not got, and
+  a different one on each visit. The two screens that kept their form mounted alongside them
+  (`HomeScreen`'s account and global-budget sheets, `BudgetsScreen`'s) now mount it when the sheet
+  opens, so reopening one draws again instead of reusing the first draw — and `GlobalBudgetForm` stops
+  asking for last month's spending on a screen where the sheet is never opened. Two things follow from
+  that unmount and are accepted: the first opening with a cold cache paints the currency's fixed
+  suggestions and swaps them for last month's when the read lands (later openings are instant, the
+  read is cached for five minutes), and a half-typed form no longer survives a close and reopen — the
+  write itself does, since it goes through the mutation and, with no network, the outbox. The draw is injectable
+  (`random: () => number = Math.random`, the shape `backoffDelay` already uses) so
+  `feature-color.test.ts` can pin it, and the four form tests pin `Math.random` through `drawOf(token)`
+  in `lib/testing/colors.ts` rather than hardcoding an index into `COLOR_TOKENS`.
+- **Why no hydration mismatch:** the three app forms render only after mount, because `AppFrame` holds
+  the children back until `useMounted` (D-29). The onboarding form is in `(auth)`, which D-29 leaves
+  server-rendered — it is safe for its own reason: `OnboardingFlow` paints a skeleton until both of its
+  React Query reads settle, and `QueryProvider` hydrates no server state, so the swatch grid never
+  exists in server HTML. If anyone ever prefetches those reads on the server, that is the one place to
+  look.
+
+## 2026-09-15 · The page behind a sheet is blurred, from one token (T-77)
+
+- **Decision:** `--overlay-blur` in `tokens/base.css` (8px) is the whole setting, and the `::backdrop`
+  of `components/ui/Sheet` applies it (`backdrop:backdrop-blur-(--overlay-blur)`) on top of the
+  `--overlay` tint. Setting it to `0px` turns the blur off everywhere.
+- **The tint was never reaching the app, and that is most of what he was seeing.** `Sheet` has asked
+  for `backdrop:bg-overlay` since it was written, but `tokens/tailwind.theme.css` never declared
+  `--color-overlay`, so Tailwind emitted **no rule at all** for that class: measured in chromium, the
+  `::backdrop` was `rgba(0, 0, 0, 0.1)` — the browser's own default — where the design asks for 40% in
+  light and 60% in dark. Every sheet in the app has floated over an almost unshaded page. The theme now
+  declares it, so the blur is judged against the scrim the design actually specifies. Nothing caught
+  this: `check-tokens` looks for raw colours, not for a token-shaped class naming a token the theme
+  does not define. That gap is its own task.
+- **Why:** the owner's words — "cuando ahi un modal abierto, se ponga una capa de blur detras de el ya
+  que confunde verlo encima del resto de la interfaz" — plus "solo haz que se pueda configurar cuanto
+  de blur se quiere aplicar facilmente desde una constante". A tint alone leaves the page behind
+  legible, so a sheet reads as part of the screen rather than a layer over it.
+- **Alternative:** a TypeScript constant feeding an inline style. Rejected: the value is needed in two
+  places that never import each other — the app and the design preview — and CSS custom properties are
+  how every other shared number in this product travels (`--tap`, `--r-2xl`, `--tabbar-h`).
+- **The tab bar got the same treatment**, because it was the other blur in the product and its two
+  copies already disagreed: `backdrop-blur-xl` (24px) in `TabBar.tsx` against a hardcoded 16px in the
+  preview's `.tabbar`. Both now read `--nav-blur`, and both blurs drop to 0 under
+  `prefers-reduced-transparency`, which is the preference a full-viewport `backdrop-filter` exists to
+  respect.
+- **Consequence:** one declaration reaches all 38 sheets, because they are all the same component, and
+  nothing else in the app draws an overlay. `backdrop-filter` is composited, so it costs a layer while
+  a sheet is open and nothing when none is. Two sheets open at once — a picker over quick add — stack
+  two backdrops, so the sheet underneath is blurred as well as the page; that is what a modal over a
+  modal should look like, and it is said here because nobody decided it on purpose. The e2e in
+  `quick-add.spec.ts` reads the computed `::backdrop` of that sheet and asserts three things: the token
+  is a length, the blur equals `blur(<the token>)`, and the tint is no longer the browser's
+  `rgba(0, 0, 0, 0.1)`. It fails if either class is dropped and keeps passing if he changes the
+  number — which is the point.
+
+## 2026-09-15 · A tap outside a sheet closes it, which it never did (T-75)
+
+- **Decision:** the scrim click moves from the `<dialog>` to the flex wrapper inside it, which is the
+  element a finger actually lands on. `Sheet` has always had `onClick` with the
+  `event.target === event.currentTarget` guard, but on the dialog that guard could never be true: the
+  wrapper is `h-full w-full`, so it covered every pixel of the backdrop and swallowed the tap.
+  Measured before the change in chromium at 390×840: the quick-add sheet starts at y=357, a tap at
+  y=178 left the dialog open, and ESC closed it.
+- **Why:** `components.md` §12 has claimed since the design was written that the sheet "closes on the
+  scrim", and the owner asked for it in his own words on 2026-09-15. Every one of the 38 sheets was
+  missing the way out that every mobile sheet has.
+- **Both ends of the gesture have to be on the scrim.** A `click` is dispatched at the nearest common
+  ancestor of the press and the release, so the wrapper receives one with `target === currentTarget`
+  whenever either end was inside the sheet: a mouse drag or a text selection out of a note dismissed
+  it, and so did a press on the scrim released on the `Save` button — which on quick add threw the
+  draft away without saving anything, since `close()` calls `resetEntry()`. `onPointerDown` and
+  `onPointerUp` on the same wrapper each check that their end landed on the scrim, and the click
+  closes only when both did. That is the rule the platform's own light dismiss (`closedby="any"`)
+  uses, and pointer events cover a finger, a pen and a mouse with one pair of handlers.
+- **Alternative:** closing on `pointerdown` alone. Rejected: it fires before the gesture is over, so a
+  press on the scrim that ends inside the sheet would already have closed it.
+- **Consequence:** `dismissible={false}` still holds — the guard is unchanged, only the element it
+  sits on — and a nested sheet closes alone, because each `<dialog>` brings its own wrapper and the
+  tap never reaches the one below. Five tests in `Sheet.test.tsx` cover it — a tap outside closes; a
+  tap inside does not; a drag out does not; a press outside released inside does not; a sheet that is
+  not dismissible does not — of which two fail if the handler goes back on the dialog. But what broke
+  was **layout**, and jsdom has none: the guard that would have caught it is the coordinate tap in
+  `tests/e2e/quick-add.spec.ts`, a real touch tap on the phone project, which fails on both projects
+  if the handler moves back.
+  This is also the first time `DECISIONS.md`'s F-41 entry, which says the scrim dismisses the local
+  mode sheet, is true. The handle on top of the sheet is still inert: what it should do is the half of
+  T-75 that is still a design question.
+
+## 2026-09-15 · A sheet with something typed asks before it lets go (T-78)
+
+- **Decision:** a tap outside a sheet, and ESC, stop closing it when the form inside has something to
+  lose. The sheet asks in place instead: a `warning` alert where the footer was, with **Keep editing**
+  as the primary action — focused, and what ESC answers while the question is up — and **Leave** as the
+  quiet one. **The body goes `inert` behind the question**, which is what actually makes Save
+  unreachable: four of the sheets that report keep their submit inside the body rather than in the
+  footer, so replacing the footer alone left a live Save and a live "Back to list" under the question.
+  The close button is unchanged: it is the deliberate exit and does not ask, which leaves ESC and the X
+  asymmetric on purpose — one is a dismissal, the other a decision.
+- **Why:** the owner's words, after the tap-outside close of T-75 landed the same day — "tocar fuera
+  de un formulario deberia de advertir antes de cerrarlo. algo como estas seguro que quieres salir?".
+  Closing was the new way out, and it threw a half-written movement away in silence.
+- **Only when there is something to lose.** An untouched sheet closes on the first tap. Asking on an
+  empty form would be friction with nothing behind it, and the owner asked for a warning, not a
+  gate. That is the one judgement call in here and the easiest to reverse: `requestClose` reads a
+  single boolean.
+- **Two ways in, because the state lives in two places.** Context flows downward, so a component that
+  renders `<Sheet>` can never report on itself with a hook. A form rendered as a sheet's **child** uses
+  `useUnsavedGuard(dirty)`: `AccountForm` and `CategoryForm` pass React Hook Form's `isDirty`, and
+  `GlobalBudgetForm`, which has no form library, passes `amount !== null`. All three are no-ops on the
+  pages where the same form is not in a sheet. A sheet whose **parent** owns the state takes the
+  `unsaved` prop: quick add, adjust balance, rename, the budget override, the currency and time-zone
+  sheets, the account deletion's typed word, and the sync-conflict sheet — whose typed rename and
+  corrected date resolve an operation written offline, which is the most expensive thing in the app to
+  throw away. The hook alone missed every parent-owned sheet, silently, until it was tried in a
+  browser; several children can report at once, so the sheet keeps a list of who is reporting rather
+  than one flag.
+- **Alternative:** a nested confirmation sheet over the first one. Rejected: a modal whose own
+  dismissal is the thing being questioned is a knot, and the app would have two scrims stacked.
+- **Consequence:** the question resets on the dialog's own `close` event, so a sheet closed by anything
+  else never reopens holding it, and it is also derived from what reported it — a picker that swaps its
+  create form for its list takes the question with it instead of leaving it hanging over the list.
+  `dismissible={false}` sheets are untouched: they never got the tap in the first place. Filters,
+  picker searches and the date and time wheels report nothing — losing a filter costs nothing — so they
+  still close on one tap. The **routes** that hold the big forms (`/transactions/new`, the account,
+  category and budget pages) are not sheets, so none of this reaches them: losing one of those to a
+  Back tap needs a route-level guard, and that is not built.
+- **What each sheet counts as "something to lose" is derived, not re-typed.** Adjust balance asks
+  `input !== null`, which is the same thing its Save button is gated on, so flipping the increase /
+  decrease segment counts; rename asks `!unchanged`, the trimmed and case-folded comparison the button
+  uses; quick add counts the chosen account as well as the amount, the category and the note. Hand-made
+  copies of those conditions were what dropped the sign and the account in the first attempt.
+- **Tested where it gets forgotten.** `Sheet.test.tsx` covers both ways in, both answers, the empty
+  form, the close button and the swap that used to leave the question hanging; and `QuickAddSheet`
+  has its own test that types an amount, taps the scrim and expects the question — the shape of test
+  that would have caught the original miss, which no amount of `Sheet`-in-isolation testing could.
+
+## 2026-09-15 · The phone's bar ends in More, and the sheet behind it is presentational (T-72)
+
+- **Decision:** below 900px the tab bar is Home · Transactions · Add · Budgets · **More**, and More is
+  a button that opens `components/shell/MoreSheet` with Accounts, Stats, Categories, Settings and the
+  user. Accounts gives up its tab. The bar is one list, `TAB_SLOTS`, and what the sheet holds is
+  **derived** from it: `MORE_ITEMS` is `NAV_ITEMS` minus whatever the bar already shows, plus Settings.
+  Adding a tab therefore removes it from the sheet by itself, which is the drift this would otherwise
+  have had for the rest of the product's life.
+- **Why now:** `/stats` and `/stats/trends` had no way in at all below 900px — no link anywhere
+  outside the sidebar — and Categories was three taps deep inside Settings. The owner chose this shape
+  on 2026-09-15 over four alternatives that stay drawn in `design/preview/variants.html`.
+- **Where the counts come from:** `components/**` may not import a feature, so `MoreSheet` takes
+  `accountCount` and `categoryCounts` as props and `AppFrame` reads them — the same route `pendingCount`
+  already takes. Both queries are `enabled` only while the sheet is open, so a closed bar costs nothing,
+  and both go through `lib/local/repository`, so the sheet says the same numbers with no network. Both
+  counts are the server's `pagination.total`, never the length of a page: a capped list would have
+  printed "100" for a user with three hundred (T-38), which is what `fetchCategorySummary` used to do
+  in Settings — it now asks for one row twice, with and without the archived, and subtracts.
+- **Alternative:** letting the bar carry six slots. Rejected with a measurement, drawn in the variants
+  page: at 320px three columns fall to 46px, and in Spanish to 37px, against a 44px minimum the rest of
+  the product holds to.
+- **Consequence:** More carries the selected look while its sheet is open and whenever the screen
+  underneath is one of its four destinations, so the bar never stops saying where you are; taking a
+  destination closes the sheet, because the shell outlives the route. The e2e suite reaches those
+  screens through `tests/e2e/nav.ts`, which takes the sidebar above 900px and More below it.
+
+## 2026-09-15 · Quick add records all three types (T-73)
+
+- **Decision:** the quick sheet opens with a three-way segment — Expense · Income · Transfer, the full
+  form's control minus Adjustment — and the title is "Add". The type tints the amount, swaps the
+  category chips for the ones of that type, and on a transfer drops the category altogether for From
+  and To with the swap button between them. The amount survives a change of type; the category does
+  not, because a category belongs to one type.
+- **Why it cost no backend work:** `POST /transactions/quick` has always taken `type` and both account
+  ids, and `lib/local/outbox/transactions.ts` has always applied the same per-type defaults offline. It
+  was the client that only ever sent an expense.
+- **Where the shape lives:** `features/transactions/schemas.ts`. `QUICK_TYPES` is checked against
+  `QuickAddTransactionInput["type"]` with `satisfies`, which catches a member the contract does not
+  have — it does **not** catch a member the contract gains, so a fourth type in the OpenAPI would be
+  silently absent here until somebody looks. `quickAddInput` is the one place that decides which side
+  the single account goes on, and the sheet no longer builds that payload inline.
+- **Consequence:** the FAB's accessible name is "Add", not "Add expense" — the button no longer only
+  adds an expense, and a name that says otherwise is a message that lies. `nav.addExpense` is gone.
+
+## 2026-09-15 · The bar on top of the quick sheet opens the full form (T-75)
+
+- **Decision:** in quick add the 36×4 bar becomes a 44×4 button named "Open the full form". Tapping it,
+  or dragging it up by at least `EXPAND_DRAG_PX` (16), makes the same jump the "More details" button
+  makes: the amount, the type, the category, the second account and the note travel into "New
+  transaction". In the other 37 sheets the bar stays the `aria-hidden` decoration it always was. The
+  owner chose this on 2026-09-15 over taking the bar out everywhere and over drag-to-dismiss.
+- **Why a `Sheet` prop and not a quick-add component:** the bar is drawn by `Sheet`, so the only way to
+  give it meaning in one sheet is to let that sheet pass the meaning in — `onExpand` plus its
+  `expandLabel`, because the label is user-visible text and belongs to the caller's namespace. A sheet
+  that passes nothing keeps the decorative span, which is what keeps this from leaking into the other 37.
+- **How the tap and the drag do not collide:** the drag is decided on `pointerup` with the pointer
+  captured, so a finger that leaves a 4px-tall bar is still heard. Any movement past `TAP_SLOP_PX`
+  counts as a gesture and marks the flag — **in either direction**, so a pull downwards, which is what
+  the bar looks like it should do everywhere else, opens nothing and its click is swallowed too.
+  Chromium sends that click after a short drag and suppresses it after a long one, so the flag cannot
+  be the only gate: a keyboard activation carries `detail === 0` and skips it, which is what keeps
+  Enter working after a drag that never clicked.
+- **Alternative:** the bar as the dismissal, which is what a bar usually means elsewhere. Rejected by
+  the owner; it also collided with the tap outside that had just been fixed the same day.
+- **Consequence:** the hit area is 64×28 around the 4px bar, because a 4px target is not one; the bar
+  is still never the only way in, so "More details" stays. `vitest.setup.ts` now shims pointer capture,
+  which jsdom does not implement.

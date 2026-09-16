@@ -26,6 +26,19 @@ if (typeof HTMLDialogElement !== "undefined" && !HTMLDialogElement.prototype.sho
   };
 }
 
+// jsdom implements no pointer capture; the bar that opens the full form (T-75) takes one.
+if (typeof Element !== "undefined" && !Element.prototype.setPointerCapture) {
+  Element.prototype.setPointerCapture = function setPointerCapture() {
+    return undefined;
+  };
+  Element.prototype.releasePointerCapture = function releasePointerCapture() {
+    return undefined;
+  };
+  Element.prototype.hasPointerCapture = function hasPointerCapture() {
+    return false;
+  };
+}
+
 // F-87: jsdom has no matchMedia, and nothing is standalone unless a test says so.
 if (typeof window !== "undefined" && !window.matchMedia) {
   window.matchMedia = (query: string) => ({

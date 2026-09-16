@@ -10,7 +10,8 @@
 - **Amounts:** `font-variant-numeric: tabular-nums`; the currency symbol in `--text-3` and smaller;
   `−` (U+2212) for money out, `+` for income, no sign on transfers, `±` on adjustments. Formatted with
   `Intl.NumberFormat(locale, { currency })`, with no decimals where the currency has no minor unit
-  (COP, JPY…).
+  (COP, JPY…). **How many decimals a currency has is the app's answer (`lib/format/currency.ts`),
+  never the device's.**
 - **Space:** a grid of 4 (`--sp-1…16`). Page padding 16 on mobile, 24 on tablet, 32 on desktop.
   Sections are 20 or 24 apart.
 - **Radii:** 6 sm (badges, kbd) · 10 md (buttons, fields, nav links) · 14 lg (cards) · 20 xl (modals)

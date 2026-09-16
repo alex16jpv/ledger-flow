@@ -3,7 +3,7 @@ import { type ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "./cn";
 
 export type ButtonVariant =
-  "primary" | "secondary" | "soft" | "ghost" | "danger" | "dangerSolid" | "ink";
+  "primary" | "secondary" | "soft" | "ghost" | "danger" | "dangerGhost" | "dangerSolid" | "ink";
 export type ButtonSize = "sm" | "md" | "lg";
 
 export interface ButtonStyleProps {
@@ -21,6 +21,7 @@ const VARIANT: Record<ButtonVariant, string> = {
   soft: "border-transparent bg-brand-soft text-brand-text",
   ghost: "border-transparent bg-transparent text-text-2 hover:bg-surface-2 hover:text-text",
   danger: "border-transparent bg-danger-soft text-danger",
+  dangerGhost: "border-transparent bg-transparent text-danger hover:bg-danger-soft",
   dangerSolid: "border-transparent bg-danger-solid text-on-brand",
   ink: "border-transparent bg-ink text-on-ink",
 };

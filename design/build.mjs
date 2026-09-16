@@ -49,13 +49,33 @@ const amount = (v, kind = "expense", cls = "") => {
 const tile = (icon, color, size = "") =>
   `<span class="tile ${size} color-${color}">${iconSvg(icon)}</span>`;
 
-const tab = (icon, label, active = false, dot = false) =>
-  `<a class="tab${active ? " active" : ""}" href="#">${iconSvg(icon)}<span>${label}</span>${dot ? "<i class=dot></i>" : ""}</a>`;
+const TAB_FOR = {
+  inicio: ["house", "Home"],
+  mov: ["list", "Transactions"],
+  pres: ["chart-pie", "Budgets"],
+  cuentas: ["wallet", "Accounts"],
+  mas: ["ellipsis", "More"],
+};
 
-const tabbar = (active) => `<nav class="tabbar" aria-label="Navegación">
-${tab("house", "Home", active == "inicio")}${tab("list", "Transactions", active == "mov", true)}
-<div class="fab-slot"><button class="fab" aria-label="Add expense">${iconSvg("plus")}</button></div>
-${tab("chart-pie", "Budgets", active == "pres")}${tab("wallet", "Accounts", active == "cuentas")}</nav>`;
+const tab = (key, active = false) => {
+  const [icon, label] = TAB_FOR[key];
+  const dot = key == "mov" ? "<i class=dot></i>" : "";
+  return `<a class="tab${active ? " active" : ""}" href="#">${iconSvg(icon)}<span>${label}</span>${dot}</a>`;
+};
+
+const navBar = (keys, active) =>
+  `<nav class="tabbar" aria-label="Navegación"${keys.length === 5 ? "" : ` style="grid-template-columns:repeat(${keys.length},1fr)"`}>
+${keys
+  .map((k) =>
+    k === null
+      ? `<div class="fab-slot"><button class="fab" aria-label="Add">${iconSvg("plus")}</button></div>`
+      : tab(k, k === active),
+  )
+  .join("")}</nav>`;
+
+// T-72 · the phone's bar ends in More; Accounts moved into the sheet it opens.
+const tabbar = (active) => navBar(["inicio", "mov", null, "pres", "mas"], active);
+const barBeforeMore = (active) => navBar(["inicio", "mov", null, "pres", "cuentas"], active);
 
 const navlink = (icon, label, active = false, count = null) => {
   const c = count ? `<span class="count">${count}</span>` : "";
@@ -225,7 +245,7 @@ const stackCols = (cols, o = {}) => {
 };
 
 const trend = (series, o = {}) => {
-  const { height = 120, max: mx, marks = [], label = "Trend" } = o;
+  const { height = 120, max: mx, marks = [], label = "Trend", active = -1, tip = "" } = o;
   const W = 300;
   const H = 100;
   const span = o.span ?? Math.max(...series.map((s) => s.points.length));
@@ -266,7 +286,25 @@ const trend = (series, o = {}) => {
         `<path class="line ${m.cls ?? "limit"}" d="M0 ${round(H - pct(m.at, top))} L${W} ${round(H - pct(m.at, top))}"/>`,
     )
     .join("");
-  return `<svg class="trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${height}px" role="img" aria-label="${label}">${rules}${lines}${dots}</svg>`;
+  const marker =
+    active < 0
+      ? ""
+      : `<path class="line guide" d="M${at(0, active)[0]} 0 L${at(0, active)[0]} ${H}"/>` +
+        series
+          .filter((s) => s.points[active] !== null && s.points[active] !== undefined)
+          .map((s) => {
+            const [x, y] = at(s.points[active], active);
+            return `<circle class="dot ${s.cls ?? ""}" cx="${x}" cy="${y}" r="3.5"/>`;
+          })
+          .join("");
+  const svg = `<svg class="trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${height}px" role="img" aria-label="${label}">${rules}${lines}${marker}${dots}</svg>`;
+  const bubble = active < 0 ? "" : `<span class="trend-tip" aria-hidden="true">${tip}</span>`;
+  const half = 100 / (2 * (span - 1));
+  const bands = Array.from({ length: span }, (_, i) => {
+    const width = i === 0 || i === span - 1 ? half : half * 2;
+    return `<span class="band" style="width:${width}%" aria-hidden="true"></span>`;
+  }).join("");
+  return `<span class="trend-wrap" style="height:${height}px">${bubble}${svg}<span class="bands">${bands}</span></span>`;
 };
 
 const heatCal = (values, o = {}) => {
@@ -316,7 +354,14 @@ const weekdayAverages = () => {
   return sums.map((sum, i) => (counts[i] > 0 ? round(sum / counts[i]) : 0));
 };
 
-const home = ({ withSheet = false, unnamed = false, notice = "", chart = false } = {}) => {
+const home = ({
+  unnamed = false,
+  notice = "",
+  chart = false,
+  nav = null,
+  sheet = "",
+  statsLink = false,
+} = {}) => {
   const bars = [
     [30, ""],
     [55, ""],
@@ -381,10 +426,13 @@ ${installRisk}
 <span class="hstack" style="gap:8px;margin-top:4px"><button class="btn primary sm">${iconSvg("download", "sm")}Install</button><button class="btn secondary sm">How</button><button class="btn ghost sm">Not now</button></span>
 </span></section>`
     : "";
-  const stats = `<section class="stats">
+  const statsHead = statsLink
+    ? '<div class="section-head mobile-only"><h3 class="h3">Stats</h3><a class="link" href="#">See all</a></div>'
+    : "";
+  const stats = `${statsHead}<section class="stats">
 <div class="card stat"><span class="k">Total balance</span><span class="v amount">${money(11258600)}</span><span class="d faint">4 accounts</span></div>
 <div class="card stat"><span class="k">Income this month</span><span class="v amount income">${money(4200000, "+")}</span><span class="d up">${iconSvg("trending-up", "sm")}Same as August</span></div>
-<div class="card stat desktop-only"><span class="k">Estimated savings</span><span class="v amount">${money(2915700)}</span><span class="d faint">Income − spending</span></div>
+<div class="card stat wide-only"><span class="k">Estimated savings</span><span class="v amount">${money(2915700)}</span><span class="d faint">Income − spending</span></div>
 </section>`;
   const bud = (name, spent, limit, note, warn = "") => {
     const [ic, col] = CATS[name];
@@ -421,23 +469,68 @@ ${row("car", "BLUE", "Uber to work", "Yesterday 18:10 · Visa Gold", 18400)}
 <div class="actions"><button class="btn ghost icon-only round desktop-only" aria-label="Search">${iconSvg("search")}</button>${av}</div></header>`;
   const mobile = `${header}${pend}${installCard}${hero}${stats}${budgetsSection}${accountsSection}${recent}`;
   const desk = `${header}${pend}${installCard}<div class="grid-main"><div class="stack" style="gap:20px">${hero}${stats}${recent}</div><div class="stack" style="gap:20px">${budgetsSection}${accountsSection}</div></div>`;
-  const sheet = withSheet ? quickSheet() : "";
   return `<div class="shell">${sidebar("inicio")}<main class="main">
 <div class="page mobile-only">${mobile}</div><div class="page desktop-only">${desk}</div>
-</main>${tabbar("inicio")}</div>${sheet}`;
+</main>${nav ?? tabbar("inicio")}</div>${sheet}`;
 };
 
-const quickSheet =
-  () => `<div class="scrim"><div class="sheet" role="dialog" aria-label="Add expense">
-<div class="handle"></div>
-<div class="sheet-head"><span class="h3">Add expense</span><button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button></div>
-<div class="amount-input"><span class="cur">$</span><span class="num">12,500</span><span class="caret"></span></div>
-<div class="stack-sm"><span class="label">Category <span class="opt">optional · you can add it later</span></span>
-<div class="chips">${catChip("Food", true)}${catChip("Coffee")}${catChip("Transport")}${catChip("Lifestyle")}${catChip("Bills")}<button class="chip">${iconSvg("ellipsis", "sm")}More</button></div></div>
-<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">From your main account</span><span class="val">Bancolombia · $3,420,500</span></span>${iconSvg("chevron-down", "sm")}</button>
-<div class="input"><span class="placeholder" style="flex:1">Quick note (optional)</span>${iconSvg("notebook-pen", "sm")}</div>
-<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">More details</button><button class="btn primary lg" style="flex:1.4">Save</button></div>
-</div></div>`;
+const quickPicker = (label, value, icon, color) =>
+  `<button class="picker">${tile(icon, color, "sm")}<span class="body"><span class="lbl">${label}</span><span class="val">${value}</span></span>${iconSvg("chevron-down", "sm")}</button>`;
+
+const QUICK_NOTE = `<div class="input"><span class="placeholder" style="flex:1">Quick note (optional)</span>${iconSvg("notebook-pen", "sm")}</div>`;
+const QUICK_BUTTONS = `<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">More details</button><button class="btn primary lg" style="flex:1.4">Save</button></div>`;
+
+// The one quick sheet every quick-add plate is drawn from: T-73 adds `type`, T-75 changes `handle`.
+const quickSheet = ({ handle = "plain", type = null, head = null, extra = "", over = "" } = {}) => {
+  const title = "Add";
+  const bar = {
+    plain: '<div class="handle"></div>',
+    none: "",
+    wide: '<button class="handle" aria-label="Open the full form" style="border:0;cursor:grab;display:block;width:44px"></button>',
+    grab: '<button class="handle" aria-label="Close" style="border:0;cursor:grab;display:block"></button>',
+  }[handle];
+  const seg =
+    type === null
+      ? ""
+      : `<div class="segment">${[
+          ["expense", "Expense", ""],
+          ["income", "Income", "income"],
+          ["transfer", "Transfer", "transfer"],
+        ]
+          .map(
+            ([k, label, cls]) =>
+              `<button aria-pressed="${String(k === type)}" class="${cls}">${label}</button>`,
+          )
+          .join("")}</div>`;
+  const tint = { income: " amount income", transfer: " amount transfer" }[type] ?? "";
+  const amount = `<div class="amount-input"><span class="cur">$</span><span class="num${tint}">12,500</span><span class="caret"></span></div>`;
+  const chips =
+    type === "income"
+      ? `${catChip("Salary", true)}${catChip("Business")}${catChip("Other income")}`
+      : `${catChip("Food", true)}${catChip("Coffee")}${catChip("Transport")}${catChip("Lifestyle")}${catChip("Bills")}`;
+  const cats =
+    type === "transfer"
+      ? ""
+      : `<div class="stack-sm"><span class="label">Category <span class="opt">optional · you can add it later</span></span>
+<div class="chips">${chips}<button class="chip">${iconSvg("ellipsis", "sm")}More</button></div></div>`;
+  const accounts =
+    type === "transfer"
+      ? `<div class="stack-sm">${quickPicker("From", "Bancolombia · $3,420,500", "landmark", "BLUE")}
+<div style="display:flex;justify-content:center;margin:-4px 0"><button class="btn secondary icon-only sm round" aria-label="Swap">${iconSvg("arrow-left-right", "sm")}</button></div>
+${quickPicker("To", "Savings · $8,900,000", "piggy-bank", "GREEN")}</div>`
+      : quickPicker(
+          type === "income" ? "Into your main account" : "From your main account",
+          "Bancolombia · $3,420,500",
+          "landmark",
+          "BLUE",
+        );
+  const sheetHead =
+    head ??
+    `<div class="sheet-head"><span class="h3">${title}</span><button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button></div>`;
+  return `<div class="scrim"><div class="sheet" role="dialog" aria-label="${title}">
+${bar}${sheetHead}${seg}${amount}${cats}${accounts}${QUICK_NOTE}${extra}${QUICK_BUTTONS}
+</div>${over}</div>`;
+};
 
 const transactionForm = (kind = "EXPENSE") => {
   const seg = [
@@ -741,6 +834,7 @@ const screen = (body, o = {}) => {
     narrow = false,
     sheet = "",
     banner = "",
+    nav = null,
   } = o;
   let header;
   if (back !== null) {
@@ -751,7 +845,7 @@ const screen = (body, o = {}) => {
     header = "";
   }
   const mw = narrow ? ' style="max-width:640px"' : "";
-  return `<div class="shell">${sidebar(side)}<main class="main">${banner}<div class="page"${mw}>${header}${body}</div></main>${tabbar(tabName)}</div>${sheet}`;
+  return `<div class="shell">${sidebar(side)}<main class="main">${banner}<div class="page"${mw}>${header}${body}</div></main>${nav ?? tabbar(tabName)}</div>${sheet}`;
 };
 
 const field = (label, value = null, placeholder = null, o = {}) => {
@@ -1021,16 +1115,20 @@ const accountCard = (name, typ, color, bal, isDefault = false, neg = false, arch
 <div><div class="amount-lg amount">${neg ? "−" : ""}${money(bal)}</div><div class="type">${ACCT_TYPE_LABEL[typ]}</div></div></a>`;
 };
 
-const accounts = () => {
-  const body = `<div class="card" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div class="stat"><span class="k">Total balance</span><span class="amount-hero" style="font-size:32px">${money(11258600)}</span><span class="small faint">4 accounts activas · 1 archivada</span></div><div class="stat" style="text-align:right;align-items:flex-end"><span class="k">Deuda en tarjetas</span><span class="amount-lg amount">${money(1245900, "−")}</span></div></div>
+const accounts = ({ actions = null, sheet = "", nav = null } = {}) => {
+  const body = `<div class="card" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div class="stat"><span class="k">Total balance</span><span class="amount-hero" style="font-size:32px">${money(11258600)}</span><span class="small faint">4 active accounts · 1 archived</span></div><div class="stat" style="text-align:right;align-items:flex-end"><span class="k">Card debt</span><span class="amount-lg amount">${money(1245900, "−")}</span></div></div>
 <div class="acct-grid">${ACCOUNTS.map((a) => accountCard(...a)).join("")}</div>
 <button class="card hstack" style="justify-content:space-between;cursor:pointer;text-align:left;padding:12px 16px"><span class="hstack">${iconSvg("archive")}<span style="font-weight:500">Archived</span><span class="badge">1</span></span>${iconSvg("chevron-down", "sm")}</button>
 <div class="acct-grid">${accountCard("Nequi", "OTHER", "PINK", 0, false, false, true)}</div>`;
   return screen(body, {
+    nav,
     tab: "cuentas",
     side: "cuentas",
     title: "Accounts",
-    actions: `<button class="btn primary desktop-only">${iconSvg("plus", "sm")}New account</button><button class="btn secondary icon-only round mobile-only" aria-label="New account">${iconSvg("plus")}</button>`,
+    actions:
+      actions ??
+      `<button class="btn primary desktop-only">${iconSvg("plus", "sm")}New account</button><button class="btn secondary icon-only round mobile-only" aria-label="New account">${iconSvg("plus")}</button>`,
+    sheet,
   });
 };
 
@@ -1262,9 +1360,13 @@ const budgetPaceCard = () => {
         span: SEP_DAYS + 1,
         marks: [{ at: BUD_LIMIT }],
         label: "Spent so far against the period's pace, and where it ends at this rate",
+        active: 12,
+        tip: `Day 12 \u00b7 Spent ${money(cum[12])} \u00b7 Expected ${money(pace[12])}`,
+        span: SEP_DAYS + 1,
       },
     )}
 <div class="axis marked"><span style="left:0;transform:none">Sep 1</span><span style="left:${round((TODAY / SEP_DAYS) * 100)}%">today</span><span style="left:100%;transform:translateX(-100%)">Sep 30</span></div>
+${readout(`Day 12 \u00b7 Spent ${money(cum[12])} \u00b7 Expected ${money(pace[12])}`)}
 <p class="small muted" style="margin:0">At this rate you finish the period at <b class="amount">${money(endsAt)}</b> — <b class="amount" style="color:var(--danger)">${money(endsAt - BUD_LIMIT)}</b> over the limit.</p>
 <span class="legend row"><span class="li"><i class="dot" style="background:var(--danger)"></i>Spent</span><span class="li"><i class="dot line"></i>Pace</span><span class="li"><i class="dot line" style="background:var(--danger);opacity:.55"></i>Where it ends</span><span class="li"><i class="dot line" style="background:var(--danger)"></i>Limit</span></span>`,
     { right: `<span class="badge danger">${iconSvg("trending-up")}Over</span>` },
@@ -1366,6 +1468,7 @@ ${chartCard(
     },
   )}
 <div class="axis marked"><span style="left:0;transform:none">Sep 1</span><span style="left:100%;transform:translateX(-100%)">Sep 30</span></div>
+${readout(`Day 1 \u00b7 Spent ${money(12400)} \u00b7 Expected ${money(round(BUD_LIMIT / SEP_DAYS))}`)}
 <p class="small muted" style="margin:0">It is day 1 of the period: one day of spending says nothing about where it ends.</p>
 <span class="legend row"><span class="li"><i class="dot" style="background:var(--brand)"></i>Spent</span><span class="li"><i class="dot line"></i>Pace</span><span class="li"><i class="dot line" style="background:var(--danger)"></i>Limit</span></span>`,
 )}
@@ -1685,6 +1788,16 @@ const trends = ({ months = 6, state = "" } = {}) => {
   let augRunning = 0;
   const augCum = scaleTo(augShape, round((1855000 * TODAY) / 31)).map((v) => (augRunning += v));
   const diff = round(((sepCum[TODAY - 1] - augCum[TODAY - 1]) / augCum[TODAY - 1]) * 100);
+  // Both curves start at the origin, like the app's: index n is the end of day n.
+  const sepLine = [0, ...sepCum];
+  const augLine = [0, ...augCum];
+  const comparisonTip = (day, month = "Sep", previous = "Aug") => {
+    const here = sepCum[day - 1];
+    const there = augCum[day - 1];
+    const change = there > 0 ? Math.round(((here - there) / there) * 100) : 0;
+    const sign = change === 0 ? "" : ` \u00b7 ${change < 0 ? "\u2212" : "+"}${Math.abs(change)} %`;
+    return `Day ${day} \u00b7 ${month} ${money(here)} \u00b7 ${previous} ${money(there)}${sign}`;
+  };
   const offset = MONTHS6.length - MONTHS.length;
   const last = MONTHS.length - 1;
   const mix = MONTHS.map(([n, , exp, partial], i) => [
@@ -1738,23 +1851,30 @@ ${
     ? `<div class="card chart"><span class="eyebrow">August against July</span>
 ${trend(
   [
-    { points: augCum, cls: "ghost" },
-    { points: sepCum, dot: true },
+    { points: augLine, cls: "ghost" },
+    { points: sepLine, dot: true },
   ],
   { height: 120, label: "Spending in August against the same days of July" },
 )}
 ${axis("Day 1", "Day 31")}
+${readout(comparisonTip(TODAY, "Aug", "Jul"))}
 <p class="small muted" style="margin:0">You spent <b class="amount">${money(1855000)}</b> in August — <b>12 % less</b> than in July.</p>
 <span class="legend row"><span class="li"><i class="dot exp"></i>August</span><span class="li"><i class="dot line"></i>July, same days</span></span></div>`
     : `<div class="card chart"><span class="eyebrow">This month against last</span>
 ${trend(
   [
-    { points: augCum, cls: "ghost" },
-    { points: sepCum, dot: true },
+    { points: augLine, cls: "ghost" },
+    { points: sepLine, dot: true },
   ],
-  { height: 120, label: "Spending in September against the same days of August" },
+  {
+    height: 120,
+    label: "Spending in September against the same days of August",
+    active: 12,
+    tip: comparisonTip(12),
+  },
 )}
 ${axis("Day 1", "Day 22")}
+${readout(comparisonTip(12))}
 <p class="small muted" style="margin:0">You have spent <b class="amount">${money(sepCum[TODAY - 1])}</b> so far — <b>${Math.abs(diff)} % ${diff < 0 ? "less" : "more"}</b> than at this point in August.</p>
 <span class="legend row"><span class="li"><i class="dot exp"></i>September</span><span class="li"><i class="dot line"></i>August, same days</span></span></div>`
 }
@@ -1893,6 +2013,17 @@ const state = (kind) => {
       side: "inicio",
       title: "Home",
       sheet: sheetWrap(inner, "Session"),
+    });
+  }
+  if (kind == "sin-guardar") {
+    const inner = `${field("Amount", "$ 12,500")}
+<div class="alert warning">${iconSvg("triangle-alert")}<span><b>Are you sure you want to leave?</b> What you have typed will be lost.</span></div>
+<div class="hstack" style="gap:10px"><button class="btn primary lg" style="flex:1.2">Keep editing</button><button class="btn ghost lg" style="flex:1;color:var(--danger)">Leave</button></div>`;
+    return screen(settingsBodyDim(), {
+      tab: "",
+      side: "cuentas",
+      title: "Accounts",
+      sheet: sheetWrap(inner, "Adjust balance"),
     });
   }
   if (kind == "confirmar") {
@@ -2726,7 +2857,7 @@ const installSheet = (prompt = true) => {
       `<button class="btn primary lg block">${iconSvg("download", "sm")}Install</button>`;
   } else {
     const steps = [
-      `Tap Share ${iconSvg("share", "sm")}`,
+      `Tap Share ${iconSvg("upload", "sm")}`,
       "Choose “Add to Home Screen”",
       "Confirm with “Add”",
     ]
@@ -2861,6 +2992,64 @@ const recurringVariant = (kind) => {
 
 // Everything below is the preview itself — navigation, search, dates — not the app's design.
 
+// T-72 · what the More tab opens; `withAccounts` false is the discarded avatar variant.
+const navMenuSheet = (withAccounts) => {
+  const acc = withAccounts ? settingsRow("wallet", "Accounts", "4 accounts", "", "BLUE") : "";
+  return sheetWrap(
+    `<div class="list card flush">${acc}${settingsRow("chart-column", "Stats", "Where the money went", "", "TEAL")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}${settingsRow("settings", "Settings", "Profile, currency, appearance", "", "GRAY")}</div>
+<div class="list card flush"><a class="row" href="#"><span class="avatar" style="width:32px;height:32px;font-size:12px">JD</span><span class="body"><span class="title">John Doe</span><span class="meta">john@example.com</span></span>${iconSvg("chevron-right", "sm")}</a></div>`,
+    "More",
+  );
+};
+
+const mobileNavVariant = (kind) => {
+  if (kind === "see-all") return home({ statsLink: true, nav: barBeforeMore("inicio") });
+  if (kind === "more-tab")
+    return home({ nav: navBar(["inicio", "mov", null, "pres", "mas"], "inicio") });
+  if (kind === "more-sheet")
+    return home({
+      nav: navBar(["inicio", "mov", null, "pres", "mas"], "mas"),
+      sheet: navMenuSheet(true),
+    });
+  if (kind === "six")
+    return home({ nav: navBar(["inicio", "mov", null, "pres", "cuentas", "mas"], "inicio") });
+  return accounts({
+    nav: barBeforeMore("cuentas"),
+    actions: `<button class="btn primary desktop-only">${iconSvg("plus", "sm")}New account</button><button class="btn secondary icon-only round mobile-only" aria-label="New account">${iconSvg("plus")}</button><a class="avatar" href="#" aria-label="More">JD</a>`,
+    sheet: kind === "avatar-open" ? navMenuSheet(false) : "",
+  });
+};
+
+// T-73 · the quick sheet learns the three types; the body is the same one `quickSheet` draws today.
+const quickTypeVariant = (kind) => {
+  if (kind !== "title") return home({ sheet: quickSheet({ type: kind }) });
+  const head = `<div class="sheet-head"><button class="btn ghost sm" aria-expanded="true" style="gap:6px;padding-left:0"><span class="h3">Add expense</span>${iconSvg("chevron-down", "sm")}</button><button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button></div>`;
+  const menu = sheetWrap(
+    `<div class="list card flush">${settingsRow("arrow-down-left", "Expense", "Money leaving an account", `<span class="badge brand">${iconSvg("check")}</span>`, "RED")}${settingsRow("arrow-up-right", "Income", "Money arriving", "", "GREEN")}${settingsRow("arrow-left-right", "Transfer", "Between two of your accounts", "", "GRAY")}</div>`,
+    "What are you adding?",
+  );
+  return home({ sheet: quickSheet({ head, over: menu }) });
+};
+
+// T-75 · the 36×4 bar on top of every mobile sheet: gone, or made to mean something.
+const sheetHandleVariant = (kind) => {
+  if (kind === "none") return home({ sheet: quickSheet({ type: "expense", handle: "none" }) });
+  if (kind === "dismiss")
+    return home({
+      sheet: quickSheet({ type: "expense", handle: "grab" })
+        .replace(
+          '<div class="scrim">',
+          '<div class="scrim" style="background:color-mix(in oklab, var(--overlay) 55%, transparent)">',
+        )
+        .replace(
+          '<div class="sheet" role="dialog"',
+          '<div class="sheet" role="dialog" style="transform:translateY(96px)"',
+        ),
+    });
+  const extra = `${field("Date", "Today · 18:10", null, { icon: "calendar" })}${field("Description", "Uber to work", null, { icon: "pencil" })}`;
+  return home({ sheet: quickSheet({ type: "expense", handle: "wide", extra }) });
+};
+
 const plate = (id, title, note, html, o = {}) => ({ id, title, note, html, ...o });
 const plateDay = (p) => p.updated ?? p.added;
 
@@ -2929,6 +3118,13 @@ const PAGES = [
         { added: "2026-09-11" },
       ),
       plate(
+        "more-sheet",
+        "More",
+        "What the last slot of the phone's bar opens: Accounts, Stats, Categories, Settings and the user, each with what it holds. It is the sidebar's list minus what the bar already has, so below 900px nothing is out of reach. Trends is deliberately absent — it is reached from a Stats view and its back arrow points at Stats.",
+        home({ nav: tabbar("mas"), sheet: navMenuSheet(true) }),
+        { added: "2026-09-15" },
+      ),
+      plate(
         "home-without-a-name",
         "Home without a name",
         "Neither the session nor the local mirror knows the name: the greeting loses the comma instead of showing an empty one.",
@@ -2946,9 +3142,23 @@ const PAGES = [
       plate(
         "quick-capture",
         "Quick capture",
-        "The sheet behind the centre button.",
-        home({ withSheet: true }),
-        { added: "2026-09-01" },
+        "The sheet behind the centre button. The three-way segment on top records all three types (T-73) and the bar above it opens the full form (T-75).",
+        home({ sheet: quickSheet({ type: "expense", handle: "wide" }) }),
+        { added: "2026-09-01", updated: "2026-09-15" },
+      ),
+      plate(
+        "quick-capture-income",
+        "Quick capture · income",
+        "The type tints the amount and reconfigures the body: the income categories, and the account row reads “Into your main account”. The amount survives the switch.",
+        home({ sheet: quickSheet({ type: "income", handle: "wide" }) }),
+        { added: "2026-09-15" },
+      ),
+      plate(
+        "quick-capture-transfer",
+        "Quick capture · transfer",
+        "A transfer has no category and two accounts, so the chips give way to From and To with the swap button between them. The two have to differ.",
+        home({ sheet: quickSheet({ type: "transfer", handle: "wide" }) }),
+        { added: "2026-09-15" },
       ),
       plate("full-form-expense", "Full form · expense", "", transactionForm("EXPENSE"), {
         added: "2026-09-01",
@@ -3573,6 +3783,13 @@ const PAGES = [
         { added: "2026-09-01" },
       ),
       plate(
+        "unsaved-before-leaving",
+        "Leaving a form with something typed",
+        "A tap outside a sheet closes it, so a half-written form would go with it. When there is something to lose, the tap does not close: the sheet asks, in place, and “Keep editing” is the primary action. The close button is the deliberate exit and does not ask. A sheet with nothing typed closes on the first tap, as it should.",
+        state("sin-guardar"),
+        { added: "2026-09-15" },
+      ),
+      plate(
         "archive-confirmation",
         "Archive confirmation",
         "Archiving always confirms, saying what is kept.",
@@ -3775,7 +3992,7 @@ const PAGES = [
     file: "variants.html",
     title: "Decided variants",
     group: "Decisions",
-    note: "Alternatives for one component, put side by side so the owner could choose. What was chosen went into the specification and only then got built; what was discarded stays here, because in three months this page is what explains why the app is the way it is.",
+    note: "Alternatives for one component, put side by side so the owner can choose. What he chooses goes into the specification and only then gets built; what he discards stays here, because in three months this page is what explains why the app is the way it is. A plate marked “Waiting on you” is a question still open — nothing about it has been built.",
     plates: [
       plate(
         "account-type-scrolling-row",
@@ -3855,6 +4072,97 @@ const PAGES = [
         { frame: false, added: "2026-09-11", verdict: "chosen" },
       ),
       plate(
+        "mobile-nav-stats-from-home",
+        "No new chrome · Home links to Stats",
+        "The cheapest option, and the one the specification has been claiming for months: Home's three-figure block — the one home.md already calls Stats — gets a section head with the same “See all” that Budgets and Accounts already have, and it goes to Stats. Below 900px only: at 900px the sidebar already has Stats. The bar keeps its five slots, nothing is demoted and no sheet is added; Categories stays where it is, one row inside Settings. Stats is then one tap from Home and two from anywhere else, which is the cost. Every plate below should be priced against this one.",
+        mobileNavVariant("see-all"),
+        { added: "2026-09-15", verdict: "discarded" },
+      ),
+      plate(
+        "mobile-nav-more-tab",
+        "Bottom bar · a More tab where Accounts is",
+        "Five slots, the shape the bar already has. Accounts gives up its tab and everything the phone cannot reach today — Stats, Categories, Settings — lives behind one door that is always in the same place. The price is real: Accounts stops being one tap from anywhere.",
+        mobileNavVariant("more-tab"),
+        { added: "2026-09-15", verdict: "chosen" },
+      ),
+      plate(
+        "mobile-nav-more-sheet",
+        "Bottom bar · what the More tab opens",
+        "The sheet behind More. It covers the bar completely — a sheet is a modal dialog, so the bar underneath it is not visible in the app either; the plate above is where the bar is judged. Its rows are the sidebar's lower half — Stats, Categories, Settings, the user — plus the Accounts row this variant takes out of the bar. Trends is deliberately absent: it is reached from a Stats view (app-map.md) and its back arrow points at Stats, so a door straight into it would land the user somewhere they never came from. The same sheet serves the variant below, without the Accounts row.",
+        mobileNavVariant("more-sheet"),
+        { added: "2026-09-15", verdict: "chosen" },
+      ),
+      plate(
+        "mobile-nav-avatar-closed",
+        "The avatar opens it · the bar untouched",
+        "Nothing about the bar changes — Home, Transactions, the Add button, Budgets and Accounts, with the four labels they have today — and the avatar, which today sits in Home's header alone and goes straight to Settings, appears in every page header instead. Drawn here on Accounts, a screen with no way to Stats at all today.",
+        mobileNavVariant("avatar"),
+        { added: "2026-09-15", verdict: "discarded" },
+      ),
+      plate(
+        "mobile-nav-avatar-menu",
+        "The avatar opens it · the sheet",
+        "The same sheet as the More tab, without the Accounts row, because Accounts keeps its tab here. Nothing is demoted and the bar stays at five slots; the cost is that the way in is a 36px circle in a corner instead of a labelled tab — under the same 44px minimum the six-slot bar is judged by, and a habit to learn rather than one to read.",
+        mobileNavVariant("avatar-open"),
+        { added: "2026-09-15", verdict: "discarded" },
+      ),
+      plate(
+        "mobile-nav-six-slots",
+        "Bottom bar · six slots",
+        "Everything stays visible and More is added on the end. Measured in this frame, and the cost is not clipping — it is the size of what you tap. <b>At 390px</b> the columns are already uneven: “Transactions” holds 65px and the other five get 62px, against 75px each in the five-slot bar above. <b>At 360px</b> they are 65 and 56, against 69. <b>At 320px</b> three columns are down to 46px — two above the 44px minimum the rest of the product uses for a control, where the five-slot bar still has 60px. <b>In Spanish</b> it breaks the rule: “Movimientos” and “Presupuestos” hold 66 and 69px, and at 320px three columns fall to 37, 37 and 43px. Nothing actually clips until about 281px in English and 296px in Spanish, below any phone.",
+        mobileNavVariant("six"),
+        { added: "2026-09-15", verdict: "discarded" },
+      ),
+      plate(
+        "quick-add-type-segment-expense",
+        "Quick add · a type segment, expense",
+        "The same three-way control the full form already has, minus Adjustment, at the top of the sheet. The title stops saying “Add expense” because the sheet is no longer only that; the amount stays unsigned, as it is today, and only its colour says which type is selected. The server needs nothing: `POST /transactions/quick` accepts `type` (INCOME, EXPENSE, TRANSFER) and both account ids today, and the offline queue already applies the same per-type rules (`lib/local/outbox/transactions.ts`), so this is a UI change with no sync work behind it.",
+        quickTypeVariant("expense"),
+        { added: "2026-09-15", verdict: "chosen" },
+      ),
+      plate(
+        "quick-add-type-segment-income",
+        "Quick add · the same sheet on income",
+        "Income reconfigures what is underneath: the amount turns green, the chips are the income categories — three, because that is all the demo data has; the app offers the five most used — and the account row reads “Into your main account”. Same height, same number of taps.",
+        quickTypeVariant("income"),
+        { added: "2026-09-15", verdict: "chosen" },
+      ),
+      plate(
+        "quick-add-type-segment-transfer",
+        "Quick add · the same sheet on transfer",
+        "A transfer has no category and two accounts, so the chips give way to From/To with the swap button — the full form's arrangement, in the sheet. This is the type that decides whether quick add can hold all three: if the body has to change this much, the segment belongs at the top, where a change of type is expected.",
+        quickTypeVariant("transfer"),
+        { added: "2026-09-15", verdict: "chosen" },
+      ),
+      plate(
+        "quick-add-type-in-title",
+        "Quick add · the title is the switch",
+        "No segment: the title becomes a menu, drawn here open. It costs no vertical space, which on a phone with the keyboard up is the scarce thing, and the sheet keeps its height and its body — only the title gains a chevron. Its real price is drawn too: the app has no menu primitive — every overlay is a native dialog through `Sheet` — so choosing one of three types is a second sheet on top of the first, which is two taps to do what the segment does in one. And the obvious shortcut is already taken: holding the FAB means “keep the sheet open for another one” (`HOLD_TO_CHAIN_MS`), so a long-press cannot pick the type.",
+        quickTypeVariant("title"),
+        { added: "2026-09-15", verdict: "discarded" },
+      ),
+      plate(
+        "sheet-handle-removed",
+        "Sheet · no bar at all",
+        "The 36×4 bar goes from every mobile sheet — 38 of them across the app, not only this one. Nothing is promised, so nothing is broken: the rounded top and the close button carry the sheet on their own, and the app stops drawing a control that does nothing. It is the cheapest honest answer, and it also removes a gesture people will keep trying.",
+        sheetHandleVariant("none"),
+        { added: "2026-09-15", verdict: "discarded" },
+      ),
+      plate(
+        "sheet-handle-drag-to-dismiss",
+        "Sheet · the bar closes the sheet",
+        "The bar becomes what it looks like everywhere else: drag down and the sheet goes — drawn here 96px into the gesture, with the scrim already fading. One behaviour for all 38 sheets, the affordance people expect, and the bar gets a real accessible name (“Close”) so a keyboard and a screen reader get the same exit the finger does. Two costs to weigh: at 36×4 the bar is a 4px-tall target, so the close button has to stay whatever happens, and the drag needs the zero-motion branch the rest of the product honours for `prefers-reduced-motion`.",
+        sheetHandleVariant("dismiss"),
+        { added: "2026-09-15", verdict: "discarded" },
+      ),
+      plate(
+        "sheet-handle-drag-to-expand",
+        "Quick add · the bar opens the full form",
+        "His choice, 2026-09-15: «me parece bien la opcion de si se arrastra o se clickea se expande el formulario a su version completa». Drag the bar up — or just tap it — and quick add grows into the full transaction form — the date and the description arrive here, tags and the note come with a taller sheet — carrying the amount, the category and the note already typed. It is the same jump the “More details” button already makes, so the gesture is a shortcut and never the only way. What it costs: the bar means something in quick add and nothing in the other 37 sheets, and at 4px tall it cannot be the only way in, so “More details” stays. It is drawn wider here — 44×4 instead of 36×4 — because a bar you can tap has to look like one.",
+        sheetHandleVariant("expand"),
+        { added: "2026-09-15", verdict: "chosen" },
+      ),
+      plate(
         "pace-mark-tooltip-only",
         "Pace mark · tooltip only",
         "The mark can be focused with the keyboard and says the pace on hover or focus.",
@@ -3874,6 +4182,7 @@ const PAGES = [
 
 const ALL_PLATES = PAGES.flatMap((page) => (page.plates ?? []).map((p) => ({ ...p, page })));
 const IN_REVIEW = ALL_PLATES.filter((p) => p.review);
+const OPEN = ALL_PLATES.filter((p) => p.verdict === "open");
 const LATEST = [...ALL_PLATES].map(plateDay).sort().at(-1);
 
 const GROUPS = ["Foundations", "Screens", "States", "Decisions"];
@@ -3908,7 +4217,7 @@ const sideNav = (current) => {
   return `<aside class="pv-side">
 <div class="pv-search"><input id="pv-q" type="search" placeholder="Search a screen or a state" autocomplete="off" aria-label="Search"><div id="pv-results" class="pv-results" hidden></div></div>
 <nav class="pv-nav">
-<div class="pv-group">${link("index.html", "Start here")}${link("in-review.html", "In review", IN_REVIEW.length, IN_REVIEW.length > 0 ? " waiting" : "")}${link("changes.html", "What changed")}</div>
+<div class="pv-group">${link("index.html", "Start here")}${link("in-review.html", "Waiting on you", IN_REVIEW.length + OPEN.length, IN_REVIEW.length + OPEN.length > 0 ? " waiting" : "")}${link("changes.html", "What changed")}</div>
 ${groups}
 </nav></aside>`;
 };
@@ -3920,7 +4229,8 @@ const plateArticle = (p) => {
       : "") +
     (p.review ? '<span class="pv-badge review">In review</span>' : "") +
     (p.verdict === "chosen" ? '<span class="pv-badge chosen">Chosen</span>' : "") +
-    (p.verdict === "discarded" ? '<span class="pv-badge">Not chosen</span>' : "");
+    (p.verdict === "discarded" ? '<span class="pv-badge">Not chosen</span>' : "") +
+    (p.verdict === "open" ? '<span class="pv-badge open">Waiting on you</span>' : "");
   const body =
     p.frame === false ? p.html : `<div class="device"><div class="app">${p.html}</div></div>`;
   const cls = `pv-item${p.frame === false ? " plain" : ""}${p.wide ? " wide" : ""}`;
@@ -3961,7 +4271,7 @@ const startHere = () => {
 <div class="pv-cards">
 <section class="pv-card wide"><h2 class="pv-h2">Where to start</h2>
 <ul class="pv-list">
-<li><a href="in-review.html">In review</a> — what is waiting on a decision of yours. Once you approve it, it moves to the screen it belongs to and this page empties.</li>
+<li><a href="in-review.html">Waiting on you</a> — the drafts being worked on and the questions drawn more than one way. Choose, and the answer goes into the specification while the rest stays on <a href="variants.html">Decided variants</a>.</li>
 <li><a href="changes.html">What changed</a> — every plate by the day it arrived, newest first.</li>
 <li><a href="foundations.html">Foundations</a> — the colour system, the type scale and the icons everything else is built from.</li>
 </ul></section>
@@ -3976,14 +4286,24 @@ const startHere = () => {
 };
 
 const inReview = () => {
-  const main = `<h1 class="pv-h1">In review</h1>
-<p class="pv-note">Anything being worked on lands here, and only here, until it is decided. Look at it, ask for corrections, and once it is right it moves to the screen it belongs to — and this page is empty again, ready for the next one.</p>
-${
-  IN_REVIEW.length === 0
-    ? `<div class="pv-empty">${iconSvg("check")}<span class="pv-h2">Nothing is waiting on you</span><p>Every design has been decided and lives on its own page. The last one landed on ${LATEST}.</p></div>`
-    : `<div class="pv-grid">${IN_REVIEW.map(plateArticle).join("")}</div>`
-}`;
-  return shellPage("In review", main, "in-review.html");
+  const questions =
+    OPEN.length === 0
+      ? ""
+      : `<section class="pv-card wide"><h2 class="pv-h2">${OPEN.length} questions with more than one answer</h2>
+<p>Each of these is drawn two or more ways on <a href="variants.html">Decided variants</a>, side by side, so they can be compared. Pick one and it goes into the specification; the others stay there as the record of why.</p>
+<ul class="pv-list">${OPEN.map((q) => `<li><a href="variants.html#${q.id}">${q.title}</a> — an answer to ${q.asks}</li>`).join("")}</ul></section>`;
+  const drafts =
+    IN_REVIEW.length === 0
+      ? ""
+      : `<h2 class="pv-h2">Being worked on</h2><div class="pv-grid">${IN_REVIEW.map(plateArticle).join("")}</div>`;
+  const nothing =
+    IN_REVIEW.length === 0 && OPEN.length === 0
+      ? `<div class="pv-empty">${iconSvg("check")}<span class="pv-h2">Nothing is waiting on you</span><p>Every design has been decided and lives on its own page. The last one landed on ${LATEST}.</p></div>`
+      : "";
+  const main = `<h1 class="pv-h1">Waiting on you</h1>
+<p class="pv-note">Two kinds of thing land here: a draft being worked on, which moves to the screen it belongs to once it is right, and a question drawn several ways, which waits for you to choose one. Nothing on this page has been built.</p>
+${questions}${drafts}${nothing}`;
+  return shellPage("Waiting on you", main, "in-review.html");
 };
 
 const whatChanged = () => {

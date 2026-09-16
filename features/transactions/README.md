@@ -8,8 +8,15 @@ W-17 adds quick capture: `useQuickAdd` posts to `POST /transactions/quick` with 
 was chosen too) and invalidates every money domain (`lib/query/domains.ts`). `useDeleteTransaction`
 backs the toast's Undo. The sheet itself is composed in the app layer
 (`app/[locale]/(app)/QuickAddSheet.tsx`) because it needs the category and account pickers of other
-features; `draftToSearchParams` carries what was typed to the full form when the user asks for
-"More details".
+features; `draftToSearchParams` carries what was typed to the full form — through "More details", and
+since T-75 through the bar on top of the sheet as well.
+
+T-73 gives that sheet the three types the endpoint has always accepted. `schemas.ts` owns the shape:
+`QUICK_TYPES` comes from `QuickAddTransactionInput["type"]`, `quickAddSchema` checks a transfer's two
+sides in `superRefine` (both present, and different), and `quickAddInput` decides which side the one
+account goes on — `fromAccountId` for an expense, `toAccountId` for an income, both for a transfer.
+Nothing behind it changed: the server and the offline queue applied these same per-type defaults
+already. The draft the full form receives carries the type and the second account too.
 
 W-18 adds the full form model in `form.ts`: one Zod schema for the four types (the account side
 rules live in `superRefine`), `toTransactionInput` maps the form to the API payload (explicit

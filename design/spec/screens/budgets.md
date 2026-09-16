@@ -25,6 +25,7 @@
 - **The one-amount sheet** behind that call to action is titled after the period ("A ceiling for the
   week"), asks for a "Weekly amount" and creates the global budget of that period; the suggested
   amounts are last month's spending scaled to the period's length. Its note drops "any month" for
-  "in any period", which is true whatever the period is.
+  "in any period", which is true whatever the period is. It shows no swatches, and the budget it
+  creates still takes one of the 16 colours at random — see [color.md](../color.md).
 - **"Custom" has no sheet:** its window is two dates the user picks, so there the call to action is a
   link to New budget with the period already selected.

@@ -30,7 +30,9 @@ still be acted on.
   period's pace, with the limit as a dashed `--danger` rule and, from today onwards, **where it ends at
   this rate**. One sentence says it in words: "At this rate you finish the period at $485,500 — $185,500
   over the limit." A projection is drawn as a projection: dashed, starting at today, never joined to the
-  real line as if it had happened.
+  real line as if it had happened. **Pointing at a day reads every line at it** — "Day 12 · Spent
+  $412,000 · Expected $480,000" — in the bubble and in the `readout`, and a day the projection covers
+  says so instead of passing a guess off as spending.
 - **Last six periods**: one column per period, spent against **its own** limit — the limit is a dashed
   cap per column, because an adjusted month does not share the base amount — over-limit columns in
   `--danger`. The line underneath counts them: "Four of the last six went over."

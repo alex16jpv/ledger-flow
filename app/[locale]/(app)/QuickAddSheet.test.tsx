@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
@@ -113,6 +113,33 @@ const calls = (method: string) =>
   fetchMock.mock.calls.filter(([, init]) => (init?.method ?? "GET") === method);
 
 describe("QuickAddSheet", () => {
+  // T-78 was first wired with a hook that never reached this sheet, and only a call-site test sees that.
+  it("asks before a tap outside throws a half-typed capture away (T-78)", async () => {
+    routeFetch();
+    const { onClose } = renderSheet();
+    await screen.findByRole("button", { name: /From your main account.*Bancolombia/ });
+    const scrim = screen.getByRole("dialog", { name: "Add" }).firstElementChild;
+    expect(scrim).not.toBeNull();
+    if (!scrim) return;
+
+    const tapOutside = () => {
+      fireEvent.pointerDown(scrim);
+      fireEvent.pointerUp(scrim);
+      fireEvent.click(scrim);
+    };
+
+    tapOutside();
+    expect(onClose).toHaveBeenCalledOnce();
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "12500");
+    tapOutside();
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(screen.getByRole("alert")).toHaveTextContent("Are you sure you want to leave?");
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Leave" }));
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
   it("saves in two interactions against the main account, adds the note and offers undo", async () => {
     routeFetch();
     const { onClose } = renderSheet();
@@ -134,6 +161,7 @@ describe("QuickAddSheet", () => {
     expect(JSON.parse(post?.[1]?.body as string)).toEqual({
       id: expect.stringMatching(UUID),
       amount: 12500,
+      type: "EXPENSE",
       categoryId: "c1",
       fromAccountId: "a1",
     });
@@ -160,7 +188,7 @@ describe("QuickAddSheet", () => {
     );
     await userEvent.click(screen.getByRole("option", { name: /Cash/ }));
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByRole("dialog", { name: "Add expense" })).toHaveAttribute("open");
+    expect(screen.getByRole("dialog", { name: "Add" })).toHaveAttribute("open");
     expect(screen.getByRole("button", { name: /^Account.*Cash/ })).toBeVisible();
   });
 
@@ -193,7 +221,7 @@ describe("QuickAddSheet", () => {
     await userEvent.type(screen.getByRole("textbox", { name: "Quick note (optional)" }), "Bus");
     await userEvent.click(screen.getByRole("button", { name: "More details" }));
     const draft = onMoreDetails.mock.calls[0]?.[0] as URLSearchParams | undefined;
-    expect(draft?.toString()).toBe("amount=4500&accountId=a1&description=Bus");
+    expect(draft?.toString()).toBe("type=EXPENSE&amount=4500&accountId=a1&description=Bus");
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -224,6 +252,130 @@ describe("QuickAddSheet", () => {
     expect(JSON.parse(calls("POST")[0]?.[1]?.body as string)).toEqual({
       id: expect.stringMatching(UUID),
       amount: 500,
+      type: "EXPENSE",
     });
+  });
+
+  // T-73: the sheet used to send an expense and nothing else, whatever the user meant.
+  it("records an income into the main account, with the income categories", async () => {
+    routeFetch();
+    renderSheet();
+    await screen.findByRole("button", { name: /From your main account.*Bancolombia/ });
+
+    await userEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(
+      await screen.findByRole("button", { name: /Into your main account.*Bancolombia/ }),
+    ).toBeVisible();
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([input]) => urlOf(input).includes("type=INCOME"))).toBe(
+        true,
+      );
+    });
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "9000");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(calls("POST")).toHaveLength(1);
+    });
+    expect(JSON.parse(calls("POST")[0]?.[1]?.body as string)).toEqual({
+      id: expect.stringMatching(UUID),
+      amount: 9000,
+      type: "INCOME",
+      toAccountId: "a1",
+    });
+  });
+
+  it("asks a transfer for both sides and refuses the same account twice", async () => {
+    routeFetch();
+    renderSheet();
+    await screen.findByRole("button", { name: /From your main account.*Bancolombia/ });
+
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    expect(screen.queryByRole("group", { name: "Category" })).not.toBeInTheDocument();
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "3000");
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("This field is required.");
+    expect(calls("POST")).toHaveLength(0);
+
+    await userEvent.click(screen.getByRole("button", { name: /^To/ }));
+    await userEvent.click(screen.getByRole("option", { name: /Cash/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(calls("POST")).toHaveLength(1);
+    });
+    expect(JSON.parse(calls("POST")[0]?.[1]?.body as string)).toEqual({
+      id: expect.stringMatching(UUID),
+      amount: 3000,
+      type: "TRANSFER",
+      fromAccountId: "a1",
+      toAccountId: "a2",
+    });
+  });
+
+  it("swaps the two sides of a transfer without losing the amount", async () => {
+    routeFetch();
+    renderSheet();
+    await screen.findByRole("button", { name: /From your main account.*Bancolombia/ });
+
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "3000");
+    await userEvent.click(screen.getByRole("button", { name: /^To/ }));
+    await userEvent.click(screen.getByRole("option", { name: /Cash/ }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Swap accounts" }));
+
+    expect(screen.getByRole("button", { name: /^From.*Cash/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /^To.*Bancolombia/ })).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("3,000");
+  });
+
+  // T-75: the bar on top was decoration. It now makes the same jump the "More details" button does.
+  it("hands the same draft to the full form from the bar on top", async () => {
+    routeFetch();
+    const { onClose, onMoreDetails } = renderSheet();
+    await screen.findByRole("button", { name: /From your main account.*Bancolombia/ });
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "4500");
+    await userEvent.type(screen.getByRole("textbox", { name: "Quick note (optional)" }), "Bus");
+
+    await userEvent.click(screen.getByRole("button", { name: "Open the full form" }));
+
+    const draft = onMoreDetails.mock.calls[0]?.[0] as URLSearchParams | undefined;
+    expect(draft?.toString()).toBe("type=EXPENSE&amount=4500&accountId=a1&description=Bus");
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  // The design is explicit: switching type never clears the amount, and always clears the category.
+  it("keeps the amount across a change of type and drops the category", async () => {
+    routeFetch();
+    renderSheet();
+    await screen.findByRole("button", { name: /From your main account.*Bancolombia/ });
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "12500");
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Category" })).getByRole("button", {
+        name: "Coffee",
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Coffee" })).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(screen.getByRole("button", { name: "Income" }));
+
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("12,500");
+    expect(await screen.findByRole("button", { name: "Coffee" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("does not throw the category away when the type shown is tapped again", async () => {
+    routeFetch();
+    renderSheet();
+    await userEvent.click(await screen.findByRole("button", { name: "Coffee" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Expense" }));
+
+    expect(screen.getByRole("button", { name: "Coffee" })).toHaveAttribute("aria-pressed", "true");
   });
 });

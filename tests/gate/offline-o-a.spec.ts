@@ -129,7 +129,7 @@ async function mirrorIdByAmount(page: Page, amount: number): Promise<string | nu
 
 function addButton(page: Page) {
   return test.info().project.name === "mobile"
-    ? page.getByRole("button", { name: "Add expense" })
+    ? page.getByRole("button", { name: "Add", exact: true })
     : page.getByRole("button", { name: "Add", exact: true });
 }
 
@@ -244,7 +244,7 @@ test("three days with no network, a cold start each day, and one drain with no d
     await createExpense(page, amountA, "GATE-D1 market");
     await page.goto("/home");
     await addButton(page).click();
-    const sheet = page.getByRole("dialog", { name: "Add expense" });
+    const sheet = page.getByRole("dialog", { name: "Add" });
     await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
     await page.keyboard.type(String(amountQ));
     await sheet.getByRole("button", { name: "Save" }).click();

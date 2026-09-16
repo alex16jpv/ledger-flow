@@ -9,9 +9,11 @@ import { AmountInput } from "@/components/ui/AmountInput";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip, ChipRow } from "@/components/ui/Chip";
+import { useUnsavedGuard } from "@/components/ui/Sheet";
 import { presentError } from "@/lib/api/errors";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
+import { randomColorToken } from "@/lib/theme/feature-color";
 
 import { budgetSuggestions } from "../form";
 import { useCreateBudget } from "../hooks";
@@ -43,7 +45,9 @@ export function GlobalBudgetForm({
     periodType,
   );
   const [amount, setAmount] = useState<number | null>(null);
+  const [suggestedColor] = useState(() => randomColorToken());
   const [inputKey, setInputKey] = useState(0);
+  useUnsavedGuard(amount !== null);
   const [validation, setValidation] = useState<string | null>(null);
   const failure = createBudget.error ? presentError(createBudget.error) : null;
 
@@ -57,7 +61,7 @@ export function GlobalBudgetForm({
     try {
       await createBudget.mutateAsync({
         name: t(`budgets.global.nameByPeriod.${periodType}`),
-        color: "INDIGO",
+        color: suggestedColor,
         categoryIds: [],
         type: "EXPENSE",
         periodType,

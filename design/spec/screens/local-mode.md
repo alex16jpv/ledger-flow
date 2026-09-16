@@ -52,11 +52,13 @@ reminder — not a wall with another door.
      copy and its n unsent changes. Your account on the server is not touched." It **confirms in a
      sheet**.
 
-  **The sheet cannot be closed without choosing** — the only one in the app that is not dismissable,
+  **The sheet cannot be closed without choosing** — one of the two in the app that are not dismissable,
   and that is why the three exits have to be complete: closing it without deciding would leave the user
-  in exactly the ambiguous state this is meant to remove. Clicking outside or pressing `Escape`
+  in exactly the ambiguous state this is meant to remove. Tapping outside or pressing `Escape`
   **underlines** the three options (with no animation under `prefers-reduced-motion`) instead of
-  closing.
+  closing. **That nudge has never been built**: today both do nothing at all, and since T-75 made a tap
+  outside close every other sheet, this is the one place where a tap outside is silently refused. It is
+  its own task.
 
 ## Confirming the deletion (`#delete-local-copy`)
 

@@ -45,7 +45,9 @@ export function HomeScreen() {
         }}
         title={t("onboarding.account.title")}
       >
-        <AccountForm submitLabel={t("home.empty.accounts.cta")} onSaved={close} />
+        {open === "account" && (
+          <AccountForm submitLabel={t("home.empty.accounts.cta")} onSaved={close} />
+        )}
       </Sheet>
       <Sheet
         open={open === "budget"}
@@ -54,11 +56,13 @@ export function HomeScreen() {
         }}
         title={t("onboarding.budget.title")}
       >
-        <GlobalBudgetForm
-          submitLabel={t("onboarding.budget.submit")}
-          skipLabel={t("common.cancel")}
-          onDone={close}
-        />
+        {open === "budget" && (
+          <GlobalBudgetForm
+            submitLabel={t("onboarding.budget.submit")}
+            skipLabel={t("common.cancel")}
+            onDone={close}
+          />
+        )}
       </Sheet>
     </>
   );

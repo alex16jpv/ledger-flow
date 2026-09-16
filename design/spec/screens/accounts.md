@@ -32,7 +32,8 @@ the computed delta and its sign ("An adjustment of −12,300 will be created"); 
 
 ## New and edit (`#duplicate-name`)
 
-Name (a 409 becomes an inline error with the case-insensitive explanation), type, colour (swatches),
+Name (a 409 becomes an inline error with the case-insensitive explanation), type, colour (swatches; a new
+account opens on one of the 16 drawn at random — see [color.md](../color.md)),
 the current balance only when creating, and a preview card. `ACCOUNT_LIMIT_REACHED` shows as an alert
 above the button.
 
