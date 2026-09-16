@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
-  type MouseEvent,
+  type PointerEvent,
   type ReactNode,
   type SyntheticEvent,
   useEffect,
@@ -46,6 +46,7 @@ export function Sheet({
   const ref = useRef<HTMLDialogElement>(null);
   const body = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const scrimGesture = useRef(false);
   const [bodyNeedsFocus, setBodyNeedsFocus] = useState(false);
 
   useEffect(() => {
@@ -72,8 +73,19 @@ export function Sheet({
     if (open) onClose();
   }
 
-  function handleScrimClick(event: MouseEvent<HTMLDialogElement>) {
-    if (dismissible && event.target === event.currentTarget) onClose();
+  // A click lands on the common ancestor, so both ends of the gesture have to be on the scrim.
+  function handleScrimDown(event: PointerEvent<HTMLElement>) {
+    scrimGesture.current = event.target === event.currentTarget;
+  }
+
+  function handleScrimUp(event: PointerEvent<HTMLElement>) {
+    scrimGesture.current = scrimGesture.current && event.target === event.currentTarget;
+  }
+
+  function handleScrimClick() {
+    const onScrim = scrimGesture.current;
+    scrimGesture.current = false;
+    if (dismissible && onScrim) onClose();
   }
 
   return (
@@ -82,14 +94,18 @@ export function Sheet({
       aria-labelledby={titleId}
       onCancel={handleCancel}
       onClose={handleClose}
-      onClick={handleScrimClick}
       className={cn(
         "backdrop:bg-overlay m-0 max-h-none max-w-none bg-transparent p-0",
         "fixed inset-0 h-full w-full",
         className,
       )}
     >
-      <div className="flex h-full w-full items-end justify-center sm:items-center">
+      <div
+        onPointerDown={handleScrimDown}
+        onPointerUp={handleScrimUp}
+        onClick={handleScrimClick}
+        className="flex h-full w-full items-end justify-center sm:items-center"
+      >
         <div
           className={cn(
             "flex max-h-[92%] w-full flex-col gap-4 rounded-t-2xl bg-surface px-4 pt-2 pb-[calc(var(--sp-4)+env(safe-area-inset-bottom))] text-text shadow-3",

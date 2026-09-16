@@ -3581,6 +3581,7 @@ cover` is set once in the root layout for the standalone display.
   It is a reference line, not a figure about the user's money — the same straight line the chart has
   always drawn — and the reading names it as what is expected, never as what was spent. The figure
   that **is** the user's money on that line comes from the API's day buckets.
+
 ## 2026-09-13 · The currency's minor unit is ours, not the device's (T-66)
 
 - **Problem:** the same COP balance read as `$1,284,300` on a desktop browser and `$1,284,300.00`
@@ -3622,3 +3623,36 @@ cover` is set once in the root layout for the standalone display.
   treat as zero-decimal — AFN, ALL, COP, HUF, IDR, IQD, IRR, KPW, LAK, LBP, MGA, MMK, PKR, SLL, SOS,
   SYP, YER. For the sixteen that are not COP this is not new — a modern browser already painted them
   that way — but freezing it makes it true on every device.
+
+## 2026-09-15 · A tap outside a sheet closes it, which it never did (T-75)
+
+- **Decision:** the scrim click moves from the `<dialog>` to the flex wrapper inside it, which is the
+  element a finger actually lands on. `Sheet` has always had `onClick` with the
+  `event.target === event.currentTarget` guard, but on the dialog that guard could never be true: the
+  wrapper is `h-full w-full`, so it covered every pixel of the backdrop and swallowed the tap.
+  Measured before the change in chromium at 390×840: the quick-add sheet starts at y=357, a tap at
+  y=178 left the dialog open, and ESC closed it.
+- **Why:** `components.md` §12 has claimed since the design was written that the sheet "closes on the
+  scrim", and the owner asked for it in his own words on 2026-09-15. Every one of the 38 sheets was
+  missing the way out that every mobile sheet has.
+- **Both ends of the gesture have to be on the scrim.** A `click` is dispatched at the nearest common
+  ancestor of the press and the release, so the wrapper receives one with `target === currentTarget`
+  whenever either end was inside the sheet: a mouse drag or a text selection out of a note dismissed
+  it, and so did a press on the scrim released on the `Save` button — which on quick add threw the
+  draft away without saving anything, since `close()` calls `resetEntry()`. `onPointerDown` and
+  `onPointerUp` on the same wrapper each check that their end landed on the scrim, and the click
+  closes only when both did. That is the rule the platform's own light dismiss (`closedby="any"`)
+  uses, and pointer events cover a finger, a pen and a mouse with one pair of handlers.
+- **Alternative:** closing on `pointerdown` alone. Rejected: it fires before the gesture is over, so a
+  press on the scrim that ends inside the sheet would already have closed it.
+- **Consequence:** `dismissible={false}` still holds — the guard is unchanged, only the element it
+  sits on — and a nested sheet closes alone, because each `<dialog>` brings its own wrapper and the
+  tap never reaches the one below. Five tests in `Sheet.test.tsx` cover it — a tap outside closes; a
+  tap inside does not; a drag out does not; a press outside released inside does not; a sheet that is
+  not dismissible does not — of which two fail if the handler goes back on the dialog. But what broke
+  was **layout**, and jsdom has none: the guard that would have caught it is the coordinate tap in
+  `tests/e2e/quick-add.spec.ts`, a real touch tap on the phone project, which fails on both projects
+  if the handler moves back.
+  This is also the first time `DECISIONS.md`'s F-41 entry, which says the scrim dismisses the local
+  mode sheet, is true. The handle on top of the sheet is still inert: what it should do is the half of
+  T-75 that is still a design question.
