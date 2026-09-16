@@ -3877,3 +3877,28 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** the hit area is 64×28 around the 4px bar, because a 4px target is not one; the bar
   is still never the only way in, so "More details" stays. `vitest.setup.ts` now shims pointer capture,
   which jsdom does not implement.
+
+## 2026-09-16 · A chart slot opens a list only where the pointer can hover (T-80)
+
+- **Context:** every chart slot carries the same reading twice — a bubble over the slot and the
+  `readout` line under the chart — and both are raised by hover or by focus. With a finger there is no
+  hover, so a tap is the only way to raise either. Where the slot also opened a filtered list, that tap
+  navigated: the owner tried to read a day of the budget's spending on the phone and was taken to
+  Transactions before the figure was legible. The `readout` was built precisely because "a tooltip does
+  not exist for a finger", and the click was undoing it.
+- **Decision:** `useCanHover()` reads `(hover: none)` through `useSyncExternalStore`, and `Bars`,
+  `Heat` and `ChartSlots` — the three slot implementations every chart is built from — pass `onSelect`
+  to the slot's `onClick` only when the pointer can hover. Where it cannot, the tap takes the slot's
+  focus, raises the bubble and writes the `readout` line, and goes nowhere.
+- **Why the slot stays a `button` there:** it has to take focus to be read, and the markup has to be
+  the same on the server and after hydration — only the handler differs, so nothing remounts and
+  nothing mismatches. Turning the chart into the `role="img"` of its non-interactive mode would take
+  the reading away, which is the opposite of the point.
+- **Alternatives:** the viewport (`md`, 900px), which is what the layout switches on — rejected because
+  the width is not the cause: a desktop window narrowed below it still hovers, and a wide tablet still
+  does not. Delaying the navigation until a second tap — two meanings on one target, and no way to tell
+  the user which one they are about to get. The owner chose the pointer on 2026-09-16.
+- **Consequence:** the query is `(hover: none)` and not `not (hover: hover)`, so a device that declares
+  nothing — an old WebView, jsdom — keeps today's behaviour instead of silently losing it. The default
+  on the server is that the pointer hovers. `lib/testing/pointer.ts` (`withTouchPointer()`) is how a
+  test asks for the other side.

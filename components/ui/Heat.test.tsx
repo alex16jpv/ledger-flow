@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { withTouchPointer } from "@/lib/testing/pointer";
+
 import { Heat, type HeatCell } from "./Heat";
 
 const COLUMNS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -101,6 +103,20 @@ describe("Heat", () => {
     expect(screen.getByRole("button", { name: "Day 9 · $1000" })).toHaveClass("bg-heat-4");
     expect(screen.getByRole("button", { name: "Day 1 · $0" })).toHaveClass("bg-surface-3");
     expect(screen.getByRole("button", { name: "Day 2 · $10" })).toHaveClass("bg-heat-1");
+  });
+
+  describe("where the pointer cannot hover", () => {
+    withTouchPointer();
+
+    it("reads the tapped day and opens nothing", async () => {
+      const onSelect = vi.fn();
+      renderHeat({ onSelect, summary: { label: "Day 9 · highest", amount: "$1000" } });
+      const day = screen.getByRole("button", { name: "Day 9 · $1000" });
+      await userEvent.click(day);
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(day).toHaveFocus();
+      expect(screen.getByText("Day 9 in full")).toBeInTheDocument();
+    });
   });
 
   it("reads the whole calendar in its name when its cells lead nowhere", () => {

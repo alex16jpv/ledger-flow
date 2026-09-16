@@ -50,7 +50,10 @@ the tooltip per slot and the readout line that every chart in `design/spec/compo
 **Before drawing a new chart, these already exist**, and a screen that rebuilds one of them drifts
 from the rest. What every chart shares is not a component but a hook: **`useRovingSlots`** gives the
 chart its single tab stop and moves the selection with the arrows, and `Bars`, `Heat` and
-`ChartSlots` are the three that call it. `ChartSlots` is the generic one — slots, the tooltip per
+`ChartSlots` are the three that call it. The same three carry **T-80**: a slot hands its `onSelect` to
+its `onClick` only when `useCanHover()` says the pointer can hover, so where it cannot the tap raises
+the bubble and the `readout` and opens nothing — a chart anywhere in the app inherits that by being
+built on one of them. `ChartSlots` is the generic one — slots, the tooltip per
 slot, the hatching of the period still running and the reading line (`Readout`) — and `ColBars` and
 `GBars` are built on it; `Bars` predates it and calls the hook itself, with `DayBars` wrapping it for
 a calendar month and `DayHeat` doing the same over `Heat`. Around them: `ChartCard` with

@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { withTouchPointer } from "@/lib/testing/pointer";
+
 import { ColBars, type Column } from "./ColBars";
 
 const PERIODS: Column[] = [
@@ -57,6 +59,27 @@ describe("ColBars", () => {
     );
     // The tallest column is 356, so 250 and 300 land at their own share of it.
     expect(caps).toEqual(["70.2247191011236%", "70.2247191011236%", "84.26966292134831%"]);
+  });
+
+  describe("where the pointer cannot hover", () => {
+    withTouchPointer();
+
+    it("reads the tapped period and opens nothing", async () => {
+      const onSelect = vi.fn();
+      render(
+        <ColBars
+          columns={PERIODS}
+          label="Spent against the limit"
+          onSelect={onSelect}
+          summary={{ label: "Three of the last six went over" }}
+        />,
+      );
+      const period = screen.getByRole("button", { name: /June/ });
+      await userEvent.click(period);
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(period).toHaveFocus();
+      expect(screen.getByText("$356,000")).toBeVisible();
+    });
   });
 
   it("says which slot the pointer is on, and the summary when it is on none", async () => {

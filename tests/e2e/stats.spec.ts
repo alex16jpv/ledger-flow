@@ -142,7 +142,16 @@ test("Trends reads the months the seed has, and reads them off the local copy", 
   await expect(pairs).toBeVisible();
   expect(reads).toEqual([]);
 
-  // A pair is a control: it opens Stats on the month it names.
-  await pairs.getByRole("button").first().click();
-  await expect(page).toHaveURL(/\/stats\?reference=2026-06$/);
+  // A pair is a control: it opens Stats on the month it names — where the pointer hovers (T-80).
+  const canHover = await page.evaluate(() => !window.matchMedia("(hover: none)").matches);
+  expect(canHover).toBe(test.info().project.name === "desktop");
+  const june = pairs.getByRole("button").first();
+  await june.click();
+  if (canHover) {
+    await expect(page).toHaveURL(/\/stats\?reference=2026-06$/);
+  } else {
+    await expect(page).toHaveURL(/\/stats\/trends\?reference=2026-08$/);
+    await expect(june).toBeFocused();
+    await expect(pairs.locator("xpath=following-sibling::p[1]")).toHaveText(/June 2026/);
+  }
 });

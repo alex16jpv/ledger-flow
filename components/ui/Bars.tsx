@@ -3,6 +3,7 @@
 import { cn } from "./cn";
 import { Readout } from "./Readout";
 import { Tooltip, type TooltipAlign } from "./Tooltip";
+import { useCanHover } from "./useCanHover";
 import { useRovingSlots } from "./useRovingSlots";
 
 export interface Bar {
@@ -46,6 +47,7 @@ export function Bars({ bars, label, height = 56, onSelect, summary, className }:
   const slots = useRovingSlots(happened, step, today);
 
   const interactive = onSelect !== undefined;
+  const opens = useCanHover() ? onSelect : undefined;
   const reading = interactive
     ? label
     : `${label}: ${happened.map((index) => bars[index]?.label ?? "").join(", ")}`;
@@ -97,9 +99,13 @@ export function Bars({ bars, label, height = 56, onSelect, summary, className }:
                 <button
                   type="button"
                   aria-label={bar.label}
-                  onClick={() => {
-                    onSelect(index);
-                  }}
+                  onClick={
+                    opens
+                      ? () => {
+                          opens(index);
+                        }
+                      : undefined
+                  }
                   onMouseEnter={onMouseEnter}
                   {...roving}
                   className="group/slot flex h-full w-full cursor-pointer items-end"

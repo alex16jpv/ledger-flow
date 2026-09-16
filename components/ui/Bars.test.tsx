@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { withTouchPointer } from "@/lib/testing/pointer";
+
 import { type Bar, Bars } from "./Bars";
 
 const DAYS: Bar[] = [
@@ -143,6 +145,27 @@ describe("Bars", () => {
     expect(screen.getByText("Thursday, September 3")).toBeInTheDocument();
     await userEvent.keyboard("{ArrowLeft}");
     expect(screen.getByText("Wednesday, September 2")).toBeInTheDocument();
+  });
+
+  describe("where the pointer cannot hover", () => {
+    withTouchPointer();
+
+    it("reads the tapped slot and opens nothing", async () => {
+      const onSelect = vi.fn();
+      render(<Bars bars={DAYS} label="Spending per day" onSelect={onSelect} summary={SUMMARY} />);
+      await userEvent.click(screen.getByRole("button", { name: "Wed, Sep 2 · $500" }));
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(screen.getByText("Wednesday, September 2")).toBeInTheDocument();
+      expect(screen.getByText("$500")).toBeInTheDocument();
+    });
+
+    it("keeps every slot a control, because a tap has to focus it to be read", async () => {
+      render(<Bars bars={DAYS} label="Spending per day" onSelect={vi.fn()} />);
+      expect(screen.getAllByRole("button")).toHaveLength(3);
+      const slot = screen.getByRole("button", { name: "Wed, Sep 2 · $500" });
+      await userEvent.click(slot);
+      expect(slot).toHaveFocus();
+    });
   });
 
   it("is one image reading every slot where the slots lead nowhere", () => {

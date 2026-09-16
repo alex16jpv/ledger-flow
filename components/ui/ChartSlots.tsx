@@ -6,6 +6,7 @@ import type { BarsSummary } from "./Bars";
 import { cn } from "./cn";
 import { Readout } from "./Readout";
 import { Tooltip, type TooltipAlign } from "./Tooltip";
+import { useCanHover } from "./useCanHover";
 import { useRovingSlots } from "./useRovingSlots";
 
 export interface ChartSlot {
@@ -57,6 +58,7 @@ export function ChartSlots({
   const roving = useRovingSlots(available, step, available.at(-1) ?? null);
 
   const interactive = onSelect !== undefined;
+  const opens = useCanHover() ? onSelect : undefined;
   const reading = interactive ? label : `${label}: ${slots.map((slot) => slot.label).join(", ")}`;
   const pointed = roving.active !== null ? slots[roving.active] : undefined;
   const line = pointed
@@ -86,9 +88,13 @@ export function ChartSlots({
                 <button
                   type="button"
                   aria-label={slot.label}
-                  onClick={() => {
-                    onSelect(index);
-                  }}
+                  onClick={
+                    opens
+                      ? () => {
+                          opens(index);
+                        }
+                      : undefined
+                  }
                   onMouseEnter={onMouseEnter}
                   {...rest}
                   className="group/slot flex h-full w-full cursor-pointer items-end"
