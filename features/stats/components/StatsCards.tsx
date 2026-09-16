@@ -293,6 +293,17 @@ export function TrendsLink({ reference }: { reference?: string }) {
   );
 }
 
+export function ZoneHead({ id, children }: { id: string; children: ReactNode }) {
+  return (
+    <div className="mt-1 flex items-center gap-2.5">
+      <h2 id={id} className="text-xs font-medium tracking-caps text-text-3 uppercase">
+        {children}
+      </h2>
+      <span className="h-px flex-1 bg-border" />
+    </div>
+  );
+}
+
 export function StatTile({
   label,
   value,

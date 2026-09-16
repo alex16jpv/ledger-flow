@@ -521,4 +521,40 @@ describe("StatsScreen", () => {
     const link = await screen.findByRole("link", { name: /Trends over time/ });
     expect(link).toHaveAttribute("href", "/stats/trends?reference=2026-07");
   });
+
+  it("keeps a way into Trends in the header, carrying the month, even when the read failed", async () => {
+    fetchMock.mockImplementation((input) => {
+      const url = new URL(urlOf(input), "http://localhost");
+      if (url.pathname === "/api/stats/spending")
+        return Promise.resolve(json({ code: "INTERNAL", message: "no" }, { status: 503 }));
+      return Promise.resolve(empty());
+    });
+    renderScreen("reference=2026-07");
+    expect(await screen.findByText(/We couldn.t load this/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Trends" })).toHaveAttribute(
+      "href",
+      "/stats/trends?reference=2026-07",
+    );
+    // A failed read offers Retry and nothing else, so the closing card is not drawn.
+    expect(screen.queryByRole("link", { name: /Trends over time/ })).not.toBeInTheDocument();
+  });
+
+  it("names the three zones as headings, so the page has landmarks and not just rules", async () => {
+    routeFetch();
+    renderScreen();
+    expect(
+      await screen.findByRole("heading", { name: "More about this month", level: 2 }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Other months", level: 2 })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Biggest this period", level: 3 }),
+    ).toBeInTheDocument();
+  });
+
+  it("asks for the biggest movements under every grouping, not only Days and Accounts", async () => {
+    routeFetch();
+    renderScreen("groupBy=tag");
+    expect(await screen.findByRole("heading", { name: "Biggest this period" })).toBeInTheDocument();
+    expect(biggestUrls).not.toHaveLength(0);
+  });
 });

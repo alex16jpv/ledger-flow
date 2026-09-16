@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, ChartColumn, ChartPie, Download, Scale } from "lucide-react";
+import { CalendarDays, ChartColumn, ChartLine, ChartPie, Download, Scale } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMemo, useState, useSyncExternalStore } from "react";
@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
 import { type Bar, Bars } from "@/components/ui/Bars";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip, ChipRow } from "@/components/ui/Chip";
 import { cn } from "@/components/ui/cn";
@@ -41,6 +41,7 @@ import {
   TagRows,
   TotalCard,
   TrendsLink,
+  ZoneHead,
 } from "@/features/stats/components/StatsCards";
 import { useStatsQuery } from "@/features/stats/hooks";
 import {
@@ -134,7 +135,7 @@ export function StatsScreen() {
     highestWindow !== null,
   );
   const hasBuckets = stats.isSuccess && stats.data.buckets.length > 0;
-  const wantsBiggest = (groupBy === "day" || groupBy === "account") && hasBuckets;
+  const wantsBiggest = hasBuckets;
   const biggest = useBiggestTransactions({ ...iso, type }, wantsBiggest);
   // An empty page is not a state of its own here: the screen is already showing its own Empty.
   const showsBiggest = wantsBiggest && biggest.data?.data.length !== 0;
@@ -153,6 +154,12 @@ export function StatsScreen() {
     });
   }
 
+  const hasFollowUps = showsBiggest || groupBy === "day";
+  const trendsReference = monthKey === currentMonthKey(now, dates.timeZone) ? undefined : monthKey;
+  const trendsHref = {
+    pathname: "/stats/trends" as const,
+    query: trendsReference ? { reference: trendsReference } : {},
+  };
   const lastDay = dayKey(new Date(window.to.getTime() - 1), dates.timeZone);
   function transactionsHref(extra: Record<string, string>) {
     return {
@@ -227,19 +234,25 @@ export function StatsScreen() {
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <PageHeader
         title={t("stats.title")}
         actions={
-          <Button
-            variant="ghost"
-            iconOnly
-            round
-            disabled={!isEnabled("exportTransactions")}
-            aria-label={t("stats.export")}
-          >
-            <Download {...iconProps("md")} />
-          </Button>
+          <>
+            <Link href={trendsHref} className={buttonClasses({ variant: "ghost" })}>
+              <ChartLine {...iconProps("sm")} />
+              {t("trends.title")}
+            </Link>
+            <Button
+              variant="ghost"
+              iconOnly
+              round
+              disabled={!isEnabled("exportTransactions")}
+              aria-label={t("stats.export")}
+            >
+              <Download {...iconProps("md")} />
+            </Button>
+          </>
         }
       />
       <PeriodNav
@@ -356,287 +369,294 @@ export function StatsScreen() {
               </>
             }
           />
-          <TrendsLink
-            reference={monthKey === currentMonthKey(now, dates.timeZone) ? undefined : monthKey}
-          />
+          <ZoneHead id="stats-other-months-empty">{t("stats.zones.otherMonths")}</ZoneHead>
+          <TrendsLink reference={trendsReference} />
         </>
       ) : (
-        <>
-          <TotalCard
-            type={type}
-            total={total}
-            count={count}
-            average={count > 0 ? total / count : 0}
-          />
-          {type === "ADJUSTMENT" && <Alert tone="neutral">{t("stats.adjustmentsNote")}</Alert>}
-          {groupBy === "category" && (
-            <>
-              <StackBar
-                shares={categoryShares}
-                colors={(key) => categoryMap.get(key)?.color ?? null}
-                names={(key) =>
-                  key === UNCATEGORIZED_KEY
-                    ? t("stats.uncategorized")
-                    : (categoryMap.get(key)?.name ?? t("stats.uncategorized"))
-                }
-                label={t("stats.breakdown")}
-              />
-              <CategoryRows
-                shares={categoryShares}
-                type={type}
-                categories={categoryMap}
-                onOpen={(key) => {
-                  openTransactions(
-                    key === UNCATEGORIZED_KEY ? { uncategorized: "1" } : { category: key },
-                  );
-                }}
-              />
-            </>
-          )}
-          {groupBy === "account" && (
-            <>
-              <StackBar
-                shares={accountShares}
-                colors={(key) => accountMap.get(key)?.color ?? null}
-                names={accountName}
-                label={t("stats.breakdownByAccount")}
-              />
-              <AccountRows
-                shares={accountShares}
-                type={type}
-                accounts={accountMap}
-                onOpen={(key) => {
-                  openTransactions({ account: key });
-                }}
-              />
-              {type === "EXPENSE" && (
-                <p className="text-xs text-text-3">{t("stats.transfersNote")}</p>
-              )}
-            </>
-          )}
-          {groupBy === "day" && series && (
-            <>
-              <Card className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-medium tracking-caps text-text-3 uppercase">
-                    {t("stats.perDay")}
-                  </span>
-                  <Segment<DayView>
-                    inline
-                    label={t("stats.dayView.label")}
-                    value={view}
-                    onChange={setDayView}
-                    options={[
-                      {
-                        value: "bars",
-                        label: <span className="sr-only">{t("stats.dayView.bars")}</span>,
-                        icon: <ChartColumn {...iconProps("sm")} />,
-                      },
-                      {
-                        value: "calendar",
-                        label: <span className="sr-only">{t("stats.dayView.calendar")}</span>,
-                        icon: <CalendarDays {...iconProps("sm")} />,
-                      },
-                    ]}
-                  />
-                </div>
-                <Projected when={outbox.projected.spending} align="center" className="w-full">
-                  {view === "calendar" ? (
-                    <DayHeat
-                      days={series.bars}
-                      label={t("stats.perDay")}
-                      summary={daySummary}
-                      onOpen={openDay}
-                      className="flex-1"
-                    />
-                  ) : (
-                    <DayBars
-                      days={series.bars}
-                      label={t("stats.perDay")}
-                      height={140}
-                      summary={daySummary}
-                      onOpen={openDay}
-                      className="flex-1"
-                    />
-                  )}
-                </Projected>
-                {view === "bars" && (
-                  <div className="flex justify-between text-xs text-text-3">
-                    <span>{dates.formatDay(window.from)}</span>
-                    <span>
-                      {series.bars[14]
-                        ? dates.formatDay(dates.fromDayKey(series.bars[14].key))
-                        : ""}
-                    </span>
-                    <span>{dates.formatDay(new Date(window.to.getTime() - 1))}</span>
-                  </div>
-                )}
-              </Card>
-              <div className="grid grid-cols-3 gap-3">
-                <StatTile
-                  label={type === "EXPENSE" ? t("stats.priciestDay") : t("stats.biggestDay")}
-                  value={
-                    <Projected when={outbox.projected.spending}>
-                      <Amount
-                        value={series.highest?.total ?? 0}
-                        signed={false}
-                        size="base"
-                        className="text-lg font-semibold"
-                      />
-                    </Projected>
+        <div className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)] md:items-start md:gap-6">
+          <div className="flex flex-col gap-4">
+            <TotalCard
+              type={type}
+              total={total}
+              count={count}
+              average={count > 0 ? total / count : 0}
+            />
+            {type === "ADJUSTMENT" && <Alert tone="neutral">{t("stats.adjustmentsNote")}</Alert>}
+            {groupBy === "category" && (
+              <>
+                <StackBar
+                  shares={categoryShares}
+                  colors={(key) => categoryMap.get(key)?.color ?? null}
+                  names={(key) =>
+                    key === UNCATEGORIZED_KEY
+                      ? t("stats.uncategorized")
+                      : (categoryMap.get(key)?.name ?? t("stats.uncategorized"))
                   }
-                  sub={highestDate ? dates.formatWeekdayDay(highestDate) : undefined}
+                  label={t("stats.breakdown")}
                 />
-                <StatTile
-                  label={t("stats.dailyAverage")}
-                  value={
-                    <Projected when={outbox.projected.spending}>
-                      <Amount
-                        value={money.round(series.dailyAverage)}
-                        signed={false}
-                        size="base"
-                        className="text-lg font-semibold"
-                      />
-                    </Projected>
-                  }
-                />
-                <StatTile
-                  label={type === "EXPENSE" ? t("stats.noSpendDays") : t("stats.quietDays")}
-                  value={series.noSpendDays}
-                />
-              </div>
-              <Card className="flex flex-col gap-2">
-                <span className="text-xs font-medium tracking-caps text-text-3 uppercase">
-                  {t("stats.weekdayAverage")}
-                </span>
-                <Projected when={outbox.projected.spending} align="center" className="w-full">
-                  <Bars
-                    bars={weekdayBars}
-                    label={t("stats.weekdayAverage")}
-                    height={64}
-                    summary={
-                      peakWeekday && peakWeekday.average > 0
-                        ? {
-                            label: t("stats.weekdayPeak", {
-                              weekday: weekdayNames.long(peakWeekday.weekday),
-                            }),
-                            amount: money.format(money.round(peakWeekday.average)),
-                          }
-                        : { label: t("stats.weekdayNone") }
-                    }
-                    className="flex-1"
-                  />
-                </Projected>
-                <div className="flex justify-between text-xs text-text-3">
-                  {weekColumns(weekStart).map((weekday) => (
-                    <span key={weekday}>{weekdayNames.short(weekday)}</span>
-                  ))}
-                </div>
-              </Card>
-              {highestDate && (
-                <section className="flex flex-col gap-2">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <h2 className="text-md font-semibold">
-                      {t("stats.highest", { day: dates.formatWeekdayDay(highestDate) })}
-                    </h2>
-                    <Amount
-                      value={series.highest?.total ?? 0}
-                      kind={AMOUNT_KIND[type]}
-                      size="sm"
-                      className="text-text-3"
-                    />
-                  </div>
-                  {highestRows.isPending ? (
-                    <Card flush role="status" aria-busy="true" aria-label={t("common.loading")}>
-                      <SkeletonRow />
-                      <SkeletonRow />
-                    </Card>
-                  ) : (
-                    <TransactionDayList
-                      transactions={highestRows.data?.pages.flatMap((page) => page.data) ?? []}
-                      lookups={lookups}
-                      onOpen={(transaction) => {
-                        router.push(`/transactions/${transaction.id}`);
-                      }}
-                    />
-                  )}
-                </section>
-              )}
-            </>
-          )}
-          {showsBiggest && (
-            <section aria-labelledby="stats-biggest" className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between gap-3 px-1">
-                <h2 id="stats-biggest" className="text-md font-semibold">
-                  {t("stats.biggest")}
-                </h2>
-                <Link href={transactionsHref({})} className="text-sm font-medium text-brand-text">
-                  {t("common.seeAll")}
-                </Link>
-              </div>
-              <Card flush>
-                {biggest.isPending ? (
-                  <div role="status" aria-busy="true" aria-label={t("common.loading")}>
-                    <SkeletonRow />
-                    <SkeletonRow />
-                  </div>
-                ) : biggest.isError ? (
-                  <Empty
-                    tone="danger"
-                    icon={<ChartPie {...iconProps("lg")} />}
-                    title={t("stats.biggestError")}
-                    body={<LoadErrorBody error={biggest.error} />}
-                    action={
-                      <Button
-                        onClick={() => {
-                          void biggest.refetch();
-                        }}
-                      >
-                        {t("common.retry")}
-                      </Button>
-                    }
-                  />
-                ) : (
-                  <List>
-                    {biggest.data.data.map((transaction) => (
-                      <TransactionRow
-                        key={transaction.id}
-                        transaction={transaction}
-                        lookups={lookups}
-                        dated
-                        onOpen={(row) => {
-                          router.push(`/transactions/${row.id}`);
-                        }}
-                      />
-                    ))}
-                  </List>
-                )}
-              </Card>
-            </section>
-          )}
-          {groupBy === "tag" && (
-            <>
-              <Alert tone="neutral">
-                {t("stats.tagsNote")}
-                {untagged > 0
-                  ? ` ${t("stats.untagged", { amount: money.format(untagged) })}`
-                  : null}
-              </Alert>
-              {tagShares.length > 0 && (
-                <TagRows
-                  shares={tagShares}
+                <CategoryRows
+                  shares={categoryShares}
                   type={type}
-                  onOpen={(tag) => {
-                    openTransactions({ tag });
+                  categories={categoryMap}
+                  onOpen={(key) => {
+                    openTransactions(
+                      key === UNCATEGORIZED_KEY ? { uncategorized: "1" } : { category: key },
+                    );
                   }}
                 />
-              )}
-            </>
-          )}
-          <TrendsLink
-            reference={monthKey === currentMonthKey(now, dates.timeZone) ? undefined : monthKey}
-          />
-        </>
+              </>
+            )}
+            {groupBy === "account" && (
+              <>
+                <StackBar
+                  shares={accountShares}
+                  colors={(key) => accountMap.get(key)?.color ?? null}
+                  names={accountName}
+                  label={t("stats.breakdownByAccount")}
+                />
+                <AccountRows
+                  shares={accountShares}
+                  type={type}
+                  accounts={accountMap}
+                  onOpen={(key) => {
+                    openTransactions({ account: key });
+                  }}
+                />
+                {type === "EXPENSE" && (
+                  <p className="text-xs text-text-3">{t("stats.transfersNote")}</p>
+                )}
+              </>
+            )}
+            {groupBy === "day" && series && (
+              <>
+                <Card className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-medium tracking-caps text-text-3 uppercase">
+                      {t("stats.perDay")}
+                    </span>
+                    <Segment<DayView>
+                      inline
+                      label={t("stats.dayView.label")}
+                      value={view}
+                      onChange={setDayView}
+                      options={[
+                        {
+                          value: "bars",
+                          label: <span className="sr-only">{t("stats.dayView.bars")}</span>,
+                          icon: <ChartColumn {...iconProps("sm")} />,
+                        },
+                        {
+                          value: "calendar",
+                          label: <span className="sr-only">{t("stats.dayView.calendar")}</span>,
+                          icon: <CalendarDays {...iconProps("sm")} />,
+                        },
+                      ]}
+                    />
+                  </div>
+                  <Projected when={outbox.projected.spending} align="center" className="w-full">
+                    {view === "calendar" ? (
+                      <DayHeat
+                        days={series.bars}
+                        label={t("stats.perDay")}
+                        summary={daySummary}
+                        onOpen={openDay}
+                        className="flex-1"
+                      />
+                    ) : (
+                      <DayBars
+                        days={series.bars}
+                        label={t("stats.perDay")}
+                        height={140}
+                        summary={daySummary}
+                        onOpen={openDay}
+                        className="flex-1"
+                      />
+                    )}
+                  </Projected>
+                  {view === "bars" && (
+                    <div className="flex justify-between text-xs text-text-3">
+                      <span>{dates.formatDay(window.from)}</span>
+                      <span>
+                        {series.bars[14]
+                          ? dates.formatDay(dates.fromDayKey(series.bars[14].key))
+                          : ""}
+                      </span>
+                      <span>{dates.formatDay(new Date(window.to.getTime() - 1))}</span>
+                    </div>
+                  )}
+                </Card>
+                <div className="grid grid-cols-3 gap-3">
+                  <StatTile
+                    label={type === "EXPENSE" ? t("stats.priciestDay") : t("stats.biggestDay")}
+                    value={
+                      <Projected when={outbox.projected.spending}>
+                        <Amount
+                          value={series.highest?.total ?? 0}
+                          signed={false}
+                          size="base"
+                          className="text-lg font-semibold"
+                        />
+                      </Projected>
+                    }
+                    sub={highestDate ? dates.formatWeekdayDay(highestDate) : undefined}
+                  />
+                  <StatTile
+                    label={t("stats.dailyAverage")}
+                    value={
+                      <Projected when={outbox.projected.spending}>
+                        <Amount
+                          value={money.round(series.dailyAverage)}
+                          signed={false}
+                          size="base"
+                          className="text-lg font-semibold"
+                        />
+                      </Projected>
+                    }
+                  />
+                  <StatTile
+                    label={type === "EXPENSE" ? t("stats.noSpendDays") : t("stats.quietDays")}
+                    value={series.noSpendDays}
+                  />
+                </div>
+              </>
+            )}
+            {groupBy === "tag" && (
+              <>
+                <Alert tone="neutral">
+                  {t("stats.tagsNote")}
+                  {untagged > 0
+                    ? ` ${t("stats.untagged", { amount: money.format(untagged) })}`
+                    : null}
+                </Alert>
+                {tagShares.length > 0 && (
+                  <TagRows
+                    shares={tagShares}
+                    type={type}
+                    onOpen={(tag) => {
+                      openTransactions({ tag });
+                    }}
+                  />
+                )}
+              </>
+            )}
+          </div>
+          <div className="flex flex-col gap-4">
+            {hasFollowUps && <ZoneHead id="stats-more">{t("stats.zones.more")}</ZoneHead>}
+            {showsBiggest && (
+              <section aria-labelledby="stats-biggest" className="flex flex-col gap-2">
+                <div className="flex items-baseline justify-between gap-3 px-1">
+                  <h3 id="stats-biggest" className="text-md font-semibold">
+                    {t("stats.biggest")}
+                  </h3>
+                  <Link href={transactionsHref({})} className="text-sm font-medium text-brand-text">
+                    {t("common.seeAll")}
+                  </Link>
+                </div>
+                <Card flush>
+                  {biggest.isPending ? (
+                    <div role="status" aria-busy="true" aria-label={t("common.loading")}>
+                      <SkeletonRow />
+                      <SkeletonRow />
+                    </div>
+                  ) : biggest.isError ? (
+                    <Empty
+                      tone="danger"
+                      icon={<ChartPie {...iconProps("lg")} />}
+                      title={t("stats.biggestError")}
+                      body={<LoadErrorBody error={biggest.error} />}
+                      action={
+                        <Button
+                          onClick={() => {
+                            void biggest.refetch();
+                          }}
+                        >
+                          {t("common.retry")}
+                        </Button>
+                      }
+                    />
+                  ) : (
+                    <List>
+                      {biggest.data.data.map((transaction) => (
+                        <TransactionRow
+                          key={transaction.id}
+                          transaction={transaction}
+                          lookups={lookups}
+                          dated
+                          onOpen={(row) => {
+                            router.push(`/transactions/${row.id}`);
+                          }}
+                        />
+                      ))}
+                    </List>
+                  )}
+                </Card>
+              </section>
+            )}
+            {groupBy === "day" && series && (
+              <>
+                <Card className="flex flex-col gap-2">
+                  <span className="text-xs font-medium tracking-caps text-text-3 uppercase">
+                    {t("stats.weekdayAverage")}
+                  </span>
+                  <Projected when={outbox.projected.spending} align="center" className="w-full">
+                    <Bars
+                      bars={weekdayBars}
+                      label={t("stats.weekdayAverage")}
+                      height={64}
+                      summary={
+                        peakWeekday && peakWeekday.average > 0
+                          ? {
+                              label: t("stats.weekdayPeak", {
+                                weekday: weekdayNames.long(peakWeekday.weekday),
+                              }),
+                              amount: money.format(money.round(peakWeekday.average)),
+                            }
+                          : { label: t("stats.weekdayNone") }
+                      }
+                      className="flex-1"
+                    />
+                  </Projected>
+                  <div className="flex justify-between text-xs text-text-3">
+                    {weekColumns(weekStart).map((weekday) => (
+                      <span key={weekday}>{weekdayNames.short(weekday)}</span>
+                    ))}
+                  </div>
+                </Card>
+                {highestDate && (
+                  <section className="flex flex-col gap-2">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h3 className="text-md font-semibold">
+                        {t("stats.highest", { day: dates.formatWeekdayDay(highestDate) })}
+                      </h3>
+                      <Amount
+                        value={series.highest?.total ?? 0}
+                        kind={AMOUNT_KIND[type]}
+                        size="sm"
+                        className="text-text-3"
+                      />
+                    </div>
+                    {highestRows.isPending ? (
+                      <Card flush role="status" aria-busy="true" aria-label={t("common.loading")}>
+                        <SkeletonRow />
+                        <SkeletonRow />
+                      </Card>
+                    ) : (
+                      <TransactionDayList
+                        transactions={highestRows.data?.pages.flatMap((page) => page.data) ?? []}
+                        lookups={lookups}
+                        onOpen={(transaction) => {
+                          router.push(`/transactions/${transaction.id}`);
+                        }}
+                      />
+                    )}
+                  </section>
+                )}
+              </>
+            )}
+            <ZoneHead id="stats-other-months">{t("stats.zones.otherMonths")}</ZoneHead>
+            <TrendsLink reference={trendsReference} />
+          </div>
+        </div>
       )}
     </div>
   );
