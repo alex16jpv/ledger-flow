@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal, PencilLine } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, PencilLine } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
@@ -9,6 +9,7 @@ import { AmountInput } from "@/components/ui/AmountInput";
 import { Button } from "@/components/ui/Button";
 import { CategoryChip, Chip, ChipRow } from "@/components/ui/Chip";
 import { Input } from "@/components/ui/Field";
+import { Segment, type SegmentOption } from "@/components/ui/Segment";
 import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { AccountPicker } from "@/features/accounts/components/AccountPicker";
@@ -16,15 +17,22 @@ import { useAccountsQuery } from "@/features/accounts/hooks";
 import { CategoryPickerSheet } from "@/features/categories/components/CategoryPickerSheet";
 import { useCategoriesQuery, useRecentCategories } from "@/features/categories/hooks";
 import { useDeleteTransaction, useQuickAdd } from "@/features/transactions/hooks";
-import { draftToSearchParams, quickAddSchema } from "@/features/transactions/schemas";
+import {
+  draftToSearchParams,
+  QUICK_TYPES,
+  quickAddInput,
+  quickAddSchema,
+  type QuickAddType,
+} from "@/features/transactions/schemas";
 import { fieldErrors, presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { isValidationKey, validationMessage } from "@/lib/i18n/validation";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
-import type { QuickAddTransactionInput } from "@/types/api";
 
 export const QUICK_RECENT_LIMIT = 5;
+
+const TYPE_TONE = { EXPENSE: "default", INCOME: "income", TRANSFER: "transfer" } as const;
 
 interface QuickAddSheetProps {
   open: boolean;
@@ -36,9 +44,16 @@ interface QuickAddSheetProps {
 export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddSheetProps) {
   const t = useTranslations();
   const toast = useToast();
+  const [type, setType] = useState<QuickAddType>("EXPENSE");
+  const transfer = type === "TRANSFER";
   const accounts = useAccountsQuery(false, open);
-  const categories = useCategoriesQuery("EXPENSE", open);
-  const recent = useRecentCategories("EXPENSE", categories.data, QUICK_RECENT_LIMIT, open);
+  const categories = useCategoriesQuery(transfer ? undefined : type, open && !transfer);
+  const recent = useRecentCategories(
+    transfer ? undefined : type,
+    categories.data,
+    QUICK_RECENT_LIMIT,
+    open,
+  );
   const quickAdd = useQuickAdd();
   const remove = useDeleteTransaction();
 
@@ -46,6 +61,7 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
   const [amountKey, setAmountKey] = useState(0);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [issues, setIssues] = useState<Record<string, string>>({});
@@ -66,9 +82,18 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
       : recent;
   const serverFields = fieldErrors(quickAdd.error);
   const amountError = validationMessage(t, issues.amount ?? serverFields.amount);
-  const accountError = validationMessage(t, issues.accountId ?? serverFields.accountId);
+  const accountError = validationMessage(
+    t,
+    issues.accountId ?? serverFields.accountId ?? serverFields.fromAccountId,
+  );
+  const toAccountError = validationMessage(t, issues.toAccountId ?? serverFields.toAccountId);
   const formError =
     quickAdd.error && Object.keys(serverFields).length === 0 ? presentError(quickAdd.error) : null;
+  const typeOptions: SegmentOption<QuickAddType>[] = QUICK_TYPES.map((value) => ({
+    value,
+    label: t(`transactionTypes.${value}`),
+    tone: TYPE_TONE[value],
+  }));
 
   function resetEntry() {
     setAmount(null);
@@ -82,8 +107,18 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
 
   function close() {
     resetEntry();
+    setType("EXPENSE");
     setAccountId(null);
+    setToAccountId(null);
     onClose();
+  }
+
+  // The amount survives a change of type (design: add.md); a category that cannot apply does not.
+  function changeType(next: QuickAddType) {
+    setType(next);
+    setCategoryId(null);
+    setIssues({});
+    quickAdd.reset();
   }
 
   function undo(id: string) {
@@ -97,13 +132,19 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
       });
   }
 
-  async function save() {
-    const parsed = quickAddSchema.safeParse({
+  function draft() {
+    return {
+      type,
       amount,
       categoryId,
       accountId: effectiveAccountId,
+      toAccountId,
       description,
-    });
+    };
+  }
+
+  async function save() {
+    const parsed = quickAddSchema.safeParse(draft());
     if (!parsed.success) {
       setIssues(
         Object.fromEntries(
@@ -115,11 +156,7 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
       return;
     }
     setIssues({});
-    const input: QuickAddTransactionInput = {
-      amount: parsed.data.amount,
-      ...(categoryId ? { categoryId } : {}),
-      ...(effectiveAccountId ? { fromAccountId: effectiveAccountId } : {}),
-    };
+    const input = quickAddInput(parsed.data);
     try {
       const result = await quickAdd.mutateAsync({
         input,
@@ -146,9 +183,7 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
   }
 
   function moreDetails() {
-    onMoreDetails(
-      draftToSearchParams({ amount, categoryId, accountId: effectiveAccountId, description }),
-    );
+    onMoreDetails(draftToSearchParams(draft()));
     close();
   }
 
@@ -157,7 +192,13 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
       <Sheet
         open={open}
         onClose={close}
-        unsaved={amount !== null || categoryId !== null || accountId !== null || description !== ""}
+        unsaved={
+          amount !== null ||
+          categoryId !== null ||
+          accountId !== null ||
+          toAccountId !== null ||
+          description !== ""
+        }
         title={t("transactions.quick.title")}
         footer={
           <div className="flex gap-3">
@@ -186,11 +227,19 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
           }}
         >
           {formError && <Alert tone="danger">{t(formError.messageKey)}</Alert>}
+          <Segment
+            options={typeOptions}
+            value={type}
+            onChange={changeType}
+            label={t("transactions.form.type")}
+          />
           <div className="flex flex-col gap-1">
             <AmountInput
               key={amountKey}
               ref={amountInput}
               label={t("transactions.quick.amount")}
+              defaultValue={amount}
+              tone={TYPE_TONE[type]}
               onChange={setAmount}
               invalid={Boolean(amountError) || (amount !== null && Number.isNaN(amount))}
               className="py-3"
@@ -201,44 +250,53 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
               </span>
             )}
           </div>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-baseline justify-between text-sm">
-              <span className="font-medium text-text-2">{t("transactions.quick.category")}</span>
-              <span className="text-text-3">{t("transactions.quick.categoryHint")}</span>
-            </div>
-            <ChipRow role="group" aria-label={t("transactions.quick.category")}>
-              {chips.map((category) => (
-                <CategoryChip
-                  key={category.id}
-                  color={category.color}
-                  selected={category.id === categoryId}
-                  icon={<CategoryIcon icon={category.icon} size="sm" />}
+          {!transfer && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-baseline justify-between text-sm">
+                <span className="font-medium text-text-2">{t("transactions.quick.category")}</span>
+                <span className="text-text-3">{t("transactions.quick.categoryHint")}</span>
+              </div>
+              <ChipRow role="group" aria-label={t("transactions.quick.category")}>
+                {chips.map((category) => (
+                  <CategoryChip
+                    key={category.id}
+                    color={category.color}
+                    selected={category.id === categoryId}
+                    icon={<CategoryIcon icon={category.icon} size="sm" />}
+                    onClick={() => {
+                      setCategoryId(category.id === categoryId ? null : category.id);
+                    }}
+                  >
+                    {category.name}
+                  </CategoryChip>
+                ))}
+                <Chip
+                  icon={<MoreHorizontal {...iconProps("sm")} />}
+                  aria-haspopup="dialog"
                   onClick={() => {
-                    setCategoryId(category.id === categoryId ? null : category.id);
+                    setPickerOpen(true);
                   }}
                 >
-                  {category.name}
-                </CategoryChip>
-              ))}
-              <Chip
-                icon={<MoreHorizontal {...iconProps("sm")} />}
-                aria-haspopup="dialog"
-                onClick={() => {
-                  setPickerOpen(true);
-                }}
-              >
-                {t("common.more")}
-              </Chip>
-            </ChipRow>
-          </div>
+                  {t("common.more")}
+                </Chip>
+              </ChipRow>
+            </div>
+          )}
           <div className="flex flex-col gap-1">
             <AccountPicker
               label={
-                defaultAccount && !accountId
-                  ? t("transactions.quick.fromMain")
-                  : t("transactions.quick.account")
+                transfer
+                  ? t("transactions.form.from")
+                  : defaultAccount && !accountId
+                    ? t(
+                        type === "INCOME"
+                          ? "transactions.quick.intoMain"
+                          : "transactions.quick.fromMain",
+                      )
+                    : t("transactions.quick.account")
               }
               value={effectiveAccountId}
+              exclude={transfer ? toAccountId : undefined}
               onChange={(account) => {
                 setAccountId(account.id);
               }}
@@ -249,6 +307,40 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
               </span>
             )}
           </div>
+          {transfer && (
+            <>
+              <div className="flex justify-center">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  iconOnly
+                  round
+                  aria-label={t("transactions.form.swap")}
+                  onClick={() => {
+                    setAccountId(toAccountId);
+                    setToAccountId(effectiveAccountId);
+                  }}
+                >
+                  <ArrowUpDown {...iconProps("sm")} />
+                </Button>
+              </div>
+              <div className="flex flex-col gap-1">
+                <AccountPicker
+                  label={t("transactions.form.to")}
+                  value={toAccountId}
+                  exclude={effectiveAccountId}
+                  onChange={(account) => {
+                    setToAccountId(account.id);
+                  }}
+                />
+                {toAccountError && (
+                  <span role="alert" className="text-sm text-danger">
+                    {toAccountError}
+                  </span>
+                )}
+              </div>
+            </>
+          )}
           <Input
             value={description}
             onChange={(event) => {
@@ -262,17 +354,19 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
           />
         </form>
       </Sheet>
-      <CategoryPickerSheet
-        open={pickerOpen}
-        onClose={() => {
-          setPickerOpen(false);
-        }}
-        type="EXPENSE"
-        value={categoryId}
-        onSelect={(category) => {
-          setCategoryId(category.id);
-        }}
-      />
+      {!transfer && (
+        <CategoryPickerSheet
+          open={pickerOpen}
+          onClose={() => {
+            setPickerOpen(false);
+          }}
+          type={type}
+          value={categoryId}
+          onSelect={(category) => {
+            setCategoryId(category.id);
+          }}
+        />
+      )}
     </>
   );
 }

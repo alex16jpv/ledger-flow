@@ -68,7 +68,7 @@ const navBar = (keys, active) =>
 ${keys
   .map((k) =>
     k === null
-      ? `<div class="fab-slot"><button class="fab" aria-label="Add expense">${iconSvg("plus")}</button></div>`
+      ? `<div class="fab-slot"><button class="fab" aria-label="Add">${iconSvg("plus")}</button></div>`
       : tab(k, k === active),
   )
   .join("")}</nav>`;
@@ -482,7 +482,7 @@ const QUICK_BUTTONS = `<div class="hstack" style="gap:10px"><button class="btn g
 
 // The one quick sheet every quick-add plate is drawn from: T-73 adds `type`, T-75 changes `handle`.
 const quickSheet = ({ handle = "plain", type = null, head = null, extra = "", over = "" } = {}) => {
-  const title = type === null ? "Add expense" : "Add";
+  const title = "Add";
   const bar = {
     plain: '<div class="handle"></div>',
     none: "",
@@ -3033,10 +3033,10 @@ const quickTypeVariant = (kind) => {
 
 // T-75 · the 36×4 bar on top of every mobile sheet: gone, or made to mean something.
 const sheetHandleVariant = (kind) => {
-  if (kind === "none") return home({ sheet: quickSheet({ handle: "none" }) });
+  if (kind === "none") return home({ sheet: quickSheet({ type: "expense", handle: "none" }) });
   if (kind === "dismiss")
     return home({
-      sheet: quickSheet({ handle: "grab" })
+      sheet: quickSheet({ type: "expense", handle: "grab" })
         .replace(
           '<div class="scrim">',
           '<div class="scrim" style="background:color-mix(in oklab, var(--overlay) 55%, transparent)">',
@@ -3047,7 +3047,7 @@ const sheetHandleVariant = (kind) => {
         ),
     });
   const extra = `${field("Date", "Today · 18:10", null, { icon: "calendar" })}${field("Description", "Uber to work", null, { icon: "pencil" })}`;
-  return home({ sheet: quickSheet({ handle: "wide", extra }) });
+  return home({ sheet: quickSheet({ type: "expense", handle: "wide", extra }) });
 };
 
 const plate = (id, title, note, html, o = {}) => ({ id, title, note, html, ...o });
@@ -3142,9 +3142,23 @@ const PAGES = [
       plate(
         "quick-capture",
         "Quick capture",
-        "The sheet behind the centre button.",
-        home({ sheet: quickSheet() }),
-        { added: "2026-09-01" },
+        "The sheet behind the centre button. The three-way segment on top records all three types (T-73) and the bar above it opens the full form (T-75).",
+        home({ sheet: quickSheet({ type: "expense", handle: "wide" }) }),
+        { added: "2026-09-01", updated: "2026-09-15" },
+      ),
+      plate(
+        "quick-capture-income",
+        "Quick capture · income",
+        "The type tints the amount and reconfigures the body: the income categories, and the account row reads “Into your main account”. The amount survives the switch.",
+        home({ sheet: quickSheet({ type: "income", handle: "wide" }) }),
+        { added: "2026-09-15" },
+      ),
+      plate(
+        "quick-capture-transfer",
+        "Quick capture · transfer",
+        "A transfer has no category and two accounts, so the chips give way to From and To with the swap button between them. The two have to differ.",
+        home({ sheet: quickSheet({ type: "transfer", handle: "wide" }) }),
+        { added: "2026-09-15" },
       ),
       plate("full-form-expense", "Full form · expense", "", transactionForm("EXPENSE"), {
         added: "2026-09-01",

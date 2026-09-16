@@ -83,19 +83,46 @@ export function defaultFormValues(now: Date, timeZone: string): TransactionFormV
 }
 
 export interface FormDraft {
+  type?: TransactionType;
   amount?: number;
   categoryId?: string;
   accountId?: string;
+  toAccountId?: string;
   description?: string;
+}
+
+function draftType(value: string | null): TransactionType | undefined {
+  return TRANSACTION_TYPES.find((type) => type === value);
 }
 
 export function draftFromSearchParams(params: URLSearchParams): FormDraft {
   const amount = Number(params.get("amount"));
+  const type = draftType(params.get("type"));
   return {
+    ...(type ? { type } : {}),
     ...(Number.isFinite(amount) && amount > 0 ? { amount } : {}),
     ...(params.get("categoryId") ? { categoryId: params.get("categoryId") ?? undefined } : {}),
     ...(params.get("accountId") ? { accountId: params.get("accountId") ?? undefined } : {}),
+    ...(params.get("toAccountId") ? { toAccountId: params.get("toAccountId") ?? undefined } : {}),
     ...(params.get("description") ? { description: params.get("description") ?? undefined } : {}),
+  };
+}
+
+// A transfer keeps its two sides; every other type has one account, so the draft's is that one.
+export function draftToFormValues(
+  draft: FormDraft,
+  base: TransactionFormValues,
+): TransactionFormValues {
+  const type = draft.type ?? base.type;
+  return {
+    ...base,
+    type,
+    ...(draft.amount !== undefined ? { amount: draft.amount } : {}),
+    categoryId: categoryAllowed(type) ? (draft.categoryId ?? null) : null,
+    accountId: type === "TRANSFER" ? null : (draft.accountId ?? null),
+    fromAccountId: type === "TRANSFER" ? (draft.accountId ?? null) : null,
+    toAccountId: type === "TRANSFER" ? (draft.toAccountId ?? null) : null,
+    description: draft.description ?? "",
   };
 }
 

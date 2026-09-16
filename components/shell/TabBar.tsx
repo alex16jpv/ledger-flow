@@ -66,7 +66,7 @@ export function TabBar({ pendingCount, moreOpen, onAdd, onMore }: TabBarProps) {
             <div key={slot} className="flex h-(--tabbar-h) items-center justify-center">
               <button
                 type="button"
-                aria-label={t("addExpense")}
+                aria-label={t("add")}
                 aria-haspopup="dialog"
                 onPointerDown={startHold}
                 onPointerUp={cancelHold}

@@ -58,7 +58,6 @@
     "home": "Home",
     "transactions": "Transactions",
     "add": "Add",
-    "addExpense": "Add expense",
     "budgets": "Budgets",
     "accounts": "Accounts",
     "stats": "Stats",
@@ -1210,11 +1209,12 @@
   },
   "transactions": {
     "quick": {
-      "title": "Add expense",
+      "title": "Add",
       "amount": "Amount",
       "category": "Category",
       "categoryHint": "optional · you can add it later",
       "fromMain": "From your main account",
+      "intoMain": "Into your main account",
       "account": "Account",
       "note": "Quick note (optional)",
       "moreDetails": "More details",

@@ -37,7 +37,7 @@ async function quickRow(request: Request, amount: number) {
 
 function addButton(page: Page) {
   return test.info().project.name === "mobile"
-    ? page.getByRole("button", { name: "Add expense" })
+    ? page.getByRole("button", { name: "Add", exact: true })
     : page.getByRole("button", { name: "Add", exact: true });
 }
 
@@ -47,7 +47,7 @@ test("an expense is captured in two interactions, lands in the inbox and can be 
 }) => {
   await signIn(page, request);
   await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  const sheet = page.getByRole("dialog", { name: "Add" });
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
   await expect(
@@ -94,7 +94,7 @@ test("a chosen category and a note complete the details, and More details carrie
 }) => {
   await signIn(page, request);
   await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  const sheet = page.getByRole("dialog", { name: "Add" });
   const amount = uniqueAmount();
   await sheet.getByRole("textbox", { name: "Amount" }).fill(String(amount));
   await sheet
@@ -152,7 +152,7 @@ test("without a main account the sheet asks for one instead of failing silently"
   await page.context().addCookies((await request.storageState()).cookies);
   await page.goto("/home");
   await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  const sheet = page.getByRole("dialog", { name: "Add" });
   await expect(sheet.getByRole("button", { name: /Account.*Choose an account/ })).toBeVisible();
   await sheet.getByRole("textbox", { name: "Amount" }).fill("500");
   await sheet.getByRole("button", { name: "Save" }).click();
@@ -173,7 +173,7 @@ test("holding the add button chains captures", async ({ page, request }) => {
   await page.mouse.down();
   await page.waitForTimeout(700);
   await page.mouse.up();
-  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  const sheet = page.getByRole("dialog", { name: "Add" });
   await expect(sheet).toBeVisible();
   const amount = uniqueAmount();
   await sheet.getByRole("textbox", { name: "Amount" }).fill(String(amount));
@@ -197,9 +197,9 @@ test("a tap outside the quick sheet closes it, and a tap inside does not", async
   };
   await signIn(page, request);
   await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  const sheet = page.getByRole("dialog", { name: "Add" });
   await expect(sheet).toBeVisible();
-  const panel = sheet.getByRole("heading", { name: "Add expense" });
+  const panel = sheet.getByRole("heading", { name: "Add" });
 
   async function outside() {
     const box = await panel.boundingBox();

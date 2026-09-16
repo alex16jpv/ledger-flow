@@ -58,7 +58,6 @@
     "home": "Inicio",
     "transactions": "Movimientos",
     "add": "Registrar",
-    "addExpense": "Registrar gasto",
     "budgets": "Presupuestos",
     "accounts": "Cuentas",
     "stats": "Estadísticas",
@@ -1210,11 +1209,12 @@
   },
   "transactions": {
     "quick": {
-      "title": "Añadir gasto",
+      "title": "Añadir",
       "amount": "Importe",
       "category": "Categoría",
       "categoryHint": "opcional · puedes añadirla después",
       "fromMain": "Desde tu cuenta principal",
+      "intoMain": "Hacia tu cuenta principal",
       "account": "Cuenta",
       "note": "Nota rápida (opcional)",
       "moreDetails": "Más detalles",

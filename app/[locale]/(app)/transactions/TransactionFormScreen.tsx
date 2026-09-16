@@ -15,6 +15,7 @@ import { DeleteTransactionSheet } from "@/features/transactions/components/Delet
 import {
   defaultFormValues,
   draftFromSearchParams,
+  draftToFormValues,
   fromTransaction,
   type TransactionFormValues,
 } from "@/features/transactions/form";
@@ -43,16 +44,12 @@ export function NewTransactionScreen() {
   const params = useSearchParams();
   const { timeZone } = useFormatSettings();
   const create = useCreateTransaction();
-  const [defaults] = useState<TransactionFormValues>(() => {
-    const draft = draftFromSearchParams(new URLSearchParams(params.toString()));
-    return {
-      ...defaultFormValues(new Date(), timeZone),
-      ...(draft.amount !== undefined ? { amount: draft.amount } : {}),
-      categoryId: draft.categoryId ?? null,
-      accountId: draft.accountId ?? null,
-      description: draft.description ?? "",
-    };
-  });
+  const [defaults] = useState<TransactionFormValues>(() =>
+    draftToFormValues(
+      draftFromSearchParams(new URLSearchParams(params.toString())),
+      defaultFormValues(new Date(), timeZone),
+    ),
+  );
 
   return (
     <div className="flex flex-col gap-5">

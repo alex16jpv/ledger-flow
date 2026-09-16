@@ -3815,3 +3815,20 @@ cover` is set once in the root layout for the standalone display.
   underneath is one of its four destinations, so the bar never stops saying where you are; taking a
   destination closes the sheet, because the shell outlives the route. The e2e suite reaches those
   screens through `tests/e2e/nav.ts`, which takes the sidebar above 900px and More below it.
+
+## 2026-09-15 · Quick add records all three types (T-73)
+
+- **Decision:** the quick sheet opens with a three-way segment — Expense · Income · Transfer, the full
+  form's control minus Adjustment — and the title is "Add". The type tints the amount, swaps the
+  category chips for the ones of that type, and on a transfer drops the category altogether for From
+  and To with the swap button between them. The amount survives a change of type; the category does
+  not, because a category belongs to one type.
+- **Why it cost no backend work:** `POST /transactions/quick` has always taken `type` and both account
+  ids, and `lib/local/outbox/transactions.ts` has always applied the same per-type defaults offline. It
+  was the client that only ever sent an expense.
+- **Where the shape lives:** `features/transactions/schemas.ts`. `QUICK_TYPES` is derived from
+  `QuickAddTransactionInput["type"]`, so a fourth type in the contract is a type error here rather than
+  a silent omission; `quickAddInput` is the one place that decides which side the single account goes
+  on, and the sheet no longer builds that payload inline.
+- **Consequence:** the FAB's accessible name is "Add", not "Add expense" — the button no longer only
+  adds an expense, and a name that says otherwise is a message that lies. `nav.addExpense` is gone.

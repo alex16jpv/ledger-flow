@@ -266,7 +266,7 @@ export function mirrorRow(
 
 export function addButton(page: Page) {
   return test.info().project.name === "mobile"
-    ? page.getByRole("button", { name: "Add expense" })
+    ? page.getByRole("button", { name: "Add", exact: true })
     : page.getByRole("button", { name: "Add", exact: true });
 }
 

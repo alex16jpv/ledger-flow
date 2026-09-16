@@ -11,6 +11,13 @@ backs the toast's Undo. The sheet itself is composed in the app layer
 features; `draftToSearchParams` carries what was typed to the full form when the user asks for
 "More details".
 
+T-73 gives that sheet the three types the endpoint has always accepted. `schemas.ts` owns the shape:
+`QUICK_TYPES` comes from `QuickAddTransactionInput["type"]`, `quickAddSchema` checks a transfer's two
+sides in `superRefine` (both present, and different), and `quickAddInput` decides which side the one
+account goes on — `fromAccountId` for an expense, `toAccountId` for an income, both for a transfer.
+Nothing behind it changed: the server and the offline queue applied these same per-type defaults
+already. The draft the full form receives carries the type and the second account too.
+
 W-18 adds the full form model in `form.ts`: one Zod schema for the four types (the account side
 rules live in `superRefine`), `toTransactionInput` maps the form to the API payload (explicit
 nulls so PUT can clear a side), `fromTransaction` prefills the edit form and `draftFromSearchParams`

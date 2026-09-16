@@ -26,7 +26,7 @@ describe("TabBar add button", () => {
     renderWithProviders(
       <TabBar pendingCount={0} moreOpen={false} onAdd={onAdd} onMore={vi.fn()} />,
     );
-    const fab = screen.getByRole("button", { name: "Add expense" });
+    const fab = screen.getByRole("button", { name: "Add" });
 
     fireEvent.pointerDown(fab);
     fireEvent.pointerUp(fab);
