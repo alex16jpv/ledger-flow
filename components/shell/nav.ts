@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { ChartColumn, ChartPie, House, List, Settings, Tags, Wallet } from "lucide-react";
+import { ChartColumn, ChartPie, Ellipsis, House, List, Settings, Tags, Wallet } from "lucide-react";
 
 export type NavKey =
   "home" | "transactions" | "budgets" | "accounts" | "stats" | "categories" | "settings";
@@ -21,7 +21,18 @@ export const NAV_ITEMS: readonly NavItem[] = [
 
 export const SETTINGS_ITEM: NavItem = { key: "settings", href: "/settings", icon: Settings };
 
-export const TAB_ITEMS: readonly NavKey[] = ["home", "transactions", "budgets", "accounts"];
+export type TabSlot = NavKey | "add" | "more";
+
+export const TAB_SLOTS: readonly TabSlot[] = ["home", "transactions", "add", "budgets", "more"];
+
+export const MORE_ICON: LucideIcon = Ellipsis;
+
+const IN_THE_BAR = new Set<string>(TAB_SLOTS);
+
+export const MORE_ITEMS: readonly NavItem[] = [
+  ...NAV_ITEMS.filter((item) => !IN_THE_BAR.has(item.key)),
+  SETTINGS_ITEM,
+];
 
 export const ADD_HREF = "/transactions/new";
 

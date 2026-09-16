@@ -73,7 +73,9 @@ ${keys
   )
   .join("")}</nav>`;
 
-const tabbar = (active) => navBar(["inicio", "mov", null, "pres", "cuentas"], active);
+// T-72 · the phone's bar ends in More; Accounts moved into the sheet it opens.
+const tabbar = (active) => navBar(["inicio", "mov", null, "pres", "mas"], active);
+const barBeforeMore = (active) => navBar(["inicio", "mov", null, "pres", "cuentas"], active);
 
 const navlink = (icon, label, active = false, count = null) => {
   const c = count ? `<span class="count">${count}</span>` : "";
@@ -832,6 +834,7 @@ const screen = (body, o = {}) => {
     narrow = false,
     sheet = "",
     banner = "",
+    nav = null,
   } = o;
   let header;
   if (back !== null) {
@@ -842,7 +845,7 @@ const screen = (body, o = {}) => {
     header = "";
   }
   const mw = narrow ? ' style="max-width:640px"' : "";
-  return `<div class="shell">${sidebar(side)}<main class="main">${banner}<div class="page"${mw}>${header}${body}</div></main>${tabbar(tabName)}</div>${sheet}`;
+  return `<div class="shell">${sidebar(side)}<main class="main">${banner}<div class="page"${mw}>${header}${body}</div></main>${nav ?? tabbar(tabName)}</div>${sheet}`;
 };
 
 const field = (label, value = null, placeholder = null, o = {}) => {
@@ -1112,12 +1115,13 @@ const accountCard = (name, typ, color, bal, isDefault = false, neg = false, arch
 <div><div class="amount-lg amount">${neg ? "−" : ""}${money(bal)}</div><div class="type">${ACCT_TYPE_LABEL[typ]}</div></div></a>`;
 };
 
-const accounts = ({ actions = null, sheet = "" } = {}) => {
+const accounts = ({ actions = null, sheet = "", nav = null } = {}) => {
   const body = `<div class="card" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div class="stat"><span class="k">Total balance</span><span class="amount-hero" style="font-size:32px">${money(11258600)}</span><span class="small faint">4 active accounts · 1 archived</span></div><div class="stat" style="text-align:right;align-items:flex-end"><span class="k">Card debt</span><span class="amount-lg amount">${money(1245900, "−")}</span></div></div>
 <div class="acct-grid">${ACCOUNTS.map((a) => accountCard(...a)).join("")}</div>
 <button class="card hstack" style="justify-content:space-between;cursor:pointer;text-align:left;padding:12px 16px"><span class="hstack">${iconSvg("archive")}<span style="font-weight:500">Archived</span><span class="badge">1</span></span>${iconSvg("chevron-down", "sm")}</button>
 <div class="acct-grid">${accountCard("Nequi", "OTHER", "PINK", 0, false, false, true)}</div>`;
   return screen(body, {
+    nav,
     tab: "cuentas",
     side: "cuentas",
     title: "Accounts",
@@ -2988,20 +2992,18 @@ const recurringVariant = (kind) => {
 
 // Everything below is the preview itself — navigation, search, dates — not the app's design.
 
-// T-72 · four ways to reach Stats and Categories from a phone, awaiting the owner's choice.
+// T-72 · what the More tab opens; `withAccounts` false is the discarded avatar variant.
 const navMenuSheet = (withAccounts) => {
-  const acc = withAccounts
-    ? settingsRow("wallet", "Accounts", "4 active · 1 archived", "", "BLUE")
-    : "";
+  const acc = withAccounts ? settingsRow("wallet", "Accounts", "4 accounts", "", "BLUE") : "";
   return sheetWrap(
     `<div class="list card flush">${acc}${settingsRow("chart-column", "Stats", "Where the money went", "", "TEAL")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}${settingsRow("settings", "Settings", "Profile, currency, appearance", "", "GRAY")}</div>
-<a class="row" href="#"><span class="avatar" style="width:32px;height:32px;font-size:12px">JD</span><span class="body"><span class="title">John Doe</span><span class="meta">john@example.com</span></span>${iconSvg("chevron-right", "sm")}</a>`,
+<div class="list card flush"><a class="row" href="#"><span class="avatar" style="width:32px;height:32px;font-size:12px">JD</span><span class="body"><span class="title">John Doe</span><span class="meta">john@example.com</span></span>${iconSvg("chevron-right", "sm")}</a></div>`,
     "More",
   );
 };
 
 const mobileNavVariant = (kind) => {
-  if (kind === "see-all") return home({ statsLink: true });
+  if (kind === "see-all") return home({ statsLink: true, nav: barBeforeMore("inicio") });
   if (kind === "more-tab")
     return home({ nav: navBar(["inicio", "mov", null, "pres", "mas"], "inicio") });
   if (kind === "more-sheet")
@@ -3012,6 +3014,7 @@ const mobileNavVariant = (kind) => {
   if (kind === "six")
     return home({ nav: navBar(["inicio", "mov", null, "pres", "cuentas", "mas"], "inicio") });
   return accounts({
+    nav: barBeforeMore("cuentas"),
     actions: `<button class="btn primary desktop-only">${iconSvg("plus", "sm")}New account</button><button class="btn secondary icon-only round mobile-only" aria-label="New account">${iconSvg("plus")}</button><a class="avatar" href="#" aria-label="More">JD</a>`,
     sheet: kind === "avatar-open" ? navMenuSheet(false) : "",
   });
@@ -3113,6 +3116,13 @@ const PAGES = [
         "Every bar is a control: it says its day and its amount on hover, on focus and in the line underneath, and it opens that day. The month's figures are now the sum of the bars.",
         home({ chart: true }),
         { added: "2026-09-11" },
+      ),
+      plate(
+        "more-sheet",
+        "More",
+        "What the last slot of the phone's bar opens: Accounts, Stats, Categories, Settings and the user, each with what it holds. It is the sidebar's list minus what the bar already has, so below 900px nothing is out of reach. Trends is deliberately absent — it is reached from a Stats view and its back arrow points at Stats.",
+        home({ nav: tabbar("mas"), sheet: navMenuSheet(true) }),
+        { added: "2026-09-15" },
       ),
       plate(
         "home-without-a-name",

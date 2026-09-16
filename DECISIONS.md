@@ -3790,3 +3790,28 @@ cover` is set once in the root layout for the standalone display.
   form, the close button and the swap that used to leave the question hanging; and `QuickAddSheet`
   has its own test that types an amount, taps the scrim and expects the question — the shape of test
   that would have caught the original miss, which no amount of `Sheet`-in-isolation testing could.
+
+## 2026-09-15 · The phone's bar ends in More, and the sheet behind it is presentational (T-72)
+
+- **Decision:** below 900px the tab bar is Home · Transactions · Add · Budgets · **More**, and More is
+  a button that opens `components/shell/MoreSheet` with Accounts, Stats, Categories, Settings and the
+  user. Accounts gives up its tab. The bar is one list, `TAB_SLOTS`, and what the sheet holds is
+  **derived** from it: `MORE_ITEMS` is `NAV_ITEMS` minus whatever the bar already shows, plus Settings.
+  Adding a tab therefore removes it from the sheet by itself, which is the drift this would otherwise
+  have had for the rest of the product's life.
+- **Why now:** `/stats` and `/stats/trends` had no way in at all below 900px — no link anywhere
+  outside the sidebar — and Categories was three taps deep inside Settings. The owner chose this shape
+  on 2026-09-15 over four alternatives that stay drawn in `design/preview/variants.html`.
+- **Where the counts come from:** `components/**` may not import a feature, so `MoreSheet` takes
+  `accountCount` and `categoryCounts` as props and `AppFrame` reads them — the same route `pendingCount`
+  already takes. Both queries are `enabled` only while the sheet is open, so a closed bar costs nothing,
+  and both go through `lib/local/repository`, so the sheet says the same numbers with no network. The
+  account count is the server's `pagination.total`, not the length of a page: a capped list would have
+  printed "100" for a user with three hundred (T-38).
+- **Alternative:** letting the bar carry six slots. Rejected with a measurement, drawn in the variants
+  page: at 320px three columns fall to 46px, and in Spanish to 37px, against a 44px minimum the rest of
+  the product holds to.
+- **Consequence:** More carries the selected look while its sheet is open and whenever the screen
+  underneath is one of its four destinations, so the bar never stops saying where you are; taking a
+  destination closes the sheet, because the shell outlives the route. The e2e suite reaches those
+  screens through `tests/e2e/nav.ts`, which takes the sidebar above 900px and More below it.

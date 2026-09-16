@@ -9,11 +9,13 @@ import {
   type AddOptions,
   AppShell,
   ConnectionBanner,
+  MoreSheet,
   NoSessionChoiceSheet,
   OfflineReadyAnnouncement,
   SessionExpiredSheet,
 } from "@/components/shell";
 import { ToastProvider } from "@/components/ui/Toast";
+import { useAccountCount, useCategorySummary } from "@/features/settings/hooks";
 import { usePendingCount } from "@/features/transactions/hooks";
 import { readSessionMarker, vaultUserFor } from "@/lib/auth/marker";
 import { LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
@@ -54,6 +56,7 @@ function Frame({ children }: { children: ReactNode }) {
     open: false,
     chain: false,
   });
+  const [moreOpen, setMoreOpen] = useState(false);
   // F-41: closing the sheet in local mode closes it for good; a new session remounts it clear.
   const [sheetDismissed, setSheetDismissed] = useState(false);
   useEffect(() => startHeartbeat(), []);
@@ -69,6 +72,9 @@ function Frame({ children }: { children: ReactNode }) {
   // F-63: offline or in local mode (§2.6), the mirror profile carries the currency and the zone.
   const mirrorProfile = useMirrorProfile(Boolean(localUserId) && session.user === null);
   const user = session.user ?? mirrorProfile;
+  // T-72: both read the mirror, and only while the sheet is open — the bar costs nothing closed.
+  const accountCount = useAccountCount(moreOpen);
+  const categorySummary = useCategorySummary(moreOpen);
   // F-38: what the pull writes into the mirror only reaches the screens through an invalidation.
   const onMirrorChanged = useCallback(() => {
     void invalidateMirrorBacked(queryClient);
@@ -103,13 +109,27 @@ function Frame({ children }: { children: ReactNode }) {
       <AppShell
         userName={user?.name ?? ""}
         pendingCount={pendingCount}
+        moreOpen={moreOpen}
         onAdd={({ chain }) => {
           setQuickAdd({ open: true, chain });
+        }}
+        onMore={() => {
+          setMoreOpen(true);
         }}
         banner={<ConnectionBanner signedOut={sessionStatus === "expired"} onSignIn={goToLogin} />}
       >
         {mounted ? children : null}
       </AppShell>
+      <MoreSheet
+        open={moreOpen}
+        onClose={() => {
+          setMoreOpen(false);
+        }}
+        userName={user?.name ?? ""}
+        userEmail={user?.email ?? ""}
+        accountCount={accountCount.data}
+        categoryCounts={categorySummary.data}
+      />
       <QuickAddSheet
         open={quickAdd.open}
         chain={quickAdd.chain}

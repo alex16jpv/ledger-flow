@@ -64,6 +64,11 @@
     "stats": "Estadísticas",
     "categories": "Categorías",
     "settings": "Ajustes",
+    "more": "Más",
+    "moreAccounts": "{count, plural, one {# cuenta} other {# cuentas}}",
+    "moreStats": "En qué se fue el dinero",
+    "moreCategories": "{active, plural, one {# activa} other {# activas}} · {archived, plural, one {# archivada} other {# archivadas}}",
+    "moreSettings": "Perfil, moneda, apariencia",
     "search": "Buscar",
     "pendingCount": "{count, plural, one {# por revisar} other {# por revisar}}"
   },

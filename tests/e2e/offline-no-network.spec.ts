@@ -11,6 +11,7 @@ import {
   uniqueAmount,
   vaultState,
 } from "../offline";
+import { goToSection } from "./nav";
 
 test("changing module with no network reads the mirror on every screen", async ({
   page,
@@ -43,7 +44,7 @@ test("changing module with no network reads the mirror on every screen", async (
     await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
   }
 
-  await page.getByRole("link", { name: "Accounts" }).first().click();
+  await goToSection(page, "Accounts");
   await page.waitForLoadState("load");
   const card = page.getByRole("link", { name: new RegExp(user.accountName) });
   await expect(card).toBeVisible({ timeout: 30_000 });

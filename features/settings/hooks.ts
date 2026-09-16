@@ -61,6 +61,16 @@ export function useHasAccounts(enabled = true) {
   });
 }
 
+// T-72: the More sheet says how many there are, so it reads the server's total, not a capped page.
+export function useAccountCount(enabled = true) {
+  return useQuery({
+    queryKey: settingsKeys.accountCount(),
+    queryFn: fetchAccountCount,
+    enabled,
+    select: (list) => list.pagination.total,
+  });
+}
+
 export interface ProfileChange extends UpdateUserInput {
   reauthenticateWith?: { email: string; password: string };
 }
