@@ -61,9 +61,13 @@ first — is written up there.
 
 ## The order of this page is an open question (T-82)
 
-Nothing below is settled, and **nothing is built until the owner chooses**: the alternatives are
-drawn in `preview/variants.html` (`#stats-three-zones`, `#stats-three-zones-and-a-way-in`,
-`#stats-a-line-instead-of-a-card`, `#stats-two-columns-on-a-desktop`) and marked "Waiting on you".
+Nothing here is settled, and **nothing is built until the owner chooses**. Everything is drawn in
+`preview/variants.html` and listed on `preview/in-review.html`: the baseline
+`#stats-three-zones`, the four answers `#stats-other-months-in-the-middle`,
+`#stats-three-zones-and-a-way-in`, `#stats-the-month-opens-a-range` and
+`#stats-a-line-instead-of-a-card`, what the backbone costs on the shortest tab
+(`#stats-three-zones-on-the-shortest-view`), and the separate desktop question
+`#stats-two-columns-on-a-desktop`.
 
 What he asked, on 2026-09-16: Trends over time must stop being lost at the end, without simply being
 put at the start, because it is not read daily. Measured on the phone frame, the way into Trends sits
@@ -71,14 +75,32 @@ put at the start, because it is not read daily. Measured on the phone frame, the
 766px under Tags — a spread of 2.4x, so there is no stable place to learn. It is also the last block
 of a flat stack of eight to twelve cards that all look alike, with nothing saying where the answer to
 _where did this month's money go_ ended; and it is drawn as a card of content when what it does is
-change the range, which is the period navigator's job. On a 1,400px screen the page is still the same
-640px column with the same scroll.
+change the range, which is the period navigator's job.
 
-The three proposals share a backbone — the page in three zones (**the answer**, **More about this
-month**, **Other months**) and _Biggest this period_ in all four views instead of two — and differ in
-where the way into Trends goes: nowhere new, a button in the page header, or one line on the total
-card carrying a six-month sparkline. The two-column desktop layout is a separate question that
-applies to whichever wins. Each plate's note carries what it costs, measured.
+**The backbone all five share** is the page in zones under real headings — **the answer** (the total,
+the chart or the breakdown, and the tiles that summarise it), **More about this month**, and **Other
+months** — plus _Biggest this period_ in all four views instead of only Days and Accounts. That last
+part is a **separable decision with its own price**: Biggest is a second request
+(`sort=amount&order=desc` on `GET /transactions`), so putting it under Categories and Tags adds a
+request to two views that do not make one today, and it makes Categories 480px taller.
+
+**They differ in where the way into Trends goes**: after the answer and before the follow-ups; a
+button in the page header; a menu on the month itself; or one line on the total card. The line is the
+only one that is not a link to the same card — it answers the comparison in place, at the cost of one
+`groupBy=month` read per Stats load, and it is the only one that has to say what an **empty period**
+does, because an empty period has no total card and `stats.md` requires it to keep its way into
+Trends.
+
+**A disagreement this has to settle.** The app caps Stats at `max-w-[640px]` at every width
+(`StatsScreen.tsx`), while this design draws it at the shared 1,120px content cap, and `layout.md`
+mentions neither. Whichever is right, it is one column: on a desktop the Days view is 1,744px of
+scroll here, and taller at 640px. `#stats-two-columns-on-a-desktop` is where that gets decided.
+
+**What is drawn and what is not.** The variants are drawn on Days and, for the backbone, on
+Categories; Accounts and Tags keep their own footnote and alert and are not redrawn. Nor are the four
+states — data is drawn, empty, loading and error are not, and they matter here: the empty period and
+the loading skeleton both change under the line variant, and the error state carries no way into
+Trends today and keeps none.
 
 ## What this needs from the backend
 
