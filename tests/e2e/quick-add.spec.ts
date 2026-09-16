@@ -26,6 +26,7 @@ async function quickRow(request: Request, amount: number) {
   const list = (await (await request.get("/api/transactions?source=QUICK&limit=50")).json()) as {
     data: {
       id: string;
+      type: string;
       amount: number;
       pendingDetails: boolean;
       description: string | null;
@@ -36,9 +37,7 @@ async function quickRow(request: Request, amount: number) {
 }
 
 function addButton(page: Page) {
-  return test.info().project.name === "mobile"
-    ? page.getByRole("button", { name: "Add", exact: true })
-    : page.getByRole("button", { name: "Add", exact: true });
+  return page.getByRole("button", { name: "Add", exact: true });
 }
 
 test("an expense is captured in two interactions, lands in the inbox and can be undone", async ({
@@ -221,5 +220,65 @@ test("a tap outside the quick sheet closes it, and a tap inside does not", async
   await expect(sheet).toBeVisible();
   box = await outside();
   if (box) await tap(box.x + box.width / 2, Math.round(box.y / 2));
+  await expect(sheet).toBeHidden();
+});
+
+// T-73: the sheet sent an expense whatever the user meant; the endpoint always took all three.
+test("the quick sheet records an income and a transfer against the real backend", async ({
+  page,
+  request,
+}) => {
+  await signIn(page, request);
+  await addButton(page).click();
+  const sheet = page.getByRole("dialog", { name: "Add" });
+
+  const income = uniqueAmount();
+  await sheet.getByRole("button", { name: "Income" }).click();
+  await expect(sheet.getByRole("button", { name: /Into your main account/ })).toBeVisible();
+  await sheet.getByRole("textbox", { name: "Amount" }).fill(String(income));
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Transaction saved")).toBeVisible();
+  const saved = await quickRow(request, income);
+  expect(saved?.type).toBe("INCOME");
+  await request.delete(`/api/transactions/${saved?.id}`, { headers: { origin: APP } });
+
+  await addButton(page).click();
+  const transfer = uniqueAmount();
+  await sheet.getByRole("button", { name: "Transfer" }).click();
+  await expect(sheet.getByRole("group", { name: "Category" })).toBeHidden();
+  await sheet.getByRole("textbox", { name: "Amount" }).fill(String(transfer));
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await expect(sheet.getByRole("alert")).toHaveText("This field is required.");
+  await sheet.getByRole("button", { name: /^To/ }).click();
+  await page.getByRole("option").first().click();
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Transaction saved")).toBeVisible();
+  const moved = await quickRow(request, transfer);
+  expect(moved?.type).toBe("TRANSFER");
+  await request.delete(`/api/transactions/${moved?.id}`, { headers: { origin: APP } });
+});
+
+// T-75: the bar existed on 38 sheets and did nothing. Only a browser has the gesture and the layout.
+test("the bar on top of the quick sheet opens the full form carrying what was typed", async ({
+  page,
+  request,
+}) => {
+  test.skip(test.info().project.name !== "mobile", "the bar is only drawn below 600px");
+  await signIn(page, request);
+  await addButton(page).click();
+  const sheet = page.getByRole("dialog", { name: "Add" });
+  const amount = uniqueAmount();
+  await sheet.getByRole("textbox", { name: "Amount" }).fill(String(amount));
+
+  const bar = sheet.getByRole("button", { name: "Open the full form" });
+  const box = await bar.boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) return;
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+
+  await expect(page.getByRole("heading", { level: 1, name: "New transaction" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Amount" })).toHaveValue(
+    new Intl.NumberFormat("en-US").format(amount),
+  );
   await expect(sheet).toBeHidden();
 });

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { renderWithProviders } from "@/lib/testing/render";
 
-import { Sheet, useUnsavedGuard } from "./Sheet";
+import { EXPAND_DRAG_PX, Sheet, useUnsavedGuard } from "./Sheet";
 
 describe("Sheet", () => {
   it("opens as a modal dialog labelled by its title and closes from the button", async () => {
@@ -244,5 +244,63 @@ describe("Sheet", () => {
       </Sheet>,
     );
     expect(screen.getByRole("dialog", { hidden: true })).not.toHaveAttribute("open");
+  });
+
+  // T-75: the bar was drawn on all 38 sheets and did nothing. In quick add it now opens the full form.
+  describe("the bar on top", () => {
+    const view = (onExpand?: () => void) => {
+      renderWithProviders(
+        <Sheet
+          open
+          onClose={vi.fn()}
+          title="Add"
+          onExpand={onExpand}
+          expandLabel="Open the full form"
+        >
+          <p>content</p>
+        </Sheet>,
+      );
+    };
+
+    it("is decoration in a sheet that has nothing to open", () => {
+      view();
+
+      expect(screen.queryByRole("button", { name: "Open the full form" })).not.toBeInTheDocument();
+    });
+
+    it("opens the full form on a tap", async () => {
+      const onExpand = vi.fn();
+      view(onExpand);
+
+      await userEvent.click(screen.getByRole("button", { name: "Open the full form" }));
+
+      expect(onExpand).toHaveBeenCalledOnce();
+    });
+
+    it("opens it once on a drag upwards, and not at all on a short one", () => {
+      const onExpand = vi.fn();
+      view(onExpand);
+      const bar = screen.getByRole("button", { name: "Open the full form" });
+
+      fireEvent.pointerDown(bar, { clientY: 200 });
+      fireEvent.pointerUp(bar, { clientY: 200 - EXPAND_DRAG_PX });
+      fireEvent.click(bar);
+      expect(onExpand).toHaveBeenCalledOnce();
+
+      fireEvent.pointerDown(bar, { clientY: 200 });
+      fireEvent.pointerUp(bar, { clientY: 198 });
+      expect(onExpand).toHaveBeenCalledOnce();
+    });
+
+    it("does not open it when the drag goes down", () => {
+      const onExpand = vi.fn();
+      view(onExpand);
+      const bar = screen.getByRole("button", { name: "Open the full form" });
+
+      fireEvent.pointerDown(bar, { clientY: 200 });
+      fireEvent.pointerUp(bar, { clientY: 260 });
+
+      expect(onExpand).not.toHaveBeenCalled();
+    });
   });
 });

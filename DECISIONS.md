@@ -3832,3 +3832,24 @@ cover` is set once in the root layout for the standalone display.
   on, and the sheet no longer builds that payload inline.
 - **Consequence:** the FAB's accessible name is "Add", not "Add expense" — the button no longer only
   adds an expense, and a name that says otherwise is a message that lies. `nav.addExpense` is gone.
+
+## 2026-09-15 · The bar on top of the quick sheet opens the full form (T-75)
+
+- **Decision:** in quick add the 36×4 bar becomes a 44×4 button named "Open the full form". Tapping it,
+  or dragging it up by at least `EXPAND_DRAG_PX` (16), makes the same jump the "More details" button
+  makes: the amount, the type, the category, the second account and the note travel into "New
+  transaction". In the other 37 sheets the bar stays the `aria-hidden` decoration it always was. The
+  owner chose this on 2026-09-15 over taking the bar out everywhere and over drag-to-dismiss.
+- **Why a `Sheet` prop and not a quick-add component:** the bar is drawn by `Sheet`, so the only way to
+  give it meaning in one sheet is to let that sheet pass the meaning in — `onExpand` plus its
+  `expandLabel`, because the label is user-visible text and belongs to the caller's namespace. A sheet
+  that passes nothing keeps the decorative span, which is what keeps this from leaking into the other 37.
+- **How the tap and the drag do not fire twice:** the drag is decided on `pointerup` with the pointer
+  captured, so a finger that leaves a 4px-tall bar is still heard; the `click` the browser sends
+  afterwards is swallowed by the flag the drag set. A tap alone never reaches the threshold, so it
+  arrives as the click.
+- **Alternative:** the bar as the dismissal, which is what a bar usually means elsewhere. Rejected by
+  the owner; it also collided with the tap outside that had just been fixed the same day.
+- **Consequence:** the hit area is 64×20 around the 4px bar, because a 4px target is not one; the bar
+  is still never the only way in, so "More details" stays. `vitest.setup.ts` now shims pointer capture,
+  which jsdom does not implement.

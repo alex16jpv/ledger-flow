@@ -200,6 +200,8 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
           description !== ""
         }
         title={t("transactions.quick.title")}
+        onExpand={moreDetails}
+        expandLabel={t("transactions.quick.expand")}
         footer={
           <div className="flex gap-3">
             <Button variant="ghost" size="lg" className="flex-1" onClick={moreDetails}>

@@ -37,6 +37,9 @@ export function useUnsavedGuard(unsaved: boolean): void {
 const FOCUSABLE =
   'a[href],button,input,select,textarea,summary,[contenteditable],[tabindex]:not([tabindex="-1"])';
 
+// T-75: how far up the 44x4 bar has to travel before the gesture counts as a drag, not a tap.
+export const EXPAND_DRAG_PX = 16;
+
 export interface SheetProps {
   open: boolean;
   onClose: () => void;
@@ -45,6 +48,8 @@ export interface SheetProps {
   footer?: ReactNode;
   dismissible?: boolean;
   unsaved?: boolean;
+  onExpand?: () => void;
+  expandLabel?: string;
   // The calendar and the wheel of 7.28 are 360 px wide from `sm` up; everything else is 520.
   width?: "md" | "sm";
   className?: string;
@@ -58,6 +63,8 @@ export function Sheet({
   footer,
   dismissible = true,
   unsaved = false,
+  onExpand,
+  expandLabel,
   width = "md",
   className,
 }: SheetProps) {
@@ -66,6 +73,8 @@ export function Sheet({
   const body = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const scrimGesture = useRef(false);
+  const dragFrom = useRef<number | null>(null);
+  const dragged = useRef(false);
   const [bodyNeedsFocus, setBodyNeedsFocus] = useState(false);
   const [reported, setReported] = useState<readonly string[]>([]);
   const [asking, setAsking] = useState(false);
@@ -130,6 +139,29 @@ export function Sheet({
     if (open) onClose();
   }
 
+  function handleBarDown(event: PointerEvent<HTMLButtonElement>) {
+    dragFrom.current = event.clientY;
+    dragged.current = false;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleBarUp(event: PointerEvent<HTMLButtonElement>) {
+    const from = dragFrom.current;
+    dragFrom.current = null;
+    if (from === null || from - event.clientY < EXPAND_DRAG_PX) return;
+    dragged.current = true;
+    onExpand?.();
+  }
+
+  // The drag already answered; the click the browser sends afterwards must not answer again.
+  function handleBarClick() {
+    if (dragged.current) {
+      dragged.current = false;
+      return;
+    }
+    onExpand?.();
+  }
+
   // A click lands on the common ancestor, so both ends of the gesture have to be on the scrim.
   function handleScrimDown(event: PointerEvent<HTMLElement>) {
     scrimGesture.current = event.target === event.currentTarget;
@@ -170,10 +202,23 @@ export function Sheet({
             "sm:rounded-xl sm:pb-5",
           )}
         >
-          <span
-            aria-hidden="true"
-            className="mx-auto mt-1 h-1 w-9 rounded-full bg-border-strong sm:hidden"
-          />
+          {onExpand ? (
+            <button
+              type="button"
+              aria-label={expandLabel}
+              onPointerDown={handleBarDown}
+              onPointerUp={handleBarUp}
+              onClick={handleBarClick}
+              className="[&>span]:focus-visible:bg-focus-ring mx-auto -mt-1 flex w-16 touch-none justify-center py-2 focus-visible:outline-none sm:hidden"
+            >
+              <span className="h-1 w-11 rounded-full bg-border-strong" />
+            </button>
+          ) : (
+            <span
+              aria-hidden="true"
+              className="mx-auto mt-1 h-1 w-9 rounded-full bg-border-strong sm:hidden"
+            />
+          )}
           <div className="flex items-center justify-between">
             <h2 id={titleId} className="text-md font-semibold">
               {title}
