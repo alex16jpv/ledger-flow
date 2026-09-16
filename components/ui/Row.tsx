@@ -19,6 +19,13 @@ interface RowBaseProps {
   children: ReactNode;
 }
 
+export function rowClasses(
+  { interactive = false, pending = false }: { interactive?: boolean; pending?: boolean } = {},
+  className?: string,
+): string {
+  return cn(ROW, interactive && INTERACTIVE, pending && PENDING, className);
+}
+
 export type RowButtonProps = RowBaseProps &
   ButtonHTMLAttributes<HTMLButtonElement> & { ref?: Ref<HTMLButtonElement> };
 
@@ -34,7 +41,7 @@ export function RowButton({
     <button
       ref={ref}
       type={type}
-      className={cn(ROW, INTERACTIVE, pending && PENDING, className)}
+      className={rowClasses({ interactive: true, pending }, className)}
       {...rest}
     >
       {children}
@@ -46,7 +53,7 @@ export type RowLinkProps = RowBaseProps & AnchorHTMLAttributes<HTMLAnchorElement
 
 export function RowLink({ pending = false, className, children, ...rest }: RowLinkProps) {
   return (
-    <a className={cn(ROW, INTERACTIVE, pending && PENDING, className)} {...rest}>
+    <a className={rowClasses({ interactive: true, pending }, className)} {...rest}>
       {children}
     </a>
   );
@@ -56,7 +63,7 @@ export type RowProps = RowBaseProps & HTMLAttributes<HTMLDivElement>;
 
 export function Row({ pending = false, className, children, ...rest }: RowProps) {
   return (
-    <div className={cn(ROW, pending && PENDING, className)} {...rest}>
+    <div className={rowClasses({ pending }, className)} {...rest}>
       {children}
     </div>
   );

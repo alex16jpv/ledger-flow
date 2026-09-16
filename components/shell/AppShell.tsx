@@ -12,7 +12,9 @@ import { TabBar } from "./TabBar";
 interface AppShellProps {
   userName: string;
   pendingCount: number;
+  moreOpen: boolean;
   onAdd: (options: AddOptions) => void;
+  onMore: () => void;
   banner?: ReactNode;
   narrow?: boolean;
   children: ReactNode;
@@ -23,7 +25,9 @@ export const MAIN_ID = "main";
 export function AppShell({
   userName,
   pendingCount,
+  moreOpen,
   onAdd,
+  onMore,
   banner,
   narrow = false,
   children,
@@ -53,7 +57,7 @@ export function AppShell({
           {children}
         </div>
       </main>
-      <TabBar pendingCount={pendingCount} onAdd={onAdd} />
+      <TabBar pendingCount={pendingCount} moreOpen={moreOpen} onAdd={onAdd} onMore={onMore} />
     </div>
   );
 }

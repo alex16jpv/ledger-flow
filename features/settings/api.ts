@@ -2,14 +2,7 @@ import { api } from "@/lib/api/client";
 import { noteSessionStarted } from "@/lib/api/refresh";
 import { pullAfterDirectSend } from "@/lib/local/outbox";
 import { readAccounts, readCategoriesPage } from "@/lib/local/repository";
-import type {
-  AccountList,
-  AuthTokens,
-  CategoryList,
-  Session,
-  UpdateUserInput,
-  User,
-} from "@/types/api";
+import type { AccountList, AuthTokens, Session, UpdateUserInput, User } from "@/types/api";
 
 export async function updateUser(id: string, input: UpdateUserInput): Promise<User> {
   const answer = await api<User>(`/users/${id}`, { method: "PUT", body: input });
@@ -22,9 +15,22 @@ export function deleteUser(id: string): Promise<unknown> {
   return api<unknown>(`/users/${id}`, { method: "DELETE" });
 }
 
+export interface CategorySummary {
+  active: number;
+  archived: number;
+}
+
 // F-43: through the repository like every other read, so the figures survive with no network.
-export function fetchCategorySummary(): Promise<CategoryList> {
-  return readCategoriesPage({ includeArchived: true, limit: 100 });
+// T-72: counted from the server's totals, because a page of a hundred cannot count past a hundred.
+export async function fetchCategorySummary(): Promise<CategorySummary> {
+  const [active, all] = await Promise.all([
+    readCategoriesPage({ limit: 1 }),
+    readCategoriesPage({ includeArchived: true, limit: 1 }),
+  ]);
+  return {
+    active: active.pagination.total,
+    archived: all.pagination.total - active.pagination.total,
+  };
 }
 
 export function fetchAccountCount(): Promise<AccountList> {

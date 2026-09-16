@@ -49,8 +49,9 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     button stays the deliberate exit that does not ask (T-78, drawn as `unsaved-before-leaving` in
     [screens/states.md](screens/states.md)).
     **The 36×4 bar is decoration in every sheet but quick add**, where it is 44×4 and is a control that
-    opens the full form: see [screens/add.md](screens/add.md). There is no other drag gesture in the
-    app.
+    opens the full form: see [screens/add.md](screens/add.md). Its target is 64×28 around that bar, a
+    pull **downwards** does nothing at all, and while the unsaved question is up the bar is inert like
+    the body — it is not a third answer to it. There is no other drag gesture in the app.
 13. **Toast** — `--ink`, one action ("Undo"), five seconds, above the tab bar.
 14. **Alert** — inline, four variants; the main-account warning uses `warning`.
 15. **Empty** — an lg outline tile plus a title, a line and a call to action. The title is an `h2` at

@@ -209,7 +209,14 @@ export function SettingsHub() {
           icon={<Tags {...iconProps("sm")} />}
           color="ORANGE"
           title={t("settings.categories.title")}
-          meta={categories.data ? t("settings.categories.subtitle", categories.data) : undefined}
+          meta={
+            categories.data
+              ? t("settings.categories.subtitle", {
+                  active: categories.data.active,
+                  archived: categories.data.archived,
+                })
+              : undefined
+          }
           href="/categories"
         />
       </Section>

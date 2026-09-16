@@ -3790,3 +3790,71 @@ cover` is set once in the root layout for the standalone display.
   form, the close button and the swap that used to leave the question hanging; and `QuickAddSheet`
   has its own test that types an amount, taps the scrim and expects the question — the shape of test
   that would have caught the original miss, which no amount of `Sheet`-in-isolation testing could.
+
+## 2026-09-15 · The phone's bar ends in More, and the sheet behind it is presentational (T-72)
+
+- **Decision:** below 900px the tab bar is Home · Transactions · Add · Budgets · **More**, and More is
+  a button that opens `components/shell/MoreSheet` with Accounts, Stats, Categories, Settings and the
+  user. Accounts gives up its tab. The bar is one list, `TAB_SLOTS`, and what the sheet holds is
+  **derived** from it: `MORE_ITEMS` is `NAV_ITEMS` minus whatever the bar already shows, plus Settings.
+  Adding a tab therefore removes it from the sheet by itself, which is the drift this would otherwise
+  have had for the rest of the product's life.
+- **Why now:** `/stats` and `/stats/trends` had no way in at all below 900px — no link anywhere
+  outside the sidebar — and Categories was three taps deep inside Settings. The owner chose this shape
+  on 2026-09-15 over four alternatives that stay drawn in `design/preview/variants.html`.
+- **Where the counts come from:** `components/**` may not import a feature, so `MoreSheet` takes
+  `accountCount` and `categoryCounts` as props and `AppFrame` reads them — the same route `pendingCount`
+  already takes. Both queries are `enabled` only while the sheet is open, so a closed bar costs nothing,
+  and both go through `lib/local/repository`, so the sheet says the same numbers with no network. Both
+  counts are the server's `pagination.total`, never the length of a page: a capped list would have
+  printed "100" for a user with three hundred (T-38), which is what `fetchCategorySummary` used to do
+  in Settings — it now asks for one row twice, with and without the archived, and subtracts.
+- **Alternative:** letting the bar carry six slots. Rejected with a measurement, drawn in the variants
+  page: at 320px three columns fall to 46px, and in Spanish to 37px, against a 44px minimum the rest of
+  the product holds to.
+- **Consequence:** More carries the selected look while its sheet is open and whenever the screen
+  underneath is one of its four destinations, so the bar never stops saying where you are; taking a
+  destination closes the sheet, because the shell outlives the route. The e2e suite reaches those
+  screens through `tests/e2e/nav.ts`, which takes the sidebar above 900px and More below it.
+
+## 2026-09-15 · Quick add records all three types (T-73)
+
+- **Decision:** the quick sheet opens with a three-way segment — Expense · Income · Transfer, the full
+  form's control minus Adjustment — and the title is "Add". The type tints the amount, swaps the
+  category chips for the ones of that type, and on a transfer drops the category altogether for From
+  and To with the swap button between them. The amount survives a change of type; the category does
+  not, because a category belongs to one type.
+- **Why it cost no backend work:** `POST /transactions/quick` has always taken `type` and both account
+  ids, and `lib/local/outbox/transactions.ts` has always applied the same per-type defaults offline. It
+  was the client that only ever sent an expense.
+- **Where the shape lives:** `features/transactions/schemas.ts`. `QUICK_TYPES` is checked against
+  `QuickAddTransactionInput["type"]` with `satisfies`, which catches a member the contract does not
+  have — it does **not** catch a member the contract gains, so a fourth type in the OpenAPI would be
+  silently absent here until somebody looks. `quickAddInput` is the one place that decides which side
+  the single account goes on, and the sheet no longer builds that payload inline.
+- **Consequence:** the FAB's accessible name is "Add", not "Add expense" — the button no longer only
+  adds an expense, and a name that says otherwise is a message that lies. `nav.addExpense` is gone.
+
+## 2026-09-15 · The bar on top of the quick sheet opens the full form (T-75)
+
+- **Decision:** in quick add the 36×4 bar becomes a 44×4 button named "Open the full form". Tapping it,
+  or dragging it up by at least `EXPAND_DRAG_PX` (16), makes the same jump the "More details" button
+  makes: the amount, the type, the category, the second account and the note travel into "New
+  transaction". In the other 37 sheets the bar stays the `aria-hidden` decoration it always was. The
+  owner chose this on 2026-09-15 over taking the bar out everywhere and over drag-to-dismiss.
+- **Why a `Sheet` prop and not a quick-add component:** the bar is drawn by `Sheet`, so the only way to
+  give it meaning in one sheet is to let that sheet pass the meaning in — `onExpand` plus its
+  `expandLabel`, because the label is user-visible text and belongs to the caller's namespace. A sheet
+  that passes nothing keeps the decorative span, which is what keeps this from leaking into the other 37.
+- **How the tap and the drag do not collide:** the drag is decided on `pointerup` with the pointer
+  captured, so a finger that leaves a 4px-tall bar is still heard. Any movement past `TAP_SLOP_PX`
+  counts as a gesture and marks the flag — **in either direction**, so a pull downwards, which is what
+  the bar looks like it should do everywhere else, opens nothing and its click is swallowed too.
+  Chromium sends that click after a short drag and suppresses it after a long one, so the flag cannot
+  be the only gate: a keyboard activation carries `detail === 0` and skips it, which is what keeps
+  Enter working after a drag that never clicked.
+- **Alternative:** the bar as the dismissal, which is what a bar usually means elsewhere. Rejected by
+  the owner; it also collided with the tap outside that had just been fixed the same day.
+- **Consequence:** the hit area is 64×20 around the 4px bar, because a 4px target is not one; the bar
+  is still never the only way in, so "More details" stays. `vitest.setup.ts` now shims pointer capture,
+  which jsdom does not implement.

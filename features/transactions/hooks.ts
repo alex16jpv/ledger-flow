@@ -61,18 +61,20 @@ export interface QuickAddResult {
   detailsSaved: boolean;
 }
 
-// P-17: the quick endpoint always flags pendingDetails; a follow-up PUT with a category clears it.
+// P-17: the quick endpoint always flags pendingDetails; a follow-up PUT completes what it can.
+// T-73: a transfer has no category to give, so nothing about it is ever left to detail.
 export async function quickAddWithDetails({
   input,
   description,
   idempotencyKey,
 }: QuickAddVariables): Promise<QuickAddResult> {
   const transaction = await quickAddTransaction(input, idempotencyKey);
-  if (!description && !input.categoryId) return { transaction, detailsSaved: true };
+  const complete = Boolean(input.categoryId) || input.type === "TRANSFER";
+  if (!description && !complete) return { transaction, detailsSaved: true };
   try {
     const detailed = await updateTransaction(transaction.id, {
       ...(description ? { description } : {}),
-      ...(input.categoryId ? { pendingDetails: false } : {}),
+      ...(complete ? { pendingDetails: false } : {}),
     });
     return { transaction: detailed, detailsSaved: true };
   } catch {

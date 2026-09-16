@@ -49,7 +49,7 @@ describe("the counts Settings shows", () => {
 
     const summary = await fetchCategorySummary();
 
-    expect(summary.data.map((row) => row.id).sort()).toEqual(["c1", "c2", "c3"]);
+    expect(summary).toEqual({ active: 2, archived: 1 });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

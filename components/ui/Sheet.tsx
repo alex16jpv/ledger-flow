@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   createContext,
+  type MouseEvent,
   type PointerEvent,
   type ReactNode,
   type SyntheticEvent,
@@ -37,7 +38,15 @@ export function useUnsavedGuard(unsaved: boolean): void {
 const FOCUSABLE =
   'a[href],button,input,select,textarea,summary,[contenteditable],[tabindex]:not([tabindex="-1"])';
 
-export interface SheetProps {
+export const EXPAND_DRAG_PX = 16;
+// Below this the finger never moved: the browser will send a click and it is a tap, not a drag.
+const TAP_SLOP_PX = 4;
+
+// A bar that does something has to say what: the two arrive together or not at all.
+type ExpandProps =
+  { onExpand: () => void; expandLabel: string } | { onExpand?: undefined; expandLabel?: undefined };
+
+export type SheetProps = {
   open: boolean;
   onClose: () => void;
   title: ReactNode;
@@ -48,7 +57,7 @@ export interface SheetProps {
   // The calendar and the wheel of 7.28 are 360 px wide from `sm` up; everything else is 520.
   width?: "md" | "sm";
   className?: string;
-}
+} & ExpandProps;
 
 export function Sheet({
   open,
@@ -58,6 +67,8 @@ export function Sheet({
   footer,
   dismissible = true,
   unsaved = false,
+  onExpand,
+  expandLabel,
   width = "md",
   className,
 }: SheetProps) {
@@ -66,6 +77,8 @@ export function Sheet({
   const body = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const scrimGesture = useRef(false);
+  const dragFrom = useRef<number | null>(null);
+  const gestured = useRef(false);
   const [bodyNeedsFocus, setBodyNeedsFocus] = useState(false);
   const [reported, setReported] = useState<readonly string[]>([]);
   const [asking, setAsking] = useState(false);
@@ -130,6 +143,36 @@ export function Sheet({
     if (open) onClose();
   }
 
+  function handleBarDown(event: PointerEvent<HTMLButtonElement>) {
+    dragFrom.current = event.clientY;
+    gestured.current = false;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleBarUp(event: PointerEvent<HTMLButtonElement>) {
+    const from = dragFrom.current;
+    dragFrom.current = null;
+    if (from === null) return;
+    const up = from - event.clientY;
+    if (Math.abs(up) < TAP_SLOP_PX) return;
+    // A drag answers here, in either direction: only upwards opens, and neither may click again.
+    gestured.current = true;
+    if (up >= EXPAND_DRAG_PX) onExpand?.();
+  }
+
+  function handleBarCancel() {
+    dragFrom.current = null;
+  }
+
+  function handleBarClick(event: MouseEvent<HTMLButtonElement>) {
+    // A keyboard activation carries detail 0 and follows no gesture, so it never reads the flag.
+    if (event.detail > 0 && gestured.current) {
+      gestured.current = false;
+      return;
+    }
+    onExpand?.();
+  }
+
   // A click lands on the common ancestor, so both ends of the gesture have to be on the scrim.
   function handleScrimDown(event: PointerEvent<HTMLElement>) {
     scrimGesture.current = event.target === event.currentTarget;
@@ -170,10 +213,26 @@ export function Sheet({
             "sm:rounded-xl sm:pb-5",
           )}
         >
-          <span
-            aria-hidden="true"
-            className="mx-auto mt-1 h-1 w-9 rounded-full bg-border-strong sm:hidden"
-          />
+          {onExpand ? (
+            <button
+              type="button"
+              // The question is the only thing on screen while it stands; this is not a way past it.
+              inert={question}
+              aria-label={expandLabel}
+              onPointerDown={handleBarDown}
+              onPointerUp={handleBarUp}
+              onPointerCancel={handleBarCancel}
+              onClick={handleBarClick}
+              className="mx-auto -mt-2 flex w-16 touch-none justify-center py-3 sm:hidden"
+            >
+              <span className="h-1 w-11 rounded-full bg-border-strong" />
+            </button>
+          ) : (
+            <span
+              aria-hidden="true"
+              className="mx-auto mt-1 h-1 w-9 rounded-full bg-border-strong sm:hidden"
+            />
+          )}
           <div className="flex items-center justify-between">
             <h2 id={titleId} className="text-md font-semibold">
               {title}

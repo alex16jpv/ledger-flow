@@ -18,7 +18,12 @@ import { requestSync } from "./engine";
 import { operationPayload } from "./envelope";
 import { pendingOperations } from "./queue";
 import { resetOutboxStatus, setBlockedOperations } from "./status";
-import { createTransaction, deleteTransaction, updateTransaction } from "./transactions";
+import {
+  createTransaction,
+  deleteTransaction,
+  quickAddTransaction,
+  updateTransaction,
+} from "./transactions";
 
 const fetchMock = vi.fn<typeof fetch>();
 const cash = account({ id: "a1", name: "Cash", balance: 1000, openingBalance: 1000 });
@@ -278,5 +283,38 @@ describe("when IndexedDB refuses the write", () => {
     expect(await vault.db.getAll("transactions")).toEqual([]);
     // The account keeps the figure the server gave it: nothing was projected onto it.
     expect((await vault.db.get("accounts", "a1"))?.row.balance).toBe(1000);
+  });
+
+  // T-73: the sheet sends all three types now, and the mirror has to show the row the server will.
+  it("projects a quick income and a quick transfer with no network", async () => {
+    const savings = account({ id: "a2", name: "Savings", balance: 500, openingBalance: 500 });
+    const vault = await vaultWith({ accounts: [cash, savings] });
+    reportOnline(false);
+
+    const income = await quickAddTransaction(
+      { amount: 700, type: "INCOME", toAccountId: "a2" },
+      "k-income",
+    );
+    const moved = await quickAddTransaction(
+      { amount: 300, type: "TRANSFER", fromAccountId: "a1", toAccountId: "a2" },
+      "k-transfer",
+    );
+
+    expect(income).toMatchObject({ type: "INCOME", fromAccountId: null, toAccountId: "a2" });
+    expect(moved).toMatchObject({ type: "TRANSFER", fromAccountId: "a1", toAccountId: "a2" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect((await vault.db.get("accounts", "a2"))?.row.balance).toBe(500);
+    const queued = await pendingOperations(vault.db);
+    expect(queued.map((operation) => operation.action)).toEqual(["quickAdd", "quickAdd"]);
+  });
+
+  // The server takes the default account for the side the sheet left empty; so must the mirror.
+  it("puts a quick income into the main account when the sheet named none", async () => {
+    await vaultWith();
+    reportOnline(false);
+
+    const income = await quickAddTransaction({ amount: 700, type: "INCOME" }, "k-default");
+
+    expect(income).toMatchObject({ type: "INCOME", toAccountId: "a1", fromAccountId: null });
   });
 });

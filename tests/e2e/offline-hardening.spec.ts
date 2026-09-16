@@ -88,7 +88,7 @@ test("a request cut before the server sees it leaves the queue exactly as it was
   await page.goto("/home");
   await expect(page.getByText("You’re offline.")).toBeVisible();
   await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  const sheet = page.getByRole("dialog", { name: "Add" });
   await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
   await page.keyboard.type(String(amount));
   await sheet.getByRole("button", { name: "Save" }).click();
@@ -148,7 +148,7 @@ test("with a dead session the app still opens, reads and queues, and syncs after
   await page.goto("/home");
   await expect(page.getByText("You’re offline.")).toBeVisible();
   await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  const sheet = page.getByRole("dialog", { name: "Add" });
   await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
   await page.keyboard.type(String(amount));
   await sheet.getByRole("button", { name: "Save" }).click();
@@ -214,7 +214,7 @@ test("the connection strip passes axe with no network and with a queue behind it
   await expectNoAxeViolations(page);
 
   await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  const sheet = page.getByRole("dialog", { name: "Add" });
   await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
   await page.keyboard.type(String(uniqueAmount()));
   await sheet.getByRole("button", { name: "Save" }).click();
@@ -258,7 +258,7 @@ test("a session that dies with the app open says so without a reload", async ({
 
   // Something to send, so the queue asks the server and earns the 401.
   await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  const sheet = page.getByRole("dialog", { name: "Add" });
   await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
   await page.keyboard.type(String(amount));
   await sheet.getByRole("button", { name: "Save" }).click();

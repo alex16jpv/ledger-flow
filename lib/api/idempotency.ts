@@ -22,22 +22,31 @@ export function stableHash(payload: unknown): string {
   return hash.toString(16).padStart(8, "0");
 }
 
+export const KEYRING_MAX = 32;
+
 // One key per distinct payload: a retry of the same body reuses it, an edited body gets a new one.
 export class IdempotencyKeyring {
-  private hash: string | null = null;
-  private key: string | null = null;
+  private keys = new Map<string, string>();
+  private last: string | null = null;
 
   keyFor(payload: unknown): string {
     const hash = stableHash(payload);
-    if (this.key === null || hash !== this.hash) {
-      this.hash = hash;
-      this.key = newIdempotencyKey();
+    this.last = hash;
+    const known = this.keys.get(hash);
+    if (known !== undefined) return known;
+    const key = newIdempotencyKey();
+    this.keys.set(hash, key);
+    // A form types its way through many bodies; only the oldest of them can no longer be retried.
+    if (this.keys.size > KEYRING_MAX) {
+      const oldest = this.keys.keys().next();
+      if (!oldest.done) this.keys.delete(oldest.value);
     }
-    return this.key;
+    return key;
   }
 
   rotate(): string {
-    this.key = newIdempotencyKey();
-    return this.key;
+    const key = newIdempotencyKey();
+    if (this.last !== null) this.keys.set(this.last, key);
+    return key;
   }
 }

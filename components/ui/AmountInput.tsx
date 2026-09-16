@@ -8,8 +8,17 @@ import { useMoney } from "@/lib/i18n/useMoney";
 
 import { cn } from "./cn";
 
+export type AmountTone = "default" | "income" | "transfer";
+
+const TONE: Record<AmountTone, string> = {
+  default: "text-text",
+  income: "text-income",
+  transfer: "text-transfer",
+};
+
 export interface AmountInputProps {
   defaultValue?: number | null;
+  tone?: AmountTone;
   onChange: (value: number | null) => void;
   label: string;
   autoFocus?: boolean;
@@ -31,6 +40,7 @@ function initialText(value: number | null | undefined, locale: string, fractionD
 // Formatting is visual only: the text shows the locale's grouping while the parent receives the clean number.
 export function AmountInput({
   defaultValue = null,
+  tone = "default",
   onChange,
   label,
   autoFocus,
@@ -99,7 +109,8 @@ export function AmountInput({
         onChange={handleChange}
         placeholder="0"
         className={cn(
-          "min-w-[2ch] bg-transparent text-[52px] leading-none font-semibold tracking-[-0.035em] text-text caret-brand outline-none placeholder:text-text-disabled",
+          "min-w-[2ch] bg-transparent text-[52px] leading-none font-semibold tracking-[-0.035em] caret-brand outline-none placeholder:text-text-disabled",
+          TONE[tone],
           invalid && "text-danger",
         )}
         style={{ width: `${Math.max(2, text.length + 1)}ch` }}

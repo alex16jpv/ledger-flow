@@ -24,10 +24,6 @@ export function useCategorySummary(enabled = true) {
     queryKey: settingsKeys.categorySummary(),
     queryFn: fetchCategorySummary,
     enabled,
-    select: (list) => ({
-      active: list.data.filter((category) => !category.archivedAt).length,
-      archived: list.data.filter((category) => Boolean(category.archivedAt)).length,
-    }),
   });
 }
 
@@ -58,6 +54,15 @@ export function useHasAccounts(enabled = true) {
     queryFn: fetchAccountCount,
     enabled,
     select: (list) => list.pagination.total > 0,
+  });
+}
+
+export function useAccountCount(enabled = true) {
+  return useQuery({
+    queryKey: settingsKeys.accountCount(),
+    queryFn: fetchAccountCount,
+    enabled,
+    select: (list) => list.pagination.total,
   });
 }
 

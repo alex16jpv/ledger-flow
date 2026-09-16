@@ -41,7 +41,7 @@ test("twenty movements with no network survive a reload and reach the server exa
   // Twenty captures and nothing else: a note would be a second operation of its own.
   for (const amount of wanted) {
     await addButton(page).click();
-    const sheet = page.getByRole("dialog", { name: "Add expense" });
+    const sheet = page.getByRole("dialog", { name: "Add" });
     await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
     await page.keyboard.type(String(amount));
     await sheet.getByRole("button", { name: "Save" }).click();
@@ -113,7 +113,7 @@ test("a reply lost after the server applied it replays as a duplicate, not as a 
   await page.goto("/home");
   await expect(page.getByText("You’re offline.")).toBeVisible();
   await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  const sheet = page.getByRole("dialog", { name: "Add" });
   await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
   await page.keyboard.type(String(amount));
   await sheet.getByRole("button", { name: "Save" }).click();

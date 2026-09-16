@@ -11,6 +11,7 @@ import {
   uniqueAmount,
   vaultState,
 } from "../offline";
+import { goToSection } from "./nav";
 
 test("changing module with no network reads the mirror on every screen", async ({
   page,
@@ -43,7 +44,7 @@ test("changing module with no network reads the mirror on every screen", async (
     await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
   }
 
-  await page.getByRole("link", { name: "Accounts" }).first().click();
+  await goToSection(page, "Accounts");
   await page.waitForLoadState("load");
   const card = page.getByRole("link", { name: new RegExp(user.accountName) });
   await expect(card).toBeVisible({ timeout: 30_000 });
@@ -111,7 +112,7 @@ test("with no network and no session the marker opens the app, and the sheet sta
     page.getByRole("dialog", { name: "This device has your data, but no session" }),
   ).toHaveCount(0);
   await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add expense" });
+  const sheet = page.getByRole("dialog", { name: "Add" });
   await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
   await page.keyboard.type(String(uniqueAmount()));
   await sheet.getByRole("button", { name: "Save" }).click();

@@ -1,5 +1,15 @@
 import { transactionKeys } from "./keys";
-import { draftToSearchParams, quickAddSchema } from "./schemas";
+import { draftToSearchParams, type QuickAddDraft, quickAddInput, quickAddSchema } from "./schemas";
+
+const draft = (over: Partial<QuickAddDraft> = {}): QuickAddDraft => ({
+  type: "EXPENSE",
+  amount: 12500,
+  categoryId: null,
+  accountId: null,
+  toAccountId: null,
+  description: "",
+  ...over,
+});
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { headers: { "content-type": "application/json" }, ...init });
@@ -20,49 +30,76 @@ describe("transactions", () => {
   });
 
   it("validates the quick sheet with message keys", () => {
+    expect(quickAddSchema.safeParse(draft({ amount: 0 })).error?.issues[0]?.message).toBe(
+      "validation.amountPositive",
+    );
+    expect(quickAddSchema.safeParse(draft({ amount: NaN })).error?.issues[0]?.message).toBe(
+      "validation.amountInvalid",
+    );
     expect(
-      quickAddSchema.safeParse({ amount: 0, categoryId: null, accountId: null, description: "" })
-        .error?.issues[0]?.message,
-    ).toBe("validation.amountPositive");
-    expect(
-      quickAddSchema.safeParse({ amount: NaN, categoryId: null, accountId: null, description: "" })
-        .error?.issues[0]?.message,
-    ).toBe("validation.amountInvalid");
-    expect(
-      quickAddSchema.safeParse({
-        amount: 10_000_000_000_001,
-        categoryId: null,
-        accountId: null,
-        description: "",
-      }).error?.issues[0]?.message,
+      quickAddSchema.safeParse(draft({ amount: 10_000_000_000_001 })).error?.issues[0]?.message,
     ).toBe("validation.amountMax");
     expect(
-      quickAddSchema.safeParse({
-        amount: 12500,
-        categoryId: "c1",
-        accountId: "a1",
-        description: " x ",
-      }).data?.description,
+      quickAddSchema.safeParse(draft({ categoryId: "c1", accountId: "a1", description: " x " }))
+        .data?.description,
     ).toBe("x");
   });
 
+  // T-73: the sheet records all three types, and a transfer is the one with two sides to check.
+  it("refuses a transfer with one side missing or both the same", () => {
+    const missing = quickAddSchema.safeParse(draft({ type: "TRANSFER", accountId: "a1" }));
+    expect(missing.error?.issues[0]?.message).toBe("validation.required");
+    expect(missing.error?.issues[0]?.path).toEqual(["toAccountId"]);
+
+    const same = quickAddSchema.safeParse(
+      draft({ type: "TRANSFER", accountId: "a1", toAccountId: "a1" }),
+    );
+    expect(same.error?.issues[0]?.message).toBe("validation.sameAccount");
+
+    expect(
+      quickAddSchema.safeParse(draft({ type: "TRANSFER", accountId: "a1", toAccountId: "a2" }))
+        .success,
+    ).toBe(true);
+  });
+
+  it("puts the one account on the side its type spends from", () => {
+    const parse = (over: Partial<QuickAddDraft>) => {
+      const result = quickAddSchema.safeParse(draft(over));
+      if (!result.success) throw result.error;
+      return quickAddInput(result.data);
+    };
+    expect(parse({ accountId: "a1" })).toEqual({
+      amount: 12500,
+      type: "EXPENSE",
+      fromAccountId: "a1",
+    });
+    expect(parse({ type: "INCOME", accountId: "a1" })).toEqual({
+      amount: 12500,
+      type: "INCOME",
+      toAccountId: "a1",
+    });
+    expect(parse({ type: "TRANSFER", accountId: "a1", toAccountId: "a2" })).toEqual({
+      amount: 12500,
+      type: "TRANSFER",
+      fromAccountId: "a1",
+      toAccountId: "a2",
+    });
+  });
+
   it("carries only the filled draft fields to the full form", () => {
+    expect(draftToSearchParams(draft({ accountId: "a1", description: "  " })).toString()).toBe(
+      "type=EXPENSE&amount=12500&accountId=a1",
+    );
     expect(
-      draftToSearchParams({
-        amount: 12500,
-        categoryId: null,
-        accountId: "a1",
-        description: "  ",
-      }).toString(),
-    ).toBe("amount=12500&accountId=a1");
+      draftToSearchParams(
+        draft({ amount: null, categoryId: "c1", description: "Uber" }),
+      ).toString(),
+    ).toBe("type=EXPENSE&categoryId=c1&description=Uber");
     expect(
-      draftToSearchParams({
-        amount: null,
-        categoryId: "c1",
-        accountId: null,
-        description: "Uber",
-      }).toString(),
-    ).toBe("categoryId=c1&description=Uber");
+      draftToSearchParams(
+        draft({ type: "TRANSFER", accountId: "a1", toAccountId: "a2" }),
+      ).toString(),
+    ).toBe("type=TRANSFER&amount=12500&accountId=a1&toAccountId=a2");
   });
 
   it("adds the note with a PUT and clears pendingDetails only when a category came along", async () => {
