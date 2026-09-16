@@ -9,6 +9,10 @@
   choice of 2026-09-15 over the four alternatives that stay drawn in `preview/variants.html`. Accounts
   gives up its tab to make room, so on a phone it is two taps instead of one — the price he accepted.
   **Trends is not in the sheet**: it is reached from a Stats view, and its back arrow points at Stats.
+  The counts under Accounts and Categories are a courtesy, not the row: when the mirror cannot answer
+  — a private window, site storage blocked, the copy not filled yet — **the line is simply not drawn**,
+  and the destination is reached exactly the same. That is the intended behaviour, confirmed by the
+  owner on 2026-09-16; it is not a swallowed error.
   More is a button, not a link: it says `aria-haspopup="dialog"` and carries the selected look while
   its sheet is open **and** whenever the screen underneath is one of its four destinations, so the bar
   never stops saying where you are. Taking a destination closes the sheet.
