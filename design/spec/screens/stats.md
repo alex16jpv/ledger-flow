@@ -47,7 +47,7 @@ transactions, the average).
 
 Every view with data ends with the way into Trends, **and so does an empty period** — a month with
 nothing in it is exactly the reader asking whether another one was better; a failed read offers Retry
-and nothing else. Export is visible and inactive ("soon"). Empty: "Nothing
+and nothing else in the page body — the header's way into Trends is always there, in every state. Export is visible and inactive ("soon"). Empty: "Nothing
 recorded in this period", "Try another month or another type of movement" — and under Accounts, with
 Expenses chosen, one more line, because a month whose only movements were transfers between the
 user's own accounts lands here and has to say why.
@@ -71,8 +71,10 @@ The page is in **three zones**, and every view has the same shape:
    **all four views**, and under Days also the average by weekday and the highest day's movements.
 4. **Other months** — the way into Trends, alone under its own `h2`.
 
-The zone labels are real headings (`h2`, with each card's own title an `h3` under them), so a reader
-navigating by heading gets the same three landmarks a sighted reader gets from the rules.
+The zone labels are real headings (`h2`, with each card's own title an `h3` under them), and each of the two labelled
+zones is a `section` that heading names, so a reader navigating by landmark or by heading gets the
+same structure the rules give a sighted reader. The answer has no heading of its own: it is what the
+page is, and a label over it would name the obvious.
 
 **The way into Trends is in the page header**, a labelled `Trends` button beside Export: measured
 16px from the top of the page on a phone and 28px on a desktop, on every view and every state,
@@ -100,12 +102,16 @@ tail having one shape.
 
 ## Two columns on a desktop (T-82, the same choice)
 
-Above 900px the page splits **1.6fr / 1fr**, the same split `layout.md` gives Home: the scope
+Above **1200px** the page splits **1.6fr / 1fr**, the same split `layout.md` gives Home: the scope
 controls span the full width, the **answer** takes the left column, and **More about this month** and
 **Other months** take the right. Trends is then on screen without scrolling, and the Days view drops
 from 1,818px of scroll to 1,302px.
 
-Below 900px it is the single column it has always been, in the order above. **Empty, loading and
+Below that it is the single column it has always been, in the order above. **Not 900px**, which is
+where Home splits: with the 240px sidebar and the page gutter, 900px leaves 596px of content, and the
+1.6fr column then lands at 272px — narrower than the phone — while the right column takes its 300px
+floor. Measured: the day chart and the three tiles clip from 900px to about 1,060px. 1200px is the
+first width where the answer column has more room than it had as a single column. **Empty, loading and
 error do not split**: there is nothing to put in a second column, and an error that blanked half a
 grid would read as a broken layout rather than a failed read.
 

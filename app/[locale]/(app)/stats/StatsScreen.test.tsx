@@ -539,7 +539,7 @@ describe("StatsScreen", () => {
     expect(screen.queryByRole("link", { name: /Trends over time/ })).not.toBeInTheDocument();
   });
 
-  it("names the three zones as headings, so the page has landmarks and not just rules", async () => {
+  it("names the two labelled zones as regions, so the page has landmarks and not just rules", async () => {
     routeFetch();
     renderScreen();
     expect(
@@ -556,5 +556,44 @@ describe("StatsScreen", () => {
     renderScreen("groupBy=tag");
     expect(await screen.findByRole("heading", { name: "Biggest this period" })).toBeInTheDocument();
     expect(biggestUrls).not.toHaveLength(0);
+  });
+
+  it("keeps both ways into Trends on an empty period, which is the reader most likely to want them", async () => {
+    fetchMock.mockImplementation((input) => {
+      const url = new URL(urlOf(input), "http://localhost");
+      if (url.pathname === "/api/stats/spending")
+        return Promise.resolve(json({ groupBy: "category", total: 0, buckets: [] }));
+      return Promise.resolve(empty());
+    });
+    renderScreen("reference=2026-07");
+    expect(await screen.findByText("Nothing recorded in this period")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Trends" })).toHaveAttribute(
+      "href",
+      "/stats/trends?reference=2026-07",
+    );
+    const zone = screen.getByRole("region", { name: "Other months" });
+    expect(within(zone).getByRole("link", { name: /Trends over time/ })).toHaveAttribute(
+      "href",
+      "/stats/trends?reference=2026-07",
+    );
+    // An empty period asks for no biggest movements: there is nothing to rank.
+    expect(biggestUrls).toHaveLength(0);
+  });
+
+  it("keeps the heading outline valid when the biggest movements fail on their own", async () => {
+    routeFetch();
+    const routed = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) => {
+      const url = new URL(urlOf(input), "http://localhost");
+      if (url.pathname === "/api/transactions" && url.searchParams.get("sort") === "amount")
+        return Promise.resolve(json({ code: "DB_UNAVAILABLE", message: "no" }, { status: 503 }));
+      return routed?.(input, init) ?? Promise.resolve(empty());
+    });
+    renderScreen();
+    const failure = await screen.findByText("We couldn’t load the biggest movements");
+    const zone = screen.getByRole("region", { name: "More about this month" });
+    expect(zone).toContainElement(failure);
+    // Under an h3 card title, the failure's own title may not climb back to h2 and close the zone.
+    expect(failure.tagName).toBe("H4");
   });
 });

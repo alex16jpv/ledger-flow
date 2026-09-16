@@ -1760,8 +1760,8 @@ const stats = (view = "cat", { state = "" } = {}) => {
 ${skelTotal()}
 ${chart}${rest ? `\n${rest}` : ""}`,
       `${controls}
-<div class="grid-main"><div class="stack" style="gap:16px">${skelTotal()}
-${chart}</div><div class="stack" style="gap:16px"><div class="list card flush">${skelRows(3)}</div>${rest ? `\n${rest}` : ""}</div></div>`,
+${skelTotal()}
+${chart}${rest ? `\n${rest}` : ""}`,
     );
   }
   if (state == "empty") {
@@ -4295,7 +4295,7 @@ const PAGES = [
       plate(
         "stats-three-zones-and-a-way-in",
         "Stats \u00b7 a Trends button in the page header",
-        "The backbone, plus a <b>Trends</b> button in the page header beside Export: measured at <b>20px from the top</b>, on all four tabs, and it never moves. Trends is not a card of this month\u2019s data \u2014 it is a sibling screen, and the header is where a sibling screen belongs; it costs one control and no vertical space at all. The closing card stays at the end, at 1,785px: someone who reaches the bottom has just run out of this month, and that is exactly when the next question is whether another one was better. The cost to weigh: a second entry point is a second thing to keep true, and the header of Stats stops being only Export.",
+        "The backbone, plus a <b>Trends</b> button in the page header beside Export: measured at <b>16px from the top</b> on a phone and 28px on a desktop, on all four tabs and in every state, and it never moves. Trends is not a card of this month\u2019s data \u2014 it is a sibling screen, and the header is where a sibling screen belongs; it costs one control and no vertical space at all. The closing card stays at the end, at 1,785px: someone who reaches the bottom has just run out of this month, and that is exactly when the next question is whether another one was better. The cost to weigh: a second entry point is a second thing to keep true, and the header of Stats stops being only Export.",
         statsOrder("top"),
         { added: "2026-09-16", verdict: "chosen" },
       ),
@@ -4323,7 +4323,7 @@ const PAGES = [
       plate(
         "stats-two-columns-on-a-desktop",
         "Stats \u00b7 two columns on a desktop",
-        "A <b>separate question</b> that applies to whichever of the four wins, and it has to settle a disagreement first: the app caps Stats at <b>640px at every width</b> (`StatsScreen.tsx`, `max-w-[640px]`), while this preview draws it at the shared content cap of 1,120px \u2014 so the screen and its own design already disagree about how wide Stats is, and `layout.md` mentions neither. Either way it is one column: measured in this frame the Days view is <b>1,744px of scroll</b> on a desktop, and narrower than that it is taller. Here Stats takes the same 1.6fr / 1fr split `layout.md` gives Home alone: the answer on the left, the follow-ups and then Trends on the right. The page drops from 1,910px to <b>1,302px</b> and the way into Trends from 1,836 to <b>1,213px</b> \u2014 one screen instead of two. The rail keeps the order of whichever variant wins, so under <i>Other months in the middle</i> Trends would sit at the top of it instead. The costs: the left column runs out first and leaves a tall gap beside the rail, and the rail puts cards about this month next to the answer rather than under it. <b>Switch the preview to Desktop to see it</b> \u2014 below 900px this plate is the baseline, unchanged.",
+        "A <b>separate question</b> that applies to whichever of the four wins, and it settled a disagreement: the app used to cap Stats at <b>640px at every width</b> while this preview drew it at the shared content cap of 1,120px, and `layout.md` mentioned neither. It takes the content cap now. Either way it is one column: measured in this frame the Days view is <b>1,744px of scroll</b> on a desktop, and narrower than that it is taller. Here Stats takes the same 1.6fr / 1fr split `layout.md` gives Home alone: the answer on the left, the follow-ups and then Trends on the right. The page drops from 1,910px to <b>1,302px</b> and the way into Trends from 1,836 to <b>1,213px</b> \u2014 one screen instead of two. The rail keeps the order of whichever variant wins, so under <i>Other months in the middle</i> Trends would sit at the top of it instead. The costs: the left column runs out first and leaves a tall gap beside the rail, and the rail puts cards about this month next to the answer rather than under it. <b>Switch the preview to Desktop to see it</b> \u2014 below 900px this plate is the baseline, unchanged.",
         statsOrder("columns"),
         { added: "2026-09-16", verdict: "chosen" },
       ),

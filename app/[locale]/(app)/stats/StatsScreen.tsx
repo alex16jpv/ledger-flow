@@ -240,7 +240,7 @@ export function StatsScreen() {
         actions={
           <>
             <Link href={trendsHref} className={buttonClasses({ variant: "ghost" })}>
-              <ChartLine {...iconProps("sm")} />
+              <ChartLine {...iconProps("sm")} className="hidden sm:block" />
               {t("trends.title")}
             </Link>
             <Button
@@ -304,11 +304,12 @@ export function StatsScreen() {
             <Skeleton className="h-9 w-48" />
             <Skeleton className="h-3 w-56" />
           </Card>
-          {groupBy === "account" && (
+          {(groupBy === "account" || groupBy === "category") && (
             <Card className="p-3">
               <Skeleton className="h-2.5 rounded-full" />
             </Card>
           )}
+          {groupBy === "tag" && <Skeleton className="h-16 rounded-lg" />}
           {groupBy === "day" && (
             <>
               <Card className="flex flex-col gap-2">
@@ -332,6 +333,10 @@ export function StatsScreen() {
           )}
           <Card flush>
             <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </Card>
+          <Card flush>
             <SkeletonRow />
             <SkeletonRow />
           </Card>
@@ -369,11 +374,13 @@ export function StatsScreen() {
               </>
             }
           />
-          <ZoneHead id="stats-other-months-empty">{t("stats.zones.otherMonths")}</ZoneHead>
-          <TrendsLink reference={trendsReference} />
+          <section aria-labelledby="stats-other-months-empty" className="flex flex-col gap-4">
+            <ZoneHead id="stats-other-months-empty">{t("stats.zones.otherMonths")}</ZoneHead>
+            <TrendsLink href={trendsHref} />
+          </section>
         </>
       ) : (
-        <div className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)] md:items-start md:gap-6">
+        <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)] lg:items-start lg:gap-5">
           <div className="flex flex-col gap-4">
             <TotalCard
               type={type}
@@ -541,120 +548,137 @@ export function StatsScreen() {
             )}
           </div>
           <div className="flex flex-col gap-4">
-            {hasFollowUps && <ZoneHead id="stats-more">{t("stats.zones.more")}</ZoneHead>}
-            {showsBiggest && (
-              <section aria-labelledby="stats-biggest" className="flex flex-col gap-2">
-                <div className="flex items-baseline justify-between gap-3 px-1">
-                  <h3 id="stats-biggest" className="text-md font-semibold">
-                    {t("stats.biggest")}
-                  </h3>
-                  <Link href={transactionsHref({})} className="text-sm font-medium text-brand-text">
-                    {t("common.seeAll")}
-                  </Link>
-                </div>
-                <Card flush>
-                  {biggest.isPending ? (
-                    <div role="status" aria-busy="true" aria-label={t("common.loading")}>
-                      <SkeletonRow />
-                      <SkeletonRow />
-                    </div>
-                  ) : biggest.isError ? (
-                    <Empty
-                      tone="danger"
-                      icon={<ChartPie {...iconProps("lg")} />}
-                      title={t("stats.biggestError")}
-                      body={<LoadErrorBody error={biggest.error} />}
-                      action={
-                        <Button
-                          onClick={() => {
-                            void biggest.refetch();
-                          }}
-                        >
-                          {t("common.retry")}
-                        </Button>
-                      }
-                    />
-                  ) : (
-                    <List>
-                      {biggest.data.data.map((transaction) => (
-                        <TransactionRow
-                          key={transaction.id}
-                          transaction={transaction}
-                          lookups={lookups}
-                          dated
-                          onOpen={(row) => {
-                            router.push(`/transactions/${row.id}`);
-                          }}
-                        />
-                      ))}
-                    </List>
-                  )}
-                </Card>
-              </section>
-            )}
-            {groupBy === "day" && series && (
-              <>
-                <Card className="flex flex-col gap-2">
-                  <span className="text-xs font-medium tracking-caps text-text-3 uppercase">
-                    {t("stats.weekdayAverage")}
-                  </span>
-                  <Projected when={outbox.projected.spending} align="center" className="w-full">
-                    <Bars
-                      bars={weekdayBars}
-                      label={t("stats.weekdayAverage")}
-                      height={64}
-                      summary={
-                        peakWeekday && peakWeekday.average > 0
-                          ? {
-                              label: t("stats.weekdayPeak", {
-                                weekday: weekdayNames.long(peakWeekday.weekday),
-                              }),
-                              amount: money.format(money.round(peakWeekday.average)),
-                            }
-                          : { label: t("stats.weekdayNone") }
-                      }
-                      className="flex-1"
-                    />
-                  </Projected>
-                  <div className="flex justify-between text-xs text-text-3">
-                    {weekColumns(weekStart).map((weekday) => (
-                      <span key={weekday}>{weekdayNames.short(weekday)}</span>
-                    ))}
-                  </div>
-                </Card>
-                {highestDate && (
-                  <section className="flex flex-col gap-2">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <h3 className="text-md font-semibold">
-                        {t("stats.highest", { day: dates.formatWeekdayDay(highestDate) })}
+            {hasFollowUps && (
+              <section aria-labelledby="stats-more" className="flex flex-col gap-4">
+                <ZoneHead id="stats-more">{t("stats.zones.more")}</ZoneHead>
+                {showsBiggest && (
+                  <section aria-labelledby="stats-biggest" className="flex flex-col gap-2">
+                    <div className="flex items-baseline justify-between gap-3 px-1">
+                      <h3 id="stats-biggest" className="text-md font-semibold">
+                        {t("stats.biggest")}
                       </h3>
-                      <Amount
-                        value={series.highest?.total ?? 0}
-                        kind={AMOUNT_KIND[type]}
-                        size="sm"
-                        className="text-text-3"
-                      />
+                      <Link
+                        href={transactionsHref({})}
+                        className="text-sm font-medium text-brand-text"
+                      >
+                        {t("common.seeAll")}
+                      </Link>
                     </div>
-                    {highestRows.isPending ? (
-                      <Card flush role="status" aria-busy="true" aria-label={t("common.loading")}>
-                        <SkeletonRow />
-                        <SkeletonRow />
-                      </Card>
-                    ) : (
-                      <TransactionDayList
-                        transactions={highestRows.data?.pages.flatMap((page) => page.data) ?? []}
-                        lookups={lookups}
-                        onOpen={(transaction) => {
-                          router.push(`/transactions/${transaction.id}`);
-                        }}
-                      />
-                    )}
+                    <Card flush>
+                      {biggest.isPending ? (
+                        <div role="status" aria-busy="true" aria-label={t("common.loading")}>
+                          <SkeletonRow />
+                          <SkeletonRow />
+                        </div>
+                      ) : biggest.isError ? (
+                        <Empty
+                          tone="danger"
+                          titleAs="h4"
+                          icon={<ChartPie {...iconProps("lg")} />}
+                          title={t("stats.biggestError")}
+                          body={<LoadErrorBody error={biggest.error} />}
+                          action={
+                            <Button
+                              onClick={() => {
+                                void biggest.refetch();
+                              }}
+                            >
+                              {t("common.retry")}
+                            </Button>
+                          }
+                        />
+                      ) : (
+                        <List>
+                          {biggest.data.data.map((transaction) => (
+                            <TransactionRow
+                              key={transaction.id}
+                              transaction={transaction}
+                              lookups={lookups}
+                              dated
+                              onOpen={(row) => {
+                                router.push(`/transactions/${row.id}`);
+                              }}
+                            />
+                          ))}
+                        </List>
+                      )}
+                    </Card>
                   </section>
                 )}
-              </>
+                {groupBy === "day" && series && (
+                  <>
+                    <Card className="flex flex-col gap-2">
+                      <span className="text-xs font-medium tracking-caps text-text-3 uppercase">
+                        {t("stats.weekdayAverage")}
+                      </span>
+                      <Projected when={outbox.projected.spending} align="center" className="w-full">
+                        <Bars
+                          bars={weekdayBars}
+                          label={t("stats.weekdayAverage")}
+                          height={64}
+                          summary={
+                            peakWeekday && peakWeekday.average > 0
+                              ? {
+                                  label: t("stats.weekdayPeak", {
+                                    weekday: weekdayNames.long(peakWeekday.weekday),
+                                  }),
+                                  amount: money.format(money.round(peakWeekday.average)),
+                                }
+                              : { label: t("stats.weekdayNone") }
+                          }
+                          className="flex-1"
+                        />
+                      </Projected>
+                      <div className="flex justify-between text-xs text-text-3">
+                        {weekColumns(weekStart).map((weekday) => (
+                          <span key={weekday}>{weekdayNames.short(weekday)}</span>
+                        ))}
+                      </div>
+                    </Card>
+                    {highestDate && (
+                      <section className="flex flex-col gap-2">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <h3 className="text-md font-semibold">
+                            {t("stats.highest", { day: dates.formatWeekdayDay(highestDate) })}
+                          </h3>
+                          <Amount
+                            value={series.highest?.total ?? 0}
+                            kind={AMOUNT_KIND[type]}
+                            size="sm"
+                            className="text-text-3"
+                          />
+                        </div>
+                        {highestRows.isPending ? (
+                          <Card
+                            flush
+                            role="status"
+                            aria-busy="true"
+                            aria-label={t("common.loading")}
+                          >
+                            <SkeletonRow />
+                            <SkeletonRow />
+                          </Card>
+                        ) : (
+                          <TransactionDayList
+                            transactions={
+                              highestRows.data?.pages.flatMap((page) => page.data) ?? []
+                            }
+                            lookups={lookups}
+                            onOpen={(transaction) => {
+                              router.push(`/transactions/${transaction.id}`);
+                            }}
+                          />
+                        )}
+                      </section>
+                    )}
+                  </>
+                )}
+              </section>
             )}
-            <ZoneHead id="stats-other-months">{t("stats.zones.otherMonths")}</ZoneHead>
-            <TrendsLink reference={trendsReference} />
+            <section aria-labelledby="stats-other-months" className="flex flex-col gap-4">
+              <ZoneHead id="stats-other-months">{t("stats.zones.otherMonths")}</ZoneHead>
+              <TrendsLink href={trendsHref} />
+            </section>
           </div>
         </div>
       )}
