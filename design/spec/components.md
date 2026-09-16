@@ -39,8 +39,9 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     except in the two sheets that turn `dismissible` off: the three exits of local mode, where a
     choice has to be made, and the expired-session sheet, which outside local mode has only one way
     out.
-    **The handle does nothing and there is no drag gesture anywhere in the app**; whether the bar goes
-    or starts meaning something is the open decision of T-75, drawn in `preview/variants.html`.
+    **The 36×4 bar is decoration in every sheet but quick add**, where it is 44×4 and is a control that
+    opens the full form: see [screens/add.md](screens/add.md). There is no other drag gesture in the
+    app.
 13. **Toast** — `--ink`, one action ("Undo"), five seconds, above the tab bar.
 14. **Alert** — inline, four variants; the main-account warning uses `warning`.
 15. **Empty** — an lg outline tile plus a title, a line and a call to action. The title is an `h2` at
