@@ -43,3 +43,8 @@ export function featureColorStyle(
     "--f-border": `var(--c-${name}-border)`,
   };
 }
+
+export function randomColorToken(random: () => number = Math.random): ColorToken {
+  const [fallback] = COLOR_TOKENS;
+  return COLOR_TOKENS[Math.floor(random() * COLOR_TOKENS.length)] ?? fallback;
+}

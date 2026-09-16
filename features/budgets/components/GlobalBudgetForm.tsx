@@ -12,6 +12,7 @@ import { Chip, ChipRow } from "@/components/ui/Chip";
 import { presentError } from "@/lib/api/errors";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
+import { randomColorToken } from "@/lib/theme/feature-color";
 
 import { budgetSuggestions } from "../form";
 import { useCreateBudget } from "../hooks";
@@ -43,6 +44,7 @@ export function GlobalBudgetForm({
     periodType,
   );
   const [amount, setAmount] = useState<number | null>(null);
+  const [suggestedColor] = useState(() => randomColorToken());
   const [inputKey, setInputKey] = useState(0);
   const [validation, setValidation] = useState<string | null>(null);
   const failure = createBudget.error ? presentError(createBudget.error) : null;
@@ -57,7 +59,7 @@ export function GlobalBudgetForm({
     try {
       await createBudget.mutateAsync({
         name: t(`budgets.global.nameByPeriod.${periodType}`),
-        color: "INDIGO",
+        color: suggestedColor,
         categoryIds: [],
         type: "EXPENSE",
         periodType,

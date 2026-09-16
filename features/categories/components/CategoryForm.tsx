@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { Alert } from "@/components/ui/Alert";
@@ -18,6 +18,7 @@ import { changedOnly, nothingChanged } from "@/lib/form/changes";
 import { Link } from "@/lib/i18n/navigation";
 import { validationMessage } from "@/lib/i18n/validation";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
+import { randomColorToken } from "@/lib/theme/feature-color";
 import type { Category } from "@/types/api";
 
 import type { CategoryType } from "../api";
@@ -55,6 +56,7 @@ export function CategoryForm({
   const create = useCreateCategory();
   const update = useUpdateCategory(category?.id ?? "");
   const mutation = category ? update : create;
+  const [suggestedColor] = useState(() => randomColorToken());
   const form = useForm<CategoryFormValues>({
     resolver: zodResolver(categoryFormSchema),
     defaultValues: category
@@ -64,7 +66,7 @@ export function CategoryForm({
           color: category.color ?? "BLUE",
           type: category.type ?? "EXPENSE",
         }
-      : { name: initialName, icon: "tag", color: "BLUE", type },
+      : { name: initialName, icon: "tag", color: suggestedColor, type },
   });
   // Read during render: `formState` is a Proxy that only tracks what the component subscribed to.
   const { errors, dirtyFields } = form.formState;

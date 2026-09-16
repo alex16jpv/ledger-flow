@@ -43,7 +43,7 @@ function renderForm(props: Partial<Parameters<typeof BudgetForm>[0]> = {}) {
   const onSubmit = vi.fn().mockResolvedValue(undefined);
   renderWithProviders(
     <BudgetForm
-      defaultValues={defaultBudgetValues(now, timeZone)}
+      defaultValues={defaultBudgetValues(now, timeZone, "TEAL")}
       categories={categories}
       submitLabel="Create budget"
       pending={false}
@@ -56,6 +56,14 @@ function renderForm(props: Partial<Parameters<typeof BudgetForm>[0]> = {}) {
 }
 
 describe("BudgetForm", () => {
+  it("shows the colour it was handed as the picked one (T-74)", () => {
+    renderForm();
+    const swatches = within(screen.getByRole("group", { name: "Color" }));
+    expect(
+      swatches.getAllByRole("button", { pressed: true }).map((b) => b.getAttribute("aria-label")),
+    ).toEqual(["Teal"]);
+  });
+
   it("offers only active expense categories, keeps one selected and submits a category budget", async () => {
     const onSubmit = renderForm();
     await userEvent.type(screen.getByLabelText("Name"), "Food & groceries");
@@ -145,7 +153,7 @@ describe("BudgetForm", () => {
         message: "overlap",
         requestId: "r",
       }),
-      defaultValues: { ...defaultBudgetValues(now, timeZone), scope: "global" },
+      defaultValues: { ...defaultBudgetValues(now, timeZone, "TEAL"), scope: "global" },
     });
     expect(screen.getByText("You already have a global monthly budget.")).toBeInTheDocument();
   });

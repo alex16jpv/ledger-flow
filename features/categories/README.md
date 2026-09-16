@@ -21,3 +21,7 @@ them locally since O-F3 part 2 — the unbounded ones walk the whole `dateCursor
 those rows and their ids, so there is nothing the client could project — it asks for a pull once the
 server answers, because the list it feeds is the mirror's now — and it stays an online-only
 action (F-20).
+
+Since T-74 a **new** category's colour picker opens on one of the sixteen tokens drawn at random,
+not on `BLUE` — in the inline "New category" of the picker as much as on the page, since both are the
+same form. The edit form does not draw.

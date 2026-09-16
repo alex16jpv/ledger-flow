@@ -3581,6 +3581,7 @@ cover` is set once in the root layout for the standalone display.
   It is a reference line, not a figure about the user's money — the same straight line the chart has
   always drawn — and the reading names it as what is expected, never as what was spent. The figure
   that **is** the user's money on that line comes from the API's day buckets.
+
 ## 2026-09-13 · The currency's minor unit is ours, not the device's (T-66)
 
 - **Problem:** the same COP balance read as `$1,284,300` on a desktop browser and `$1,284,300.00`
@@ -3622,3 +3623,54 @@ cover` is set once in the root layout for the standalone display.
   treat as zero-decimal — AFN, ALL, COP, HUF, IDR, IQD, IRR, KPW, LAK, LBP, MGA, MMK, PKR, SLL, SOS,
   SYP, YER. For the sixteen that are not COP this is not new — a modern browser already painted them
   that way — but freezing it makes it true on every device.
+
+## 2026-09-15 · A create form opens with a random colour already picked (T-74)
+
+- **Decision:** `randomColorToken()` draws one of the 16 feature tokens and it is that draw, not a
+  constant, that every form which creates a coloured thing opens with: `AccountForm`, `CategoryForm`,
+  `NewBudgetScreen` through `defaultBudgetValues(now, timeZone, color)`, and `GlobalBudgetForm`, which
+  has no picker at all and used to hardcode `INDIGO`. The draw happens once per mount
+  (`useState(() => randomColorToken())`, the shape `NewBudgetScreen` already used for `now`) and lives
+  in the form's state from then on, so a re-render never moves the ring. Nothing is consulted and
+  nothing is remembered: the owner asked for a plain draw, not for a colour that avoids the ones
+  already in use.
+- **Why:** accounts and categories opened on `BLUE`, budgets on `TEAL` and global budgets on `INDIGO`.
+  Somebody who creates four accounts without opening the picker ends up with four cards of the same
+  colour, and the colour is the only thing that tells them apart at a glance in Home's carousel, in
+  Stats and in every tile. A random default costs nothing and makes the common path produce a usable
+  result.
+- **Alternative:** picking the colour least used by the user's existing items. Rejected, and by the
+  owner explicitly: it needs the full list of accounts, categories and budgets loaded before the form
+  can paint a default — three queries, an offline path and a rule to explain — to improve on a draw
+  that is already good enough. His words: "no hay que tener lógicas adicionales como comprobación de
+  que otros items tengan el color".
+- **Alternative:** drawing the colour when the form is submitted rather than when it opens. Rejected:
+  the swatch grid would open with nothing selected while `color` is a required field, so the screen
+  would lie about what it is going to save.
+- **Alternative:** a `useRandomColorToken()` hook so the four call sites share one line. Rejected:
+  `lib/theme/feature-color.ts` is a pure token module that server code imports, and
+  `useState(() => …)` is already the house shape for a value drawn once per mount. The tests pin
+  `Math.random` instead, which is one seam for all four.
+- **Consequence:** `defaultBudgetValues` takes the colour as its third argument, which makes the
+  budget form's default deterministic in a test and keeps the randomness at the one place that mounts
+  the screen. The two default period dates `fromBudget` wanted from it moved to `defaultPeriodDates`,
+  so `fromBudget` no longer asks for defaults it overwrites. **Only creation draws**: an edit form
+  still falls back to `BLUE` for an item whose `color` is `null`, because `changedOnly` leaves an
+  untouched field out of the `PUT` — a drawn ring there would show a colour the item has not got, and
+  a different one on each visit. The two screens that kept their form mounted alongside them
+  (`HomeScreen`'s account and global-budget sheets, `BudgetsScreen`'s) now mount it when the sheet
+  opens, so reopening one draws again instead of reusing the first draw — and `GlobalBudgetForm` stops
+  asking for last month's spending on a screen where the sheet is never opened. Two things follow from
+  that unmount and are accepted: the first opening with a cold cache paints the currency's fixed
+  suggestions and swaps them for last month's when the read lands (later openings are instant, the
+  read is cached for five minutes), and a half-typed form no longer survives a close and reopen — the
+  write itself does, since it goes through the mutation and, with no network, the outbox. The draw is injectable
+  (`random: () => number = Math.random`, the shape `backoffDelay` already uses) so
+  `feature-color.test.ts` can pin it, and the four form tests pin `Math.random` through `drawOf(token)`
+  in `lib/testing/colors.ts` rather than hardcoding an index into `COLOR_TOKENS`.
+- **Why no hydration mismatch:** the three app forms render only after mount, because `AppFrame` holds
+  the children back until `useMounted` (D-29). The onboarding form is in `(auth)`, which D-29 leaves
+  server-rendered — it is safe for its own reason: `OnboardingFlow` paints a skeleton until both of its
+  React Query reads settle, and `QueryProvider` hydrates no server state, so the swatch grid never
+  exists in server HTML. If anyone ever prefetches those reads on the server, that is the one place to
+  look.

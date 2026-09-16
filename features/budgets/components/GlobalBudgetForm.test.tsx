@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { drawOf } from "@/lib/testing/colors";
 import { renderWithProviders } from "@/lib/testing/render";
 
 import { GlobalBudgetForm } from "./GlobalBudgetForm";
@@ -20,6 +21,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 function renderForm(onDone = vi.fn(), periodType?: "WEEKLY" | "QUARTERLY") {
@@ -37,7 +39,8 @@ function renderForm(onDone = vi.fn(), periodType?: "WEEKLY" | "QUARTERLY") {
 }
 
 describe("GlobalBudgetForm", () => {
-  it("creates a global MONTHLY budget from a suggestion", async () => {
+  it("creates a global MONTHLY budget from a suggestion, in a drawn colour (T-74)", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(drawOf("GREEN"));
     fetchMock.mockImplementation((input, init) =>
       Promise.resolve(init?.method === "POST" ? json({ id: "b1" }, { status: 201 }) : stats(0)),
     );
@@ -54,6 +57,7 @@ describe("GlobalBudgetForm", () => {
       type: "EXPENSE",
       amount: 3_000_000,
       name: "Monthly budget",
+      color: "GREEN",
     });
   });
 

@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { drawOf } from "@/lib/testing/colors";
 import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 
@@ -18,6 +19,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 function renderForm(onSaved = vi.fn()) {
@@ -37,6 +39,26 @@ async function chooseType(label: string) {
 }
 
 describe("AccountForm", () => {
+  it("opens on a drawn colour and creates the account with it (T-74)", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(drawOf("PURPLE"));
+    fetchMock.mockResolvedValue(json({ id: "a3" }, { status: 201 }));
+    renderForm();
+    const swatches = within(screen.getByRole("group", { name: "Color" }));
+    expect(
+      swatches.getAllByRole("button", { pressed: true }).map((b) => b.getAttribute("aria-label")),
+    ).toEqual(["Purple"]);
+    await userEvent.type(screen.getByLabelText("Name"), "Nequi");
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as Record<
+      string,
+      unknown
+    >;
+    expect(body.color).toBe("PURPLE");
+  });
+
   it("creates the account with the chosen type, color and a zero balance when left empty", async () => {
     fetchMock.mockResolvedValue(
       json({ id: "a1", name: "Bancolombia", isDefault: true }, { status: 201 }),
