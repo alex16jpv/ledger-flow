@@ -72,3 +72,7 @@ the weekday average of Stats.
 
 T-65 gave the pace curve a reading a day at a time too — spent against expected in a bubble and in the
 `readout` — and past today it says the figure is where the projection puts it, not what was spent.
+
+Since T-78 `GlobalBudgetForm` reports a typed amount to the sheet around it (`useUnsavedGuard`), and
+the period override sheet passes `unsaved` directly, so neither is thrown away by a tap outside
+without asking.

@@ -463,7 +463,13 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={sheetTitle()} footer={footer()}>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      unsaved={renameTo !== null || correctedTo !== null}
+      title={sheetTitle()}
+      footer={footer()}
+    >
       {body()}
     </Sheet>
   );

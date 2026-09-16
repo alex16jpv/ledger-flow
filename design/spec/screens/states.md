@@ -27,6 +27,13 @@ server fails and when something has to be confirmed.
   object and says what is kept; the primary button carries the verb ("Archive", "Make main") and
   "Cancel" is a ghost. Final actions — deleting a transaction, archiving a budget, deleting the account
   — use `danger`.
+- **Leaving with something typed** (`#unsaved-before-leaving`): a tap outside a sheet closes it, and
+  ESC does the same, so a half-written form would go with it. When there is something to lose, neither
+  closes: the sheet asks in place — a `warning` alert where the footer was, "Keep editing" as the
+  primary and focused action, "Leave" as a quiet `dangerGhost` — and the body goes inert, so nothing
+  behind the question can be pressed. ESC answers "Keep editing". The close button is the deliberate
+  exit and does not ask, and a sheet with nothing typed closes on the first tap. Which sheets count as
+  having something to lose is listed in `../../../DECISIONS.md` under T-78.
 - **An address that cannot name a row** answers **404 with no request at all**, and shows the public
   404 ([public.md](public.md) `#not-found`) — there is no separate in-app 404. A detail route's `[id]`
   matches any segment, so `/accounts/nope` used to answer 200 and then ask the server for a row that

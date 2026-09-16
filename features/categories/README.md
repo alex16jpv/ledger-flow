@@ -21,3 +21,6 @@ them locally since O-F3 part 2 — the unbounded ones walk the whole `dateCursor
 those rows and their ids, so there is nothing the client could project — it asks for a pull once the
 server answers, because the list it feeds is the mirror's now — and it stays an online-only
 action (F-20).
+
+Since T-78 `CategoryForm` reports React Hook Form's `isDirty` to the sheet around it
+(`useUnsavedGuard`), so the inline "New category" of the picker asks before a tap outside discards it.

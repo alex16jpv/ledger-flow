@@ -51,6 +51,7 @@ export function RenameRestoreSheet({
     <Sheet
       open={open}
       onClose={onClose}
+      unsaved={!unchanged}
       title={title}
       footer={
         <>

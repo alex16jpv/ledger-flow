@@ -38,8 +38,12 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     button; at 600px and up it becomes a 520px modal with radius 20. **It closes on a tap anywhere
     outside the sheet and on ESC**, except in the two sheets that turn `dismissible` off: the three
     exits of local mode, where a choice has to be made, and the expired-session sheet, which outside
-    local mode has only one way out. The handle does nothing and there is no drag gesture anywhere in
-    the app; what the bar should do is the open decision of T-75.
+    local mode has only one way out. **A sheet whose form has something typed does not close on that
+    tap, and ESC does not close it either**: it asks in place, with "Keep editing" as the primary and
+    focused action and "Leave" as the quiet one, the body inert behind the question, and ESC answering
+    "Keep editing". The close button stays the deliberate exit that does not ask (T-78, drawn as
+    `unsaved-before-leaving` in [screens/states.md](screens/states.md)). The handle does nothing and there is no drag gesture anywhere in the
+    app; what the bar should do is the open decision of T-75.
 13. **Toast** — `--ink`, one action ("Undo"), five seconds, above the tab bar.
 14. **Alert** — inline, four variants; the main-account warning uses `warning`.
 15. **Empty** — an lg outline tile plus a title, a line and a call to action. The title is an `h2` at

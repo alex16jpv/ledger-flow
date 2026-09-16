@@ -3656,3 +3656,51 @@ cover` is set once in the root layout for the standalone display.
   This is also the first time `DECISIONS.md`'s F-41 entry, which says the scrim dismisses the local
   mode sheet, is true. The handle on top of the sheet is still inert: what it should do is the half of
   T-75 that is still a design question.
+
+## 2026-09-15 · A sheet with something typed asks before it lets go (T-78)
+
+- **Decision:** a tap outside a sheet, and ESC, stop closing it when the form inside has something to
+  lose. The sheet asks in place instead: a `warning` alert where the footer was, with **Keep editing**
+  as the primary action — focused, and what ESC answers while the question is up — and **Leave** as the
+  quiet one. **The body goes `inert` behind the question**, which is what actually makes Save
+  unreachable: four of the sheets that report keep their submit inside the body rather than in the
+  footer, so replacing the footer alone left a live Save and a live "Back to list" under the question.
+  The close button is unchanged: it is the deliberate exit and does not ask, which leaves ESC and the X
+  asymmetric on purpose — one is a dismissal, the other a decision.
+- **Why:** the owner's words, after the tap-outside close of T-75 landed the same day — "tocar fuera
+  de un formulario deberia de advertir antes de cerrarlo. algo como estas seguro que quieres salir?".
+  Closing was the new way out, and it threw a half-written movement away in silence.
+- **Only when there is something to lose.** An untouched sheet closes on the first tap. Asking on an
+  empty form would be friction with nothing behind it, and the owner asked for a warning, not a
+  gate. That is the one judgement call in here and the easiest to reverse: `requestClose` reads a
+  single boolean.
+- **Two ways in, because the state lives in two places.** Context flows downward, so a component that
+  renders `<Sheet>` can never report on itself with a hook. A form rendered as a sheet's **child** uses
+  `useUnsavedGuard(dirty)`: `AccountForm` and `CategoryForm` pass React Hook Form's `isDirty`, and
+  `GlobalBudgetForm`, which has no form library, passes `amount !== null`. All three are no-ops on the
+  pages where the same form is not in a sheet. A sheet whose **parent** owns the state takes the
+  `unsaved` prop: quick add, adjust balance, rename, the budget override, the currency and time-zone
+  sheets, the account deletion's typed word, and the sync-conflict sheet — whose typed rename and
+  corrected date resolve an operation written offline, which is the most expensive thing in the app to
+  throw away. The hook alone missed every parent-owned sheet, silently, until it was tried in a
+  browser; several children can report at once, so the sheet keeps a list of who is reporting rather
+  than one flag.
+- **Alternative:** a nested confirmation sheet over the first one. Rejected: a modal whose own
+  dismissal is the thing being questioned is a knot, and the app would have two scrims stacked.
+- **Consequence:** the question resets on the dialog's own `close` event, so a sheet closed by anything
+  else never reopens holding it, and it is also derived from what reported it — a picker that swaps its
+  create form for its list takes the question with it instead of leaving it hanging over the list.
+  `dismissible={false}` sheets are untouched: they never got the tap in the first place. Filters,
+  picker searches and the date and time wheels report nothing — losing a filter costs nothing — so they
+  still close on one tap. The **routes** that hold the big forms (`/transactions/new`, the account,
+  category and budget pages) are not sheets, so none of this reaches them: losing one of those to a
+  Back tap needs a route-level guard, and that is not built.
+- **What each sheet counts as "something to lose" is derived, not re-typed.** Adjust balance asks
+  `input !== null`, which is the same thing its Save button is gated on, so flipping the increase /
+  decrease segment counts; rename asks `!unchanged`, the trimmed and case-folded comparison the button
+  uses; quick add counts the chosen account as well as the amount, the category and the note. Hand-made
+  copies of those conditions were what dropped the sign and the account in the first attempt.
+- **Tested where it gets forgotten.** `Sheet.test.tsx` covers both ways in, both answers, the empty
+  form, the close button and the swap that used to leave the question hanging; and `QuickAddSheet`
+  has its own test that types an amount, taps the scrim and expects the question — the shape of test
+  that would have caught the original miss, which no amount of `Sheet`-in-isolation testing could.
