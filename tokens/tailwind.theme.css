@@ -10,6 +10,7 @@
   --color-text-3: var(--text-3);
   --color-text-disabled: var(--text-disabled);
   --color-ink: var(--ink);
+  --color-overlay: var(--overlay);
   --color-on-ink: var(--on-ink);
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);

@@ -84,7 +84,7 @@ export function Sheet({
       onClose={handleClose}
       onClick={handleScrimClick}
       className={cn(
-        "backdrop:bg-overlay m-0 max-h-none max-w-none bg-transparent p-0",
+        "m-0 max-h-none max-w-none bg-transparent p-0 backdrop:bg-overlay backdrop:backdrop-blur-(--overlay-blur)",
         "fixed inset-0 h-full w-full",
         className,
       )}

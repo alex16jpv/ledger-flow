@@ -35,10 +35,14 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
 11. **Picker** — a 48px row with an sm tile, an 11px label and a 14px value, plus a chevron; it opens a
     sheet or modal with search and a list of rows.
 12. **Bottom sheet / modal** — radius 28 on top, a 36×4 handle, a header with a title and a close
-    button; at 600px and up it becomes a 520px modal with radius 20. It closes on the scrim and on ESC,
-    except in the two sheets that turn `dismissible` off: the three exits of local mode, where a
-    choice has to be made, and the expired-session sheet, which outside local mode has only one way
-    out.
+    button; at 600px and up it becomes a 520px modal with radius 20. **The page behind it is tinted by
+    `--overlay` and blurred by `--overlay-blur`** (T-77), so the sheet reads as a layer and not as
+    something sitting inside the screen; those two tokens are the whole setting, and a blur of 0 turns
+    that half off. The same `--nav-blur`/`--overlay-blur` pair is what the tab bar and the preview's
+    `.scrim` read, so no overlay in the product carries a hardcoded radius. Both drop to 0 under
+    `prefers-reduced-transparency`. It closes on the scrim and on ESC, except in the two sheets that
+    turn `dismissible` off: the three exits of local mode, where a choice has to be made, and the
+    expired-session sheet, which outside local mode has only one way out.
     **The 36×4 bar is decoration in every sheet but quick add**, where it is 44×4 and is a control that
     opens the full form: see [screens/add.md](screens/add.md). There is no other drag gesture in the
     app.
