@@ -141,9 +141,14 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     **The x positions are slots too.** Pointing at one names that day and reads **every line at it**,
     in a `Tooltip` (23) and in the `readout` (29); a vertical rule in `--border-strong` marks the
     position and each line takes a dot there, so the reading and the picture are the same point. With
-    nothing pointed at, the `readout` reads the last position that has one. The positions are **not**
-    controls — a day of a two-month comparison, or of a pace curve, opens nothing — so the chart stays
-    one `role="img"`, and **its accessible name is the card's sentence, not the thirty-one readings**:
+    nothing pointed at, the `readout` reads the last position that has one. **A finger points by
+    sliding** (T-81): a touch on the chart reads the position it landed on and every position it is
+    dragged across, which is the gesture every line chart on a phone already has, and the reading stays
+    where the finger left it. The chart keeps the page's vertical scroll — only the horizontal axis is
+    the chart's — so a flick down the page passes over it without reading anything. The positions are
+    **not** controls — a day of a two-month comparison, or of a pace curve, opens nothing — so the
+    chart stays one `role="img"`, and **its accessible name is the card's sentence, not the thirty-one
+    readings**:
     that is where this piece parts from 18, and why the `readout` matters more here than anywhere
     else. A position with nothing to read — the origin of a cumulative curve, a day the previous month
     never reached — has no slot and no bubble.

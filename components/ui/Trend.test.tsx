@@ -1,5 +1,4 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { Trend, type TrendLine } from "./Trend";
 
@@ -11,11 +10,19 @@ const LINES: TrendLine[] = [
 
 const pathsOf = (container: HTMLElement) => [...container.querySelectorAll("path")];
 
-function band(container: HTMLElement, index: number): Element {
-  const found = container.querySelectorAll("span.absolute > span").item(index);
-  if (!found) throw new Error(`no band at ${String(index)}`);
+const SPAN = 5;
+
+// jsdom measures everything as zero, and the reading is the pointer's share of the chart's width.
+const LEFT = 40;
+
+function surface(container: HTMLElement): HTMLElement {
+  const found = container.querySelector("span.touch-pan-y");
+  if (!(found instanceof HTMLElement)) throw new Error("no reading surface");
+  found.getBoundingClientRect = () => new DOMRect(LEFT, 0, 300, 100);
   return found;
 }
+
+const atPosition = (index: number) => LEFT + (index / (SPAN - 1)) * 300;
 
 describe("Trend", () => {
   it("reads as one image, because a line has no slots to focus", () => {
@@ -65,7 +72,7 @@ describe("Trend", () => {
     expect(container.textContent).toBe("");
   });
 
-  it("reads the pointed position on every line, and marks it", async () => {
+  it("reads the pointed position on every line, and marks it", () => {
     const { container } = render(
       <Trend
         lines={LINES}
@@ -79,7 +86,10 @@ describe("Trend", () => {
     expect(container.querySelector("path.stroke-border-strong")).toBeNull();
     expect(container.querySelectorAll("circle")).toHaveLength(1);
 
-    await userEvent.hover(band(container, 1));
+    fireEvent.pointerMove(surface(container), {
+      pointerType: "mouse",
+      clientX: atPosition(1),
+    });
     // Two lines reach day 1, the projection has not started, and the live line keeps its end dot.
     expect(screen.getAllByText("Day 1 - 60")).toHaveLength(2);
     expect(screen.queryByText("Day 2 - 120")).toBeNull();
@@ -87,7 +97,7 @@ describe("Trend", () => {
     expect(container.querySelectorAll("circle")).toHaveLength(3);
   });
 
-  it("keeps the origin and the days a line never reached out of the reading", async () => {
+  it("keeps the origin and the days a line never reached out of the reading", () => {
     const { container } = render(
       <Trend
         lines={LINES}
@@ -95,7 +105,138 @@ describe("Trend", () => {
         points={[null, { label: "Day 1 - 60" }, null, null, null]}
       />,
     );
-    await userEvent.hover(band(container, 0));
+    const reading = surface(container);
+    fireEvent.pointerMove(reading, { pointerType: "mouse", clientX: atPosition(1) });
+    expect(container.querySelector("path.stroke-border-strong")).not.toBeNull();
+    fireEvent.pointerMove(reading, { pointerType: "mouse", clientX: atPosition(0) });
+    // The origin is not a day: the mark goes and the line falls back to what the chart reads whole.
     expect(container.querySelector("path.stroke-border-strong")).toBeNull();
+    expect(screen.getAllByText("Day 1 - 60")).toHaveLength(1);
+  });
+
+  it("reads the nearest position, and the ends of a slide that went past them", () => {
+    const { container } = render(
+      <Trend
+        lines={LINES}
+        label="Pace"
+        points={[
+          { label: "Day 0 - 0" },
+          { label: "Day 1 - 60" },
+          { label: "Day 2 - 120" },
+          { label: "Day 3 - 160" },
+          { label: "Day 4 - 200" },
+        ]}
+      />,
+    );
+    const reading = surface(container);
+    fireEvent.pointerDown(reading, { pointerType: "touch", clientX: atPosition(0) - 500 });
+    expect(screen.getAllByText("Day 0 - 0")).toHaveLength(2);
+    fireEvent.pointerMove(reading, { pointerType: "touch", clientX: atPosition(4) + 500 });
+    expect(screen.getAllByText("Day 4 - 200")).toHaveLength(2);
+    // Two thirds of the way from position 1 to position 2 is position 2, not position 1.
+    fireEvent.pointerMove(reading, { pointerType: "touch", clientX: atPosition(1) + 50 });
+    expect(screen.getAllByText("Day 2 - 120")).toHaveLength(2);
+  });
+
+  it("gives the reading back when the browser takes the gesture for a scroll", () => {
+    const { container } = render(
+      <Trend
+        lines={LINES}
+        label="Pace"
+        points={[null, { label: "Day 1 - 60" }, { label: "Day 2 - 120" }, null, null]}
+      />,
+    );
+    const reading = surface(container);
+    fireEvent.pointerDown(reading, { pointerType: "touch", clientX: atPosition(1) });
+    expect(screen.getAllByText("Day 1 - 60")).toHaveLength(2);
+    fireEvent.pointerCancel(reading, { pointerType: "touch" });
+    expect(screen.queryByText("Day 1 - 60")).toBeNull();
+    expect(screen.getByText("Day 2 - 120")).toBeInTheDocument();
+  });
+
+  it("does not let a mouse's click change what its hover already says", () => {
+    const { container } = render(
+      <Trend
+        lines={LINES}
+        label="Pace"
+        points={[null, { label: "Day 1 - 60" }, { label: "Day 2 - 120" }, null, null]}
+      />,
+    );
+    const reading = surface(container);
+    fireEvent.pointerMove(reading, { pointerType: "mouse", clientX: atPosition(1) });
+    fireEvent.pointerDown(reading, { pointerType: "mouse", clientX: atPosition(2) });
+    expect(screen.getAllByText("Day 1 - 60")).toHaveLength(2);
+  });
+
+  it("reads where a finger lands and every position it slides across", () => {
+    const { container } = render(
+      <Trend
+        lines={LINES}
+        label="Pace"
+        points={[null, { label: "Day 1 - 60" }, { label: "Day 2 - 120" }, null, null]}
+      />,
+    );
+    const reading = surface(container);
+    fireEvent.pointerDown(reading, { pointerType: "touch", clientX: atPosition(1) });
+    expect(screen.getAllByText("Day 1 - 60")).toHaveLength(2);
+    fireEvent.pointerMove(reading, { pointerType: "touch", clientX: atPosition(2) });
+    expect(screen.getAllByText("Day 2 - 120")).toHaveLength(2);
+    // The reading stays where the finger left it: lifting it is not the same as leaving the chart.
+    fireEvent.pointerUp(reading, { pointerType: "touch" });
+    expect(screen.getAllByText("Day 2 - 120")).toHaveLength(2);
+  });
+
+  it("reads a hovering pen, which has no contact to wait for", () => {
+    const { container } = render(
+      <Trend
+        lines={LINES}
+        label="Pace"
+        points={[null, { label: "Day 1 - 60" }, { label: "Day 2 - 120" }, null, null]}
+      />,
+    );
+    fireEvent.pointerMove(surface(container), { pointerType: "pen", clientX: atPosition(1) });
+    expect(screen.getAllByText("Day 1 - 60")).toHaveLength(2);
+  });
+
+  it("ignores a finger that passes over without pressing, so a scroll reads nothing", () => {
+    const { container } = render(
+      <Trend
+        lines={LINES}
+        label="Pace"
+        points={[null, { label: "Day 1 - 60" }, { label: "Day 2 - 120" }, null, null]}
+      />,
+    );
+    fireEvent.pointerMove(surface(container), { pointerType: "touch", clientX: atPosition(1) });
+    expect(screen.queryByText("Day 1 - 60")).toBeNull();
+    expect(container.querySelector("path.stroke-border-strong")).toBeNull();
+  });
+
+  it("reads nothing while it has not been laid out, instead of reading position zero", () => {
+    const { container } = render(
+      <Trend lines={LINES} label="Pace" points={[null, { label: "Day 1 - 60" }]} />,
+    );
+    const found = container.querySelector("span.touch-pan-y");
+    if (!(found instanceof HTMLElement)) throw new Error("no reading surface");
+    fireEvent.pointerMove(found, { pointerType: "mouse", clientX: 0 });
+    expect(container.querySelector("path.stroke-border-strong")).toBeNull();
+  });
+
+  it("reads the only position there is when the chart has one", () => {
+    const { container } = render(
+      <Trend
+        lines={[{ points: [80], tone: "spent" }]}
+        label="Pace"
+        points={[{ label: "Day 1" }]}
+      />,
+    );
+    fireEvent.pointerMove(surface(container), { pointerType: "mouse", clientX: atPosition(3) });
+    expect(screen.getAllByText("Day 1")).toHaveLength(2);
+  });
+
+  it("leaves the page its own vertical scroll and its pinch zoom over the chart", () => {
+    const { container } = render(
+      <Trend lines={LINES} label="Pace" points={[null, { label: "Day 1 - 60" }]} />,
+    );
+    expect(surface(container)).toHaveClass("touch-pan-y", "touch-pinch-zoom");
   });
 });

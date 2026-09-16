@@ -69,3 +69,10 @@ cumulative curves into one reading per day — both months and what separates th
 it in a bubble on hover and in the `readout` underneath, with a rule and a dot marking the position.
 Day 0 is the origin of the curves, not a day, and a day the previous month never reached reads this
 month alone, so neither gets a bubble that says nothing.
+
+**T-80 does not reach this chart** — a position opens nothing, so there was never a tap to take away —
+but **T-81 did**: `Trend` used to raise its reading from `onMouseEnter` alone over one span per
+position, so on a phone the `readout` could only ever say the last day. It is now one surface that
+turns the pointer's x into the nearest position, which the mouse drives by moving and a finger by
+pressing and sliding. The positions are still not controls, so the chart stays one `role="img"` whose
+name is the card's sentence; the surface is `touch-pan-y`, so a flick down the page still scrolls.

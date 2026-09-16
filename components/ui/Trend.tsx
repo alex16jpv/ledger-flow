@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type PointerEvent, useRef, useState } from "react";
 
 import { BUBBLE_ROOM, type ChartSlot } from "./ChartSlots";
 import { cn } from "./cn";
@@ -76,6 +76,8 @@ function lastPoint(
 
 export function Trend({ lines, label, limit, height = 128, points, className }: TrendProps) {
   const [pointed, setPointed] = useState<number | null>(null);
+  const sliding = useRef(false);
+  const before = useRef<number | null>(null);
   const span = Math.max(1, ...lines.map((line) => line.points.length));
   const values = lines.flatMap((line) => line.points).filter((value) => value !== null);
   const top = Math.max(0, ...values, limit ?? 0);
@@ -145,10 +147,17 @@ export function Trend({ lines, label, limit, height = 128, points, className }: 
 
   if (!points) return chart;
 
-  // Each band owns the half step either side of its own position, so the ends carry half a band.
-  const half = 100 / (2 * Math.max(span - 1, 1));
   const whole = points.findLast((slot) => slot !== null) ?? null;
   const reading = active !== null ? points[active] : whole;
+
+  function readAt(event: PointerEvent<HTMLElement>) {
+    const box = event.currentTarget.getBoundingClientRect();
+    if (box.width <= 0) return;
+    const share = (event.clientX - box.left) / box.width;
+    const nearest = Math.min(Math.max(Math.round(share * (span - 1)), 0), span - 1);
+    setPointed(points?.[nearest] ? nearest : null);
+  }
+
   return (
     <span className="flex w-full flex-col gap-2">
       <span
@@ -165,19 +174,27 @@ export function Trend({ lines, label, limit, height = 128, points, className }: 
             {points[active]?.label}
           </span>
         )}
-        <span className="absolute inset-0 flex">
-          {Array.from({ length: span }, (_, index) => (
-            <span
-              key={index}
-              aria-hidden="true"
-              className="block shrink-0 self-stretch"
-              style={{ width: `${String(index === 0 || index === span - 1 ? half : half * 2)}%` }}
-              onMouseEnter={() => {
-                setPointed(points[index] ? index : null);
-              }}
-            />
-          ))}
-        </span>
+        <span
+          aria-hidden="true"
+          // Only the horizontal axis is the chart's: the page keeps its scroll and its pinch zoom.
+          className="absolute inset-0 block touch-pan-y touch-pinch-zoom"
+          onPointerDown={(event) => {
+            if (event.pointerType !== "touch") return;
+            sliding.current = true;
+            before.current = pointed;
+            readAt(event);
+          }}
+          onPointerMove={(event) => {
+            if (event.pointerType !== "touch" || sliding.current) readAt(event);
+          }}
+          onPointerUp={() => {
+            sliding.current = false;
+          }}
+          onPointerCancel={() => {
+            sliding.current = false;
+            setPointed(before.current);
+          }}
+        />
       </span>
       <Readout label={reading?.detail ?? reading?.label ?? ""} value={reading?.amount} />
     </span>

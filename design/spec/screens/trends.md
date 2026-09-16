@@ -24,7 +24,8 @@ Stats was showing.
   solid, the same days of the previous month dashed — and one sentence: "You have spent $1,284,300 so
   far — 2 % less than at this point in August." **Pointing at a day reads both lines at that day and
   what separates them**: "Day 12 · September $1,240,000 · August $950,000 · +30%", in the bubble and
-  in the `readout` under the chart — the sentence answers the month, the slot answers the day, and a
+  in the `readout` under the chart — with a pointer by hovering, with a finger by touching the chart
+  and sliding along it (T-81). The sentence answers the month, the slot answers the day, and a
   card whose whole point is a comparison never reads one line alone. Where the previous month never
   reached that day the slot reads this month only, and where it spent nothing there is no percentage
   to give rather than a division by zero dressed up as one. Comparing a finished month against one in its third

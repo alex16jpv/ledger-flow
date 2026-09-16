@@ -299,12 +299,7 @@ const trend = (series, o = {}) => {
           .join("");
   const svg = `<svg class="trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${height}px" role="img" aria-label="${label}">${rules}${lines}${marker}${dots}</svg>`;
   const bubble = active < 0 ? "" : `<span class="trend-tip" aria-hidden="true">${tip}</span>`;
-  const half = 100 / (2 * (span - 1));
-  const bands = Array.from({ length: span }, (_, i) => {
-    const width = i === 0 || i === span - 1 ? half : half * 2;
-    return `<span class="band" style="width:${width}%" aria-hidden="true"></span>`;
-  }).join("");
-  return `<span class="trend-wrap" style="height:${height}px">${bubble}${svg}<span class="bands">${bands}</span></span>`;
+  return `<span class="trend-wrap" style="height:${height}px">${bubble}${svg}<span class="reading" aria-hidden="true"></span></span>`;
 };
 
 const heatCal = (values, o = {}) => {
