@@ -4,11 +4,21 @@
 
 ## Quick capture (`#quick-capture`)
 
-The sheet records an **expense** and nothing else: an income or a transfer needs the full form. Whether
-it grows a type control, and what that costs the rest of the sheet, is the open decision of T-73 — the
-alternatives are drawn in `preview/variants.html`. The backend already accepts `type` (INCOME, EXPENSE,
-TRANSFER) and both account ids on `POST /transactions/quick`; it is the client that only ever sends an
-expense.
+**The sheet records all three types.** A three-way `segment` — Expense · Income · Transfer, the same
+control the full form has minus Adjustment — sits at the top, above the amount, and the title is "Add"
+rather than "Add expense" (owner's choice of 2026-09-15; the alternative, the title as a menu, stays
+drawn in `preview/variants.html`). The type reconfigures what is underneath and never clears the
+amount:
+
+- **Expense** — the amount in `--text`, the category chips of the expense categories, one account row
+  reading "From your main account".
+- **Income** — the amount in `--income`, the income categories, and the account row reads "Into your
+  main account".
+- **Transfer** — no category at all: From and To with the swap button between them, the amount in
+  `--transfer`, and the check that the two accounts differ.
+
+`POST /transactions/quick` already accepts `type` (INCOME, EXPENSE, TRANSFER) and both account ids, and
+the offline queue already applies the same per-type defaults, so this costs no sync work.
 
 A sheet: the amount focused with the numeric keyboard open; a row of chips with the five most used
 categories plus "More", which opens the full picker; an account picker preselected with the main
