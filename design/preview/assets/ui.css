@@ -114,7 +114,7 @@
 .sidebar .cta { margin: var(--sp-2) 0 var(--sp-3); }
 
 /* Barra de pestañas (< 900) */
-.tabbar { z-index: var(--z-nav); display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; height: var(--tabbar-h); padding: 0 var(--sp-2) env(safe-area-inset-bottom); background: color-mix(in oklab, var(--surface) 88%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--border); }
+.tabbar { z-index: var(--z-nav); display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; height: var(--tabbar-h); padding: 0 var(--sp-2) env(safe-area-inset-bottom); background: color-mix(in oklab, var(--surface) 88%, transparent); backdrop-filter: blur(var(--nav-blur)); -webkit-backdrop-filter: blur(var(--nav-blur)); border-top: 1px solid var(--border); }
 .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: var(--tabbar-h); color: var(--text-3); font-size: var(--fs-xs); font-weight: var(--fw-medium); position: relative; }
 .tab .icon { stroke-width: 1.75; }
 .tab.active { color: var(--brand-text); }
@@ -274,7 +274,7 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .picker.placeholder .val { color: var(--text-3); font-weight: var(--fw-regular); }
 
 /* ── Bottom sheet / modal ───────────────────────────────────────────────── */
-.scrim { position: absolute; inset: 0; background: var(--overlay); z-index: var(--z-sheet); display: flex; align-items: flex-end; justify-content: center; }
+.scrim { position: absolute; inset: 0; background: var(--overlay); backdrop-filter: blur(var(--overlay-blur)); -webkit-backdrop-filter: blur(var(--overlay-blur)); z-index: var(--z-sheet); display: flex; align-items: flex-end; justify-content: center; }
 .sheet { width: 100%; background: var(--surface); border-radius: var(--r-2xl) var(--r-2xl) 0 0; padding: var(--sp-2) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom)); box-shadow: var(--shadow-3); display: flex; flex-direction: column; gap: var(--sp-4); max-height: 92%; }
 .sheet .handle { width: 36px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 4px auto 0; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; }

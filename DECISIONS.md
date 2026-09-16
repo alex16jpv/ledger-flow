@@ -3581,6 +3581,7 @@ cover` is set once in the root layout for the standalone display.
   It is a reference line, not a figure about the user's money — the same straight line the chart has
   always drawn — and the reading names it as what is expected, never as what was spent. The figure
   that **is** the user's money on that line comes from the API's day buckets.
+
 ## 2026-09-13 · The currency's minor unit is ours, not the device's (T-66)
 
 - **Problem:** the same COP balance read as `$1,284,300` on a desktop browser and `$1,284,300.00`
@@ -3622,3 +3623,38 @@ cover` is set once in the root layout for the standalone display.
   treat as zero-decimal — AFN, ALL, COP, HUF, IDR, IQD, IRR, KPW, LAK, LBP, MGA, MMK, PKR, SLL, SOS,
   SYP, YER. For the sixteen that are not COP this is not new — a modern browser already painted them
   that way — but freezing it makes it true on every device.
+
+## 2026-09-15 · The page behind a sheet is blurred, from one token (T-77)
+
+- **Decision:** `--overlay-blur` in `tokens/base.css` (8px) is the whole setting, and the `::backdrop`
+  of `components/ui/Sheet` applies it (`backdrop:backdrop-blur-(--overlay-blur)`) on top of the
+  `--overlay` tint. Setting it to `0px` turns the blur off everywhere.
+- **The tint was never reaching the app, and that is most of what he was seeing.** `Sheet` has asked
+  for `backdrop:bg-overlay` since it was written, but `tokens/tailwind.theme.css` never declared
+  `--color-overlay`, so Tailwind emitted **no rule at all** for that class: measured in chromium, the
+  `::backdrop` was `rgba(0, 0, 0, 0.1)` — the browser's own default — where the design asks for 40% in
+  light and 60% in dark. Every sheet in the app has floated over an almost unshaded page. The theme now
+  declares it, so the blur is judged against the scrim the design actually specifies. Nothing caught
+  this: `check-tokens` looks for raw colours, not for a token-shaped class naming a token the theme
+  does not define. That gap is its own task.
+- **Why:** the owner's words — "cuando ahi un modal abierto, se ponga una capa de blur detras de el ya
+  que confunde verlo encima del resto de la interfaz" — plus "solo haz que se pueda configurar cuanto
+  de blur se quiere aplicar facilmente desde una constante". A tint alone leaves the page behind
+  legible, so a sheet reads as part of the screen rather than a layer over it.
+- **Alternative:** a TypeScript constant feeding an inline style. Rejected: the value is needed in two
+  places that never import each other — the app and the design preview — and CSS custom properties are
+  how every other shared number in this product travels (`--tap`, `--r-2xl`, `--tabbar-h`).
+- **The tab bar got the same treatment**, because it was the other blur in the product and its two
+  copies already disagreed: `backdrop-blur-xl` (24px) in `TabBar.tsx` against a hardcoded 16px in the
+  preview's `.tabbar`. Both now read `--nav-blur`, and both blurs drop to 0 under
+  `prefers-reduced-transparency`, which is the preference a full-viewport `backdrop-filter` exists to
+  respect.
+- **Consequence:** one declaration reaches all 38 sheets, because they are all the same component, and
+  nothing else in the app draws an overlay. `backdrop-filter` is composited, so it costs a layer while
+  a sheet is open and nothing when none is. Two sheets open at once — a picker over quick add — stack
+  two backdrops, so the sheet underneath is blurred as well as the page; that is what a modal over a
+  modal should look like, and it is said here because nobody decided it on purpose. The e2e in
+  `quick-add.spec.ts` reads the computed `::backdrop` of that sheet and asserts three things: the token
+  is a length, the blur equals `blur(<the token>)`, and the tint is no longer the browser's
+  `rgba(0, 0, 0, 0.1)`. It fails if either class is dropped and keeps passing if he changes the
+  number — which is the point.
