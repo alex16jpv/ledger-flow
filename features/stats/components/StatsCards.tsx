@@ -2,7 +2,7 @@
 
 import { ChartLine, ChevronRight, Hash } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import { Amount, type AmountKind } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
@@ -274,11 +274,11 @@ export function TagRows({
   );
 }
 
-export function TrendsLink({ reference }: { reference?: string }) {
+export function TrendsLink({ href }: { href: ComponentProps<typeof Link>["href"] }) {
   const t = useTranslations("stats");
   return (
     <Link
-      href={{ pathname: "/stats/trends", query: reference ? { reference } : {} }}
+      href={href}
       className="flex items-center gap-3 rounded-lg border border-border bg-surface p-4 shadow-1 transition-colors duration-(--dur-1) ease-(--ease) hover:bg-surface-2"
     >
       <Tile color="INDIGO">
@@ -290,6 +290,17 @@ export function TrendsLink({ reference }: { reference?: string }) {
       </span>
       <ChevronRight {...iconProps("sm")} className="shrink-0 text-text-3" />
     </Link>
+  );
+}
+
+export function ZoneHead({ id, children }: { id: string; children: ReactNode }) {
+  return (
+    <div className="mt-1 flex items-center gap-2.5">
+      <h2 id={id} className="text-xs font-medium tracking-caps text-text-3 uppercase">
+        {children}
+      </h2>
+      <span className="h-px flex-1 bg-border" />
+    </div>
   );
 }
 

@@ -1436,6 +1436,10 @@
     "trendsLink": {
       "title": "Trends over time",
       "body": "Income, savings and categories month by month"
+    },
+    "zones": {
+      "more": "More about this month",
+      "otherMonths": "Other months"
     }
   },
   "trends": {

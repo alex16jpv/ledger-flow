@@ -10,7 +10,7 @@ export interface EmptyProps {
   action?: ReactNode;
   tone?: "neutral" | "danger";
   // Where this Empty is the whole page, nothing else carries the document's first heading.
-  titleAs?: "h1" | "h2";
+  titleAs?: "h1" | "h2" | "h3" | "h4";
   titleSize?: "md" | "page";
   className?: string;
 }

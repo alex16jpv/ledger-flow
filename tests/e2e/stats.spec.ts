@@ -165,3 +165,56 @@ test("Trends reads the months the seed has, and reads them off the local copy", 
     await expect(pairs.locator("xpath=following-sibling::p[1]")).toHaveText(/June 2026/);
   }
 });
+
+test("the way into Trends is in the header on every view, and the columns only split where they fit", async ({
+  page,
+  request,
+}) => {
+  await signIn(page, request);
+  const header = page.getByRole("link", { name: "Trends", exact: true });
+  for (const view of ["category", "day", "account", "tag"]) {
+    await page.goto(`/stats?reference=2026-08&groupBy=${view}`);
+    await expect(page.getByRole("heading", { level: 1, name: "Stats" })).toBeVisible();
+    await expect(header).toHaveAttribute("href", /\/stats\/trends\?reference=2026-08$/);
+    await expect(page.getByRole("region", { name: "More about this month" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Other months" })).toBeVisible();
+  }
+
+  // An empty period keeps both ways in; a failed read keeps only the header's.
+  await page.goto("/stats?reference=2019-01");
+  await expect(page.getByText("Nothing recorded in this period")).toBeVisible();
+  await expect(header).toBeVisible();
+  await expect(page.getByRole("link", { name: /Trends over time/ })).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  if (test.info().project.name !== "desktop") {
+    // The header label is longer in Spanish, and the page title may not pay for it.
+    await page.setViewportSize({ width: 320, height: 720 });
+    await page.goto("/es/stats?reference=2026-08");
+    const title = page.getByRole("heading", { level: 1 });
+    await expect(title).toHaveText("Estadísticas");
+    const clipped = await title.evaluate((el) => el.scrollWidth > el.clientWidth);
+    expect(clipped, "the page title is cut off at 320px in Spanish").toBe(false);
+    return;
+  }
+  // T-82: the split waits for 1200px. Below it the answer column would be narrower than a phone,
+  // so every width has to fit what it draws — nothing may overflow its card.
+  await page.goto("/stats?reference=2026-08&groupBy=day");
+  const card = page
+    .getByText("Per day")
+    .locator("xpath=ancestor::div[contains(@class,'rounded')][1]");
+  for (const width of [900, 1000, 1100, 1199, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.getByRole("region", { name: "Other months" })).toBeVisible();
+    const fits = await card.evaluate((el) => el.scrollWidth <= el.clientWidth);
+    expect(fits, `the day chart overflows its card at ${width}px`).toBe(true);
+    const rail = await page
+      .getByRole("region", { name: "Other months" })
+      .evaluate((el) => el.getBoundingClientRect().left);
+    const answer = await page
+      .getByText("Total spent")
+      .evaluate((el) => el.getBoundingClientRect().left);
+    // Two columns put the rail beside the answer; one column puts it under, at the same left edge.
+    expect(rail > answer, `columns at ${width}px`).toBe(width >= 1200);
+  }
+});

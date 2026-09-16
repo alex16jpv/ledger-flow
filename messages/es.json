@@ -1436,6 +1436,10 @@
     "trendsLink": {
       "title": "Tendencias en el tiempo",
       "body": "Ingresos, ahorro y categorías mes a mes"
+    },
+    "zones": {
+      "more": "Más sobre este mes",
+      "otherMonths": "Otros meses"
     }
   },
   "trends": {

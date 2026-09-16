@@ -1649,8 +1649,7 @@ const statsEmpty = (extra = "") =>
 const statsError = (what = "this") =>
   `<div class="empty">${tile("circle-alert", "RED", "lg")}<span class="h3">We couldn’t load ${what}</span><p class="small muted" style="margin:0;max-width:280px">The server didn’t respond (503). Your data is safe; try again in a few seconds.</p><button class="btn secondary" style="margin-top:8px">${iconSvg("refresh-cw", "sm")}Retry</button><span class="xs faint mono">Reference: 8c1f4e2a-…-3b7d</span></div>`;
 
-const stats = (view = "cat", { state = "" } = {}) => {
-  const total = SEP_TOTAL;
+const statsControls = (view, o = {}) => {
   const selected = view === "cal" ? "day" : view;
   const seg = `<div class="segment">${[
     ["Categories", "cat"],
@@ -1660,112 +1659,220 @@ const stats = (view = "cat", { state = "" } = {}) => {
   ]
     .map(([t, k]) => `<button aria-pressed="${String(selected == k)}">${t}</button>`)
     .join("")}</div>`;
-  const controls = `<div class="period-nav"><button class="btn ghost icon-only round">${iconSvg("chevron-left")}</button><span class="label">September 2026</span><button class="btn ghost icon-only round" disabled>${iconSvg("chevron-right")}</button></div>
+  const month = o.range
+    ? `<button class="btn ghost" style="gap:6px"><span class="label">September 2026</span>${iconSvg("chevron-down", "sm")}</button>`
+    : `<span class="label">September 2026</span>`;
+  return `<div class="period-nav"><button class="btn ghost icon-only round">${iconSvg("chevron-left")}</button>${month}<button class="btn ghost icon-only round" disabled>${iconSvg("chevron-right")}</button></div>
 <div class="chips"><button class="chip selected">Expenses</button><button class="chip">Income</button><button class="chip">Transfers</button><button class="chip">${iconSvg("scale", "sm")}Adjustments</button></div>${seg}`;
-  const totalCard = `<div class="card"><span class="eyebrow">Total spent</span><div class="amount-hero" style="font-size:34px">${money(total)}</div><span class="small muted">48 transactions · average <b class="amount">${money(round(total / 48))}</b></span></div>`;
-  const intro = `${controls}
-${totalCard}`;
-  const frame = (body) =>
-    screen(body, {
-      tab: "",
-      side: "stats",
-      title: "Stats",
-      actions: `<button class="btn ghost icon-only round" aria-label="Export" disabled>${iconSvg("download")}</button>`,
-    });
+};
+
+const statsTotalCard = (footer = "") =>
+  `<div class="card"><span class="eyebrow">Total spent</span><div class="amount-hero" style="font-size:34px">${money(SEP_TOTAL)}</div><span class="small muted">48 transactions · average <b class="amount">${money(round(SEP_TOTAL / 48))}</b></span>${footer}</div>`;
+
+const statsDayChartCard = (view) => {
+  const toggle = `<div class="segment" style="flex:none;width:96px">${[
+    ["chart-column", "day"],
+    ["calendar-days", "cal"],
+  ]
+    .map(
+      ([ic, k]) =>
+        `<button aria-pressed="${String(view == k)}" aria-label="${k == "day" ? "Bars" : "Calendar"}">${iconSvg(ic, "sm")}</button>`,
+    )
+    .join("")}</div>`;
+  const head = `<div class="card-head" style="margin:0"><span class="eyebrow">Per day</span>${toggle}</div>`;
+  const body =
+    view == "day"
+      ? `${barsChart(SEP_SPEND, { height: 140, today: TODAY, until: TODAY, active: 8, label: "Per day" })}${axis("Sep 1", "15", "30")}`
+      : `${heatCal(SEP_SPEND, { active: 8, label: "Per day" })}${heatScale()}`;
+  return `<div class="card chart">${head}${body}
+${readout(`${WD_LONG[sepWeekday(9)]} 9 September · 3 transactions`, money(SEP_SPEND[8]))}</div>`;
+};
+
+const statsDayTiles = () =>
+  `<div class="stats" style="grid-template-columns:repeat(3,1fr)">${statTile("Priciest day", money(SEP_SPEND[8]), `${WD_LONG[sepWeekday(9)]} 9`)}${statTile("Daily average", money(round(SEP_TOTAL / TODAY)))}${statTile("No-spend days", "2", "of 22 so far")}</div>`;
+
+const statsHighestDayCard = () =>
+  `<div class="list card flush"><div class="day-head"><span>We 9 · highest</span><span class="amount">${money(SEP_SPEND[8], "−")}</span></div>${row("shopping-bag", "PINK", "Zara", "Visa Gold", 98000)}${row("car", "BLUE", "Uber", "Visa Gold", 11000)}${row("coffee", "BROWN", "Pergamino Coffee", "Cash", SEP_SPEND[8] - 109000)}</div>`;
+
+const statsCategoryCards = () => {
+  const bar = STATS_CATS.map(([, c, v]) => `<i class="color-${c}" style="flex:${v}"></i>`).join("");
+  const lis = STATS_CATS.map(
+    ([n, c, v, k]) =>
+      `<a class="row" href="#">${tile(CATS[n][0], c)}<span class="body"><span class="title"><span class="truncate">${n}</span></span><span class="meta"><span class="progress thin color-${c}" style="width:120px"><span class="fill" style="width:${round((v / SEP_TOTAL) * 100)}%"></span></span>${round((v / SEP_TOTAL) * 100)} %</span></span><span class="right">${amount(v)}<span class="sub">${k} txns</span></span></a>`,
+  ).join("");
+  const tip =
+    '<span class="tooltip show" style="position:absolute;left:14%;top:-4px"><span class="tip">Food</span></span>';
+  return `<div class="card stack-sm" style="position:relative;overflow:visible">${tip}<div class="stackbar" style="height:12px">${bar}</div></div><div class="list card flush">${lis}</div>`;
+};
+
+const statsAccountCards = () => {
+  const bar = STATS_ACCOUNTS.map(
+    ([, c, , v]) => `<i class="color-${c}" style="flex:${v}"></i>`,
+  ).join("");
+  const lis = STATS_ACCOUNTS.map(([n, c, ic, v, k, o = {}]) => {
+    const badge = o.badge ? `<span class="badge warning">${o.badge}</span>` : "";
+    const body = `${tile(ic, c)}<span class="body"><span class="title"><span class="truncate">${n}</span>${badge}</span><span class="meta"><span class="progress thin color-${c}" style="width:120px"><span class="fill" style="width:${round((v / SEP_TOTAL) * 100)}%"></span></span>${round((v / SEP_TOTAL) * 100)} %</span></span><span class="right">${amount(v)}<span class="sub">${k} txns</span></span>`;
+    // No filter can narrow "no account", so that row is a figure and not a way in.
+    return o.flat
+      ? `<div class="row" style="cursor:default">${body}</div>`
+      : `<a class="row" href="#">${body}</a>`;
+  }).join("");
+  return `<div class="card stack-sm" style="position:relative;overflow:visible"><span class="tooltip show" style="position:absolute;left:22%;top:-4px"><span class="tip">Visa Gold</span></span><div class="stackbar" style="height:12px">${bar}</div></div>
+<div class="list card flush">${lis}</div>
+<p class="xs faint" style="margin:0">Transfers between your own accounts are not spending: they are counted under Transfers, never here.</p>`;
+};
+
+const STATS_TAGS = [
+  ["groceries", 268000, 9],
+  ["latte", 61300, 7],
+  ["monthly", 55900, 4],
+  ["work", 42400, 5],
+];
+
+const statsTagCards = () => {
+  const lis = STATS_TAGS.map(
+    ([t, v, n]) =>
+      `<a class="row" href="#"><span class="tile"><span style="font-weight:600;color:var(--text-2)">#</span></span><span class="body"><span class="title">#${t}</span><span class="meta">${n} transactions</span></span><span class="right">${amount(v)}</span></a>`,
+  ).join("");
+  return `<div class="alert neutral">${iconSvg("info")}<span>A transaction with several tags counts in each of them, so tag totals can add up to more than the total. <b class="amount">${money(SEP_TOTAL - 361400)}</b> of spending has no tags.</span></div><div class="list card flush">${lis}</div>`;
+};
+
+const statsShell = (mobileBody, deskBody) =>
+  `<div class="shell">${sidebar("stats")}<main class="main">
+<div class="page mobile-only">${statsPageBody(mobileBody, statsHeaderActions(true))}</div><div class="page desktop-only">${statsPageBody(deskBody, statsHeaderActions(true))}</div>
+</main>${tabbar("")}</div>`;
+
+const stats = (view = "cat", { state = "" } = {}) => {
+  const controls = statsControls(view);
   if (state == "loading") {
-    const cards =
+    const chart =
       view == "acct"
         ? `<div class="card" style="padding:12px">${skel("height:10px;border-radius:999px")}</div><div class="list card flush">${skelRows(3)}</div>`
         : `<div class="card chart">${skel("height:10px;width:120px")}${skel("height:140px;margin-top:22px")}${skel("height:12px;width:60%")}</div>
-<div class="stats" style="grid-template-columns:repeat(3,1fr)">${skel("height:68px;border-radius:14px")}${skel("height:68px;border-radius:14px")}${skel("height:68px;border-radius:14px")}</div>
-<div class="card chart">${skel("height:10px;width:140px")}${skel("height:64px;margin-top:22px")}${skel("height:12px;width:55%")}</div>
+<div class="stats" style="grid-template-columns:repeat(3,1fr)">${skel("height:68px;border-radius:14px")}${skel("height:68px;border-radius:14px")}${skel("height:68px;border-radius:14px")}</div>`;
+    const rest =
+      view == "acct"
+        ? ""
+        : `<div class="card chart">${skel("height:10px;width:140px")}${skel("height:64px;margin-top:22px")}${skel("height:12px;width:55%")}</div>
 <div class="list card flush">${skelRows(3)}</div>`;
-    return frame(`${controls}
+    return statsShell(
+      `${controls}
 ${skelTotal()}
-${cards}`);
+${chart}${rest ? `\n${rest}` : ""}`,
+      `${controls}
+${skelTotal()}
+${chart}${rest ? `\n${rest}` : ""}`,
+    );
   }
   if (state == "empty") {
     const note =
       view == "acct"
         ? '<p class="xs faint" style="margin:6px 0 0;max-width:280px">Transfers between your own accounts are not spending, so a month of only transfers looks like this.</p>'
         : "";
-    return frame(`${controls}
+    const body = `${controls}
 <div class="card">${statsEmpty(note)}</div>
-${trendsLink()}`);
+${statsOtherMonths()}`;
+    return statsShell(body, body);
   }
   if (state == "error") {
-    return frame(`${controls}
-<div class="card">${statsError()}</div>`);
+    const body = `${controls}
+<div class="card">${statsError()}</div>`;
+    return statsShell(body, body);
   }
-  let content;
-  if (view == "cat") {
-    const bar = STATS_CATS.map(([, c, v]) => `<i class="color-${c}" style="flex:${v}"></i>`).join(
-      "",
-    );
-    const lis = STATS_CATS.map(
-      ([n, c, v, k]) =>
-        `<a class="row" href="#">${tile(CATS[n][0], c)}<span class="body"><span class="title"><span class="truncate">${n}</span></span><span class="meta"><span class="progress thin color-${c}" style="width:120px"><span class="fill" style="width:${round((v / total) * 100)}%"></span></span>${round((v / total) * 100)} %</span></span><span class="right">${amount(v)}<span class="sub">${k} txns</span></span></a>`,
-    ).join("");
-    const tip =
-      '<span class="tooltip show" style="position:absolute;left:14%;top:-4px"><span class="tip">Food</span></span>';
-    content = `<div class="card stack-sm" style="position:relative;overflow:visible">${tip}<div class="stackbar" style="height:12px">${bar}</div></div><div class="list card flush">${lis}</div>
+  const answer = statsAnswer(view);
+  const followUps = statsFollowUps(view, state == "cardError");
+  return statsShell(
+    `${controls}
+${statsTotalCard()}
+${answer}
+${followUps}
+${statsOtherMonths()}`,
+    `${controls}
+<div class="grid-main"><div class="stack" style="gap:16px">${statsTotalCard()}
+${answer}</div><div class="stack" style="gap:16px">${followUps}
+${statsOtherMonths()}</div></div>`,
+  );
+};
+
+const zoneHead = (label) =>
+  `<div class="hstack" style="gap:10px;margin-top:6px"><h2 class="eyebrow" style="margin:0">${label}</h2><span class="divider" style="flex:1"></span></div>`;
+
+const COMPLETE_MONTHS = MONTHS6.filter(([, , , partial]) => !partial);
+const MONTH_AVG = round(
+  COMPLETE_MONTHS.reduce((sum, [, , exp]) => sum + exp, 0) / COMPLETE_MONTHS.length,
+);
+
+const compareStrip = () => {
+  const usual = round((MONTH_AVG * TODAY) / SEP_DAYS);
+  const diff = round(((SEP_TOTAL - usual) / usual) * 100);
+  const spark = stackCols(
+    MONTHS6.map(([name, , exp, partial]) => [name, [["BLUE", exp]], { partial }]),
+    { height: 30, label: "" },
+  );
+  return `<a href="#" class="hstack" style="gap:12px;margin-top:12px;padding:12px 0 2px;min-height:44px;border-top:1px solid var(--border);text-decoration:none;color:inherit">
+<span aria-hidden="true" style="flex:none;width:72px">${spark}</span>
+<span class="small" style="flex:1;color:var(--text-2)">Day ${TODAY} · <b>${Math.abs(diff)} % ${diff < 0 ? "below" : "above"}</b> your usual by now</span>
+${iconSvg("chevron-right", "sm")}</a>`;
+};
+
+const statsAnswer = (view) => {
+  if (view == "day" || view == "cal")
+    return `${statsDayChartCard(view)}
+${statsDayTiles()}`;
+  if (view == "acct") return statsAccountCards();
+  if (view == "tag") return statsTagCards();
+  return statsCategoryCards();
+};
+
+const statsFollowUps = (view, failed = false) =>
+  `${zoneHead("More about this month")}
+${biggestCard(failed)}${view == "day" || view == "cal" ? `\n${weekdayCard()}\n${statsHighestDayCard()}` : ""}`;
+
+const statsOtherMonths = () => `${zoneHead("Other months")}
 ${trendsLink()}`;
-  } else if (view == "day" || view == "cal") {
-    const toggle = `<div class="segment" style="flex:none;width:96px">${[
-      ["chart-column", "day"],
-      ["calendar-days", "cal"],
-    ]
-      .map(
-        ([ic, k]) =>
-          `<button aria-pressed="${String(view == k)}" aria-label="${k == "day" ? "Bars" : "Calendar"}">${iconSvg(ic, "sm")}</button>`,
-      )
-      .join("")}</div>`;
-    const head = `<div class="card-head" style="margin:0"><span class="eyebrow">Per day</span>${toggle}</div>`;
-    const body =
-      view == "day"
-        ? `${barsChart(SEP_SPEND, { height: 140, today: TODAY, until: TODAY, active: 8, label: "Per day" })}${axis("Sep 1", "15", "30")}`
-        : `${heatCal(SEP_SPEND, { active: 8, label: "Per day" })}${heatScale()}`;
-    content = `<div class="card chart">${head}${body}
-${readout(`${WD_LONG[sepWeekday(9)]} 9 September · 3 transactions`, money(SEP_SPEND[8]))}</div>
-<div class="stats" style="grid-template-columns:repeat(3,1fr)">${statTile("Priciest day", money(SEP_SPEND[8]), `${WD_LONG[sepWeekday(9)]} 9`)}${statTile("Daily average", money(round(SEP_TOTAL / TODAY)))}${statTile("No-spend days", "2", "of 22 so far")}</div>
-${weekdayCard()}
-<div class="list card flush"><div class="day-head"><span>We 9 · highest</span><span class="amount">${money(SEP_SPEND[8], "−")}</span></div>${row("shopping-bag", "PINK", "Zara", "Visa Gold", 98000)}${row("car", "BLUE", "Uber", "Visa Gold", 11000)}${row("coffee", "BROWN", "Pergamino Coffee", "Cash", SEP_SPEND[8] - 109000)}</div>
-${biggestCard(state == "cardError")}
-${trendsLink()}`;
-  } else if (view == "acct") {
-    const bar = STATS_ACCOUNTS.map(
-      ([, c, , v]) => `<i class="color-${c}" style="flex:${v}"></i>`,
-    ).join("");
-    const lis = STATS_ACCOUNTS.map(([n, c, ic, v, k, o = {}]) => {
-      const badge = o.badge ? `<span class="badge warning">${o.badge}</span>` : "";
-      const body = `${tile(ic, c)}<span class="body"><span class="title"><span class="truncate">${n}</span>${badge}</span><span class="meta"><span class="progress thin color-${c}" style="width:120px"><span class="fill" style="width:${round((v / total) * 100)}%"></span></span>${round((v / total) * 100)} %</span></span><span class="right">${amount(v)}<span class="sub">${k} txns</span></span>`;
-      // No filter can narrow "no account", so that row is a figure and not a way in.
-      return o.flat
-        ? `<div class="row" style="cursor:default">${body}</div>`
-        : `<a class="row" href="#">${body}</a>`;
-    }).join("");
-    content = `<div class="card stack-sm" style="position:relative;overflow:visible"><span class="tooltip show" style="position:absolute;left:22%;top:-4px"><span class="tip">Visa Gold</span></span><div class="stackbar" style="height:12px">${bar}</div></div>
-<div class="list card flush">${lis}</div>
-<p class="xs faint" style="margin:0">Transfers between your own accounts are not spending: they are counted under Transfers, never here.</p>
-${biggestCard(state == "cardError")}
-${trendsLink()}`;
-  } else {
-    const tags = [
-      ["groceries", 268000, 9],
-      ["latte", 61300, 7],
-      ["monthly", 55900, 4],
-      ["work", 42400, 5],
-    ];
-    const lis = tags
-      .map(
-        ([t, v, n]) =>
-          `<a class="row" href="#"><span class="tile"><span style="font-weight:600;color:var(--text-2)">#</span></span><span class="body"><span class="title">#${t}</span><span class="meta">${n} transactions</span></span><span class="right">${amount(v)}</span></a>`,
-      )
-      .join("");
-    content = `<div class="alert neutral">${iconSvg("info")}<span>A transaction with several tags counts in each of them, so tag totals can add up to more than the total. <b class="amount">${money(SEP_TOTAL - 361400)}</b> of spending has no tags.</span></div><div class="list card flush">${lis}</div>
-${trendsLink()}`;
-  }
-  return frame(intro + content);
+
+const statsHeaderActions = (trendsButton) =>
+  `${trendsButton ? `<a class="btn ghost" href="#">${iconSvg("chart-line", "sm")}Trends</a>` : ""}<button class="btn ghost icon-only round" aria-label="Export" disabled>${iconSvg("download")}</button>`;
+
+const statsPageBody = (body, actions) =>
+  `<header class="page-header"><div class="title"><h1 class="h1">Stats</h1></div><div class="actions">${actions}</div></header>${body}`;
+
+const rangeSheet = () => {
+  const opt = (name, sub, sel) =>
+    `<button class="row" style="border-top:1px solid var(--border)"><span class="body"><span class="title">${name}</span><span class="meta">${sub}</span></span><span class="right" style="flex-direction:row">${sel ? iconSvg("circle-check", "sm") : ""}</span></button>`;
+  const inner = `<div class="list" style="margin:0 -16px">${opt("September 2026", "One month, the screen you are on", true)}${opt("Last 6 months", "Opens Trends", false)}${opt("Last 12 months", "Opens Trends", false)}</div>
+<p class="small muted" style="margin:0">A range wider than a month is a different screen, and this is the door to it: the two are never mixed under one navigator.</p>`;
+  return sheetWrap(inner, "Period");
+};
+
+const statsOrder = (kind, view = "day") => {
+  const actions = statsHeaderActions(kind == "top");
+  const otherMonths = statsOtherMonths();
+  const body = [
+    statsControls(view, { range: kind.startsWith("range") }),
+    statsTotalCard(kind == "inline" ? compareStrip() : ""),
+    statsAnswer(view),
+    kind == "middle" ? otherMonths : "",
+    statsFollowUps(view),
+    kind == "inline" || kind == "middle" ? "" : otherMonths,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  if (kind != "columns")
+    return screen(body, {
+      tab: "",
+      side: "stats",
+      title: "Stats",
+      actions,
+      sheet: kind == "range-open" ? rangeSheet() : "",
+    });
+  const desk = `${statsControls(view)}
+<div class="grid-main"><div class="stack" style="gap:16px">${statsTotalCard()}
+${statsAnswer(view)}</div><div class="stack" style="gap:16px">${statsFollowUps(view)}
+${otherMonths}</div></div>`;
+  return `<div class="shell">${sidebar("stats")}<main class="main">
+<div class="page mobile-only">${statsPageBody(body, actions)}</div><div class="page desktop-only">${statsPageBody(desk, actions)}</div>
+</main>${tabbar("")}</div>`;
 };
 
 const trends = ({ months = 6, state = "" } = {}) => {
@@ -4171,6 +4278,55 @@ const PAGES = [
         paceVariant(true),
         { frame: false, added: "2026-09-06", verdict: "chosen" },
       ),
+      plate(
+        "stats-three-zones",
+        "Stats \u00b7 the baseline, zones and nothing moved",
+        "Not one of the answers \u2014 the floor the four below are priced against. Measured on the phone frame, the way into Trends sits 1,701px down on Days, 1,815px on the calendar, 1,248px under Accounts, 865px under Categories and 766px under Tags: a 2.4\u00d7 spread, so there is nowhere to learn where it is. This plate only gives the page the structure it never had \u2014 <b>the answer</b> (the total, the chart, and the tiles that summarise it), <b>More about this month</b> and <b>Other months</b>, under real headings with a rule \u2014 and puts <b>Biggest this period in all four views</b> instead of two. It does not answer the ask: Trends still ends the page, and in fact moves <b>down</b>, to 1,785px on Days and from 865 to 1,345px on Categories. What it buys is legibility and a stable shape. The four below all keep this backbone and differ only in where the way in goes.",
+        statsOrder("zones"),
+        { added: "2026-09-16", verdict: "discarded" },
+      ),
+      plate(
+        "stats-other-months-in-the-middle",
+        "Stats \u00b7 Other months between the answer and the rest",
+        "The middle position, and the most literal reading of what was asked: not at the end, not at the start. The <b>Other months</b> zone moves up to sit immediately after the answer \u2014 the total, the chart and its three tiles \u2014 and the follow-ups come after it. Trends lands at <b>872px</b> on Days \u2014 roughly one screen down instead of three \u2014 and because all that precedes it is the scope controls, the total and the answer, it lands at about the same place on every tab: the 2.4\u00d7 spread was all tail, and the tail is now below it. It reads as an order too: this month, then the months around it, then the detail of this one. Nothing new is added \u2014 no second entry point, no extra request, no new control \u2014 and the cost is that the follow-up cards are pushed below a card that is not about this month.",
+        statsOrder("middle"),
+        { added: "2026-09-16", verdict: "discarded" },
+      ),
+      plate(
+        "stats-three-zones-and-a-way-in",
+        "Stats \u00b7 a Trends button in the page header",
+        "The backbone, plus a <b>Trends</b> button in the page header beside Export: measured at <b>16px from the top</b> on a phone and 28px on a desktop, on all four tabs and in every state, and it never moves. Trends is not a card of this month\u2019s data \u2014 it is a sibling screen, and the header is where a sibling screen belongs; it costs one control and no vertical space at all. The closing card stays at the end, at 1,785px: someone who reaches the bottom has just run out of this month, and that is exactly when the next question is whether another one was better. The cost to weigh: a second entry point is a second thing to keep true, and the header of Stats stops being only Export.",
+        statsOrder("top"),
+        { added: "2026-09-16", verdict: "chosen" },
+      ),
+      plate(
+        "stats-the-month-opens-a-range",
+        "Stats \u00b7 the month itself opens the range",
+        "The way in goes where the thing it changes already lives. Trends is the only part of this page that widens the <b>range</b>, and the range is what the period navigator owns \u2014 so the month becomes a button, and it opens a sheet with <i>September 2026</i>, <i>Last 6 months</i> and <i>Last 12 months</i>. It adds no card and no header control, it is the first thing under the title, and it uses the picker sheet the product already has. Two costs, and they are real. trends.md says the two screens exist because one navigator cannot walk a month at a time and span six at once \u2014 this keeps them two screens and makes the navigator a <b>door</b>, not a range control, and the sheet has to say so or it promises something the screen will not do. And the navigator stops being three plain controls: the month, which today is a label, becomes the busiest target in the row.",
+        statsOrder("range"),
+        { added: "2026-09-16", verdict: "discarded" },
+      ),
+      plate(
+        "stats-the-month-opens-a-range-sheet",
+        "Stats \u00b7 what the month opens",
+        "The sheet behind the variant above, drawn on its own because a sheet is a modal dialog and covers the screen it belongs to. Three rows: the month you are on, and the two ranges Trends offers. Each range row says it opens Trends, so the sheet never promises that this screen will widen.",
+        statsOrder("range-open"),
+        { added: "2026-09-16", verdict: "discarded" },
+      ),
+      plate(
+        "stats-a-line-instead-of-a-card",
+        "Stats \u00b7 the comparison answered in one line",
+        "The other reading of the problem: Trends is rarely opened not because it is hard to find but because it costs a screen change to answer one question \u2014 <i>is this month worse than usual</i>. Here that question is answered <b>on the total card</b>, in one line with the last six months beside it, and the strip itself is the way in \u2014 measured at <b>355px</b>, on the first screenful, without taking a card\u2019s worth of room. The running month is <b>hatched</b> and the sentence compares like with like, both as trends.md requires. The closing card goes away, so the page is 1,780px instead of 1,874 \u2014 <b>except on an empty period</b>, which has no total card to hang the line from (`stats.md` requires an empty month to keep its way into Trends, and it is the reader most likely to want it), so there the closing card stays. Three costs. It is <b>one more request per Stats load</b> (`groupBy=month` over six months, the same one Trends already makes, served since T-24), which house rule 24 makes you justify. The figure is a ratio of two totals the API returned, scaled to the same day of the month \u2014 what `stats.md`\u2019s \u201cWho computes what\u201d already allows the client to do \u2014 but it is one more figure to keep honest, and a partial month against whole ones is the lie trends.md refuses. And offline it needs six months in the mirror: on a device that only holds the recent window the strip is not drawn at all.",
+        statsOrder("inline"),
+        { added: "2026-09-16", verdict: "discarded" },
+      ),
+      plate(
+        "stats-two-columns-on-a-desktop",
+        "Stats \u00b7 two columns on a desktop",
+        "A <b>separate question</b> that applies to whichever of the four wins, and it settled a disagreement: the app used to cap Stats at <b>640px at every width</b> while this preview drew it at the shared content cap of 1,120px, and `layout.md` mentioned neither. It takes the content cap now. Either way it is one column: measured in this frame the Days view is <b>1,744px of scroll</b> on a desktop, and narrower than that it is taller. Here Stats takes the same 1.6fr / 1fr split `layout.md` gives Home alone: the answer on the left, the follow-ups and then Trends on the right. The page drops from 1,910px to <b>1,302px</b> and the way into Trends from 1,836 to <b>1,213px</b> \u2014 one screen instead of two. The rail keeps the order of whichever variant wins, so under <i>Other months in the middle</i> Trends would sit at the top of it instead. The costs: the left column runs out first and leaves a tall gap beside the rail, and the rail puts cards about this month next to the answer rather than under it. <b>Switch the preview to Desktop to see it</b> \u2014 below 900px this plate is the baseline, unchanged.",
+        statsOrder("columns"),
+        { added: "2026-09-16", verdict: "chosen" },
+      ),
     ],
   },
 ];
@@ -4281,12 +4437,19 @@ const startHere = () => {
 };
 
 const inReview = () => {
+  const asked = [...new Set(OPEN.map((q) => q.asks))];
   const questions =
     OPEN.length === 0
       ? ""
-      : `<section class="pv-card wide"><h2 class="pv-h2">${OPEN.length} questions with more than one answer</h2>
+      : `<section class="pv-card wide"><h2 class="pv-h2">${asked.length} ${asked.length === 1 ? "question" : "questions"} with more than one answer</h2>
 <p>Each of these is drawn two or more ways on <a href="variants.html">Decided variants</a>, side by side, so they can be compared. Pick one and it goes into the specification; the others stay there as the record of why.</p>
-<ul class="pv-list">${OPEN.map((q) => `<li><a href="variants.html#${q.id}">${q.title}</a> — an answer to ${q.asks}</li>`).join("")}</ul></section>`;
+${asked
+  .map((q) => {
+    const answers = OPEN.filter((o) => o.asks === q);
+    return `<p class="pv-note"><b>${q}</b> — ${answers.length} ${answers.length === 1 ? "answer" : "answers"}:</p>
+<ul class="pv-list">${answers.map((a) => `<li><a href="variants.html#${a.id}">${a.title}</a></li>`).join("")}</ul>`;
+  })
+  .join("")}</section>`;
   const drafts =
     IN_REVIEW.length === 0
       ? ""

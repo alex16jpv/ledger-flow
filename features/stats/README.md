@@ -20,12 +20,25 @@ T-27 and T-29 spend that: **Days** gains a Bars ⇄ Calendar toggle (`DayHeat`, 
 month), the **average by weekday** — `weekdayAverages`, the one place the client adds buckets the
 server returned without adding, in minor units, before dividing — and the **biggest movements of the
 period**, which is `useBiggestTransactions`: one page of five with `sort=amount&order=desc`, its own
-request and therefore its own loading, error and Retry, and which **Accounts shows too**. Its rows
+request and therefore its own loading, error and Retry, and which **every grouping shows since
+T-82** — Categories and Tags pay a second read for it, which is the price of the tail having one shape. Its rows
 date themselves by the day the movement froze, never by the device's reading of the instant. **Accounts** is the same stacked bar and the
 same row list as categories, sharing `ShareRows`, with the account's colour and its type icon; the
 line under it says that transfers between the user's own accounts are never counted here. Which of
 the two day views is showing lives in `localStorage` (`lib/charts/day-view.ts`), beside the palette
 and the language, by the owner's decision of 2026-09-12.
+
+T-82 gives the screen its shape (owner's choice, 2026-09-16). The page is three zones: **the answer**
+— the total and the breakdown of the chosen grouping, plus the three tiles under Days — and then two
+labelled `section`s, **More about this month** (_Biggest this period_, and under Days the average by
+weekday and the highest day's movements) and **Other months** (the way into Trends), each named by the
+`h2` of its `ZoneHead`, with the card titles inside them `h3`. A zone heading is not drawn when its
+zone would be empty. The way into Trends is also a labelled link in the page header, on every grouping
+and every state including an empty period and a failed read, carrying the month being read when it is
+not this one; `trendsHref` is built once and given to both it and the closing card. Above **1200px**
+the page splits 1.6fr / 1fr like Home — not at Home's 900px, where the sidebar leaves 596px and the
+wide column would land at 272px — and the empty, loading and error states stay one column at every
+width. The screen no longer caps itself at 640px: it takes the shell's content cap.
 
 T-31 adds **Trends** (`/stats/trends`), the one screen here that reads a range of months instead of
 one, in **five** reads and no duplicates: spending by month **with its category splits** (one read
