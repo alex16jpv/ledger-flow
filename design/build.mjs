@@ -472,17 +472,63 @@ ${row("car", "BLUE", "Uber to work", "Yesterday 18:10 · Visa Gold", 18400)}
 </main>${nav ?? tabbar("inicio")}</div>${sheet}`;
 };
 
-const quickSheet =
-  () => `<div class="scrim"><div class="sheet" role="dialog" aria-label="Add expense">
-<div class="handle"></div>
-<div class="sheet-head"><span class="h3">Add expense</span><button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button></div>
-<div class="amount-input"><span class="cur">$</span><span class="num">12,500</span><span class="caret"></span></div>
-<div class="stack-sm"><span class="label">Category <span class="opt">optional · you can add it later</span></span>
-<div class="chips">${catChip("Food", true)}${catChip("Coffee")}${catChip("Transport")}${catChip("Lifestyle")}${catChip("Bills")}<button class="chip">${iconSvg("ellipsis", "sm")}More</button></div></div>
-<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">From your main account</span><span class="val">Bancolombia · $3,420,500</span></span>${iconSvg("chevron-down", "sm")}</button>
-<div class="input"><span class="placeholder" style="flex:1">Quick note (optional)</span>${iconSvg("notebook-pen", "sm")}</div>
-<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">More details</button><button class="btn primary lg" style="flex:1.4">Save</button></div>
-</div></div>`;
+const quickPicker = (label, value, icon, color) =>
+  `<button class="picker">${tile(icon, color, "sm")}<span class="body"><span class="lbl">${label}</span><span class="val">${value}</span></span>${iconSvg("chevron-down", "sm")}</button>`;
+
+const QUICK_NOTE = `<div class="input"><span class="placeholder" style="flex:1">Quick note (optional)</span>${iconSvg("notebook-pen", "sm")}</div>`;
+const QUICK_BUTTONS = `<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">More details</button><button class="btn primary lg" style="flex:1.4">Save</button></div>`;
+
+// The one quick sheet every quick-add plate is drawn from: T-73 adds `type`, T-75 changes `handle`.
+const quickSheet = ({ handle = "plain", type = null, head = null, extra = "", over = "" } = {}) => {
+  const title = type === null ? "Add expense" : "Add";
+  const bar = {
+    plain: '<div class="handle"></div>',
+    none: "",
+    wide: '<button class="handle" aria-label="Open the full form" style="border:0;cursor:grab;display:block;width:44px"></button>',
+    grab: '<button class="handle" aria-label="Close" style="border:0;cursor:grab;display:block"></button>',
+  }[handle];
+  const seg =
+    type === null
+      ? ""
+      : `<div class="segment">${[
+          ["expense", "Expense", ""],
+          ["income", "Income", "income"],
+          ["transfer", "Transfer", "transfer"],
+        ]
+          .map(
+            ([k, label, cls]) =>
+              `<button aria-pressed="${String(k === type)}" class="${cls}">${label}</button>`,
+          )
+          .join("")}</div>`;
+  const tint = { income: " amount income", transfer: " amount transfer" }[type] ?? "";
+  const amount = `<div class="amount-input"><span class="cur">$</span><span class="num${tint}">12,500</span><span class="caret"></span></div>`;
+  const chips =
+    type === "income"
+      ? `${catChip("Salary", true)}${catChip("Business")}${catChip("Other income")}`
+      : `${catChip("Food", true)}${catChip("Coffee")}${catChip("Transport")}${catChip("Lifestyle")}${catChip("Bills")}`;
+  const cats =
+    type === "transfer"
+      ? ""
+      : `<div class="stack-sm"><span class="label">Category <span class="opt">optional · you can add it later</span></span>
+<div class="chips">${chips}<button class="chip">${iconSvg("ellipsis", "sm")}More</button></div></div>`;
+  const accounts =
+    type === "transfer"
+      ? `<div class="stack-sm">${quickPicker("From", "Bancolombia · $3,420,500", "landmark", "BLUE")}
+<div style="display:flex;justify-content:center;margin:-4px 0"><button class="btn secondary icon-only sm round" aria-label="Swap">${iconSvg("arrow-left-right", "sm")}</button></div>
+${quickPicker("To", "Savings · $8,900,000", "piggy-bank", "GREEN")}</div>`
+      : quickPicker(
+          type === "income" ? "Into your main account" : "From your main account",
+          "Bancolombia · $3,420,500",
+          "landmark",
+          "BLUE",
+        );
+  const sheetHead =
+    head ??
+    `<div class="sheet-head"><span class="h3">${title}</span><button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button></div>`;
+  return `<div class="scrim"><div class="sheet" role="dialog" aria-label="${title}">
+${bar}${sheetHead}${seg}${amount}${cats}${accounts}${QUICK_NOTE}${extra}${QUICK_BUTTONS}
+</div>${over}</div>`;
+};
 
 const transactionForm = (kind = "EXPENSE") => {
   const seg = [
@@ -2960,6 +3006,17 @@ const mobileNavVariant = (kind) => {
   });
 };
 
+// T-73 · the quick sheet learns the three types; the body is the same one `quickSheet` draws today.
+const quickTypeVariant = (kind) => {
+  if (kind !== "title") return home({ sheet: quickSheet({ type: kind }) });
+  const head = `<div class="sheet-head"><button class="btn ghost sm" aria-expanded="true" style="gap:6px;padding-left:0"><span class="h3">Add expense</span>${iconSvg("chevron-down", "sm")}</button><button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button></div>`;
+  const menu = sheetWrap(
+    `<div class="list card flush">${settingsRow("arrow-down-left", "Expense", "Money leaving an account", `<span class="badge brand">${iconSvg("check")}</span>`, "RED")}${settingsRow("arrow-up-right", "Income", "Money arriving", "", "GREEN")}${settingsRow("arrow-left-right", "Transfer", "Between two of your accounts", "", "GRAY")}</div>`,
+    "What are you adding?",
+  );
+  return home({ sheet: quickSheet({ head, over: menu }) });
+};
+
 const plate = (id, title, note, html, o = {}) => ({ id, title, note, html, ...o });
 const plateDay = (p) => p.updated ?? p.added;
 
@@ -3994,6 +4051,34 @@ const PAGES = [
         "Everything stays visible and More is added on the end. Measured in this frame, and the cost is not clipping — it is the size of what you tap. <b>At 390px</b> the columns are already uneven: “Transactions” holds 65px and the other five get 62px, against 75px each in the five-slot bar above. <b>At 360px</b> they are 65 and 56, against 69. <b>At 320px</b> three columns are down to 46px — two above the 44px minimum the rest of the product uses for a control, where the five-slot bar still has 60px. <b>In Spanish</b> it breaks the rule: “Movimientos” and “Presupuestos” hold 66 and 69px, and at 320px three columns fall to 37, 37 and 43px. Nothing actually clips until about 281px in English and 296px in Spanish, below any phone.",
         mobileNavVariant("six"),
         { added: "2026-09-15", verdict: "open", asks: "T-72" },
+      ),
+      plate(
+        "quick-add-type-segment-expense",
+        "Quick add · a type segment, expense",
+        "The same three-way control the full form already has, minus Adjustment, at the top of the sheet. The title stops saying “Add expense” because the sheet is no longer only that; the amount stays unsigned, as it is today, and only its colour says which type is selected. The server needs nothing: `POST /transactions/quick` accepts `type` (INCOME, EXPENSE, TRANSFER) and both account ids today, and the offline queue already applies the same per-type rules (`lib/local/outbox/transactions.ts`), so this is a UI change with no sync work behind it.",
+        quickTypeVariant("expense"),
+        { added: "2026-09-15", verdict: "open", asks: "T-73" },
+      ),
+      plate(
+        "quick-add-type-segment-income",
+        "Quick add · the same sheet on income",
+        "Income reconfigures what is underneath: the amount turns green, the chips are the income categories — three, because that is all the demo data has; the app offers the five most used — and the account row reads “Into your main account”. Same height, same number of taps.",
+        quickTypeVariant("income"),
+        { added: "2026-09-15", verdict: "open", asks: "T-73" },
+      ),
+      plate(
+        "quick-add-type-segment-transfer",
+        "Quick add · the same sheet on transfer",
+        "A transfer has no category and two accounts, so the chips give way to From/To with the swap button — the full form's arrangement, in the sheet. This is the type that decides whether quick add can hold all three: if the body has to change this much, the segment belongs at the top, where a change of type is expected.",
+        quickTypeVariant("transfer"),
+        { added: "2026-09-15", verdict: "open", asks: "T-73" },
+      ),
+      plate(
+        "quick-add-type-in-title",
+        "Quick add · the title is the switch",
+        "No segment: the title becomes a menu, drawn here open. It costs no vertical space, which on a phone with the keyboard up is the scarce thing, and the sheet keeps its height and its body — only the title gains a chevron. Its real price is drawn too: the app has no menu primitive — every overlay is a native dialog through `Sheet` — so choosing one of three types is a second sheet on top of the first, which is two taps to do what the segment does in one. And the obvious shortcut is already taken: holding the FAB means “keep the sheet open for another one” (`HOLD_TO_CHAIN_MS`), so a long-press cannot pick the type.",
+        quickTypeVariant("title"),
+        { added: "2026-09-15", verdict: "open", asks: "T-73" },
       ),
       plate(
         "pace-mark-tooltip-only",

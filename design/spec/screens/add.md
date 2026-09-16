@@ -4,12 +4,21 @@
 
 ## Quick capture (`#quick-capture`)
 
+The sheet records an **expense** and nothing else: an income or a transfer needs the full form. Whether
+it grows a type control, and what that costs the rest of the sheet, is the open decision of T-73 — the
+alternatives are drawn in `preview/variants.html`. The backend already accepts `type` (INCOME, EXPENSE,
+TRANSFER) and both account ids on `POST /transactions/quick`; it is the client that only ever sends an
+expense.
+
 A sheet: the amount focused with the numeric keyboard open; a row of chips with the five most used
 categories plus "More", which opens the full picker; an account picker preselected with the main
 account (with no main account, `NO_DEFAULT_ACCOUNT` → an empty, required picker); a quick note; and the
 buttons "More details" (which carries the state into the full form) and "Save".
 
-Saving posts to `/transactions/quick` with a UUID `Idempotency-Key` per opening of the sheet. When a
+Saving posts to `/transactions/quick` with a UUID `Idempotency-Key` per distinct payload
+(`IdempotencyKeyring`): a retry of the same amount, category and account reuses the key, and an
+edited one gets a new key, which is what makes a lost reply safe to repeat. The note is not part of
+that payload — it travels in the `PUT` that completes the movement. When a
 category was chosen it is sent as `categoryId` — the backend still marks `pendingDetails`, and the app
 may complete it with `PUT … pendingDetails:false` if the user gave both a category and a note. On save
 the sheet closes, a toast says "Transaction saved · Undo" (undo is a `DELETE`), the amount clears and

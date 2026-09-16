@@ -28,8 +28,9 @@ balance and income, the top budgets, accounts, and recent transactions.
 
 ## Add ✅
 
-The quick-capture sheet (`POST /transactions/quick`, with an `Idempotency-Key`) and the full form for
-EXPENSE / INCOME / TRANSFER / ADJUSTMENT (`POST /transactions`). Category, account and date/time open
+The quick-capture sheet (`POST /transactions/quick`, with an `Idempotency-Key`), which records an
+expense and nothing else today (T-73), and the full form for EXPENSE / INCOME / TRANSFER / ADJUSTMENT
+(`POST /transactions`). Category, account and date/time open
 sheets built on the `picker` component plus a searchable list of rows. Tag autocomplete offers chips
 under the field.
 
