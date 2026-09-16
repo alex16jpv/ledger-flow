@@ -3113,7 +3113,7 @@ const PAGES = [
       plate(
         "hero-day-tooltip",
         "Hero chart · the day under the pointer",
-        "Every bar is a control: it says its day and its amount on hover, on focus and in the line underneath, and it opens that day. The month's figures are now the sum of the bars.",
+        "Every bar is a control: it says its day and its amount on hover, on focus and in the line underneath, and it opens that day where the pointer can hover. The month's figures are now the sum of the bars.",
         home({ chart: true }),
         { added: "2026-09-11" },
       ),

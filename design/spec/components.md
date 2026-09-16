@@ -165,5 +165,12 @@ bar, a cell, a column, a pair — carries its name and its amount as its accessi
 a line is the exception 31 states); it shows that
 same text on hover and on keyboard focus through `Tooltip` (23); it repeats it in the `readout` (29)
 for a finger; and where there is a list behind the slot, the slot is a control that opens that list
-already filtered. A chart drawn from figures that include an unconfirmed write carries the projection
-mark (24), exactly like a number does.
+already filtered — **but it opens it only where the pointer can hover**. Where it cannot,
+`(hover: none)`, **the tap is the reading and nothing else**: it takes the slot's focus, raises its
+bubble and writes its `readout` line, and it goes nowhere. On a touch screen a tap is the only way to
+read a slot, so a tap that also navigates takes the screen away before the figure can be read; that is
+why the slot stays a control there instead of becoming part of an image — it has to take focus to be
+read. The cut is what the pointer can do, never the width of the screen: a desktop window narrowed
+below the mobile layout still hovers and still opens, and a wide tablet neither hovers nor opens. A
+device that declares nothing keeps the pointer's behaviour. A chart drawn from figures that include an
+unconfirmed write carries the projection mark (24), exactly like a number does.

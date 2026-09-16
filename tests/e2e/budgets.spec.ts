@@ -454,7 +454,16 @@ test("the detail says how the period got here, where it ends and how it compares
   await expect(page.getByRole("group", { name: "Spending per day" })).toBeVisible();
   expect(reads).toEqual([]);
 
-  // A column is a control: it opens the period it names.
-  await columns.first().click();
-  await expect(page).toHaveURL(/reference=\d{4}-\d{2}$/);
+  // A column is a control: it opens the period it names — where the pointer hovers (T-80).
+  const canHover = await page.evaluate(() => !window.matchMedia("(hover: none)").matches);
+  expect(canHover).toBe(test.info().project.name === "desktop");
+  const column = columns.first();
+  await column.click();
+  if (canHover) {
+    await expect(page).toHaveURL(/reference=\d{4}-\d{2}$/);
+  } else {
+    await expect(page).not.toHaveURL(/reference=/);
+    await expect(column).toBeFocused();
+    await expect(history.locator("xpath=following-sibling::p[1]")).toHaveText(/\$/);
+  }
 });

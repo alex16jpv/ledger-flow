@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { BarsSummary } from "./Bars";
 import { cn } from "./cn";
 import { Readout } from "./Readout";
+import { useSlotOpen } from "./slotOpen";
 import { Tooltip, type TooltipAlign } from "./Tooltip";
 import { useRovingSlots } from "./useRovingSlots";
 
@@ -57,6 +58,7 @@ export function ChartSlots({
   const roving = useRovingSlots(available, step, available.at(-1) ?? null);
 
   const interactive = onSelect !== undefined;
+  const open = useSlotOpen(onSelect);
   const reading = interactive ? label : `${label}: ${slots.map((slot) => slot.label).join(", ")}`;
   const pointed = roving.active !== null ? slots[roving.active] : undefined;
   const line = pointed
@@ -86,9 +88,7 @@ export function ChartSlots({
                 <button
                   type="button"
                   aria-label={slot.label}
-                  onClick={() => {
-                    onSelect(index);
-                  }}
+                  onClick={open?.(index)}
                   onMouseEnter={onMouseEnter}
                   {...rest}
                   className="group/slot flex h-full w-full cursor-pointer items-end"

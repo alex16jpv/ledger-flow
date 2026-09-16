@@ -50,8 +50,23 @@ test("home shows the pending alert, the day bars, the top budgets and the latest
   await firstAccount.click();
   await expect(page).toHaveURL(new RegExp(`${String(accountHref)}$`));
   await page.goBack();
-  await chart.getByRole("button").first().click();
-  await expect(page).toHaveURL(
-    /\/transactions\?period=custom&from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}&type=EXPENSE$/,
-  );
+  // T-80: only a browser says whether the pointer hovers, and that is what decides the tap's meaning.
+  const canHover = await page.evaluate(() => !window.matchMedia("(hover: none)").matches);
+  expect(canHover).toBe(test.info().project.name === "desktop");
+  const day = chart.getByRole("button").first();
+  const readout = chart.locator("xpath=following-sibling::p[1]");
+  const summary = await readout.textContent();
+  await day.click();
+  if (canHover) {
+    await expect(page).toHaveURL(
+      /\/transactions\?period=custom&from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}&type=EXPENSE$/,
+    );
+  } else {
+    await expect(page).toHaveURL(/\/home$/);
+    await expect(day).toBeFocused();
+    await expect(readout).not.toHaveText(summary ?? "");
+    await expect(readout).toHaveText(/\$/);
+    // The tap has to leave the reading of the day it landed on, not of the highest day.
+    await expect(readout).not.toHaveText(/^Highest day/);
+  }
 });
