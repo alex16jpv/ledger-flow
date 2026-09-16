@@ -72,7 +72,6 @@ function Frame({ children }: { children: ReactNode }) {
   // F-63: offline or in local mode (§2.6), the mirror profile carries the currency and the zone.
   const mirrorProfile = useMirrorProfile(Boolean(localUserId) && session.user === null);
   const user = session.user ?? mirrorProfile;
-  // T-72: both read the mirror, and only while the sheet is open — the bar costs nothing closed.
   const accountCount = useAccountCount(moreOpen);
   const categorySummary = useCategorySummary(moreOpen);
   // F-38: what the pull writes into the mirror only reaches the screens through an invalidation.

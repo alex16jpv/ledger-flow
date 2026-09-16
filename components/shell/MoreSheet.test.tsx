@@ -6,6 +6,8 @@ import { renderWithProviders } from "@/lib/testing/render";
 
 import { MoreSheet } from "./MoreSheet";
 
+let pathname = "/home";
+
 vi.mock("@/lib/i18n/navigation", () => ({
   Link: ({
     children,
@@ -20,8 +22,12 @@ vi.mock("@/lib/i18n/navigation", () => ({
       {children}
     </a>
   ),
-  usePathname: () => "/home",
+  usePathname: () => pathname,
 }));
+
+beforeEach(() => {
+  pathname = "/home";
+});
 
 const view = (overrides: Partial<Parameters<typeof MoreSheet>[0]> = {}) => {
   const props = {
@@ -60,8 +66,17 @@ describe("MoreSheet", () => {
   it("says nothing about a count it does not have yet", () => {
     view({ accountCount: undefined, categoryCounts: undefined });
 
-    expect(screen.queryByText(/accounts?$/)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Accounts/ })).toBeInTheDocument();
+    expect(screen.queryByText("4 accounts")).not.toBeInTheDocument();
+    expect(screen.queryByText("13 active · 1 archived")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Accounts" })).toBeInTheDocument();
+  });
+
+  it("marks the destination the screen underneath is already on", () => {
+    pathname = "/stats/trends";
+    view();
+
+    expect(screen.getByRole("link", { name: /Stats/ })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: /Categories/ })).not.toHaveAttribute("aria-current");
   });
 
   // The shell outlives the route, so a sheet left open would sit on top of where it just went.

@@ -68,7 +68,7 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
   const keyring = useRef(new IdempotencyKeyring());
   const amountInput = useRef<HTMLInputElement>(null);
 
-  // showModal() lands on the close button; the amount must own the focus on every (re)opening.
+  // showModal() lands on the bar that opens the full form; the amount owns the focus instead.
   useEffect(() => {
     if (open) amountInput.current?.focus();
   }, [open, amountKey]);
@@ -82,11 +82,13 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
       : recent;
   const serverFields = fieldErrors(quickAdd.error);
   const amountError = validationMessage(t, issues.amount ?? serverFields.amount);
-  const accountError = validationMessage(
-    t,
-    issues.accountId ?? serverFields.accountId ?? serverFields.fromAccountId,
-  );
-  const toAccountError = validationMessage(t, issues.toAccountId ?? serverFields.toAccountId);
+  const oneAccount = transfer
+    ? undefined
+    : (serverFields.accountId ?? serverFields.fromAccountId ?? serverFields.toAccountId);
+  const accountError = validationMessage(t, issues.accountId ?? oneAccount);
+  const toAccountError = transfer
+    ? validationMessage(t, issues.toAccountId ?? serverFields.toAccountId)
+    : undefined;
   const formError =
     quickAdd.error && Object.keys(serverFields).length === 0 ? presentError(quickAdd.error) : null;
   const typeOptions: SegmentOption<QuickAddType>[] = QUICK_TYPES.map((value) => ({
@@ -113,8 +115,8 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
     onClose();
   }
 
-  // The amount survives a change of type (design: add.md); a category that cannot apply does not.
   function changeType(next: QuickAddType) {
+    if (next === type) return;
     setType(next);
     setCategoryId(null);
     setIssues({});
@@ -240,7 +242,6 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
               key={amountKey}
               ref={amountInput}
               label={t("transactions.quick.amount")}
-              defaultValue={amount}
               tone={TYPE_TONE[type]}
               onChange={setAmount}
               invalid={Boolean(amountError) || (amount !== null && Number.isNaN(amount))}
@@ -317,6 +318,7 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
                   size="sm"
                   iconOnly
                   round
+                  disabled={toAccountId === null}
                   aria-label={t("transactions.form.swap")}
                   onClick={() => {
                     setAccountId(toAccountId);

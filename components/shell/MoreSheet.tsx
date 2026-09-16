@@ -7,12 +7,12 @@ import { Card } from "@/components/ui/Card";
 import { List, RowBody, rowClasses, RowMeta, RowTitle } from "@/components/ui/Row";
 import { Sheet } from "@/components/ui/Sheet";
 import { Tile } from "@/components/ui/Tile";
-import { Link } from "@/lib/i18n/navigation";
+import { Link, usePathname } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 import type { ColorToken } from "@/lib/theme/feature-color";
 
 import { Avatar } from "./Avatar";
-import { MORE_ITEMS, type NavKey, SETTINGS_ITEM } from "./nav";
+import { isActive, MORE_ITEMS, type NavKey, SETTINGS_ITEM } from "./nav";
 
 export interface CategoryCounts {
   active: number;
@@ -43,21 +43,28 @@ export function MoreSheet({
   accountCount,
   categoryCounts,
 }: MoreSheetProps) {
-  const t = useTranslations("nav");
+  const t = useTranslations();
+  const pathname = usePathname();
 
   function metaFor(key: NavKey) {
     if (key === "accounts")
-      return accountCount === undefined ? undefined : t("moreAccounts", { count: accountCount });
+      return accountCount === undefined
+        ? undefined
+        : t("home.accountsCount", { count: accountCount });
     if (key === "categories")
       return categoryCounts === undefined
         ? undefined
-        : t("moreCategories", { active: categoryCounts.active, archived: categoryCounts.archived });
-    if (key === "stats") return t("moreStats");
-    return t("moreSettings");
+        : t("settings.categories.subtitle", {
+            active: categoryCounts.active,
+            archived: categoryCounts.archived,
+          });
+    if (key === "stats") return t("nav.moreStats");
+    if (key === "settings") return t("nav.moreSettings");
+    return undefined;
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={t("more")}>
+    <Sheet open={open} onClose={onClose} title={t("nav.more")}>
       <div className="flex flex-col gap-3">
         <Card flush>
           <List>
@@ -67,6 +74,7 @@ export function MoreSheet({
                 <Link
                   key={item.key}
                   href={item.href}
+                  aria-current={isActive(pathname, item.href) ? "page" : undefined}
                   onClick={onClose}
                   className={rowClasses({ interactive: true })}
                 >
@@ -75,7 +83,7 @@ export function MoreSheet({
                   </Tile>
                   <RowBody>
                     <RowTitle>
-                      <span>{t(item.key)}</span>
+                      <span>{t(`nav.${item.key}`)}</span>
                     </RowTitle>
                     {meta && <RowMeta items={[meta]} />}
                   </RowBody>

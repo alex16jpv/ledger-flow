@@ -248,7 +248,7 @@ describe("Sheet", () => {
 
   // T-75: the bar was drawn on all 38 sheets and did nothing. In quick add it now opens the full form.
   describe("the bar on top", () => {
-    const view = (onExpand?: () => void) => {
+    const view = (onExpand: () => void) => {
       renderWithProviders(
         <Sheet
           open
@@ -263,7 +263,11 @@ describe("Sheet", () => {
     };
 
     it("is decoration in a sheet that has nothing to open", () => {
-      view();
+      renderWithProviders(
+        <Sheet open onClose={vi.fn()} title="Add">
+          <p>content</p>
+        </Sheet>,
+      );
 
       expect(screen.queryByRole("button", { name: "Open the full form" })).not.toBeInTheDocument();
     });
@@ -277,28 +281,85 @@ describe("Sheet", () => {
       expect(onExpand).toHaveBeenCalledOnce();
     });
 
-    it("opens it once on a drag upwards, and not at all on a short one", () => {
+    it("opens it once on a drag upwards, and reads a 2px wobble as the tap it is", () => {
       const onExpand = vi.fn();
       view(onExpand);
       const bar = screen.getByRole("button", { name: "Open the full form" });
 
       fireEvent.pointerDown(bar, { clientY: 200 });
       fireEvent.pointerUp(bar, { clientY: 200 - EXPAND_DRAG_PX });
-      fireEvent.click(bar);
+      fireEvent.click(bar, { detail: 1 });
       expect(onExpand).toHaveBeenCalledOnce();
 
       fireEvent.pointerDown(bar, { clientY: 200 });
       fireEvent.pointerUp(bar, { clientY: 198 });
-      expect(onExpand).toHaveBeenCalledOnce();
+      fireEvent.click(bar, { detail: 1 });
+      expect(onExpand).toHaveBeenCalledTimes(2);
     });
 
-    it("does not open it when the drag goes down", () => {
+    // The bar is the usual pull-down-to-dismiss affordance: a downward drag must not open anything,
+    // and Chromium sends the compatibility click afterwards, so the handler has to swallow it too.
+    it("does not open it when the drag goes down, click and all", () => {
       const onExpand = vi.fn();
       view(onExpand);
       const bar = screen.getByRole("button", { name: "Open the full form" });
 
       fireEvent.pointerDown(bar, { clientY: 200 });
       fireEvent.pointerUp(bar, { clientY: 260 });
+      fireEvent.click(bar, { detail: 1 });
+
+      expect(onExpand).not.toHaveBeenCalled();
+    });
+
+    // A long drag gets no click at all, so a flag left standing would eat the next Enter.
+    it("still answers the keyboard after a drag that the browser never clicked", async () => {
+      const onExpand = vi.fn();
+      view(onExpand);
+      const bar = screen.getByRole("button", { name: "Open the full form" });
+
+      fireEvent.pointerDown(bar, { clientY: 200 });
+      fireEvent.pointerUp(bar, { clientY: 140 });
+      expect(onExpand).toHaveBeenCalledOnce();
+
+      bar.focus();
+      await userEvent.keyboard("{Enter}");
+      expect(onExpand).toHaveBeenCalledTimes(2);
+    });
+
+    // T-78's question leaves only two answers; the bar is not a third way out of it.
+    it("cannot be used while the sheet is asking about unsaved work", async () => {
+      const onExpand = vi.fn();
+      renderWithProviders(
+        <Sheet
+          open
+          onClose={vi.fn()}
+          title="Add"
+          unsaved
+          onExpand={onExpand}
+          expandLabel="Open the full form"
+        >
+          <p>content</p>
+        </Sheet>,
+      );
+      const dialog = screen.getByRole("dialog", { name: "Add" });
+      const scrim = dialog.firstElementChild;
+      expect(scrim).not.toBeNull();
+      if (!scrim) return;
+      await userEvent.click(scrim);
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+
+      expect(screen.getByRole("button", { name: "Open the full form" })).toHaveAttribute("inert");
+      expect(onExpand).not.toHaveBeenCalled();
+    });
+
+    it("forgets a cancelled pointer instead of measuring the next one against it", () => {
+      const onExpand = vi.fn();
+      view(onExpand);
+      const bar = screen.getByRole("button", { name: "Open the full form" });
+
+      fireEvent.pointerDown(bar, { clientY: 200 });
+      fireEvent.pointerCancel(bar);
+      fireEvent.pointerUp(bar, { clientY: 100 });
 
       expect(onExpand).not.toHaveBeenCalled();
     });

@@ -22,18 +22,38 @@ function uniqueAmount(): number {
   return 100_000 + Math.floor(Math.random() * 899_999);
 }
 
-async function quickRow(request: Request, amount: number) {
+interface QuickRow {
+  id: string;
+  type: string;
+  amount: number;
+  pendingDetails: boolean;
+  description: string | null;
+  categoryId: string | null;
+}
+
+async function quickRows(request: Request): Promise<QuickRow[]> {
   const list = (await (await request.get("/api/transactions?source=QUICK&limit=50")).json()) as {
-    data: {
-      id: string;
-      type: string;
-      amount: number;
-      pendingDetails: boolean;
-      description: string | null;
-      categoryId: string | null;
-    }[];
+    data: QuickRow[];
   };
-  return list.data.find((row) => row.amount === amount);
+  return list.data;
+}
+
+// The reply comes back before the row is readable, and a quick capture finishes in two steps, so
+// the list is polled for the row in the state the test is waiting for rather than read once.
+async function quickRow(
+  request: Request,
+  amount: number,
+  settled: (row: QuickRow) => boolean = () => true,
+): Promise<QuickRow | undefined> {
+  let found: QuickRow | undefined;
+  await expect
+    .poll(async () => {
+      const row = (await quickRows(request)).find((candidate) => candidate.amount === amount);
+      if (row) found = row;
+      return row !== undefined && settled(row);
+    })
+    .toBe(true);
+  return found;
 }
 
 function addButton(page: Page) {
@@ -135,7 +155,9 @@ test("a chosen category and a note complete the details, and More details carrie
   await expect(sheet.getByRole("button", { name: /^Account.*Cash/ })).toBeVisible();
   await sheet.getByRole("textbox", { name: "Quick note (optional)" }).fill("Bus");
   await sheet.getByRole("button", { name: "More details" }).click();
-  await expect(page).toHaveURL(/\/transactions\/new\?amount=4500&accountId=[^&]+&description=Bus$/);
+  await expect(page).toHaveURL(
+    /\/transactions\/new\?type=EXPENSE&amount=4500&accountId=[^&]+&description=Bus$/,
+  );
 });
 
 test("without a main account the sheet asks for one instead of failing silently", async ({
@@ -253,8 +275,10 @@ test("the quick sheet records an income and a transfer against the real backend"
   await page.getByRole("option").first().click();
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Transaction saved")).toBeVisible();
-  const moved = await quickRow(request, transfer);
+  // A transfer has no category to give, so it must not sit in the review inbox for ever.
+  const moved = await quickRow(request, transfer, (row) => !row.pendingDetails);
   expect(moved?.type).toBe("TRANSFER");
+  expect(moved?.pendingDetails).toBe(false);
   await request.delete(`/api/transactions/${moved?.id}`, { headers: { origin: APP } });
 });
 
@@ -281,4 +305,41 @@ test("the bar on top of the quick sheet opens the full form carrying what was ty
     new Intl.NumberFormat("en-US").format(amount),
   );
   await expect(sheet).toBeHidden();
+});
+
+// T-75: the drag is the half of the gesture only a browser has, and a pull down must open nothing.
+test("the bar is dragged up to the full form, and a pull down opens nothing", async ({
+  page,
+  request,
+}) => {
+  test.skip(test.info().project.name !== "mobile", "the bar is only drawn below 600px");
+  await signIn(page, request);
+  await addButton(page).click();
+  const sheet = page.getByRole("dialog", { name: "Add" });
+  const amount = uniqueAmount();
+  await sheet.getByRole("textbox", { name: "Amount" }).fill(String(amount));
+
+  const bar = sheet.getByRole("button", { name: "Open the full form" });
+  const box = await bar.boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) return;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y + 60, { steps: 6 });
+  await page.mouse.up();
+  await expect(sheet).toBeVisible();
+  await expect(page).not.toHaveURL(/\/transactions\/new/);
+
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y - 60, { steps: 6 });
+  await page.mouse.up();
+
+  await expect(page.getByRole("heading", { level: 1, name: "New transaction" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Amount" })).toHaveValue(
+    new Intl.NumberFormat("en-US").format(amount),
+  );
 });

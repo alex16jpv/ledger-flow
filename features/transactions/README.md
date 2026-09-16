@@ -8,8 +8,8 @@ W-17 adds quick capture: `useQuickAdd` posts to `POST /transactions/quick` with 
 was chosen too) and invalidates every money domain (`lib/query/domains.ts`). `useDeleteTransaction`
 backs the toast's Undo. The sheet itself is composed in the app layer
 (`app/[locale]/(app)/QuickAddSheet.tsx`) because it needs the category and account pickers of other
-features; `draftToSearchParams` carries what was typed to the full form when the user asks for
-"More details".
+features; `draftToSearchParams` carries what was typed to the full form — through "More details", and
+since T-75 through the bar on top of the sheet as well.
 
 T-73 gives that sheet the three types the endpoint has always accepted. `schemas.ts` owns the shape:
 `QUICK_TYPES` comes from `QuickAddTransactionInput["type"]`, `quickAddSchema` checks a transfer's two

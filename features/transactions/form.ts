@@ -108,7 +108,6 @@ export function draftFromSearchParams(params: URLSearchParams): FormDraft {
   };
 }
 
-// A transfer keeps its two sides; every other type has one account, so the draft's is that one.
 export function draftToFormValues(
   draft: FormDraft,
   base: TransactionFormValues,

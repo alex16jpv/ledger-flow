@@ -4,14 +4,20 @@ import { renderWithProviders } from "@/lib/testing/render";
 
 import { HOLD_TO_CHAIN_MS, TabBar } from "./TabBar";
 
+let pathname = "/home";
+
 vi.mock("@/lib/i18n/navigation", () => ({
   Link: ({ children, href, ...rest }: { children: React.ReactNode; href: string }) => (
     <a href={href} {...rest}>
       {children}
     </a>
   ),
-  usePathname: () => "/home",
+  usePathname: () => pathname,
 }));
+
+beforeEach(() => {
+  pathname = "/home";
+});
 
 describe("TabBar add button", () => {
   beforeEach(() => {
@@ -69,5 +75,28 @@ describe("TabBar destinations", () => {
     renderWithProviders(<TabBar pendingCount={0} moreOpen onAdd={vi.fn()} onMore={vi.fn()} />);
 
     expect(screen.getByRole("button", { name: "More" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  // The bar lost four destinations to More, so More is where the app has to say you are on one.
+  it.each(["/accounts", "/stats", "/stats/trends", "/categories", "/settings"])(
+    "marks More as the current page on %s",
+    (where) => {
+      pathname = where;
+      renderWithProviders(
+        <TabBar pendingCount={0} moreOpen={false} onAdd={vi.fn()} onMore={vi.fn()} />,
+      );
+
+      expect(screen.getByRole("button", { name: "More" })).toHaveAttribute("aria-current", "page");
+    },
+  );
+
+  it("does not mark More on a screen the bar itself holds", () => {
+    pathname = "/budgets";
+    renderWithProviders(
+      <TabBar pendingCount={0} moreOpen={false} onAdd={vi.fn()} onMore={vi.fn()} />,
+    );
+
+    expect(screen.getByRole("button", { name: "More" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Budgets" })).toHaveAttribute("aria-current", "page");
   });
 });

@@ -90,6 +90,7 @@ export function TabBar({ pendingCount, moreOpen, onAdd, onMore }: TabBarProps) {
               type="button"
               aria-haspopup="dialog"
               aria-expanded={moreOpen}
+              aria-current={behindMore ? "page" : undefined}
               onClick={onMore}
               className={slotClasses(behindMore || moreOpen)}
             >

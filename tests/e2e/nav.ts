@@ -6,7 +6,11 @@ export async function goToSection(page: Page, name: string): Promise<void> {
     .getByRole("navigation", { name: "Navigation" })
     .last()
     .getByRole("button", { name: "More", exact: true });
-  if (await more.isVisible()) await more.click();
-  // In the sheet the accessible name carries the count too, so this match is a substring.
-  await page.getByRole("link", { name }).first().click();
+  if (!(await more.isVisible())) {
+    await page.getByRole("link", { name, exact: true }).first().click();
+    return;
+  }
+  await more.click();
+  // Inside the sheet the accessible name carries the count too, so this match is a substring.
+  await page.getByRole("dialog", { name: "More" }).getByRole("link", { name }).click();
 }

@@ -346,4 +346,36 @@ describe("QuickAddSheet", () => {
     expect(draft?.toString()).toBe("type=EXPENSE&amount=4500&accountId=a1&description=Bus");
     expect(onClose).toHaveBeenCalled();
   });
+
+  // The design is explicit: switching type never clears the amount, and always clears the category.
+  it("keeps the amount across a change of type and drops the category", async () => {
+    routeFetch();
+    renderSheet();
+    await screen.findByRole("button", { name: /From your main account.*Bancolombia/ });
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "12500");
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Category" })).getByRole("button", {
+        name: "Coffee",
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Coffee" })).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(screen.getByRole("button", { name: "Income" }));
+
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("12,500");
+    expect(await screen.findByRole("button", { name: "Coffee" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("does not throw the category away when the type shown is tapped again", async () => {
+    routeFetch();
+    renderSheet();
+    await userEvent.click(await screen.findByRole("button", { name: "Coffee" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Expense" }));
+
+    expect(screen.getByRole("button", { name: "Coffee" })).toHaveAttribute("aria-pressed", "true");
+  });
 });

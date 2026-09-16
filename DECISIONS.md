@@ -3805,9 +3805,10 @@ cover` is set once in the root layout for the standalone display.
 - **Where the counts come from:** `components/**` may not import a feature, so `MoreSheet` takes
   `accountCount` and `categoryCounts` as props and `AppFrame` reads them — the same route `pendingCount`
   already takes. Both queries are `enabled` only while the sheet is open, so a closed bar costs nothing,
-  and both go through `lib/local/repository`, so the sheet says the same numbers with no network. The
-  account count is the server's `pagination.total`, not the length of a page: a capped list would have
-  printed "100" for a user with three hundred (T-38).
+  and both go through `lib/local/repository`, so the sheet says the same numbers with no network. Both
+  counts are the server's `pagination.total`, never the length of a page: a capped list would have
+  printed "100" for a user with three hundred (T-38), which is what `fetchCategorySummary` used to do
+  in Settings — it now asks for one row twice, with and without the archived, and subtracts.
 - **Alternative:** letting the bar carry six slots. Rejected with a measurement, drawn in the variants
   page: at 320px three columns fall to 46px, and in Spanish to 37px, against a 44px minimum the rest of
   the product holds to.
@@ -3826,10 +3827,11 @@ cover` is set once in the root layout for the standalone display.
 - **Why it cost no backend work:** `POST /transactions/quick` has always taken `type` and both account
   ids, and `lib/local/outbox/transactions.ts` has always applied the same per-type defaults offline. It
   was the client that only ever sent an expense.
-- **Where the shape lives:** `features/transactions/schemas.ts`. `QUICK_TYPES` is derived from
-  `QuickAddTransactionInput["type"]`, so a fourth type in the contract is a type error here rather than
-  a silent omission; `quickAddInput` is the one place that decides which side the single account goes
-  on, and the sheet no longer builds that payload inline.
+- **Where the shape lives:** `features/transactions/schemas.ts`. `QUICK_TYPES` is checked against
+  `QuickAddTransactionInput["type"]` with `satisfies`, which catches a member the contract does not
+  have — it does **not** catch a member the contract gains, so a fourth type in the OpenAPI would be
+  silently absent here until somebody looks. `quickAddInput` is the one place that decides which side
+  the single account goes on, and the sheet no longer builds that payload inline.
 - **Consequence:** the FAB's accessible name is "Add", not "Add expense" — the button no longer only
   adds an expense, and a name that says otherwise is a message that lies. `nav.addExpense` is gone.
 
@@ -3844,10 +3846,13 @@ cover` is set once in the root layout for the standalone display.
   give it meaning in one sheet is to let that sheet pass the meaning in — `onExpand` plus its
   `expandLabel`, because the label is user-visible text and belongs to the caller's namespace. A sheet
   that passes nothing keeps the decorative span, which is what keeps this from leaking into the other 37.
-- **How the tap and the drag do not fire twice:** the drag is decided on `pointerup` with the pointer
-  captured, so a finger that leaves a 4px-tall bar is still heard; the `click` the browser sends
-  afterwards is swallowed by the flag the drag set. A tap alone never reaches the threshold, so it
-  arrives as the click.
+- **How the tap and the drag do not collide:** the drag is decided on `pointerup` with the pointer
+  captured, so a finger that leaves a 4px-tall bar is still heard. Any movement past `TAP_SLOP_PX`
+  counts as a gesture and marks the flag — **in either direction**, so a pull downwards, which is what
+  the bar looks like it should do everywhere else, opens nothing and its click is swallowed too.
+  Chromium sends that click after a short drag and suppresses it after a long one, so the flag cannot
+  be the only gate: a keyboard activation carries `detail === 0` and skips it, which is what keeps
+  Enter working after a drag that never clicked.
 - **Alternative:** the bar as the dismissal, which is what a bar usually means elsewhere. Rejected by
   the owner; it also collided with the tap outside that had just been fixed the same day.
 - **Consequence:** the hit area is 64×20 around the 4px bar, because a 4px target is not one; the bar

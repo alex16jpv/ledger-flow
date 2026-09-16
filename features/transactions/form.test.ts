@@ -3,6 +3,7 @@ import type { Transaction } from "@/types/api";
 import {
   defaultFormValues,
   draftFromSearchParams,
+  draftToFormValues,
   fromTransaction,
   isTooFarAhead,
   toTransactionChanges,
@@ -172,5 +173,57 @@ describe("what an edit sends", () => {
 
   it("sends nothing when nothing was touched", () => {
     expect(toTransactionChanges(input, {})).toEqual({});
+  });
+});
+
+// T-73: the quick sheet now hands over a type and, for a transfer, a second account.
+describe("the draft the quick sheet hands to the full form", () => {
+  const base = defaultFormValues(NOW, BOGOTA);
+
+  it("reads the type only when the contract has it", () => {
+    expect(draftFromSearchParams(new URLSearchParams("type=TRANSFER")).type).toBe("TRANSFER");
+    expect(draftFromSearchParams(new URLSearchParams("type=SOMETHING")).type).toBeUndefined();
+    expect(draftFromSearchParams(new URLSearchParams("")).type).toBeUndefined();
+  });
+
+  it("puts a transfer's one account on the side it leaves from", () => {
+    const draft = draftFromSearchParams(
+      new URLSearchParams("type=TRANSFER&amount=3000&accountId=a1&toAccountId=a2"),
+    );
+
+    expect(draftToFormValues(draft, base)).toMatchObject({
+      type: "TRANSFER",
+      amount: 3000,
+      accountId: null,
+      fromAccountId: "a1",
+      toAccountId: "a2",
+      categoryId: null,
+    });
+  });
+
+  it("keeps one account and drops a category the type cannot take", () => {
+    const income = draftToFormValues(
+      draftFromSearchParams(new URLSearchParams("type=INCOME&accountId=a1&categoryId=c1")),
+      base,
+    );
+    expect(income).toMatchObject({
+      type: "INCOME",
+      accountId: "a1",
+      fromAccountId: null,
+      toAccountId: null,
+      categoryId: "c1",
+    });
+
+    const transfer = draftToFormValues(
+      draftFromSearchParams(new URLSearchParams("type=TRANSFER&accountId=a1&categoryId=c1")),
+      base,
+    );
+    expect(transfer.categoryId).toBeNull();
+  });
+
+  it("falls back to the form's own type when the draft carries none", () => {
+    expect(
+      draftToFormValues(draftFromSearchParams(new URLSearchParams("amount=100")), base),
+    ).toMatchObject({ type: "EXPENSE", amount: 100 });
   });
 });

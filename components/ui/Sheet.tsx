@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   createContext,
+  type MouseEvent,
   type PointerEvent,
   type ReactNode,
   type SyntheticEvent,
@@ -37,10 +38,15 @@ export function useUnsavedGuard(unsaved: boolean): void {
 const FOCUSABLE =
   'a[href],button,input,select,textarea,summary,[contenteditable],[tabindex]:not([tabindex="-1"])';
 
-// T-75: how far up the 44x4 bar has to travel before the gesture counts as a drag, not a tap.
 export const EXPAND_DRAG_PX = 16;
+// Below this the finger never moved: the browser will send a click and it is a tap, not a drag.
+const TAP_SLOP_PX = 4;
 
-export interface SheetProps {
+// A bar that does something has to say what: the two arrive together or not at all.
+type ExpandProps =
+  { onExpand: () => void; expandLabel: string } | { onExpand?: undefined; expandLabel?: undefined };
+
+export type SheetProps = {
   open: boolean;
   onClose: () => void;
   title: ReactNode;
@@ -48,12 +54,10 @@ export interface SheetProps {
   footer?: ReactNode;
   dismissible?: boolean;
   unsaved?: boolean;
-  onExpand?: () => void;
-  expandLabel?: string;
   // The calendar and the wheel of 7.28 are 360 px wide from `sm` up; everything else is 520.
   width?: "md" | "sm";
   className?: string;
-}
+} & ExpandProps;
 
 export function Sheet({
   open,
@@ -74,7 +78,7 @@ export function Sheet({
   const titleId = useId();
   const scrimGesture = useRef(false);
   const dragFrom = useRef<number | null>(null);
-  const dragged = useRef(false);
+  const gestured = useRef(false);
   const [bodyNeedsFocus, setBodyNeedsFocus] = useState(false);
   const [reported, setReported] = useState<readonly string[]>([]);
   const [asking, setAsking] = useState(false);
@@ -141,22 +145,29 @@ export function Sheet({
 
   function handleBarDown(event: PointerEvent<HTMLButtonElement>) {
     dragFrom.current = event.clientY;
-    dragged.current = false;
+    gestured.current = false;
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
   function handleBarUp(event: PointerEvent<HTMLButtonElement>) {
     const from = dragFrom.current;
     dragFrom.current = null;
-    if (from === null || from - event.clientY < EXPAND_DRAG_PX) return;
-    dragged.current = true;
-    onExpand?.();
+    if (from === null) return;
+    const up = from - event.clientY;
+    if (Math.abs(up) < TAP_SLOP_PX) return;
+    // A drag answers here, in either direction: only upwards opens, and neither may click again.
+    gestured.current = true;
+    if (up >= EXPAND_DRAG_PX) onExpand?.();
   }
 
-  // The drag already answered; the click the browser sends afterwards must not answer again.
-  function handleBarClick() {
-    if (dragged.current) {
-      dragged.current = false;
+  function handleBarCancel() {
+    dragFrom.current = null;
+  }
+
+  function handleBarClick(event: MouseEvent<HTMLButtonElement>) {
+    // A keyboard activation carries detail 0 and follows no gesture, so it never reads the flag.
+    if (event.detail > 0 && gestured.current) {
+      gestured.current = false;
       return;
     }
     onExpand?.();
@@ -205,11 +216,14 @@ export function Sheet({
           {onExpand ? (
             <button
               type="button"
+              // The question is the only thing on screen while it stands; this is not a way past it.
+              inert={question}
               aria-label={expandLabel}
               onPointerDown={handleBarDown}
               onPointerUp={handleBarUp}
+              onPointerCancel={handleBarCancel}
               onClick={handleBarClick}
-              className="[&>span]:focus-visible:bg-focus-ring mx-auto -mt-1 flex w-16 touch-none justify-center py-2 focus-visible:outline-none sm:hidden"
+              className="mx-auto -mt-2 flex w-16 touch-none justify-center py-3 sm:hidden"
             >
               <span className="h-1 w-11 rounded-full bg-border-strong" />
             </button>
