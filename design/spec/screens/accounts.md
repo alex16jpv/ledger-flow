@@ -79,7 +79,7 @@ type, and it is not an inconsistency: each type leads with the figure it actuall
 **card** the bar is **the limit in use**: a purchase pushes it up, a payment pulls it back down, and at
 $0 owed it is empty with the whole limit available again. On a **loan** it is **what you have paid
 off**: it only ever grows, because you cannot re-borrow what you repaid, and it is full the day the
-loan is finished. The line under each says which it is, so the bar is never read alone. The cost is
+loan is finished. The line under each says which it is, so the bar is never read alone. That line always describes what the bar **fills with**, never its complement, and `npm run design:check` compares the two on every bar of every plate — the mismatch shipped three times before it was checked by arithmetic instead of by eye. The cost is
 real and accepted: a card at 31% and a loan at 30% mean different things on the same list. The
 alternative — one rule for both, the bar always being the debt that is left — makes a loan start full
 and empty as you pay, which reads backwards.

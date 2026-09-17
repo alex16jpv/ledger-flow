@@ -41,6 +41,36 @@ try {
     process.exit(1);
   }
   console.log(`check-design-preview: ${fresh.length} files match design/build.mjs`);
+
+  const BAR =
+    /<div class="progress thin"><span class="fill" style="width:(\d+)%"><\/span><\/div><span class="xs faint">([^<]*)<\/span>/g;
+  const figure = (text) => Number(text.replace(/[$,]/g, ""));
+  const wrong = [];
+  let bars = 0;
+  for (const name of files(PREVIEW).filter((file) => file.endsWith(".html"))) {
+    const html = readFileSync(join(PREVIEW, name), "utf8");
+    for (const [, percent, caption] of html.matchAll(BAR)) {
+      bars += 1;
+      const parts =
+        /^\$([\d,]+) (?:owed|paid) of \$([\d,]+)$/.exec(caption) ??
+        /^\$([\d,]+) of \$([\d,]+) used/.exec(caption);
+      const expected = parts
+        ? Math.round((figure(parts[1]) / figure(parts[2])) * 100)
+        : /of your own money sitting on it$/.test(caption)
+          ? 0
+          : null;
+      if (expected === null || expected !== Number(percent))
+        wrong.push(`  ${name}: bar at ${percent}% under “${caption}”`);
+    }
+  }
+  if (wrong.length > 0) {
+    console.error(
+      "check-design-preview: a bar disagrees with the line under it. The line says what the bar fills with, never its complement (design/spec/screens/accounts.md).",
+    );
+    console.error(wrong.join("\n"));
+    process.exit(1);
+  }
+  console.log(`check-design-preview: ${bars} bars agree with their caption`);
 } finally {
   rmSync(out, { recursive: true, force: true });
 }
