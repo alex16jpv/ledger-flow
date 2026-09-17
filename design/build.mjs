@@ -356,7 +356,7 @@ const home = ({
   nav = null,
   sheet = "",
   statsLink = false,
-  debt = null,
+  debt = "two-cards",
 } = {}) => {
   const bars = [
     [30, ""],
@@ -543,7 +543,13 @@ ${bar}${sheetHead}${seg}${amount}${cats}${accounts}${QUICK_NOTE}${extra}${QUICK_
 
 const transactionForm = (
   kind = "EXPENSE",
-  { adjustment = true, transfer = null, amount = "18,400", readback = "", description = null } = {},
+  {
+    adjustment = false,
+    transfer = null,
+    amount = "18,400",
+    readback = "",
+    description = null,
+  } = {},
 ) => {
   const seg = [
     ["EXPENSE", "Expense", ""],
@@ -1139,10 +1145,9 @@ const accountCard = (name, typ, color, bal, isDefault = false, neg = false, arch
 };
 
 const accounts = ({ actions = null, sheet = "", nav = null } = {}) => {
-  const body = `<div class="card" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div class="stat"><span class="k">Total balance</span><span class="amount-hero" style="font-size:32px">${money(11258600)}</span><span class="small faint">4 active accounts · 1 archived</span></div><div class="stat" style="text-align:right;align-items:flex-end"><span class="k">Card debt</span><span class="amount-lg amount">${money(1245900, "−")}</span></div></div>
-<div class="acct-grid">${ACCOUNTS.map((a) => accountCard(...a)).join("")}</div>
-<button class="card hstack" style="justify-content:space-between;cursor:pointer;text-align:left;padding:12px 16px"><span class="hstack">${iconSvg("archive")}<span style="font-weight:500">Archived</span><span class="badge">1</span></span>${iconSvg("chevron-down", "sm")}</button>
-<div class="acct-grid">${accountCard("Nequi", "OTHER", "PINK", 0, false, false, true)}</div>`;
+  const body = `${debtSummary()}
+<div class="acct-grid">${withDebt(debtCard("available", VISA), debtCard("owed", CARLOAN))}</div>
+${ARCHIVED_FOLD}`;
   return screen(body, {
     nav,
     tab: "cuentas",
@@ -1236,11 +1241,12 @@ const CARLOAN = {
 const meter = (value) =>
   `<div class="progress thin"><span class="fill" style="width:${value}%"></span></div>`;
 
-// The bar is always the debt that is left; the line under it is always what is not owed.
+// A card's bar is the limit in use and moves both ways; a loan's is what is paid and only grows.
 const debtFace = (kind, a) => {
   const label = ACCT_TYPE_LABEL[a.typ];
-  const ceiling = a.limit ?? a.taken;
-  const used = round((a.owed / ceiling) * 100);
+  const used = a.limit
+    ? round((a.owed / a.limit) * 100)
+    : round(((a.taken - a.owed) / a.taken) * 100);
   const spare = a.limit
     ? `${moneyText(a.limit - a.owed)} left of ${moneyText(a.limit)}`
     : `${moneyText(a.taken - a.owed)} paid of ${moneyText(a.taken)}`;
@@ -1491,6 +1497,27 @@ const payFlow = (kind) => {
   });
 };
 
+const barStep = (caption, card) =>
+  `<div class="stack-sm" style="gap:8px;min-width:0"><span class="xs faint">${caption}</span>${card}</div>`;
+
+const barHowItMoves = () => {
+  const card = (owed) => debtCard("available", { ...VISA, owed });
+  const loan = (owed) => debtCard("owed", { ...CARLOAN, owed });
+  return `<div class="app" style="padding:20px;border-radius:14px;width:100%;max-width:1280px;display:grid;gap:20px">
+<div class="stack-sm" style="gap:10px"><span class="eyebrow">A credit card · the bar is the limit in use, and it moves both ways</span>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+${barStep("Today", card(CARD_OWED))}
+${barStep("You buy something for $500,000 with it", card(CARD_OWED + 500000))}
+${barStep("You pay $1,000,000 towards it", card(CARD_OWED + 500000 - 1000000))}
+</div></div>
+<div class="stack-sm" style="gap:10px"><span class="eyebrow">A loan · the bar is what you have paid off, and it only grows</span>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+${barStep("Today", loan(LOAN_OWED))}
+${barStep("You pay one instalment of $420,000", loan(LOAN_OWED - 420000))}
+${barStep("A year of instalments later", loan(LOAN_OWED - 420000 * 12))}
+</div></div></div>`;
+};
+
 const outsideSheet = (kind) => {
   const lines =
     kind === "income"
@@ -1560,8 +1587,6 @@ ${row("utensils", "ORANGE", "Carulla groceries", "", 78900)}</div>`;
     sheet,
   });
 };
-
-const addWithoutAdjustment = () => transactionForm("EXPENSE", { adjustment: false });
 
 const categories = ({ offline = false } = {}) => {
   const gtile = (name, count, archived = false) => {
@@ -3676,13 +3701,6 @@ const PAGES = [
         timeSheet(),
         { added: "2026-09-06" },
       ),
-      plate(
-        "add-without-adjustment",
-        "Full form \u00b7 the three kinds you record",
-        'The consequence of taking Adjustment out of Add, drawn so it can be seen rather than described. The four types were presented as equals and are not: three of them are things that happened to your money \u2014 two of them daily, one weekly \u2014 and the fourth is a repair tool for when a balance has drifted. It moves to <b>Adjust balance</b> inside the account, which already exists, already preloads the recorded balance and already explains the difference it is about to write; the segment here drops to three. <b>Where an adjustment is edited afterwards is still open</b> \u2014 two answers are drawn on <a href="variants.html">Decided variants</a>. Nothing is built.',
-        addWithoutAdjustment(),
-        { added: "2026-09-17", review: true },
-      ),
     ],
   },
   {
@@ -3817,30 +3835,30 @@ const PAGES = [
       plate(
         "account-detail-as-debt",
         "Account detail \u00b7 a card read as debt",
-        "The card\u2019s own screen with the whole reading in place: the debt as the headline, the bar of the limit under it, and <b>Pay this card</b> as the one primary action above the four that were already there. It is drawn here on its own because in both answers of <i>What the Pay button opens</i> the sheet\u2019s veil covers exactly this. <b>It follows two choices that are still yours</b> \u2014 the headline is whatever you pick in <i>What a card or a loan leads with</i>, and the limit line only exists once the field of <i>What an account gains besides its balance</i> does. Nothing is built.",
+        "The card\u2019s own screen with the whole reading in place: the debt as the headline, the bar of the limit under it, and <b>Pay this card</b> as the one primary action above the four that were already there. It is drawn on its own because the pay sheet’s veil covers exactly this.",
         debtDetail(VISA, VISA_DETAIL),
-        { added: "2026-09-17", review: true },
+        { added: "2026-09-17" },
       ),
       plate(
         "loan-detail-and-pay",
         "Loan detail \u00b7 and paying it",
-        "The other half of his sentence \u2014 <i>un bot\u00f3n para pagar la tarjeta <b>o el pr\u00e9stamo</b></i> \u2014 drawn because a loan is not a card. It has no limit, so the bar is what is <b>still owed</b> of what was borrowed and the line under it says how much is paid; its opening balance is the loan itself, so the hero\u2019s last line carries it. <b>Pay this loan</b> opens the same sheet as the card, preloaded with everything owed. <b>Two things that are true here and not on the card, and they matter when you choose.</b> Paying a loan in full is the rare case, not the common one \u2014 the ordinary payment is the monthly instalment \u2014 so the preset chip is the one part of the sheet that reads wrong on this screen, and a <i>This month\u2019s payment</i> preset would need the field that <i>What an account gains besides its balance</i> is still deciding. And the instalment is the place T-86\u2019s capital-and-interest split lands: under that split one payment is two movements, and this sheet writes one. Drawn on the recommended reading of the first question; nothing is built.",
+        "The other half of his sentence \u2014 <i>un bot\u00f3n para pagar la tarjeta <b>o el pr\u00e9stamo</b></i> \u2014 drawn because a loan is not a card. It has no limit, so the bar is what is <b>still owed</b> of what was borrowed and the line under it says how much is paid; its opening balance is the loan itself, so the hero\u2019s last line carries it. <b>Pay this loan</b> opens the same sheet as the card, preloaded with everything owed. <b>Two things that are true here and not on the card, and they matter when you choose.</b> Paying a loan in full is the rare case, not the common one \u2014 the ordinary payment is the monthly instalment \u2014 so the preset chip is the one part of the sheet that reads wrong on this screen, and a <i>This month\u2019s payment</i> preset would need the field that <i>What an account gains besides its balance</i> is still deciding. And the instalment is the place T-86\u2019s capital-and-interest split lands: under that split one payment is two movements, and this sheet writes one. ",
         debtDetail(CARLOAN, LOAN_DETAIL),
-        { added: "2026-09-17", review: true },
+        { added: "2026-09-17" },
       ),
       plate(
         "debt-in-credit",
         "A debt account that owes nothing",
-        "<b>This is where your cards are right now</b>, and it is not T-90. A CARD or an OVERDRAFT whose balance is zero or above owes nothing, so it reads <b>$0 owed</b> with an empty bar and the money on it named for what it is. Two accounts are drawn: a card carrying your own $4,000,000 \u2014 a limit typed in as a balance, exactly what you described \u2014 and an overdraft at $320,000, which is the <b>ordinary</b> state of an overdraft and not a mistake at all. The rule has to exist either way: a card can be overpaid, an overdraft normally sits positive, and until T-90 runs every card in the product looks like the first one. Without it the screen would say \u201c$4,000,000 owed\u201d about money you have. <b>It is also the honest answer to \u201cwhy did my total drop\u201d:</b> once this ships, that card stops counting $4,000,000 towards what you have. Drawn as a draft, not a question \u2014 tell me if you would rather it said something else.",
+        "<b>This is where your cards are right now</b>, and it is not T-90. A CARD or an OVERDRAFT whose balance is zero or above owes nothing, so it reads <b>$0 owed</b> with an empty bar and the money on it named for what it is. Two accounts are drawn: a card carrying your own $4,000,000 \u2014 a limit typed in as a balance, exactly what you described \u2014 and an overdraft at $320,000, which is the <b>ordinary</b> state of an overdraft and not a mistake at all. The rule has to exist either way: a card can be overpaid, an overdraft normally sits positive, and until T-90 runs every card in the product looks like the first one. Without it the screen would say \u201c$4,000,000 owed\u201d about money you have. <b>It is also the honest answer to \u201cwhy did my total drop\u201d:</b> once this ships, that card stops counting $4,000,000 towards what you have. ",
         debtInCredit(),
-        { added: "2026-09-17", review: true },
+        { added: "2026-09-17" },
       ),
       plate(
         "account-create-a-debt",
         "Creating a card \u00b7 the field that asks for the debt",
-        "The form that starts the habit. Today <i>Current balance</i> is a plain amount box, so \u201cmy card has a limit of 100\u201d becomes a balance of 100 \u2014 which is how the cards got into the state T-90 has to repair. On a CARD, an OVERDRAFT or a LOAN the field asks the question instead: <b>How much do you owe on it right now?</b>, entered as a plain positive figure and stored as the debt, with the credit limit beside it and a preview card that reads back what the account will look like. Every other type keeps the field it has. <b>The alternative was drawn and dropped:</b> keeping \u201cCurrent balance\u201d with an increase/decrease control beside it, which puts a sign decision in front of someone on the one screen where the whole confusion starts. Drawn as a draft, not a question.",
+        "The form that starts the habit. Today <i>Current balance</i> is a plain amount box, so \u201cmy card has a limit of 100\u201d becomes a balance of 100 \u2014 which is how the cards got into the state T-90 has to repair. On a CARD, an OVERDRAFT or a LOAN the field asks the question instead: <b>How much do you owe on it right now?</b>, entered as a plain positive figure and stored as the debt, with the credit limit beside it and a preview card that reads back what the account will look like. Every other type keeps the field it has. <b>The alternative was drawn and dropped:</b> keeping \u201cCurrent balance\u201d with an increase/decrease control beside it, which puts a sign decision in front of someone on the one screen where the whole confusion starts. ",
         createDebtAccount(),
-        { added: "2026-09-17", review: true },
+        { added: "2026-09-17" },
       ),
     ],
   },
@@ -4747,7 +4765,7 @@ const PAGES = [
       plate(
         "debt-owed-first",
         "A debt account · what you owe, first",
-        "Every plate of this question adds a <b>Car loan</b> to the four accounts the preview has always drawn, because a card and a loan are not read the same way and one screen has to hold both. The figures: <b>$12,504,500</b> across the three accounts that hold money, <b>$9,645,900</b> owed between the card and the loan, so the total is <b>$2,858,600</b> — that gap is the complaint. Here the card leads with <b>what you owe</b>, as a plain positive figure with the word beside it, and the bar under it says how much of the limit is gone (31% of $4,000,000). The loan has no limit, so the same bar says how much of it is <b>paid</b>. A debt is drawn in the ordinary amount colour, never in red: owing on a card is normal, and this product keeps red for what is wrong. Both bars mean the same thing — <b>the debt that is left</b> — and the line under each is the part that is not owed, which is why the card says <i>left</i> and the loan says <i>paid</i>. <b>What it costs, and there are three.</b> The figure on screen is the opposite sign of the one the server stores, so every surface that paints a balance now has to know the account’s type, offline projections included, and a balance read here no longer matches the same field read from the API. <b>Inside the account the signs still invert</b> — open the card’s own screen and “Uber to work −$18,400” sits under a headline that reads <i>$1,245,900 owed</i>, and that expense <i>raises</i> what you owe: the movements keep the account’s point of view while the headline takes yours. And the summary card at the top of this page changes in all three answers, from the <i>Card debt</i> stat it carries today to <i>yours / owed</i> — that is not one of the six questions and it follows whatever <i>How Home says what you have and what you owe</i> settles. <b>Not chosen.</b> The session recommended it — the first thing you read is the thing you asked for — and he picked availability first instead: in a shop the question is how much room is left. It stays drawn as the record, and as the reading a <b>LOAN keeps</b>, since a loan has nothing available.",
+        "Every plate of this question adds a <b>Car loan</b> to the four accounts the preview has always drawn, because a card and a loan are not read the same way and one screen has to hold both. The figures: <b>$12,504,500</b> across the three accounts that hold money, <b>$9,645,900</b> owed between the card and the loan, so the total is <b>$2,858,600</b> — that gap is the complaint. Here the card leads with <b>what you owe</b>, as a plain positive figure with the word beside it, and the bar under it says how much of the limit is gone (31% of $4,000,000). The loan has no limit, so the same bar says how much of it is <b>paid</b>. A debt is drawn in the ordinary amount colour, never in red: owing on a card is normal, and this product keeps red for what is wrong. The two bars do not fill for the same reason, and that is settled on purpose: see <a href='#debt-bar-how-it-moves'>how the bar moves</a>. <b>What it costs, and there are three.</b> The figure on screen is the opposite sign of the one the server stores, so every surface that paints a balance now has to know the account’s type, offline projections included, and a balance read here no longer matches the same field read from the API. <b>Inside the account the signs still invert</b> — open the card’s own screen and “Uber to work −$18,400” sits under a headline that reads <i>$1,245,900 owed</i>, and that expense <i>raises</i> what you owe: the movements keep the account’s point of view while the headline takes yours. And the summary card at the top of this page changes in all three answers, from the <i>Card debt</i> stat it carries today to <i>yours / owed</i> — that is not one of the six questions and it follows whatever <i>How Home says what you have and what you owe</i> settles. <b>Not chosen.</b> The session recommended it — the first thing you read is the thing you asked for — and he picked availability first instead: in a shop the question is how much room is left. It stays drawn as the record, and as the reading a <b>LOAN keeps</b>, since a loan has nothing available.",
         accountsDebt("owed"),
         { added: "2026-09-17", verdict: "discarded", asks: "What a card or a loan leads with" },
       ),
@@ -4856,36 +4874,43 @@ const PAGES = [
       plate(
         "pay-a-sheet-on-the-account",
         "Pay · a sheet on the account itself",
-        "The card’s own screen, with the debt as the headline and <b>Pay this card</b> as the one primary action above the four that were already there. It opens a sheet that is the payment and nothing else: the amount <b>preloaded with everything owed</b>, a chip to change it, one <i>From</i> picker on the main account, and a line that reads the result back — <i>Bancolombia −$1,245,900 · Visa Gold goes to $0 owed. Your total balance does not change.</i> It is a TRANSFER underneath, with the direction filled in for you, which is the point: paying a debt means sending money <b>towards</b> the card, and that is the step people get backwards. <b>What it costs:</b> a second way to record a transfer, so the rule about doing it the way it is already done has to be paid — the sheet has to reuse the same pickers, the same idempotency key and the same offline queue, not a private copy. <b>The session recommends this one:</b> two decisions instead of six, and you never leave the account.",
+        "<b>Chosen, 2026-09-17.</b> His words: once the accounts work is finished, the pay button is the modal on the account. The card’s own screen, with <b>Pay this card</b> as the one primary action above the four that were already there. It opens a sheet that is the payment and nothing else: the amount <b>preloaded with everything owed</b>, a chip to change it, one <i>From</i> picker on the main account, and a line that reads the result back — <i>Bancolombia −$1,245,900 · Visa Gold goes to $0 owed. Your total balance does not change.</i> It is a TRANSFER underneath, with the direction filled in for you, which is the point: paying a debt means sending money <b>towards</b> the card, and that is the step people get backwards. <b>What it costs:</b> a second way to record a transfer, so the rule about doing it the way it is already done has to be paid — the sheet has to reuse the same pickers, the same idempotency key and the same offline queue, not a private copy. Two decisions instead of six, and you never leave the account — and, as the question below shows, a sheet can offer the right thing where the full form hands you a type picker and lets you choose the wrong one.",
         payFlow("sheet"),
-        { added: "2026-09-17", verdict: "open", asks: "What the Pay button opens" },
+        { added: "2026-09-17", verdict: "chosen", asks: "What the Pay button opens" },
       ),
       plate(
         "pay-the-full-transfer-form",
         "Pay · the transfer form, filled in",
-        "<b>Pay this card</b> opens the New transaction screen already set to Transfer, with From, To and the full amount filled in and the same sentence reading the result back. <b>What it gains:</b> one way to record a transfer instead of two, nothing new to build in the account, and the direction is <b>shown</b> rather than hidden — which is half of what T-86 is about, so the two tasks would reinforce each other. <b>What it costs:</b> it leaves the account for a screen with seven fields — From, To, Date, Time, Description, Tags and Note — when the three that matter are already right, the way back is the browser’s, and the shortcut stops feeling like an action on this card and starts feeling like a form.",
+        "<b>Not chosen.</b> <b>Pay this card</b> opens the New transaction screen already set to Transfer, with From, To and the full amount filled in and the same sentence reading the result back. <b>What it gains:</b> one way to record a transfer instead of two, nothing new to build in the account, and the direction is <b>shown</b> rather than hidden — which is half of what T-86 is about, so the two tasks would reinforce each other. <b>What it costs:</b> it leaves the account for a screen with seven fields — From, To, Date, Time, Description, Tags and Note — when the three that matter are already right, the way back is the browser’s, and the shortcut stops feeling like an action on this card and starts feeling like a form.",
         payFlow("form"),
-        { added: "2026-09-17", verdict: "open", asks: "What the Pay button opens" },
+        { added: "2026-09-17", verdict: "discarded", asks: "What the Pay button opens" },
+      ),
+      plate(
+        "debt-bar-how-it-moves",
+        "How the bar moves on each kind of debt",
+        "His question of 2026-09-17: on a card, unlike a loan, paying gives the room back \u2014 so what does the bar do? <b>They fill for opposite reasons, and each is the natural one for its type.</b> On a <b>credit card</b> the bar is <b>the limit in use</b>: a purchase pushes it up, a payment pulls it back down, and at $0 owed it is empty with the whole limit available again. On a <b>loan</b> the bar is <b>what you have paid off</b>: it only ever grows, because you cannot re-borrow what you repaid \u2014 his own words \u2014 and it is full the day the loan is finished. The line under each says which it is, so the bar is never read alone. <b>What it costs, and it is why this is drawn rather than described:</b> two bars on the same list fill for opposite reasons, so a card at 31% and a loan at 30% mean different things. The alternative \u2014 one rule for both, the bar always being the debt that is left \u2014 was what the first draft did, and it made the loan start full and empty as you paid, which reads backwards.",
+        barHowItMoves(),
+        { added: "2026-09-17", frame: false, wide: true },
       ),
       plate(
         "pay-from-outside-quiet",
         "Paid from somewhere else \u00b7 written as a repair",
-        "<b>His case, and it is a real one:</b> the card gets paid from money that is in no account of Ledger Flow \u2014 someone else\u2019s transfer, cash he does not track, an account he never registered. Nothing here loses that money, so it cannot be a transfer. The <i>From</i> picker gains one row under the accounts, <b>Somewhere else \u00b7 not an account here</b>, and the sheet writes an <b>ADJUSTMENT</b> that raises the card. <b>Why this and not an income:</b> `deriveSpending` hides ADJUSTMENT from every figure unless the query names it (`lib/local/derive/spending.ts:107`), which is exactly right \u2014 the money is not income and it is not spending, it simply never was inside the app. <b>What it costs:</b> an adjustment means \u201creconcile a balance\u201d everywhere else in the product, and here it is carrying a payment; the row in the history reads <i>Balance adjustment</i>, so the sheet has to write the description for you. <b>And the honest alternative is neither plate:</b> register that money as an account \u2014 even a CASH one called \u201cOther money\u201d \u2014 and the payment is an ordinary transfer that is right everywhere. That is bookkeeping, and it is the only answer that keeps Stats complete. <b>The session recommends this one.</b>",
+        "<b>Chosen, 2026-09-17.</b> The card gets paid from money that is in no account of Ledger Flow \u2014 someone else\u2019s transfer, cash he does not track, an account he never registered. Nothing here loses that money, so it cannot be a transfer. The <i>From</i> picker gains one row under the accounts, <b>Somewhere else \u00b7 not an account here</b>, and the sheet writes an <b>ADJUSTMENT</b> that raises the card. <b>It is not an account and nothing is created:</b> it never appears in Accounts, it has no balance, it counts in no total and the user registers nothing \u2014 which is his whole point: the money comes from something he has chosen not to track. It is a row in a picker that writes a one-sided movement, a shape the product already has. <b>Why this and not an income:</b> `deriveSpending` hides ADJUSTMENT from every figure unless the query names it (`lib/local/derive/spending.ts:107`), which is exactly right \u2014 the money is not income and it is not spending, it simply never was inside the app. <b>What it costs:</b> an adjustment means \u201creconcile a balance\u201d everywhere else in the product, and here it is carrying a payment; the row in the history reads <i>Balance adjustment</i>, so the sheet has to write the description for you. <b>And the honest alternative is neither plate:</b> register that money as an account \u2014 even a CASH one called \u201cOther money\u201d \u2014 and the payment is an ordinary transfer that is right everywhere. That is bookkeeping, and he rejected it for the reason the row exists at all: the point is that the money comes from something he has chosen not to register.",
         payFromOutside("adjustment"),
         {
           added: "2026-09-17",
-          verdict: "open",
+          verdict: "chosen",
           asks: "Paying a debt with money that is in no account here",
         },
       ),
       plate(
         "pay-from-outside-as-income",
         "Paid from somewhere else \u00b7 written as an income",
-        'The same row writing an <b>INCOME</b> into the card, which is what he asked about. The balance comes out right \u2014 an income with only a destination raises the card exactly as much as the payment did. <b>But it lies three times, and they are all measured.</b> Home\u2019s <i>Income this month</i> is literally `fetchSpending({type: "INCOME"})` over the month (`features/home/hooks.ts:111`), so paying ${moneyText(CARD_OWED)} off the card reads as ${moneyText(CARD_OWED)} earned. <b>Estimated savings</b> is income minus spending, so it inflates by the same amount. And an income budget \u2014 the product has them \u2014 would count it. The plate draws the warning the sheet would have to carry, which is the tell: a form that has to apologise for what it writes is writing the wrong thing. Drawn because it is the obvious answer and it deserves to be rejected for a reason rather than a taste.',
+        '<b>Not chosen, and it goes further than not being chosen:</b> he ruled that if an income on a card is wrong then the product should not allow it at all, and that sweep is now T-93. The same row writing an <b>INCOME</b> into the card. The balance comes out right \u2014 an income with only a destination raises the card exactly as much as the payment did. <b>But it lies three times, and they are all measured.</b> Home\u2019s <i>Income this month</i> is literally `fetchSpending({type: "INCOME"})` over the month (`features/home/hooks.ts:111`), so paying ${moneyText(CARD_OWED)} off the card reads as ${moneyText(CARD_OWED)} earned. <b>Estimated savings</b> is income minus spending, so it inflates by the same amount. And an income budget \u2014 the product has them \u2014 would count it. The plate draws the warning the sheet would have to carry, which is the tell: a form that has to apologise for what it writes is writing the wrong thing. Drawn because it is the obvious answer and it deserves to be rejected for a reason rather than a taste.',
         payFromOutside("income"),
         {
           added: "2026-09-17",
-          verdict: "open",
+          verdict: "discarded",
           asks: "Paying a debt with money that is in no account here",
         },
       ),

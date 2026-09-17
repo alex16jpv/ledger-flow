@@ -75,8 +75,14 @@ follow: the figure you want in a shop is how much room is left. **A LOAN leads w
 because a loan has nothing available; its second line says how much of it is paid. So the rule is per
 type, and it is not an inconsistency: each type leads with the figure it actually has.
 
-**The bar always means the same thing on both** — the debt that is left — and the line under it is the
-part that is not owed, which is why a card says _left_ and a loan says _paid_.
+**The two bars do not fill for the same reason, and that is settled** (`#debt-bar-how-it-moves`). On a
+**card** the bar is **the limit in use**: a purchase pushes it up, a payment pulls it back down, and at
+$0 owed it is empty with the whole limit available again. On a **loan** it is **what you have paid
+off**: it only ever grows, because you cannot re-borrow what you repaid, and it is full the day the
+loan is finished. The line under each says which it is, so the bar is never read alone. The cost is
+real and accepted: a card at 31% and a loan at 30% mean different things on the same list. The
+alternative — one rule for both, the bar always being the debt that is left — makes a loan start full
+and empty as you pay, which reads backwards.
 
 **A debt account whose balance is zero or above owes nothing** (`#debt-in-credit`): it reads `$0 owed`
 with an empty bar and the money on it named as the holder's own. That covers an overdraft in its
@@ -113,18 +119,31 @@ positive and stored as the debt. That field is where the habit T-90 has to repai
 It takes the same shape Home does: **What you have** as the headline and **What you owe** beside it,
 and **no net figure** — see [home.md](home.md) for why. The "Card debt" stat it carries today goes.
 
-### Still open
+### Paying a debt (`#pay-a-sheet-on-the-account`, `#pay-from-outside-quiet`)
 
-- **What the Pay button opens** — `#pay-a-sheet-on-the-account` or `#pay-the-full-transfer-form`. The
-  button itself is settled: one primary action above the four the detail already had, saying "Pay this
-  card" or "Pay this loan", opening a TRANSFER with the direction filled in. Paying a loan is drawn in
-  `#loan-detail-and-pay`, where the full-balance preset is the one part that reads wrong — the ordinary
-  payment is the instalment, and that is where T-86's capital/interest split lands.
-- **Paying a debt with money that is in no account here** — `#pay-from-outside-quiet` or
-  `#pay-from-outside-as-income`. His case: the card gets paid from money the app does not track, so
-  nothing here loses it and it cannot be a transfer. The _From_ picker gains a **Somewhere else** row;
-  what it writes is the question. An INCOME gets the balance right and inflates Home's _Income this
-  month_ (`features/home/hooks.ts:111`), _Estimated savings_ and any income budget; an ADJUSTMENT gets
-  the balance right and is excluded from all three (`lib/local/derive/spending.ts:107`) at the cost of
-  meaning "reconcile" everywhere else. The third answer is neither plate: register that money as an
-  account and the payment is an ordinary transfer that is right everywhere.
+**Pay this card / Pay this loan** is one primary action above the four the detail already had, and it
+opens **a sheet on the account**, not the transaction form: the amount preloaded with everything owed, a
+chip to change it, one _From_ picker, and a line reading the result back. It is a TRANSFER underneath
+with the direction filled in — paying a debt means sending money **towards** the card, which is the step
+people get backwards. Underneath it must use the same pickers, the same `Idempotency-Key` and the same
+offline queue as the transaction form, not a private copy (§8.14). Paying a loan is drawn in
+`#loan-detail-and-pay`: the full-balance preset is the one part that reads wrong there, because the
+ordinary payment is the instalment, and that is where T-86's capital/interest split lands.
+
+**The _From_ picker carries one row under the accounts: `Somewhere else · not an account here`.** A debt
+can be paid with money the app does not track — someone else's transfer, cash, an account the user
+chose never to register — and nothing here loses that money, so it cannot be a transfer.
+
+**It is not an account and nothing is created.** It never appears in Accounts, it has no balance, it
+counts in no total, and the user registers nothing: that is the whole point, the money comes from
+something they decided not to track. It is a row in a picker that writes a **one-sided ADJUSTMENT**
+raising the debt account, a shape the product already has.
+
+**Why an adjustment and not an income.** An income gets the balance right and then lies three times:
+Home's _Income this month_ is `fetchSpending({type: "INCOME"})` over the month
+(`features/home/hooks.ts:111`), _Estimated savings_ is income minus spending, and the product has income
+budgets. `deriveSpending` excludes ADJUSTMENT from all three unless the query names it
+(`lib/local/derive/spending.ts:107`), which is exactly right: the money is neither income nor spending,
+it simply never was inside the app. The cost is that "adjustment" means _reconcile a balance_ everywhere
+else, so the sheet writes the description for you. **And it is now a rule, not a preference:** if an
+income on a debt account is wrong, the product should refuse it — T-93 sweeps the other combinations.
