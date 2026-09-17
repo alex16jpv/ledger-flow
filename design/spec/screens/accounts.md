@@ -132,12 +132,14 @@ TRANSFER underneath with the direction filled in — paying a debt means sending
 card, which is the step people get backwards. Underneath it must use the same pickers, the same
 `Idempotency-Key` and the same offline queue as the transaction form, not a private copy (§8.14).
 
-**Three things T-86 changed here, and they are his decisions, not tidying.** The sheet reads the result
+**Two things T-86 changed here, and they are his decisions, not tidying.** The sheet reads the result
 back **as a difference** — "Bancolombia −$1,245,900 · Visa Gold **$1,245,900 less owed**", not "goes to
-$0 owed" — because that grammar is now the product's on every surface (see [add.md](add.md)). The preset
-row gains **The instalment** beside _Everything owed_, since paying a loan off whole is the rare case
-and the monthly payment is the normal one, which is what `#loan-detail-and-pay` had flagged. And the
-sheet carries the same **optional TRANSFER category** the form now has, so a card payment says so.
+$0 owed" — because that grammar is now the product's on every surface (see [add.md](add.md)), and that
+includes the _Somewhere else_ sheet, which is the same act on the same card. And the sheet carries the
+same **optional TRANSFER category** the form now has, with nothing preselected, so a card payment can
+say so. The presets stay the two it had: `#loan-detail-and-pay` is right that the instalment is the
+ordinary payment on a loan, but a preset for it needs a figure the account does not carry, and that is
+part of T-94.
 
 **The instalment still records as one movement, and that is deliberate for now.** His words: «por ahora
 prefiero sin el campo de interés». About $126,000 of a $420,000 instalment is interest, so the loan

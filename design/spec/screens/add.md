@@ -129,9 +129,8 @@ The two were drawn as alternatives and he took both.
 The sheet is three rows, each a tile, a name and its line. **They explain and lead nowhere, so they
 carry no chevron.** The `?` has the accessible name "What the three types mean".
 
-**Measured on the built plates:** on a phone the Expense and Income lines are 35px and the Transfer
-line 52px; on a desktop, 17px and 35px. The `?` is what pushes Expense onto a second line — it is 17px
-without it. **The rule binds both surfaces**, Quick capture and the full form
+**Measured on the built plates, per type.** On a phone: Income 17px (one line), Expense 35px (two),
+Transfer 52px (three). On a desktop: 17, 17 and 35. **The rule binds both surfaces**, Quick capture and the full form
 (`#transfer-said-in-a-line-on-the-quick-sheet`): a rule that reaches one and not the other is how the
 same thing comes to read two ways one tap apart.
 
@@ -161,9 +160,9 @@ which is the only thing people get wrong, because paying a debt means sending mo
 card. _Pay a card_ puts the main account in _From_ and the card in _To_; with more than one card it
 opens the account picker already filtered to cards. Everything stays editable afterwards.
 
-**A chip also preselects the category that matches it** — _Pay a card_ selects _Credit Card Payment_,
-_Move to savings_ selects _Transfer_ — which is what keeps the chip and the category from saying the
-same thing twice.
+**A chip does not touch the category.** Preselecting one would be the chip setting a field, which is
+not what it was described as when he chose it, and on a loan there is no seeded category to preselect:
+the backend seeds only _Transfer_ and _Credit Card Payment_.
 
 **T-85's Pay sheet does not go away**: it stays the way in from the account, and this is the way in for
 someone who starts at the ＋. Two ways to record the same transfer is the cost he accepted, so they
@@ -187,9 +186,11 @@ refuses a category only when its type and the transaction's differ (`Transaction
 ### A loan instalment stays one movement (`#instalment-one-movement`)
 
 His words: «por ahora prefiero sin el campo de interés. tengo que pensarlo más a futuro cómo hacerlo.»
-So the Pay sheet keeps its single movement and gains only the preset T-85 found missing — **The
-instalment** — because paying a loan off whole is the rare case and the monthly payment is the normal
-one.
+So the Pay sheet keeps its single movement, its two presets and its optional category: no interest
+field, no second movement, nothing new on the server. **And no instalment preset**: T-85 had already
+worked out that a _This month's payment_ preset needs a figure the account does not have
+(`#loan-detail-and-pay`), so where that figure would come from is part of what T-94 has to settle, not
+something to invent here.
 
 **What stays wrong is written down, not forgotten.** About $126,000 of a $420,000 instalment is
 interest, so the loan falls by the whole $420,000 when only $294,000 paid it down: the bar that says
