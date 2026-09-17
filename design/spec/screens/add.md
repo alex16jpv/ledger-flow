@@ -80,3 +80,17 @@ shown); and a note. Saving carries an `Idempotency-Key`, and errors are shown by
 field responsible (`CATEGORY_TYPE_MISMATCH`, `CATEGORY_ARCHIVED`, `AMOUNT_PRECISION`,
 `CURRENCY_MISMATCH`). Editing uses the same form under the title "Edit transaction", with "Delete" as
 the secondary action (confirmed; there is no restore).
+
+## Adjustment leaves this form (T-85)
+
+The segmented control presents four kinds as equals and they are not: an expense, an income and a
+transfer are things that happened to your money, and an adjustment is the tool that repairs a balance
+that has drifted. It moves to **Adjust balance** inside the account (see
+[accounts.md](accounts.md)), which already preloads the recorded balance
+and already explains the difference it is about to write; the segment here drops to three. The draft is
+in `preview/in-review.html#add-without-adjustment`.
+
+**Where an existing adjustment is edited is still open**: two answers are drawn in
+`preview/variants.html` — `#adjustment-edited-in-the-account`, which gives the Adjust balance sheet a
+second, editing mode, and `#adjustment-edit-keeps-the-fourth-type`, which leaves the fourth kind on the
+Edit transaction form with the other three disabled. **Nothing is built until the owner chooses.**

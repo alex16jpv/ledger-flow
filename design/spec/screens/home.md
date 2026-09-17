@@ -100,3 +100,18 @@
   persistent-storage dialog exists.
 - **Once installed:** the Persistent storage row in Sync status turns to "Granted" on its own, without
   asking for anything, because browsers grant it to installed apps.
+
+## What the total balance says is an open question (T-85)
+
+Today the Stats row leads with **Total balance**, the sum of the active accounts' balances. The sum is
+a signed one, so a debt already subtracts and the arithmetic was never wrong; what the card does not
+say is that some of those accounts are money owed, which is what the owner asked for on 2026-09-16.
+
+Three answers are drawn in `preview/variants.html` and marked "Waiting on you":
+`#home-total-with-a-line` (the total with `$12,504,500 yours − $9,645,900 owed` under it),
+`#home-have-and-owe` (two cards, and _Estimated savings_ dropped from Home), and
+`#home-total-unchanged` (today's card, drawn so the cheapest answer is on the table). Measured at
+460px in the preview frame: the stats row is 104px today, 120px with the line and 221px with two
+cards. All three pay the same 37px in the accounts carousel, which is as tall as its tallest card and
+the debt cards are taller. **Nothing is built until the owner chooses**, and the reading inside the
+carousel's cards follows whatever [accounts.md](accounts.md) settles.

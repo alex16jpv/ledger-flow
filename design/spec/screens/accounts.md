@@ -52,3 +52,41 @@ account "A checking or current account" / «Una cuenta corriente o de ahorros de
 "Funds, stocks, crypto" / «Fondos, acciones, cripto» · Overdraft "A negative balance you can use" / «Un
 saldo en negativo que puedes usar» · Loan "Money you owe" / «Dinero que debes» · Other "Anything else" /
 «Cualquier otra cosa».
+
+## The accounts that are debt are an open question (T-85)
+
+Nothing in this section is settled, and **nothing is built until the owner chooses**. The alternatives
+are drawn in `preview/variants.html` and marked "Waiting on you"; the account detail with the whole
+reading in place is in `preview/in-review.html#account-detail-as-debt`.
+
+What he asked, on 2026-09-16: "actualmente las uso en positivo osea si mi tarjeta de credito tiene un
+cupo de 100 estoy poniendo el balance de 100. por lo que un expense lo baja y un income o transffer lo
+sube. pero eso hace que no pueda reflejar la deuda real y hace que la matematica del total balance
+este inflada con dinero que realmente no es mio."
+
+**The premise, which is not one of the questions.** A debt account already carries a negative balance:
+an expense on a card lowers it, `summarizeAccounts` already adds a "Card debt" from the negative
+balances of CARD, OVERDRAFT and LOAN, and this page has drawn Visa Gold at −$1,245,900 since the design
+was written. So the sign is not up for decision — changing it would rewrite what every transaction
+already recorded means. What is missing is a limit to measure against, a reading that says _debt_ in
+words rather than in a minus sign, a total that shows its two halves, and a way to pay.
+
+**The four questions this page owns**, each drawn two or three ways:
+
+| Question                                             | Plates                                                                                              |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| What a card or a loan leads with                     | `#debt-owed-first`, `#debt-available-first`, `#debt-signed-balance`                                 |
+| What a debt account shows before you give it a limit | `#debt-no-limit-quiet`, `#debt-no-limit-prompt`                                                     |
+| What an account gains besides its balance            | `#account-fields-a-credit-limit`, `#account-fields-the-amount-borrowed`, `#account-fields-per-type` |
+| What the Pay button opens                            | `#pay-a-sheet-on-the-account`, `#pay-the-full-transfer-form`                                        |
+
+Every plate adds a **Car loan** to the four accounts this preview has always drawn, because a card and
+a loan are not read the same way and one screen has to hold both: $12,504,500 across the three accounts
+that hold money, $9,645,900 owed between the card and the loan, so the total is $2,858,600. Each note
+carries what its answer costs. Two couplings are worth knowing before choosing: the loan's second line
+says _paid of $12,000,000_ only if the form gains the amount borrowed, and _paid since you added it_
+otherwise; and "what you have left" has no meaning on a loan, so choosing it splits the three debt
+types into two readings.
+
+**Adjust balance is where a balance adjustment is made**, once Adjustment leaves the Add form — see
+[add.md](add.md). Where an existing one is _edited_ is the fifth question, drawn on the same page.
