@@ -425,7 +425,7 @@ ${installRisk}
   const statsHead = statsLink
     ? '<div class="section-head mobile-only"><h3 class="h3">Stats</h3><a class="link" href="#">See all</a></div>'
     : "";
-  const income = `<div class="card stat"${debt === "two-cards" ? ' style="grid-column:1 / -1"' : ""}><span class="k">Income this month</span><span class="v amount income">${money(4200000, "+")}</span><span class="d up">${iconSvg("trending-up", "sm")}Same as August</span></div>`;
+  const income = `<div class="card stat"><span class="k">Income this month</span><span class="v amount income">${money(4200000, "+")}</span><span class="d up">${iconSvg("trending-up", "sm")}Same as August</span></div>`;
   const savings = `<div class="card stat wide-only"><span class="k">Estimated savings</span><span class="v amount">${money(2915700)}</span><span class="d faint">Income − spending</span></div>`;
   const totalCard =
     debt === null
@@ -434,10 +434,10 @@ ${installRisk}
         ? `<div class="card stat"><span class="k">What you have</span><span class="v amount">${money(YOURS)}</span><span class="d faint">3 accounts</span></div>
 <div class="card stat"><span class="k">What you owe</span><span class="v amount">${money(OWED)}</span><span class="d faint">A card and a loan</span></div>`
         : `<div class="card stat"><span class="k">Total balance</span><span class="v amount">${money(NET)}</span><span class="d faint">${debt === "unchanged" ? "5 accounts" : `${moneyText(YOURS)} yours − ${moneyText(OWED)} owed`}</span></div>`;
-  const stats = `${statsHead}<section class="stats">
+  const stats = `${statsHead}<section class="stats${debt === "two-cards" ? " pairs" : ""}">
 ${totalCard}
 ${income}
-${debt === "two-cards" ? "" : savings}
+${savings}
 </section>`;
   const bud = (name, spent, limit, note, warn = "") => {
     const [ic, col] = CATS[name];
@@ -1283,8 +1283,8 @@ const holdCard = (name, typ, color, balance, isDefault = false) =>
   acctCardFace({ name, typ, color, balance }, { badge: isDefault ? MAIN_BADGE : "" });
 
 const debtSummary = (yours = YOURS, owed = OWED, active = 5) =>
-  `<div class="card" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div class="stat"><span class="k">Total balance</span><span class="amount-hero" style="font-size:32px">${money(yours - owed)}</span><span class="small faint">${active} active accounts · 1 archived</span></div>
-<div class="stat" style="text-align:right;align-items:flex-end;gap:2px"><span class="small faint">${moneyText(yours)} yours</span><span class="small faint">${moneyText(owed)} owed</span></div></div>`;
+  `<div class="card" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div class="stat"><span class="k">What you have</span><span class="amount-hero" style="font-size:32px">${money(yours)}</span><span class="small faint">${active} active accounts · 1 archived</span></div>
+<div class="stat" style="text-align:right;align-items:flex-end"><span class="k">What you owe</span><span class="amount-lg amount">${money(owed)}</span></div></div>`;
 
 const ARCHIVED_FOLD = `<button class="card hstack" style="justify-content:space-between;cursor:pointer;text-align:left;padding:12px 16px"><span class="hstack">${iconSvg("archive")}<span style="font-weight:500">Archived</span><span class="badge">1</span></span>${iconSvg("chevron-down", "sm")}</button>
 <div class="acct-grid">${accountCard("Nequi", "OTHER", "PINK", 0, false, false, true)}</div>`;
@@ -1490,6 +1490,23 @@ const payFlow = (kind) => {
     sheet: paySheet(VISA, "Pay Visa Gold", "Everything owed"),
   });
 };
+
+const outsideSheet = (kind) => {
+  const lines =
+    kind === "income"
+      ? `<div class="alert warning">${iconSvg("triangle-alert")}<span>Visa Gold goes to <b>$0 owed</b> — and this month’s <b>Income</b> goes up by ${moneyText(CARD_OWED)}, which is not money you earned.</span></div>`
+      : `<div class="alert neutral">${iconSvg("scale")}<span>Visa Gold goes to <b>$0 owed</b>. It does not count as income or as spending, because the money never was in Ledger Flow.</span></div>`;
+  return sheetWrap(
+    `<div class="stack-sm"><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">${nf.format(CARD_OWED)}</span><span class="caret"></span></div>
+<div class="chips" style="justify-content:center"><button class="chip selected">Everything owed</button><button class="chip">Another amount</button></div></div>
+<button class="picker">${tile("circle-dollar-sign", "GRAY", "sm")}<span class="body"><span class="lbl">From</span><span class="val">Somewhere else · not an account here</span></span>${iconSvg("chevron-down", "sm")}</button>
+${lines}
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Pay</button></div>`,
+    "Pay Visa Gold",
+  );
+};
+
+const payFromOutside = (kind) => debtDetail(VISA, { ...VISA_DETAIL, sheet: outsideSheet(kind) });
 
 const adjustmentEdit = (kind) => {
   if (kind === "form") {
@@ -4730,16 +4747,16 @@ const PAGES = [
       plate(
         "debt-owed-first",
         "A debt account · what you owe, first",
-        "Every plate of this question adds a <b>Car loan</b> to the four accounts the preview has always drawn, because a card and a loan are not read the same way and one screen has to hold both. The figures: <b>$12,504,500</b> across the three accounts that hold money, <b>$9,645,900</b> owed between the card and the loan, so the total is <b>$2,858,600</b> — that gap is the complaint. Here the card leads with <b>what you owe</b>, as a plain positive figure with the word beside it, and the bar under it says how much of the limit is gone (31% of $4,000,000). The loan has no limit, so the same bar says how much of it is <b>paid</b>. A debt is drawn in the ordinary amount colour, never in red: owing on a card is normal, and this product keeps red for what is wrong. Both bars mean the same thing — <b>the debt that is left</b> — and the line under each is the part that is not owed, which is why the card says <i>left</i> and the loan says <i>paid</i>. <b>What it costs, and there are three.</b> The figure on screen is the opposite sign of the one the server stores, so every surface that paints a balance now has to know the account’s type, offline projections included, and a balance read here no longer matches the same field read from the API. <b>Inside the account the signs still invert</b> — open the card’s own screen and “Uber to work −$18,400” sits under a headline that reads <i>$1,245,900 owed</i>, and that expense <i>raises</i> what you owe: the movements keep the account’s point of view while the headline takes yours. And the summary card at the top of this page changes in all three answers, from the <i>Card debt</i> stat it carries today to <i>yours / owed</i> — that is not one of the six questions and it follows whatever <i>How Home says what you have and what you owe</i> settles. <b>The session recommends this one:</b> it is the only one of the three where the first thing you read is the thing you asked for, and it is the reading that makes the split total above it obvious instead of arithmetic.",
+        "Every plate of this question adds a <b>Car loan</b> to the four accounts the preview has always drawn, because a card and a loan are not read the same way and one screen has to hold both. The figures: <b>$12,504,500</b> across the three accounts that hold money, <b>$9,645,900</b> owed between the card and the loan, so the total is <b>$2,858,600</b> — that gap is the complaint. Here the card leads with <b>what you owe</b>, as a plain positive figure with the word beside it, and the bar under it says how much of the limit is gone (31% of $4,000,000). The loan has no limit, so the same bar says how much of it is <b>paid</b>. A debt is drawn in the ordinary amount colour, never in red: owing on a card is normal, and this product keeps red for what is wrong. Both bars mean the same thing — <b>the debt that is left</b> — and the line under each is the part that is not owed, which is why the card says <i>left</i> and the loan says <i>paid</i>. <b>What it costs, and there are three.</b> The figure on screen is the opposite sign of the one the server stores, so every surface that paints a balance now has to know the account’s type, offline projections included, and a balance read here no longer matches the same field read from the API. <b>Inside the account the signs still invert</b> — open the card’s own screen and “Uber to work −$18,400” sits under a headline that reads <i>$1,245,900 owed</i>, and that expense <i>raises</i> what you owe: the movements keep the account’s point of view while the headline takes yours. And the summary card at the top of this page changes in all three answers, from the <i>Card debt</i> stat it carries today to <i>yours / owed</i> — that is not one of the six questions and it follows whatever <i>How Home says what you have and what you owe</i> settles. <b>Not chosen.</b> The session recommended it — the first thing you read is the thing you asked for — and he picked availability first instead: in a shop the question is how much room is left. It stays drawn as the record, and as the reading a <b>LOAN keeps</b>, since a loan has nothing available.",
         accountsDebt("owed"),
-        { added: "2026-09-17", verdict: "open", asks: "What a card or a loan leads with" },
+        { added: "2026-09-17", verdict: "discarded", asks: "What a card or a loan leads with" },
       ),
       plate(
         "debt-available-first",
         "A debt account · what you have left, first",
-        "The same screen leading with <b>what is still available</b> — $2,754,100 of the $4,000,000 limit — and the debt demoted to the line under the bar. It is how a bank app usually opens a credit card, and it answers the question you actually have in a shop. <b>What it costs, and it is the reason the session does not recommend it.</b> It only exists where there is a limit: a <b>loan has nothing available</b>, so the Car loan in this same plate has to fall back to the other reading, and two of the three debt types read one way while the third reads another. And the lead figure is a large number that is not money you have — which is the exact confusion this task exists to remove, moved one card over. It also cannot be drawn at all for a card whose limit is not set yet, which is every card on the day this ships.",
+        "<b>Chosen, 2026-09-17.</b> Leading with <b>what is still available</b> — $2,754,100 of the $4,000,000 limit — and the debt on the line under the bar. His words: «me gustaría ver cuál es el cupo que tengo disponible en el momento». It is the convention card and bank apps follow, and it answers the question you actually have in a shop; personal-finance apps lead with the debt instead, which is what the plate beside this one draws. <b>The rule it settles is per type, and that is deliberate.</b> A <b>loan has nothing available</b>, so the Car loan here leads with what is owed and says how much is paid — each type leads with the figure it actually has. A card with no limit yet has no availability line either, which is what the next question is about. <b>What it still costs:</b> the lead figure is a large number that is not money you have, so the word beside it is doing all the work, and the second line has to carry the debt for the reading to be honest.",
         accountsDebt("available"),
-        { added: "2026-09-17", verdict: "open", asks: "What a card or a loan leads with" },
+        { added: "2026-09-17", verdict: "chosen", asks: "What a card or a loan leads with" },
       ),
       plate(
         "debt-signed-balance",
@@ -4751,38 +4768,46 @@ const PAGES = [
       plate(
         "debt-no-limit-quiet",
         "No limit yet · the card says only what you owe",
-        "<b>This is the state every existing account is in the day this ships</b>, and for anyone who never fills the field it is the state forever: an <code>Account</code> has no limit today, so there is nothing to draw a bar from. Here the card simply says <b>$1,245,900 owed</b> and stops — no bar, no empty gauge, no prompt. The limit is offered where it belongs, in the account’s own Edit form, and the list stays a list. <b>The session recommends this one</b>, for the reason the home screen’s install card already follows: a screen does not ask for something it does not need to work. The cost is that a limit nobody knows about is a limit nobody sets, and this card never mentions it.",
+        "<b>This is the state every existing account is in the day this ships</b>, and for anyone who never fills the field it is the state forever: an <code>Account</code> has no limit today, so there is nothing to draw a bar from. Here the card simply says <b>$1,245,900 owed</b> and stops — no bar, no empty gauge, no prompt. The limit is offered where it belongs, in the account’s own Edit form, and the list stays a list. <b>Not chosen.</b> The session recommended the quiet card, for the reason the install card already follows: a screen does not ask for something it does not need to work. He chose the prompt — and the cost the session was weighing cuts the other way too: a limit nobody knows about is a limit nobody sets.",
         noLimitYet("quiet"),
         {
           added: "2026-09-17",
-          verdict: "open",
+          verdict: "discarded",
           asks: "What a debt account shows before you give it a limit",
         },
       ),
       plate(
         "debt-no-limit-prompt",
         "No limit yet · the card asks for it",
-        "The same card with <b>Set a credit limit</b> on it, so the field is discovered where the gap is visible. <b>What it costs.</b> It is a call to action on a list you open every day, on every debt account that has no limit, and it does not go away until you deal with it — on a phone it is the largest thing in the card. It also turns the card from a single link into a container with two targets — the whole card stays openable through a stretched link, and the button sits on top of it — which is <b>a second tab stop per card</b>: the same defect T-68 is open about for the sync icon, added on purpose this time. And it appears on the loan too, where a credit limit means nothing, unless the prompt learns the type.",
+        "<b>Chosen, 2026-09-17.</b> The card with <b>Set a credit limit</b> on it, so the field is discovered where the gap is visible. <b>What it costs.</b> It is a call to action on a list you open every day, on every debt account that has no limit, and it does not go away until you deal with it — on a phone it is the largest thing in the card. It also turns the card from a single link into a container with two targets — the whole card stays openable through a stretched link, and the button sits on top of it — which is <b>a second tab stop per card</b>: the same defect T-68 is open about for the sync icon, added on purpose this time. And it appears on the loan too, where a credit limit means nothing, unless the prompt learns the type.",
         noLimitYet("prompt"),
         {
           added: "2026-09-17",
-          verdict: "open",
+          verdict: "chosen",
           asks: "What a debt account shows before you give it a limit",
         },
       ),
       plate(
         "account-fields-a-credit-limit",
         "Fields · a credit limit, and nothing else",
-        "<b>One new field in the whole product.</b> <i>Credit limit</i>, optional, offered on CARD and OVERDRAFT and on nothing else; every other type’s form is exactly what it is today. A loan gets no new field because the app already stores what it needs: <code>openingBalance</code> is written once when the account is created and never changes, so what has been paid off is today’s balance minus that figure (both are negative on a debt, so the newer, smaller debt gives the positive difference), and no field, no validation and no sync work is added for it. <b>What it costs, and it is real.</b> For a loan someone starts tracking halfway through, <code>openingBalance</code> is the balance the day they created the account, <b>not what they borrowed</b> — so under this answer the loan’s line has to read <i>paid since you added it</i> rather than <i>paid of $12,000,000</i>, which is what the plates of the first question draw. <b>The session recommends this one:</b> it is the smallest thing that answers the complaint, and the task itself says to decide which fields and stop there. <b>A coupling worth knowing:</b> the preview card at the bottom of this plate is drawn on the first question’s recommended reading, and the loan drawn in <i>What a debt account shows before you give it a limit</i> is on the <i>second</i> answer of this one — it says <i>paid of $12,000,000</i>, which only the amount borrowed can give.",
+        "<b>One new field in the whole product.</b> <i>Credit limit</i>, optional, offered on CARD and OVERDRAFT and on nothing else; every other type’s form is exactly what it is today. A loan gets no new field because the app already stores what it needs: <code>openingBalance</code> is written once when the account is created and never changes, so what has been paid off is today’s balance minus that figure (both are negative on a debt, so the newer, smaller debt gives the positive difference), and no field, no validation and no sync work is added for it. <b>What it costs, and it is real.</b> For a loan someone starts tracking halfway through, <code>openingBalance</code> is the balance the day they created the account, <b>not what they borrowed</b> — so under this answer the loan’s line has to read <i>paid since you added it</i> rather than <i>paid of $12,000,000</i>, which is what the plates of the first question draw. <b>Not chosen.</b> The session recommended it as the smallest thing that answers the complaint; he asked for both fields, both optional, which buys the loan a figure `openingBalance` cannot give and costs one more optional field. Two is still stopping: the set of terms per type stays rejected. <b>A coupling worth knowing:</b> the preview card at the bottom of this plate is drawn on the first question’s recommended reading, and the loan drawn in <i>What a debt account shows before you give it a limit</i> is on the <i>second</i> answer of this one — it says <i>paid of $12,000,000</i>, which only the amount borrowed can give.",
         accountFields("limit"),
-        { added: "2026-09-17", verdict: "open", asks: "What an account gains besides its balance" },
+        {
+          added: "2026-09-17",
+          verdict: "discarded",
+          asks: "What an account gains besides its balance",
+        },
       ),
       plate(
         "account-fields-the-amount-borrowed",
         "Fields · a credit limit and, on a loan, the amount borrowed",
-        "The credit limit as above, plus <i>Amount borrowed</i> on a LOAN — drawn here, because that is the only form the two answers differ on. It is what lets a loan added halfway through say <b>$3,600,000 paid of $12,000,000</b> instead of only what has moved since you started tracking it, and it is the one thing <code>openingBalance</code> genuinely cannot answer. <b>What it costs:</b> a second optional field that the server, the OpenAPI, the local mirror, the outbox and the sync all have to learn and keep, for a figure that only one line of one card reads. If most loans are created with their full balance, it buys nothing the first answer does not already have.",
+        "<b>Chosen, 2026-09-17.</b> Both fields, and <b>both optional</b>, as he asked: the credit limit on CARD and OVERDRAFT, plus <i>Amount borrowed</i> on a LOAN — drawn here, because that is the only form the two answers differ on. It is what lets a loan added halfway through say <b>$3,600,000 paid of $12,000,000</b> instead of only what has moved since you started tracking it, and it is the one thing <code>openingBalance</code> genuinely cannot answer. <b>What it costs:</b> a second optional field that the server, the OpenAPI, the local mirror, the outbox and the sync all have to learn and keep, for a figure that only one line of one card reads. If most loans are created with their full balance, it buys nothing the first answer does not already have.",
         accountFields("borrowed"),
-        { added: "2026-09-17", verdict: "open", asks: "What an account gains besides its balance" },
+        {
+          added: "2026-09-17",
+          verdict: "chosen",
+          asks: "What an account gains besides its balance",
+        },
       ),
       plate(
         "account-fields-per-type",
@@ -4798,22 +4823,22 @@ const PAGES = [
       plate(
         "home-total-with-a-line",
         "Home · the total, with the split under it",
-        "<b>Total balance $2,858,600</b>, and the line under it reads <b>$12,504,500 yours − $9,645,900 owed</b>. The figure itself does not change meaning — the app has always summed signed balances, so a debt already subtracted — it just stops being a number with no explanation. <b>What it costs, measured in this frame at 460px:</b> the line takes the slot that today counts the accounts (“4 accounts”), so that count moves to the Accounts summary card, which already carries it, and because it wraps to two lines the stats row grows from <b>104px to 120px</b>. No new card, the row stays two wide on a phone. <b>A cost the three answers share:</b> the accounts carousel is as tall as its tallest card, so the debt cards make it grow <b>37px</b> whichever reading wins — the page goes from 1,415px to <b>1,468px</b> here, of which only 16 belong to this answer. <b>The session recommends this one.</b>",
+        "<b>Total balance $2,858,600</b>, and the line under it reads <b>$12,504,500 yours − $9,645,900 owed</b>. The figure itself does not change meaning — the app has always summed signed balances, so a debt already subtracted — it just stops being a number with no explanation. <b>What it costs, measured in this frame at 460px:</b> the line takes the slot that today counts the accounts (“4 accounts”), so that count moves to the Accounts summary card, which already carries it, and because it wraps to two lines the stats row grows from <b>104px to 120px</b>. No new card, the row stays two wide on a phone. <b>A cost the three answers share:</b> the accounts carousel is as tall as its tallest card, so the debt cards make it grow <b>37px</b> whichever reading wins — the page goes from 1,415px to <b>1,468px</b> here, of which only 16 belong to this answer. <b>Not chosen.</b> The session recommended it as the cheapest honest answer; he chose the two cards, because a net figure with a car loan in it reads negative for years. It stays drawn as the record.",
         home({ debt: "net-line" }),
         {
           added: "2026-09-17",
-          verdict: "open",
+          verdict: "discarded",
           asks: "How Home says what you have and what you owe",
         },
       ),
       plate(
         "home-have-and-owe",
         "Home · two cards, what you have and what you owe",
-        "The split as two stat cards of its own, which is the loudest way to say it and the only one where <i>what you owe</i> is a figure you can look straight at. <b>What it costs, measured in this frame at 460px.</b> The stats row holds two cards on a phone, so <i>Income this month</i> is pushed to a full-width row of its own and the block goes from <b>104px to 221px</b> — budgets, accounts and recent transactions all move down by more than a card, and the page ends at <b>1,568px</b> against 1,415 today. And <b>Estimated savings</b>, which is neither what you have nor what you owe, has nowhere left to go: it is dropped from Home in this plate. Switch the preview to Desktop to see the same cost in the left column.",
+        "<b>Chosen, 2026-09-17.</b> Two stat cards, and <b>no net figure anywhere on Home</b>. <b>His reason, and it is right:</b> a car loan is tens of millions against a few in the bank, so a net total would read <i>negative for years</i> — until the car is paid — and that is a true figure nobody wants on the screen they open to record a coffee. Net worth is a real number; it is not this screen’s number. <b>Income this month and Estimated savings both stay</b>, which he asked for after a first draft dropped the savings card: the row is four cards in two pairs, and <i>Estimated savings</i> keeps the 600px floor it has today, so a phone still shows three and nothing is lost against now. <b>What it costs, measured at 460px:</b> the stats row goes from <b>104px to 221px</b> and the page ends at <b>1,568px</b> against 1,415 — budgets, accounts and recent transactions all move down. Switch the preview to Desktop to see the two pairs.",
         home({ debt: "two-cards" }),
         {
           added: "2026-09-17",
-          verdict: "open",
+          verdict: "chosen",
           asks: "How Home says what you have and what you owe",
         },
       ),
@@ -4843,24 +4868,46 @@ const PAGES = [
         { added: "2026-09-17", verdict: "open", asks: "What the Pay button opens" },
       ),
       plate(
-        "adjustment-edited-in-the-account",
-        "Adjustment · edited where it was made",
-        "Adjustment leaves Add, so a balance adjustment is created in one place only: <b>Adjust balance</b>, inside the account. This answer says it is <b>edited</b> there too — tapping the row in the account’s own list reopens that sheet on that adjustment, with Delete beside Save. <b>What it costs, and it is not small.</b> The sheet that creates one asks a different question from the sheet that edits one: creating asks <i>what is the real balance now</i> and computes the difference, while editing has to work on the adjustment’s own amount, because recomputing a past adjustment from today’s balance would silently change what it meant. So the sheet becomes two modes — drawn here in its editing mode, with the increase/decrease segment and the amount it actually holds. The row is also reachable from the global Transactions list, which has no account context, so that route has to open this same sheet.",
-        adjustmentEdit("sheet"),
+        "pay-from-outside-quiet",
+        "Paid from somewhere else \u00b7 written as a repair",
+        "<b>His case, and it is a real one:</b> the card gets paid from money that is in no account of Ledger Flow \u2014 someone else\u2019s transfer, cash he does not track, an account he never registered. Nothing here loses that money, so it cannot be a transfer. The <i>From</i> picker gains one row under the accounts, <b>Somewhere else \u00b7 not an account here</b>, and the sheet writes an <b>ADJUSTMENT</b> that raises the card. <b>Why this and not an income:</b> `deriveSpending` hides ADJUSTMENT from every figure unless the query names it (`lib/local/derive/spending.ts:107`), which is exactly right \u2014 the money is not income and it is not spending, it simply never was inside the app. <b>What it costs:</b> an adjustment means \u201creconcile a balance\u201d everywhere else in the product, and here it is carrying a payment; the row in the history reads <i>Balance adjustment</i>, so the sheet has to write the description for you. <b>And the honest alternative is neither plate:</b> register that money as an account \u2014 even a CASH one called \u201cOther money\u201d \u2014 and the payment is an ordinary transfer that is right everywhere. That is bookkeeping, and it is the only answer that keeps Stats complete. <b>The session recommends this one.</b>",
+        payFromOutside("adjustment"),
         {
           added: "2026-09-17",
           verdict: "open",
+          asks: "Paying a debt with money that is in no account here",
+        },
+      ),
+      plate(
+        "pay-from-outside-as-income",
+        "Paid from somewhere else \u00b7 written as an income",
+        'The same row writing an <b>INCOME</b> into the card, which is what he asked about. The balance comes out right \u2014 an income with only a destination raises the card exactly as much as the payment did. <b>But it lies three times, and they are all measured.</b> Home\u2019s <i>Income this month</i> is literally `fetchSpending({type: "INCOME"})` over the month (`features/home/hooks.ts:111`), so paying ${moneyText(CARD_OWED)} off the card reads as ${moneyText(CARD_OWED)} earned. <b>Estimated savings</b> is income minus spending, so it inflates by the same amount. And an income budget \u2014 the product has them \u2014 would count it. The plate draws the warning the sheet would have to carry, which is the tell: a form that has to apologise for what it writes is writing the wrong thing. Drawn because it is the obvious answer and it deserves to be rejected for a reason rather than a taste.',
+        payFromOutside("income"),
+        {
+          added: "2026-09-17",
+          verdict: "open",
+          asks: "Paying a debt with money that is in no account here",
+        },
+      ),
+      plate(
+        "adjustment-edited-in-the-account",
+        "Adjustment · edited where it was made",
+        "<b>Chosen, 2026-09-17.</b> His reason: since it is not going to live in the transaction form, the other answer does not make sense. Adjustment leaves Add, so a balance adjustment is created in one place only — <b>Adjust balance</b>, inside the account — and it is <b>edited</b> there too — tapping the row in the account’s own list reopens that sheet on that adjustment, with Delete beside Save. <b>What it costs, and it is not small.</b> The sheet that creates one asks a different question from the sheet that edits one: creating asks <i>what is the real balance now</i> and computes the difference, while editing has to work on the adjustment’s own amount, because recomputing a past adjustment from today’s balance would silently change what it meant. So the sheet becomes two modes — drawn here in its editing mode, with the increase/decrease segment and the amount it actually holds. The row is also reachable from the global Transactions list, which has no account context, so that route has to open this same sheet.",
+        adjustmentEdit("sheet"),
+        {
+          added: "2026-09-17",
+          verdict: "chosen",
           asks: "Where a balance adjustment is edited, once Adjustment leaves Add",
         },
       ),
       plate(
         "adjustment-edit-keeps-the-fourth-type",
         "Adjustment · Add loses it, Edit keeps it",
-        "The other reading: <b>Add</b> offers three kinds, and the <b>Edit transaction</b> form keeps the fourth for the one case it is needed — an adjustment that already exists. The segment shows it pressed with the other three disabled, because an adjustment cannot become an expense; the line under it says so. <b>What it gains:</b> one screen edits every kind of transaction, so nothing new is built and the route from the global Transactions list works unchanged. <b>What it costs:</b> the segment is four wide here and three wide in Add, which is the sort of difference nobody can explain in a sentence, and it leaves Adjustment visible in the place the task wanted it out of — just one screen further in.",
+        "<b>Not chosen.</b> The other reading: <b>Add</b> offers three kinds, and the <b>Edit transaction</b> form keeps the fourth for the one case it is needed — an adjustment that already exists. The segment shows it pressed with the other three disabled, because an adjustment cannot become an expense; the line under it says so. <b>What it gains:</b> one screen edits every kind of transaction, so nothing new is built and the route from the global Transactions list works unchanged. <b>What it costs:</b> the segment is four wide here and three wide in Add, which is the sort of difference nobody can explain in a sentence, and it leaves Adjustment visible in the place the task wanted it out of — just one screen further in.",
         adjustmentEdit("form"),
         {
           added: "2026-09-17",
-          verdict: "open",
+          verdict: "discarded",
           asks: "Where a balance adjustment is edited, once Adjustment leaves Add",
         },
       ),

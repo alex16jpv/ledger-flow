@@ -54,60 +54,77 @@ account "A checking or current account" / «Una cuenta corriente o de ahorros de
 saldo en negativo que puedes usar» · Loan "Money you owe" / «Dinero que debes» · Other "Anything else" /
 «Cualquier otra cosa».
 
-## The accounts that are debt are an open question (T-85)
+## The accounts that are debt (T-85)
 
-Nothing in this section is settled, and **nothing is built until the owner chooses**. The alternatives
-are drawn in `preview/variants.html` and marked "Waiting on you"; the account detail with the whole
-reading in place is in `preview/in-review.html#account-detail-as-debt`.
+His words, 2026-09-16: "actualmente las uso en positivo osea si mi tarjeta de credito tiene un cupo de
+100 estoy poniendo el balance de 100 … eso hace que no pueda reflejar la deuda real y hace que la
+matematica del total balance este inflada con dinero que realmente no es mio." The alternatives are
+drawn in `preview/variants.html`; what he chose on **2026-09-17** is below, and **two questions are
+still open** (see the end of this section). Nothing is built.
 
-What he asked, on 2026-09-16: "actualmente las uso en positivo osea si mi tarjeta de credito tiene un
-cupo de 100 estoy poniendo el balance de 100. por lo que un expense lo baja y un income o transffer lo
-sube. pero eso hace que no pueda reflejar la deuda real y hace que la matematica del total balance
-este inflada con dinero que realmente no es mio."
+**The premise, which was never a question.** A debt account already carries a negative balance: an
+expense on a card lowers it, `summarizeAccounts` already adds a "Card debt" from the negative balances
+of CARD, OVERDRAFT and LOAN, and this page has drawn Visa Gold at −$1,245,900 since the design was
+written. Changing the sign would rewrite what every recorded transaction means.
 
-**The premise, which is not one of the questions.** A debt account already carries a negative balance:
-an expense on a card lowers it, `summarizeAccounts` already adds a "Card debt" from the negative
-balances of CARD, OVERDRAFT and LOAN, and this page has drawn Visa Gold at −$1,245,900 since the design
-was written. So the sign is not up for decision — changing it would rewrite what every transaction
-already recorded means. What is missing is a limit to measure against, a reading that says _debt_ in
-words rather than in a minus sign, a total that shows its two halves, and a way to pay.
+### What a debt account leads with (`#debt-available-first`)
 
-**The four questions this page owns.** A plate marked "Waiting on you" is an answer to choose; one
-marked "Not chosen" is drawn as the baseline the others are read against, ruled out by his own sentence
-or by the task card and not by anyone's taste, and it stays a word away from being chosen anyway.
+**A CARD or an OVERDRAFT leads with what is still available** — `$2,754,100 available` — with the debt
+on the line under the bar: `$1,245,900 owed of $4,000,000`. His reason, and it is the one card apps
+follow: the figure you want in a shop is how much room is left. **A LOAN leads with what is owed,**
+because a loan has nothing available; its second line says how much of it is paid. So the rule is per
+type, and it is not an inconsistency: each type leads with the figure it actually has.
 
-| Question                                             | Waiting on you                                                          | Drawn, not chosen          |
-| ---------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------- |
-| What a card or a loan leads with                     | `#debt-owed-first`, `#debt-available-first`                             | `#debt-signed-balance`     |
-| What a debt account shows before you give it a limit | `#debt-no-limit-quiet`, `#debt-no-limit-prompt`                         | —                          |
-| What an account gains besides its balance            | `#account-fields-a-credit-limit`, `#account-fields-the-amount-borrowed` | `#account-fields-per-type` |
-| What the Pay button opens                            | `#pay-a-sheet-on-the-account`, `#pay-the-full-transfer-form`            | —                          |
+**The bar always means the same thing on both** — the debt that is left — and the line under it is the
+part that is not owed, which is why a card says _left_ and a loan says _paid_.
 
-**Four drafts go with them**, in `preview/in-review.html`: `#account-detail-as-debt` (the card's own
-screen with the whole reading), `#loan-detail-and-pay` (the loan half of "pagar la tarjeta o el
-préstamo", where the full-balance preset is the one part that reads wrong and the instalment is where
-T-86's capital/interest split lands), `#debt-in-credit` and `#account-create-a-debt`.
+**A debt account whose balance is zero or above owes nothing** (`#debt-in-credit`): it reads `$0 owed`
+with an empty bar and the money on it named as the holder's own. That covers an overdraft in its
+ordinary state, an overpaid card, and — until T-90 runs — every card in the product.
 
-**Two rules the drafts settle, because they are not choices.** A debt account whose balance is zero or
-above **owes nothing**: it reads `$0 owed` with an empty bar and the money on it named as the account
-holder's own. That covers an overdraft in its ordinary state, an overpaid card, and — until T-90 runs —
-**every card in the product**. And on a CARD, an OVERDRAFT or a LOAN the create form's amount field asks
-_How much do you owe on it right now?_ rather than _Current balance_, entered positive and stored as the
-debt: that field is where the habit T-90 has to repair actually starts.
+**What it costs, and it is paid knowingly.** The figure on screen is the opposite sign of the one the
+server stores, so every surface that paints a balance has to know the account's type, offline
+projections included. And inside the account the movements keep the account's point of view while the
+headline takes the owner's: an expense on the card prints as `−$18,400` under a headline about what is
+available, and that expense _reduces_ what is available. Drawn in `#account-detail-as-debt`.
 
-Every plate adds a **Car loan** to the four accounts this preview has always drawn, because a card and
-a loan are not read the same way and one screen has to hold both: $12,504,500 across the three accounts
-that hold money, $9,645,900 owed between the card and the loan, so the total is $2,858,600. Each note
-carries what its answer costs. Two couplings are worth knowing before choosing: the loan's second line
-says _paid of $12,000,000_ only if the form gains the amount borrowed, and _paid since you added it_
-otherwise; and "what you have left" has no meaning on a loan, so choosing it splits the three debt
-types into two readings. The bar means the same thing on both kinds — **the debt that is left** — and
-the line under it is the part that is not owed, which is why a card says _left_ and a loan says _paid_.
+### Before a limit is set (`#debt-no-limit-prompt`)
 
-**One thing the reading does not fix, and it is worth seeing before choosing.** Inside the account the
-movements keep the account's point of view while the headline takes the owner's: an expense on the card
-prints as `−$18,400` under a headline that reads _$1,245,900 owed_, and that expense _raises_ what is
-owed. It is drawn that way in `#account-detail-as-debt`.
+A debt account with no limit carries **Set a credit limit** on its card in the list, so the field is
+discovered where the gap is. The card stays openable through a stretched link and the button sits on
+top of it, which is **a second tab stop per card** — the same shape T-68 is open about for the sync
+icon, accepted here on purpose. Without a limit there is no bar and no availability line.
 
-**Adjust balance is where a balance adjustment is made**, once Adjustment leaves the Add form — see
-[add.md](add.md). Where an existing one is _edited_ is the fifth question, drawn on the same page.
+### The two fields an account gains (`#account-fields-the-amount-borrowed`)
+
+Two, both **optional**: **Credit limit** on CARD and OVERDRAFT, and **Amount borrowed** on LOAN. Every
+other type's form is untouched. The amount borrowed exists because `openingBalance` — written once at
+creation and never changed — is the balance the day the account was created, not what was borrowed, so
+a loan someone starts tracking halfway through cannot say what its progress is a fraction of. A set of
+terms per type (interest rate, monthly payment, payment day) was drawn and **rejected**
+(`#account-fields-per-type`): nothing reads three of those four until T-86's instalment split exists.
+
+**On creation the amount field asks for the debt** (`#account-create-a-debt`): on a CARD, an OVERDRAFT
+or a LOAN it reads _How much do you owe on it right now?_ rather than _Current balance_, entered
+positive and stored as the debt. That field is where the habit T-90 has to repair actually starts.
+
+### The summary card
+
+It takes the same shape Home does: **What you have** as the headline and **What you owe** beside it,
+and **no net figure** — see [home.md](home.md) for why. The "Card debt" stat it carries today goes.
+
+### Still open
+
+- **What the Pay button opens** — `#pay-a-sheet-on-the-account` or `#pay-the-full-transfer-form`. The
+  button itself is settled: one primary action above the four the detail already had, saying "Pay this
+  card" or "Pay this loan", opening a TRANSFER with the direction filled in. Paying a loan is drawn in
+  `#loan-detail-and-pay`, where the full-balance preset is the one part that reads wrong — the ordinary
+  payment is the instalment, and that is where T-86's capital/interest split lands.
+- **Paying a debt with money that is in no account here** — `#pay-from-outside-quiet` or
+  `#pay-from-outside-as-income`. His case: the card gets paid from money the app does not track, so
+  nothing here loses it and it cannot be a transfer. The _From_ picker gains a **Somewhere else** row;
+  what it writes is the question. An INCOME gets the balance right and inflates Home's _Income this
+  month_ (`features/home/hooks.ts:111`), _Estimated savings_ and any income budget; an ADJUSTMENT gets
+  the balance right and is excluded from all three (`lib/local/derive/spending.ts:107`) at the cost of
+  meaning "reconcile" everywhere else. The third answer is neither plate: register that money as an
+  account and the payment is an ordinary transfer that is right everywhere.

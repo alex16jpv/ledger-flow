@@ -77,6 +77,7 @@
 .grid-3 { display: grid; grid-template-columns: 1fr; gap: var(--sp-4); }
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 @container app (min-width: 600px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+.stats.pairs { grid-template-columns: 1fr 1fr; }
 .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
 .section-head .link { font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--brand-text); }
 .stack { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }

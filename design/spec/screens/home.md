@@ -101,19 +101,27 @@
 - **Once installed:** the Persistent storage row in Sync status turns to "Granted" on its own, without
   asking for anything, because browsers grant it to installed apps.
 
-## What the total balance says is an open question (T-85)
+## What you have and what you owe (T-85)
 
-Today the Stats row leads with **Total balance**, the sum of the active accounts' balances. The sum is
-a signed one, so a debt already subtracts and the arithmetic was never wrong; what the card does not
-say is that some of those accounts are money owed, which is what the owner asked for on 2026-09-16.
+The Stats row led with **Total balance**, the sum of the active accounts' balances. The sum is a signed
+one, so a debt already subtracted and the arithmetic was never wrong; what the card never said is that
+some of those accounts are money owed.
 
-Two answers are drawn in `preview/variants.html` and marked "Waiting on you":
-`#home-total-with-a-line` (the total with `$12,504,500 yours − $9,645,900 owed` under it) and
-`#home-have-and-owe` (two cards, and _Estimated savings_ dropped from Home). `#home-total-unchanged` is
-today's card, drawn as the baseline rather than as a choice: his own sentence rules it out. Measured at
-460px in the preview frame: the stats row is 104px today, 120px with the line and 221px with two
-cards. All three pay the same 37px in the accounts carousel, which is as tall as its tallest card and
-the debt cards are taller. **Nothing is built until the owner chooses**, and the reading inside the
-carousel's cards follows whatever [accounts.md](accounts.md) settles. **The Accounts summary card takes
-the same answer**: it carries a "Card debt" stat today, and whichever way Home splits the total, that
-card splits it the same way, so the product never says it two ways.
+**It becomes two cards** (`#home-have-and-owe`): **What you have** and **What you owe**, and **no net
+figure anywhere on Home**. His reason, on 2026-09-17, and it is correct: a car loan is tens of millions
+against a few in the bank, so a net total would read negative for years — until the car is paid — and
+that is a true figure nobody wants on the screen they open to record a coffee. Net worth is a real
+number; it is not this screen's number.
+
+_Income this month_ and _Estimated savings_ **both stay** — he asked for it explicitly, after a first
+draft dropped the savings card. The row is four cards in **two pairs**: what you have and what you owe
+above, income and savings below. `Estimated savings` keeps the 600px floor it has today, so a phone
+shows three cards and nothing is lost compared to now.
+
+Measured at 460px in the preview frame: the stats row goes from **104px to 221px**, and the accounts
+carousel grows **37px** because it is as tall as its tallest card and the debt cards are taller — the
+page ends at **1,568px** against 1,415 today. `#home-total-with-a-line` (the total with the split under
+it) and `#home-total-unchanged` (today's card) stay drawn as the record of why.
+
+The reading inside the carousel's cards is [accounts.md](accounts.md)'s, and the **Accounts summary
+card takes this same shape**, so the product never says it two ways.

@@ -83,14 +83,21 @@ the secondary action (confirmed; there is no restore).
 
 ## Adjustment leaves this form (T-85)
 
-The segmented control presents four kinds as equals and they are not: an expense, an income and a
+The segmented control presented four kinds as equals and they are not: an expense, an income and a
 transfer are things that happened to your money, and an adjustment is the tool that repairs a balance
 that has drifted. It moves to **Adjust balance** inside the account (see
-[accounts.md](accounts.md)), which already preloads the recorded balance
-and already explains the difference it is about to write; the segment here drops to three. The draft is
-in `preview/in-review.html#add-without-adjustment`.
+[accounts.md](accounts.md)), which already preloads the recorded balance and already explains the
+difference it is about to write; the segment here drops to three. The draft is in
+`preview/in-review.html#add-without-adjustment`.
 
-**Where an existing adjustment is edited is still open**: two answers are drawn in
-`preview/variants.html` — `#adjustment-edited-in-the-account`, which gives the Adjust balance sheet a
-second, editing mode, and `#adjustment-edit-keeps-the-fourth-type`, which leaves the fourth kind on the
-Edit transaction form with the other three disabled. **Nothing is built until the owner chooses.**
+**An adjustment is also edited there** (`#adjustment-edited-in-the-account`, his choice of 2026-09-17:
+since it is not in the transaction form, the alternative makes no sense). Tapping the row — in the
+account's list or in the global one, which has no account context — reopens that sheet on that
+adjustment, with Delete beside Save. **The sheet has two modes and they ask different questions.**
+Creating asks _what is the real balance now_ and computes the difference; editing works on the
+adjustment's **own amount**, because recomputing a past adjustment from today's balance would silently
+change what it meant. The editing mode says so: _Recorded on Sep 21, it took −$12,300 off Bancolombia.
+Changing the amount rewrites that difference, not today's balance._
+
+`#adjustment-edit-keeps-the-fourth-type` — leaving the fourth kind on the Edit transaction form with
+the other three disabled — stays drawn as the record of why not.
