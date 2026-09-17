@@ -102,73 +102,105 @@ Changing the amount rewrites that difference, not today's balance._
 `#adjustment-edit-keeps-the-fourth-type` — leaving the fourth kind on the Edit transaction form with
 the other three disabled — stays drawn as the record of why not.
 
-## Registering a movement (T-86) — drawn, waiting on a choice
+## Registering a movement (T-86)
 
-Nothing in this section is decided. Every answer is drawn on
-[`preview/variants.html`](../../preview/variants.html) and listed on **Waiting on you**; when one is
-chosen it comes back here as the rule and the rest stay there as the record.
+Five questions were drawn more than one way and he answered all five on 2026-09-17. What follows is
+the rule; the answers not taken stay on [`preview/variants.html`](../../preview/variants.html) as the
+record of why, and every row is in [decisions.md](../decisions.md).
 
-**The measurement this came from.** Someone he showed the app to did not understand Transfer. Across
-the whole product, on 2026-09-16, **there is not one sentence that says what a transfer is for**: four
-mention it and all four are negations — `stats.transfersNote`, `stats.emptyTransfers`,
-`budgets.list.footnote` and `budgets.form.categoriesHelp` — plus six labels. The asymmetry runs
-backwards: **Adjustment, the rarest of the four types, is the only one with an explanatory line**
-(`transactions.form.adjustmentHint`). And the form asks _geometry_ — From and To — when the person has
-an _intention_ ("I paid the card"), on the one operation where the direction is counter-intuitive:
-paying a debt means sending money **towards** the card.
+**Where this came from.** Someone he was shown the app by did not understand Transfer. Across the whole
+product **there was not one sentence saying what a transfer is for**: four mention it and all four are
+negations (`stats.transfersNote`, `stats.emptyTransfers`, `budgets.list.footnote`,
+`budgets.form.categoriesHelp`), plus six labels. The asymmetry ran backwards: **Adjustment, the rarest
+of the four types, was the only one with an explanatory line** (`transactions.form.adjustmentHint`).
 
-**What is premise here, and was not asked.**
+### A line for each type, and a ? for the detail (`#transfer-said-for-every-type`, `#transfer-said-in-a-sheet`)
 
-- **Adjustment has already left this form** — T-85's decision, not a question (see above).
-- **The type stays a segmented control**, his choice of 2026-09-15.
-- **Whatever is decided binds both surfaces**, Quick capture and the full form: a rule that reaches one
-  and not the other is how the same thing comes to read two ways one tap apart.
-- **The interest split, if it happens, lives on the Pay sheet**, because that is the only place the app
-  knows a movement is a loan instalment. An instalment typed by hand into the Add form stays one
-  transfer under every answer.
+Under the segment, **one line for whichever type is selected** — his words: «la línea para los tres» —
+**and a `?` beside it** that opens the three explained side by side («adicional me gustaría el botón de
+? para que se abra el modal con la información más detallada de qué hace cada tipo de transacción»).
+The two were drawn as alternatives and he took both.
 
-### The five questions
+- **Expense** — "Money leaving one of your accounts and not coming back."
+- **Income** — "Money arriving into one of your accounts."
+- **Transfer** — "Moves money between two of your own accounts: paying a card, a loan instalment,
+  putting money aside. Nothing is spent and nothing is earned."
 
-| What is being asked                                                  | Drawn as                                                                                                                                                          |
-| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| How the form says what each type is                                  | `#transfer-said-for-every-type`, `#transfer-said-in-a-line`, `#transfer-said-in-a-sheet`, and `#transfer-said-in-a-line-on-the-quick-sheet` for the other surface |
-| What the form reads back before you save                             | `#readback-the-two-sides`, `#readback-with-the-new-balances`, `#readback-nothing`                                                                                 |
-| Whether Add gets shortcuts too, now that paying lives in the account | `#transfer-by-intention-none`, `#transfer-by-intention-one-chip`, `#transfer-by-intention-three-chips`                                                            |
-| How a loan instalment records its interest                           | `#instalment-one-movement`, `#instalment-two-movements`, `#instalment-only-half-arrived`, `#instalment-interest-inside-the-movement`                              |
-| What happens to the categories of type Transfer                      | `#transfer-categories-used`, `#transfer-categories-in-the-list`, `#transfer-categories-dropped`                                                                   |
+The sheet is three rows, each a tile, a name and its line. **They explain and lead nowhere, so they
+carry no chevron.** The `?` has the accessible name "What the three types mean".
 
-**The line costs 17px more than nothing, not a screen.** Measured in the preview frame at mobile width:
-the Expense line is 17px and one line, Income the same, and the Transfer line 52px and three, because
-it is the only one carrying the three cases. So "a line for every type" — which is what his sentence
-literally asks for — is "a line only on Transfer" plus 17px on the two types used every day. Spanish
-runs about 20% longer, so Transfer can reach four lines on a narrow phone.
+**Measured on the built plates:** on a phone the Expense and Income lines are 35px and the Transfer
+line 52px; on a desktop, 17px and 35px. The `?` is what pushes Expense onto a second line — it is 17px
+without it. **The rule binds both surfaces**, Quick capture and the full form
+(`#transfer-said-in-a-line-on-the-quick-sheet`): a rule that reaches one and not the other is how the
+same thing comes to read two ways one tap apart.
 
-**The read-back is where the line falls between a sentence and a projection, and the product is already
-on both sides of it.** Saying _Bancolombia −$500,000 · Visa Gold $500,000 less owed_ repeats the amount
-just typed and the two names just picked: no arithmetic on a balance, so house rule 4 is untouched and
-it reads the same offline. Saying what each account **will read afterwards** is the client doing money
-arithmetic, which only `lib/local/derive` may do and which must carry the projection mark of
-[components.md](../components.md) 24. **The Pay sheet approved in T-85 already uses the second grammar**
-— "Visa Gold goes to $0 owed" — so this question decides that sheet's sentence as well as this form's.
+### The form reads the movement back as a difference (`#readback-the-two-sides`)
 
-**The instalment is the one that can reach the server.** The Car loan owes $8,400,000 of $12,000,000
-and its instalment is $420,000, of which about $126,000 is interest. Recorded as one transfer — what
-happens today — the loan falls by the whole $420,000 when only $294,000 paid it down, so the bar that
-says _what is paid_ runs ahead by the interest every month, and the $126,000 actually spent never
-appears in Stats. Writing the transfer and the interest as **two movements** needs nothing new from the
-server, but they are **not atomic**: `POST /sync` applies its operations one at a time through the same
-services (`SyncBatchService.applyOne`), so one can be applied and the other rejected — the state that
-leaves is drawn. Carrying the interest **inside one movement** removes that, and is a new shape in the
-domain: a field on `Transaction`, the OpenAPI, `/stats/spending`, `lib/local/derive/spending.ts` and the
-parity fixtures that prove those two agree. Only that third answer is backend work, and if it is chosen
-it joins T-87.
+Once both accounts are chosen: **"Bancolombia −$500,000 · Visa Gold $500,000 less owed. Your total
+balance does not change."** His words: «la diferencia». The debt side is said in the T-85 vocabulary,
+never as "+$500,000", because on a card more is not better.
 
-**The Transfer categories are worse than "unused".** Every user is seeded with two of them — _Transfer_
-and _Credit Card Payment_ (`src/shared/defaultCategories.ts:74-88`), two of the ten a new account starts
-with — the Categories screen counts them in a tab of their own, and no form can attach one to anything:
+**It costs nothing but the sentence.** It repeats the amount just typed and the two names just picked —
+no arithmetic on any balance — so house rule 4 is untouched and it reads identically offline, on a
+device that has never seen those balances. The alternative, reading back what each account **will say
+afterwards**, is the client computing money: only `lib/local/derive` may, and it must carry the
+projection mark of [components.md](../components.md) 24. It stays drawn in
+`#readback-with-the-new-balances` as the shape to return to if "will I be short?" becomes worth paying
+for.
+
+**This grammar is the product's, not this form's.** The Pay sheet approved in T-85 read back the
+resulting balance ("Visa Gold goes to $0 owed"); it now says **"$1,245,900 less owed"** (see
+[accounts.md](accounts.md)). One grammar, every surface.
+
+### Three intent chips fill the two sides (`#transfer-by-intention-three-chips`)
+
+Above _From_ and _To_, under the label "What are you doing?": **Pay a card · Pay a loan · Move to
+savings**. A chip **saves nothing and adds no field** — it fills the two sides in the right direction,
+which is the only thing people get wrong, because paying a debt means sending money **towards** the
+card. _Pay a card_ puts the main account in _From_ and the card in _To_; with more than one card it
+opens the account picker already filtered to cards. Everything stays editable afterwards.
+
+**A chip also preselects the category that matches it** — _Pay a card_ selects _Credit Card Payment_,
+_Move to savings_ selects _Transfer_ — which is what keeps the chip and the category from saying the
+same thing twice.
+
+**T-85's Pay sheet does not go away**: it stays the way in from the account, and this is the way in for
+someone who starts at the ＋. Two ways to record the same transfer is the cost he accepted, so they
+**share the pickers, the `Idempotency-Key` and the offline queue** rather than each growing its own.
+
+### A transfer can carry a category (`#transfer-categories-used`)
+
+The transfer form and the Pay sheet carry an **optional** category in the same slot expense and income
+use, filtered to the TRANSFER type. His word: «usarlas».
+
+Before this, **every user was seeded with two Transfer categories** — _Transfer_ and _Credit Card
+Payment_ (`src/shared/defaultCategories.ts:74-88`), two of the ten a new account starts with — the
+Categories screen counted them in a tab of their own, and **no form could attach one to anything**:
 `categoryAllowed()` is true only for Expense and Income (`features/transactions/form.ts:65`), the
 mappers null the category on every other type (`form.ts:120`, `:164`), and the form clears and hides the
-field on switching type (`TransactionForm.tsx:133`, `:178`). The server is not the obstacle: it refuses
-a category only when its type and the transaction's differ (`TransactionService.ts:408`). So either the
-transfer form gains the optional category it already has a contract for, or the type comes off the
-screen — and with it `budgets.form.categoriesHelp`, which would otherwise explain a type nobody can see.
+field on switching type (`TransactionForm.tsx:133`, `:178`). **The server was never the obstacle:** it
+refuses a category only when its type and the transaction's differ (`TransactionService.ts:408`), and
+`/stats/spending` already groups transfers by category. What it buys is drawn in
+`#transfer-categories-in-the-list`.
+
+### A loan instalment stays one movement (`#instalment-one-movement`)
+
+His words: «por ahora prefiero sin el campo de interés. tengo que pensarlo más a futuro cómo hacerlo.»
+So the Pay sheet keeps its single movement and gains only the preset T-85 found missing — **The
+instalment** — because paying a loan off whole is the rare case and the monthly payment is the normal
+one.
+
+**What stays wrong is written down, not forgotten.** About $126,000 of a $420,000 instalment is
+interest, so the loan falls by the whole $420,000 when only $294,000 paid it down: the bar that says
+_what is paid_ runs ahead by the interest for the life of the loan, and the interest never appears in
+Stats, because a transfer is not spending. That is **T-94** on his list, deferred by him, with both
+answers already drawn and measured — `#instalment-two-movements` (with its half-applied state,
+`#instalment-only-half-arrived`) and `#instalment-interest-inside-the-movement`.
+
+### What was premise, and was not asked
+
+- **Adjustment has already left this form** — T-85's decision (above).
+- **The type stays a segmented control**, his choice of 2026-09-15.
+- **The interest split, when it happens, belongs to the Pay sheet**, the only place the app knows a
+  movement is a loan instalment. An instalment typed by hand into this form stays one transfer.

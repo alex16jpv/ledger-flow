@@ -127,12 +127,22 @@ and **no net figure** — see [home.md](home.md) for why. The "Card debt" stat i
 
 **Pay this card / Pay this loan** is one primary action above the four the detail already had, and it
 opens **a sheet on the account**, not the transaction form: the amount preloaded with everything owed, a
-chip to change it, one _From_ picker, and a line reading the result back. It is a TRANSFER underneath
-with the direction filled in — paying a debt means sending money **towards** the card, which is the step
-people get backwards. Underneath it must use the same pickers, the same `Idempotency-Key` and the same
-offline queue as the transaction form, not a private copy (§8.14). Paying a loan is drawn in
-`#loan-detail-and-pay`: the full-balance preset is the one part that reads wrong there, because the
-ordinary payment is the instalment, and that is where T-86's capital/interest split lands.
+chip to change it, one _From_ picker, an optional category and a line reading the result back. It is a
+TRANSFER underneath with the direction filled in — paying a debt means sending money **towards** the
+card, which is the step people get backwards. Underneath it must use the same pickers, the same
+`Idempotency-Key` and the same offline queue as the transaction form, not a private copy (§8.14).
+
+**Three things T-86 changed here, and they are his decisions, not tidying.** The sheet reads the result
+back **as a difference** — "Bancolombia −$1,245,900 · Visa Gold **$1,245,900 less owed**", not "goes to
+$0 owed" — because that grammar is now the product's on every surface (see [add.md](add.md)). The preset
+row gains **The instalment** beside _Everything owed_, since paying a loan off whole is the rare case
+and the monthly payment is the normal one, which is what `#loan-detail-and-pay` had flagged. And the
+sheet carries the same **optional TRANSFER category** the form now has, so a card payment says so.
+
+**The instalment still records as one movement, and that is deliberate for now.** His words: «por ahora
+prefiero sin el campo de interés». About $126,000 of a $420,000 instalment is interest, so the loan
+falls by more than was actually paid off and the interest never reaches Stats — **T-94** on his list,
+with both answers drawn in `#instalment-two-movements` and `#instalment-interest-inside-the-movement`.
 
 **The _From_ picker carries one row under the accounts: `Somewhere else · not an account here`.** A debt
 can be paid with money the app does not track — someone else's transfer, cash, an account the user
