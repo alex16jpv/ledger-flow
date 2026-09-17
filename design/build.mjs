@@ -490,7 +490,14 @@ const QUICK_NOTE = `<div class="input"><span class="placeholder" style="flex:1">
 const QUICK_BUTTONS = `<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">More details</button><button class="btn primary lg" style="flex:1.4">Save</button></div>`;
 
 // The one quick sheet every quick-add plate is drawn from: T-73 adds `type`, T-75 changes `handle`.
-const quickSheet = ({ handle = "plain", type = null, head = null, extra = "", over = "" } = {}) => {
+const quickSheet = ({
+  handle = "plain",
+  type = null,
+  head = null,
+  extra = "",
+  over = "",
+  hint = "",
+} = {}) => {
   const title = "Add";
   const bar = {
     plain: '<div class="handle"></div>',
@@ -537,7 +544,7 @@ ${quickPicker("To", "Savings · $8,900,000", "piggy-bank", "GREEN")}</div>`
     head ??
     `<div class="sheet-head"><span class="h3">${title}</span><button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button></div>`;
   return `<div class="scrim"><div class="sheet" role="dialog" aria-label="${title}">
-${bar}${sheetHead}${seg}${amount}${cats}${accounts}${QUICK_NOTE}${extra}${QUICK_BUTTONS}
+${bar}${sheetHead}${seg}${hint}${amount}${cats}${accounts}${QUICK_NOTE}${extra}${QUICK_BUTTONS}
 </div>${over}</div>`;
 };
 
@@ -549,6 +556,10 @@ const transactionForm = (
     amount = "18,400",
     readback = "",
     description = null,
+    hint = "",
+    intents = "",
+    transferCategory = "",
+    sheet = "",
   } = {},
 ) => {
   const seg = [
@@ -573,7 +584,7 @@ const transactionForm = (
       "GREEN",
       "Savings · $8,900,000",
     ];
-    accounts = `<div class="stack-sm">
+    accounts = `${intents}<div class="stack-sm">
 <button class="picker">${tile(fromIcon, fromColor, "sm")}<span class="body"><span class="lbl">From</span><span class="val">${fromValue}</span></span>${iconSvg("chevron-down", "sm")}</button>
 <div style="display:flex;justify-content:center;margin:-4px 0"><button class="btn secondary icon-only sm round" aria-label="Swap">${iconSvg("arrow-left-right", "sm")}</button></div>
 <button class="picker">${tile(toIcon, toColor, "sm")}<span class="body"><span class="lbl">To</span><span class="val">${toValue}</span></span>${iconSvg("chevron-down", "sm")}</button></div>`;
@@ -585,19 +596,19 @@ const transactionForm = (
   }
   return `<div class="shell">${sidebar("")}<main class="main"><div class="page" style="max-width:640px">
 <header class="page-header"><button class="btn ghost icon-only round" aria-label="Back">${iconSvg("arrow-left")}</button><h1 class="h2" style="flex:1;text-align:center">New transaction</h1><span style="width:40px"></span></header>
-<div class="segment">${seg}</div>
+<div class="segment">${seg}</div>${hint}
 <div class="amount-input" style="padding-top:8px"><span class="cur">$</span><span class="num">${amount}</span></div>
 ${cat}
-${accounts}${readback}
+${accounts}${readback}${transferCategory}
 <div class="input-group">
 <div class="field"><span class="label">Date</span><div class="input">${iconSvg("calendar", "sm")}<span class="value">Today</span></div></div>
 <div class="field"><span class="label">Time</span><div class="input">${iconSvg("clock", "sm")}<span class="value">18:10</span></div></div></div>
-<div class="field"><span class="label">Description <span class="opt">optional</span></span><div class="input${description === null ? " focus" : ""}">${description === null ? '<span class="value">Uber to work</span>' : `<span class="value">${description}</span>`}</div></div>
+<div class="field"><span class="label">Description <span class="opt">optional</span></span><div class="input${description === null ? " focus" : ""}"><span class="value">${description ?? (kind == "TRANSFER" ? "Visa Gold payment" : "Uber to work")}</span></div></div>
 <div class="field"><span class="label">Tags <span class="opt">optional</span></span><div class="input" style="height:auto;min-height:48px;padding:8px 12px;flex-wrap:wrap"><span class="tag">work</span><span class="placeholder">Add…</span></div>
 <div class="chips" style="margin-top:2px"><button class="chip" style="height:28px">#travel</button><button class="chip" style="height:28px">#monthly</button><button class="chip" style="height:28px">#latte</button></div></div>
 <div class="field"><span class="label">Note <span class="opt">optional</span></span><div class="input textarea"><span class="placeholder">Anything you want to remember about this one</span></div></div>
 <div class="hstack" style="gap:10px;padding:8px 0 12px"><button class="btn primary lg block">Save transaction</button></div>
-</div></main></div>`;
+</div></main></div>${sheet}`;
 };
 
 const budgets = (v = {}) => {
@@ -1485,7 +1496,7 @@ const payFlow = (kind) => {
     return transactionForm("TRANSFER", {
       transfer: {
         from: ["landmark", "BLUE", "Bancolombia · $3,420,500"],
-        to: ["credit-card", "PURPLE", "Visa Gold · $1,245,900 owed"],
+        to: ["credit-card", "PURPLE", "Visa Gold · $2,754,100 available"],
       },
       amount: nf.format(CARD_OWED),
       readback: `\n<div class="alert neutral">${iconSvg("info")}<span>Bancolombia <b class="amount">${money(CARD_OWED, "−")}</b> · Visa Gold goes to <b>$0 owed</b>. Your total balance does not change.</span></div>`,
@@ -1593,7 +1604,7 @@ ${row("utensils", "ORANGE", "Carulla groceries", "", 78900)}</div>`;
   });
 };
 
-const categories = ({ offline = false } = {}) => {
+const categories = ({ offline = false, transferTab = true } = {}) => {
   const gtile = (name, count, archived = false) => {
     const [ic, col] = CATS[name];
     return `<a class="card stack-sm color-${col}" href="#" style="align-items:center;text-align:center;gap:8px;padding:16px 8px;${archived ? "opacity:.6" : ""}">${tile(ic, col, "lg")}<span style="font-weight:500;font-size:13px" class="truncate">${name}</span><span class="xs faint">${count}</span></a>`;
@@ -1602,7 +1613,8 @@ const categories = ({ offline = false } = {}) => {
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">' +
     items.map(([n, c]) => gtile(n, c)).join("") +
     "</div>";
-  const body = `<div class="segment"><button aria-pressed="true">Expense · 8</button><button class="income">Income · 3</button><button class="transfer">Transfer · 2</button></div>
+  const transferSeg = transferTab ? '<button class="transfer">Transfer · 2</button>' : "";
+  const body = `<div class="segment"><button aria-pressed="true">Expense · 8</button><button class="income">Income · 3</button>${transferSeg}</div>
 ${grid([
   ["Food", "24 txns"],
   ["Transport", "18 txns"],
@@ -3511,6 +3523,142 @@ const recurringVariant = (kind) => {
   return `<div class="app" style="padding:20px;border-radius:14px;display:flex;flex-direction:column;gap:14px;width:100%">${body}</div>`;
 };
 
+// T-86 · registering a movement: what each type is, what the form is about to do, and the ways in.
+const TYPE_LINE = {
+  EXPENSE: "Money leaving one of your accounts and not coming back.",
+  INCOME: "Money arriving into one of your accounts.",
+  TRANSFER:
+    "Moves money between two of your own accounts: paying a card, a loan instalment, putting money aside. Nothing is spent and nothing is earned.",
+};
+
+const PAY_AMOUNT = 500000;
+const BANCO_BAL = 3420500;
+const CARD_AVAILABLE = CARD_LIMIT - CARD_OWED;
+const INSTALMENT = 420000;
+const INSTALMENT_INTEREST = 126000;
+const INSTALMENT_PRINCIPAL = INSTALMENT - INSTALMENT_INTEREST;
+
+const PAY_SIDES = {
+  from: ["landmark", "BLUE", `Bancolombia · ${moneyText(BANCO_BAL)}`],
+  to: ["credit-card", "PURPLE", `Visa Gold · ${moneyText(CARD_AVAILABLE)} available`],
+};
+
+const typeLine = (kind) => `<span class="help">${TYPE_LINE[kind]}</span>`;
+
+const readbackLine = (inner, foot = "") =>
+  `\n<div class="alert neutral">${iconSvg("arrow-left-right")}<span>${inner}</span></div>${foot}`;
+
+const TWO_SIDES = readbackLine(
+  `Bancolombia <b class="amount">${money(PAY_AMOUNT, "−")}</b> · Visa Gold <b class="amount">${money(PAY_AMOUNT)}</b> less owed. <b>Your total balance does not change.</b>`,
+);
+
+const NEW_BALANCES = readbackLine(
+  `Bancolombia ${moneyText(BANCO_BAL)} → <b class="amount">${money(BANCO_BAL - PAY_AMOUNT)}</b><br>Visa Gold ${moneyText(CARD_AVAILABLE)} available → <b class="amount">${money(CARD_AVAILABLE + PAY_AMOUNT)}</b> available`,
+  `\n<span class="help">Worked out on this device from the balances it holds, not sent by the server.</span>`,
+);
+
+const INTENT_CHIPS = (only = false) => {
+  const chips = only
+    ? `<button class="chip selected">${iconSvg("credit-card", "sm")}Pay a card or a loan</button>`
+    : `<button class="chip selected">${iconSvg("credit-card", "sm")}Pay a card</button><button class="chip">${iconSvg("car", "sm")}Pay a loan</button><button class="chip">${iconSvg("piggy-bank", "sm")}Move to savings</button>`;
+  return `<div class="stack-sm"><span class="label">What are you doing? <span class="opt">optional</span></span>
+<div class="chips">${chips}</div></div>`;
+};
+
+const TRANSFER_CAT = `\n<div class="stack-sm"><span class="label">Category <span class="opt">optional</span></span>
+<div class="chips">${catChip("Card payment", true)}${catChip("Transfer")}<button class="chip">${iconSvg("search", "sm")}Search</button></div>
+<span class="help">Only the categories you marked as Transfer are offered here.</span></div>`;
+
+const typeRow = (icon, color, name, line) =>
+  `<div class="row">${tile(icon, color, "sm")}<span class="body"><span class="title">${name}</span><span class="meta">${line}</span></span></div>`;
+
+const TYPES_SHEET = sheetWrap(
+  `<div class="list card flush">${typeRow("arrow-down-left", "RED", "Expense", TYPE_LINE.EXPENSE)}${typeRow("arrow-up-right", "GREEN", "Income", TYPE_LINE.INCOME)}${typeRow("arrow-left-right", "GRAY", "Transfer", TYPE_LINE.TRANSFER)}</div>`,
+  "What the three mean",
+);
+
+const HELP_LINK = `<button class="btn ghost sm" style="align-self:flex-start;gap:6px;padding-left:0">${iconSvg("info", "sm")}What do these mean?</button>`;
+
+const instalmentSheet = (kind) => {
+  const presets = `<div class="chips"><button class="chip selected">The instalment</button><button class="chip">Everything owed</button><button class="chip">Another amount</button></div>`;
+  const amountBox = `<div class="stack-sm"><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">${nf.format(INSTALMENT)}</span><span class="caret"></span></div>${presets}</div>`;
+  const from = `<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">From</span><span class="val">Bancolombia · ${moneyText(BANCO_BAL)}</span></span>${iconSvg("chevron-down", "sm")}</button>`;
+  const interestField = `${field("Of which interest", moneyText(INSTALMENT_INTEREST), null, { icon: "percent", opt: true, help: "What the lender charged you this month. The rest lowers what you owe." })}`;
+  const one = `<div class="alert neutral">${iconSvg("arrow-left-right")}<span>Bancolombia <b class="amount">${money(INSTALMENT, "−")}</b> · Car loan <b class="amount">${money(INSTALMENT)}</b> less owed, ${moneyText(LOAN_OWED - INSTALMENT)} left. <b>Your total balance does not change.</b></span></div>`;
+  const split = `<div class="alert neutral">${iconSvg("arrow-left-right")}<span>Bancolombia <b class="amount">${money(INSTALMENT, "−")}</b> · Car loan <b class="amount">${money(INSTALMENT_PRINCIPAL)}</b> less owed, ${moneyText(LOAN_OWED - INSTALMENT_PRINCIPAL)} left.<br><b class="amount">${money(INSTALMENT_INTEREST)}</b> of it is <b>spending</b>: it shows in Stats under <i>Interest</i>.</span></div>`;
+  const twoRows = `<div class="list card flush" style="margin:0">${row("repeat", "GRAY", "Bancolombia → Car loan", "Transfer · pays the loan down", INSTALMENT_PRINCIPAL, "transfer")}${row("percent", "RED", "Car loan interest", "Expense · Interest", INSTALMENT_INTEREST)}</div>
+<span class="help">Two movements, written together by this sheet.</span>`;
+  const body = {
+    one: `${amountBox}${from}${one}`,
+    two: `${amountBox}${from}${interestField}${split}${twoRows}`,
+    field: `${amountBox}${from}${interestField}${split}<span class="help">One movement. The server keeps the interest inside it and Stats reads it from there.</span>`,
+  }[kind];
+  return sheetWrap(
+    `${body}
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Pay</button></div>`,
+    "Pay Car loan",
+  );
+};
+
+const addMovement = (kind) => {
+  if (kind === "line-every-type") return transactionForm("EXPENSE", { hint: typeLine("EXPENSE") });
+  if (kind === "line-transfer")
+    return transactionForm("TRANSFER", { hint: typeLine("TRANSFER"), transfer: PAY_SIDES });
+  if (kind === "line-quick")
+    return home({ sheet: quickSheet({ type: "transfer", hint: typeLine("TRANSFER") }) });
+  if (kind === "line-in-a-sheet")
+    return transactionForm("TRANSFER", {
+      hint: HELP_LINK,
+      transfer: PAY_SIDES,
+      sheet: TYPES_SHEET,
+    });
+  if (kind === "readback-two-sides")
+    return transactionForm("TRANSFER", {
+      transfer: PAY_SIDES,
+      amount: nf.format(PAY_AMOUNT),
+      readback: TWO_SIDES,
+    });
+  if (kind === "readback-balances")
+    return transactionForm("TRANSFER", {
+      transfer: PAY_SIDES,
+      amount: nf.format(PAY_AMOUNT),
+      readback: NEW_BALANCES,
+    });
+  if (kind === "readback-none")
+    return transactionForm("TRANSFER", {
+      transfer: PAY_SIDES,
+      amount: nf.format(PAY_AMOUNT),
+    });
+  if (kind === "intent-three")
+    return transactionForm("TRANSFER", {
+      transfer: PAY_SIDES,
+      amount: nf.format(PAY_AMOUNT),
+      intents: INTENT_CHIPS(),
+      readback: TWO_SIDES,
+    });
+  if (kind === "intent-one")
+    return transactionForm("TRANSFER", {
+      transfer: PAY_SIDES,
+      amount: nf.format(PAY_AMOUNT),
+      intents: INTENT_CHIPS(true),
+      readback: TWO_SIDES,
+    });
+  if (kind === "intent-none")
+    return debtDetail(VISA, {
+      ...VISA_DETAIL,
+      sheet: paySheet(VISA, "Pay Visa Gold", "Everything owed"),
+    });
+  if (kind === "transfer-category")
+    return transactionForm("TRANSFER", {
+      transfer: PAY_SIDES,
+      amount: nf.format(PAY_AMOUNT),
+      readback: TWO_SIDES,
+      transferCategory: TRANSFER_CAT,
+    });
+  if (kind === "transfer-categories-gone") return categories({ transferTab: false });
+  return debtDetail(CARLOAN, { ...LOAN_DETAIL, sheet: instalmentSheet(kind) });
+};
+
 // Everything below is the preview itself — navigation, search, dates — not the app's design.
 
 // T-72 · what the More tab opens; `withAccounts` false is the discarded avatar variant.
@@ -4946,6 +5094,131 @@ const PAGES = [
           added: "2026-09-17",
           verdict: "discarded",
           asks: "Where a balance adjustment is edited, once Adjustment leaves Add",
+        },
+      ),
+      plate(
+        "transfer-said-in-a-line",
+        "A transfer · said in one line, under the type",
+        "The question this task came from: someone he showed the app to did not understand Transfer. <b>Measured across the whole product on 2026-09-16: not one sentence says what a transfer is for.</b> The only two that mention it are negations — “Transfers between your own accounts are not spending” and “Balance adjustments and transfers never count toward a budget” — plus four labels. And the asymmetry runs backwards: <b>Adjustment, the rarest of the four, is the only one with an explanatory line</b> (`transactions.form.adjustmentHint`). Here the line appears under the segment <b>only when Transfer is selected</b>, and it says the thing plus the three cases: paying a card, a loan instalment, putting money aside. <b>What it costs:</b> two message keys, one line of layout, and 20px on the one form where Transfer is chosen. Nothing else on the screen moves. <b>Recommended.</b>",
+        addMovement("line-transfer"),
+        { added: "2026-09-17", verdict: "open", asks: "How the form says what a transfer is" },
+      ),
+      plate(
+        "transfer-said-in-a-line-on-the-quick-sheet",
+        "A transfer · the same line, on the quick sheet",
+        "<b>Not a fourth answer: the first one, on the other surface it has to reach.</b> Whichever of the three wins binds <b>both</b> places a movement is written — the quick sheet and the full form — because the quick sheet is where a transfer is most likely to be recorded in a hurry, and a rule that lands on one screen and not the other is how the same thing ends up reading two ways a tap apart (T-85 spent a whole review pass on exactly that). Drawn so the cost is visible rather than assumed: the sheet already loses its category row on Transfer, so the line takes room the type had just freed. If the answer is the link instead, the link goes here too.",
+        addMovement("line-quick"),
+        { added: "2026-09-17", verdict: "open", asks: "How the form says what a transfer is" },
+      ),
+      plate(
+        "transfer-said-for-every-type",
+        "A transfer · a line for each of the three",
+        "The same line, given to <b>all three types</b>, so the form always explains the kind you are on — drawn here on <b>Expense</b>, which is the one that has to pay for it. <b>What it gains:</b> symmetry, and the same shape Adjustment already had, so nothing on the screen is a special case. <b>What it costs, and it is the whole argument:</b> Expense is the type the form opens on and the one used every day, and it is also the one nobody has ever misread — so this spends a permanent line of screen, on every visit, explaining what “Expense” means to someone who already knows. Six message keys instead of two. <b>Not recommended</b>, unless the line is wanted as a house rule rather than as the answer to this problem.",
+        addMovement("line-every-type"),
+        { added: "2026-09-17", verdict: "open", asks: "How the form says what a transfer is" },
+      ),
+      plate(
+        "transfer-said-in-a-sheet",
+        "A transfer · explained behind a link",
+        "Neither line on the form: a <b>What do these mean?</b> link under the segment, opening a sheet that explains the three side by side — which is the only place the three are ever compared. <b>What it gains:</b> no permanent cost on a screen used many times a day, room to say more than one line allows, and the comparison is the thing that actually teaches. <b>What it costs:</b> it is behind a tap, so the person who does not know a transfer is not the person who taps a link about it — the confusion this task came from happened in front of the form, not in a help screen. It is also a new sheet, a new control and a fifth thing on a form that already has seven fields. <b>Not recommended on its own</b>, though it works beside the first answer: the line teaches, the link goes deeper.",
+        addMovement("line-in-a-sheet"),
+        { added: "2026-09-17", verdict: "open", asks: "How the form says what a transfer is" },
+      ),
+      plate(
+        "readback-the-two-sides",
+        "Before you save · the two sides, in the app’s own words",
+        "The second half of the problem, and the bigger one: the form asks <b>geometry</b> — <i>From</i> and <i>To</i> — when the person has an <b>intention</b> (“I paid the card”), and the direction is counter-intuitive, because paying a debt means sending money <b>towards</b> the card. Once both accounts are chosen the form reads the consequence back: <b>Bancolombia −$500,000 · Visa Gold $500,000 less owed. Your total balance does not change.</b> The debt side is said in the T-85 vocabulary, not as “+$500,000”, because on a card more is not better. <b>What it costs: nothing but the sentence.</b> It repeats the amount that was just typed and the two names that were just picked — <b>no arithmetic on a balance</b>, so house rule 4 is untouched and it reads identically offline. It is the same sentence T-85 already put in the Pay sheet (`#pay-a-sheet-on-the-account`), which is what makes it one product rather than two. <b>Recommended.</b>",
+        addMovement("readback-two-sides"),
+        { added: "2026-09-17", verdict: "open", asks: "What the form reads back before you save" },
+      ),
+      plate(
+        "readback-with-the-new-balances",
+        "Before you save · what each account will read afterwards",
+        "The stronger version: not the movement but <b>the result</b> — Bancolombia $3,420,500 → $2,920,500, Visa Gold $2,754,100 available → $3,254,100 available. <b>What it gains:</b> it answers the question behind the question (“will I be short?”) without leaving the form, and a direction taken backwards becomes obvious, because the wrong way round makes the card’s availability <i>fall</i>. <b>What it costs, and it is a rule:</b> this is the client doing money arithmetic on a balance. House rule 4 and the front’s `CLAUDE.md` allow exactly one place for that — `lib/local/derive` — and require anything painted from it to be <b>marked as a projection</b>. Offline the balances it starts from are already projections, so this is a projection of a projection, and the line under it has to say so (drawn). It also has to handle the balance it does not have: a device that has not synced that account shows the sentence without its figures. <b>Worth it only if the answer is “yes, tell me what I will be left with”</b> — the session would rather ship the line above first and add this later than tie both to one decision.",
+        addMovement("readback-balances"),
+        { added: "2026-09-17", verdict: "open", asks: "What the form reads back before you save" },
+      ),
+      plate(
+        "readback-nothing",
+        "Before you save · exactly as it is today",
+        "The baseline, drawn so the cheap answer is on the table: two pickers labelled <i>From</i> and <i>To</i>, and nothing says what will happen. <b>What it gains:</b> nothing to build, and the form stays at the height it has. <b>What it costs:</b> it is the state that produced this task. <i>From</i> and <i>To</i> are correct and are not the words in anyone’s head, and the one case where getting it backwards costs real money — paying a card the wrong way round <b>raises</b> the debt and looks like a purchase — is the case the form says least about. Drawn as the record, not as a recommendation.",
+        addMovement("readback-none"),
+        { added: "2026-09-17", verdict: "open", asks: "What the form reads back before you save" },
+      ),
+      plate(
+        "transfer-by-intention-three-chips",
+        "The way in · three intentions above the two accounts",
+        "<b>Pay a card · Pay a loan · Move to savings</b>, above <i>From</i> and <i>To</i>: choosing one fills both sides in the right direction, leaving only the amount. It is the direct answer to “the form asks geometry when the person has an intention”. <b>What it costs, and this is the part to weigh:</b> T-85 already decided the way to pay a debt — <b>a sheet on the account itself</b>, with the direction filled in and the amount preloaded (`#pay-a-sheet-on-the-account`). So two of these three chips are a <b>second</b> way to do the thing that now has a good first one, in a screen you had to open by hand; only <i>Move to savings</i> is new, and nobody gets that one backwards. Each chip is also a rule about which accounts it picks — which card, if there are three? — so it is a picker in disguise, not a chip. And measured in this frame the row <b>does not fit a phone</b>: the third chip is off the right edge and has to be scrolled to. <b>Not recommended</b> while the Pay sheet exists.",
+        addMovement("intent-three"),
+        { added: "2026-09-17", verdict: "open", asks: "Whether Add keeps a way in by intention" },
+      ),
+      plate(
+        "transfer-by-intention-one-chip",
+        "The way in · one chip, for the case that is got backwards",
+        "The middle answer: a single chip, <b>Pay a card or a loan</b>, which opens the account picker showing <b>only</b> the debt accounts and then fills the direction — the rest of the form stays as it is. <b>What it gains:</b> it covers the one mistake that costs money and says nothing about the two nobody gets wrong, so the form grows by one control instead of a row of three. It is also the honest half of the answer above: the chip does not guess which card, it asks. <b>What it costs:</b> it still duplicates T-85’s Pay sheet, one screen further away, and someone who arrives here already chose to use the long form. <b>Recommended only if the answer to “does Add need a way in at all” is yes</b>; otherwise the plate beside this one is the answer.",
+        addMovement("intent-one"),
+        { added: "2026-09-17", verdict: "open", asks: "Whether Add keeps a way in by intention" },
+      ),
+      plate(
+        "transfer-by-intention-none",
+        "The way in · the one T-85 already built",
+        "<b>No shortcut in Add at all</b>, because the intention already has a home: you open the card and press <b>Pay this card</b> — one action, amount preloaded, direction filled in, drawn here as T-85 settled it. The full form goes back to being what it is for: a movement you are describing in detail. <b>What it gains:</b> one way to pay a debt instead of two, nothing new on the form, and the shortcut lives where the question is asked (looking at the card), not where the form is. <b>What it costs:</b> it only works if you think of going to the account first — someone who taps the ＋ and picks Transfer gets no help beyond the line and the read-back, which is why those two questions matter more than this one. <b>Recommended</b>, and the session would spend the room on the sentence instead.",
+        addMovement("intent-none"),
+        { added: "2026-09-17", verdict: "open", asks: "Whether Add keeps a way in by intention" },
+      ),
+      plate(
+        "instalment-one-movement",
+        "A loan instalment · one movement, as it works today",
+        "The Car loan: <b>$12,000,000</b> taken, <b>$8,400,000</b> still owed, and an instalment of <b>$420,000</b>, of which about <b>$126,000</b> is interest. Today that is one transfer, and T-85 already noticed the hole — the Pay sheet’s <i>Everything owed</i> preset is the rare case, the instalment is the normal one, so the preset row gains <b>The instalment</b>. <b>What it gains:</b> nothing to build beyond that chip, one movement per payment, and the balances are right. <b>What it costs, measured:</b> the loan drops by the whole $420,000 when only <b>$294,000</b> of it paid the loan down, so the bar that says <i>what is paid</i> runs ahead of the truth by the interest, every month, for the life of the loan. And the $126,000 you actually spent <b>never appears in Stats</b>: a transfer is not spending, so “where the money went” is short by a third of every instalment. On a car loan that is the single largest expense of the month, invisible.",
+        addMovement("one"),
+        {
+          added: "2026-09-17",
+          verdict: "open",
+          asks: "How a loan instalment records its interest",
+        },
+      ),
+      plate(
+        "instalment-two-movements",
+        "A loan instalment · the sheet writes the transfer and the interest",
+        "The sheet gains one optional field, <b>Of which interest</b>, and writes <b>two movements</b> in one action: a TRANSFER of $294,000 that lowers the loan, and an EXPENSE of $126,000 against an <i>Interest</i> category. Both rows are shown before you press Pay. <b>What it gains:</b> every figure ends up true — the loan falls by what was actually paid off, the bar stops running ahead, and the interest lands in Stats as the spending it is. <b>Nothing new is needed from the server:</b> both movements are shapes that already exist, and the offline queue already classifies them. <b>What it costs, and it is real.</b> The two are <b>not atomic</b>: `POST /sync` applies its operations one at a time through the same services (`SyncBatchService.applyOne`), so offline one can be applied and the other rejected, leaving a payment with no interest or an interest with no payment. The sheet has to say what happened when that occurs, and editing or deleting one of the pair afterwards leaves the other behind. There is also <b>no interest category</b>: none of the ten seeded categories is one (`src/shared/defaultCategories.ts`), so either the sheet creates it the first time or the seed gains an eleventh — that part is a backend task, T-87. <b>Recommended</b>, and the pairing problem stated out loud rather than hidden.",
+        addMovement("two"),
+        {
+          added: "2026-09-17",
+          verdict: "open",
+          asks: "How a loan instalment records its interest",
+        },
+      ),
+      plate(
+        "instalment-interest-inside-the-movement",
+        "A loan instalment · one movement that carries its interest",
+        "The same field on the sheet, but <b>one</b> movement: the transaction carries the interest inside it and the server splits it — the loan falls by the principal, and Stats counts the interest as spending by reading that field. <b>What it gains:</b> the pairing problem disappears — one write, one row in the list, one thing to edit or delete, and offline it either lands or it does not. Conceptually it is also right: an instalment <i>is</i> one event. <b>What it costs, and it is the largest bill in this task.</b> A transaction that is partly a transfer and partly spending is <b>a new shape in the domain</b>, not a new field: `Transaction` gains it, the OpenAPI gains it and the front regenerates from that (T-87); every figure that answers “how much was spent” has to learn to add it — the server’s `/stats/spending`, the offline `lib/local/derive/spending.ts`, and the <b>parity fixtures</b> that prove the two agree; budgets have to decide whether it counts; and the list, the detail and the review inbox all have to show a movement whose amount is not the amount that left the account. Every one of those is a place the two sides can drift apart, which is exactly what house rule 4 exists to prevent. <b>Not recommended now</b> — it is the better shape and a task of its own, and the answer beside it buys the same truth today.",
+        addMovement("field"),
+        {
+          added: "2026-09-17",
+          verdict: "open",
+          asks: "How a loan instalment records its interest",
+        },
+      ),
+      plate(
+        "transfer-categories-used",
+        "Categories of type Transfer · finally choosable",
+        "Measured, and it is worse than the task assumed: <b>every user is seeded with two Transfer categories</b> — “Transfer” and “Credit Card Payment” (`src/shared/defaultCategories.ts:74-88`) — the Categories screen counts them in its own tab (<i>Transfer · 2</i>), and <b>no form in the app can ever attach one to anything</b>: `categoryAllowed()` returns true only for Expense and Income (`features/transactions/form.ts:64`), and `withType()` nulls the category on any other type. They are ten per cent of what a new account starts with, and they are furniture. Here the transfer form gains an <b>optional</b> category, filtered to that type, exactly as expense and income already are. <b>What it costs: nothing on the server.</b> It already accepts it — `TransactionService` refuses a category only when its type and the transaction’s differ (`TransactionService.ts:407`) — and `/stats/spending` already groups transfers. So it is one field on the form, one on the Pay sheet, and the two names a user is given become the two things they actually do. <b>Recommended</b>, and it is what lets “Card payment” and a loan instalment tell themselves apart in the list a year from now.",
+        addMovement("transfer-category"),
+        {
+          added: "2026-09-17",
+          verdict: "open",
+          asks: "What happens to the categories of type Transfer",
+        },
+      ),
+      plate(
+        "transfer-categories-dropped",
+        "Categories of type Transfer · taken off the screen",
+        "The other way to stop the contradiction: <b>the Transfer tab leaves Categories</b> — drawn here, two tabs instead of three — the two seeded ones stop being created for new users, and the type stays in the contract only so that anything already stored keeps working. <b>What it gains:</b> the product stops offering something it cannot use, which is a defect either way, and it costs less than the answer beside it — no new field on two forms, and one fewer thing to explain. <b>What it costs:</b> it throws away a real piece of information — by this time next year the transfer list is a column of “Bancolombia → Visa Gold” with nothing saying which were card payments and which were savings — and it is a <b>data decision, not a UI one</b>: existing users already have the two categories, possibly renamed, and a tab that disappears takes them out of sight without deleting them. <b>Not recommended</b>, but it is the honest cheap answer and it belongs on the table.",
+        addMovement("transfer-categories-gone"),
+        {
+          added: "2026-09-17",
+          verdict: "open",
+          asks: "What happens to the categories of type Transfer",
         },
       ),
     ],
