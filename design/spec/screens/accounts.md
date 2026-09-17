@@ -5,7 +5,8 @@
 ## List (`#list`)
 
 A summary card (the total balance of active accounts, active and archived counts, card debt as the sum
-of negative balances of CARD, OVERDRAFT and LOAN), then an `acct-grid` of one, two or three columns.
+of negative balances of CARD, OVERDRAFT and LOAN — **this stat is pending T-85**, which replaces it with
+the same split Home takes), then an `acct-grid` of one, two or three columns.
 Each card carries a colour stripe, the type tile (a fixed icon per `type`), the name, the Main badge,
 the balance and the type. A folded "Archived (n)" section asks for `includeArchived=true` when opened;
 the contents of its cards sit at 60% with a badge, and the card's own box stays solid so the
@@ -71,14 +72,28 @@ was written. So the sign is not up for decision — changing it would rewrite wh
 already recorded means. What is missing is a limit to measure against, a reading that says _debt_ in
 words rather than in a minus sign, a total that shows its two halves, and a way to pay.
 
-**The four questions this page owns**, each drawn two or three ways:
+**The four questions this page owns.** A plate marked "Waiting on you" is an answer to choose; one
+marked "Not chosen" is drawn as the baseline the others are read against, ruled out by his own sentence
+or by the task card and not by anyone's taste, and it stays a word away from being chosen anyway.
 
-| Question                                             | Plates                                                                                              |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| What a card or a loan leads with                     | `#debt-owed-first`, `#debt-available-first`, `#debt-signed-balance`                                 |
-| What a debt account shows before you give it a limit | `#debt-no-limit-quiet`, `#debt-no-limit-prompt`                                                     |
-| What an account gains besides its balance            | `#account-fields-a-credit-limit`, `#account-fields-the-amount-borrowed`, `#account-fields-per-type` |
-| What the Pay button opens                            | `#pay-a-sheet-on-the-account`, `#pay-the-full-transfer-form`                                        |
+| Question                                             | Waiting on you                                                          | Drawn, not chosen          |
+| ---------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------- |
+| What a card or a loan leads with                     | `#debt-owed-first`, `#debt-available-first`                             | `#debt-signed-balance`     |
+| What a debt account shows before you give it a limit | `#debt-no-limit-quiet`, `#debt-no-limit-prompt`                         | —                          |
+| What an account gains besides its balance            | `#account-fields-a-credit-limit`, `#account-fields-the-amount-borrowed` | `#account-fields-per-type` |
+| What the Pay button opens                            | `#pay-a-sheet-on-the-account`, `#pay-the-full-transfer-form`            | —                          |
+
+**Four drafts go with them**, in `preview/in-review.html`: `#account-detail-as-debt` (the card's own
+screen with the whole reading), `#loan-detail-and-pay` (the loan half of "pagar la tarjeta o el
+préstamo", where the full-balance preset is the one part that reads wrong and the instalment is where
+T-86's capital/interest split lands), `#debt-in-credit` and `#account-create-a-debt`.
+
+**Two rules the drafts settle, because they are not choices.** A debt account whose balance is zero or
+above **owes nothing**: it reads `$0 owed` with an empty bar and the money on it named as the account
+holder's own. That covers an overdraft in its ordinary state, an overpaid card, and — until T-90 runs —
+**every card in the product**. And on a CARD, an OVERDRAFT or a LOAN the create form's amount field asks
+_How much do you owe on it right now?_ rather than _Current balance_, entered positive and stored as the
+debt: that field is where the habit T-90 has to repair actually starts.
 
 Every plate adds a **Car loan** to the four accounts this preview has always drawn, because a card and
 a loan are not read the same way and one screen has to hold both: $12,504,500 across the three accounts
@@ -86,7 +101,13 @@ that hold money, $9,645,900 owed between the card and the loan, so the total is 
 carries what its answer costs. Two couplings are worth knowing before choosing: the loan's second line
 says _paid of $12,000,000_ only if the form gains the amount borrowed, and _paid since you added it_
 otherwise; and "what you have left" has no meaning on a loan, so choosing it splits the three debt
-types into two readings.
+types into two readings. The bar means the same thing on both kinds — **the debt that is left** — and
+the line under it is the part that is not owed, which is why a card says _left_ and a loan says _paid_.
+
+**One thing the reading does not fix, and it is worth seeing before choosing.** Inside the account the
+movements keep the account's point of view while the headline takes the owner's: an expense on the card
+prints as `−$18,400` under a headline that reads _$1,245,900 owed_, and that expense _raises_ what is
+owed. It is drawn that way in `#account-detail-as-debt`.
 
 **Adjust balance is where a balance adjustment is made**, once Adjustment leaves the Add form — see
 [add.md](add.md). Where an existing one is _edited_ is the fifth question, drawn on the same page.

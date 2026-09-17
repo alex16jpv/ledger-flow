@@ -541,7 +541,10 @@ ${bar}${sheetHead}${seg}${amount}${cats}${accounts}${QUICK_NOTE}${extra}${QUICK_
 </div>${over}</div>`;
 };
 
-const transactionForm = (kind = "EXPENSE", { adjustment = true } = {}) => {
+const transactionForm = (
+  kind = "EXPENSE",
+  { adjustment = true, transfer = null, amount = "18,400", readback = "", description = null } = {},
+) => {
   const seg = [
     ["EXPENSE", "Expense", ""],
     ["INCOME", "Income", "income"],
@@ -554,10 +557,20 @@ const transactionForm = (kind = "EXPENSE", { adjustment = true } = {}) => {
   let accounts;
   let cat;
   if (kind == "TRANSFER") {
+    const [fromIcon, fromColor, fromValue] = transfer?.from ?? [
+      "landmark",
+      "BLUE",
+      "Bancolombia · $3,420,500",
+    ];
+    const [toIcon, toColor, toValue] = transfer?.to ?? [
+      "piggy-bank",
+      "GREEN",
+      "Savings · $8,900,000",
+    ];
     accounts = `<div class="stack-sm">
-<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">From</span><span class="val">Bancolombia · $3,420,500</span></span>${iconSvg("chevron-down", "sm")}</button>
+<button class="picker">${tile(fromIcon, fromColor, "sm")}<span class="body"><span class="lbl">From</span><span class="val">${fromValue}</span></span>${iconSvg("chevron-down", "sm")}</button>
 <div style="display:flex;justify-content:center;margin:-4px 0"><button class="btn secondary icon-only sm round" aria-label="Swap">${iconSvg("arrow-left-right", "sm")}</button></div>
-<button class="picker">${tile("piggy-bank", "GREEN", "sm")}<span class="body"><span class="lbl">To</span><span class="val">Savings · $8,900,000</span></span>${iconSvg("chevron-down", "sm")}</button></div>`;
+<button class="picker">${tile(toIcon, toColor, "sm")}<span class="body"><span class="lbl">To</span><span class="val">${toValue}</span></span>${iconSvg("chevron-down", "sm")}</button></div>`;
     cat = "";
   } else {
     accounts = `<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">Account</span><span class="val">Bancolombia · $3,420,500</span></span>${iconSvg("chevron-down", "sm")}</button>`;
@@ -567,13 +580,13 @@ const transactionForm = (kind = "EXPENSE", { adjustment = true } = {}) => {
   return `<div class="shell">${sidebar("")}<main class="main"><div class="page" style="max-width:640px">
 <header class="page-header"><button class="btn ghost icon-only round" aria-label="Back">${iconSvg("arrow-left")}</button><h1 class="h2" style="flex:1;text-align:center">New transaction</h1><span style="width:40px"></span></header>
 <div class="segment">${seg}</div>
-<div class="amount-input" style="padding-top:8px"><span class="cur">$</span><span class="num">18,400</span></div>
+<div class="amount-input" style="padding-top:8px"><span class="cur">$</span><span class="num">${amount}</span></div>
 ${cat}
-${accounts}
+${accounts}${readback}
 <div class="input-group">
 <div class="field"><span class="label">Date</span><div class="input">${iconSvg("calendar", "sm")}<span class="value">Today</span></div></div>
 <div class="field"><span class="label">Time</span><div class="input">${iconSvg("clock", "sm")}<span class="value">18:10</span></div></div></div>
-<div class="field"><span class="label">Description <span class="opt">optional</span></span><div class="input focus"><span class="value">Uber to work</span></div></div>
+<div class="field"><span class="label">Description <span class="opt">optional</span></span><div class="input${description === null ? " focus" : ""}">${description === null ? '<span class="value">Uber to work</span>' : `<span class="value">${description}</span>`}</div></div>
 <div class="field"><span class="label">Tags <span class="opt">optional</span></span><div class="input" style="height:auto;min-height:48px;padding:8px 12px;flex-wrap:wrap"><span class="tag">work</span><span class="placeholder">Add…</span></div>
 <div class="chips" style="margin-top:2px"><button class="chip" style="height:28px">#travel</button><button class="chip" style="height:28px">#monthly</button><button class="chip" style="height:28px">#latte</button></div></div>
 <div class="field"><span class="label">Note <span class="opt">optional</span></span><div class="input textarea"><span class="placeholder">Anything you want to remember about this one</span></div></div>
@@ -1196,13 +1209,11 @@ const accountForm = ({ edit = false, sheet = false } = {}) => {
   });
 };
 
-// T-85 · the accounts that are debt. One sample set for every variant: the baseline four accounts
-// plus a loan, so one screen shows both kinds of debt at once.
+// T-85 · one sample set for every debt variant: the baseline four accounts plus a loan.
 const CARD_LIMIT = 4000000;
 const CARD_OWED = 1245900;
 const LOAN_TAKEN = 12000000;
 const LOAN_OWED = 8400000;
-const LOAN_PAID = LOAN_TAKEN - LOAN_OWED;
 const YOURS = 3420500 + 184000 + 8900000;
 const OWED = CARD_OWED + LOAN_OWED;
 const NET = YOURS - OWED;
@@ -1225,67 +1236,102 @@ const CARLOAN = {
 const meter = (value) =>
   `<div class="progress thin"><span class="fill" style="width:${value}%"></span></div>`;
 
+// The bar is always the debt that is left; the line under it is always what is not owed.
 const debtFace = (kind, a) => {
   const label = ACCT_TYPE_LABEL[a.typ];
-  const used = a.limit ? round((a.owed / a.limit) * 100) : round((LOAN_PAID / a.taken) * 100);
-  const gauge = a.limit
+  const ceiling = a.limit ?? a.taken;
+  const used = round((a.owed / ceiling) * 100);
+  const spare = a.limit
     ? `${moneyText(a.limit - a.owed)} left of ${moneyText(a.limit)}`
     : `${moneyText(a.taken - a.owed)} paid of ${moneyText(a.taken)}`;
+  if (a.owed <= 0)
+    return {
+      lead: money(0),
+      type: `owed · ${label}`,
+      foot: `${moneyText(-a.owed)} of your own money sitting on it`,
+      used: 0,
+    };
   if (kind === "available" && a.limit)
     return {
-      lead: `${money(a.limit - a.owed)}`,
+      lead: money(a.limit - a.owed),
       type: `available · ${label}`,
       foot: `${moneyText(a.owed)} owed of ${moneyText(a.limit)}`,
       used,
     };
-  if (kind === "signed") return { lead: money(a.owed, "−"), type: label, foot: gauge, used };
-  return { lead: money(a.owed), type: `owed · ${label}`, foot: gauge, used };
+  if (kind === "signed") return { lead: money(a.owed, "−"), type: label, foot: spare, used };
+  return { lead: money(a.owed), type: `owed · ${label}`, foot: spare, used };
 };
 
-const debtCard = (kind, a, dot = false) => {
-  const face = debtFace(kind, a);
+const acctCardFace = (a, { dot = false, badge = "", face = null, extra = "" } = {}) => {
   const mark = dot ? '<span class="dot"></span>' : tile(ACCT_TYPE_ICON[a.typ], a.color, "sm");
-  return `<a class="account-card color-${a.color}" href="#"><div class="top">${mark}<span class="name truncate">${a.name}</span></div>
-<div><div class="amount-lg amount">${face.lead}</div><div class="type">${face.type}</div></div>
-<div class="stack-sm" style="gap:5px">${meter(face.used)}<span class="xs faint">${face.foot}</span></div></a>`;
+  const gauge = face?.foot
+    ? `\n<div class="stack-sm" style="gap:5px">${meter(face.used)}<span class="xs faint">${face.foot}</span></div>`
+    : "";
+  const body = face
+    ? `<div><div class="amount-lg amount">${face.lead}</div><div class="type">${face.type}</div></div>${gauge}`
+    : `<div><div class="amount-lg amount">${money(a.balance)}</div><div class="type">${ACCT_TYPE_LABEL[a.typ]}</div></div>`;
+  const head = `<div class="top">${mark}<span class="name truncate">${a.name}</span>${badge}</div>`;
+  if (extra === "") return `<a class="account-card color-${a.color}" href="#">${head}${body}</a>`;
+  return `<div class="account-card color-${a.color}"><a href="#" class="stretch" aria-label="${a.name}"></a>${head}${body}${extra}</div>`;
 };
 
-const holdCard = (name, typ, color, bal, isDefault = false) =>
-  `<a class="account-card color-${color}" href="#"><div class="top">${tile(ACCT_TYPE_ICON[typ], color, "sm")}<span class="name truncate">${name}</span>${isDefault ? `<span class="badge brand">${iconSvg("star")}Main</span>` : ""}</div>
-<div><div class="amount-lg amount">${money(bal)}</div><div class="type">${ACCT_TYPE_LABEL[typ]}</div></div></a>`;
+const debtCard = (kind, a, dot = false) => acctCardFace(a, { dot, face: debtFace(kind, a) });
 
-const debtSummary = () =>
-  `<div class="card" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div class="stat"><span class="k">Total balance</span><span class="amount-hero" style="font-size:32px">${money(NET)}</span><span class="small faint">5 active accounts · 1 archived</span></div>
-<div class="stat" style="text-align:right;align-items:flex-end;gap:2px"><span class="small faint">${moneyText(YOURS)} yours</span><span class="small faint">${moneyText(OWED)} owed</span></div></div>`;
+const MAIN_BADGE = `<span class="badge brand">${iconSvg("star")}Main</span>`;
 
-const accountsScreen = (cards) =>
-  screen(`${debtSummary()}\n<div class="acct-grid">${cards}</div>`, {
+const holdCard = (name, typ, color, balance, isDefault = false) =>
+  acctCardFace({ name, typ, color, balance }, { badge: isDefault ? MAIN_BADGE : "" });
+
+const debtSummary = (yours = YOURS, owed = OWED, active = 5) =>
+  `<div class="card" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div class="stat"><span class="k">Total balance</span><span class="amount-hero" style="font-size:32px">${money(yours - owed)}</span><span class="small faint">${active} active accounts · 1 archived</span></div>
+<div class="stat" style="text-align:right;align-items:flex-end;gap:2px"><span class="small faint">${moneyText(yours)} yours</span><span class="small faint">${moneyText(owed)} owed</span></div></div>`;
+
+const ARCHIVED_FOLD = `<button class="card hstack" style="justify-content:space-between;cursor:pointer;text-align:left;padding:12px 16px"><span class="hstack">${iconSvg("archive")}<span style="font-weight:500">Archived</span><span class="badge">1</span></span>${iconSvg("chevron-down", "sm")}</button>
+<div class="acct-grid">${accountCard("Nequi", "OTHER", "PINK", 0, false, false, true)}</div>`;
+
+const accountsScreen = (cards, summary = debtSummary()) =>
+  screen(`${summary}\n<div class="acct-grid">${cards}</div>\n${ARCHIVED_FOLD}`, {
     tab: "cuentas",
     side: "cuentas",
     title: "Accounts",
     actions: `<button class="btn primary desktop-only">${iconSvg("plus", "sm")}New account</button><button class="btn secondary icon-only round mobile-only" aria-label="New account">${iconSvg("plus")}</button>`,
   });
 
-const accountsDebt = (kind) =>
-  accountsScreen(
-    `${holdCard("Bancolombia", "ACCOUNT", "BLUE", 3420500, true)}${holdCard("Cash", "CASH", "GRAY", 184000)}${debtCard(kind, VISA)}${debtCard(kind, CARLOAN)}${holdCard("Savings", "SAVINGS", "GREEN", 8900000)}`,
-  );
+const withDebt = (visa, loan) =>
+  `${holdCard("Bancolombia", "ACCOUNT", "BLUE", 3420500, true)}${holdCard("Cash", "CASH", "GRAY", 184000)}${visa}${loan}${holdCard("Savings", "SAVINGS", "GREEN", 8900000)}`;
 
-// The state every card is in the day this ships: a debt with no limit written down yet.
+const accountsDebt = (kind) =>
+  accountsScreen(withDebt(debtCard(kind, VISA), debtCard(kind, CARLOAN)));
+
 const noLimitYet = (kind) => {
-  const head = `<div class="top">${tile("credit-card", "PURPLE", "sm")}<span class="name truncate">Visa Gold</span></div>
-<div><div class="amount-lg amount">${money(CARD_OWED)}</div><div class="type">owed · Credit card</div></div>`;
-  const card =
-    kind === "prompt"
-      ? `<div class="account-card color-PURPLE">${head}<button class="btn secondary sm" style="align-self:flex-start">${iconSvg("gauge", "sm")}Set a credit limit</button></div>`
-      : `<a class="account-card color-PURPLE" href="#">${head}</a>`;
+  const face = { lead: money(CARD_OWED), type: "owed · Credit card", foot: null, used: 0 };
+  const card = acctCardFace(VISA, {
+    face,
+    extra:
+      kind === "prompt"
+        ? `<button class="btn secondary sm" style="align-self:flex-start;position:relative">${iconSvg("target", "sm")}Set a credit limit</button>`
+        : "",
+  });
+  return accountsScreen(withDebt(card, debtCard("owed", CARLOAN)));
+};
+
+const debtInCredit = () => {
+  const overpaid = { ...VISA, owed: -CARD_LIMIT };
+  const overdraft = {
+    name: "Overdraft",
+    typ: "OVERDRAFT",
+    color: "TEAL",
+    owed: -320000,
+    limit: 2000000,
+  };
   return accountsScreen(
-    `${holdCard("Bancolombia", "ACCOUNT", "BLUE", 3420500, true)}${holdCard("Cash", "CASH", "GRAY", 184000)}${card}${debtCard("owed", CARLOAN)}${holdCard("Savings", "SAVINGS", "GREEN", 8900000)}`,
+    `${holdCard("Bancolombia", "ACCOUNT", "BLUE", 3420500, true)}${debtCard("owed", overpaid)}${debtCard("owed", overdraft)}${holdCard("Savings", "SAVINGS", "GREEN", 8900000)}`,
+    debtSummary(3420500 + CARD_LIMIT + 320000 + 8900000, 0, 4),
   );
 };
 
-const amountField = (label, value, help, opt = true) =>
-  `<div class="field"><span class="label">${label}${opt ? ' <span class="opt">optional</span>' : ""}</span><div class="input"><span class="cur">$</span><span class="value" style="flex:1">${nf.format(value)}</span></div><span class="help">${help}</span></div>`;
+const amountField = (label, value, help, o = {}) =>
+  `<div class="field"><span class="label">${label}${o.required ? "" : ' <span class="opt">optional</span>'}</span><div class="input"><span class="cur">$</span><span class="value" style="flex:1">${nf.format(value)}</span></div><span class="help">${help}</span></div>`;
 
 const accountFields = (kind) => {
   const card = kind === "limit";
@@ -1320,7 +1366,7 @@ const accountFields = (kind) => {
 <div class="field"><span class="label">Type</span>${accountTypePicker(typ, color)}</div>
 ${extra}
 <div class="field"><span class="label">Color</span>${swatches(color)}</div>
-<div class="card hstack color-${color}" style="gap:12px">${tile(ACCT_TYPE_ICON[typ], color)}<span class="body" style="flex:1;display:flex;flex-direction:column"><span style="font-weight:500">${name}</span><span class="small faint">${ACCT_TYPE_LABEL[typ]} · preview</span></span><span class="body" style="flex:0;align-items:flex-end;display:flex;flex-direction:column"><span class="amount-lg amount">${money(owed)}</span><span class="xs faint">owed</span></span></div>
+${acctCardFace({ name, typ, color }, { face: { lead: money(owed), type: "owed · preview", foot: null } })}
 <button class="btn primary lg block">Save changes</button>`;
   return screen(body, {
     tab: "cuentas",
@@ -1331,15 +1377,51 @@ ${extra}
   });
 };
 
-const debtHero = () =>
-  `<div class="card color-PURPLE stack-sm" style="gap:6px;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--f)"></span>
-<div class="hstack" style="justify-content:space-between">${tile("credit-card", "PURPLE")}</div>
-<span class="eyebrow" style="margin-top:6px">Credit card</span><span class="h2">Visa Gold</span>
-<span class="amount-hero" style="font-size:36px">${money(CARD_OWED)}</span><span class="small muted">owed</span>
-<div class="stack-sm" style="gap:5px;margin-top:6px">${meter(round((CARD_OWED / CARD_LIMIT) * 100))}<span class="small faint">${moneyText(CARD_LIMIT - CARD_OWED)} left of ${moneyText(CARD_LIMIT)}</span></div></div>`;
+const createDebtAccount = () => {
+  const body = `${field("Name", "Visa Gold")}
+<div class="field"><span class="label">Type</span>${accountTypePicker("CARD", "PURPLE")}</div>
+${amountField("How much do you owe on it right now?", CARD_OWED, "What you still have to pay back, not your credit limit. Nothing owed yet? Leave it at zero.", { required: true })}
+${amountField("Credit limit", CARD_LIMIT, "Only so the app can tell you how much you have left.")}
+<div class="field"><span class="label">Color</span>${swatches("PURPLE")}</div>
+${acctCardFace({ name: "Visa Gold", typ: "CARD", color: "PURPLE" }, { face: debtFace("owed", VISA) })}
+<button class="btn primary lg block">Create account</button>`;
+  return screen(body, {
+    tab: "cuentas",
+    side: "cuentas",
+    back: true,
+    title: "New account",
+    narrow: true,
+  });
+};
 
-const debtActions = () =>
-  `<button class="btn primary lg block">${iconSvg("arrow-left-right", "sm")}Pay this card</button>
+const heroCard = (o) => {
+  const gauge = o.gauge
+    ? `<div class="stack-sm" style="gap:5px;margin-top:6px">${meter(o.gauge.used)}<span class="small faint">${o.gauge.foot}</span></div>`
+    : "";
+  const under = o.under ? `<span class="small muted">${o.under}</span>` : "";
+  return `<div class="card color-${o.color} stack-sm" style="gap:6px;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--f)"></span>
+<div class="hstack" style="justify-content:space-between">${tile(o.icon, o.color)}${o.badge ?? ""}</div>
+<span class="eyebrow" style="margin-top:6px">${o.eyebrow}</span><span class="h2">${o.name}</span>
+<span class="amount-hero" style="font-size:36px">${o.lead}</span>${under}${gauge}
+<span class="small muted">${o.meta}</span></div>`;
+};
+
+const debtHero = (a, opened, since) => {
+  const face = debtFace("owed", a);
+  return heroCard({
+    color: a.color,
+    icon: ACCT_TYPE_ICON[a.typ],
+    eyebrow: ACCT_TYPE_LABEL[a.typ],
+    name: a.name,
+    lead: money(a.owed),
+    under: "owed",
+    gauge: { used: face.used, foot: face.foot },
+    meta: `Opening balance <b class="amount">${money(opened, "−")}</b> · created ${since} · COP`,
+  });
+};
+
+const debtActions = (what) =>
+  `<button class="btn primary lg block">${iconSvg("arrow-left-right", "sm")}Pay this ${what}</button>
 <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:10px"><button class="btn secondary">${iconSvg("scale", "sm")}Adjust balance</button><button class="btn secondary">${iconSvg("pencil", "sm")}Edit</button><button class="btn secondary">${iconSvg("star", "sm")}Make main</button><button class="btn secondary">${iconSvg("archive", "sm")}Archive</button></div>`;
 
 const cardMovements = () =>
@@ -1350,51 +1432,62 @@ ${row("car", "BLUE", "Uber to work", "18:10", 18400)}
 <div class="day-head"><span>Sep 5</span><span class="amount">${money(600000, "+")}</span></div>
 ${row("repeat", "GRAY", "Bancolombia → Visa Gold", "Payment", 600000, "transfer")}</div>`;
 
-const debtDetail = () =>
-  screen(`${debtHero()}${debtActions()}${cardMovements()}`, {
+const loanMovements = () =>
+  `<div class="section-head"><h3 class="h3">Transactions</h3><a class="link" href="#">Open with filters</a></div>
+<div class="list card flush">
+<div class="day-head"><span>Sep 5</span><span class="amount">${money(420000, "+")}</span></div>
+${row("repeat", "GRAY", "Bancolombia → Car loan", "Payment", 420000, "transfer")}
+<div class="day-head"><span>Aug 5</span><span class="amount">${money(420000, "+")}</span></div>
+${row("repeat", "GRAY", "Bancolombia → Car loan", "Payment", 420000, "transfer")}</div>`;
+
+const paySheet = (a, title, preset) =>
+  sheetWrap(
+    `<div class="stack-sm"><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">${nf.format(a.owed)}</span><span class="caret"></span></div>
+<div class="chips" style="justify-content:center"><button class="chip selected">${preset}</button><button class="chip">Another amount</button></div></div>
+<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">From</span><span class="val">Bancolombia · $3,420,500</span></span>${iconSvg("chevron-down", "sm")}</button>
+<div class="alert neutral">${iconSvg("arrow-left-right")}<span>Bancolombia <b class="amount">${money(a.owed, "−")}</b> · ${a.name} goes to <b>$0 owed</b>. Your total balance does not change.</span></div>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Pay</button></div>`,
+    title,
+  );
+
+const debtDetail = (a, o = {}) =>
+  screen(`${debtHero(a, o.opened, o.since)}${debtActions(o.what)}${o.movements}`, {
     tab: "cuentas",
     side: "cuentas",
     back: true,
-    title: "Visa Gold",
+    title: a.name,
     narrow: true,
     actions: `<button class="btn ghost icon-only round" aria-label="More">${iconSvg("ellipsis")}</button>`,
+    sheet: o.sheet ?? "",
   });
 
+const VISA_DETAIL = { opened: 0, since: "Mar 12, 2026", what: "card", movements: cardMovements() };
+const LOAN_DETAIL = {
+  opened: LOAN_TAKEN,
+  since: "Jan 8, 2026",
+  what: "loan",
+  movements: loanMovements(),
+};
+
 const payFlow = (kind) => {
-  if (kind === "form") {
-    const body = `<div class="segment"><button>Expense</button><button class="income">Income</button><button class="transfer" aria-pressed="true">Transfer</button></div>
-<div class="card" style="padding:0"><div class="amount-input"><span class="cur">$</span><span class="num">1,245,900</span><span class="caret"></span></div></div>
-${field("From", "Bancolombia · Main", null, { icon: "landmark" })}
-<div class="hstack" style="justify-content:center"><button class="btn secondary icon-only round" aria-label="Swap">${iconSvg("arrow-up-down", "sm")}</button></div>
-${field("To", "Visa Gold · Credit card", null, { icon: "credit-card" })}
-<div class="alert neutral">${iconSvg("info")}<span>Bancolombia <b class="amount">${money(1245900, "−")}</b> · Visa Gold goes to <b>$0 owed</b>. Your total balance does not change.</span></div>
-${field("Date", "Today · 18:10", null, { icon: "calendar" })}
-${field("Description", null, "What it was for", { icon: "pencil", opt: true })}
-<button class="btn primary lg block">Save transaction</button>`;
-    return screen(body, {
-      tab: "mov",
-      side: "mov",
-      back: true,
-      title: "New transaction",
-      narrow: true,
+  if (kind === "form")
+    return transactionForm("TRANSFER", {
+      transfer: {
+        from: ["landmark", "BLUE", "Bancolombia · $3,420,500"],
+        to: ["credit-card", "PURPLE", "Visa Gold · $1,245,900 owed"],
+      },
+      amount: nf.format(CARD_OWED),
+      readback: `\n<div class="alert neutral">${iconSvg("info")}<span>Bancolombia <b class="amount">${money(CARD_OWED, "−")}</b> · Visa Gold goes to <b>$0 owed</b>. Your total balance does not change.</span></div>`,
+      description: "Visa Gold payment",
     });
-  }
-  const sheet = sheetWrap(
-    `<div class="stack-sm"><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">1,245,900</span><span class="caret"></span></div>
-<div class="chips" style="justify-content:center"><button class="chip selected">Everything owed</button><button class="chip">Another amount</button></div></div>
-${field("From", "Bancolombia · Main", null, { icon: "landmark" })}
-<div class="alert neutral">${iconSvg("arrow-left-right")}<span>Bancolombia <b class="amount">${money(1245900, "−")}</b> · Visa Gold goes to <b>$0 owed</b>. Your total balance does not change.</span></div>
-<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Pay</button></div>`,
-    "Pay Visa Gold",
-  );
-  return screen(`${debtHero()}${debtActions()}${cardMovements()}`, {
-    tab: "cuentas",
-    side: "cuentas",
-    back: true,
-    title: "Visa Gold",
-    narrow: true,
-    actions: `<button class="btn ghost icon-only round" aria-label="More">${iconSvg("ellipsis")}</button>`,
-    sheet,
+  if (kind === "loan")
+    return debtDetail(CARLOAN, {
+      ...LOAN_DETAIL,
+      sheet: paySheet(CARLOAN, "Pay Car loan", "Everything owed"),
+    });
+  return debtDetail(VISA, {
+    ...VISA_DETAIL,
+    sheet: paySheet(VISA, "Pay Visa Gold", "Everything owed"),
   });
 };
 
@@ -1402,7 +1495,7 @@ const adjustmentEdit = (kind) => {
   if (kind === "form") {
     const body = `<div class="segment"><button disabled>Expense</button><button class="income" disabled>Income</button><button class="transfer" disabled>Transfer</button><button aria-pressed="true">Adjustment</button></div>
 <span class="help">An adjustment cannot become another kind of transaction. Delete it and record the right one.</span>
-<div class="card" style="padding:0"><div class="amount-input"><span class="cur">$</span><span class="num">12,300</span><span class="caret"></span></div></div>
+<div class="card" style="padding:0"><div class="amount-input"><span class="cur">$</span><span class="num">12,300</span></div></div>
 <div class="segment"><button>Increase</button><button aria-pressed="true">Decrease</button></div>
 ${field("Account", "Bancolombia · Main", null, { icon: "landmark" })}
 ${field("Date", "Sep 21 · 09:00", null, { icon: "calendar" })}
@@ -1419,15 +1512,20 @@ ${field("Note", "August bank fee", null, { icon: "notebook-pen", opt: true })}
   const sheet = sheetWrap(
     `<div class="stack-sm"><div class="segment"><button>Increase</button><button aria-pressed="true">Decrease</button></div>
 <div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">12,300</span><span class="caret"></span></div></div>
-<div class="alert neutral" style="align-items:center">${iconSvg("scale")}<span>Bancolombia goes from <b class="amount">${money(3420500)}</b> to <b class="amount">${money(3408200)}</b>. It does not count as spending or in budgets.</span></div>
+<div class="alert neutral" style="align-items:center">${iconSvg("scale")}<span>Recorded on <b>Sep 21</b>, it took <b class="amount">${money(12300, "−")}</b> off Bancolombia. Changing the amount rewrites that difference, not today's balance.</span></div>
 ${field("Note", "August bank fee", null, { opt: true })}
 <div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">Delete</button><button class="btn primary lg" style="flex:1.4">Save changes</button></div>`,
     "Edit adjustment",
   );
-  const body = `<div class="card color-BLUE stack-sm" style="gap:6px;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--f)"></span>
-<div class="hstack" style="justify-content:space-between">${tile("landmark", "BLUE")}<span class="badge brand">${iconSvg("star")}Main</span></div>
-<span class="eyebrow" style="margin-top:6px">Bank account</span><span class="h2">Bancolombia</span>
-<span class="amount-hero" style="font-size:36px">${money(3408200)}</span></div>
+  const body = `${heroCard({
+    color: "BLUE",
+    icon: "landmark",
+    eyebrow: "Bank account",
+    name: "Bancolombia",
+    lead: money(3408200),
+    badge: MAIN_BADGE,
+    meta: `Opening balance <b class="amount">${money(2500000)}</b> · created Mar 12, 2026 · COP`,
+  })}
 <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:10px"><button class="btn secondary">${iconSvg("scale", "sm")}Adjust balance</button><button class="btn secondary">${iconSvg("pencil", "sm")}Edit</button><button class="btn secondary" disabled>${iconSvg("star", "sm")}Main account</button><button class="btn secondary">${iconSvg("archive", "sm")}Archive</button></div>
 <div class="section-head"><h3 class="h3">Transactions</h3><a class="link" href="#">Open with filters</a></div>
 <div class="list card flush">
@@ -1446,7 +1544,6 @@ ${row("utensils", "ORANGE", "Carulla groceries", "", 78900)}</div>`;
   });
 };
 
-// Adjustment leaves Add: the segment that offered four kinds offers the three you record every day.
 const addWithoutAdjustment = () => transactionForm("EXPENSE", { adjustment: false });
 
 const categories = ({ offline = false } = {}) => {
@@ -3704,7 +3801,28 @@ const PAGES = [
         "account-detail-as-debt",
         "Account detail \u00b7 a card read as debt",
         "The card\u2019s own screen with the whole reading in place: the debt as the headline, the bar of the limit under it, and <b>Pay this card</b> as the one primary action above the four that were already there. It is drawn here on its own because in both answers of <i>What the Pay button opens</i> the sheet\u2019s veil covers exactly this. <b>It follows two choices that are still yours</b> \u2014 the headline is whatever you pick in <i>What a card or a loan leads with</i>, and the limit line only exists once the field of <i>What an account gains besides its balance</i> does. Nothing is built.",
-        debtDetail(),
+        debtDetail(VISA, VISA_DETAIL),
+        { added: "2026-09-17", review: true },
+      ),
+      plate(
+        "loan-detail-and-pay",
+        "Loan detail \u00b7 and paying it",
+        "The other half of his sentence \u2014 <i>un bot\u00f3n para pagar la tarjeta <b>o el pr\u00e9stamo</b></i> \u2014 drawn because a loan is not a card. It has no limit, so the bar is what is <b>still owed</b> of what was borrowed and the line under it says how much is paid; its opening balance is the loan itself, so the hero\u2019s last line carries it. <b>Pay this loan</b> opens the same sheet as the card, preloaded with everything owed. <b>Two things that are true here and not on the card, and they matter when you choose.</b> Paying a loan in full is the rare case, not the common one \u2014 the ordinary payment is the monthly instalment \u2014 so the preset chip is the one part of the sheet that reads wrong on this screen, and a <i>This month\u2019s payment</i> preset would need the field that <i>What an account gains besides its balance</i> is still deciding. And the instalment is the place T-86\u2019s capital-and-interest split lands: under that split one payment is two movements, and this sheet writes one. Drawn on the recommended reading of the first question; nothing is built.",
+        debtDetail(CARLOAN, LOAN_DETAIL),
+        { added: "2026-09-17", review: true },
+      ),
+      plate(
+        "debt-in-credit",
+        "A debt account that owes nothing",
+        "<b>This is where your cards are right now</b>, and it is not T-90. A CARD or an OVERDRAFT whose balance is zero or above owes nothing, so it reads <b>$0 owed</b> with an empty bar and the money on it named for what it is. Two accounts are drawn: a card carrying your own $4,000,000 \u2014 a limit typed in as a balance, exactly what you described \u2014 and an overdraft at $320,000, which is the <b>ordinary</b> state of an overdraft and not a mistake at all. The rule has to exist either way: a card can be overpaid, an overdraft normally sits positive, and until T-90 runs every card in the product looks like the first one. Without it the screen would say \u201c$4,000,000 owed\u201d about money you have. <b>It is also the honest answer to \u201cwhy did my total drop\u201d:</b> once this ships, that card stops counting $4,000,000 towards what you have. Drawn as a draft, not a question \u2014 tell me if you would rather it said something else.",
+        debtInCredit(),
+        { added: "2026-09-17", review: true },
+      ),
+      plate(
+        "account-create-a-debt",
+        "Creating a card \u00b7 the field that asks for the debt",
+        "The form that starts the habit. Today <i>Current balance</i> is a plain amount box, so \u201cmy card has a limit of 100\u201d becomes a balance of 100 \u2014 which is how the cards got into the state T-90 has to repair. On a CARD, an OVERDRAFT or a LOAN the field asks the question instead: <b>How much do you owe on it right now?</b>, entered as a plain positive figure and stored as the debt, with the credit limit beside it and a preview card that reads back what the account will look like. Every other type keeps the field it has. <b>The alternative was drawn and dropped:</b> keeping \u201cCurrent balance\u201d with an increase/decrease control beside it, which puts a sign decision in front of someone on the one screen where the whole confusion starts. Drawn as a draft, not a question.",
+        createDebtAccount(),
         { added: "2026-09-17", review: true },
       ),
     ],
@@ -4612,7 +4730,7 @@ const PAGES = [
       plate(
         "debt-owed-first",
         "A debt account · what you owe, first",
-        "Every plate of this question adds a <b>Car loan</b> to the four accounts the preview has always drawn, because a card and a loan are not read the same way and one screen has to hold both. The figures: <b>$12,504,500</b> across the three accounts that hold money, <b>$9,645,900</b> owed between the card and the loan, so the total is <b>$2,858,600</b> — that gap is the complaint. Here the card leads with <b>what you owe</b>, as a plain positive figure with the word beside it, and the bar under it says how much of the limit is gone (31% of $4,000,000). The loan has no limit, so the same bar says how much of it is <b>paid</b>. A debt is drawn in the ordinary amount colour, never in red: owing on a card is normal, and this product keeps red for what is wrong. <b>What it costs.</b> The figure on screen is the opposite sign of the one the server stores, so every surface that paints a balance now has to know the account’s type, offline projections included, and a balance read here no longer matches the same field read from the API. <b>The session recommends this one:</b> it is the only one of the three where the first thing you read is the thing you asked for, and it is the reading that makes the split total above it obvious instead of arithmetic.",
+        "Every plate of this question adds a <b>Car loan</b> to the four accounts the preview has always drawn, because a card and a loan are not read the same way and one screen has to hold both. The figures: <b>$12,504,500</b> across the three accounts that hold money, <b>$9,645,900</b> owed between the card and the loan, so the total is <b>$2,858,600</b> — that gap is the complaint. Here the card leads with <b>what you owe</b>, as a plain positive figure with the word beside it, and the bar under it says how much of the limit is gone (31% of $4,000,000). The loan has no limit, so the same bar says how much of it is <b>paid</b>. A debt is drawn in the ordinary amount colour, never in red: owing on a card is normal, and this product keeps red for what is wrong. Both bars mean the same thing — <b>the debt that is left</b> — and the line under each is the part that is not owed, which is why the card says <i>left</i> and the loan says <i>paid</i>. <b>What it costs, and there are three.</b> The figure on screen is the opposite sign of the one the server stores, so every surface that paints a balance now has to know the account’s type, offline projections included, and a balance read here no longer matches the same field read from the API. <b>Inside the account the signs still invert</b> — open the card’s own screen and “Uber to work −$18,400” sits under a headline that reads <i>$1,245,900 owed</i>, and that expense <i>raises</i> what you owe: the movements keep the account’s point of view while the headline takes yours. And the summary card at the top of this page changes in all three answers, from the <i>Card debt</i> stat it carries today to <i>yours / owed</i> — that is not one of the six questions and it follows whatever <i>How Home says what you have and what you owe</i> settles. <b>The session recommends this one:</b> it is the only one of the three where the first thing you read is the thing you asked for, and it is the reading that makes the split total above it obvious instead of arithmetic.",
         accountsDebt("owed"),
         { added: "2026-09-17", verdict: "open", asks: "What a card or a loan leads with" },
       ),
@@ -4626,9 +4744,9 @@ const PAGES = [
       plate(
         "debt-signed-balance",
         "A debt account · the balance as the server stores it",
-        "Today’s reading kept — <b>−$1,245,900</b>, the signed balance — with the limit line and the bar added under it. <b>What it gains:</b> one rule for every account, nothing on screen has to know the type to paint a figure, and a balance shown here is the same number the API returns, which keeps the offline projection and the parity fixtures reading exactly as they do now. <b>What it costs:</b> a minus sign is the weakest thing a screen can say, and this is already what the app shows — the Accounts page has drawn Visa Gold at −$1,245,900 and summed a “Card debt” since the design was written. If it were enough, this task would not exist. Drawn so the cheap answer is on the table with the other two.",
+        "<b>Not chosen — by your own sentence, not by anyone’s taste.</b> You asked to see <i>cuánto debes y cuánto te queda</i>, and a minus sign says neither. It stays drawn because it is the baseline the other two are read against, and because if you disagree the answer is one word. Today’s reading kept — <b>−$1,245,900</b>, the signed balance — with the limit line and the bar added under it. <b>What it gains:</b> one rule for every account, nothing on screen has to know the type to paint a figure, and a balance shown here is the same number the API returns, which keeps the offline projection and the parity fixtures reading exactly as they do now. <b>What it costs:</b> a minus sign is the weakest thing a screen can say, and this is already what the app shows — the Accounts page has drawn Visa Gold at −$1,245,900 and summed a “Card debt” since the design was written. If it were enough, this task would not exist. Drawn so the cheap answer is on the table with the other two.",
         accountsDebt("signed"),
-        { added: "2026-09-17", verdict: "open", asks: "What a card or a loan leads with" },
+        { added: "2026-09-17", verdict: "discarded", asks: "What a card or a loan leads with" },
       ),
       plate(
         "debt-no-limit-quiet",
@@ -4644,7 +4762,7 @@ const PAGES = [
       plate(
         "debt-no-limit-prompt",
         "No limit yet · the card asks for it",
-        "The same card with <b>Set a credit limit</b> on it, so the field is discovered where the gap is visible. <b>What it costs.</b> It is a call to action on a list you open every day, on every debt account that has no limit, and it does not go away until you deal with it — on a phone it is the largest thing in the card. It also turns the card from a single link into a container with two targets, which is <b>a second tab stop per card</b>: the same defect T-68 is open about for the sync icon, added on purpose this time. And it appears on the loan too, where a credit limit means nothing, unless the prompt learns the type.",
+        "The same card with <b>Set a credit limit</b> on it, so the field is discovered where the gap is visible. <b>What it costs.</b> It is a call to action on a list you open every day, on every debt account that has no limit, and it does not go away until you deal with it — on a phone it is the largest thing in the card. It also turns the card from a single link into a container with two targets — the whole card stays openable through a stretched link, and the button sits on top of it — which is <b>a second tab stop per card</b>: the same defect T-68 is open about for the sync icon, added on purpose this time. And it appears on the loan too, where a credit limit means nothing, unless the prompt learns the type.",
         noLimitYet("prompt"),
         {
           added: "2026-09-17",
@@ -4655,7 +4773,7 @@ const PAGES = [
       plate(
         "account-fields-a-credit-limit",
         "Fields · a credit limit, and nothing else",
-        "<b>One new field in the whole product.</b> <i>Credit limit</i>, optional, offered on CARD and OVERDRAFT and on nothing else; every other type’s form is exactly what it is today. A loan gets no new field because the app already stores what it needs: <code>openingBalance</code> is written once when the account is created and never changes, so what has been paid off is that figure minus today’s balance, and no field, no validation and no sync work is added for it. <b>What it costs, and it is real.</b> For a loan someone starts tracking halfway through, <code>openingBalance</code> is the balance the day they created the account, <b>not what they borrowed</b> — so under this answer the loan’s line has to read <i>paid since you added it</i> rather than <i>paid of $12,000,000</i>, which is what the plates of the first question draw. <b>The session recommends this one:</b> it is the smallest thing that answers the complaint, and the task itself says to decide which fields and stop there.",
+        "<b>One new field in the whole product.</b> <i>Credit limit</i>, optional, offered on CARD and OVERDRAFT and on nothing else; every other type’s form is exactly what it is today. A loan gets no new field because the app already stores what it needs: <code>openingBalance</code> is written once when the account is created and never changes, so what has been paid off is today’s balance minus that figure (both are negative on a debt, so the newer, smaller debt gives the positive difference), and no field, no validation and no sync work is added for it. <b>What it costs, and it is real.</b> For a loan someone starts tracking halfway through, <code>openingBalance</code> is the balance the day they created the account, <b>not what they borrowed</b> — so under this answer the loan’s line has to read <i>paid since you added it</i> rather than <i>paid of $12,000,000</i>, which is what the plates of the first question draw. <b>The session recommends this one:</b> it is the smallest thing that answers the complaint, and the task itself says to decide which fields and stop there. <b>A coupling worth knowing:</b> the preview card at the bottom of this plate is drawn on the first question’s recommended reading, and the loan drawn in <i>What a debt account shows before you give it a limit</i> is on the <i>second</i> answer of this one — it says <i>paid of $12,000,000</i>, which only the amount borrowed can give.",
         accountFields("limit"),
         { added: "2026-09-17", verdict: "open", asks: "What an account gains besides its balance" },
       ),
@@ -4669,9 +4787,13 @@ const PAGES = [
       plate(
         "account-fields-per-type",
         "Fields · a set of terms per type",
-        "The door the task warns about, drawn open so it can be shut on sight: <i>Amount borrowed</i>, <i>Interest rate</i>, <i>Monthly payment</i> and <i>Payment day</i> on a loan, and the same idea on a card would bring a statement day and a due day. <b>What it costs.</b> Three of these four are read by <b>nothing</b> until the instalment split of T-86 exists, and a field nobody reads is a field that goes stale without anyone noticing. Each one is a form row, a validation, an OpenAPI change the front regenerates from, a column in the mirror, a field the outbox has to classify for conflicts and a case in the sync — multiplied by the type it belongs to. The form goes from four rows to eight for the type most people will never create. <b>Not recommended</b>, and the interest rate in particular belongs to whatever T-86 decides about the instalment, not here.",
+        "<b>Not chosen — the task itself closed this one</b> («decidir cuáles y parar ahí»). It stays drawn so the door is visible rather than imagined, and so the interest rate has a place to be pointed at when T-86 asks for it. The door the task warns about, drawn open so it can be shut on sight: <i>Amount borrowed</i>, <i>Interest rate</i>, <i>Monthly payment</i> and <i>Payment day</i> on a loan, and the same idea on a card would bring a statement day and a due day. <b>What it costs.</b> Three of these four are read by <b>nothing</b> until the instalment split of T-86 exists, and a field nobody reads is a field that goes stale without anyone noticing. Each one is a form row, a validation, an OpenAPI change the front regenerates from, a column in the mirror, a field the outbox has to classify for conflicts and a case in the sync — multiplied by the type it belongs to. The form goes from four rows to eight for the type most people will never create. <b>Not recommended</b>, and the interest rate in particular belongs to whatever T-86 decides about the instalment, not here.",
         accountFields("terms"),
-        { added: "2026-09-17", verdict: "open", asks: "What an account gains besides its balance" },
+        {
+          added: "2026-09-17",
+          verdict: "discarded",
+          asks: "What an account gains besides its balance",
+        },
       ),
       plate(
         "home-total-with-a-line",
@@ -4698,11 +4820,11 @@ const PAGES = [
       plate(
         "home-total-unchanged",
         "Home · the total exactly as it is today",
-        "Today’s card, with the loan’s balance included in the sum: <b>Total balance $2,858,600</b> over <b>5 accounts</b>. The arithmetic is already right and always was — which is the point of drawing it — and it is the cheapest of the three: the stats row stays at <b>104px</b>, so the only growth on the page is the <b>37px</b> the taller account cards add to the carousel, which every answer pays. <b>What it costs:</b> a figure that is correct and unexplained. Nothing on this screen says that two of those five accounts are money you owe, so the only reading available is “this is what I have”, and the number moves for reasons the screen never gives. This is the plate to choose if the split belongs only on Accounts and Home should stay a spending screen.",
+        "<b>Not chosen — by your own sentence.</b> «<i>hace que la matematica del total balance este inflada con dinero que realmente no es mio</i>» is exactly this card. It stays drawn as the baseline the other two are measured against. Today’s card, with the loan’s balance included in the sum: <b>Total balance $2,858,600</b> over <b>5 accounts</b>. The arithmetic is already right and always was — which is the point of drawing it — and it is the cheapest of the three: the stats row stays at <b>104px</b>, so the only growth on the page is the <b>37px</b> the taller account cards add to the carousel, which every answer pays. <b>What it costs:</b> a figure that is correct and unexplained. Nothing on this screen says that two of those five accounts are money you owe, so the only reading available is “this is what I have”, and the number moves for reasons the screen never gives. This is the plate to choose if the split belongs only on Accounts and Home should stay a spending screen.",
         home({ debt: "unchanged" }),
         {
           added: "2026-09-17",
-          verdict: "open",
+          verdict: "discarded",
           asks: "How Home says what you have and what you owe",
         },
       ),
@@ -4716,7 +4838,7 @@ const PAGES = [
       plate(
         "pay-the-full-transfer-form",
         "Pay · the transfer form, filled in",
-        "<b>Pay this card</b> opens the New transaction screen already set to Transfer, with From, To and the full amount filled in and the same sentence reading the result back. <b>What it gains:</b> one way to record a transfer instead of two, nothing new to build in the account, and the direction is <b>shown</b> rather than hidden — which is half of what T-86 is about, so the two tasks would reinforce each other. <b>What it costs:</b> it leaves the account for a screen with six fields when five of them are already right, the way back is the browser’s, and the shortcut stops feeling like an action on this card and starts feeling like a form.",
+        "<b>Pay this card</b> opens the New transaction screen already set to Transfer, with From, To and the full amount filled in and the same sentence reading the result back. <b>What it gains:</b> one way to record a transfer instead of two, nothing new to build in the account, and the direction is <b>shown</b> rather than hidden — which is half of what T-86 is about, so the two tasks would reinforce each other. <b>What it costs:</b> it leaves the account for a screen with seven fields — From, To, Date, Time, Description, Tags and Note — when the three that matter are already right, the way back is the browser’s, and the shortcut stops feeling like an action on this card and starts feeling like a form.",
         payFlow("form"),
         { added: "2026-09-17", verdict: "open", asks: "What the Pay button opens" },
       ),

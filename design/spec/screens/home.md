@@ -107,11 +107,13 @@ Today the Stats row leads with **Total balance**, the sum of the active accounts
 a signed one, so a debt already subtracts and the arithmetic was never wrong; what the card does not
 say is that some of those accounts are money owed, which is what the owner asked for on 2026-09-16.
 
-Three answers are drawn in `preview/variants.html` and marked "Waiting on you":
-`#home-total-with-a-line` (the total with `$12,504,500 yours − $9,645,900 owed` under it),
-`#home-have-and-owe` (two cards, and _Estimated savings_ dropped from Home), and
-`#home-total-unchanged` (today's card, drawn so the cheapest answer is on the table). Measured at
+Two answers are drawn in `preview/variants.html` and marked "Waiting on you":
+`#home-total-with-a-line` (the total with `$12,504,500 yours − $9,645,900 owed` under it) and
+`#home-have-and-owe` (two cards, and _Estimated savings_ dropped from Home). `#home-total-unchanged` is
+today's card, drawn as the baseline rather than as a choice: his own sentence rules it out. Measured at
 460px in the preview frame: the stats row is 104px today, 120px with the line and 221px with two
 cards. All three pay the same 37px in the accounts carousel, which is as tall as its tallest card and
 the debt cards are taller. **Nothing is built until the owner chooses**, and the reading inside the
-carousel's cards follows whatever [accounts.md](accounts.md) settles.
+carousel's cards follows whatever [accounts.md](accounts.md) settles. **The Accounts summary card takes
+the same answer**: it carries a "Card debt" stat today, and whichever way Home splits the total, that
+card splits it the same way, so the product never says it two ways.
