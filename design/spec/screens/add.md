@@ -87,8 +87,8 @@ The segmented control presented four kinds as equals and they are not: an expens
 transfer are things that happened to your money, and an adjustment is the tool that repairs a balance
 that has drifted. It moves to **Adjust balance** inside the account (see
 [accounts.md](accounts.md)), which already preloads the recorded balance and already explains the
-difference it is about to write; the segment here drops to three. The draft is in
-`preview/in-review.html#add-without-adjustment`.
+difference it is about to write; the segment here drops to three, which is what `#full-form-expense` and `#full-form-transfer` now
+draw.
 
 **An adjustment is also edited there** (`#adjustment-edited-in-the-account`, his choice of 2026-09-17:
 since it is not in the transaction form, the alternative makes no sense). Tapping the row — in the

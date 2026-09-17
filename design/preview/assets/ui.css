@@ -78,6 +78,7 @@
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 @container app (min-width: 600px) { .stats { grid-template-columns: repeat(3, 1fr); } }
 .stats.pairs { grid-template-columns: 1fr 1fr; }
+@container app (max-width: 599.9px) { .stats.pairs > .card:nth-child(3) { grid-column: 1 / -1; } }
 .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
 .section-head .link { font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--brand-text); }
 .stack { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }

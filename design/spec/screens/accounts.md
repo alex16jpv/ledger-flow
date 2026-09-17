@@ -59,8 +59,8 @@ saldo en negativo que puedes usar» · Loan "Money you owe" / «Dinero que debes
 His words, 2026-09-16: "actualmente las uso en positivo osea si mi tarjeta de credito tiene un cupo de
 100 estoy poniendo el balance de 100 … eso hace que no pueda reflejar la deuda real y hace que la
 matematica del total balance este inflada con dinero que realmente no es mio." The alternatives are
-drawn in `preview/variants.html`; what he chose on **2026-09-17** is below, and **two questions are
-still open** (see the end of this section). Nothing is built.
+drawn in `preview/variants.html`; what he chose on **2026-09-17** is below, every question is
+answered, and the rows are in [decisions.md](../decisions.md). Nothing is built yet.
 
 **The premise, which was never a question.** A debt account already carries a negative balance: an
 expense on a card lowers it, `summarizeAccounts` already adds a "Card debt" from the negative balances
@@ -84,8 +84,10 @@ real and accepted: a card at 31% and a loan at 30% mean different things on the 
 alternative — one rule for both, the bar always being the debt that is left — makes a loan start full
 and empty as you pay, which reads backwards.
 
-**A debt account whose balance is zero or above owes nothing** (`#debt-in-credit`): it reads `$0 owed`
-with an empty bar and the money on it named as the holder's own. That covers an overdraft in its
+**A debt account that owes nothing reads so** (`#debt-in-credit`). A card with a limit and **exactly
+zero** owed still leads with its availability — `$4,000,000 available`, `$0 owed of $4,000,000`, empty
+bar. Only a balance on the owner's side of zero — an overpaid card, an overdraft in its ordinary state
+— reads `$0 owed` with the money on it named as the holder's own. That covers an overdraft in its
 ordinary state, an overpaid card, and — until T-90 runs — every card in the product.
 
 **What it costs, and it is paid knowingly.** The figure on screen is the opposite sign of the one the
@@ -96,10 +98,12 @@ available, and that expense _reduces_ what is available. Drawn in `#account-deta
 
 ### Before a limit is set (`#debt-no-limit-prompt`)
 
-A debt account with no limit carries **Set a credit limit** on its card in the list, so the field is
-discovered where the gap is. The card stays openable through a stretched link and the button sits on
-top of it, which is **a second tab stop per card** — the same shape T-68 is open about for the sync
-icon, accepted here on purpose. Without a limit there is no bar and no availability line.
+A debt account with the field of its type still empty carries a button on its card in the list, so the
+field is discovered where the gap is. **The button names the field that type has**: a CARD or an
+OVERDRAFT says **Set a credit limit**, a LOAN says **Set the amount borrowed** — a credit limit means
+nothing on a loan. The card stays openable through a stretched link and the button sits on top of it,
+which is **a second tab stop per card** — the same shape T-68 is open about for the sync icon, accepted
+here on purpose. Without the field there is no bar and no second line.
 
 ### The two fields an account gains (`#account-fields-the-amount-borrowed`)
 
