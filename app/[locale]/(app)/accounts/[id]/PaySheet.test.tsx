@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
@@ -127,6 +127,65 @@ describe("PaySheet", () => {
         "Bancolombia −$300,000 · Visa Gold $300,000 less owed. Your total balance does not change.",
       ),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pay" })).toBeEnabled();
+  });
+
+  it("replaces an amount already typed, and gives it back on a second press", async () => {
+    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    open();
+
+    const amount = await screen.findByLabelText("Amount to pay");
+    await userEvent.type(amount, "300000");
+    await userEvent.click(screen.getByRole("button", { name: /^Everything owed/ }));
+    expect(amount).toHaveValue("1,245,900");
+
+    await userEvent.click(screen.getByRole("button", { name: /^Everything owed/ }));
+    expect(amount).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Pay" })).toBeDisabled();
+  });
+
+  it("does not move the keyboard away from the chip that was pressed", async () => {
+    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    open();
+
+    const chip = await screen.findByRole("button", { name: /^Everything owed/ });
+    await userEvent.click(chip);
+    expect(chip).toHaveFocus();
+    expect(screen.getByLabelText("Amount to pay")).toHaveValue("1,245,900");
+  });
+
+  it("asks before leaving once something is typed, and not before", async () => {
+    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    open();
+
+    await screen.findByLabelText("Amount to pay");
+    const cancel = () =>
+      fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
+
+    cancel();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("Amount to pay"), "300000");
+    cancel();
+    expect(screen.getByRole("alert")).toHaveTextContent("Are you sure you want to leave?");
+  });
+
+  it("offers the whole debt on a loan too, which is exactly its ceiling", async () => {
+    const loan = account({ id: "loan", name: "Car loan", type: "LOAN", balance: -8_400_000 });
+    fetchMock.mockResolvedValue(json({ data: [main, loan] }));
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <PaySheet account={loan} main={main} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Everything owed · $8,400,000" }),
+    );
+    expect(screen.getByLabelText("Amount to pay")).toHaveValue("8,400,000");
+    expect(screen.queryByText(/cannot be paid more than/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pay" })).toBeEnabled();
   });
 

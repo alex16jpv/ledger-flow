@@ -234,9 +234,13 @@ there: the first thing to do is say the amount, and nothing is assumed. Undernea
 option it is. It reads as selected while the typed amount is exactly that, so the chip is also the
 answer to "have I typed all of it?".
 
+**And the chip is a switch, not a button**: pressing it again empties the field. That is what its
+pressed state promises a screen reader, and it is the way back that _Another amount_ used to be — one
+tap, instead of selecting a seven-figure number and deleting it.
+
 **The second chip goes.** _Another amount_ existed only to clear a field that arrived full; beside a
-field that is already empty and focused it is a control with nothing to do, and the figure it used to
-hide is now on the chip that remains.
+field that is already empty and focused it is a control with nothing to do, and both the figure it used
+to hide and the way back it offered now live on the chip that remains.
 
 **This is also what `#loan-detail-and-pay` had flagged**: paying a loan in full is the rare case — the
 ordinary payment is the instalment — so a sheet that opened with the whole debt read wrong on that
@@ -246,8 +250,10 @@ the account does not carry, and that is **T-94**, not this.
 **Two consequences inside the sheet.** The unsaved mark of [states.md](states.md) compares against
 **nothing typed** rather than against the debt: with the field empty at the start, anything in it is
 work that would be lost. And the amount field has to be **filled from outside** when the chip is
-pressed, which the Quick add already does by remounting it — the same way here, so the component keeps
-one shape.
+pressed, so `AmountInput` takes an optional figure from its parent — it keeps its own text while you
+type and only listens when the figure is one it did not produce, which is what lets a half-typed
+decimal survive. Pressing the chip does not move the keyboard: it stays on the chip, and the next stop
+is _From_.
 
 **Two things T-86 changed here, and they are his decisions, not tidying.** The sheet reads the result
 back **as a difference** — "Bancolombia −$1,245,900 · Visa Gold **$1,245,900 less owed**", not "goes to

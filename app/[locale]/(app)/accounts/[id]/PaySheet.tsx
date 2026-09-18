@@ -58,7 +58,6 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   const owed = Math.max(0, -account.balance);
   const capped = !mayHoldOwnMoney(account.type);
   const [amount, setAmount] = useState<number | null>(null);
-  const [amountKey, setAmountKey] = useState(0);
   // The main account can be the very account being paid, and nothing is paid with itself.
   const [from, setFrom] = useState<Account | null>(main?.id === account.id ? null : (main ?? null));
   const [openedAt] = useState(() => new Date());
@@ -130,9 +129,8 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
         >
           <Card className="flex flex-col gap-2 p-0 pb-3">
             <AmountInput
-              key={amountKey}
               label={t("accounts.pay.amount")}
-              defaultValue={amount}
+              value={amount}
               onChange={setAmount}
               autoFocus
               invalid={over}
@@ -142,8 +140,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
               <Chip
                 selected={amount === owed}
                 onClick={() => {
-                  setAmount(owed);
-                  setAmountKey((serial) => serial + 1);
+                  setAmount(amount === owed ? null : owed);
                 }}
               >
                 {t("accounts.pay.everything", { amount: money.format(owed) })}

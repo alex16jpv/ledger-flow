@@ -19,6 +19,7 @@ const TONE: Record<AmountTone, string> = {
 
 export interface AmountInputProps {
   defaultValue?: number | null;
+  value?: number | null;
   tone?: AmountTone;
   onChange: (value: number | null) => void;
   label: string;
@@ -41,6 +42,7 @@ function initialText(value: number | null | undefined, locale: string, fractionD
 // Formatting is visual only: the text shows the locale's grouping while the parent receives the clean number.
 export function AmountInput({
   defaultValue = null,
+  value,
   tone = "default",
   onChange,
   label,
@@ -54,13 +56,21 @@ export function AmountInput({
   const field = useFieldContext();
   const invalidNow = invalid ?? field?.invalid;
   const describedByAll = describedBy ?? field?.describedBy;
-  const id = useId();
+  const ownId = useId();
+  const id = field?.id ?? ownId;
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingCaret = useRef<number | null>(null);
   const [text, setText] = useState(() =>
     initialText(defaultValue, money.locale, money.fractionDigits),
   );
+  const [mine, setMine] = useState<number | null>(defaultValue);
   const { group, decimal } = decimalSeparators(money.locale);
+
+  // Only a figure this input did not produce is written back in: an echo of its own would eat a half-typed decimal.
+  if (value !== undefined && value !== mine) {
+    setMine(value);
+    setText(initialText(value, money.locale, money.fractionDigits));
+  }
 
   useLayoutEffect(() => {
     const caret = pendingCaret.current;
@@ -90,6 +100,7 @@ export function AmountInput({
     const next = formatEditableAmount(raw, money.locale, money.fractionDigits);
     pendingCaret.current = caretAfterUnits(next.text, units, decimal);
     setText(next.text);
+    setMine(next.value);
     onChange(next.value);
   }
 

@@ -189,12 +189,12 @@ test("adjusting a card asks what it owes and books the difference as debt", asyn
   });
   expect(signedUp.ok()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
-  const visa = (await (
-    await request.post("/api/accounts", {
-      headers: { origin: APP },
-      data: { name: "Visa Gold", type: "CARD", balance: -1_245_900, creditLimit: 4_000_000 },
-    })
-  ).json()) as { id: string };
+  const made = await request.post("/api/accounts", {
+    headers: { origin: APP },
+    data: { name: "Visa Gold", type: "CARD", balance: -1_245_900, creditLimit: 4_000_000 },
+  });
+  expect(made.status()).toBe(201);
+  const visa = (await made.json()) as { id: string };
 
   const note = `E2E card adjust ${Date.now()}`;
   await page.goto(`/accounts/${visa.id}`);
