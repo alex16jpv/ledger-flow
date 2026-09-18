@@ -115,7 +115,7 @@ number; it is not this screen's number.
 
 _Income this month_ and _Estimated savings_ **both stay** — he asked for it explicitly, after a first
 draft dropped the savings card. The row is four cards in **two pairs**: what you have and what you owe
-above, income and savings below. `Estimated savings` keeps the 600px floor it has today, so a phone
+above, income and savings below. `Estimated savings` takes a 600px floor — it had 640 — so a phone
 shows three cards and nothing is lost compared to now.
 
 Measured at 460px in the preview frame: the stats row goes from **104px to 221px**, and the accounts

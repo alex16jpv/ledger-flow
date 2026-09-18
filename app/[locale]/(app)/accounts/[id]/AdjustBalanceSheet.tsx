@@ -56,8 +56,10 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
   const [magnitude, setMagnitude] = useState<number | null>(Math.abs(account.balance));
   const [sign, setSign] = useState<Sign>(account.balance < 0 ? "negative" : "positive");
   const [note, setNote] = useState("");
+  const [openedAt] = useState(() => new Date());
   const actual = magnitude === null ? null : sign === "negative" ? -magnitude : magnitude;
-  const input = actual === null ? null : adjustmentInput(account, actual, note, money.round);
+  const input =
+    actual === null ? null : adjustmentInput(account, actual, note, money.round, openedAt);
   const delta = actual === null ? null : money.round(actual - account.balance);
   const error = create.error ? presentError(create.error) : null;
 
