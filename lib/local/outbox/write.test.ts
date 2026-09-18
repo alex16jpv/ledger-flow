@@ -74,6 +74,48 @@ describe("writing through the outbox", () => {
     expect(await vault.db.get("accounts", created.id)).toBeDefined();
   });
 
+  it("carries a debt amount into the mirror with no network (T-88)", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+
+    const created = await createAccount({
+      name: "Visa Gold",
+      type: "CARD",
+      balance: -1245900,
+      creditLimit: 4000000,
+    });
+
+    expect(created.creditLimit).toBe(4000000);
+    expect((await vault.db.get("accounts", created.id))?.row.creditLimit).toBe(4000000);
+  });
+
+  it("leaves the field off an account that never sent one (T-88)", async () => {
+    await vaultWith();
+    reportOnline(false);
+
+    const created = await createAccount({ name: "Wallet", type: "CASH", balance: 250 });
+
+    expect(created).not.toHaveProperty("creditLimit");
+  });
+
+  it("clears a debt amount the way the server answers it: absent, not null (T-88)", async () => {
+    const card = account({
+      id: "a2",
+      name: "Visa Gold",
+      balance: -1245900,
+      openingBalance: -1245900,
+    });
+    const vault = await vaultWith({ accounts: [{ ...card, type: "CARD", creditLimit: 4000000 }] });
+    reportOnline(false);
+
+    const raised = await updateAccount("a2", { creditLimit: 5000000 });
+    expect(raised.creditLimit).toBe(5000000);
+
+    const cleared = await updateAccount("a2", { creditLimit: null });
+    expect(cleared).not.toHaveProperty("creditLimit");
+    expect((await vault.db.get("accounts", "a2"))?.row).not.toHaveProperty("creditLimit");
+  });
+
   // F-65: blocking the record would be worse, and nothing new waits behind what is blocked.
   it("keeps writing normally while an app update holds part of the queue back", async () => {
     const vault = await vaultWith();
