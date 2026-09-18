@@ -182,13 +182,22 @@ test("adjusting a card asks what it owes and books the difference as debt", asyn
   page,
   request,
 }) => {
-  await signIn(page, request);
+  // Its own user and its own card: the two projects run this at once and used to fight over the seed.
+  const signedUp = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: { name: "Adjust E2E", email: uniqueEmail("adjust"), password: "LedgerFlow!2026" },
+  });
+  expect(signedUp.ok()).toBe(true);
+  await page.context().addCookies((await request.storageState()).cookies);
+  const visa = (await (
+    await request.post("/api/accounts", {
+      headers: { origin: APP },
+      data: { name: "Visa Gold", type: "CARD", balance: -1_245_900, creditLimit: 4_000_000 },
+    })
+  ).json()) as { id: string };
+
   const note = `E2E card adjust ${Date.now()}`;
-  const accounts = (await (await request.get("/api/accounts?limit=50")).json()) as {
-    data: { id: string; name: string }[];
-  };
-  const visa = accounts.data.find((account) => account.name === "Visa Gold");
-  await page.goto(`/accounts/${visa?.id}`);
+  await page.goto(`/accounts/${visa.id}`);
 
   await page.getByRole("button", { name: "Adjust balance" }).click();
   const adjusting = page.getByRole("dialog", { name: "Adjust balance" });
@@ -206,7 +215,7 @@ test("adjusting a card asks what it owes and books the difference as debt", asyn
   const created = await findByNote(request, note);
   expect(created?.type).toBe("ADJUSTMENT");
   expect(created?.amount).toBe(12_300);
-  expect(created?.toAccountId).toBe(visa?.id);
+  expect(created?.toAccountId).toBe(visa.id);
   expect(created?.fromAccountId).toBe(null);
 
   const removed = await request.delete(`/api/transactions/${created?.id}`, {

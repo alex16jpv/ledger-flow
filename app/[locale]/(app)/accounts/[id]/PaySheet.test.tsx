@@ -83,16 +83,51 @@ describe("payInput", () => {
 });
 
 describe("PaySheet", () => {
-  it("opens with everything owed and reads the payment back as a difference", async () => {
+  it("opens empty, with nothing decided and nothing to read back (T-99)", async () => {
     fetchMock.mockResolvedValue(json({ data: [main, card] }));
     open();
 
-    expect(await screen.findByLabelText("Amount to pay")).toHaveValue("1,245,900");
+    expect(await screen.findByLabelText("Amount to pay")).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Pay" })).toBeDisabled();
+    expect(screen.queryByText(/less owed/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Another amount/ })).not.toBeInTheDocument();
+  });
+
+  it("carries the total on the chip that fills the field, as the second option it now is", async () => {
+    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    open();
+
+    const chip = await screen.findByRole("button", { name: "Everything owed · $1,245,900" });
+    expect(chip).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(chip);
+
+    expect(screen.getByLabelText("Amount to pay")).toHaveValue("1,245,900");
+    expect(screen.getByRole("button", { name: /^Everything owed/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(
       screen.getByText(
         "Bancolombia −$1,245,900 · Visa Gold $1,245,900 less owed. Your total balance does not change.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("takes an amount of the user's own, which is the whole point of T-99", async () => {
+    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    open();
+
+    await userEvent.type(await screen.findByLabelText("Amount to pay"), "300000");
+    expect(screen.getByRole("button", { name: /^Everything owed/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(
+      screen.getByText(
+        "Bancolombia −$300,000 · Visa Gold $300,000 less owed. Your total balance does not change.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pay" })).toBeEnabled();
   });
 
   it("records the payment as a transfer towards the card", async () => {
@@ -103,7 +138,8 @@ describe("PaySheet", () => {
     );
     const onClose = open();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Pay" }));
+    await userEvent.click(await screen.findByRole("button", { name: /^Everything owed/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Pay" }));
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();
     });
@@ -128,7 +164,8 @@ describe("PaySheet", () => {
     );
     open();
 
-    await userEvent.click(await screen.findByRole("button", { name: /^From/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /^Everything owed/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
     const sheet = screen.getByRole("dialog", { name: "Account" });
     await userEvent.click(within(sheet).getByRole("option", { name: /Somewhere else/ }));
 
@@ -177,7 +214,6 @@ describe("PaySheet", () => {
     );
 
     const amount = await screen.findByLabelText("Amount to pay");
-    await userEvent.clear(amount);
     await userEvent.type(amount, "9000000");
     expect(
       screen.getByText("A loan cannot be paid more than the $8,400,000 it still owes."),
@@ -195,16 +231,20 @@ describe("PaySheet", () => {
     open();
 
     const amount = await screen.findByLabelText("Amount to pay");
-    await userEvent.clear(amount);
     await userEvent.type(amount, "2000000");
     expect(screen.getByRole("button", { name: "Pay" })).toBeEnabled();
   });
 
-  it("refuses to pay nothing", async () => {
+  it("refuses to pay nothing once the field has been emptied again", async () => {
     fetchMock.mockResolvedValue(json({ data: [main, card] }));
     open();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Another amount" }));
+    const amount = await screen.findByLabelText("Amount to pay");
+    await userEvent.type(amount, "300000");
+    expect(screen.getByRole("button", { name: "Pay" })).toBeEnabled();
+
+    await userEvent.clear(amount);
     expect(screen.getByRole("button", { name: "Pay" })).toBeDisabled();
+    expect(screen.queryByText(/less owed/)).not.toBeInTheDocument();
   });
 });

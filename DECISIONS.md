@@ -5,6 +5,32 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-18 · The Pay sheet opens empty and the whole debt is a chip (T-99)
+
+- **Context:** the owner, 2026-09-17: «en el Pay this card. el valor por defecto no puede ser el pagar
+  el valor total. el valor total debe ser la segunda opcion y el usuario debe decider cuanto es lo que
+  paga». The field opened holding `max(0, −balance)`, so the sheet had already decided what was being
+  paid; the only way out was a chip, _Another amount_, whose whole job was to empty it again — and it
+  did not even do that, because `AmountInput` is uncontrolled and kept showing the figure while the
+  Pay button went disabled with nothing saying why.
+- **Decision:** the amount opens **empty and focused**, which is what the Quick add does and what he
+  approved there, and the total becomes **one chip carrying its own figure**, `Everything owed ·
+$1,245,900`, that fills the field. The chip reads as pressed while the typed amount is exactly the
+  debt. _Another amount_ is **gone**: beside an empty focused field it is a control with nothing to do,
+  and the figure it used to hide now travels on the chip that stays. The sheet counts as unsaved from
+  the moment anything is typed, rather than from the moment the amount differs from the debt.
+- **Alternatives:** keeping both chips with the total second, which is the most literal reading of his
+  sentence but leaves a control whose only act is to empty a field that starts empty; and making
+  `AmountInput` controlled so the chip could write into it, which would put caret handling and
+  editable formatting behind a `value` prop for every one of its eleven call sites. The chip remounts
+  it with a `key` instead — the idiom the Quick add already uses to reset the same component — so the
+  component keeps one shape and `autoFocus` puts the caret back at the end.
+- **Consequence:** the loan reads right for the first time. `#loan-detail-and-pay` had flagged the
+  preloaded total as "the one part of the sheet that reads wrong on this screen", because the ordinary
+  payment on a loan is the instalment; the sheet now assumes neither. What a _This month's payment_
+  preset would need is still a figure the account does not carry, which is **T-94** and not this. The
+  uncontrolled-field defect the T-101 review found disappears with the starting value it depended on.
+
 ## 2026-09-18 · Money from outside reaches the full form, and only where it is a payment (T-100)
 
 - **Context:** the owner, 2026-09-17: «lo del somewhere else en el account from Tambien tiene que

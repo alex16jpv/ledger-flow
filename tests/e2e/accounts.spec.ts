@@ -203,11 +203,17 @@ test("a card in credit still says what is available, and a loan that is paid is 
 
   await page.getByRole("button", { name: /Pay this loan/ }).click();
   const paying = page.getByRole("dialog", { name: "Pay Loan owing" });
-  await paying.getByRole("textbox", { name: "Amount to pay" }).fill("9000000");
+  const toPay = paying.getByRole("textbox", { name: "Amount to pay" });
+  await expect(toPay).toHaveValue("");
+  await expect(paying.getByRole("button", { name: "Pay", exact: true })).toBeDisabled();
+  await paying.getByRole("button", { name: "Everything owed · $8,400,000" }).click();
+  await expect(toPay).toHaveValue("8,400,000");
+
+  await toPay.fill("9000000");
   await expect(
     paying.getByText("A loan cannot be paid more than the $8,400,000 it still owes."),
   ).toBeVisible();
   await expect(paying.getByRole("button", { name: "Pay", exact: true })).toBeDisabled();
-  await paying.getByRole("textbox", { name: "Amount to pay" }).fill("8400000");
+  await toPay.fill("8400000");
   await expect(paying.getByRole("button", { name: "Pay", exact: true })).toBeEnabled();
 });
