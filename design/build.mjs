@@ -1496,6 +1496,17 @@ const debtDetail = (a, o = {}) =>
     sheet: o.sheet ?? "",
   });
 
+const adjustDebtSheet = (name, typed, o) =>
+  sheetWrap(
+    `<div class="stack-sm"><span class="label">${o.owed ? `How much do you owe on ${name} right now?` : `How much of your own money is on ${name} right now?`}</span><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">${nf.format(typed)}</span><span class="caret"></span></div>
+<div class="segment" style="margin:0 auto"><button${o.owed ? ' aria-pressed="true"' : ""}>Owed</button><button${o.owed ? "" : ' aria-pressed="true"'}>Your own money</button></div>
+<p class="small muted" style="text-align:center;margin:0">Recorded: <b class="amount">${money(o.recorded)}</b> ${o.owed ? "owed" : "of your own money on it"}</p></div>
+<div class="alert neutral" style="align-items:center">${iconSvg("scale")}<span>${o.line} It does not count as spending or in budgets.</span></div>
+${field("Note", null, o.note, { opt: true })}
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Save adjustment</button></div>`,
+    "Adjust balance",
+  );
+
 const VISA_DETAIL = { opened: 0, since: "Mar 12, 2026", what: "card", movements: cardMovements() };
 const LOAN_DETAIL = {
   opened: LOAN_TAKEN,
@@ -4113,6 +4124,36 @@ const PAGES = [
         "A debt account that owes nothing",
         "<b>This is where your cards are right now</b>, and it is not T-90. A CARD or an OVERDRAFT whose balance is zero or above owes nothing, so it reads <b>$0 owed</b> with an empty bar and the money on it named for what it is. Two accounts are drawn: a card carrying your own $4,000,000 \u2014 a limit typed in as a balance, exactly what you described \u2014 and an overdraft at $320,000, which is the <b>ordinary</b> state of an overdraft and not a mistake at all. The rule has to exist either way: a card can be overpaid, an overdraft normally sits positive, and until T-90 runs every card in the product looks like the first one. Without it the screen would say \u201c$4,000,000 owed\u201d about money you have. <b>The card is drawn with no limit yet, because that is the whole state on day one:</b> no account carries the field until someone fills it, so it reads $0 owed with the money named, <b>no bar at all</b> \u2014 there is no scale to fill \u2014 and the prompt still asks for the limit. The overdraft beside it has one, which is what the same state looks like once the field is set. <b>It is also the honest answer to \u201cwhy did my total drop\u201d:</b> once this ships, that card stops counting $4,000,000 towards what you have. ",
         debtInCredit(),
+        { added: "2026-09-17" },
+      ),
+      plate(
+        "adjust-balance-on-a-debt",
+        "Adjust balance \u00b7 on a card",
+        "The same sheet, asking what he decided on 2026-09-17 when he asked whether adjusting a card meant the available credit or the debt: <b>the debt</b>. So <i>Actual balance</i> and its Positive / Negative pair give way to the question the account form already asks \u2014 <b>How much do you owe on it right now?</b> \u2014 and the line under it reads the recorded state in the product\u2019s own words. <b>The pair does not disappear, it changes what it means:</b> <i>Owed</i> or <i>Your own money</i>, because an overdraft sitting positive is its ordinary state, a card can be overpaid, and until T-90 runs every card is in exactly that state; without it those balances could not be said on the one screen whose job is to say them. The question follows the choice, so the label cannot contradict the answer, and the difference is read as the grammar the rest of the product uses: <b>less owed</b>, not \u201can adjustment of \u2212$12,300\u201d. Nothing changes in what reaches the server. ",
+        debtDetail(VISA, {
+          ...VISA_DETAIL,
+          sheet: adjustDebtSheet("Visa Gold", 1233600, {
+            owed: true,
+            recorded: CARD_OWED,
+            line: `<b>${money(12300)} less owed</b> will be recorded as an adjustment.`,
+            note: "Statement says less",
+          }),
+        }),
+        { added: "2026-09-17" },
+      ),
+      plate(
+        "adjust-balance-owes-nothing",
+        "Adjust balance \u00b7 a card that owes nothing",
+        "The other half of the same sheet, and <b>the state every card in the product is in until T-90 runs</b>: the balance is money of its owner, so it opens on <i>Your own money</i> and the question follows it. The alert is the plain one here, on purpose. \u201c$8,000,000 more owed\u201d about a debt that went from nothing to $4,000,000 would be a figure nobody owes, so the debt grammar is kept for movements that are debt at both ends \u2014 the same rule the transfer readback follows \u2014 and everything else falls back to <i>An adjustment of \u2212$8,000,000 will be created</i>, which is true on either side of zero. ",
+        debtDetail(VISA, {
+          ...VISA_DETAIL,
+          sheet: adjustDebtSheet("Visa Gold", CARD_LIMIT, {
+            owed: false,
+            recorded: CARD_LIMIT,
+            line: `<b>An adjustment of ${money(8000000, "\u2212")}</b> will be created to reconcile the account.`,
+            note: "Moving it to what I owe",
+          }),
+        }),
         { added: "2026-09-17" },
       ),
       plate(

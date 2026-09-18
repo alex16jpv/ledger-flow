@@ -35,6 +35,15 @@ const account: Account = {
 
 const round = (amount: number) => Math.round(amount);
 
+const visa = (balance: number): Account => ({
+  ...account,
+  id: "visa",
+  name: "Visa",
+  type: "CARD",
+  balance,
+  creditLimit: 4_000_000,
+});
+
 beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
@@ -113,29 +122,136 @@ describe("AdjustBalanceSheet", () => {
     expect(screen.getByText("Adjustment saved")).toBeInTheDocument();
   });
 
-  it("lets a debt account go further negative and keeps the form open on a server error", async () => {
+  it("asks a card what it owes, reads the difference as debt, and keeps the form open on a server error", async () => {
     fetchMock.mockResolvedValue(json({ code: "DB_UNAVAILABLE", message: "down" }, { status: 503 }));
     renderWithProviders(
       <QueryProvider>
         <ToastProvider>
+          <AdjustBalanceSheet account={visa(-1_245_900)} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Owed", pressed: true })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Negative (debt)" })).not.toBeInTheDocument();
+    expect(screen.getByText("Recorded: $1,245,900 owed")).toBeInTheDocument();
+    const amount = screen.getByRole("textbox", { name: "How much do you owe on Visa right now?" });
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "1300000");
+    expect(screen.getByText("$54,100 more owed")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Save adjustment" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/didn’t respond/);
+    expect(
+      screen.getByRole("textbox", { name: "How much do you owe on Visa right now?" }),
+    ).toHaveValue("1,300,000");
+  });
+
+  it("books less owed when the debt goes down", async () => {
+    fetchMock.mockResolvedValue(json({ id: "t9" }, { status: 201 }));
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <AdjustBalanceSheet account={visa(-1_245_900)} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    const amount = screen.getByRole("textbox", { name: "How much do you owe on Visa right now?" });
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "1233600");
+    expect(screen.getByText("$12,300 less owed")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Save adjustment" }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    const [, init] = writes()[0] ?? [];
+    expect(JSON.parse(init?.body as string)).toMatchObject({
+      type: "ADJUSTMENT",
+      amount: 12_300,
+      fromAccountId: null,
+      toAccountId: "visa",
+    });
+  });
+
+  it("opens on your own money when the card holds some, and stops talking debt across zero", async () => {
+    fetchMock.mockResolvedValue(json({ id: "t9" }, { status: 201 }));
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <AdjustBalanceSheet account={visa(4_000_000)} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Your own money", pressed: true })).toBeVisible();
+    expect(screen.getByText("Recorded: $4,000,000 of your own money on it")).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "How much of your own money is on Visa right now?" }),
+    ).toHaveValue("4,000,000");
+
+    await userEvent.click(screen.getByRole("button", { name: "Owed" }));
+    expect(screen.getByText("An adjustment of −$8,000,000")).toBeInTheDocument();
+    expect(screen.queryByText(/more owed/)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Save adjustment" }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    const [, init] = writes()[0] ?? [];
+    expect(JSON.parse(init?.body as string)).toMatchObject({
+      amount: 8_000_000,
+      fromAccountId: "visa",
+      toAccountId: null,
+    });
+  });
+
+  it("says nothing about debt when only your own money on the card moves", async () => {
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <AdjustBalanceSheet account={visa(4_000_000)} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    const amount = screen.getByRole("textbox", {
+      name: "How much of your own money is on Visa right now?",
+    });
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "5000000");
+    expect(screen.getByText("An adjustment of +$1,000,000")).toBeInTheDocument();
+    expect(screen.queryByText(/owed/)).not.toBeInTheDocument();
+  });
+
+  it("starts an overdraft that owes nothing at zero owed, and counts the debt from there", async () => {
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
           <AdjustBalanceSheet
-            account={{ ...account, id: "visa", name: "Visa", balance: -1_245_900 }}
+            account={{ ...visa(0), type: "OVERDRAFT", name: "Overdraft" }}
             open
             onClose={vi.fn()}
           />
         </ToastProvider>
       </QueryProvider>,
     );
-    expect(screen.getByRole("button", { name: "Negative (debt)", pressed: true })).toBeVisible();
-    const amount = screen.getByRole("textbox", { name: "Actual balance in Visa" });
+    expect(screen.getByRole("button", { name: "Owed", pressed: true })).toBeVisible();
+    expect(screen.getByText("Recorded: $0 owed")).toBeInTheDocument();
+    const amount = screen.getByRole("textbox", {
+      name: "How much do you owe on Overdraft right now?",
+    });
     await userEvent.clear(amount);
-    await userEvent.type(amount, "1300000");
-    expect(screen.getByText("An adjustment of −$54,100")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Save adjustment" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/didn’t respond/);
-    expect(screen.getByRole("textbox", { name: "Actual balance in Visa" })).toHaveValue(
-      "1,300,000",
+    await userEvent.type(amount, "12300");
+    expect(screen.getByText("$12,300 more owed")).toBeInTheDocument();
+  });
+
+  it("keeps the sign pair on an account that is not debt", async () => {
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <AdjustBalanceSheet account={account} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
     );
+    expect(screen.queryByRole("button", { name: "Owed" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Negative (debt)" }));
+    expect(screen.getByText("An adjustment of −$6,841,000")).toBeInTheDocument();
   });
 });
 
