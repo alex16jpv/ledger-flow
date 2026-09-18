@@ -49,13 +49,21 @@ outright would make those balances unsayable on the one screen whose job is to s
 **The question follows the segment**, so the label can never contradict the answer: `Owed` asks _How
 much do you owe on {name} right now?_, `Your own money` asks _How much of your own money is on {name}
 right now?_. It opens on whichever the recorded balance already is, with that figure preloaded — a
-card that owes nothing opens on `Your own money`.
+card carrying money of its owner opens on `Your own money` (`#adjust-balance-owes-nothing`), and a
+balance of exactly zero opens on `Owed`, because zero owed is what the rest of the product says about
+it (`#debt-in-credit`).
 
 The line under it reads the recorded state in the same words the rest of the product uses:
-`Recorded: $1,245,900 owed`, or `Recorded: $4,000,000 of your own money on it`. And the alert reads
-the difference as the product's debt grammar, the one [add.md](add.md) fixed: **`$12,300 less owed`**
-/ **`$12,300 more owed`**, followed by the same tail as ever — it counts neither as spending nor in
-budgets.
+`Recorded: $1,245,900 owed`, or `Recorded: $4,000,000 of your own money on it`.
+
+**The alert only talks debt while the whole movement is debt**, which is the rule the transfer
+readback already follows: a card can hold money of its owner, and then there is no debt to say less
+or more of. With the recorded balance and the new one both owing, it reads the product's grammar —
+**`$12,300 less owed`** / **`$12,300 more owed`**. The moment either end is money of your own — the
+state every card is in until T-90 runs — it falls back to the neutral sentence, `An adjustment of
+−$8,000,000 will be created`, which is true whichever side of zero the account lands on. Saying
+"$8,000,000 more owed" about a debt that went from nothing to $4,000,000 would be a figure nobody
+owes. Either way the tail is the same: it counts neither as spending nor in budgets.
 
 Everything below is untouched: the note, the zero-delta rule, and the write itself. What reaches the
 server is exactly what reached it before — an ADJUSTMENT with `fromAccountId` when the balance goes

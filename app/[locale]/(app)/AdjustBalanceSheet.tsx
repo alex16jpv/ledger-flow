@@ -41,8 +41,6 @@ import type {
 
 type Sign = "positive" | "negative";
 
-type Side = "owed" | "mine";
-
 export interface AdjustBalanceSheetProps {
   account: Account;
   open: boolean;
@@ -98,18 +96,20 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
   const keyring = useRef(new IdempotencyKeyring());
   const isDebt = debtFieldOf(account.type) !== null;
   const [magnitude, setMagnitude] = useState<number | null>(Math.abs(account.balance));
-  const [sign, setSign] = useState<Sign>(account.balance < 0 ? "negative" : "positive");
-  const [side, setSide] = useState<Side>(account.balance > 0 ? "mine" : "owed");
+  const [sign, setSign] = useState<Sign>(account.balance > 0 ? "positive" : "negative");
   const [note, setNote] = useState("");
   const [openedAt] = useState(() => new Date());
-  const negative = isDebt ? side === "owed" : sign === "negative";
-  const actual = magnitude === null ? null : negative ? -magnitude : magnitude;
+  const actual = magnitude === null ? null : sign === "negative" ? -magnitude : magnitude;
   const label = isDebt
-    ? t(side === "owed" ? "accounts.adjust.owed" : "accounts.adjust.mine", { name: account.name })
+    ? t(sign === "negative" ? "accounts.adjust.owed" : "accounts.adjust.mine", {
+        name: account.name,
+      })
     : t("accounts.adjust.actual", { name: account.name });
   const input =
     actual === null ? null : adjustmentInput(account, actual, note, money.round, openedAt);
   const delta = actual === null ? null : money.round(actual - account.balance);
+  // A debt account can hold money of your own, and then there is no debt to say less or more of.
+  const debtGrammar = isDebt && account.balance <= 0 && (actual ?? 0) <= 0;
   const error = create.error ? presentError(create.error) : null;
 
   async function save() {
@@ -159,31 +159,24 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
               autoFocus
               className="py-4"
             />
-            {isDebt ? (
-              <Segment<Side>
-                inline
-                label={t("accounts.adjust.side")}
-                value={side}
-                onChange={setSide}
-                options={[
-                  { value: "owed", label: t("accounts.adjust.sideOwed") },
-                  { value: "mine", label: t("accounts.adjust.sideMine") },
-                ]}
-                className="mx-auto"
-              />
-            ) : (
-              <Segment<Sign>
-                inline
-                label={t("accounts.adjust.sign")}
-                value={sign}
-                onChange={setSign}
-                options={[
-                  { value: "positive", label: t("accounts.adjust.positive") },
-                  { value: "negative", label: t("accounts.adjust.negative") },
-                ]}
-                className="mx-auto"
-              />
-            )}
+            <Segment<Sign>
+              inline
+              label={t(isDebt ? "accounts.adjust.side" : "accounts.adjust.sign")}
+              value={sign}
+              onChange={setSign}
+              options={
+                isDebt
+                  ? [
+                      { value: "negative", label: t("accounts.adjust.sideOwed") },
+                      { value: "positive", label: t("accounts.adjust.sideMine") },
+                    ]
+                  : [
+                      { value: "positive", label: t("accounts.adjust.positive") },
+                      { value: "negative", label: t("accounts.adjust.negative") },
+                    ]
+              }
+              className="mx-auto"
+            />
           </Card>
         </Field>
         <p className="text-center text-sm text-text-3">
@@ -201,13 +194,13 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
         ) : (
           <Alert tone="info">
             {t.rich(
-              isDebt
+              debtGrammar
                 ? delta > 0
                   ? "accounts.adjust.deltaLessOwed"
                   : "accounts.adjust.deltaMoreOwed"
                 : "accounts.adjust.delta",
               {
-                amount: isDebt
+                amount: debtGrammar
                   ? money.format(Math.abs(delta))
                   : (delta < 0 ? "−" : "+") + money.format(Math.abs(delta)),
                 b: (chunks) => <b className="font-semibold">{chunks}</b>,

@@ -1496,13 +1496,13 @@ const debtDetail = (a, o = {}) =>
     sheet: o.sheet ?? "",
   });
 
-const adjustDebtSheet = (name, owed, help) =>
+const adjustDebtSheet = (name, typed, o) =>
   sheetWrap(
-    `<div class="stack-sm"><span class="label">How much do you owe on ${name} right now?</span><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">${nf.format(owed)}</span><span class="caret"></span></div>
-<div class="segment" style="margin:0 auto"><button aria-pressed="true">Owed</button><button>Your own money</button></div>
-<p class="small muted" style="text-align:center;margin:0">Recorded: <b class="amount">${money(help.recorded)}</b> ${help.word}</p></div>
-<div class="alert neutral" style="align-items:center">${iconSvg("scale")}<span><b>${money(help.delta)} ${help.grammar} owed</b> will be recorded as an adjustment. It does not count as spending or in budgets.</span></div>
-${field("Note", null, "Statement says less", { opt: true })}
+    `<div class="stack-sm"><span class="label">${o.owed ? `How much do you owe on ${name} right now?` : `How much of your own money is on ${name} right now?`}</span><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">${nf.format(typed)}</span><span class="caret"></span></div>
+<div class="segment" style="margin:0 auto"><button${o.owed ? ' aria-pressed="true"' : ""}>Owed</button><button${o.owed ? "" : ' aria-pressed="true"'}>Your own money</button></div>
+<p class="small muted" style="text-align:center;margin:0">Recorded: <b class="amount">${money(o.recorded)}</b> ${o.owed ? "owed" : "of your own money on it"}</p></div>
+<div class="alert neutral" style="align-items:center">${iconSvg("scale")}<span>${o.line} It does not count as spending or in budgets.</span></div>
+${field("Note", null, o.note, { opt: true })}
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Save adjustment</button></div>`,
     "Adjust balance",
   );
@@ -4133,10 +4133,25 @@ const PAGES = [
         debtDetail(VISA, {
           ...VISA_DETAIL,
           sheet: adjustDebtSheet("Visa Gold", 1233600, {
+            owed: true,
             recorded: CARD_OWED,
-            word: "owed",
-            delta: 12300,
-            grammar: "less",
+            line: `<b>${money(12300)} less owed</b> will be recorded as an adjustment.`,
+            note: "Statement says less",
+          }),
+        }),
+        { added: "2026-09-17" },
+      ),
+      plate(
+        "adjust-balance-owes-nothing",
+        "Adjust balance \u00b7 a card that owes nothing",
+        "The other half of the same sheet, and <b>the state every card in the product is in until T-90 runs</b>: the balance is money of its owner, so it opens on <i>Your own money</i> and the question follows it. The alert is the plain one here, on purpose. \u201c$8,000,000 more owed\u201d about a debt that went from nothing to $4,000,000 would be a figure nobody owes, so the debt grammar is kept for movements that are debt at both ends \u2014 the same rule the transfer readback follows \u2014 and everything else falls back to <i>An adjustment of \u2212$8,000,000 will be created</i>, which is true on either side of zero. ",
+        debtDetail(VISA, {
+          ...VISA_DETAIL,
+          sheet: adjustDebtSheet("Visa Gold", CARD_LIMIT, {
+            owed: false,
+            recorded: CARD_LIMIT,
+            line: `<b>An adjustment of ${money(8000000, "\u2212")}</b> will be created to reconcile the account.`,
+            note: "Moving it to what I owe",
           }),
         }),
         { added: "2026-09-17" },

@@ -171,7 +171,7 @@ describe("AdjustBalanceSheet", () => {
     });
   });
 
-  it("opens on your own money when the card owes nothing, and switching the pair moves the balance across zero", async () => {
+  it("opens on your own money when the card holds some, and stops talking debt across zero", async () => {
     fetchMock.mockResolvedValue(json({ id: "t9" }, { status: 201 }));
     renderWithProviders(
       <QueryProvider>
@@ -185,8 +185,11 @@ describe("AdjustBalanceSheet", () => {
     expect(
       screen.getByRole("textbox", { name: "How much of your own money is on Visa right now?" }),
     ).toHaveValue("4,000,000");
+
     await userEvent.click(screen.getByRole("button", { name: "Owed" }));
-    expect(screen.getByText("$8,000,000 more owed")).toBeInTheDocument();
+    expect(screen.getByText("An adjustment of −$8,000,000")).toBeInTheDocument();
+    expect(screen.queryByText(/more owed/)).not.toBeInTheDocument();
+
     await userEvent.click(screen.getByRole("button", { name: "Save adjustment" }));
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalled();
@@ -197,6 +200,58 @@ describe("AdjustBalanceSheet", () => {
       fromAccountId: "visa",
       toAccountId: null,
     });
+  });
+
+  it("says nothing about debt when only your own money on the card moves", async () => {
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <AdjustBalanceSheet account={visa(4_000_000)} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    const amount = screen.getByRole("textbox", {
+      name: "How much of your own money is on Visa right now?",
+    });
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "5000000");
+    expect(screen.getByText("An adjustment of +$1,000,000")).toBeInTheDocument();
+    expect(screen.queryByText(/owed/)).not.toBeInTheDocument();
+  });
+
+  it("starts an overdraft that owes nothing at zero owed, and counts the debt from there", async () => {
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <AdjustBalanceSheet
+            account={{ ...visa(0), type: "OVERDRAFT", name: "Overdraft" }}
+            open
+            onClose={vi.fn()}
+          />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Owed", pressed: true })).toBeVisible();
+    expect(screen.getByText("Recorded: $0 owed")).toBeInTheDocument();
+    const amount = screen.getByRole("textbox", {
+      name: "How much do you owe on Overdraft right now?",
+    });
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "12300");
+    expect(screen.getByText("$12,300 more owed")).toBeInTheDocument();
+  });
+
+  it("keeps the sign pair on an account that is not debt", async () => {
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <AdjustBalanceSheet account={account} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    expect(screen.queryByRole("button", { name: "Owed" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Negative (debt)" }));
+    expect(screen.getByText("An adjustment of −$6,841,000")).toBeInTheDocument();
   });
 });
 

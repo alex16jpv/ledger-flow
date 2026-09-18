@@ -189,6 +189,7 @@ test("adjusting a card asks what it owes and books the difference as debt", asyn
   const adjusting = page.getByRole("dialog", { name: "Adjust balance" });
   await expect(adjusting.getByRole("button", { name: "Owed", pressed: true })).toBeVisible();
   await expect(adjusting.getByText("Recorded: $1,245,900 owed")).toBeVisible();
+  await expectNoAxeViolations(page);
   await adjusting
     .getByRole("textbox", { name: /How much do you owe on Visa Gold right now/ })
     .fill("1233600");
