@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
-import { AccountCard } from "@/components/ui/AccountCard";
+import { AccountCard, useAccountReading } from "@/components/ui/AccountCard";
 import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
 import { AmountInput } from "@/components/ui/AmountInput";
@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Field";
 import { useUnsavedGuard } from "@/components/ui/Sheet";
 import { SwatchGrid } from "@/components/ui/Swatch";
+import { type DebtField, debtFieldOf } from "@/lib/accounts/debt";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
 import { changedOnly, nothingChanged } from "@/lib/form/changes";
 import { validationMessage } from "@/lib/i18n/validation";
@@ -25,6 +26,19 @@ import type { Account } from "@/types/api";
 import { useCreateAccount, useUpdateAccount } from "../hooks";
 import { accountFormSchema, type AccountFormValues } from "../schemas";
 import { AccountTypePicker } from "./AccountTypePicker";
+
+// A type change leaves the other type's amount behind, and the server refuses to store it.
+function orphanedFields(
+  account: Account,
+  carried: DebtField | null,
+): Partial<Record<DebtField, null>> {
+  const orphaned: Partial<Record<DebtField, null>> = {};
+  if (account.creditLimit !== undefined && carried !== "creditLimit") orphaned.creditLimit = null;
+  if (account.borrowedAmount !== undefined && carried !== "borrowedAmount") {
+    orphaned.borrowedAmount = null;
+  }
+  return orphaned;
+}
 
 interface AccountFormProps {
   account?: Account;
@@ -49,8 +63,22 @@ export function AccountForm({
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
     defaultValues: account
-      ? { name: account.name, type: account.type, balance: null, color: account.color ?? "BLUE" }
-      : { name: "", type: "ACCOUNT", balance: null, color: suggestedColor },
+      ? {
+          name: account.name,
+          type: account.type,
+          balance: null,
+          creditLimit: account.creditLimit ?? null,
+          borrowedAmount: account.borrowedAmount ?? null,
+          color: account.color ?? "BLUE",
+        }
+      : {
+          name: "",
+          type: "ACCOUNT",
+          balance: null,
+          creditLimit: null,
+          borrowedAmount: null,
+          color: suggestedColor,
+        },
   });
   // Read during render: `formState` is a Proxy that only tracks what the component subscribed to.
   const { errors, dirtyFields, isDirty } = form.formState;
@@ -60,27 +88,52 @@ export function AccountForm({
   const duplicate = failure instanceof ApiError && failure.code === "DUPLICATE";
   const formError =
     failure && !duplicate && Object.keys(serverFields).length === 0 ? presentError(failure) : null;
-  const [name, type, color, balance] = useWatch({
+  const [name, type, color, balance, creditLimit, borrowedAmount] = useWatch({
     control: form.control,
-    name: ["name", "type", "color", "balance"],
+    name: ["name", "type", "color", "balance", "creditLimit", "borrowedAmount"],
+  });
+  const debtField = debtFieldOf(type);
+  const typed = balance ?? 0;
+  const preview = useAccountReading({
+    type,
+    balance: account ? account.balance : debtField === null ? typed : -typed,
+    creditLimit: debtField === "creditLimit" ? (creditLimit ?? undefined) : undefined,
+    borrowedAmount: debtField === "borrowedAmount" ? (borrowedAmount ?? undefined) : undefined,
   });
 
   const submit = form.handleSubmit(async (values) => {
+    const carried = debtFieldOf(values.type);
     try {
       if (account) {
         const changes = changedOnly(
-          { name: values.name, type: values.type, color: values.color },
+          {
+            name: values.name,
+            type: values.type,
+            color: values.color,
+            creditLimit: carried === "creditLimit" ? values.creditLimit : null,
+            borrowedAmount: carried === "borrowedAmount" ? values.borrowedAmount : null,
+          },
           dirtyFields,
         );
-        onSaved(nothingChanged(changes) ? account : await update.mutateAsync(changes));
+        // The server refuses a type change that orphans an amount, so the same write clears it.
+        const orphaned = orphanedFields(account, carried);
+        const write = { ...changes, ...orphaned };
+        onSaved(nothingChanged(write) ? account : await update.mutateAsync(write));
         return;
       }
+      const typed = values.balance ?? 0;
       onSaved(
         await create.mutateAsync({
           name: values.name,
           type: values.type,
           color: values.color,
-          balance: values.balance ?? 0,
+          balance: carried === null ? typed : -typed,
+          ...(carried === "creditLimit" && values.creditLimit !== null
+            ? { creditLimit: values.creditLimit }
+            : {}),
+          ...(carried === "borrowedAmount" && values.borrowedAmount !== null
+            ? { borrowedAmount: values.borrowedAmount }
+            : {}),
         }),
       );
     } catch {
@@ -124,6 +177,51 @@ export function AccountForm({
             />
           )}
         />
+        {debtField !== null && !account && (
+          <Controller
+            control={form.control}
+            name="balance"
+            render={({ field }) => (
+              <Field
+                label={t("accounts.form.owed")}
+                help={t("accounts.form.owedHelp")}
+                error={validationMessage(t, errors.balance?.message ?? serverFields.balance)}
+              >
+                <Card className="p-0">
+                  <AmountInput
+                    label={t("accounts.form.owed")}
+                    defaultValue={field.value}
+                    onChange={field.onChange}
+                    className="py-3.5"
+                  />
+                </Card>
+              </Field>
+            )}
+          />
+        )}
+        {debtField !== null && (
+          <Controller
+            control={form.control}
+            name={debtField}
+            render={({ field }) => (
+              <Field
+                label={t(`accounts.form.${debtField}`)}
+                optional
+                help={t(`accounts.form.${debtField}Help`)}
+                error={validationMessage(t, errors[debtField]?.message ?? serverFields[debtField])}
+              >
+                <Card className="p-0">
+                  <AmountInput
+                    label={t(`accounts.form.${debtField}`)}
+                    defaultValue={field.value}
+                    onChange={field.onChange}
+                    className="py-3.5"
+                  />
+                </Card>
+              </Field>
+            )}
+          />
+        )}
         <Controller
           control={form.control}
           name="color"
@@ -140,7 +238,7 @@ export function AccountForm({
             </Field>
           )}
         />
-        {!account && (
+        {debtField === null && !account && (
           <Controller
             control={form.control}
             name="balance"
@@ -166,9 +264,10 @@ export function AccountForm({
         <AccountCard
           name={name.trim() || t("accounts.form.previewName")}
           typeLabel={`${t(`accountTypes.${type}`)} · ${t("accounts.form.preview")}`}
-          balance={<Amount value={account?.balance ?? balance ?? 0} signed={false} size="lg" />}
+          balance={<Amount value={preview.lead} signed={false} size="lg" />}
           color={color}
           mainLabel={account?.isDefault ? t("common.main") : undefined}
+          debt={preview.debt}
         />
       </div>
       <div className="flex flex-col gap-2">

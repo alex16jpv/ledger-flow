@@ -19,6 +19,12 @@ export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
 export const ACCOUNT_NAME_MAX = 255;
 
+const debtAmount = z
+  .number({ error: "validation.amountInvalid" })
+  .positive({ error: "validation.amountPositive" })
+  .max(MAX_AMOUNT, { error: "validation.amountMax" })
+  .nullable();
+
 export const accountFormSchema = z.object({
   name: z
     .string()
@@ -31,6 +37,8 @@ export const accountFormSchema = z.object({
     .min(-MAX_AMOUNT, { error: "validation.amountMax" })
     .max(MAX_AMOUNT, { error: "validation.amountMax" })
     .nullable(),
+  creditLimit: debtAmount,
+  borrowedAmount: debtAmount,
   color: z.enum(COLOR_TOKENS, { error: "validation.required" }),
 });
 

@@ -4,7 +4,7 @@ import { Star, Target } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
-import { type DebtFoot, readDebt } from "@/lib/accounts/debt";
+import { type DebtAccount, type DebtFoot, readDebt } from "@/lib/accounts/debt";
 import { Link } from "@/lib/i18n/navigation";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
@@ -149,6 +149,54 @@ export function AccountCardGrid({
   );
 }
 
+export interface AccountReading {
+  lead: number;
+  debt?: AccountCardDebt;
+}
+
+/** The one reading four surfaces print: the list, Home, the picker and the form's preview. */
+export function useAccountReading(account: DebtAccount, promptHref?: string): AccountReading {
+  const t = useTranslations();
+  const money = useMoney();
+  const reading = readDebt(account);
+  if (reading === null) return { lead: account.balance };
+  const footLine = (foot: DebtFoot): string => {
+    if (foot.line === "owedOfLimit") {
+      return t("accounts.debt.owedOfLimit", {
+        owed: money.format(foot.owed),
+        limit: money.format(foot.limit),
+      });
+    }
+    if (foot.line === "paidOfBorrowed") {
+      return t("accounts.debt.paidOfBorrowed", {
+        paid: money.format(foot.paid),
+        borrowed: money.format(foot.borrowed),
+      });
+    }
+    return t("accounts.debt.inCredit", { amount: money.format(foot.amount) });
+  };
+  return {
+    lead: reading.lead,
+    debt: {
+      word: t(`accounts.debt.${reading.word}`),
+      bar: reading.bar,
+      barLabel: t(
+        reading.word === "available" ? "accounts.debt.barInUse" : "accounts.debt.barPaid",
+      ),
+      foot: reading.foot === null ? undefined : footLine(reading.foot),
+      action:
+        reading.missing === null || promptHref === undefined ? undefined : (
+          <Link href={promptHref} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+            <Target {...iconProps("sm")} />
+            {reading.missing === "creditLimit"
+              ? t("accounts.debt.setCreditLimit")
+              : t("accounts.debt.setBorrowedAmount")}
+          </Link>
+        ),
+    },
+  };
+}
+
 export interface AccountRowCardProps {
   account: Account;
   href?: string;
@@ -165,23 +213,7 @@ export function AccountRowCard({
   promptHref,
 }: AccountRowCardProps) {
   const t = useTranslations();
-  const money = useMoney();
-  const reading = readDebt(account);
-  const footLine = (foot: DebtFoot): string => {
-    if (foot.line === "owedOfLimit") {
-      return t("accounts.debt.owedOfLimit", {
-        owed: money.format(foot.owed),
-        limit: money.format(foot.limit),
-      });
-    }
-    if (foot.line === "paidOfBorrowed") {
-      return t("accounts.debt.paidOfBorrowed", {
-        paid: money.format(foot.paid),
-        borrowed: money.format(foot.borrowed),
-      });
-    }
-    return t("accounts.debt.inCredit", { amount: money.format(foot.amount) });
-  };
+  const { lead, debt } = useAccountReading(account, promptHref);
   return (
     <AccountCard
       href={href}
@@ -189,36 +221,13 @@ export function AccountRowCard({
       typeLabel={t(`accountTypes.${account.type}`)}
       balance={
         <Projected when={projected}>
-          <Amount value={reading ? reading.lead : account.balance} signed={false} size="lg" />
+          <Amount value={lead} signed={false} size="lg" />
         </Projected>
       }
       color={account.color}
       mainLabel={account.isDefault ? t("common.main") : undefined}
       archivedLabel={archived ? t("accounts.list.archivedBadge") : undefined}
-      debt={
-        reading
-          ? {
-              word: t(`accounts.debt.${reading.word}`),
-              bar: reading.bar,
-              barLabel: t(
-                reading.word === "available" ? "accounts.debt.barInUse" : "accounts.debt.barPaid",
-              ),
-              foot: reading.foot === null ? undefined : footLine(reading.foot),
-              action:
-                reading.missing === null || promptHref === undefined ? undefined : (
-                  <Link
-                    href={promptHref}
-                    className={buttonClasses({ variant: "secondary", size: "sm" })}
-                  >
-                    <Target {...iconProps("sm")} />
-                    {reading.missing === "creditLimit"
-                      ? t("accounts.debt.setCreditLimit")
-                      : t("accounts.debt.setBorrowedAmount")}
-                  </Link>
-                ),
-            }
-          : undefined
-      }
+      debt={debt}
     />
   );
 }
