@@ -241,6 +241,49 @@ describe("AdjustBalanceSheet", () => {
     expect(screen.getByText("$12,300 more owed")).toBeInTheDocument();
   });
 
+  it("asks a loan only what it owes, because it cannot hold money of its owner", async () => {
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <AdjustBalanceSheet
+            account={{ ...visa(-8_400_000), type: "LOAN", name: "Car loan" }}
+            open
+            onClose={vi.fn()}
+          />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    expect(screen.queryByRole("button", { name: "Your own money" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Owed" })).not.toBeInTheDocument();
+    expect(screen.getByText("Recorded: $8,400,000 owed")).toBeInTheDocument();
+    const amount = screen.getByRole("textbox", {
+      name: "How much do you owe on Car loan right now?",
+    });
+    expect(amount).toHaveValue("8,400,000");
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "8250000");
+    expect(screen.getByText("$150,000 less owed")).toBeInTheDocument();
+  });
+
+  it("opens a loan that drifted into credit at nothing owed, and says what is recorded", () => {
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <AdjustBalanceSheet
+            account={{ ...visa(200_000), type: "LOAN", name: "Car loan" }}
+            open
+            onClose={vi.fn()}
+          />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    expect(
+      screen.getByRole("textbox", { name: "How much do you owe on Car loan right now?" }),
+    ).toHaveValue("0");
+    expect(screen.getByText("Recorded: $200,000 paid past what it owed")).toBeInTheDocument();
+    expect(screen.getByText("An adjustment of −$200,000")).toBeInTheDocument();
+  });
+
   it("keeps the sign pair on an account that is not debt", async () => {
     renderWithProviders(
       <QueryProvider>

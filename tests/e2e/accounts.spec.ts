@@ -158,3 +158,55 @@ test("a new user creates, edits, promotes, archives and restores accounts, with 
     ]),
   );
 });
+
+// T-101: past zero a card keeps what it has available, and a loan can be neither overpaid nor emptied.
+test("a card in credit still says what is available, and a loan that is paid is full and unpayable", async ({
+  page,
+  request,
+}) => {
+  await signUp(page, request);
+  const debt = async (name: string, type: string, balance: number, field: object) => {
+    const response = await request.post("/api/accounts", {
+      headers: { origin: APP },
+      data: { name, type, balance, ...field },
+    });
+    expect(response.status()).toBe(201);
+    return (await response.json()) as { id: string };
+  };
+  await debt("Visa in credit", "CARD", 500_000, { creditLimit: 4_000_000 });
+  const finished = await debt("Loan finished", "LOAN", 200_000, { borrowedAmount: 12_000_000 });
+  const owing = await debt("Loan owing", "LOAN", -8_400_000, { borrowedAmount: 12_000_000 });
+
+  await page.goto("/accounts");
+  const visa = page.getByRole("link", { name: /Visa in credit/ });
+  await expect(visa.getByText("available · Credit card")).toBeVisible();
+  await expect(visa.getByText("$4,500,000")).toBeVisible();
+  await expect(
+    visa.getByText("$0 owed of $4,000,000 · $500,000 of your own money on it"),
+  ).toBeVisible();
+  const paid = page.getByRole("link", { name: /Loan finished/ });
+  await expect(paid.getByText("owed · Loan")).toBeVisible();
+  await expect(paid.getByText("$12,000,000 paid of $12,000,000")).toBeVisible();
+
+  await page.goto(`/accounts/${finished.id}`);
+  await expect(page.getByRole("button", { name: /Pay this loan/ })).toHaveCount(0);
+
+  await page.goto(`/accounts/${owing.id}`);
+  await page.getByRole("button", { name: "Adjust balance" }).click();
+  const adjusting = page.getByRole("dialog", { name: "Adjust balance" });
+  await expect(adjusting.getByRole("button", { name: "Your own money" })).toHaveCount(0);
+  await expect(
+    adjusting.getByRole("textbox", { name: /How much do you owe on Loan owing right now/ }),
+  ).toHaveValue("8,400,000");
+  await adjusting.getByRole("button", { name: "Cancel" }).click();
+
+  await page.getByRole("button", { name: /Pay this loan/ }).click();
+  const paying = page.getByRole("dialog", { name: "Pay Loan owing" });
+  await paying.getByRole("textbox", { name: "Amount to pay" }).fill("9000000");
+  await expect(
+    paying.getByText("A loan cannot be paid more than the $8,400,000 it still owes."),
+  ).toBeVisible();
+  await expect(paying.getByRole("button", { name: "Pay", exact: true })).toBeDisabled();
+  await paying.getByRole("textbox", { name: "Amount to pay" }).fill("8400000");
+  await expect(paying.getByRole("button", { name: "Pay", exact: true })).toBeEnabled();
+});

@@ -83,13 +83,40 @@ describe("readDebt", () => {
     });
   });
 
-  it("names money of your own sitting on a debt account as yours", () => {
+  it("keeps a card's availability past zero, with what is its owner's added to it", () => {
     expect(readDebt(account({ balance: 500000, creditLimit: 4000000 }))).toEqual({
+      lead: 4500000,
+      word: "available",
+      bar: 0,
+      foot: { line: "inCreditOfLimit", owed: 0, limit: 4000000, own: 500000 },
+      missing: null,
+    });
+  });
+
+  it("reads an overdraft in its ordinary state the same way", () => {
+    const reading = readDebt(account({ type: "OVERDRAFT", balance: 320000, creditLimit: 2000000 }));
+    expect(reading?.word).toBe("available");
+    expect(reading?.lead).toBe(2320000);
+    expect(reading?.bar).toBe(0);
+  });
+
+  it("reads a loan paid past its end as finished, with the bar full", () => {
+    expect(readDebt(account({ type: "LOAN", balance: 200000, borrowedAmount: 12000000 }))).toEqual({
       lead: 0,
       word: "owed",
-      bar: 0,
-      foot: { line: "inCredit", amount: 500000 },
+      bar: 1,
+      foot: { line: "paidOfBorrowed", paid: 12000000, borrowed: 12000000 },
       missing: null,
+    });
+  });
+
+  it("never names money of your own on a loan, because there is no such thing there", () => {
+    expect(readDebt(account({ type: "LOAN", balance: 200000 }))).toEqual({
+      lead: 0,
+      word: "owed",
+      bar: null,
+      foot: null,
+      missing: "borrowedAmount",
     });
   });
 

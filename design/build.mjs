@@ -1266,14 +1266,30 @@ const debtFace = (kind, a) => {
   const gauge = a.limit
     ? `${moneyText(a.owed)} of ${moneyText(a.limit)} used · ${moneyText(a.limit - a.owed)} left`
     : `${moneyText(a.taken - a.owed)} paid of ${moneyText(a.taken)}`;
-  if (a.owed < 0)
+  // T-101 · past zero a card keeps its availability and adds what is its owner's, and a loan is simply paid.
+  if (a.owed < 0) {
+    if (a.taken)
+      return {
+        lead: money(0),
+        type: `owed · ${label}`,
+        foot: `${moneyText(a.taken)} paid of ${moneyText(a.taken)}`,
+        used: 100,
+      };
+    if (a.limit)
+      return {
+        lead: money(a.limit - a.owed),
+        type: `available · ${label}`,
+        foot: `${moneyText(0)} owed of ${moneyText(a.limit)} · ${moneyText(-a.owed)} of your own money on it`,
+        used: 0,
+      };
     return {
       lead: money(0),
       type: `owed · ${label}`,
-      foot: `${moneyText(-a.owed)} of your own money sitting on it`,
+      foot: a.typ === "LOAN" ? null : `${moneyText(-a.owed)} of your own money sitting on it`,
       used: 0,
-      bare: !a.limit && !a.taken,
+      bare: true,
     };
+  }
   if (kind === "available" && a.limit)
     return {
       lead: money(a.limit - a.owed),
@@ -1450,7 +1466,7 @@ const debtHero = (a, opened, since) => {
 };
 
 const debtActions = (what) =>
-  `<button class="btn primary lg block">${iconSvg("arrow-left-right", "sm")}Pay this ${what}</button>
+  `${what === null ? "" : `<button class="btn primary lg block">${iconSvg("arrow-left-right", "sm")}Pay this ${what}</button>`}
 <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:10px"><button class="btn secondary">${iconSvg("scale", "sm")}Adjust balance</button><button class="btn secondary">${iconSvg("pencil", "sm")}Edit</button><button class="btn secondary">${iconSvg("star", "sm")}Make main</button><button class="btn secondary">${iconSvg("archive", "sm")}Archive</button></div>`;
 
 const cardMovements = () =>
@@ -1470,6 +1486,7 @@ ${row("repeat", "GRAY", "Bancolombia → Car loan", "Payment", 420000, "transfer
 ${row("repeat", "GRAY", "Bancolombia → Car loan", "Payment", 420000, "transfer")}</div>`;
 
 const PAY_PRESETS = `<button class="chip selected">Everything owed</button><button class="chip">Another amount</button>`;
+const PAY_OVER_PRESETS = `<button class="chip">Everything owed</button><button class="chip selected">Another amount</button>`;
 
 const paySheet = (a, title, chips, o = {}) => {
   const amt = o.amount ?? a.owed;
@@ -1477,10 +1494,10 @@ const paySheet = (a, title, chips, o = {}) => {
     o.read ??
     `\n<div class="alert neutral">${iconSvg("arrow-left-right")}<span>Bancolombia <b class="amount">${money(amt, "−")}</b> · ${a.name} <b class="amount">${money(amt)}</b> less owed. Your total balance does not change.</span></div>`;
   return sheetWrap(
-    `<div class="stack-sm"><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">${nf.format(amt)}</span><span class="caret"></span></div>
-<div class="chips" style="justify-content:center">${chips}</div></div>
+    `<div class="stack-sm"><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num"${o.error ? ' style="color:var(--danger)"' : ""}>${nf.format(amt)}</span><span class="caret"></span></div>
+<div class="chips" style="justify-content:center">${chips}</div>${o.error ? `<span class="help error">${iconSvg("circle-alert", "sm")}${o.error}</span>` : ""}</div>
 <button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">From</span><span class="val">Bancolombia · $3,420,500</span></span>${iconSvg("chevron-down", "sm")}</button>${o.cat ?? ""}${o.extra ?? ""}${read}
-<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">${o.action ?? "Pay"}</button></div>`,
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4"${o.error ? " disabled" : ""}>${o.action ?? "Pay"}</button></div>`,
     title,
   );
 };
@@ -1499,7 +1516,7 @@ const debtDetail = (a, o = {}) =>
 const adjustDebtSheet = (name, typed, o) =>
   sheetWrap(
     `<div class="stack-sm"><span class="label">${o.owed ? `How much do you owe on ${name} right now?` : `How much of your own money is on ${name} right now?`}</span><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">${nf.format(typed)}</span><span class="caret"></span></div>
-<div class="segment" style="margin:0 auto"><button${o.owed ? ' aria-pressed="true"' : ""}>Owed</button><button${o.owed ? "" : ' aria-pressed="true"'}>Your own money</button></div>
+${o.loan ? "" : `<div class="segment" style="margin:0 auto"><button${o.owed ? ' aria-pressed="true"' : ""}>Owed</button><button${o.owed ? "" : ' aria-pressed="true"'}>Your own money</button></div>`}
 <p class="small muted" style="text-align:center;margin:0">Recorded: <b class="amount">${money(o.recorded)}</b> ${o.owed ? "owed" : "of your own money on it"}</p></div>
 <div class="alert neutral" style="align-items:center">${iconSvg("scale")}<span>${o.line} It does not count as spending or in budgets.</span></div>
 ${field("Note", null, o.note, { opt: true })}
@@ -4122,7 +4139,7 @@ const PAGES = [
       plate(
         "debt-in-credit",
         "A debt account that owes nothing",
-        "<b>This is where your cards are right now</b>, and it is not T-90. A CARD or an OVERDRAFT whose balance is zero or above owes nothing, so it reads <b>$0 owed</b> with an empty bar and the money on it named for what it is. Two accounts are drawn: a card carrying your own $4,000,000 \u2014 a limit typed in as a balance, exactly what you described \u2014 and an overdraft at $320,000, which is the <b>ordinary</b> state of an overdraft and not a mistake at all. The rule has to exist either way: a card can be overpaid, an overdraft normally sits positive, and until T-90 runs every card in the product looks like the first one. Without it the screen would say \u201c$4,000,000 owed\u201d about money you have. <b>The card is drawn with no limit yet, because that is the whole state on day one:</b> no account carries the field until someone fills it, so it reads $0 owed with the money named, <b>no bar at all</b> \u2014 there is no scale to fill \u2014 and the prompt still asks for the limit. The overdraft beside it has one, which is what the same state looks like once the field is set. <b>It is also the honest answer to \u201cwhy did my total drop\u201d:</b> once this ships, that card stops counting $4,000,000 towards what you have. ",
+        "<b>This is where your cards are right now</b>, and it is not T-90. A CARD or an OVERDRAFT whose balance is zero or above owes nothing, and <b>past zero it keeps leading with what it has available</b> (T-101): the money on it is its owner’s, so it is credit to spend on top of the limit. Two accounts are drawn: a card carrying your own $4,000,000 — a limit typed in as a balance, exactly what you described — and an overdraft at $320,000, which is the <b>ordinary</b> state of an overdraft and not a mistake at all. The overdraft has its field, so it reads <b>$2,320,000 available</b> with <i>$0 owed of $2,000,000 · $320,000 of your own money on it</i> under an empty bar: the sentence it already had at exactly zero, with one clause added. The rule has to exist either way: a card can be overpaid, an overdraft normally sits positive, and until T-90 runs every card in the product looks like the first one. Without it the screen would say “$4,000,000 owed” about money you have, and until T-101 it said nothing at all about what was still available. <b>The card is drawn with no limit yet, because that is the whole state on day one:</b> no account carries the field until someone fills it, so it reads $0 owed with the money named, <b>no bar at all</b> — there is no scale to fill — and the prompt still asks for the limit. <b>It is also the honest answer to “why did my total drop”:</b> once this ships, that card stops counting $4,000,000 towards what you have. ",
         debtInCredit(),
         { added: "2026-09-17" },
       ),
@@ -4155,6 +4172,44 @@ const PAGES = [
           }),
         }),
         { added: "2026-09-17" },
+      ),
+      plate(
+        "debt-past-zero-on-a-loan",
+        "A loan that is paid off \u00b7 and one paid past the end",
+        "The other half of T-101, and the one that read backwards: on a loan the bar is <b>what you have paid</b>, so the day the last instalment clears the debt the bar was falling from 90% to <b>0%</b> \u2014 exactly the day it should be full. Drawn here with the loan $200,000 past the end, which is the state a card is allowed to reach and a loan is not: it reads <b>$0 owed</b> with the bar <b>full</b> and <i>$12,000,000 paid of $12,000,000</i>, and money of its owner is <b>not</b> named, because there is no such thing on a loan \u2014 what there is, is a loan that is finished. <b>And Pay this loan is not on the screen</b>: the primary action only exists while the account is below zero, which is what the detail already does for every debt account. ",
+        debtDetail({ ...CARLOAN, owed: -200000 }, { ...LOAN_DETAIL, what: null }),
+        { added: "2026-09-18" },
+      ),
+      plate(
+        "adjust-balance-on-a-loan",
+        "Adjust balance \u00b7 on a loan",
+        "The same sheet T-95 drew for a card, minus the one thing that means nothing here (T-101): a loan cannot hold money of its owner, so the <i>Owed / Your own money</i> pair is <b>not offered</b> and the question is the only one there is \u2014 <b>How much do you owe on Car loan right now?</b>. The line under it still reads the recorded state as it really is, so a loan that landed in credit by another route says so and the adjustment that puts it back is one figure away. Nothing changes in what reaches the server. ",
+        debtDetail(CARLOAN, {
+          ...LOAN_DETAIL,
+          sheet: adjustDebtSheet("Car loan", LOAN_OWED - 150000, {
+            owed: true,
+            loan: true,
+            recorded: LOAN_OWED,
+            line: `<b>${money(150000)} less owed</b> will be recorded as an adjustment.`,
+            note: "Statement says less",
+          }),
+        }),
+        { added: "2026-09-18" },
+      ),
+      plate(
+        "pay-a-loan-not-more-than-owed",
+        "Pay this loan \u00b7 not more than it owes",
+        "His sentence, 2026-09-17: <i>supongo que se debe de limitar que no se pague de mas</i> \u2014 and on a loan it is a limit, not a warning. Anything above what is still owed is refused on the field, with the figure in the message, and the button stays disabled; the read-back does not appear either, because there is no movement to read back. A CARD and an OVERDRAFT are the opposite case and keep taking it: overpaying a card is real and the bank shows it as money in your favour. ",
+        debtDetail(CARLOAN, {
+          ...LOAN_DETAIL,
+          sheet: paySheet(CARLOAN, "Pay Car loan", PAY_OVER_PRESETS, {
+            amount: 9000000,
+            error: `A loan cannot be paid more than the ${moneyText(LOAN_OWED)} it still owes.`,
+            cat: transferCatRow(null),
+            read: "",
+          }),
+        }),
+        { added: "2026-09-18" },
       ),
       plate(
         "account-create-a-debt",

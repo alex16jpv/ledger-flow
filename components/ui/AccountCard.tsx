@@ -196,6 +196,13 @@ export function useAccountReading(
         borrowed: money.format(foot.borrowed),
       });
     }
+    if (foot.line === "inCreditOfLimit") {
+      return t("accounts.debt.inCreditOfLimit", {
+        owed: money.format(foot.owed),
+        limit: money.format(foot.limit),
+        own: money.format(foot.own),
+      });
+    }
     return t("accounts.debt.inCredit", { amount: money.format(foot.amount) });
   };
   return {
