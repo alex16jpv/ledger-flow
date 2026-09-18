@@ -12,6 +12,21 @@ import {
 } from "./queue";
 import { write } from "./write";
 
+// The server answers a debt amount it never got as absent, not as null: the mirror says the same.
+const debtFields = (body: CreateAccountInput): Partial<Account> => ({
+  ...(typeof body.creditLimit === "number" ? { creditLimit: body.creditLimit } : {}),
+  ...(typeof body.borrowedAmount === "number" ? { borrowedAmount: body.borrowedAmount } : {}),
+});
+
+function applyUpdate(row: Account, input: UpdateAccountInput): Account {
+  const next = patch(row, { name: input.name, type: input.type, color: input.color });
+  if (input.creditLimit === null) delete next.creditLimit;
+  else if (input.creditLimit !== undefined) next.creditLimit = input.creditLimit;
+  if (input.borrowedAmount === null) delete next.borrowedAmount;
+  else if (input.borrowedAmount !== undefined) next.borrowedAmount = input.borrowedAmount;
+  return next;
+}
+
 async function currentRow(tx: WriteTransaction, id: string): Promise<Account> {
   const record = await tx.objectStore("accounts").get(id);
   if (!record) throw new NotProjectableError(`account ${id}, which the mirror does not hold`);
@@ -68,6 +83,7 @@ export function createAccount(input: CreateAccountInput): Promise<Account> {
           balance: body.balance,
           openingBalance: body.balance,
           color: body.color ?? null,
+          ...debtFields(body),
           userId,
           isDefault,
           currency,
@@ -88,7 +104,7 @@ export function updateAccount(id: string, input: UpdateAccountInput): Promise<Ac
       entityId: id,
       action: "update",
       payload: { body: input },
-      project: async (tx) => projectAccount(tx, id, patch(await currentRow(tx, id), input)),
+      project: async (tx) => projectAccount(tx, id, applyUpdate(await currentRow(tx, id), input)),
     },
     optimistic: readBack(id),
   });

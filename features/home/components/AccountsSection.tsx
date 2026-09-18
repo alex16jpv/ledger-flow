@@ -2,9 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
-import { AccountCard, AccountCardGrid } from "@/components/ui/AccountCard";
-import { Amount } from "@/components/ui/Amount";
-import { Projected } from "@/components/ui/Projected";
+import { AccountCardGrid, AccountRowCard } from "@/components/ui/AccountCard";
 import { Link } from "@/lib/i18n/navigation";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import type { Account } from "@/types/api";
@@ -27,18 +25,11 @@ export function AccountsSection({ accounts }: AccountsSectionProps) {
       </div>
       <AccountCardGrid label={t("home.accounts")}>
         {ordered.map((account) => (
-          <AccountCard
+          <AccountRowCard
             key={account.id}
+            account={account}
             href={`/accounts/${account.id}`}
-            name={account.name}
-            typeLabel={t(`accountTypes.${account.type}`)}
-            balance={
-              <Projected when={outbox.projected.balances}>
-                <Amount value={account.balance} signed={false} size="lg" />
-              </Projected>
-            }
-            color={account.color}
-            mainLabel={account.isDefault ? t("common.main") : undefined}
+            projected={outbox.projected.balances}
           />
         ))}
       </AccountCardGrid>

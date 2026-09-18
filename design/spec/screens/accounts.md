@@ -90,9 +90,16 @@ bar. Only a balance on the owner's side of zero — an overpaid card, an overdra
 — reads `$0 owed` with the money on it named as the holder's own. That covers an overdraft in its
 ordinary state, an overpaid card, and — until T-90 runs — every card in the product.
 
+**And on day one none of them carries the field either**, so that is what the plate draws: `$0 owed`, the
+money named as the holder's own, **no bar** — a bar needs a scale and there is none — and the prompt still
+asking for the limit. The bar arrives with the field, not with the debt.
+
 **What it costs, and it is paid knowingly.** The figure on screen is the opposite sign of the one the
 server stores, so every surface that paints a balance has to know the account's type, offline
-projections included. And inside the account the movements keep the account's point of view while the
+projections included. **Those surfaces are four**, and they read the account the same way or the
+product says it two ways: the card in this list, Home's carousel, the account's own screen, and the
+account picker — where the row carries the word beside the type, because a figure with no word there
+reads as a balance. And inside the account the movements keep the account's point of view while the
 headline takes the owner's: an expense on the card prints as `−$18,400` under a headline about what is
 available, and that expense _reduces_ what is available. Drawn in `#account-detail-as-debt`.
 

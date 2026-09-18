@@ -1,21 +1,44 @@
-import { Star } from "lucide-react";
-import type { ReactNode } from "react";
+"use client";
 
+import { Star, Target } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { createElement, type ReactNode } from "react";
+
+import { type DebtAccount, debtFieldOf, type DebtFoot, readDebt } from "@/lib/accounts/debt";
 import { Link } from "@/lib/i18n/navigation";
+import { useMoney } from "@/lib/i18n/useMoney";
+import { accountTypeIcon } from "@/lib/icons/account-type-icons";
+import { iconProps } from "@/lib/icons/sizes";
 import { type ColorToken, featureColorStyle } from "@/lib/theme/feature-color";
+import type { Account } from "@/types/api";
 
+import { Amount } from "./Amount";
 import { Badge } from "./Badge";
+import { buttonClasses } from "./Button";
 import { cn } from "./cn";
-import { Dot } from "./Tile";
+import { Progress } from "./Progress";
+import { Projected } from "./Projected";
+import { Dot, Tile } from "./Tile";
+
+export interface AccountCardDebt {
+  word: ReactNode;
+  bar: number | null;
+  barLabel: string;
+  foot?: ReactNode;
+  action?: ReactNode;
+  projected?: boolean;
+}
 
 export interface AccountCardProps {
   name: string;
   typeLabel: ReactNode;
+  mark?: ReactNode;
   balance: ReactNode;
   color?: ColorToken | null;
   mainLabel?: ReactNode;
   archivedLabel?: ReactNode;
   href?: string;
+  debt?: AccountCardDebt;
 }
 
 const CARD =
@@ -28,17 +51,24 @@ const ARCHIVED = "[&>*]:opacity-60 before:opacity-60";
 export function AccountCard({
   name,
   typeLabel,
+  mark,
   balance,
   color,
   mainLabel,
   archivedLabel,
   href,
+  debt,
 }: AccountCardProps) {
-  const paint = cn(CARD, href !== undefined && OPENS, archivedLabel ? ARCHIVED : null);
+  const stretched = debt?.action !== undefined && href !== undefined;
+  const paint = cn(
+    CARD,
+    href !== undefined && !stretched && OPENS,
+    archivedLabel ? ARCHIVED : null,
+  );
   const body = (
     <>
       <div className="flex items-center gap-2">
-        <Dot color={color} />
+        {mark ?? <Dot color={color} />}
         <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
         {mainLabel && (
           <Badge tone="brand">
@@ -48,10 +78,46 @@ export function AccountCard({
         )}
         {archivedLabel && <Badge>{archivedLabel}</Badge>}
       </div>
-      <span className="text-2xl font-semibold tracking-[-0.02em] tabular-nums">{balance}</span>
-      <span className="text-xs text-text-3">{typeLabel}</span>
+      <div>
+        <span className="block text-2xl font-semibold tracking-[-0.02em] tabular-nums">
+          {balance}
+        </span>
+        <span className="block text-xs text-text-3">
+          {debt ? (
+            <>
+              {debt.word} · {typeLabel}
+            </>
+          ) : (
+            typeLabel
+          )}
+        </span>
+      </div>
+      {debt && (debt.bar !== null || debt.foot) && (
+        // Both read the same balance, so one mark covers the pair (components.md 24).
+        <Projected when={debt.projected ?? false} align="center" className="w-full">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            {debt.bar !== null && <Progress value={debt.bar} thin plain label={debt.barLabel} />}
+            {debt.foot && <span className="text-xs text-text-3">{debt.foot}</span>}
+          </div>
+        </Projected>
+      )}
     </>
   );
+
+  if (stretched) {
+    return (
+      <div className={paint} style={featureColorStyle(color)}>
+        <Link
+          href={href}
+          aria-label={name}
+          className="absolute inset-0 rounded-lg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--focus-ring)"
+        />
+        {body}
+        <div className="relative self-start">{debt.action}</div>
+      </div>
+    );
+  }
+
   return href === undefined ? (
     <div className={paint} style={featureColorStyle(color)}>
       {body}
@@ -86,5 +152,109 @@ export function AccountCardGrid({
     >
       {children}
     </div>
+  );
+}
+
+export function AccountTypeTile({
+  type,
+  color,
+}: {
+  type: Account["type"];
+  color?: ColorToken | null;
+}) {
+  return (
+    <Tile size="sm" color={color}>
+      {createElement(accountTypeIcon(type), iconProps("sm"))}
+    </Tile>
+  );
+}
+
+export interface AccountReading {
+  lead: number;
+  debt?: AccountCardDebt;
+}
+
+export function useAccountReading(
+  account: DebtAccount,
+  promptHref?: string,
+  projected = false,
+): AccountReading {
+  const t = useTranslations();
+  const money = useMoney();
+  const reading = readDebt(account);
+  if (reading === null) return { lead: account.balance };
+  const footLine = (foot: DebtFoot): string => {
+    if (foot.line === "owedOfLimit") {
+      return t("accounts.debt.owedOfLimit", {
+        owed: money.format(foot.owed),
+        limit: money.format(foot.limit),
+      });
+    }
+    if (foot.line === "paidOfBorrowed") {
+      return t("accounts.debt.paidOfBorrowed", {
+        paid: money.format(foot.paid),
+        borrowed: money.format(foot.borrowed),
+      });
+    }
+    return t("accounts.debt.inCredit", { amount: money.format(foot.amount) });
+  };
+  return {
+    lead: reading.lead,
+    debt: {
+      projected,
+      word: t(`accounts.debt.${reading.word}`),
+      bar: reading.bar,
+      barLabel: t(
+        debtFieldOf(account.type) === "creditLimit"
+          ? "accounts.debt.barInUse"
+          : "accounts.debt.barPaid",
+      ),
+      foot: reading.foot === null ? undefined : footLine(reading.foot),
+      action:
+        reading.missing === null || promptHref === undefined ? undefined : (
+          <Link href={promptHref} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+            <Target {...iconProps("sm")} />
+            {reading.missing === "creditLimit"
+              ? t("accounts.debt.setCreditLimit")
+              : t("accounts.debt.setBorrowedAmount")}
+          </Link>
+        ),
+    },
+  };
+}
+
+export interface AccountRowCardProps {
+  account: Account;
+  href?: string;
+  archived?: boolean;
+  projected?: boolean;
+  promptHref?: string;
+}
+
+export function AccountRowCard({
+  account,
+  href,
+  archived = false,
+  projected = false,
+  promptHref,
+}: AccountRowCardProps) {
+  const t = useTranslations();
+  const { lead, debt } = useAccountReading(account, promptHref, projected);
+  return (
+    <AccountCard
+      href={href}
+      name={account.name}
+      typeLabel={t(`accountTypes.${account.type}`)}
+      mark={<AccountTypeTile type={account.type} color={account.color} />}
+      balance={
+        <Projected when={projected}>
+          <Amount value={lead} signed={false} size="lg" />
+        </Projected>
+      }
+      color={account.color}
+      mainLabel={account.isDefault ? t("common.main") : undefined}
+      archivedLabel={archived ? t("accounts.list.archivedBadge") : undefined}
+      debt={debt}
+    />
   );
 }

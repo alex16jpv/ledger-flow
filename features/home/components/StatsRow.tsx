@@ -9,26 +9,38 @@ import { Stat } from "@/components/ui/Stat";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 
 interface StatsRowProps {
-  totalBalance: number;
+  have: number;
+  owe: number;
   accountCount: number;
   income: number;
   spent: number;
 }
 
-export function StatsRow({ totalBalance, accountCount, income, spent }: StatsRowProps) {
+export function StatsRow({ have, owe, accountCount, income, spent }: StatsRowProps) {
   const t = useTranslations("home");
+  const ta = useTranslations("accounts.summary");
   const outbox = useOutbox();
   return (
-    <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <section className="grid grid-cols-2 gap-3">
       <Card>
         <Stat
-          label={t("totalBalance")}
+          label={ta("have")}
           value={
             <Projected when={outbox.projected.balances}>
-              <Amount value={totalBalance} signed={false} size="lg" />
+              <Amount value={have} signed={false} size="lg" />
             </Projected>
           }
           delta={{ direction: "flat", label: t("accountsCount", { count: accountCount }) }}
+        />
+      </Card>
+      <Card>
+        <Stat
+          label={ta("owe")}
+          value={
+            <Projected when={outbox.projected.balances}>
+              <Amount value={owe} signed={false} size="lg" />
+            </Projected>
+          }
         />
       </Card>
       <Card>
@@ -41,7 +53,7 @@ export function StatsRow({ totalBalance, accountCount, income, spent }: StatsRow
           }
         />
       </Card>
-      <Card className="hidden sm:block">
+      <Card className="hidden min-[600px]:block">
         <Stat
           label={t("estimatedSavings")}
           value={

@@ -45,7 +45,7 @@ afterEach(() => {
 });
 
 describe("AccountsView", () => {
-  it("sums active balances, reports card debt and keeps archived accounts folded", async () => {
+  it("says what you have and what you owe, and keeps archived accounts folded", async () => {
     fetchMock.mockResolvedValue(
       list([
         account("cash", "Cash", { type: "CASH", balance: 184_000 }),
@@ -59,9 +59,12 @@ describe("AccountsView", () => {
         <AccountsView />
       </QueryProvider>,
     );
-    expect(await screen.findByText("2,358,600")).toBeInTheDocument();
+    expect(await screen.findByText("3,604,500")).toBeInTheDocument();
     expect(screen.getByText("3 active accounts · 1 archived")).toBeInTheDocument();
-    expect(screen.getByText("Card debt")).toBeInTheDocument();
+    expect(screen.getByText("What you owe")).toBeInTheDocument();
+    // The same figure twice: the summary owes it, and the card leads with it while it has no limit.
+    expect(screen.getAllByText("1,245,900")).toHaveLength(2);
+    expect(screen.getByText("owed · Credit card")).toBeInTheDocument();
     const url = fetchMock.mock.calls[0]?.[0];
     expect(url).toContain("includeArchived=true");
 

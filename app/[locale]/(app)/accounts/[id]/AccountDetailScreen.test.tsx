@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
@@ -205,6 +205,39 @@ describe("AccountDetailScreen", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Restore as “Nequi old”" }));
     expect(await screen.findByText("Account restored")).toBeVisible();
     expect(posts).toEqual([{}, { name: "Nequi old" }]);
+  });
+
+  it("offers Pay only on a debt account that owes something (T-88)", async () => {
+    const visa = account("visa", "Visa Gold", { type: "CARD", balance: -1_245_900 });
+    routeFetch(visa);
+    renderScreen("visa");
+    expect(await screen.findByRole("button", { name: "Pay this card" })).toBeInTheDocument();
+    cleanup();
+
+    routeFetch({ ...visa, balance: 0 });
+    renderScreen("visa");
+    await screen.findByRole("heading", { level: 1, name: "Visa Gold" });
+    expect(screen.queryByRole("button", { name: /^Pay/ })).not.toBeInTheDocument();
+    cleanup();
+
+    routeFetch({ ...visa, archivedAt: "2026-05-01T00:00:00Z" });
+    renderScreen("visa");
+    await screen.findByRole("heading", { level: 1, name: "Visa Gold" });
+    expect(screen.queryByRole("button", { name: /^Pay/ })).not.toBeInTheDocument();
+    cleanup();
+
+    routeFetch(banco);
+    renderScreen("banco");
+    await screen.findByRole("heading", { level: 1, name: "Bancolombia" });
+    expect(screen.queryByRole("button", { name: /^Pay/ })).not.toBeInTheDocument();
+  });
+
+  it("names the loan's button after a loan (T-88)", async () => {
+    const loan = account("loan", "Car loan", { type: "LOAN", balance: -8_400_000 });
+    routeFetch(loan);
+    renderScreen("loan");
+
+    expect(await screen.findByRole("button", { name: "Pay this loan" })).toBeInTheDocument();
   });
 
   it("shows the not-found state for an unknown id", async () => {

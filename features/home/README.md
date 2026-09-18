@@ -26,3 +26,10 @@ phone the tap is the reading and goes nowhere. Days still to come are drawn as a
 T-64 made the accounts of the carousel links: `AccountCard` takes an `href` and renders as the link
 itself, so Home and the Accounts list are one control and the card — not a wrapper around it — is
 what carries the focus ring and the flex sizing of the carousel.
+
+T-88 split the stats row's first card in two: **What you have** and **What you owe**, from
+`splitAccounts` in `lib/accounts/debt.ts`, the same call the Accounts summary makes — and **no net
+figure**, because a car loan against a bank account reads negative for years. The row is four cards
+in two pairs; _Estimated savings_ keeps its floor, so a phone still shows three. The carousel prints
+each account through the same reading as the Accounts list, so a card leads with what is available
+on both screens or on neither.

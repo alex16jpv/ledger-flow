@@ -35,16 +35,20 @@ async function createAccount(request: Request, name: string, type = "CASH") {
   return (await response.json()) as { id: string };
 }
 
-test("the list sums the seed accounts, folds the archived one and opens the main account's detail", async ({
+test("the list splits what you have from what you owe, folds the archived one and opens the main account's detail", async ({
   page,
   request,
 }) => {
   await signIn(page, request);
   await page.goto("/accounts");
   await expect(page.getByRole("heading", { level: 1, name: "Accounts" })).toBeVisible();
-  await expect(page.getByText("Total balance")).toBeVisible();
+  await expect(page.getByText("What you have")).toBeVisible();
   await expect(page.getByText(/\d+ active accounts · \d+ archived/)).toBeVisible();
-  await expect(page.getByText("Card debt")).toBeVisible();
+  await expect(page.getByText("What you owe")).toBeVisible();
+  // The seeded Visa Gold carries its limit, so the card leads with what is left on it (T-88).
+  const visa = page.getByRole("link", { name: /Visa Gold/ });
+  await expect(visa.getByText("available · Credit card")).toBeVisible();
+  await expect(visa.getByText(/owed of/)).toBeVisible();
   await expect(page.getByRole("link", { name: /Bancolombia.*Main/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Nequi/ })).toBeHidden();
   await expectNoAxeViolations(page);

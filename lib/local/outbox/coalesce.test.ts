@@ -151,6 +151,28 @@ describe("folding the queue before it is sent", () => {
     expect(operationPayload(plan.operations[0]!.operation).body).toEqual({ id: "t1", amount: 12 });
   });
 
+  it("does not fold a cleared field into a create, which has no way to say no value (T-88)", () => {
+    const plan = coalesce([
+      operation(1, "create", {
+        entity: "account",
+        entityId: "a1",
+        payload: { body: { id: "a1", name: "Visa", type: "CARD", creditLimit: 4000000 } },
+      }),
+      operation(2, "update", {
+        entity: "account",
+        entityId: "a1",
+        payload: { body: { creditLimit: null } },
+      }),
+    ]);
+
+    expect(plan.operations).toHaveLength(1);
+    expect(operationPayload(plan.operations[0]!.operation).body).toEqual({
+      id: "a1",
+      name: "Visa",
+      type: "CARD",
+    });
+  });
+
   it("keeps two amounts written for different budget periods, and folds two for the same one", () => {
     const budget = { entity: "budget" as const, entityId: "b1" };
     const august = { query: { reference: "2026-08-01" }, body: { amount: 100 } };

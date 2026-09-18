@@ -1,6 +1,15 @@
 "use client";
 
-import { Archive, ArchiveRestore, CircleAlert, Inbox, Pencil, Scale, Star } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowLeftRight,
+  CircleAlert,
+  Inbox,
+  Pencil,
+  Scale,
+  Star,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -36,8 +45,11 @@ import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
 
 import { AdjustBalanceSheet } from "./AdjustBalanceSheet";
+import { PaySheet } from "./PaySheet";
 
-type OpenSheet = "adjust" | "main" | "archive" | "conflict" | null;
+type OpenSheet = "adjust" | "pay" | "main" | "archive" | "conflict" | null;
+
+const PAY_LABEL = { CARD: "card", OVERDRAFT: "overdraft", LOAN: "loan" } as const;
 
 export function AccountDetailScreen({ id }: { id: string }) {
   const t = useTranslations();
@@ -61,6 +73,10 @@ export function AccountDetailScreen({ id }: { id: string }) {
     [accounts.data, categories.data],
   );
   const row = account.data;
+  const payable =
+    row && !row.archivedAt && row.balance < 0 && row.type in PAY_LABEL
+      ? (row.type as keyof typeof PAY_LABEL)
+      : null;
   const previousMain = accounts.data?.find((other) => other.isDefault && other.id !== id);
   const conflict = row ? findActiveByName(accounts.data ?? [], row.name) : undefined;
   const rows = transactions.data?.pages.flatMap((page) => page.data) ?? [];
@@ -190,6 +206,18 @@ export function AccountDetailScreen({ id }: { id: string }) {
       ) : (
         <>
           <AccountHero account={row} />
+          {payable && (
+            <Button
+              size="lg"
+              block
+              onClick={() => {
+                setSheet("pay");
+              }}
+            >
+              <ArrowLeftRight {...iconProps("sm")} />
+              {t(`accounts.pay.${PAY_LABEL[payable]}`)}
+            </Button>
+          )}
           <div className="grid grid-cols-2 gap-3">
             {!row.archivedAt && (
               <Button
@@ -315,6 +343,16 @@ export function AccountDetailScreen({ id }: { id: string }) {
               </>
             )}
           </section>
+          {sheet === "pay" && (
+            <PaySheet
+              account={row}
+              main={(accounts.data ?? []).find((option) => option.isDefault)}
+              open
+              onClose={() => {
+                setSheet(null);
+              }}
+            />
+          )}
           {sheet === "adjust" && (
             <AdjustBalanceSheet
               account={row}

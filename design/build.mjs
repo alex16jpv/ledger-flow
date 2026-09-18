@@ -1272,6 +1272,7 @@ const debtFace = (kind, a) => {
       type: `owed · ${label}`,
       foot: `${moneyText(-a.owed)} of your own money sitting on it`,
       used: 0,
+      bare: !a.limit && !a.taken,
     };
   if (kind === "available" && a.limit)
     return {
@@ -1287,7 +1288,7 @@ const debtFace = (kind, a) => {
 const acctCardFace = (a, { dot = false, badge = "", face = null, extra = "" } = {}) => {
   const mark = dot ? '<span class="dot"></span>' : tile(ACCT_TYPE_ICON[a.typ], a.color, "sm");
   const gauge = face?.foot
-    ? `\n<div class="stack-sm" style="gap:5px">${meter(face.used)}<span class="xs faint">${face.foot}</span></div>`
+    ? `\n<div class="stack-sm" style="gap:5px">${face.bare ? "" : meter(face.used)}<span class="xs faint">${face.foot}</span></div>`
     : "";
   const body = face
     ? `<div><div class="amount-lg amount">${face.lead}</div><div class="type">${face.type}</div></div>${gauge}`
@@ -1340,7 +1341,8 @@ const noLimitYet = (kind) => {
 };
 
 const debtInCredit = () => {
-  const overpaid = { ...VISA, owed: -CARD_LIMIT };
+  // Day one: the limit was typed in as a balance and no field is filled, so the card asks for one.
+  const overpaid = { ...VISA, owed: -CARD_LIMIT, limit: undefined };
   const overdraft = {
     name: "Overdraft",
     typ: "OVERDRAFT",
@@ -1349,7 +1351,10 @@ const debtInCredit = () => {
     limit: 2000000,
   };
   return accountsScreen(
-    `${holdCard("Bancolombia", "ACCOUNT", "BLUE", 3420500, true)}${debtCard(DEBT_LEAD, overpaid)}${debtCard(DEBT_LEAD, overdraft)}${holdCard("Savings", "SAVINGS", "GREEN", 8900000)}`,
+    `${holdCard("Bancolombia", "ACCOUNT", "BLUE", 3420500, true)}${acctCardFace(overpaid, {
+      face: debtFace(DEBT_LEAD, overpaid),
+      extra: setField("Set a credit limit"),
+    })}${debtCard(DEBT_LEAD, overdraft)}${holdCard("Savings", "SAVINGS", "GREEN", 8900000)}`,
     debtSummary(3420500 + CARD_LIMIT + 320000 + 8900000, 0, 4),
   );
 };
@@ -4074,7 +4079,7 @@ const PAGES = [
       plate(
         "debt-in-credit",
         "A debt account that owes nothing",
-        "<b>This is where your cards are right now</b>, and it is not T-90. A CARD or an OVERDRAFT whose balance is zero or above owes nothing, so it reads <b>$0 owed</b> with an empty bar and the money on it named for what it is. Two accounts are drawn: a card carrying your own $4,000,000 \u2014 a limit typed in as a balance, exactly what you described \u2014 and an overdraft at $320,000, which is the <b>ordinary</b> state of an overdraft and not a mistake at all. The rule has to exist either way: a card can be overpaid, an overdraft normally sits positive, and until T-90 runs every card in the product looks like the first one. Without it the screen would say \u201c$4,000,000 owed\u201d about money you have. <b>It is also the honest answer to \u201cwhy did my total drop\u201d:</b> once this ships, that card stops counting $4,000,000 towards what you have. ",
+        "<b>This is where your cards are right now</b>, and it is not T-90. A CARD or an OVERDRAFT whose balance is zero or above owes nothing, so it reads <b>$0 owed</b> with an empty bar and the money on it named for what it is. Two accounts are drawn: a card carrying your own $4,000,000 \u2014 a limit typed in as a balance, exactly what you described \u2014 and an overdraft at $320,000, which is the <b>ordinary</b> state of an overdraft and not a mistake at all. The rule has to exist either way: a card can be overpaid, an overdraft normally sits positive, and until T-90 runs every card in the product looks like the first one. Without it the screen would say \u201c$4,000,000 owed\u201d about money you have. <b>The card is drawn with no limit yet, because that is the whole state on day one:</b> no account carries the field until someone fills it, so it reads $0 owed with the money named, <b>no bar at all</b> \u2014 there is no scale to fill \u2014 and the prompt still asks for the limit. The overdraft beside it has one, which is what the same state looks like once the field is set. <b>It is also the honest answer to \u201cwhy did my total drop\u201d:</b> once this ships, that card stops counting $4,000,000 towards what you have. ",
         debtInCredit(),
         { added: "2026-09-17" },
       ),

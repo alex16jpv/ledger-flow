@@ -10,6 +10,7 @@ export interface ProgressProps {
   // 7.7, F-08: with it the mark is a focusable control with a tooltip; without it, just a line.
   markerLabel?: string;
   thin?: boolean;
+  plain?: boolean;
   color?: ColorToken | null;
   label: string;
   className?: string;
@@ -27,12 +28,13 @@ export function Progress({
   marker,
   markerLabel,
   thin = false,
+  plain = false,
   color,
   label,
   className,
 }: ProgressProps) {
   const ratio = max > 0 ? value / max : 0;
-  const tone = progressTone(ratio);
+  const tone = plain ? "ok" : progressTone(ratio);
   const width = `${Math.min(100, Math.max(0, ratio * 100))}%`;
   const at = `${Math.min(100, Math.max(0, (marker ?? 0) * 100))}%`;
   return (

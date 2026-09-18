@@ -29,16 +29,16 @@ const accounts = [
 ];
 
 describe("summarizeAccounts", () => {
-  it("splits active and archived, puts the main account first and sums only active balances", () => {
+  it("splits active and archived, and puts the main account first", () => {
     const summary = summarizeAccounts(accounts);
     expect(summary.active.map((a) => a.id)).toEqual(["banco", "cash", "visa", "loan"]);
     expect(summary.archived.map((a) => a.id)).toEqual(["nequi"]);
-    expect(summary.totalBalance).toBe(184_000 + 3_420_500 - 1_245_900 + 500_000);
   });
 
-  it("counts as card debt only the negative balances of card, overdraft and loan accounts", () => {
-    expect(summarizeAccounts(accounts).cardDebt).toBe(-1_245_900);
-    expect(summarizeAccounts([account("neg", { type: "CASH", balance: -5 })]).cardDebt).toBe(0);
+  it("says what you have and what you owe over the active accounts only", () => {
+    const summary = summarizeAccounts(accounts);
+    expect(summary.have).toBe(184_000 + 3_420_500 + 500_000);
+    expect(summary.owe).toBe(1_245_900);
   });
 });
 

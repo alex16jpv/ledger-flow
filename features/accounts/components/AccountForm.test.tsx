@@ -158,6 +158,89 @@ describe("AccountForm", () => {
     expect(JSON.parse(init?.body as string)).toEqual({ name: "Nu Bank" });
   });
 
+  it("asks a debt account what it owes and stores it as the debt (T-88)", async () => {
+    fetchMock.mockResolvedValue(json({ id: "a4" }, { status: 201 }));
+    renderForm();
+    await userEvent.type(screen.getByLabelText("Name"), "Visa Gold");
+    await chooseType("Credit card");
+
+    expect(screen.queryByLabelText("Current balance")).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("How much do you owe on it right now?"), "1245900");
+    await userEvent.type(screen.getByLabelText("Credit limit"), "4000000");
+    expect(screen.getByText("available · Credit card · preview")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toMatchObject({
+      type: "CARD",
+      balance: -1245900,
+      creditLimit: 4000000,
+    });
+  });
+
+  it("offers the amount borrowed to a loan and a credit limit to nothing else (T-88)", async () => {
+    renderForm();
+    await chooseType("Loan");
+    expect(screen.getByLabelText("Amount borrowed")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Credit limit")).not.toBeInTheDocument();
+
+    await chooseType("Cash");
+    expect(screen.queryByLabelText("Amount borrowed")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Current balance")).toBeInTheDocument();
+  });
+
+  it("does not leave one type's amount showing under the other type's question (T-88)", async () => {
+    renderForm();
+    await chooseType("Credit card");
+    await userEvent.type(screen.getByLabelText("Credit limit"), "4000000");
+
+    await chooseType("Loan");
+
+    expect(screen.queryByLabelText("Credit limit")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Amount borrowed")).toHaveValue("");
+  });
+
+  it("clears an amount the new type cannot carry, in the same write (T-88)", async () => {
+    fetchMock.mockResolvedValue(json({ id: "a1" }));
+    const onSaved = vi.fn();
+    renderWithProviders(
+      <QueryProvider>
+        <AccountForm
+          account={{
+            id: "a1",
+            name: "Visa Gold",
+            type: "CARD",
+            balance: -1_245_900,
+            openingBalance: 0,
+            creditLimit: 4_000_000,
+            color: "PURPLE",
+            userId: "u1",
+            isDefault: false,
+            currency: "COP",
+            archivedAt: null,
+            createdAt: "",
+            updatedAt: "",
+          }}
+          submitLabel="Save changes"
+          onSaved={onSaved}
+        />
+      </QueryProvider>,
+    );
+    expect(screen.getByLabelText("Credit limit")).toHaveValue("4,000,000");
+
+    await chooseType("Cash");
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      type: "CASH",
+      creditLimit: null,
+    });
+  });
+
   // F-03, variant C: one row and a sheet with room to say what each of the nine types is.
   it("offers all nine account types in a sheet, each with the line that explains it", async () => {
     renderForm();

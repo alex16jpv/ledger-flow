@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Plus, Wallet } from "lucide-react";
+import { Check, CircleDollarSign, Plus, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createElement, useEffect, useRef, useState } from "react";
 
@@ -14,6 +14,7 @@ import { List, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/compone
 import { Sheet } from "@/components/ui/Sheet";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
+import { readDebt } from "@/lib/accounts/debt";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { iconProps } from "@/lib/icons/sizes";
@@ -30,6 +31,8 @@ export interface AccountPickerProps {
   disabled?: boolean;
   allowCreate?: boolean;
   className?: string;
+  // A debt can be paid with money the app does not track: one row that is not an account.
+  outside?: { label: string; meta: string; selected: boolean; onSelect: () => void };
 }
 
 export function AccountPicker({
@@ -40,16 +43,23 @@ export function AccountPicker({
   disabled = false,
   allowCreate = true,
   className,
+  outside,
 }: AccountPickerProps) {
   const t = useTranslations();
+  const leadOf = (account: Account): number => readDebt(account)?.lead ?? account.balance;
+  const rowMeta = (account: Account): string[] => {
+    const reading = readDebt(account);
+    const type = t(`accountTypes.${account.type}`);
+    return reading === null ? [type] : [t(`accounts.debt.${reading.word}`), type];
+  };
   const money = useMoney();
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const initialFocus = useRef<HTMLButtonElement>(null);
   const focused = useRef(false);
   const accounts = useAccountsQuery(false, open || value !== null);
-  const selected = accounts.data?.find((account) => account.id === value) ?? null;
   const options = (accounts.data ?? []).filter((account) => account.id !== exclude);
+  const selected = options.find((account) => account.id === value) ?? null;
   const focusedId = options.some((account) => account.id === value) ? value : options[0]?.id;
 
   // showModal() lands on the close button; move focus to a row once the rows exist so Enter selects.
@@ -75,7 +85,7 @@ export function AccountPicker({
     <>
       <Picker
         label={label ?? t("accounts.picker.label")}
-        value={selected ? `${selected.name} · ${money.format(selected.balance)}` : undefined}
+        value={selected ? `${selected.name} · ${money.format(leadOf(selected))}` : undefined}
         placeholder={t("accounts.picker.placeholder")}
         disabled={disabled}
         className={className}
@@ -103,7 +113,12 @@ export function AccountPicker({
           open={open}
           onClose={close}
           title={t("accounts.picker.title")}
-          footer={<p className="text-sm text-text-3">{t("accounts.picker.note")}</p>}
+          footer={
+            <p className="text-sm text-text-3">
+              {t("accounts.picker.note")}
+              {outside ? ` ${t("accounts.picker.outsideNote")}` : ""}
+            </p>
+          }
         >
           <List className="-mx-4 max-h-[60dvh] overflow-y-auto">
             {accounts.isPending ? (
@@ -118,7 +133,7 @@ export function AccountPicker({
                 title={t("states.error.title")}
                 body={<LoadErrorBody error={accounts.error} />}
               />
-            ) : options.length === 0 ? (
+            ) : options.length === 0 && !outside ? (
               <Empty icon={<Wallet {...iconProps("lg")} />} title={t("accounts.picker.empty")} />
             ) : (
               <div role="listbox" aria-label={t("accounts.picker.title")} className="flex flex-col">
@@ -144,17 +159,44 @@ export function AccountPicker({
                           <span>{account.name}</span>
                           {account.isDefault && <Badge tone="brand">{t("common.main")}</Badge>}
                         </RowTitle>
-                        <RowMeta items={[t(`accountTypes.${account.type}`)]} />
+                        <RowMeta items={rowMeta(account)} />
                       </RowBody>
                       <RowRight>
                         <span className="flex items-center gap-2">
-                          <Amount value={account.balance} signed={false} />
+                          <Amount value={leadOf(account)} signed={false} />
                           {isSelected && <Check {...iconProps("sm")} className="text-brand-text" />}
                         </span>
                       </RowRight>
                     </RowButton>
                   );
                 })}
+                {outside && (
+                  <RowButton
+                    ref={options.length === 0 ? initialFocus : undefined}
+                    role="option"
+                    aria-selected={outside.selected}
+                    onClick={() => {
+                      outside.onSelect();
+                      close();
+                    }}
+                    className={cn("border-t border-border", outside.selected && "bg-brand-soft/40")}
+                  >
+                    <Tile variant="outline">
+                      <CircleDollarSign {...iconProps("md")} />
+                    </Tile>
+                    <RowBody>
+                      <RowTitle>
+                        <span>{outside.label}</span>
+                      </RowTitle>
+                      <RowMeta items={[outside.meta]} />
+                    </RowBody>
+                    {outside.selected && (
+                      <RowRight>
+                        <Check {...iconProps("sm")} className="text-brand-text" />
+                      </RowRight>
+                    )}
+                  </RowButton>
+                )}
               </div>
             )}
             {allowCreate && !accounts.isPending && (

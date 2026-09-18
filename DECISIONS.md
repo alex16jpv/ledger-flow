@@ -3939,3 +3939,39 @@ cover` is set once in the root layout for the standalone display.
   encoded — each position owned the half step either side of it — so a pointer reads exactly what it
   read before, with thirty-one fewer nodes. jsdom measures every element as zero, so a test that points
   at the chart has to give the surface a `getBoundingClientRect`.
+
+## 2026-09-17 · One call decides what a debt account leads with (T-88)
+
+- **Context:** T-85 settled that a CARD or an OVERDRAFT leads with what is still available and a LOAN
+  with what is owed, and four surfaces paint an account's figure: the Accounts list, Home's carousel,
+  the account's own screen and the account picker. While T-85 was still being drawn, one of them had
+  already drifted — the hero printed what was owed under a design that had chosen availability.
+- **Decision:** `lib/accounts/debt.ts` answers the whole reading — the lead figure, the word beside
+  the type, the bar, the line under it and which field is missing — and the four surfaces render what
+  it returns. `AccountRowCard` and `useAccountReading` in `components/ui/AccountCard.tsx` are the only
+  places that turn that reading into nodes.
+- **Alternatives:** a helper per screen (what the app already did with `summarizeAccounts`, and what
+  let the hero drift), or pushing the arithmetic into `lib/local/derive`. The second is wrong: derive
+  is for figures the server did not send, and both of these come from the server — this only subtracts
+  them for the screen, which is the same category as summing balances for a total.
+- **Consequence:** the figure on screen is the opposite sign of the one the API returns for debt
+  accounts, so nothing may print `account.balance` directly on those four surfaces. The reading adds in
+  minor units, refuses to promise availability past the limit and never reports a negative amount paid.
+  A bar without its field is not drawn at all — a bar needs a scale — which is the state every card in
+  the product is in until T-90 runs.
+
+## 2026-09-17 · Paying a debt from outside the app is an adjustment, not an income (T-88)
+
+- **Context:** the pay sheet's `From` picker carries one row that is not an account, for a debt paid
+  with money Ledger Flow does not track. Something has to lower the debt without money leaving an
+  account.
+- **Decision:** a one-sided `ADJUSTMENT` into the debt account, with the description written by the
+  sheet.
+- **Alternatives:** an `INCOME` into the account, which gets the balance right and then lies three
+  times — Home's _Income this month_, _Estimated savings_ and the income budgets all count it as money
+  earned. `deriveSpending` already excludes ADJUSTMENT from all three unless a query names it, which is
+  exactly the behaviour wanted here.
+- **Consequence:** "adjustment" means _reconcile a balance_ everywhere else in the product, so this one
+  reads oddly in a list of movements; the sheet writes the description so the row says what it is. The
+  owner's rule from the same day — an income on a debt account is wrong and the product should refuse
+  it — is T-93.

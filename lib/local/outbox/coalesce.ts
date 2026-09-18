@@ -36,6 +36,11 @@ function mergeBody(first: unknown, second: unknown): unknown {
   return merged;
 }
 
+function withoutCleared(body: unknown): unknown {
+  if (typeof body !== "object" || body === null) return body;
+  return Object.fromEntries(Object.entries(body).filter(([, value]) => value !== null));
+}
+
 // The FIRST operation's `before` survives: keeping the second would count its move twice.
 function mergeEffect(first: OutboxOperation, second: OutboxOperation): MoneyEffect | undefined {
   const before = operationPayload(first).effect;
@@ -85,7 +90,8 @@ function fold(first: OutboxOperation, second: OutboxOperation): Fold {
     return { kind: "cancel" };
 
   if (from === "create" && to === "update") {
-    return { kind: "merge", operation: merged(first, second, "create", body()) };
+    // A create has no way to say "no value": an update that cleared a field leaves it out instead.
+    return { kind: "merge", operation: merged(first, second, "create", withoutCleared(body())) };
   }
   if (from === "update" && to === "update") {
     return { kind: "merge", operation: merged(first, second, "update", body()) };
