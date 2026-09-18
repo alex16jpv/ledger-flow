@@ -150,7 +150,8 @@ export function EditTransactionScreen({ id }: { id: string }) {
           error={update.error}
           onSubmit={async (input, _key, changes) => {
             // The same rule as the inbox (P-17): a category is what completes a quick capture.
-            const completes = row.pendingDetails && input.categoryId != null;
+            const completes =
+              row.pendingDetails && (input.categoryId != null || input.type === "ADJUSTMENT");
             if (completes || !nothingChanged(changes))
               await update.mutateAsync(completes ? { ...changes, pendingDetails: false } : changes);
             toast.show({ message: t("transactions.form.updated") });

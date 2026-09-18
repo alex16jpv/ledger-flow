@@ -1,6 +1,6 @@
 "use client";
 
-import { Wallet } from "lucide-react";
+import { CircleDollarSign, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createElement, useState } from "react";
 
@@ -44,12 +44,18 @@ export function AccountPicker({
   const [open, setOpen] = useState(false);
   const accounts = useAccountsQuery(false, open || value !== null);
   const selected = (accounts.data ?? []).find((account) => account.id === value) ?? null;
+  const pickedOutside = outside?.selected === true;
+  const chosen = pickedOutside
+    ? `${outside.label} · ${outside.meta}`
+    : selected
+      ? `${selected.name} · ${money.format(accountLead(selected))}`
+      : undefined;
 
   return (
     <>
       <Picker
         label={label ?? t("accounts.picker.label")}
-        value={selected ? `${selected.name} · ${money.format(accountLead(selected))}` : undefined}
+        value={chosen}
         placeholder={t("accounts.picker.placeholder")}
         disabled={disabled}
         className={className}
@@ -57,8 +63,15 @@ export function AccountPicker({
           setOpen(true);
         }}
         leading={
-          <Tile size="sm" color={selected?.color} variant={selected ? "soft" : "outline"}>
-            {createElement(selected ? accountTypeIcon(selected.type) : Wallet, iconProps("sm"))}
+          <Tile
+            size="sm"
+            color={pickedOutside ? null : selected?.color}
+            variant={!pickedOutside && selected ? "soft" : "outline"}
+          >
+            {createElement(
+              pickedOutside ? CircleDollarSign : selected ? accountTypeIcon(selected.type) : Wallet,
+              iconProps("sm"),
+            )}
           </Tile>
         }
       />

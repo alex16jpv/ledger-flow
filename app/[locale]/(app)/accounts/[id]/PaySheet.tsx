@@ -1,6 +1,5 @@
 "use client";
 
-import { Scale } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 
@@ -88,12 +87,13 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   }
 
   const readBack =
-    amount === null || amount <= 0 || over ? null : outside ? (
-      <Alert tone="neutral" icon={Scale}>
-        {t("accounts.pay.readOutside", { name: account.name, amount: money.format(amount) })}
-      </Alert>
-    ) : (
-      <TransferReadback from={from} to={account} amount={amount} />
+    amount === null || amount <= 0 || over ? null : (
+      <TransferReadback
+        from={outside ? null : from}
+        to={account}
+        amount={amount}
+        outside={outside}
+      />
     );
 
   return (

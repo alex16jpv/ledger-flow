@@ -273,3 +273,67 @@ wrong, and a guessed field would point at the wrong half of a transfer.
 - **The type stays a segmented control**, his choice of 2026-09-15.
 - **The interest split, when it happens, belongs to the Pay sheet**, the only place the app knows a
   movement is a loan instalment. An instalment typed by hand into this form stays one transfer.
+
+## Money from outside, in the transfer's _From_ (T-100)
+
+His words, 2026-09-17: «lo del somewhere else en el account from Tambien tiene que aplicar en el
+formulario de transaccion en transfer. y se debe de considerar en la tarea de las reglas de transfer
+para definir si sale siempre o cuando se cumplan condiciones como por ejemplo que el TO sea una credit
+card o un loan o algo en lo que realmente aplique».
+
+**The row is the Pay sheet's, unchanged** (`#transfer-from-somewhere-else`): under the accounts of the
+_From_ picker, `Somewhere else · not an account here`, with the note the sheet already carries. Same
+row, same words, the same picker component — the two surfaces share it rather than each growing its own
+(§8.14), and what it writes is the same one-sided ADJUSTMENT raising the debt account, with no category.
+Why an adjustment and not an income is settled in [accounts.md](accounts.md) and does not change here:
+the money is neither income nor spending, it simply never was inside the app.
+
+### It appears only when the _To_ actually owes money (`#transfer-from-only-when-it-applies`)
+
+That is the condition he asked to be defined, and it is **the Pay sheet's own**: paying a debt is
+offered on an account only while it is a debt account **and its balance is below zero**
+(`payable`, in `AccountDetailScreen`), so the row that pays it from outside appears on the same terms.
+One sentence for both screens — an account that **owes money** can be paid, and money reaching it from
+outside is a payment. Everywhere else — an ordinary account, a savings account, a card whose owner has
+money sitting on it, a loan already settled — money from outside **is income**, which is what the grid
+in `lag-money-manager/docs/modules/transactions.md` settled, and the honest record is an Income.
+
+**An overdraft in the red takes it**, and that does not reopen his decision of 2026-09-18 that an
+income may land on an overdraft: a positive overdraft is its ordinary state and a salary landing there
+is income, while an overdraft below zero owes money like any other debt. Both records exist because
+both acts do.
+
+**And it keeps the form out of a dead end.** A loan that owes nothing refuses any amount above zero —
+T-93's ceiling — so offering to pay it from outside would be offering a form that can never be saved.
+
+**Reaching it costs nothing extra.** The _To_ is one field below _From_, and the two intent chips that
+fill a card or a loan set it in one tap; the row is in the picker from the moment the _To_ qualifies.
+**Choosing a _To_ that does not qualify takes the row away**, and empties _From_ if that was the choice,
+so the form asks for an account instead of carrying one that no longer means anything.
+
+### It is not offered in the _To_
+
+His decision, 2026-09-18, asked as part of this task. Money leaving towards something the app does not
+track already has its shape: it is an **Expense**. A second way to record it that is not spending would
+keep the same act out of Stats and out of every budget depending only on which field it was typed into.
+
+### What the rest of the form does while it is chosen
+
+- **The category disappears**, as it does in the Pay sheet: an adjustment carries none and the server
+  refuses one.
+- **The sentence at the bottom loses its left half**: _Visa Gold $500,000 less owed. It does not count
+  as income or as spending, because the money never was in Ledger Flow._ There is no second side to
+  name, and the side that is there goes through the same `sideKey` the two-sided sentence uses, so the
+  Pay sheet says it with the very same component instead of a second copy of the text.
+- **The swap button is disabled.** One of the two sides is not an account, so there is nothing to swap
+  it with, and the _To_ never takes this row.
+- **The description is the user's if they typed one**, and the Pay sheet's — _Paid from outside Ledger
+  Flow_ — if they did not, because the history would otherwise read _Balance adjustment_ about a
+  payment.
+- **The loan ceiling of T-93 still applies**, on the amount, exactly as it does for a transfer: the
+  server caps an ADJUSTMENT into a loan on the same terms as a TRANSFER.
+
+**Saved, it leaves this form for good.** An adjustment is not editable here — T-85 took the type out of
+the form — so `/transactions/<id>/edit` sends it on to the detail, where it can be read and deleted.
+That is already true of the Pay sheet's outside payment: it is the cost of the shape, not of this
+screen.

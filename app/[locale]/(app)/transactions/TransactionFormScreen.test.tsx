@@ -125,6 +125,14 @@ function routeFetchWithDebt() {
   });
 }
 
+// A transfer keeps three account sheets mounted — From, To and the intent chips — so the open one wins.
+async function openAccountSheet() {
+  const sheets = await screen.findAllByRole("dialog", { name: "Account" });
+  const shown = sheets.find((sheet) => sheet.hasAttribute("open"));
+  if (!shown) throw new Error("no account sheet is open");
+  return shown;
+}
+
 const calls = (method: string) =>
   fetchMock.mock.calls.filter(([, init]) => (init?.method ?? "GET") === method);
 
@@ -373,6 +381,175 @@ describe("NewTransactionScreen", () => {
     expect(screen.queryByText(/cannot be paid more than/)).not.toBeInTheDocument();
   });
 
+  it("offers Somewhere else in the From only when the To owes money", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Move to savings" }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+
+    const plain = await openAccountSheet();
+    expect(within(plain).queryByRole("option", { name: /Somewhere else/ })).not.toBeInTheDocument();
+    await userEvent.click(within(plain).getByRole("button", { name: "Close" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Pay a loan" }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+    const debt = await openAccountSheet();
+    expect(within(debt).getByRole("option", { name: /Somewhere else/ })).toBeVisible();
+    expect(within(debt).getByText(/is not an account and creates nothing/)).toBeVisible();
+  });
+
+  it("does not offer it towards a debt account that owes nothing", async () => {
+    fetchMock.mockImplementation((input) => {
+      if (urlOf(input).includes("/api/accounts")) {
+        return Promise.resolve(
+          json({
+            data: [
+              ...accounts,
+              { ...debtAccounts[2], balance: 120 },
+              { ...debtAccounts[3], balance: 0 },
+            ],
+            pagination,
+          }),
+        );
+      }
+      return Promise.resolve(json({ code: "INTERNAL", message: urlOf(input) }, { status: 500 }));
+    });
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+
+    for (const chip of ["Pay a card", "Pay a loan"]) {
+      await userEvent.click(await screen.findByRole("button", { name: chip }));
+      await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+      const sheet = await openAccountSheet();
+      expect(
+        within(sheet).queryByRole("option", { name: /Somewhere else/ }),
+      ).not.toBeInTheDocument();
+      await userEvent.click(within(sheet).getByRole("button", { name: "Close" }));
+    }
+  });
+
+  // The overdraft takes income and still owes money below zero: both records exist because both acts do.
+  it("offers it towards an overdraft in the red", async () => {
+    fetchMock.mockImplementation((input) => {
+      if (urlOf(input).includes("/api/accounts")) {
+        return Promise.resolve(
+          json({ data: [...accounts, { ...debtAccounts[4], balance: -90 }], pagination }),
+        );
+      }
+      return Promise.resolve(json({ code: "INTERNAL", message: urlOf(input) }, { status: 500 }));
+    });
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Pay a card" }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+
+    expect(
+      within(await openAccountSheet()).getByRole("option", { name: /Somewhere else/ }),
+    ).toBeVisible();
+  });
+
+  it("writes a debt paid from outside as a one-sided adjustment", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "30");
+    await userEvent.click(await screen.findByRole("button", { name: "Pay a loan" }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+    await userEvent.click(
+      within(await openAccountSheet()).getByRole("option", { name: /Somewhere else/ }),
+    );
+
+    expect(screen.getByRole("button", { name: /From.*Somewhere else/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Swap accounts" })).toBeDisabled();
+    expect(screen.queryByText(/marked as Transfer are offered here/)).not.toBeInTheDocument();
+    expect(screen.getByText(/never was in Ledger Flow/)).toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
+    await waitFor(() => {
+      expect(calls("POST")).toHaveLength(1);
+    });
+    expect(JSON.parse(calls("POST")[0]?.[1]?.body as string)).toMatchObject({
+      type: "ADJUSTMENT",
+      amount: 30,
+      fromAccountId: null,
+      toAccountId: "a4",
+      categoryId: null,
+      description: "Paid from outside Ledger Flow",
+    });
+  });
+
+  it("keeps the description the user typed instead of the one it writes for them", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "30");
+    await userEvent.click(await screen.findByRole("button", { name: "Pay a loan" }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+    await userEvent.click(
+      within(await openAccountSheet()).getByRole("option", { name: /Somewhere else/ }),
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: /^Description/ }),
+      "My mother paid it",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
+
+    await waitFor(() => {
+      expect(calls("POST")).toHaveLength(1);
+    });
+    expect(JSON.parse(calls("POST")[0]?.[1]?.body as string)).toMatchObject({
+      type: "ADJUSTMENT",
+      description: "My mother paid it",
+    });
+  });
+
+  it("takes the row away, and the choice with it, when the To stops owing money", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "30");
+    await userEvent.click(await screen.findByRole("button", { name: "Pay a loan" }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+    await userEvent.click(
+      within(await openAccountSheet()).getByRole("option", { name: /Somewhere else/ }),
+    );
+    expect(screen.getByRole("button", { name: /From.*Somewhere else/ })).toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: /^To/ }));
+    await userEvent.click(
+      within(await openAccountSheet()).getByRole("option", { name: /Savings/ }),
+    );
+
+    expect(screen.getByRole("button", { name: /^From/ })).toHaveTextContent("Choose an account");
+    await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
+    expect(calls("POST")).toHaveLength(0);
+    expect(await screen.findByText("This field is required.")).toBeVisible();
+  });
+
+  it("drops the choice when the type leaves the transfer and comes back", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Pay a loan" }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+    await userEvent.click(
+      within(await openAccountSheet()).getByRole("option", { name: /Somewhere else/ }),
+    );
+    expect(screen.getByRole("button", { name: /From.*Somewhere else/ })).toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: "Expense" }));
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    expect(screen.queryByRole("button", { name: /From.*Somewhere else/ })).not.toBeInTheDocument();
+  });
+
   it("offers no intent chip for a kind of account nobody has", async () => {
     render(<NewTransactionScreen />);
     await screen.findByRole("group", { name: "Type" });
@@ -476,6 +653,55 @@ describe("EditTransactionScreen", () => {
       expect(replace).toHaveBeenCalledWith("/transactions/t1");
     });
     expect(screen.queryByRole("group", { name: "Type" })).not.toBeInTheDocument();
+  });
+
+  // A converted movement carries no category, so the inbox rule has to let an adjustment complete one.
+  it("turns a transfer waiting to be detailed into a payment from outside, and clears the review flag", async () => {
+    const transfer = {
+      ...stored,
+      type: "TRANSFER",
+      categoryId: null,
+      fromAccountId: "a1",
+      toAccountId: "a3",
+      pendingDetails: true,
+    };
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      const method = init?.method ?? "GET";
+      if (url.includes("/api/accounts"))
+        return Promise.resolve(json({ data: debtAccounts, pagination }));
+      if (url.includes("/api/categories"))
+        return Promise.resolve(json({ data: categories, pagination }));
+      if (url.includes("/api/stats/spending"))
+        return Promise.resolve(json({ groupBy: "category", total: 0, buckets: [] }));
+      if (url.endsWith("/api/transactions/tags")) return Promise.resolve(json({ data: [] }));
+      if (url.endsWith("/api/transactions/t1") && method === "GET")
+        return Promise.resolve(json(transfer));
+      if (url.endsWith("/api/transactions/t1") && method === "PUT")
+        return Promise.resolve(json(transfer));
+      return Promise.resolve(
+        json({ code: "INTERNAL", message: `${method} ${url}` }, { status: 500 }),
+      );
+    });
+    render(<EditTransactionScreen id="t1" />);
+    expect(await screen.findByRole("button", { name: /From.*Bancolombia/ })).toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+    await userEvent.click(
+      within(await openAccountSheet()).getByRole("option", { name: /Somewhere else/ }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => {
+      expect(calls("PUT")).toHaveLength(1);
+    });
+    expect(JSON.parse(calls("PUT")[0]?.[1]?.body as string)).toMatchObject({
+      type: "ADJUSTMENT",
+      fromAccountId: null,
+      toAccountId: "a3",
+      categoryId: null,
+      pendingDetails: false,
+    });
   });
 
   it("shows the not-found state for a missing id", async () => {

@@ -38,6 +38,7 @@ export const transactionFormSchema = z
     accountId: z.string().nullable(),
     fromAccountId: z.string().nullable(),
     toAccountId: z.string().nullable(),
+    fromOutside: z.boolean(),
     date: z.string().min(1, { error: "validation.required" }),
     time: z.string().nullable(),
     description: z.string().trim().max(TEXT_MAX, { error: "validation.nameMax" }),
@@ -46,7 +47,7 @@ export const transactionFormSchema = z
   })
   .superRefine((values, context) => {
     if (values.type === "TRANSFER") {
-      if (!values.fromAccountId)
+      if (!values.fromAccountId && !values.fromOutside)
         context.addIssue({
           code: "custom",
           path: ["fromAccountId"],
@@ -75,6 +76,7 @@ export function defaultFormValues(now: Date, timeZone: string): TransactionFormV
     accountId: null,
     fromAccountId: null,
     toAccountId: null,
+    fromOutside: false,
     ...dateTimeParts(now, timeZone),
     description: "",
     tags: [],
@@ -121,6 +123,7 @@ export function draftToFormValues(
     accountId: type === "TRANSFER" ? null : (draft.accountId ?? null),
     fromAccountId: type === "TRANSFER" ? (draft.accountId ?? null) : null,
     toAccountId: type === "TRANSFER" ? (draft.toAccountId ?? null) : null,
+    fromOutside: false,
     description: draft.description ?? "",
   };
 }
@@ -143,7 +146,10 @@ function accountSides(values: TransactionFormValues): {
     case "INCOME":
       return { fromAccountId: null, toAccountId: values.accountId };
     case "TRANSFER":
-      return { fromAccountId: values.fromAccountId, toAccountId: values.toAccountId };
+      return {
+        fromAccountId: values.fromOutside ? null : values.fromAccountId,
+        toAccountId: values.toAccountId,
+      };
   }
 }
 
@@ -153,11 +159,12 @@ export function toTransactionInput(
   timeZone: string,
   now: Date = new Date(),
 ): CreateTransactionInput & UpdateTransactionInput {
+  const outside = values.type === "TRANSFER" && values.fromOutside;
   return {
-    type: values.type,
+    type: outside ? "ADJUSTMENT" : values.type,
     amount: values.amount,
     date: dateTimeInstant(values, timeZone, now).toISOString(),
-    categoryId: values.categoryId,
+    categoryId: outside ? null : values.categoryId,
     ...accountSides(values),
     description: values.description.trim() || null,
     tags: values.tags,
@@ -174,6 +181,7 @@ const OWNED_BY: Record<keyof TransactionFormValues, readonly (keyof UpdateTransa
   accountId: ["fromAccountId", "toAccountId"],
   fromAccountId: ["fromAccountId", "toAccountId"],
   toAccountId: ["fromAccountId", "toAccountId"],
+  fromOutside: ["type", "fromAccountId", "toAccountId", "categoryId", "description"],
   date: ["date"],
   time: ["date"],
   description: ["description"],
@@ -215,6 +223,7 @@ export function fromTransaction(
     accountId: single,
     fromAccountId: transaction.type === "TRANSFER" ? transaction.fromAccountId : null,
     toAccountId: transaction.type === "TRANSFER" ? transaction.toAccountId : null,
+    fromOutside: false,
     ...dateTimeParts(new Date(transaction.date), timeZone),
     description: transaction.description ?? "",
     tags: transaction.tags,

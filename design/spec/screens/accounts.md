@@ -251,6 +251,8 @@ chose never to register — and nothing here loses that money, so it cannot be a
 counts in no total, and the user registers nothing: that is the whole point, the money comes from
 something they decided not to track. It is a row in a picker that writes a **one-sided ADJUSTMENT**
 raising the debt account, a shape the product already has.
+**Since T-100 the same row is in the full form's transfer**, in the _From_ and only when the _To_ is a
+card or a loan: see [add.md](add.md).
 
 **Why an adjustment and not an income.** An income gets the balance right and then lies three times:
 Home's _Income this month_ is `fetchSpending({type: "INCOME"})` over the month

@@ -15,6 +15,11 @@ function uniqueAmount(): number {
   return 100_000 + Math.floor(Math.random() * 899_999);
 }
 
+// The two Playwright projects run the same test at once: a clock-only suffix collides between them.
+function uniqueEmail(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@ledgerflow.test`;
+}
+
 interface Row {
   id: string;
   amount: number;
@@ -262,7 +267,7 @@ test("an income is not offered a card or a loan, and the server refuses one anyw
     headers: { origin: APP },
     data: {
       name: "Rules E2E",
-      email: `rules-${Date.now()}@ledgerflow.test`,
+      email: uniqueEmail("rules"),
       password: "LedgerFlow!2026",
     },
   });
@@ -331,4 +336,69 @@ test("an income is not offered a card or a loan, and the server refuses one anyw
   });
   expect(overpaid.status()).toBe(400);
   expect(((await overpaid.json()) as { code: string }).code).toBe("LOAN_OVERPAID");
+});
+
+test("a transfer can be paid from somewhere else, and only into an account that owes", async ({
+  page,
+  request,
+}) => {
+  const created = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: {
+      name: "Outside E2E",
+      email: uniqueEmail("outside"),
+      password: "LedgerFlow!2026",
+    },
+  });
+  expect(created.ok()).toBe(true);
+  await page.context().addCookies((await request.storageState()).cookies);
+
+  const account = async (data: Record<string, unknown>): Promise<{ id: string }> => {
+    const response = await request.post("/api/accounts", { headers: { origin: APP }, data });
+    expect(response.status()).toBe(201);
+    return (await response.json()) as { id: string };
+  };
+  await account({ name: "Bank", type: "ACCOUNT", balance: 5_000_000 });
+  await account({ name: "Savings E2E", type: "SAVINGS", balance: 1_000_000 });
+  const card = await account({
+    name: "Visa E2E",
+    type: "CARD",
+    balance: -2_000_000,
+    creditLimit: 4_000_000,
+  });
+
+  const amount = uniqueAmount();
+  await page.goto("/transactions/new");
+  await page.getByRole("button", { name: "Transfer" }).click();
+  await page.getByRole("textbox", { name: "Amount" }).fill(String(amount));
+
+  await page.getByRole("button", { name: "Move to savings" }).click();
+  await page.getByRole("button", { name: /^From/ }).click();
+  const plain = page.getByRole("dialog", { name: "Account" }).filter({ visible: true });
+  await expect(plain.getByRole("option", { name: /Somewhere else/ })).toHaveCount(0);
+  await plain.getByRole("button", { name: "Close" }).click();
+
+  await page.getByRole("button", { name: "Pay a card" }).click();
+  await page.getByRole("button", { name: /^From/ }).click();
+  const debt = page.getByRole("dialog", { name: "Account" }).filter({ visible: true });
+  await debt.getByRole("option", { name: /Somewhere else/ }).click();
+
+  await expect(page.getByRole("button", { name: /From.*Somewhere else/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Swap accounts" })).toBeDisabled();
+  await expect(page.getByText(/never was in Ledger Flow/)).toBeVisible();
+  await page.getByRole("button", { name: "Save transaction" }).click();
+  await expect(page).toHaveURL(/\/transactions$/);
+
+  const saved = await findByAmount(request, amount);
+  expect(saved).toMatchObject({
+    type: "ADJUSTMENT",
+    fromAccountId: null,
+    toAccountId: card.id,
+    categoryId: null,
+    description: "Paid from outside Ledger Flow",
+  });
+  const after = (await (await request.get(`/api/accounts/${card.id}`)).json()) as {
+    balance: number;
+  };
+  expect(after.balance).toBe(-2_000_000 + amount);
 });

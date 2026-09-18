@@ -107,3 +107,14 @@ filtered by type) only fill the two sides in the right direction; they save noth
 touch no category, a chip whose kind of account nobody has is not offered, and none of them empties a
 _From_ it has nothing to put back. Switching the type puts the chosen category aside per type rather
 than dropping it, because a round trip through the segment used to lose it.
+
+A transfer can be paid with money the app does not track (T-100): the _From_ picker carries the Pay
+sheet's `Somewhere else` row, and only when the _To_ **owes money** — `owesMoney()`, a debt account
+below zero, which is the same condition under which the Pay sheet offers to pay that account at all.
+Everywhere else money from outside **is** income. It is never offered in the _To_: money leaving
+towards something untracked is an expense. The choice lives in the form values as `fromOutside` and is
+derived against the current _To_ before it is used, so a _To_ that stops owing takes the row and the
+choice with it; `toTransactionInput` then writes an `ADJUSTMENT` with one side, no category and — when
+the user typed none — the Pay sheet's description. `TransferReadback` takes `outside` and says the
+single side through the same `sideKey`, which is why the Pay sheet renders it too instead of writing
+that sentence itself.

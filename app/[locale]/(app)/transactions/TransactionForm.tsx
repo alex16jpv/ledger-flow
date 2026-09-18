@@ -29,7 +29,7 @@ import {
   type TransactionFormValues,
 } from "@/features/transactions/form";
 import { useTagsQuery } from "@/features/transactions/hooks";
-import { INCOME_REFUSED_TYPES, loanOwed } from "@/lib/accounts/debt";
+import { INCOME_REFUSED_TYPES, loanOwed, owesMoney } from "@/lib/accounts/debt";
 import { fieldErrors, presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { dayKey, shiftDayKey } from "@/lib/format/dates";
@@ -102,6 +102,7 @@ export function TransactionForm({
   const amount = useWatch({ control: form.control, name: "amount" });
   const fromAccountId = useWatch({ control: form.control, name: "fromAccountId" });
   const toAccountId = useWatch({ control: form.control, name: "toAccountId" });
+  const fromOutside = useWatch({ control: form.control, name: "fromOutside" });
   const income = type === "INCOME";
   const accounts = useAccountsQuery(false, transfer || income);
   const known = accounts.data ?? [];
@@ -117,8 +118,11 @@ export function TransactionForm({
     t,
     errors.accountId?.message ?? serverFields.fromAccountId ?? serverFields.toAccountId,
   );
+  const target = transfer ? accountOf(toAccountId) : null;
+  const outsideOffered = owesMoney(target);
+  const outside = transfer && fromOutside && outsideOffered;
   // A loan cannot be paid more than it owes, and offline the mirror would draw it paid until the sync says no.
-  const owedOnTarget = transfer ? loanOwed(accountOf(toAccountId)) : null;
+  const owedOnTarget = transfer ? loanOwed(target) : null;
   const overLoan =
     owedOnTarget !== null && Number.isFinite(amount) && amount > owedOnTarget
       ? t("accounts.pay.overLoan", { amount: money.format(owedOnTarget) })
@@ -130,7 +134,19 @@ export function TransactionForm({
       return;
     }
     if (overLoan !== null) return;
-    const input = toTransactionInput(values, timeZone);
+    if (values.fromOutside && !outsideOffered) {
+      form.setError("fromAccountId", { message: "validation.required" });
+      return;
+    }
+    const input = toTransactionInput(
+      outside
+        ? {
+            ...values,
+            description: values.description.trim() || t("accounts.pay.outsideDescription"),
+          }
+        : values,
+      timeZone,
+    );
     try {
       await onSubmit(
         input,
@@ -152,6 +168,7 @@ export function TransactionForm({
     if (next === "INCOME" && chosen !== null && INCOME_REFUSED_TYPES.has(chosen.type)) {
       form.setValue("accountId", null, { shouldDirty: true });
     }
+    if (next !== "TRANSFER") form.setValue("fromOutside", false, { shouldDirty: true });
     form.clearErrors();
   }
 
@@ -196,35 +213,37 @@ export function TransactionForm({
           </div>
         )}
       />
-      <Controller
-        control={form.control}
-        name="categoryId"
-        render={({ field }) => (
-          <div className="flex flex-col gap-1">
-            <CategoryPicker
-              type={type}
-              value={field.value}
-              allowCreate={!transfer}
-              label={t(
-                transfer ? "transactions.form.categoryOptional" : "transactions.form.category",
+      {!outside && (
+        <Controller
+          control={form.control}
+          name="categoryId"
+          render={({ field }) => (
+            <div className="flex flex-col gap-1">
+              <CategoryPicker
+                type={type}
+                value={field.value}
+                allowCreate={!transfer}
+                label={t(
+                  transfer ? "transactions.form.categoryOptional" : "transactions.form.category",
+                )}
+                onChange={(category) => {
+                  field.onChange(category.id);
+                }}
+              />
+              {transfer && (
+                <span className="text-sm text-text-3">
+                  {t("transactions.form.transferCategoryHelp")}
+                </span>
               )}
-              onChange={(category) => {
-                field.onChange(category.id);
-              }}
-            />
-            {transfer && (
-              <span className="text-sm text-text-3">
-                {t("transactions.form.transferCategoryHelp")}
-              </span>
-            )}
-            {serverFields.categoryId && (
-              <span role="alert" className="text-sm text-danger">
-                {validationMessage(t, serverFields.categoryId)}
-              </span>
-            )}
-          </div>
-        )}
-      />
+              {serverFields.categoryId && (
+                <span role="alert" className="text-sm text-danger">
+                  {validationMessage(t, serverFields.categoryId)}
+                </span>
+              )}
+            </div>
+          )}
+        />
+      )}
       {transfer ? (
         <div className="flex flex-col gap-3">
           <IntentChips
@@ -233,6 +252,7 @@ export function TransactionForm({
             from={accountOf(fromAccountId)}
             to={accountOf(toAccountId)}
             onFill={({ from, to }) => {
+              form.setValue("fromOutside", false, { shouldDirty: true });
               form.setValue("fromAccountId", from?.id ?? null, { shouldDirty: true });
               form.setValue("toAccountId", to.id, { shouldDirty: true });
               form.clearErrors(["fromAccountId", "toAccountId"]);
@@ -246,11 +266,26 @@ export function TransactionForm({
                 <div className="flex flex-col gap-1">
                   <AccountPicker
                     label={t("transactions.form.from")}
-                    value={field.value}
+                    value={outside ? null : field.value}
                     exclude={toAccountId}
                     onChange={(account) => {
+                      form.setValue("fromOutside", false, { shouldDirty: true });
                       field.onChange(account.id);
                     }}
+                    outside={
+                      outsideOffered
+                        ? {
+                            label: t("accounts.pay.outside"),
+                            meta: t("accounts.pay.outsideMeta"),
+                            selected: outside,
+                            onSelect: () => {
+                              form.setValue("fromOutside", true, { shouldDirty: true });
+                              field.onChange(null);
+                              form.clearErrors("fromAccountId");
+                            },
+                          }
+                        : undefined
+                    }
                   />
                   {(errors.fromAccountId ?? serverFields.fromAccountId) && (
                     <span role="alert" className="text-sm text-danger">
@@ -270,6 +305,7 @@ export function TransactionForm({
                 iconOnly
                 round
                 aria-label={t("transactions.form.swap")}
+                disabled={outside}
                 onClick={() => {
                   form.setValue("fromAccountId", toAccountId, { shouldDirty: true });
                   form.setValue("toAccountId", fromAccountId, { shouldDirty: true });
@@ -288,6 +324,8 @@ export function TransactionForm({
                     value={field.value}
                     exclude={fromAccountId}
                     onChange={(account) => {
+                      if (!owesMoney(account))
+                        form.setValue("fromOutside", false, { shouldDirty: true });
                       field.onChange(account.id);
                     }}
                   />
@@ -305,8 +343,9 @@ export function TransactionForm({
           </div>
           <TransferReadback
             from={accountOf(fromAccountId)}
-            to={accountOf(toAccountId)}
+            to={target}
             amount={amount}
+            outside={outside}
           />
         </div>
       ) : (

@@ -74,6 +74,27 @@ describe("the sentence that reads a transfer back", () => {
     ).toBeVisible();
   });
 
+  it("reads a payment from outside with one side only", () => {
+    renderWithProviders(
+      <TransferReadback from={null} to={account("Visa Gold", "CARD")} amount={500000} outside />,
+    );
+    expect(screen.getByText(/Visa Gold \$500,000 less owed/)).toHaveTextContent(
+      "It does not count as income or as spending, because the money never was in Ledger Flow.",
+    );
+  });
+
+  it("says the one side through the same vocabulary as the two-sided sentence", () => {
+    renderWithProviders(
+      <TransferReadback
+        from={null}
+        to={account("Visa Gold", "CARD", 100_000)}
+        amount={50_000}
+        outside
+      />,
+    );
+    expect(screen.getByText(/Visa Gold \+\$50,000/)).toBeVisible();
+  });
+
   it("says nothing until there is an amount and both sides", () => {
     const { container } = renderWithProviders(
       <TransferReadback from={account("Bancolombia", "ACCOUNT")} to={null} amount={500} />,
