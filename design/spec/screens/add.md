@@ -237,13 +237,27 @@ that was not read first. Left empty, the sheet behaves exactly as it does today.
 for this. The app finds it by its **`seedKey`**, never by its name, so renaming it keeps the link, and
 someone who has it never sees a field about it. **Someone who does not** — every account registered
 before T-94, until they restore the defaults — gets one more row on the sheet, _Where the interest
-goes_, asking for a category of their own. It is there **from the moment the sheet opens**, not from
-the moment they type: a row that appears mid-amount is a row that moves the keyboard away from what is
-being typed.
+goes_, asking for a category of their own. It appears **as soon as the sheet knows there is none** —
+the categories are asked for when the sheet opens, not when the interest is typed — because a row that
+arrives mid-amount takes the keyboard away from what is being typed. If that question cannot be
+answered the row is still drawn, with the picker's own error inside it: a button that stays dead
+without saying why is the thing this product does not do.
 
 **The ceiling of T-93 now applies to the principal, not to the instalment**, and that is a fix rather
 than a side effect: a loan owing $300,000 can take a $420,000 instalment of which $126,000 is interest,
-because only $294,000 reaches the debt. Refusing it would have been arithmetic nobody asked for.
+because only $294,000 reaches the debt. Refusing it would have been arithmetic nobody asked for. For
+the same reason **_Everything owed_ fills the instalment that leaves the loan at zero** — the debt plus
+the interest on top — and reads as taken while the **principal** is exactly what is owed, not while the
+typed figure is.
+
+**An instalment that is all interest is refused**, and that is a limit of this sheet rather than of the
+product: nothing would reach the debt, and _Pay this loan_ is the screen for paying it down. A month
+where the whole payment is interest is recorded as the expense it is, from the transaction form.
+
+**The split is two figures the user typed, subtracted in minor units.** It is the only arithmetic the
+sheet does and it never touches a balance, which is what house rule 4 draws the line around; done in
+major units, a currency with cents would drift by a fraction and the offline mirror would keep the
+drift.
 
 **And no instalment preset**, which has not changed: T-85 worked out that a _This month's payment_
 preset needs a figure the account does not carry (`#loan-detail-and-pay`), and the two fields a loan
@@ -261,6 +275,11 @@ incomplete: the loan has already fallen by $294,000 and the interest is nowhere.
 **With no network this state does not appear here.** Both movements are queued and the sheet closes;
 if the server later refuses one, it surfaces where every refused change does, in the attention tray of
 [attention-tray.md](attention-tray.md). One place per situation, not two.
+
+**While that state is on screen nothing below it can be changed.** The amount, the interest, the chip
+and the _From_ are frozen, so _Send it again_ can only send what failed; and the sheet still counts as
+having something to lose, so closing it asks first. Without both of those the sheet would offer to
+resend one thing and send another, or lose the interest without a word.
 
 **What it costs, said plainly because he was told it before choosing:** the pair can be separated
 afterwards. Deleting or editing one of the two does not touch the other, and the app does not link

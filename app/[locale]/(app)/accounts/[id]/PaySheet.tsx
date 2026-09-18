@@ -21,6 +21,7 @@ import { mayHoldOwnMoney } from "@/lib/accounts/debt";
 import { presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { useMoney } from "@/lib/i18n/useMoney";
+import { fromCents, toCents } from "@/lib/local/derive/money";
 import type { Account, CreateTransactionInput } from "@/types/api";
 
 export interface PaySheetProps {
@@ -96,7 +97,9 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
     seededInterest?.name ??
     (expenses.data ?? []).find((category) => category.id === chosenInterestCategory)?.name ??
     "";
-  const principal = splits && amount !== null ? amount - interest : amount;
+  // Two figures the user typed, split in minor units: a subtraction in majors loses cents (§2).
+  const principal =
+    splits && amount !== null ? fromCents(toCents(amount) - toCents(interest)) : amount;
   const allInterest = splits && principal !== null && principal <= 0;
   const over = capped && principal !== null && principal > owed;
   const ready =
@@ -118,7 +121,6 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
       openedAt,
     );
     try {
-      // The transfer goes first: it is the payment, and a refused interest leaves the debt right.
       if (!paidPrincipal) {
         await create.mutateAsync({ input, idempotencyKey: keyring.current.keyFor(input) });
         if (splits) setPaidPrincipal(true);
@@ -167,7 +169,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
     <Sheet
       open={open}
       onClose={onClose}
-      unsaved={amount !== null && !paidPrincipal}
+      unsaved={amount !== null}
       title={t("accounts.pay.title", { name: account.name })}
       footer={
         <>
@@ -190,94 +192,97 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
       }
     >
       <div className="flex flex-col gap-4">
-        <Field
-          label={t("accounts.pay.amount")}
-          error={over ? t("accounts.pay.overLoan", { amount: money.format(owed) }) : undefined}
-        >
-          <Card className="flex flex-col gap-2 p-0 pb-3">
-            <AmountInput
-              label={t("accounts.pay.amount")}
-              value={amount}
-              onChange={setAmount}
-              autoFocus
-              invalid={over}
-              className="py-4"
-            />
-            <div className="mx-auto flex gap-2">
-              <Chip
-                selected={amount === owed}
-                onClick={() => {
-                  setAmount(amount === owed ? null : owed);
-                }}
-              >
-                {t("accounts.pay.everything", { amount: money.format(owed) })}
-              </Chip>
-            </div>
-          </Card>
-        </Field>
-        {instalment && (
+        <fieldset disabled={paidPrincipal} className="flex min-w-0 flex-col gap-4 border-0 p-0">
           <Field
-            label={t("accounts.pay.interest")}
-            optional
-            help={t("accounts.pay.interestHelp")}
-            error={allInterest ? t("accounts.pay.interestOverAmount") : undefined}
+            label={t("accounts.pay.amount")}
+            error={over ? t("accounts.pay.overLoan", { amount: money.format(owed) }) : undefined}
           >
-            <Card className="p-0 pb-1">
+            <Card className="flex flex-col gap-2 p-0 pb-3">
               <AmountInput
-                label={t("accounts.pay.interest")}
-                size="sm"
-                value={interest}
-                onChange={setInterest}
-                invalid={allInterest}
-                className="py-3"
+                label={t("accounts.pay.amount")}
+                value={amount}
+                onChange={setAmount}
+                autoFocus
+                invalid={over}
+                className="py-4"
               />
+              <div className="mx-auto flex gap-2">
+                <Chip
+                  selected={principal === owed}
+                  onClick={() => {
+                    setAmount(
+                      principal === owed ? null : fromCents(toCents(owed) + toCents(interest ?? 0)),
+                    );
+                  }}
+                >
+                  {t("accounts.pay.everything", { amount: money.format(owed) })}
+                </Chip>
+              </div>
             </Card>
           </Field>
-        )}
-        {instalment && expenses.isSuccess && seededInterest === undefined && (
-          <Field
-            label={t("accounts.pay.interestCategory")}
-            help={t("accounts.pay.interestCategoryHelp")}
-          >
-            <CategoryPicker
-              type="EXPENSE"
-              label={t("accounts.pay.interestCategory")}
-              value={chosenInterestCategory}
-              onChange={(category) => {
-                setChosenInterestCategory(category.id);
-              }}
-            />
-          </Field>
-        )}
-        <AccountPicker
-          label={t("accounts.pay.from")}
-          value={outside ? null : (from?.id ?? null)}
-          exclude={account.id}
-          allowCreate={false}
-          onChange={(chosen) => {
-            setOutside(false);
-            setFrom(chosen);
-          }}
-          outside={{
-            label: t("accounts.pay.outside"),
-            meta: t("accounts.pay.outsideMeta"),
-            selected: outside,
-            onSelect: () => {
-              setOutside(true);
-              setFrom(null);
-            },
-          }}
-        />
-        {!outside && (
-          <CategoryPicker
-            type="TRANSFER"
-            value={categoryId}
+          {instalment && (
+            <Field
+              label={t("accounts.pay.interest")}
+              optional
+              help={t("accounts.pay.interestHelp")}
+              error={allInterest ? t("accounts.pay.interestOverAmount") : undefined}
+            >
+              <Card className="p-0 pb-1">
+                <AmountInput
+                  label={t("accounts.pay.interest")}
+                  size="sm"
+                  value={interest}
+                  onChange={setInterest}
+                  invalid={allInterest}
+                  className="py-3"
+                />
+              </Card>
+            </Field>
+          )}
+          {instalment && !expenses.isPending && seededInterest === undefined && (
+            <div className="flex flex-col gap-1">
+              <CategoryPicker
+                type="EXPENSE"
+                label={t("accounts.pay.interestCategory")}
+                value={chosenInterestCategory}
+                onChange={(category) => {
+                  setChosenInterestCategory(category.id);
+                }}
+              />
+              <span className="text-sm text-text-3">{t("accounts.pay.interestCategoryHelp")}</span>
+            </div>
+          )}
+          <AccountPicker
+            label={t("accounts.pay.from")}
+            value={outside ? null : (from?.id ?? null)}
+            exclude={account.id}
             allowCreate={false}
-            onChange={(category) => {
-              setCategoryId(category.id);
+            onChange={(chosen) => {
+              setOutside(false);
+              setFrom(chosen);
+            }}
+            outside={{
+              label: t("accounts.pay.outside"),
+              meta: t("accounts.pay.outsideMeta"),
+              selected: outside,
+              onSelect: () => {
+                setOutside(true);
+                setFrom(null);
+                setInterest(null);
+              },
             }}
           />
-        )}
+          {!outside && (
+            <CategoryPicker
+              type="TRANSFER"
+              value={categoryId}
+              allowCreate={false}
+              onChange={(category) => {
+                setCategoryId(category.id);
+              }}
+            />
+          )}
+        </fieldset>
         {readBack}
       </div>
     </Sheet>

@@ -452,7 +452,6 @@ test("a loan instalment is saved as a payment and an interest expense", async ({
   expect(interest?.description).toBe("Interest on Car loan");
   expect(interest?.toAccountId).toBeNull();
 
-  // The seeded category is what makes the sheet ask nothing: the app finds it by seedKey.
   const categories = (await (await request.get("/api/categories?type=EXPENSE")).json()) as {
     data: { id: string; seedKey: string | null }[];
   };

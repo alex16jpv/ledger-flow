@@ -29,7 +29,11 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
    `--danger`; focus is a brand border plus the `--focus-ring` ring. Textarea 88px. A two-column group
    for date and time. The switch is 44×26.
 9. **Large amount (`amount-input`)** — 52px semibold, a 20px symbol in `--text-3`, a brand caret; the
-   native numeric keyboard (`inputmode="decimal"` or `numeric` depending on the currency).
+   native numeric keyboard (`inputmode="decimal"` or `numeric` depending on the currency). **A second
+   size, 28px with a 16px symbol** (T-94), for a second amount beside the one a screen is about — the
+   interest inside a loan instalment: at 52px the two would read as equals.
+   It takes an **optional figure from its parent**, and adjusts its text only when the figure is one it
+   did not itself produce, so filling it from a chip never rewrites a half-typed decimal.
 10. **Segmented control** — 34px per option, `--surface-2` track, the selected one `--surface` with
     shadow 1; it colours its own label by type (income, transfer).
 11. **Picker** — a 48px row with an sm tile, an 11px label and a 14px value, plus a chevron; it opens a

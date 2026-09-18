@@ -128,4 +128,16 @@ describe("AmountInput", () => {
     const label = screen.getByText("Amount to pay", { selector: "label span" }).closest("label");
     expect(label).toHaveAttribute("for", input.getAttribute("id"));
   });
+
+  it("takes a second size, for an amount that sits beside the one a screen is about", () => {
+    const { rerender } = renderWithProviders(
+      <AmountInput onChange={vi.fn()} label="Amount to pay" />,
+    );
+    expect(screen.getByRole("textbox", { name: "Amount to pay" })).toHaveClass("text-[52px]");
+
+    rerender(<AmountInput onChange={vi.fn()} label="Amount to pay" size="sm" />);
+    const small = screen.getByRole("textbox", { name: "Amount to pay" });
+    expect(small).toHaveClass("text-[28px]");
+    expect(small).not.toHaveClass("text-[52px]");
+  });
 });

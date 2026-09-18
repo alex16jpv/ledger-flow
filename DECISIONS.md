@@ -27,6 +27,14 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   two agree, a decision about budgets, and three screens that would have to show a movement whose
   amount is not the amount that left the account. Each is a place the two sides can drift, which is
   what house rule 4 exists to prevent.
+- **What the independent review changed**, because three of its findings were the same shape — the
+  half-saved state was a state nothing guarded: the amount, the interest, the chip and the _From_ are
+  **frozen** once the transfer has landed, so _Send it again_ cannot resend something other than what
+  failed; the sheet still counts as having something to lose in that state, so closing it asks (it did
+  the opposite, which was backwards); _Everything owed_ now fills the instalment that leaves the loan
+  at zero, interest on top, and reads as taken by the **principal**; choosing _Somewhere else_ clears
+  the interest instead of silently dropping it; and the split is subtracted **in minor units**, since
+  in majors a currency with cents drifts by a fraction that the offline mirror would then keep.
 - **Consequence:** the two are **not atomic** and cannot be — `POST /sync` applies its operations one
   at a time, and online they are two requests. So the transfer goes **first**, and if the interest is
   refused the sheet stays open, says which half is saved, and its button becomes _Send it again_, which

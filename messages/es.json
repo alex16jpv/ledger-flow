@@ -902,11 +902,12 @@
         "readSplit": "{left} · {right}. {interest} de eso es gasto: sale en Stats bajo {category}.",
         "halfArrived": "Solo llegó la mitad. El pago de {principal} está en el servidor; los intereses de {interest} fueron rechazados. Envíalo otra vez, o borra el pago y empieza de nuevo.",
         "transferRow": "Hacia {name}",
-        "transferMeta": "Transfer · baja el préstamo",
+        "transferMeta": "Transferencia · baja el préstamo",
         "expenseRow": "Intereses de {name}",
-        "expenseMeta": "Expense · {category}",
+        "expenseMeta": "Gasto · {category}",
         "saved": "Guardado",
-        "refused": "Rechazado"
+        "refused": "Rechazado",
+        "list": "Los dos movimientos que se guardan"
       },
       "from": "Desde",
       "outside": "Otro sitio",

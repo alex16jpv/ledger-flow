@@ -51,7 +51,11 @@ export function InstalmentReadback({
 
   return (
     <div className="flex flex-col gap-2">
-      <Alert tone={half ? "warning" : "neutral"} icon={ArrowLeftRight}>
+      <Alert
+        tone={half ? "warning" : "neutral"}
+        role={half ? "alert" : undefined}
+        icon={ArrowLeftRight}
+      >
         {half
           ? t("accounts.pay.instalment.halfArrived", {
               principal: money.format(principal),
@@ -70,8 +74,12 @@ export function InstalmentReadback({
               category: interestCategory,
             })}
       </Alert>
-      <List className="rounded-xl border border-border">
-        <Row>
+      <List
+        role="list"
+        aria-label={t("accounts.pay.instalment.list")}
+        className="rounded-xl border border-border"
+      >
+        <Row role="listitem">
           <Tile size="sm" color={null}>
             <Repeat {...iconProps("sm")} />
           </Tile>
@@ -86,7 +94,7 @@ export function InstalmentReadback({
             <Amount value={principal} signed={false} />
           </RowRight>
         </Row>
-        <Row className="border-t border-border">
+        <Row role="listitem" className="border-t border-border">
           <Tile size="sm" color={null}>
             <Percent {...iconProps("sm")} />
           </Tile>

@@ -906,7 +906,8 @@
         "expenseRow": "Interest on {name}",
         "expenseMeta": "Expense · {category}",
         "saved": "Saved",
-        "refused": "Refused"
+        "refused": "Refused",
+        "list": "The two movements this saves"
       },
       "from": "From",
       "outside": "Somewhere else",

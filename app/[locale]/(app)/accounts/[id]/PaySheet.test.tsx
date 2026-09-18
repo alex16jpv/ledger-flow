@@ -125,7 +125,6 @@ function openLoan() {
   return onClose;
 }
 
-// The sheet keeps both category pickers mounted; only one of them is open.
 async function openSheet(name: string) {
   const sheets = await screen.findAllByRole("dialog", { name });
   const shown = sheets.find((sheet) => sheet.hasAttribute("open"));
@@ -261,6 +260,116 @@ describe("the instalment split (T-94)", () => {
     });
     // Three POSTs, and only one of them is the transfer: the payment is never sent twice.
     expect(bodies().filter((body) => body.type === "TRANSFER")).toHaveLength(1);
+  });
+
+  it("freezes what was typed once the payment landed, so Send it again cannot send something else", async () => {
+    let posts = 0;
+    fetchMock.mockImplementation((url, init) => {
+      const href = url instanceof Request ? url.url : url.toString();
+      if (href.includes("/api/categories"))
+        return Promise.resolve(json({ data: [interestCategory], pagination }));
+      if (isTransactions(url) && (init?.method ?? "GET") === "POST") {
+        posts += 1;
+        return posts === 2
+          ? Promise.resolve(json({ code: "INTERNAL", message: "no" }, { status: 500 }))
+          : Promise.resolve(json({ id: `t${String(posts)}` }, { status: 201 }));
+      }
+      return Promise.resolve(json({ data: [main, loan] }));
+    });
+    openLoan();
+
+    await userEvent.type(await screen.findByLabelText("Amount to pay"), "420000");
+    await userEvent.type(screen.getByLabelText("Of which interest"), "126000");
+    await userEvent.click(screen.getByRole("button", { name: "Pay" }));
+    await screen.findByText(/Only half of this arrived/);
+
+    expect(screen.getByLabelText("Amount to pay")).toBeDisabled();
+    expect(screen.getByLabelText("Of which interest")).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Everything owed/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^From/ })).toBeDisabled();
+  });
+
+  it("still asks before closing while half of it is unsaved", async () => {
+    let posts = 0;
+    fetchMock.mockImplementation((url, init) => {
+      const href = url instanceof Request ? url.url : url.toString();
+      if (href.includes("/api/categories"))
+        return Promise.resolve(json({ data: [interestCategory], pagination }));
+      if (isTransactions(url) && (init?.method ?? "GET") === "POST") {
+        posts += 1;
+        return posts === 2
+          ? Promise.resolve(json({ code: "INTERNAL", message: "no" }, { status: 500 }))
+          : Promise.resolve(json({ id: `t${String(posts)}` }, { status: 201 }));
+      }
+      return Promise.resolve(json({ data: [main, loan] }));
+    });
+    openLoan();
+
+    await userEvent.type(await screen.findByLabelText("Amount to pay"), "420000");
+    await userEvent.type(screen.getByLabelText("Of which interest"), "126000");
+    await userEvent.click(screen.getByRole("button", { name: "Pay" }));
+    await screen.findByText(/Only half of this arrived/);
+
+    fireEvent(
+      screen.getByRole("dialog", { name: "Pay Car loan" }),
+      new Event("cancel", { cancelable: true }),
+    );
+    expect(screen.getByText("Are you sure you want to leave?")).toBeVisible();
+  });
+
+  it("everything owed means the loan ends at zero, with the interest on top", async () => {
+    routeLoan([interestCategory]);
+    openLoan();
+
+    await userEvent.type(await screen.findByLabelText("Of which interest"), "126000");
+    await userEvent.click(screen.getByRole("button", { name: /^Everything owed/ }));
+
+    expect(screen.getByLabelText("Amount to pay")).toHaveValue("8,526,000");
+    expect(screen.getByRole("button", { name: /^Everything owed/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText(/Car loan \$8,400,000 less owed/)).toBeVisible();
+  });
+
+  it("drops the interest when the money turns out to come from outside", async () => {
+    routeLoan([interestCategory]);
+    openLoan();
+
+    await userEvent.type(await screen.findByLabelText("Amount to pay"), "420000");
+    await userEvent.type(screen.getByLabelText("Of which interest"), "126000");
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+    await userEvent.click(
+      within(await openSheet("Account")).getByRole("option", { name: /Somewhere else/ }),
+    );
+
+    expect(screen.queryByLabelText("Of which interest")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Pay" }));
+    await waitFor(() => {
+      expect(bodies()).toHaveLength(1);
+    });
+    expect(bodies()[0]).toMatchObject({ type: "ADJUSTMENT", amount: 420_000 });
+  });
+
+  it("splits in minor units, so a currency with cents does not drift", async () => {
+    routeLoan([interestCategory]);
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <PaySheet account={loan} main={main} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
+      { currency: "USD" },
+    );
+
+    await userEvent.type(await screen.findByLabelText("Amount to pay"), "420.07");
+    await userEvent.type(screen.getByLabelText("Of which interest"), "126.03");
+    await userEvent.click(screen.getByRole("button", { name: "Pay" }));
+
+    await waitFor(() => {
+      expect(bodies()).toHaveLength(2);
+    });
+    expect(bodies()[0]).toMatchObject({ type: "TRANSFER", amount: 294.04 });
   });
 
   it("does not offer the split on a card, or when the money comes from outside", async () => {

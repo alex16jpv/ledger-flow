@@ -10,10 +10,9 @@ import { cn } from "./cn";
 import { useFieldContext } from "./Field";
 
 export type AmountTone = "default" | "income" | "transfer";
-export type AmountSize = "lg" | "sm";
+export type AmountInputSize = "lg" | "sm";
 
-// The hero figure a screen is about, and the smaller one a second amount beside it takes (T-94).
-const SIZE: Record<AmountSize, { symbol: string; input: string }> = {
+const SIZE: Record<AmountInputSize, { symbol: string; input: string }> = {
   lg: { symbol: "text-xl", input: "text-[52px] tracking-[-0.035em]" },
   sm: { symbol: "text-base", input: "text-[28px] tracking-[-0.02em]" },
 };
@@ -28,7 +27,7 @@ export interface AmountInputProps {
   defaultValue?: number | null;
   value?: number | null;
   tone?: AmountTone;
-  size?: AmountSize;
+  size?: AmountInputSize;
   onChange: (value: number | null) => void;
   label: string;
   autoFocus?: boolean;

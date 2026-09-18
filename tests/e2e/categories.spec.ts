@@ -67,7 +67,6 @@ test("a new user creates, retypes, archives and restores categories, and restore
 }) => {
   await signUp(page, request);
   await page.goto("/categories");
-  // Six since T-94 seeded Interest, for the expense half of a loan instalment.
   await expect(page.getByRole("button", { name: "Expense · 6", pressed: true })).toBeVisible();
 
   await page.getByRole("link", { name: "New category" }).first().click();
