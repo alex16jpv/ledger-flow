@@ -267,7 +267,14 @@ test("the quick sheet records an income and a transfer against the real backend"
   await addButton(page).click();
   const transfer = uniqueAmount();
   await sheet.getByRole("button", { name: "Transfer" }).click();
-  await expect(sheet.getByRole("group", { name: "Category" })).toBeHidden();
+  // T-86: the sheet keeps its category row on a transfer, filtered to the ones marked Transfer.
+  await expect(sheet.getByRole("group", { name: "Category" })).toBeVisible();
+  await sheet
+    .getByRole("group", { name: "Category" })
+    .getByRole("button", { name: "More" })
+    .click();
+  const picker = page.getByRole("dialog", { name: "Category" });
+  await picker.getByRole("option", { name: /Credit Card Payment/ }).click();
   await sheet.getByRole("textbox", { name: "Amount" }).fill(String(transfer));
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(sheet.getByRole("alert")).toHaveText("This field is required.");
@@ -279,6 +286,7 @@ test("the quick sheet records an income and a transfer against the real backend"
   const moved = await quickRow(request, transfer, (row) => !row.pendingDetails);
   expect(moved?.type).toBe("TRANSFER");
   expect(moved?.pendingDetails).toBe(false);
+  expect(moved?.categoryId).toBeTruthy();
   await request.delete(`/api/transactions/${moved?.id}`, { headers: { origin: APP } });
 });
 

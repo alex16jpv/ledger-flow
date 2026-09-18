@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { createElement, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
-import { List, Row, RowBody, RowMeta, RowTitle } from "@/components/ui/Row";
+import { List, Row, RowBody, RowTitle } from "@/components/ui/Row";
 import { Sheet } from "@/components/ui/Sheet";
 import { Tile } from "@/components/ui/Tile";
 import { iconProps } from "@/lib/icons/sizes";
@@ -57,7 +57,7 @@ export function TypeLine({ type }: { type: FormTransactionType }) {
                 </Tile>
                 <RowBody>
                   <RowTitle>{types(value)}</RowTitle>
-                  <RowMeta items={[t(`typeLine.${value}`)]} />
+                  <span className="text-sm text-text-3">{t(`typeLine.${value}`)}</span>
                 </RowBody>
               </Row>
             ))}

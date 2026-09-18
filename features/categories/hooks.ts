@@ -18,7 +18,6 @@ import {
   fetchCategoryUsage,
   restoreCategory,
   restoreDefaultCategories,
-  type SpendingType,
   updateCategory,
 } from "./api";
 import { categoryKeys } from "./keys";
@@ -118,10 +117,6 @@ export function rankRecentCategories(
     .slice(0, limit);
 }
 
-function spendingType(type: CategoryType | undefined): SpendingType | null {
-  return type === "EXPENSE" || type === "INCOME" ? type : null;
-}
-
 export function useRecentCategories(
   type: CategoryType | undefined,
   categories: readonly Category[] | undefined,
@@ -134,7 +129,8 @@ export function useRecentCategories(
     () => toIsoWindow(trailingDaysWindow(localNoon(today, timeZone), RECENT_DAYS, timeZone)),
     [today, timeZone],
   );
-  const statsType = spendingType(type);
+  // T-86: /stats/spending groups transfers by category too, so all three types have recents.
+  const statsType = type ?? null;
   const params = { type: statsType ?? "EXPENSE", ...window };
   const usage = useQuery({
     queryKey: categoryKeys.usage(params),

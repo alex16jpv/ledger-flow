@@ -9,7 +9,6 @@ import {
 import type { Category, RestoreDefaultsResponse, StatsResponse } from "@/types/api";
 
 export type CategoryType = NonNullable<Category["type"]>;
-export type SpendingType = Extract<CategoryType, "EXPENSE" | "INCOME">;
 
 export type CategoryFilters = CategoryListParams;
 
@@ -39,7 +38,7 @@ export async function restoreDefaultCategories(): Promise<RestoreDefaultsRespons
 }
 
 export interface CategoryUsageParams {
-  type: SpendingType;
+  type: CategoryType;
   from: string;
   to: string;
 }
