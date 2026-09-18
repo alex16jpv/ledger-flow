@@ -174,6 +174,11 @@ which is the only thing people get wrong, because paying a debt means sending mo
 card. _Pay a card_ puts the main account in _From_ and the card in _To_; with more than one card it
 opens the account picker already filtered to cards. Everything stays editable afterwards.
 
+**A chip nobody can use is not drawn.** Each one names a kind of account — a card or an overdraft, a
+loan, a savings account — so with none of that kind there is nothing for it to fill and it does not
+appear; with several it opens the picker filtered to them. On the seeded account set that means two
+chips, not three.
+
 **A chip does not touch the category.** Preselecting one would be the chip setting a field, which is
 not what it was described as when he chose it, and on a loan there is no seeded category to preselect:
 the backend seeds only _Transfer_ and _Credit Card Payment_.
