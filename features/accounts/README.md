@@ -3,6 +3,12 @@
 Money holders: list, detail, create/edit, main account, archive/restore (W-23) and balance
 adjustments (W-24).
 
+On a CARD, an OVERDRAFT or a LOAN the Adjust balance sheet asks **the debt**, not the stored balance
+with its sign (T-95): the Positive / Negative pair becomes **Owed / Your own money** — an overdraft
+in positive is ordinary and a card can be overpaid — the question follows whichever is chosen, and
+the difference reads as "less owed" / "more owed". `debtFieldOf` picks the shape; what reaches the
+server is the same ADJUSTMENT as for any other account.
+
 `AccountPicker` (W-16) is the shared account selector: a `Picker` that opens a sheet listing the
 active accounts with their type tile, "Main" badge and live balance. `exclude` hides one account so
 the two sides of a transfer can never be the same; archived accounts are not offered.

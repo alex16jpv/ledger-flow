@@ -5,6 +5,32 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-17 · Adjusting a debt account asks the debt, and the pair says what the amount is (T-95)
+
+- **Context:** since T-88 the whole product reads a CARD, an OVERDRAFT or a LOAN as debt — the list,
+  Home, the account screen and the picker say "$1,245,900 owed" or "$2,754,100 available", and the
+  account form asks _How much do you owe on it right now?_. The Adjust balance sheet was the one
+  surface still preloading the stored balance with its sign (−$1,245,900) and offering Positive /
+  Negative underneath, so two readings of the same number lived on the same screen. The owner asked
+  it outright on 2026-09-17 — "ajustar el balance en una credit card que sería? el cupo disponible
+  para usar? o la deuda?" — and answered **la deuda**.
+- **Decision:** on a debt account the sheet asks the debt and the Positive / Negative pair becomes
+  **Owed / Your own money**. The question follows the pair, so the label can never contradict the
+  answer; the line under it reads the recorded state in the product's words ("Recorded: $1,245,900
+  owed", "Recorded: $4,000,000 of your own money on it"); and the difference is read as the debt
+  grammar the rest of the product uses ("$12,300 less owed"). Every other account type is untouched,
+  and so is the write: the same ADJUSTMENT, `fromAccountId` when the balance goes down and
+  `toAccountId` when it goes up. `debtFieldOf` decides which of the two sheets you get, so the rule
+  lives where the rest of the debt reading already lives.
+- **Alternatives:** dropping the pair outright, which reads cleanest until you meet the accounts
+  that need it — an overdraft sitting positive is its _ordinary_ state, a card can be overpaid, and
+  every card in the product is in that state until T-90 runs, so those balances would stop being
+  sayable on the one screen whose job is to say them. Or keeping the sign and only renaming the
+  labels, which leaves the person doing the arithmetic the reading already does for them.
+- **Consequence:** the sheet has two shapes and the tests cover both. A new debt type only has to
+  join `debtFieldOf` to get the right one. What the person types is never the available credit,
+  which stays derived from the limit and typed nowhere.
+
 ## 2026-09-13 · A session that is over is not asked for a token again (H-61)
 
 - **Context:** on 2026-09-14 at 00:33 UTC the owner signed out from Settings › Sessions — the

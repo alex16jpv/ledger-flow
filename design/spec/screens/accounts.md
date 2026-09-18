@@ -31,6 +31,38 @@ the computed delta and its sign ("An adjustment of −12,300 will be created"); 
 "Save adjustment" → `POST /transactions` of type ADJUSTMENT, with `fromAccountId` when it goes down and
 `toAccountId` when it goes up. A delta of zero disables the button.
 
+### On an account that is debt (`#adjust-balance-on-a-debt`, T-95)
+
+On a CARD, an OVERDRAFT or a LOAN the same sheet **asks the debt**, not the balance with its sign.
+His decision, 2026-09-17, asked as "ajustar el balance en una credit card que sería? el cupo
+disponible para usar? o la deuda?" and answered **la deuda** — which is what the rest of the product
+already does: the account form asks _How much do you owe on it right now?_
+(`#account-create-a-debt`), the card leads with what is available and says `$1,245,900 owed of
+$4,000,000`, and Pay this card works on what is owed. The available credit is derived, never typed.
+
+So the sheet drops the **Positive / Negative** segment, which on a debt account says nothing, and
+puts in its place **what the amount is**: `Owed` or `Your own money`. The second is not an edge case
+to tolerate — **an overdraft sitting positive is its ordinary state** (`#debt-in-credit`), a card can
+be overpaid, and every card in the product is in that state until T-90 runs. Dropping the control
+outright would make those balances unsayable on the one screen whose job is to say them.
+
+**The question follows the segment**, so the label can never contradict the answer: `Owed` asks _How
+much do you owe on {name} right now?_, `Your own money` asks _How much of your own money is on {name}
+right now?_. It opens on whichever the recorded balance already is, with that figure preloaded — a
+card that owes nothing opens on `Your own money`.
+
+The line under it reads the recorded state in the same words the rest of the product uses:
+`Recorded: $1,245,900 owed`, or `Recorded: $4,000,000 of your own money on it`. And the alert reads
+the difference as the product's debt grammar, the one [add.md](add.md) fixed: **`$12,300 less owed`**
+/ **`$12,300 more owed`**, followed by the same tail as ever — it counts neither as spending nor in
+budgets.
+
+Everything below is untouched: the note, the zero-delta rule, and the write itself. What reaches the
+server is exactly what reached it before — an ADJUSTMENT with `fromAccountId` when the balance goes
+down and `toAccountId` when it goes up — because this decision is about the question, not about the
+money. **Editing an adjustment that already exists is not this sheet** and does not change: it works
+on the adjustment's own amount with Increase/Decrease.
+
 ## New and edit (`#duplicate-name`)
 
 Name (a 409 becomes an inline error with the case-insensitive explanation), type, colour (swatches; a new

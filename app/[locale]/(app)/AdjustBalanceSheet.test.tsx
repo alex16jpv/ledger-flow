@@ -35,6 +35,15 @@ const account: Account = {
 
 const round = (amount: number) => Math.round(amount);
 
+const visa = (balance: number): Account => ({
+  ...account,
+  id: "visa",
+  name: "Visa",
+  type: "CARD",
+  balance,
+  creditLimit: 4_000_000,
+});
+
 beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
@@ -113,29 +122,81 @@ describe("AdjustBalanceSheet", () => {
     expect(screen.getByText("Adjustment saved")).toBeInTheDocument();
   });
 
-  it("lets a debt account go further negative and keeps the form open on a server error", async () => {
+  it("asks a card what it owes, reads the difference as debt, and keeps the form open on a server error", async () => {
     fetchMock.mockResolvedValue(json({ code: "DB_UNAVAILABLE", message: "down" }, { status: 503 }));
     renderWithProviders(
       <QueryProvider>
         <ToastProvider>
-          <AdjustBalanceSheet
-            account={{ ...account, id: "visa", name: "Visa", balance: -1_245_900 }}
-            open
-            onClose={vi.fn()}
-          />
+          <AdjustBalanceSheet account={visa(-1_245_900)} open onClose={vi.fn()} />
         </ToastProvider>
       </QueryProvider>,
     );
-    expect(screen.getByRole("button", { name: "Negative (debt)", pressed: true })).toBeVisible();
-    const amount = screen.getByRole("textbox", { name: "Actual balance in Visa" });
+    expect(screen.getByRole("button", { name: "Owed", pressed: true })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Negative (debt)" })).not.toBeInTheDocument();
+    expect(screen.getByText("Recorded: $1,245,900 owed")).toBeInTheDocument();
+    const amount = screen.getByRole("textbox", { name: "How much do you owe on Visa right now?" });
     await userEvent.clear(amount);
     await userEvent.type(amount, "1300000");
-    expect(screen.getByText("An adjustment of −$54,100")).toBeInTheDocument();
+    expect(screen.getByText("$54,100 more owed")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Save adjustment" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/didn’t respond/);
-    expect(screen.getByRole("textbox", { name: "Actual balance in Visa" })).toHaveValue(
-      "1,300,000",
+    expect(
+      screen.getByRole("textbox", { name: "How much do you owe on Visa right now?" }),
+    ).toHaveValue("1,300,000");
+  });
+
+  it("books less owed when the debt goes down", async () => {
+    fetchMock.mockResolvedValue(json({ id: "t9" }, { status: 201 }));
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <AdjustBalanceSheet account={visa(-1_245_900)} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
     );
+    const amount = screen.getByRole("textbox", { name: "How much do you owe on Visa right now?" });
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "1233600");
+    expect(screen.getByText("$12,300 less owed")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Save adjustment" }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    const [, init] = writes()[0] ?? [];
+    expect(JSON.parse(init?.body as string)).toMatchObject({
+      type: "ADJUSTMENT",
+      amount: 12_300,
+      fromAccountId: null,
+      toAccountId: "visa",
+    });
+  });
+
+  it("opens on your own money when the card owes nothing, and switching the pair moves the balance across zero", async () => {
+    fetchMock.mockResolvedValue(json({ id: "t9" }, { status: 201 }));
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <AdjustBalanceSheet account={visa(4_000_000)} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Your own money", pressed: true })).toBeVisible();
+    expect(screen.getByText("Recorded: $4,000,000 of your own money on it")).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "How much of your own money is on Visa right now?" }),
+    ).toHaveValue("4,000,000");
+    await userEvent.click(screen.getByRole("button", { name: "Owed" }));
+    expect(screen.getByText("$8,000,000 more owed")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Save adjustment" }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    const [, init] = writes()[0] ?? [];
+    expect(JSON.parse(init?.body as string)).toMatchObject({
+      amount: 8_000_000,
+      fromAccountId: "visa",
+      toAccountId: null,
+    });
   });
 });
 

@@ -25,6 +25,7 @@ import {
   useDeleteTransaction,
   useUpdateTransaction,
 } from "@/features/transactions/hooks";
+import { debtFieldOf } from "@/lib/accounts/debt";
 import { presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { nothingChanged } from "@/lib/form/changes";
@@ -39,6 +40,8 @@ import type {
 } from "@/types/api";
 
 type Sign = "positive" | "negative";
+
+type Side = "owed" | "mine";
 
 export interface AdjustBalanceSheetProps {
   account: Account;
@@ -93,11 +96,17 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
   const toast = useToast();
   const create = useCreateTransaction();
   const keyring = useRef(new IdempotencyKeyring());
+  const isDebt = debtFieldOf(account.type) !== null;
   const [magnitude, setMagnitude] = useState<number | null>(Math.abs(account.balance));
   const [sign, setSign] = useState<Sign>(account.balance < 0 ? "negative" : "positive");
+  const [side, setSide] = useState<Side>(account.balance > 0 ? "mine" : "owed");
   const [note, setNote] = useState("");
   const [openedAt] = useState(() => new Date());
-  const actual = magnitude === null ? null : sign === "negative" ? -magnitude : magnitude;
+  const negative = isDebt ? side === "owed" : sign === "negative";
+  const actual = magnitude === null ? null : negative ? -magnitude : magnitude;
+  const label = isDebt
+    ? t(side === "owed" ? "accounts.adjust.owed" : "accounts.adjust.mine", { name: account.name })
+    : t("accounts.adjust.actual", { name: account.name });
   const input =
     actual === null ? null : adjustmentInput(account, actual, note, money.round, openedAt);
   const delta = actual === null ? null : money.round(actual - account.balance);
@@ -141,39 +150,69 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
       }
     >
       <div className="flex flex-col gap-4">
-        <Field label={t("accounts.adjust.actual", { name: account.name })}>
+        <Field label={label}>
           <Card className="flex flex-col gap-2 p-0 pb-3">
             <AmountInput
-              label={t("accounts.adjust.actual", { name: account.name })}
+              label={label}
               defaultValue={Math.abs(account.balance)}
               onChange={setMagnitude}
               autoFocus
               className="py-4"
             />
-            <Segment<Sign>
-              inline
-              label={t("accounts.adjust.sign")}
-              value={sign}
-              onChange={setSign}
-              options={[
-                { value: "positive", label: t("accounts.adjust.positive") },
-                { value: "negative", label: t("accounts.adjust.negative") },
-              ]}
-              className="mx-auto"
-            />
+            {isDebt ? (
+              <Segment<Side>
+                inline
+                label={t("accounts.adjust.side")}
+                value={side}
+                onChange={setSide}
+                options={[
+                  { value: "owed", label: t("accounts.adjust.sideOwed") },
+                  { value: "mine", label: t("accounts.adjust.sideMine") },
+                ]}
+                className="mx-auto"
+              />
+            ) : (
+              <Segment<Sign>
+                inline
+                label={t("accounts.adjust.sign")}
+                value={sign}
+                onChange={setSign}
+                options={[
+                  { value: "positive", label: t("accounts.adjust.positive") },
+                  { value: "negative", label: t("accounts.adjust.negative") },
+                ]}
+                className="mx-auto"
+              />
+            )}
           </Card>
         </Field>
         <p className="text-center text-sm text-text-3">
-          {t("accounts.adjust.recorded", { amount: money.format(account.balance) })}
+          {isDebt
+            ? t(
+                account.balance > 0
+                  ? "accounts.adjust.recordedMine"
+                  : "accounts.adjust.recordedOwed",
+                { amount: money.format(Math.abs(account.balance)) },
+              )
+            : t("accounts.adjust.recorded", { amount: money.format(account.balance) })}
         </p>
         {delta === null ? null : delta === 0 ? (
           <Alert tone="neutral">{t("accounts.adjust.noChange")}</Alert>
         ) : (
           <Alert tone="info">
-            {t.rich("accounts.adjust.delta", {
-              amount: (delta < 0 ? "−" : "+") + money.format(Math.abs(delta)),
-              b: (chunks) => <b className="font-semibold">{chunks}</b>,
-            })}
+            {t.rich(
+              isDebt
+                ? delta > 0
+                  ? "accounts.adjust.deltaLessOwed"
+                  : "accounts.adjust.deltaMoreOwed"
+                : "accounts.adjust.delta",
+              {
+                amount: isDebt
+                  ? money.format(Math.abs(delta))
+                  : (delta < 0 ? "−" : "+") + money.format(Math.abs(delta)),
+                b: (chunks) => <b className="font-semibold">{chunks}</b>,
+              },
+            )}
           </Alert>
         )}
         <Field label={t("accounts.adjust.note")} optional>

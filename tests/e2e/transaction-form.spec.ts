@@ -172,6 +172,43 @@ test("a chip fills the two sides, the form reads the movement back, and the tran
   await request.delete(`/api/transactions/${created?.id}`, { headers: { origin: APP } });
 });
 
+// T-95: on a card the same sheet asks the debt, not the balance with its sign.
+test("adjusting a card asks what it owes and books the difference as debt", async ({
+  page,
+  request,
+}) => {
+  await signIn(page, request);
+  const note = `E2E card adjust ${Date.now()}`;
+  const accounts = (await (await request.get("/api/accounts?limit=50")).json()) as {
+    data: { id: string; name: string }[];
+  };
+  const visa = accounts.data.find((account) => account.name === "Visa Gold");
+  await page.goto(`/accounts/${visa?.id}`);
+
+  await page.getByRole("button", { name: "Adjust balance" }).click();
+  const adjusting = page.getByRole("dialog", { name: "Adjust balance" });
+  await expect(adjusting.getByRole("button", { name: "Owed", pressed: true })).toBeVisible();
+  await expect(adjusting.getByText("Recorded: $1,245,900 owed")).toBeVisible();
+  await adjusting
+    .getByRole("textbox", { name: /How much do you owe on Visa Gold right now/ })
+    .fill("1233600");
+  await expect(adjusting.getByText("$12,300 less owed")).toBeVisible();
+  await adjusting.getByRole("textbox", { name: /^Note/ }).fill(note);
+  await adjusting.getByRole("button", { name: "Save adjustment" }).click();
+  await expect(page.getByText("Adjustment saved")).toBeVisible();
+
+  const created = await findByNote(request, note);
+  expect(created?.type).toBe("ADJUSTMENT");
+  expect(created?.amount).toBe(12_300);
+  expect(created?.toAccountId).toBe(visa?.id);
+  expect(created?.fromAccountId).toBe(null);
+
+  const removed = await request.delete(`/api/transactions/${created?.id}`, {
+    headers: { origin: APP },
+  });
+  expect(removed.ok()).toBe(true);
+});
+
 // T-89: an adjustment is made and edited in the account, on its own amount and never on today's balance.
 test("an adjustment is made in the account and edited from its own list", async ({
   page,
