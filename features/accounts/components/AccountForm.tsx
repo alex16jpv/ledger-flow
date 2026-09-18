@@ -86,8 +86,12 @@ export function AccountForm({
   const serverFields = fieldErrors(mutation.error);
   const failure = mutation.error;
   const duplicate = failure instanceof ApiError && failure.code === "DUPLICATE";
+  // The balance is only a field while creating, so an error about it has nowhere to land on an edit.
+  const shownFields = Object.keys(serverFields).filter(
+    (field) => account === undefined || field !== "balance",
+  );
   const formError =
-    failure && !duplicate && Object.keys(serverFields).length === 0 ? presentError(failure) : null;
+    failure && !duplicate && shownFields.length === 0 ? presentError(failure) : null;
   const [name, type, color, balance, creditLimit, borrowedAmount] = useWatch({
     control: form.control,
     name: ["name", "type", "color", "balance", "creditLimit", "borrowedAmount"],

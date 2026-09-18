@@ -174,7 +174,8 @@ test("a card in credit still says what is available, and a loan that is paid is 
     return (await response.json()) as { id: string };
   };
   await debt("Visa in credit", "CARD", 500_000, { creditLimit: 4_000_000 });
-  const finished = await debt("Loan finished", "LOAN", 200_000, { borrowedAmount: 12_000_000 });
+  // Past zero is unreachable through the API since T-93; at exactly zero the reading is the same one.
+  const finished = await debt("Loan finished", "LOAN", 0, { borrowedAmount: 12_000_000 });
   const owing = await debt("Loan owing", "LOAN", -8_400_000, { borrowedAmount: 12_000_000 });
 
   await page.goto("/accounts");

@@ -29,10 +29,12 @@ import {
   type TransactionFormValues,
 } from "@/features/transactions/form";
 import { useTagsQuery } from "@/features/transactions/hooks";
+import { INCOME_REFUSED_TYPES, loanOwed } from "@/lib/accounts/debt";
 import { fieldErrors, presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { dayKey, shiftDayKey } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
+import { useMoney } from "@/lib/i18n/useMoney";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
 import { aheadOfServer, clockStore } from "@/lib/local/clock";
@@ -69,6 +71,7 @@ export function TransactionForm({
   secondaryAction,
 }: TransactionFormProps) {
   const t = useTranslations();
+  const money = useMoney();
   const { timeZone } = useFormatSettings();
   // F-66: the server refuses a date more than 24 h ahead, so the calendar stops there (7.28).
   const tomorrow = shiftDayKey(dayKey(new Date(), timeZone), 1);
@@ -99,7 +102,8 @@ export function TransactionForm({
   const amount = useWatch({ control: form.control, name: "amount" });
   const fromAccountId = useWatch({ control: form.control, name: "fromAccountId" });
   const toAccountId = useWatch({ control: form.control, name: "toAccountId" });
-  const accounts = useAccountsQuery(false, transfer);
+  const income = type === "INCOME";
+  const accounts = useAccountsQuery(false, transfer || income);
   const known = accounts.data ?? [];
   const accountOf = (id: string | null) => known.find((account) => account.id === id) ?? null;
   const serverFields = fieldErrors(error);
@@ -113,12 +117,19 @@ export function TransactionForm({
     t,
     errors.accountId?.message ?? serverFields.fromAccountId ?? serverFields.toAccountId,
   );
+  // A loan cannot be paid more than it owes, and offline the mirror would draw it paid until the sync says no.
+  const owedOnTarget = transfer ? loanOwed(accountOf(toAccountId)) : null;
+  const overLoan =
+    owedOnTarget !== null && Number.isFinite(amount) && amount > owedOnTarget
+      ? t("accounts.pay.overLoan", { amount: money.format(owedOnTarget) })
+      : null;
 
   async function save(values: TransactionFormValues) {
     if (isTooFarAhead(values, timeZone, new Date())) {
       form.setError("date", { message: "validation.futureDate" });
       return;
     }
+    if (overLoan !== null) return;
     const input = toTransactionInput(values, timeZone);
     try {
       await onSubmit(
@@ -137,6 +148,10 @@ export function TransactionForm({
     // `shouldDirty` because an edit sends only dirty fields, and this is still the user's change.
     form.setValue("type", next, { shouldDirty: true });
     form.setValue("categoryId", chosenPerType.current[next] ?? null, { shouldDirty: true });
+    const chosen = accountOf(form.getValues("accountId"));
+    if (next === "INCOME" && chosen !== null && INCOME_REFUSED_TYPES.has(chosen.type)) {
+      form.setValue("accountId", null, { shouldDirty: true });
+    }
     form.clearErrors();
   }
 
@@ -170,12 +185,12 @@ export function TransactionForm({
               onChange={(value) => {
                 field.onChange(value ?? Number.NaN);
               }}
-              invalid={Boolean(errors.amount) || Boolean(serverFields.amount)}
+              invalid={Boolean(errors.amount) || Boolean(serverFields.amount) || overLoan !== null}
               className="py-2"
             />
-            {(errors.amount ?? serverFields.amount) && (
+            {(errors.amount ?? serverFields.amount ?? overLoan) && (
               <span role="alert" className="text-center text-sm text-danger">
-                {validationMessage(t, errors.amount?.message ?? serverFields.amount)}
+                {overLoan ?? validationMessage(t, errors.amount?.message ?? serverFields.amount)}
               </span>
             )}
           </div>
@@ -303,6 +318,8 @@ export function TransactionForm({
               <AccountPicker
                 label={t("transactions.form.account")}
                 value={field.value}
+                omit={income ? INCOME_REFUSED_TYPES : undefined}
+                note={income ? t("accounts.picker.incomeNote") : undefined}
                 onChange={(account) => {
                   field.onChange(account.id);
                 }}

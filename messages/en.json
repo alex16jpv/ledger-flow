@@ -777,6 +777,8 @@
     "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED": "Your main account can’t be archived. Make another account the main one first.",
     "ACCOUNT_LIMIT_REACHED": "You’ve reached the limit of 100 accounts.",
     "ACCOUNT_FIELD_NOT_FOR_TYPE": "That amount doesn’t belong to this account type. Clear it or pick another type.",
+    "INCOME_ON_CARD_OR_LOAN": "Money arriving at a card or a loan is a payment, not income. Record it as a transfer from the account it came from, or pay it from Somewhere else.",
+    "LOAN_OVERPAID": "A loan cannot be paid more than it still owes.",
     "CATEGORY_LIMIT_REACHED": "You’ve reached the limit of 200 categories.",
     "CATEGORY_ARCHIVED": "That category is archived. Restore it or pick another.",
     "CATEGORY_TYPE_MISMATCH": "That category doesn’t match this type of transaction.",
@@ -860,6 +862,7 @@
       "placeholder": "Choose an account",
       "note": "Archived accounts are not listed. Balances update as you save.",
       "outsideNote": "Somewhere else is not an account and creates nothing: it records a payment made with money Ledger Flow does not track.",
+      "incomeNote": "Money arriving at a card or a loan is a payment, not income: record it as a transfer from wherever it came from.",
       "empty": "No accounts yet",
       "new": "New account",
       "newHint": "Create it without leaving this form"

@@ -73,6 +73,15 @@ The summary card and Home's stats row say **what you have** and **what you owe**
 anywhere: a car loan against a bank account reads negative for years, and that is not the number
 those screens are for.
 
+**The account picker filters by what a movement may touch (T-93).** The sheet takes `only` (the
+intent chips' positive filter) and `omit` (a negative one), plus a `note` appended to its footer.
+Under **Income** the form and the quick capture pass `omit={INCOME_REFUSED_TYPES}` — a card and a
+loan — and the note that says why: money arriving there is a payment, and the server refuses it as
+income. An **overdraft** is not on that list, because a positive balance is its ordinary state and a
+salary landing there is income (owner's decision, 2026-09-18). The rule itself is the server's; this
+is only what keeps the client from offering what it would refuse, and the note is shown only when
+there was something to leave out.
+
 `PaySheet` (app layer, because it composes transactions) is the one primary action on a debt
 account's own screen: the amount preloaded with everything owed, one `From` picker and the optional
 TRANSFER category, and on a LOAN it refuses anything above what is still owed. It writes a TRANSFER

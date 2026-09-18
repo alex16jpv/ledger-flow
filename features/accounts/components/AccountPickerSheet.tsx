@@ -36,6 +36,8 @@ export interface AccountPickerSheetProps {
   onSelect: (account: Account) => void;
   exclude?: string | null;
   only?: ReadonlySet<Account["type"]>;
+  omit?: ReadonlySet<Account["type"]>;
+  note?: string;
   allowCreate?: boolean;
   outside?: OutsideRow;
 }
@@ -51,6 +53,8 @@ export function AccountPickerSheet({
   onSelect,
   exclude = null,
   only,
+  omit,
+  note,
   allowCreate = true,
   outside,
 }: AccountPickerSheetProps) {
@@ -60,8 +64,13 @@ export function AccountPickerSheet({
   const focused = useRef(false);
   const accounts = useAccountsQuery(false, open || value !== null);
   const options = (accounts.data ?? []).filter(
-    (account) => account.id !== exclude && (only === undefined || only.has(account.type)),
+    (account) =>
+      account.id !== exclude &&
+      (only?.has(account.type) ?? true) &&
+      !(omit?.has(account.type) ?? false),
   );
+  // The note explains an absence: with nothing to leave out there is nothing to explain.
+  const omitted = (accounts.data ?? []).some((account) => omit?.has(account.type) ?? false);
   const focusedId = options.some((account) => account.id === value) ? value : options[0]?.id;
   const rowMeta = (account: Account): string[] => {
     const reading = readDebt(account);
@@ -111,6 +120,7 @@ export function AccountPickerSheet({
         <p className="text-sm text-text-3">
           {t("accounts.picker.note")}
           {outside ? ` ${t("accounts.picker.outsideNote")}` : ""}
+          {note !== undefined && omitted ? ` ${note}` : ""}
         </p>
       }
     >

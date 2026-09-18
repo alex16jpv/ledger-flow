@@ -29,33 +29,48 @@ function urlOf(input: string | URL | Request): string {
   return input instanceof URL ? input.href : input.url;
 }
 
-function routeFetch({ accounts = true } = {}) {
+const CARD_MAIN = [
+  {
+    id: "a1",
+    name: "Visa Gold",
+    type: "CARD",
+    balance: -50,
+    isDefault: true,
+    color: "PURPLE",
+    creditLimit: 400,
+  },
+  { id: "a2", name: "Cash", type: "CASH", balance: 5, isDefault: false, color: "GRAY" },
+];
+
+function routeFetch({ accounts = true, list = null as unknown[] | null } = {}) {
   fetchMock.mockImplementation((input, init) => {
     const url = urlOf(input);
     const method = init?.method ?? "GET";
     if (url.includes("/api/accounts"))
       return Promise.resolve(
         json({
-          data: accounts
-            ? [
-                {
-                  id: "a1",
-                  name: "Bancolombia",
-                  type: "ACCOUNT",
-                  balance: 100,
-                  isDefault: true,
-                  color: "BLUE",
-                },
-                {
-                  id: "a2",
-                  name: "Cash",
-                  type: "CASH",
-                  balance: 5,
-                  isDefault: false,
-                  color: "GRAY",
-                },
-              ]
-            : [],
+          data:
+            list ??
+            (accounts
+              ? [
+                  {
+                    id: "a1",
+                    name: "Bancolombia",
+                    type: "ACCOUNT",
+                    balance: 100,
+                    isDefault: true,
+                    color: "BLUE",
+                  },
+                  {
+                    id: "a2",
+                    name: "Cash",
+                    type: "CASH",
+                    balance: 5,
+                    isDefault: false,
+                    color: "GRAY",
+                  },
+                ]
+              : []),
           pagination,
         }),
       );
@@ -283,6 +298,37 @@ describe("QuickAddSheet", () => {
       amount: 9000,
       type: "INCOME",
       toAccountId: "a1",
+    });
+  });
+
+  // T-93: a card can be the main account — a quick expense on it is ordinary — but an income cannot land there.
+  it("asks for an account when the main one is a card and the entry is an income", async () => {
+    routeFetch({ list: CARD_MAIN });
+    renderSheet();
+    await screen.findByRole("button", { name: /From your main account.*Visa Gold/ });
+
+    await userEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(await screen.findByRole("button", { name: /^Account/ })).toHaveTextContent(
+      "Choose an account",
+    );
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "9000");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("This field is required.")).toBeVisible();
+    expect(calls("POST")).toHaveLength(0);
+
+    await userEvent.click(screen.getByRole("button", { name: /^Account/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Account" });
+    expect(within(sheet).queryByRole("option", { name: /Visa Gold/ })).not.toBeInTheDocument();
+    await userEvent.click(within(sheet).getByRole("option", { name: /Cash/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(calls("POST")).toHaveLength(1);
+    });
+    expect(JSON.parse(calls("POST")[0]?.[1]?.body as string)).toMatchObject({
+      type: "INCOME",
+      toAccountId: "a2",
     });
   });
 

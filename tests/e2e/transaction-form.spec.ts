@@ -252,3 +252,83 @@ test("an adjustment is made in the account and edited from its own list", async 
   await expect(page.getByText("Transaction deleted")).toBeVisible();
   expect((await request.get(`/api/transactions/${created?.id}`)).status()).toBe(404);
 });
+
+// T-93: the rule is the server's; the form's job is not to offer what it will refuse.
+test("an income is not offered a card or a loan, and the server refuses one anyway", async ({
+  page,
+  request,
+}) => {
+  const created = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: {
+      name: "Rules E2E",
+      email: `rules-${Date.now()}@ledgerflow.test`,
+      password: "LedgerFlow!2026",
+    },
+  });
+  expect(created.ok()).toBe(true);
+  await page.context().addCookies((await request.storageState()).cookies);
+
+  const account = async (data: Record<string, unknown>): Promise<{ id: string }> => {
+    const response = await request.post("/api/accounts", { headers: { origin: APP }, data });
+    expect(response.status()).toBe(201);
+    return (await response.json()) as { id: string };
+  };
+  const bank = await account({ name: "Bank", type: "ACCOUNT", balance: 20_000 });
+  const card = await account({
+    name: "Visa E2E",
+    type: "CARD",
+    balance: -1_245,
+    creditLimit: 4_000,
+  });
+  const loan = await account({
+    name: "Loan E2E",
+    type: "LOAN",
+    balance: -8_400,
+    borrowedAmount: 12_000,
+  });
+  const overdraft = await account({
+    name: "Overdraft E2E",
+    type: "OVERDRAFT",
+    balance: 320,
+    creditLimit: 2_000,
+  });
+
+  await page.goto("/transactions/new");
+  await page.getByRole("button", { name: "Income" }).click();
+  await page.getByRole("button", { name: /^Account/ }).click();
+  const picker = page.getByRole("dialog", { name: "Account" });
+  await expect(picker.getByRole("option", { name: /Bank/ })).toBeVisible();
+  await expect(picker.getByRole("option", { name: /Overdraft E2E/ })).toBeVisible();
+  await expect(picker.getByRole("option", { name: /Visa E2E/ })).toHaveCount(0);
+  await expect(picker.getByRole("option", { name: /Loan E2E/ })).toHaveCount(0);
+  await expect(picker.getByText(/is a payment, not income/)).toBeVisible();
+
+  const income = async (toAccountId: string) =>
+    request.post("/api/transactions", {
+      headers: { origin: APP },
+      data: { type: "INCOME", amount: 600, date: new Date().toISOString(), toAccountId },
+    });
+
+  for (const target of [card, loan]) {
+    const refused = await income(target.id);
+    expect(refused.status()).toBe(400);
+    expect(((await refused.json()) as { code: string }).code).toBe("INCOME_ON_CARD_OR_LOAN");
+  }
+
+  // The overdraft is the one debt type that takes income: its positive balance is its ordinary state.
+  expect((await income(overdraft.id)).status()).toBe(201);
+
+  const overpaid = await request.post("/api/transactions", {
+    headers: { origin: APP },
+    data: {
+      type: "TRANSFER",
+      amount: 9_000,
+      date: new Date().toISOString(),
+      fromAccountId: bank.id,
+      toAccountId: loan.id,
+    },
+  });
+  expect(overpaid.status()).toBe(400);
+  expect(((await overpaid.json()) as { code: string }).code).toBe("LOAN_OVERPAID");
+});

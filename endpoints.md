@@ -922,6 +922,13 @@ Creates a transaction and updates account balances atomically.
 - **TRANSFER**: Subtracts from `fromAccountId` and adds to `toAccountId` (both required, must differ).
 - **ADJUSTMENT**: Balance reconciliation; exactly one of `fromAccountId` (decrease) or `toAccountId` (increase), no `categoryId`. Excluded from spending stats and budgets.
 
+Two rules bind the movement to the **type** of account it touches: money arriving
+at a CARD or a LOAN is never an INCOME — it is a TRANSFER from wherever it came
+from, or an ADJUSTMENT when it came from outside the app — and nothing may leave a
+LOAN above zero, because a loan cannot be paid more than it owes. An OVERDRAFT does
+take income: its positive balance is its ordinary state. Everything else stays open:
+spending with a card, a cash advance out of one, or reconciling any account.
+
 The server stamps `currency` (from the involved account) and `source`; client-sent values are ignored.
 
 Accepts an optional client-minted `id` (UUID). An id the user already
@@ -939,15 +946,15 @@ id that belongs to another user is rejected with 409 ID_TAKEN.
 
 **Responses**
 
-| Status | Schema          | Description                                                                                                                                                                                                                                                     |
-| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `Transaction`   | Replay of a create already made with this client-minted id                                                                                                                                                                                                      |
-| `201`  | `Transaction`   | Transaction created                                                                                                                                                                                                                                             |
-| `400`  | `ErrorResponse` | Validation error. Codes include FUTURE_DATE (date more than 24h in the future), CURRENCY_MISMATCH (transfer between accounts with different currencies), CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH, IDEMPOTENCY_KEY_INVALID (malformed Idempotency-Key header). |
-| `401`  | —               | Unauthorized                                                                                                                                                                                                                                                    |
-| `404`  | `ErrorResponse` | Referenced category or account not found (or not owned by the user)                                                                                                                                                                                             |
-| `409`  | `ErrorResponse` | The transaction originally created with this Idempotency-Key was deleted (code IDEMPOTENCY_ORIGINAL_DELETED), or the client-minted id is already in use (code ID_TAKEN)                                                                                         |
-| `422`  | `ErrorResponse` | Idempotency-Key was already used with a different payload (code IDEMPOTENCY_PAYLOAD_MISMATCH)                                                                                                                                                                   |
+| Status | Schema          | Description                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `Transaction`   | Replay of a create already made with this client-minted id                                                                                                                                                                                                                                                                                                                                     |
+| `201`  | `Transaction`   | Transaction created                                                                                                                                                                                                                                                                                                                                                                            |
+| `400`  | `ErrorResponse` | Validation error. Codes include FUTURE_DATE (date more than 24h in the future), CURRENCY_MISMATCH (transfer between accounts with different currencies), INCOME_ON_CARD_OR_LOAN (an income landing on a CARD or a LOAN), LOAN_OVERPAID (a movement that would leave a LOAN above zero), CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH, IDEMPOTENCY_KEY_INVALID (malformed Idempotency-Key header). |
+| `401`  | —               | Unauthorized                                                                                                                                                                                                                                                                                                                                                                                   |
+| `404`  | `ErrorResponse` | Referenced category or account not found (or not owned by the user)                                                                                                                                                                                                                                                                                                                            |
+| `409`  | `ErrorResponse` | The transaction originally created with this Idempotency-Key was deleted (code IDEMPOTENCY_ORIGINAL_DELETED), or the client-minted id is already in use (code ID_TAKEN)                                                                                                                                                                                                                        |
+| `422`  | `ErrorResponse` | Idempotency-Key was already used with a different payload (code IDEMPOTENCY_PAYLOAD_MISMATCH)                                                                                                                                                                                                                                                                                                  |
 
 ### `GET /transactions/{id}`
 
@@ -982,13 +989,13 @@ changes are reversed and the new ones applied atomically.
 
 **Responses**
 
-| Status | Schema                | Description                                                                                                                                                                            |
-| ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `Transaction`         | Transaction updated                                                                                                                                                                    |
-| `400`  | `ErrorResponse`       | Validation error. Codes include FUTURE_DATE, CURRENCY_MISMATCH, CATEGORY_ARCHIVED (assigning an archived category; keeping the one it already had is allowed), CATEGORY_TYPE_MISMATCH. |
-| `401`  | —                     | Unauthorized                                                                                                                                                                           |
-| `404`  | —                     | Transaction, category, or account not found (or not owned by the user)                                                                                                                 |
-| `409`  | `TransactionConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy)                                                                             |
+| Status | Schema                | Description                                                                                                                                                                                                                                                                         |
+| ------ | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `Transaction`         | Transaction updated                                                                                                                                                                                                                                                                 |
+| `400`  | `ErrorResponse`       | Validation error. Codes include FUTURE_DATE, CURRENCY_MISMATCH, INCOME_ON_CARD_OR_LOAN and LOAN_OVERPAID (both checked again whenever the edit moves money), CATEGORY_ARCHIVED (assigning an archived category; keeping the one it already had is allowed), CATEGORY_TYPE_MISMATCH. |
+| `401`  | —                     | Unauthorized                                                                                                                                                                                                                                                                        |
+| `404`  | —                     | Transaction, category, or account not found (or not owned by the user)                                                                                                                                                                                                              |
+| `409`  | `TransactionConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy)                                                                                                                                                                          |
 
 ### `DELETE /transactions/{id}`
 
@@ -1064,15 +1071,15 @@ id that belongs to another user is rejected with 409 ID_TAKEN.
 
 **Responses**
 
-| Status | Schema          | Description                                                                                                                                                                                              |
-| ------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `Transaction`   | Replay of a create already made with this client-minted id                                                                                                                                               |
-| `201`  | `Transaction`   | Transaction created (pendingDetails=true, source=QUICK)                                                                                                                                                  |
-| `400`  | `ErrorResponse` | Validation error. Codes include NO_DEFAULT_ACCOUNT (no account id given and no default account set), FUTURE_DATE, CURRENCY_MISMATCH, CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH, IDEMPOTENCY_KEY_INVALID. |
-| `401`  | —               | Unauthorized                                                                                                                                                                                             |
-| `404`  | `ErrorResponse` | Referenced category or account not found (or not owned by the user)                                                                                                                                      |
-| `409`  | `ErrorResponse` | The transaction originally created with this Idempotency-Key was deleted (code IDEMPOTENCY_ORIGINAL_DELETED), or the client-minted id is already in use (code ID_TAKEN)                                  |
-| `422`  | `ErrorResponse` | Idempotency-Key was already used with a different payload (code IDEMPOTENCY_PAYLOAD_MISMATCH)                                                                                                            |
+| Status | Schema          | Description                                                                                                                                                                                                                                                                                                |
+| ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `Transaction`   | Replay of a create already made with this client-minted id                                                                                                                                                                                                                                                 |
+| `201`  | `Transaction`   | Transaction created (pendingDetails=true, source=QUICK)                                                                                                                                                                                                                                                    |
+| `400`  | `ErrorResponse` | Validation error. Codes include NO_DEFAULT_ACCOUNT (no account id given and no default account set), FUTURE_DATE, CURRENCY_MISMATCH, INCOME_ON_CARD_OR_LOAN (a quick income whose default account is a card or a loan), LOAN_OVERPAID, CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH, IDEMPOTENCY_KEY_INVALID. |
+| `401`  | —               | Unauthorized                                                                                                                                                                                                                                                                                               |
+| `404`  | `ErrorResponse` | Referenced category or account not found (or not owned by the user)                                                                                                                                                                                                                                        |
+| `409`  | `ErrorResponse` | The transaction originally created with this Idempotency-Key was deleted (code IDEMPOTENCY_ORIGINAL_DELETED), or the client-minted id is already in use (code ID_TAKEN)                                                                                                                                    |
+| `422`  | `ErrorResponse` | Idempotency-Key was already used with a different payload (code IDEMPOTENCY_PAYLOAD_MISMATCH)                                                                                                                                                                                                              |
 
 ### `GET /transactions/tags`
 

@@ -777,6 +777,8 @@
     "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED": "Tu cuenta principal no se puede archivar. Haz principal otra cuenta primero.",
     "ACCOUNT_LIMIT_REACHED": "Llegaste al límite de 100 cuentas.",
     "ACCOUNT_FIELD_NOT_FOR_TYPE": "Ese importe no es de este tipo de cuenta. Bórralo o elige otro tipo.",
+    "INCOME_ON_CARD_OR_LOAN": "El dinero que llega a una tarjeta o un préstamo es un pago, no un ingreso. Regístralo como una transferencia desde la cuenta de la que salió, o como un pago desde «Otro sitio».",
+    "LOAN_OVERPAID": "Un préstamo no se puede pagar por más de lo que aún debes.",
     "CATEGORY_LIMIT_REACHED": "Llegaste al límite de 200 categorías.",
     "CATEGORY_ARCHIVED": "Esa categoría está archivada. Restáurala o elige otra.",
     "CATEGORY_TYPE_MISMATCH": "Esa categoría no corresponde a este tipo de movimiento.",
@@ -860,6 +862,7 @@
       "placeholder": "Elige una cuenta",
       "note": "Las cuentas archivadas no aparecen. Los saldos se actualizan al guardar.",
       "outsideNote": "Otro sitio no es una cuenta y no crea nada: registra un pago hecho con dinero que Ledger Flow no lleva.",
+      "incomeNote": "El dinero que llega a una tarjeta o un préstamo es un pago, no un ingreso: regístralo como una transferencia desde donde vino.",
       "empty": "Aún no hay cuentas",
       "new": "Nueva cuenta",
       "newHint": "Créala sin salir de este formulario"

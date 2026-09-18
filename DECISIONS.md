@@ -5,6 +5,34 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-18 · An income is not offered a card or a loan, and the server is the one that refuses (T-93)
+
+- **Context:** nothing related the type of a movement to the type of the account it touches. An
+  INCOME landing on a CARD, an OVERDRAFT or a LOAN inflates Home's _Income this month_, _Estimated
+  savings_ and every income budget with money nobody earned — the owner's rule, 2026-09-17: "si hacer
+  un income sobre una tarjeta es incorrecto entonces no se debe de permitir".
+- **Decision:** the rule lives in the backend (`INCOME_ON_CARD_OR_LOAN`, `LOAN_OVERPAID`), and this
+  client does two things with it. It does not offer what the server will refuse — under Income the
+  account picker omits a card and a loan and its footer says why, switching the type to Income drops
+  one already chosen, and the quick capture asks for an account instead of sending a main account
+  that is a card — and it caps a transfer into a loan at what it still owes, the way the Pay sheet
+  already did, because offline the mirror would otherwise draw the loan paid off until the sync took
+  it back. When the server refuses anyway, both codes are shown as the form's own alert with the
+  sentence that says what to record instead; they are not pinned to a field, because the server does
+  not say which of a transfer's two sides is the wrong one. **An overdraft is not omitted**: the owner decided on 2026-09-18, asked while this
+  was built, that it keeps taking income, because T-101 already settled that its positive balance is
+  its ordinary state — it is the account that holds the money and sometimes dips below zero, and a
+  salary landing there is income.
+- **Alternatives:** listing debt accounts disabled with the reason on each row, which teaches more
+  but needs a disabled state the picker's rows do not have and repeats one sentence per row; and
+  leaving the client alone and letting the server refuse, which is correct and hostile: the form is
+  where the choice was made.
+- **Consequence:** `AccountPickerSheet` now has both a positive filter (`only`, the intent chips) and
+  a negative one (`omit`), and the set it is given, `INCOME_REFUSED_TYPES`, sits next to the debt
+  reading in `lib/accounts/debt.ts`. It is the one place where this client repeats a rule the server
+  owns, and it is a UI affordance, not the rule: the e2e proves the server agrees. A movement that reaches the server anyway — queued offline, another
+  device, an older app — still fails, which is the point of the rule being there.
+
 ## 2026-09-18 · Past zero a card keeps its availability and a loan is simply paid (T-101)
 
 - **Context:** `readDebt` answered a balance on the owner's side of zero with one branch for the

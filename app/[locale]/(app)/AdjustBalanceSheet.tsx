@@ -25,7 +25,7 @@ import {
   useDeleteTransaction,
   useUpdateTransaction,
 } from "@/features/transactions/hooks";
-import { debtFieldOf, mayHoldOwnMoney } from "@/lib/accounts/debt";
+import { debtFieldOf, loanOwed, mayHoldOwnMoney } from "@/lib/accounts/debt";
 import { presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { nothingChanged } from "@/lib/form/changes";
@@ -250,8 +250,22 @@ export function EditAdjustmentSheet({ adjustment, open, onClose }: EditAdjustmen
   const [note, setNote] = useState(adjustment.note ?? "");
   const [confirming, setConfirming] = useState(false);
   const error = update.error ? presentError(update.error) : null;
+  // The loan cannot end above zero, and this sheet is the last door into that state.
+  const owedWithout =
+    account === undefined
+      ? null
+      : loanOwed({
+          type: account.type,
+          balance:
+            account.balance -
+            (directionOf(adjustment) === "increase" ? adjustment.amount : -adjustment.amount),
+        });
+  const overLoan =
+    owedWithout !== null && amount !== null && direction === "increase" && amount > owedWithout
+      ? t("accounts.pay.overLoan", { amount: money.format(owedWithout) })
+      : null;
   const changes =
-    amount === null || amount <= 0 || !account
+    amount === null || amount <= 0 || !account || overLoan !== null
       ? null
       : adjustmentChanges(adjustment, account, amount, direction, note);
 
@@ -332,9 +346,15 @@ export function EditAdjustmentSheet({ adjustment, open, onClose }: EditAdjustmen
               defaultValue={adjustment.amount}
               onChange={setAmount}
               autoFocus
+              invalid={overLoan !== null}
               className="py-4"
             />
           </Card>
+          {overLoan !== null && (
+            <span role="alert" className="text-center text-sm text-danger">
+              {overLoan}
+            </span>
+          )}
           {account && (
             <Alert tone="neutral" icon={Scale}>
               {t(

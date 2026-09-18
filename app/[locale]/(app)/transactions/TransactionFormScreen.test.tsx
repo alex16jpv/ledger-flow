@@ -31,6 +31,36 @@ const accounts = [
   { id: "a1", name: "Bancolombia", type: "ACCOUNT", balance: 100, isDefault: true, color: "BLUE" },
   { id: "a2", name: "Savings", type: "SAVINGS", balance: 5, isDefault: false, color: "GREEN" },
 ];
+const debtAccounts = [
+  ...accounts,
+  {
+    id: "a3",
+    name: "Visa Gold",
+    type: "CARD",
+    balance: -50,
+    isDefault: false,
+    color: "PURPLE",
+    creditLimit: 400,
+  },
+  {
+    id: "a4",
+    name: "Car loan",
+    type: "LOAN",
+    balance: -800,
+    isDefault: false,
+    color: "INDIGO",
+    borrowedAmount: 1200,
+  },
+  {
+    id: "a5",
+    name: "Overdraft",
+    type: "OVERDRAFT",
+    balance: 32,
+    isDefault: false,
+    color: "TEAL",
+    creditLimit: 200,
+  },
+];
 const categories = [
   { id: "c1", name: "Food", icon: "utensils", color: "ORANGE", type: "EXPENSE", archivedAt: null },
 ];
@@ -80,6 +110,18 @@ function routeFetch() {
     return Promise.resolve(
       json({ code: "INTERNAL", message: `${method} ${url}` }, { status: 500 }),
     );
+  });
+}
+
+// T-93 needs a card and a loan on the list; the default set has neither, and an intent chip test counts on that.
+function routeFetchWithDebt() {
+  routeFetch();
+  const base = fetchMock.getMockImplementation();
+  fetchMock.mockImplementation((input, init) => {
+    if (urlOf(input).includes("/api/accounts")) {
+      return Promise.resolve(json({ data: debtAccounts, pagination }));
+    }
+    return base?.(input, init) ?? Promise.reject(new Error("no route"));
   });
 }
 
@@ -277,6 +319,58 @@ describe("NewTransactionScreen", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Expense" }));
     expect(screen.getByRole("button", { name: /Category.*Food/ })).toBeVisible();
+  });
+
+  // T-93: money arriving at a debt account is a payment; the server refuses it as income.
+  it("does not offer a debt account for an income, and says why", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Income" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Account/ }));
+
+    const sheet = await screen.findByRole("dialog", { name: "Account" });
+    expect(within(sheet).getByRole("option", { name: /Bancolombia/ })).toBeVisible();
+    expect(within(sheet).queryByRole("option", { name: /Visa Gold/ })).not.toBeInTheDocument();
+    expect(within(sheet).queryByRole("option", { name: /Car loan/ })).not.toBeInTheDocument();
+    // An overdraft is the account that dips below zero: a salary landing there is income (T-93).
+    expect(within(sheet).getByRole("option", { name: /Overdraft/ })).toBeVisible();
+    expect(within(sheet).getByText(/is a payment, not income/)).toBeVisible();
+  });
+
+  it("drops a card already chosen when the type becomes an income", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: /^Account/ }));
+    await userEvent.click(
+      within(await screen.findByRole("dialog", { name: "Account" })).getByRole("option", {
+        name: /Visa Gold/,
+      }),
+    );
+    expect(screen.getByRole("button", { name: /Account.*Visa Gold/ })).toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(screen.queryByRole("button", { name: /Account.*Visa Gold/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Account/ })).toHaveTextContent("Choose an account");
+  });
+
+  // T-93: the server refuses it, and offline the mirror would draw the loan paid until the sync said no.
+  it("refuses a transfer that would pay a loan more than it owes", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "900");
+    await userEvent.click(await screen.findByRole("button", { name: "Pay a loan" }));
+
+    expect(await screen.findByText(/cannot be paid more than/)).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
+    expect(calls("POST")).toHaveLength(0);
+
+    await userEvent.clear(screen.getByRole("textbox", { name: "Amount" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "800");
+    expect(screen.queryByText(/cannot be paid more than/)).not.toBeInTheDocument();
   });
 
   it("offers no intent chip for a kind of account nobody has", async () => {
