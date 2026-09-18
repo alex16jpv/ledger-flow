@@ -294,9 +294,7 @@ describe("NewTransactionScreen", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByText(/Bancolombia −\$300,000 · Savings \+\$300,000/)).toHaveTextContent(
-      "Your total balance does not change.",
-    );
+    expect(screen.getByText("Bancolombia −$300,000 · Savings +$300,000.")).toBeVisible();
 
     await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
     await waitFor(() => {

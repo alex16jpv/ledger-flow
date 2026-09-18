@@ -1497,7 +1497,7 @@ const paySheet = (a, title, o = {}) => {
     o.read ??
     (empty
       ? ""
-      : `\n<div class="alert neutral">${iconSvg("arrow-left-right")}<span>Bancolombia <b class="amount">${money(amt, "\u2212")}</b> \u00b7 ${a.name} <b class="amount">${money(amt)}</b> less owed. Your total balance does not change.</span></div>`);
+      : `\n<div class="alert neutral">${iconSvg("arrow-left-right")}<span>Bancolombia <b class="amount">${money(amt, "\u2212")}</b> \u00b7 ${a.name} <b class="amount">${money(amt)}</b> less owed.</span></div>`);
   const stopped = empty || Boolean(o.error);
   return sheetWrap(
     `<div class="stack-sm"><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span>${num}<span class="caret"></span></div>
@@ -3592,7 +3592,7 @@ const readbackLine = (inner, foot = "") =>
   `\n<div class="alert neutral">${iconSvg("arrow-left-right")}<span>${inner}</span></div>${foot}`;
 
 const TWO_SIDES = readbackLine(
-  `Bancolombia <b class="amount">${money(PAY_AMOUNT, "−")}</b> · Visa Gold <b class="amount">${money(PAY_AMOUNT)}</b> less owed. <b>Your total balance does not change.</b>`,
+  `Bancolombia <b class="amount">${money(PAY_AMOUNT, "−")}</b> · Visa Gold <b class="amount">${money(PAY_AMOUNT)}</b> less owed.`,
 );
 
 const SAVINGS_AMOUNT = 300000;
@@ -3611,7 +3611,7 @@ const PLAIN_SIDES = {
 };
 
 const PLAIN_TWO_SIDES = readbackLine(
-  `Bancolombia <b class="amount">${money(SAVINGS_AMOUNT, "−")}</b> · Savings <b class="amount">${money(SAVINGS_AMOUNT, "+")}</b>. <b>Your total balance does not change.</b>`,
+  `Bancolombia <b class="amount">${money(SAVINGS_AMOUNT, "−")}</b> · Savings <b class="amount">${money(SAVINGS_AMOUNT, "+")}</b>.`,
 );
 
 const projectedFigure = (inner) =>
@@ -3670,7 +3670,7 @@ const instalmentSheet = (kind) => {
     one: {
       extra: "",
       read: readbackLine(
-        `Bancolombia <b class="amount">${money(INSTALMENT, "−")}</b> · Car loan <b class="amount">${money(INSTALMENT)}</b> less owed. <b>Your total balance does not change.</b>`,
+        `Bancolombia <b class="amount">${money(INSTALMENT, "−")}</b> · Car loan <b class="amount">${money(INSTALMENT)}</b> less owed.`,
       ),
     },
     two: {
@@ -5295,7 +5295,7 @@ const PAGES = [
       plate(
         "pay-a-sheet-on-the-account",
         "Pay · a sheet on the account itself",
-        "<b>Chosen, 2026-09-17.</b> His words: once the accounts work is finished, the pay button is the modal on the account. The card’s own screen, with <b>Pay this card</b> as the one primary action above the four that were already there. It opens a sheet that is the payment and nothing else: the amount, one chip that fills it with everything owed, one <i>From</i> picker on the main account, and a line that reads the result back. <b>The amount is drawn here already typed</b> \u2014 since T-99 the field opens empty and the total is the chip, which is `#pay-opens-empty`. <b>That line changed with T-86</b> («la diferencia»): it now reads <i>Bancolombia −$1,245,900 · Visa Gold $1,245,900 less owed. Your total balance does not change.</i> — the difference, not the resulting balance — and the sheet carries the optional Transfer category the form gained at the same time. It is a TRANSFER underneath, with the direction filled in for you, which is the point: paying a debt means sending money <b>towards</b> the card, and that is the step people get backwards. <b>What it costs:</b> a second way to record a transfer, so the rule about doing it the way it is already done has to be paid — the sheet has to reuse the same pickers, the same idempotency key and the same offline queue, not a private copy. Two decisions instead of six, and you never leave the account — and, as the question below shows, a sheet can offer the right thing where the full form hands you a type picker and lets you choose the wrong one.",
+        "<b>Chosen, 2026-09-17.</b> His words: once the accounts work is finished, the pay button is the modal on the account. The card’s own screen, with <b>Pay this card</b> as the one primary action above the four that were already there. It opens a sheet that is the payment and nothing else: the amount, one chip that fills it with everything owed, one <i>From</i> picker on the main account, and a line that reads the result back. <b>The amount is drawn here already typed</b> \u2014 since T-99 the field opens empty and the total is the chip, which is `#pay-opens-empty`. <b>That line changed with T-86</b> («la diferencia»): it now reads <i>Bancolombia −$1,245,900 · Visa Gold $1,245,900 less owed.</i> — the difference, not the resulting balance, and since T-96 it ends there — and the sheet carries the optional Transfer category the form gained at the same time. It is a TRANSFER underneath, with the direction filled in for you, which is the point: paying a debt means sending money <b>towards</b> the card, and that is the step people get backwards. <b>What it costs:</b> a second way to record a transfer, so the rule about doing it the way it is already done has to be paid — the sheet has to reuse the same pickers, the same idempotency key and the same offline queue, not a private copy. Two decisions instead of six, and you never leave the account — and, as the question below shows, a sheet can offer the right thing where the full form hands you a type picker and lets you choose the wrong one.",
         payFlow("sheet"),
         { added: "2026-09-17", verdict: "chosen", asks: "What the Pay button opens" },
       ),
@@ -5388,7 +5388,7 @@ const PAGES = [
       plate(
         "readback-the-two-sides",
         "Before you save · the two sides, as a difference",
-        "<b>Chosen, 2026-09-17: «la diferencia».</b> The form asks <b>geometry</b> — <i>From</i> and <i>To</i> — when the person has an <b>intention</b> (“I paid the card”), on the one operation where the direction is counter-intuitive, because paying a debt means sending money <b>towards</b> the card. So once both accounts are chosen it reads the consequence back as a difference: <i>Bancolombia −$500,000 · Visa Gold $500,000 less owed. Your total balance does not change.</i> The debt side is said in the T-85 vocabulary, never as “+$500,000”, because on a card more is not better. <b>What it costs: nothing but the sentence.</b> It repeats the amount just typed and the two names just picked — <b>no arithmetic on any balance</b> — so house rule 4 is untouched and it reads identically offline, on a device that has never seen those balances. <b>And it reaches further than this form:</b> the Pay sheet approved in T-85 read back the resulting balance («Visa Gold goes to $0 owed»), so it now says <i>$1,245,900 less owed</i> instead. One grammar, every surface.",
+        "<b>Chosen, 2026-09-17: «la diferencia».</b> The form asks <b>geometry</b> — <i>From</i> and <i>To</i> — when the person has an <b>intention</b> (“I paid the card”), on the one operation where the direction is counter-intuitive, because paying a debt means sending money <b>towards</b> the card. So once both accounts are chosen it reads the consequence back as a difference: <i>Bancolombia −$500,000 · Visa Gold $500,000 less owed.</i> The debt side is said in the T-85 vocabulary, never as “+$500,000”, because on a card more is not better. <b>What it costs: nothing but the sentence.</b> It repeats the amount just typed and the two names just picked — <b>no arithmetic on any balance</b> — so house rule 4 is untouched and it reads identically offline, on a device that has never seen those balances. <b>And it reaches further than this form:</b> the Pay sheet approved in T-85 read back the resulting balance («Visa Gold goes to $0 owed»), so it now says <i>$1,245,900 less owed</i> instead. One grammar, every surface.",
         addMovement("readback-two-sides"),
         {
           added: "2026-09-17",

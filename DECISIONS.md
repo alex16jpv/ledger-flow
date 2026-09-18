@@ -5,6 +5,28 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-18 · The transfer read-back ends with the two sides and nothing after them (T-96)
+
+- **Context:** the sentence closed with "Your total balance does not change" / «Tu balance total no
+  cambia», which is the owner's own copy from T-86 and is **true** — net worth does not move. But T-85
+  took the net figure off every screen: Home states "no net figure anywhere", and Accounts shows _What
+  you have_ beside _What you owe_. So the clause pointed at a number nobody can see, while the two that
+  are on screen do move when you pay a card — both down, by the same amount. The independent review of
+  T-88 found it.
+- **Decision:** the owner's, asked at the start of this task with three options and the plate in front
+  of him. He chose **no closing clause at all**: `transactions.readback.line` is `{left} · {right}.`
+  and the sentence is the difference, full stop.
+- **Alternatives, both put to him:** naming the two figures that are on screen — «Lo que tienes y lo
+  que debes se mueven lo mismo» — which is precise for a debt payment and **false for money put
+  aside**, where neither figure moves, so it would take two sentences and a rule to choose between
+  them; and borrowing the Transfer type line, «nothing is spent and nothing is earned», which is true
+  of every transfer and is already the product's own definition of the type, one line above in the full
+  form. His answer to both was that the two sides already say it.
+- **Consequence:** one key changed and both surfaces followed, which is what T-89 bought by merging
+  `accounts.pay.readTransfer` into this key. The sentence is now shorter than the type line above it in
+  the form, which is the point: it states the difference and stops. Nothing else in the product claims a
+  total balance any more.
+
 ## 2026-09-18 · The Pay sheet opens empty and the whole debt is a chip (T-99)
 
 - **Context:** the owner, 2026-09-17: «en el Pay this card. el valor por defecto no puede ser el pagar
@@ -4178,6 +4200,5 @@ cover` is set once in the root layout for the standalone display.
   change both), or reading back what each account will say afterwards — the client doing money
   arithmetic, which house rule 4 allows only in `lib/local/derive` and only with the projection mark.
 - **Consequence:** the sentence repeats what was just typed and picked, so it costs no request and no
-  arithmetic and reads identically with no network. It still ends in "Your total balance does not
-  change", which is the owner's own copy and what **T-96** is about; when he decides, one key changes
-  both surfaces.
+  arithmetic and reads identically with no network. **Reversed in part on 2026-09-18 (T-96):** it no
+  longer ends in "Your total balance does not change" — see that entry.

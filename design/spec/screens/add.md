@@ -137,9 +137,17 @@ same thing comes to read two ways one tap apart.
 
 ### The form reads the movement back as a difference (`#readback-the-two-sides`)
 
-Once both accounts are chosen: **"Bancolombia −$500,000 · Visa Gold $500,000 less owed. Your total
-balance does not change."** His words: «la diferencia». The debt side is said in the T-85 vocabulary,
-never as "+$500,000", because on a card more is not better.
+Once both accounts are chosen: **"Bancolombia −$500,000 · Visa Gold $500,000 less owed."** His words:
+«la diferencia». The debt side is said in the T-85 vocabulary, never as "+$500,000", because on a card
+more is not better.
+
+**And the sentence ends there — his decision, 2026-09-18 (T-96).** It used to close with _Your total
+balance does not change_, which was true and pointed at a figure **no screen shows any more**: T-85 took
+the net figure off Home and Accounts, which now say _What you have_ and _What you owe_. Asked between
+naming those two, borrowing the Transfer type line («nothing is spent and nothing is earned») and
+saying nothing, he chose **saying nothing**: the two sides already are the answer, and a closing clause
+that has to be true of a card payment and of money put aside at the same time can only be vaguer than
+they are.
 
 **Each side is said in the vocabulary of the account it names**, which is what makes the sentence
 general enough to cover every transfer and not only paying a card (`#full-form-transfer-plain`):
