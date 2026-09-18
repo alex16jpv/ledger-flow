@@ -73,7 +73,6 @@ export function AccountDetailScreen({ id }: { id: string }) {
     [accounts.data, categories.data],
   );
   const row = account.data;
-  // Nothing to pay on an archived account, on one that owes nothing, or on one that is not debt.
   const payable =
     row && !row.archivedAt && row.balance < 0 && row.type in PAY_LABEL
       ? (row.type as keyof typeof PAY_LABEL)

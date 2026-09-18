@@ -30,7 +30,6 @@ export function AccountsSection({ accounts }: AccountsSectionProps) {
             account={account}
             href={`/accounts/${account.id}`}
             projected={outbox.projected.balances}
-            promptHref={`/accounts/${account.id}/edit`}
           />
         ))}
       </AccountCardGrid>

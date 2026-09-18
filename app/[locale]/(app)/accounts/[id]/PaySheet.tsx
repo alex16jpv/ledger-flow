@@ -27,11 +27,6 @@ export interface PaySheetProps {
   onClose: () => void;
 }
 
-/**
- * Paying a debt sends money towards the account, which is the step people get
- * backwards; from outside the app nothing leaves, so it is a one-sided
- * adjustment and never an income (design/spec/screens/accounts.md, T-85).
- */
 export function payInput(
   account: Pick<Account, "id">,
   from: Account | null,
@@ -61,7 +56,9 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   const keyring = useRef(new IdempotencyKeyring());
   const owed = Math.max(0, -account.balance);
   const [amount, setAmount] = useState<number | null>(owed);
-  const [from, setFrom] = useState<Account | null>(main ?? null);
+  // The main account can be the very account being paid, and nothing is paid with itself.
+  const [from, setFrom] = useState<Account | null>(main?.id === account.id ? null : (main ?? null));
+  const [openedAt] = useState(() => new Date());
   const [outside, setOutside] = useState(false);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const error = create.error ? presentError(create.error) : null;
@@ -75,6 +72,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
       amount,
       categoryId,
       t("accounts.pay.outsideDescription"),
+      openedAt,
     );
     try {
       await create.mutateAsync({ input, idempotencyKey: keyring.current.keyFor(input) });

@@ -4,7 +4,7 @@ import { Star, Target } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createElement, type ReactNode } from "react";
 
-import { type DebtAccount, type DebtFoot, readDebt } from "@/lib/accounts/debt";
+import { type DebtAccount, debtFieldOf, type DebtFoot, readDebt } from "@/lib/accounts/debt";
 import { Link } from "@/lib/i18n/navigation";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { accountTypeIcon } from "@/lib/icons/account-type-icons";
@@ -110,7 +110,6 @@ export function AccountCard({
         <Link
           href={href}
           aria-label={name}
-          // The card clips its contents, so an inset outline is the ring that survives; a shadow is cut off.
           className="absolute inset-0 rounded-lg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--focus-ring)"
         />
         {body}
@@ -175,7 +174,6 @@ export interface AccountReading {
   debt?: AccountCardDebt;
 }
 
-/** The one reading four surfaces print: the list, Home, the picker and the form's preview. */
 export function useAccountReading(
   account: DebtAccount,
   promptHref?: string,
@@ -207,7 +205,9 @@ export function useAccountReading(
       word: t(`accounts.debt.${reading.word}`),
       bar: reading.bar,
       barLabel: t(
-        reading.word === "available" ? "accounts.debt.barInUse" : "accounts.debt.barPaid",
+        debtFieldOf(account.type) === "creditLimit"
+          ? "accounts.debt.barInUse"
+          : "accounts.debt.barPaid",
       ),
       foot: reading.foot === null ? undefined : footLine(reading.foot),
       action:

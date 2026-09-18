@@ -32,10 +32,6 @@ export type DebtAccount = Pick<Account, "type" | "balance" | "creditLimit" | "bo
 
 const clamp = (fraction: number): number => Math.min(1, Math.max(0, fraction));
 
-/**
- * What a debt account leads with, decided per type (T-85, `design/spec/screens/accounts.md`).
- * Not a money rule: both figures come from the server and this only subtracts them for the screen.
- */
 export function readDebt(account: DebtAccount): DebtReading | null {
   const field = debtFieldOf(account.type);
   if (field === null) return null;
@@ -84,7 +80,6 @@ export interface AccountsSplit {
   owe: number;
 }
 
-/** What you have and what you owe, the same split Home and the Accounts summary both print. */
 export function splitAccounts(accounts: readonly Account[]): AccountsSplit {
   let have = 0;
   let owe = 0;

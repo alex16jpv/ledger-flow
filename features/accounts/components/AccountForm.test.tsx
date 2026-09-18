@@ -191,6 +191,17 @@ describe("AccountForm", () => {
     expect(screen.getByLabelText("Current balance")).toBeInTheDocument();
   });
 
+  it("does not leave one type's amount showing under the other type's question (T-88)", async () => {
+    renderForm();
+    await chooseType("Credit card");
+    await userEvent.type(screen.getByLabelText("Credit limit"), "4000000");
+
+    await chooseType("Loan");
+
+    expect(screen.queryByLabelText("Credit limit")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Amount borrowed")).toHaveValue("");
+  });
+
   it("clears an amount the new type cannot carry, in the same write (T-88)", async () => {
     fetchMock.mockResolvedValue(json({ id: "a1" }));
     const onSaved = vi.fn();

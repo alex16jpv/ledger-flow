@@ -115,7 +115,6 @@ export function AccountForm({
           },
           dirtyFields,
         );
-        // The server refuses a type change that orphans an amount, so the same write clears it.
         const orphaned = orphanedFields(account, carried);
         const write = { ...changes, ...orphaned };
         onSaved(nothingChanged(write) ? account : await update.mutateAsync(write));
@@ -201,6 +200,7 @@ export function AccountForm({
         )}
         {debtField !== null && (
           <Controller
+            key={debtField}
             control={form.control}
             name={debtField}
             render={({ field }) => (

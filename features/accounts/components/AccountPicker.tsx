@@ -46,12 +46,11 @@ export function AccountPicker({
   outside,
 }: AccountPickerProps) {
   const t = useTranslations();
-  // The picker prints the same figure as every other surface, and never a number with no word.
   const leadOf = (account: Account): number => readDebt(account)?.lead ?? account.balance;
   const rowMeta = (account: Account): string[] => {
     const reading = readDebt(account);
     const type = t(`accountTypes.${account.type}`);
-    return reading === null ? [type] : [type, t(`accounts.debt.${reading.word}`)];
+    return reading === null ? [type] : [t(`accounts.debt.${reading.word}`), type];
   };
   const money = useMoney();
   const [open, setOpen] = useState(false);
@@ -59,8 +58,8 @@ export function AccountPicker({
   const initialFocus = useRef<HTMLButtonElement>(null);
   const focused = useRef(false);
   const accounts = useAccountsQuery(false, open || value !== null);
-  const selected = accounts.data?.find((account) => account.id === value) ?? null;
   const options = (accounts.data ?? []).filter((account) => account.id !== exclude);
+  const selected = options.find((account) => account.id === value) ?? null;
   const focusedId = options.some((account) => account.id === value) ? value : options[0]?.id;
 
   // showModal() lands on the close button; move focus to a row once the rows exist so Enter selects.
@@ -114,7 +113,12 @@ export function AccountPicker({
           open={open}
           onClose={close}
           title={t("accounts.picker.title")}
-          footer={<p className="text-sm text-text-3">{t("accounts.picker.note")}</p>}
+          footer={
+            <p className="text-sm text-text-3">
+              {t("accounts.picker.note")}
+              {outside ? ` ${t("accounts.picker.outsideNote")}` : ""}
+            </p>
+          }
         >
           <List className="-mx-4 max-h-[60dvh] overflow-y-auto">
             {accounts.isPending ? (
@@ -129,7 +133,7 @@ export function AccountPicker({
                 title={t("states.error.title")}
                 body={<LoadErrorBody error={accounts.error} />}
               />
-            ) : options.length === 0 ? (
+            ) : options.length === 0 && !outside ? (
               <Empty icon={<Wallet {...iconProps("lg")} />} title={t("accounts.picker.empty")} />
             ) : (
               <div role="listbox" aria-label={t("accounts.picker.title")} className="flex flex-col">
@@ -166,33 +170,34 @@ export function AccountPicker({
                     </RowButton>
                   );
                 })}
-              </div>
-            )}
-            {outside && !accounts.isPending && (
-              <RowButton
-                role="option"
-                aria-selected={outside.selected}
-                onClick={() => {
-                  outside.onSelect();
-                  close();
-                }}
-                className={cn("border-t border-border", outside.selected && "bg-brand-soft/40")}
-              >
-                <Tile variant="outline">
-                  <CircleDollarSign {...iconProps("md")} />
-                </Tile>
-                <RowBody>
-                  <RowTitle>
-                    <span>{outside.label}</span>
-                  </RowTitle>
-                  <RowMeta items={[outside.meta]} />
-                </RowBody>
-                {outside.selected && (
-                  <RowRight>
-                    <Check {...iconProps("sm")} className="text-brand-text" />
-                  </RowRight>
+                {outside && (
+                  <RowButton
+                    ref={options.length === 0 ? initialFocus : undefined}
+                    role="option"
+                    aria-selected={outside.selected}
+                    onClick={() => {
+                      outside.onSelect();
+                      close();
+                    }}
+                    className={cn("border-t border-border", outside.selected && "bg-brand-soft/40")}
+                  >
+                    <Tile variant="outline">
+                      <CircleDollarSign {...iconProps("md")} />
+                    </Tile>
+                    <RowBody>
+                      <RowTitle>
+                        <span>{outside.label}</span>
+                      </RowTitle>
+                      <RowMeta items={[outside.meta]} />
+                    </RowBody>
+                    {outside.selected && (
+                      <RowRight>
+                        <Check {...iconProps("sm")} className="text-brand-text" />
+                      </RowRight>
+                    )}
+                  </RowButton>
                 )}
-              </RowButton>
+              </div>
             )}
             {allowCreate && !accounts.isPending && (
               <RowButton

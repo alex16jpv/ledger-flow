@@ -150,6 +150,21 @@ describe("PaySheet", () => {
     });
   });
 
+  it("never offers the account being paid as the source, even when it is the main one (T-88)", async () => {
+    fetchMock.mockResolvedValue(json({ data: [card] }));
+    const onClose = vi.fn();
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <PaySheet account={card} main={{ ...card, isDefault: true }} open onClose={onClose} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+
+    expect(await screen.findByRole("button", { name: "Pay" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^From/ })).toHaveTextContent("Choose an account");
+  });
+
   it("refuses to pay nothing", async () => {
     fetchMock.mockResolvedValue(json({ data: [main, card] }));
     open();

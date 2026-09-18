@@ -94,6 +94,14 @@ describe("AccountRowCard", () => {
     expect(screen.getByText("$4,000,000 of your own money sitting on it")).toBeInTheDocument();
   });
 
+  it("names the bar after the type, not after what the account happens to lead with", () => {
+    renderWithProviders(
+      <AccountRowCard account={account({ balance: 500000, creditLimit: 4000000 })} href="/a" />,
+    );
+
+    expect(screen.getByRole("progressbar", { name: "Credit limit in use" })).toBeInTheDocument();
+  });
+
   it("marks the bar and its line as a projection, not only the headline", () => {
     renderWithProviders(
       <AccountRowCard account={account({ creditLimit: 4000000 })} href="/a" projected />,

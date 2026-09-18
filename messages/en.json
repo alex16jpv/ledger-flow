@@ -184,7 +184,6 @@
     "spendingPerDay": "Spending per day",
     "budgetProgress": "{percent}% of monthly budget",
     "createMonthlyBudget": "Create a monthly budget",
-    "totalBalance": "Total balance",
     "accountsCount": "{count, plural, one {# account} other {# accounts}}",
     "incomeThisMonth": "Income this month",
     "estimatedSavings": "Estimated savings",
@@ -860,6 +859,7 @@
       "label": "Account",
       "placeholder": "Choose an account",
       "note": "Archived accounts are not listed. Balances update as you save.",
+      "outsideNote": "Somewhere else is not an account and creates nothing: it records a payment made with money Ledger Flow does not track.",
       "empty": "No accounts yet",
       "new": "New account",
       "newHint": "Create it without leaving this form"
@@ -899,9 +899,7 @@
     "list": {
       "title": "Accounts",
       "new": "New account",
-      "totalBalance": "Total balance",
       "counts": "{active, plural, one {# active account} other {# active accounts}} · {archived, plural, one {# archived} other {# archived}}",
-      "cardDebt": "Card debt",
       "archived": "Archived",
       "archivedBadge": "Archived",
       "showArchived": "Archived · {count}",

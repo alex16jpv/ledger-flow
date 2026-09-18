@@ -184,7 +184,6 @@
     "spendingPerDay": "Gasto por día",
     "budgetProgress": "{percent}% del presupuesto mensual",
     "createMonthlyBudget": "Crear presupuesto mensual",
-    "totalBalance": "Balance total",
     "accountsCount": "{count, plural, one {# cuenta} other {# cuentas}}",
     "incomeThisMonth": "Ingresos del mes",
     "estimatedSavings": "Ahorro estimado",
@@ -860,6 +859,7 @@
       "label": "Cuenta",
       "placeholder": "Elige una cuenta",
       "note": "Las cuentas archivadas no aparecen. Los saldos se actualizan al guardar.",
+      "outsideNote": "Otro sitio no es una cuenta y no crea nada: registra un pago hecho con dinero que Ledger Flow no lleva.",
       "empty": "Aún no hay cuentas",
       "new": "Nueva cuenta",
       "newHint": "Créala sin salir de este formulario"
@@ -899,9 +899,7 @@
     "list": {
       "title": "Cuentas",
       "new": "Nueva cuenta",
-      "totalBalance": "Balance total",
       "counts": "{active, plural, one {# cuenta activa} other {# cuentas activas}} · {archived, plural, one {# archivada} other {# archivadas}}",
-      "cardDebt": "Deuda en tarjetas",
       "archived": "Archivadas",
       "archivedBadge": "Archivada",
       "showArchived": "Archivadas · {count}",
