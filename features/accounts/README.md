@@ -36,3 +36,33 @@ because an untouched field never reaches the `PUT`.
 Since T-78 `AccountForm` reports React Hook Form's `isDirty` to the sheet around it
 (`useUnsavedGuard`), so a tap outside asks before throwing a half-written account away. On the pages,
 where the form is not in a sheet, the hook does nothing.
+
+## A debt account reads as debt (T-88)
+
+`lib/accounts/debt.ts` decides the whole reading and four surfaces print it: the card in
+`AccountsView`, Home's carousel, `AccountHero` and `AccountPicker`. A CARD or an OVERDRAFT leads with
+what is **available** (`creditLimit` minus what is owed) and carries `X owed of Y` under a bar of the
+limit in use; a LOAN leads with what is **owed** and its bar is what has been paid off, because a
+loan has nothing available and cannot be re-borrowed. The bar arrives with the field, not with the
+debt: an account whose field is empty says only what is owed and carries a button to
+`/accounts/:id/edit`, which is where the field lives. Money of the owner's own sitting on a debt
+account is named as theirs — the state every card is in until T-90 runs.
+
+The two fields are optional and belong to the types that have them (`creditLimit` on CARD and
+OVERDRAFT, `borrowedAmount` on LOAN). On creation the amount field asks _How much do you owe on it
+right now?_ and stores the answer as the debt; changing an account's type clears the amount the new
+type cannot carry **in the same write**, because the server refuses to leave one behind rather than
+dropping it quietly (`ACCOUNT_FIELD_NOT_FOR_TYPE`). Offline, the mirror keeps whatever a create sent
+and a cleared field leaves the row exactly as the server answers it: absent, not null.
+
+The summary card and Home's stats row say **what you have** and **what you owe**, with no net figure
+anywhere: a car loan against a bank account reads negative for years, and that is not the number
+those screens are for.
+
+`PaySheet` (app layer, because it composes transactions) is the one primary action on a debt
+account's own screen: the amount preloaded with everything owed, one `From` picker and the optional
+TRANSFER category. It writes a TRANSFER towards the account — paying a debt means sending money
+**towards** the card — through the same queue and the same client-minted id as the form. Its `From`
+picker carries one row that is not an account, for money the app does not track; that writes a
+one-sided ADJUSTMENT, never an income, because an income would lift _Income this month_ and
+_Estimated savings_ by money nobody earned.

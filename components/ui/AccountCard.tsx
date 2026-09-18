@@ -2,11 +2,12 @@
 
 import { Star, Target } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
 
 import { type DebtAccount, type DebtFoot, readDebt } from "@/lib/accounts/debt";
 import { Link } from "@/lib/i18n/navigation";
 import { useMoney } from "@/lib/i18n/useMoney";
+import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { iconProps } from "@/lib/icons/sizes";
 import { type ColorToken, featureColorStyle } from "@/lib/theme/feature-color";
 import type { Account } from "@/types/api";
@@ -17,7 +18,7 @@ import { buttonClasses } from "./Button";
 import { cn } from "./cn";
 import { Progress } from "./Progress";
 import { Projected } from "./Projected";
-import { Dot } from "./Tile";
+import { Dot, Tile } from "./Tile";
 
 export interface AccountCardDebt {
   word: ReactNode;
@@ -30,6 +31,7 @@ export interface AccountCardDebt {
 export interface AccountCardProps {
   name: string;
   typeLabel: ReactNode;
+  mark?: ReactNode;
   balance: ReactNode;
   color?: ColorToken | null;
   mainLabel?: ReactNode;
@@ -48,6 +50,7 @@ const ARCHIVED = "[&>*]:opacity-60 before:opacity-60";
 export function AccountCard({
   name,
   typeLabel,
+  mark,
   balance,
   color,
   mainLabel,
@@ -64,7 +67,7 @@ export function AccountCard({
   const body = (
     <>
       <div className="flex items-center gap-2">
-        <Dot color={color} />
+        {mark ?? <Dot color={color} />}
         <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
         {mainLabel && (
           <Badge tone="brand">
@@ -149,6 +152,20 @@ export function AccountCardGrid({
   );
 }
 
+export function AccountTypeTile({
+  type,
+  color,
+}: {
+  type: Account["type"];
+  color?: ColorToken | null;
+}) {
+  return (
+    <Tile size="sm" color={color}>
+      {createElement(accountTypeIcon(type), iconProps("sm"))}
+    </Tile>
+  );
+}
+
 export interface AccountReading {
   lead: number;
   debt?: AccountCardDebt;
@@ -219,6 +236,7 @@ export function AccountRowCard({
       href={href}
       name={account.name}
       typeLabel={t(`accountTypes.${account.type}`)}
+      mark={<AccountTypeTile type={account.type} color={account.color} />}
       balance={
         <Projected when={projected}>
           <Amount value={lead} signed={false} size="lg" />

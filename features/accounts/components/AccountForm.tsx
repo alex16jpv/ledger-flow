@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
-import { AccountCard, useAccountReading } from "@/components/ui/AccountCard";
+import { AccountCard, AccountTypeTile, useAccountReading } from "@/components/ui/AccountCard";
 import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
 import { AmountInput } from "@/components/ui/AmountInput";
@@ -263,6 +263,7 @@ export function AccountForm({
         )}
         <AccountCard
           name={name.trim() || t("accounts.form.previewName")}
+          mark={<AccountTypeTile type={type} color={color} />}
           typeLabel={`${t(`accountTypes.${type}`)} · ${t("accounts.form.preview")}`}
           balance={<Amount value={preview.lead} signed={false} size="lg" />}
           color={color}
