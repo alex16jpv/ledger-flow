@@ -274,15 +274,25 @@ test("an income is not offered a card or a loan, and the server refuses one anyw
     expect(response.status()).toBe(201);
     return (await response.json()) as { id: string };
   };
-  await account({ name: "Bank", type: "ACCOUNT", balance: 20_000 });
+  const bank = await account({ name: "Bank", type: "ACCOUNT", balance: 20_000 });
   const card = await account({
     name: "Visa E2E",
     type: "CARD",
     balance: -1_245,
     creditLimit: 4_000,
   });
-  await account({ name: "Loan E2E", type: "LOAN", balance: -8_400, borrowedAmount: 12_000 });
-  await account({ name: "Overdraft E2E", type: "OVERDRAFT", balance: 320, creditLimit: 2_000 });
+  const loan = await account({
+    name: "Loan E2E",
+    type: "LOAN",
+    balance: -8_400,
+    borrowedAmount: 12_000,
+  });
+  const overdraft = await account({
+    name: "Overdraft E2E",
+    type: "OVERDRAFT",
+    balance: 320,
+    creditLimit: 2_000,
+  });
 
   await page.goto("/transactions/new");
   await page.getByRole("button", { name: "Income" }).click();
@@ -294,15 +304,31 @@ test("an income is not offered a card or a loan, and the server refuses one anyw
   await expect(picker.getByRole("option", { name: /Loan E2E/ })).toHaveCount(0);
   await expect(picker.getByText(/is a payment, not income/)).toBeVisible();
 
-  const refused = await request.post("/api/transactions", {
+  const income = async (toAccountId: string) =>
+    request.post("/api/transactions", {
+      headers: { origin: APP },
+      data: { type: "INCOME", amount: 600, date: new Date().toISOString(), toAccountId },
+    });
+
+  for (const target of [card, loan]) {
+    const refused = await income(target.id);
+    expect(refused.status()).toBe(400);
+    expect(((await refused.json()) as { code: string }).code).toBe("INCOME_ON_CARD_OR_LOAN");
+  }
+
+  // The overdraft is the one debt type that takes income: its positive balance is its ordinary state.
+  expect((await income(overdraft.id)).status()).toBe(201);
+
+  const overpaid = await request.post("/api/transactions", {
     headers: { origin: APP },
     data: {
-      type: "INCOME",
-      amount: 600,
+      type: "TRANSFER",
+      amount: 9_000,
       date: new Date().toISOString(),
-      toAccountId: card.id,
+      fromAccountId: bank.id,
+      toAccountId: loan.id,
     },
   });
-  expect(refused.status()).toBe(400);
-  expect(((await refused.json()) as { code: string }).code).toBe("INCOME_ON_CARD_OR_LOAN");
+  expect(overpaid.status()).toBe(400);
+  expect(((await overpaid.json()) as { code: string }).code).toBe("LOAN_OVERPAID");
 });

@@ -355,6 +355,24 @@ describe("NewTransactionScreen", () => {
     expect(screen.getByRole("button", { name: /^Account/ })).toHaveTextContent("Choose an account");
   });
 
+  // T-93: the server refuses it, and offline the mirror would draw the loan paid until the sync said no.
+  it("refuses a transfer that would pay a loan more than it owes", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "900");
+    await userEvent.click(await screen.findByRole("button", { name: "Pay a loan" }));
+
+    expect(await screen.findByText(/cannot be paid more than/)).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
+    expect(calls("POST")).toHaveLength(0);
+
+    await userEvent.clear(screen.getByRole("textbox", { name: "Amount" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "800");
+    expect(screen.queryByText(/cannot be paid more than/)).not.toBeInTheDocument();
+  });
+
   it("offers no intent chip for a kind of account nobody has", async () => {
     render(<NewTransactionScreen />);
     await screen.findByRole("group", { name: "Type" });

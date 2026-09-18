@@ -79,7 +79,8 @@ Under **Income** the form and the quick capture pass `omit={INCOME_REFUSED_TYPES
 loan — and the note that says why: money arriving there is a payment, and the server refuses it as
 income. An **overdraft** is not on that list, because a positive balance is its ordinary state and a
 salary landing there is income (owner's decision, 2026-09-18). The rule itself is the server's; this
-is only what keeps the client from offering what it would refuse.
+is only what keeps the client from offering what it would refuse, and the note is shown only when
+there was something to leave out.
 
 `PaySheet` (app layer, because it composes transactions) is the one primary action on a debt
 account's own screen: the amount preloaded with everything owed, one `From` picker and the optional

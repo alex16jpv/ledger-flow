@@ -150,19 +150,23 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
   }
 
   async function save() {
-    if (income && effectiveAccountId === null && mainIsDebt) {
-      setIssues({ accountId: "validation.required" });
-      return;
-    }
     const parsed = quickAddSchema.safeParse(draft());
-    if (!parsed.success) {
-      setIssues(
-        Object.fromEntries(
-          parsed.error.issues.flatMap((issue) =>
-            isValidationKey(issue.message) ? [[String(issue.path[0]), issue.message]] : [],
-          ),
-        ),
-      );
+    // The schema takes a missing account (the server resolves the main one), but not when that one is a card.
+    const missingAccount: Record<string, string> =
+      income && effectiveAccountId === null && mainIsDebt
+        ? { accountId: "validation.required" }
+        : {};
+    if (!parsed.success || Object.keys(missingAccount).length > 0) {
+      setIssues({
+        ...(parsed.success
+          ? {}
+          : Object.fromEntries(
+              parsed.error.issues.flatMap((issue) =>
+                isValidationKey(issue.message) ? [[String(issue.path[0]), issue.message]] : [],
+              ),
+            )),
+        ...missingAccount,
+      });
       return;
     }
     setIssues({});
@@ -297,7 +301,7 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
               label={
                 transfer
                   ? t("transactions.form.from")
-                  : defaultAccount && !accountId
+                  : effectiveAccountId !== null && !accountId
                     ? t(
                         type === "INCOME"
                           ? "transactions.quick.intoMain"

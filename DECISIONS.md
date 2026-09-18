@@ -15,8 +15,11 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   client does two things with it. It does not offer what the server will refuse — under Income the
   account picker omits a card and a loan and its footer says why, switching the type to Income drops
   one already chosen, and the quick capture asks for an account instead of sending a main account
-  that is a card — and it maps both codes to the field they are about, the account and the amount,
-  never a toast. **An overdraft is not omitted**: the owner decided on 2026-09-18, asked while this
+  that is a card — and it caps a transfer into a loan at what it still owes, the way the Pay sheet
+  already did, because offline the mirror would otherwise draw the loan paid off until the sync took
+  it back. When the server refuses anyway, both codes are shown as the form's own alert with the
+  sentence that says what to record instead; they are not pinned to a field, because the server does
+  not say which of a transfer's two sides is the wrong one. **An overdraft is not omitted**: the owner decided on 2026-09-18, asked while this
   was built, that it keeps taking income, because T-101 already settled that its positive balance is
   its ordinary state — it is the account that holds the money and sometimes dips below zero, and a
   salary landing there is income.

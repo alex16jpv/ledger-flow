@@ -158,6 +158,46 @@ describe("AccountForm", () => {
     expect(JSON.parse(init?.body as string)).toEqual({ name: "Nu Bank" });
   });
 
+  // T-93: the server refuses a loan above zero, and the balance is not a field on an edit.
+  it("says why a save failed when the error is about a field this form does not show", async () => {
+    fetchMock.mockResolvedValue(
+      json(
+        {
+          code: "LOAN_OVERPAID",
+          message: "A loan cannot hold money of its own",
+          details: [{ field: "balance", message: "A loan cannot be above zero" }],
+        },
+        { status: 400 },
+      ),
+    );
+    renderWithProviders(
+      <QueryProvider>
+        <AccountForm
+          account={{
+            id: "a1",
+            name: "Savings",
+            type: "SAVINGS",
+            balance: 250_000,
+            openingBalance: 0,
+            color: "PURPLE",
+            userId: "u1",
+            isDefault: false,
+            currency: "COP",
+            archivedAt: null,
+            createdAt: "",
+            updatedAt: "",
+          }}
+          submitLabel="Save changes"
+          onSaved={vi.fn()}
+        />
+      </QueryProvider>,
+    );
+    await chooseType("Loan");
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/loan cannot be paid more/i);
+  });
+
   it("asks a debt account what it owes and stores it as the debt (T-88)", async () => {
     fetchMock.mockResolvedValue(json({ id: "a4" }, { status: 201 }));
     renderForm();

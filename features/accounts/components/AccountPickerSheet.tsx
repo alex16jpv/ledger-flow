@@ -69,6 +69,8 @@ export function AccountPickerSheet({
       (only?.has(account.type) ?? true) &&
       !(omit?.has(account.type) ?? false),
   );
+  // The note explains an absence: with nothing to leave out there is nothing to explain.
+  const omitted = (accounts.data ?? []).some((account) => omit?.has(account.type) ?? false);
   const focusedId = options.some((account) => account.id === value) ? value : options[0]?.id;
   const rowMeta = (account: Account): string[] => {
     const reading = readDebt(account);
@@ -118,7 +120,7 @@ export function AccountPickerSheet({
         <p className="text-sm text-text-3">
           {t("accounts.picker.note")}
           {outside ? ` ${t("accounts.picker.outsideNote")}` : ""}
-          {note ? ` ${note}` : ""}
+          {note !== undefined && omitted ? ` ${note}` : ""}
         </p>
       }
     >

@@ -256,10 +256,16 @@ sending the main one to be refused.
 card is for, paying one is the movement the Pay sheet exists for, and a cash advance out of a card is
 real.
 
+**A transfer cannot pay a loan more than it owes.** The Pay sheet already capped it; the full form
+does too, on the amount, with the figure in the message. It is not only a round trip saved: without a
+network the mirror would draw the loan paid off and only the attention tray would take it back later,
+and that is the one thing offline is not allowed to do.
+
 **When the server refuses anyway** — a movement queued offline before this shipped, another device, an
-older app — the code lands on the field it is about: `INCOME_ON_DEBT_ACCOUNT` on the account,
-`LOAN_OVERPAID` on the amount, with the sentence that says what to record instead. Never a toast: the
-form is where the wrong choice was made.
+older app — `INCOME_ON_CARD_OR_LOAN` and `LOAN_OVERPAID` are shown **as the form's own alert**, at the
+top, with the sentence that says what to record instead. Never a toast: the form is where the wrong
+choice was made. They are not placed on a single field because the server does not say which one is
+wrong, and a guessed field would point at the wrong half of a transfer.
 
 ### What was premise, and was not asked
 
