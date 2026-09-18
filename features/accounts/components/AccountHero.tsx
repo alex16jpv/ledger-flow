@@ -4,10 +4,12 @@ import { Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createElement } from "react";
 
+import { useAccountReading } from "@/components/ui/AccountCard";
 import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/cn";
+import { Progress } from "@/components/ui/Progress";
 import { Projected } from "@/components/ui/Projected";
 import { Tile } from "@/components/ui/Tile";
 import { useDates } from "@/lib/i18n/useDates";
@@ -24,6 +26,7 @@ export function AccountHero({ account }: { account: Account }) {
   const dates = useDates();
   const outbox = useOutbox();
   const archived = Boolean(account.archivedAt);
+  const { lead, debt } = useAccountReading(account);
   return (
     <Card
       className={cn(
@@ -50,8 +53,15 @@ export function AccountHero({ account }: { account: Account }) {
       </span>
       <p className="text-lg font-semibold">{account.name}</p>
       <Projected when={outbox.projected.balances}>
-        <Amount value={account.balance} signed={false} size="hero" />
+        <Amount value={lead} signed={false} size="hero" />
       </Projected>
+      {debt && <span className="text-sm text-text-2">{debt.word}</span>}
+      {debt && (debt.bar !== null || debt.foot) && (
+        <div className="mt-0.5 flex flex-col gap-1.5">
+          {debt.bar !== null && <Progress value={debt.bar} thin plain label={debt.barLabel} />}
+          {debt.foot && <span className="text-sm text-text-3">{debt.foot}</span>}
+        </div>
+      )}
       <span className="text-sm text-text-3">
         {t("accounts.detail.openingLine", {
           amount: money.format(account.openingBalance),

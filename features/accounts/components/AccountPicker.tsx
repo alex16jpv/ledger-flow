@@ -14,6 +14,7 @@ import { List, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/compone
 import { Sheet } from "@/components/ui/Sheet";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
+import { readDebt } from "@/lib/accounts/debt";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { iconProps } from "@/lib/icons/sizes";
@@ -42,6 +43,13 @@ export function AccountPicker({
   className,
 }: AccountPickerProps) {
   const t = useTranslations();
+  // The picker prints the same figure as every other surface, and never a number with no word.
+  const leadOf = (account: Account): number => readDebt(account)?.lead ?? account.balance;
+  const rowMeta = (account: Account): string[] => {
+    const reading = readDebt(account);
+    const type = t(`accountTypes.${account.type}`);
+    return reading === null ? [type] : [type, t(`accounts.debt.${reading.word}`)];
+  };
   const money = useMoney();
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -75,7 +83,7 @@ export function AccountPicker({
     <>
       <Picker
         label={label ?? t("accounts.picker.label")}
-        value={selected ? `${selected.name} · ${money.format(selected.balance)}` : undefined}
+        value={selected ? `${selected.name} · ${money.format(leadOf(selected))}` : undefined}
         placeholder={t("accounts.picker.placeholder")}
         disabled={disabled}
         className={className}
@@ -144,11 +152,11 @@ export function AccountPicker({
                           <span>{account.name}</span>
                           {account.isDefault && <Badge tone="brand">{t("common.main")}</Badge>}
                         </RowTitle>
-                        <RowMeta items={[t(`accountTypes.${account.type}`)]} />
+                        <RowMeta items={rowMeta(account)} />
                       </RowBody>
                       <RowRight>
                         <span className="flex items-center gap-2">
-                          <Amount value={account.balance} signed={false} />
+                          <Amount value={leadOf(account)} signed={false} />
                           {isSelected && <Check {...iconProps("sm")} className="text-brand-text" />}
                         </span>
                       </RowRight>

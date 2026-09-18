@@ -66,9 +66,10 @@ describe("AccountPicker", () => {
     expect(main).toHaveAttribute("aria-selected", "true");
     expect(within(main).getByText("Main")).toBeVisible();
     expect(within(listbox).getByRole("option", { name: /Cash/ })).toHaveTextContent("$184,000");
-    expect(within(listbox).getByRole("option", { name: /Visa Gold/ })).toHaveTextContent(
-      "−$1,245,900",
-    );
+    // T-88: a debt account reads here as it does everywhere else, and never as a naked figure.
+    const visa = within(listbox).getByRole("option", { name: /Visa Gold/ });
+    expect(visa).toHaveTextContent("$1,245,900");
+    expect(within(visa).getByText("owed")).toBeVisible();
 
     expect(main).toHaveFocus();
     await userEvent.click(within(listbox).getByRole("option", { name: /Visa Gold/ }));
