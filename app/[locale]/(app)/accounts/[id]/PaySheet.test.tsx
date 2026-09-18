@@ -7,7 +7,7 @@ import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 import type { Account } from "@/types/api";
 
-import { payInput, PaySheet } from "./PaySheet";
+import { interestInput, payInput, PaySheet } from "./PaySheet";
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { headers: { "content-type": "application/json" }, ...init });
@@ -32,6 +32,7 @@ const account = (over: Partial<Account>): Account => ({
   ...over,
 });
 
+const pagination = { limit: 100, offset: 0, total: 1, hasMore: false, nextCursor: null };
 const card = account({});
 const main = account({ id: "banco", name: "Bancolombia", type: "ACCOUNT", balance: 3_420_500 });
 
@@ -79,6 +80,200 @@ describe("payInput", () => {
       categoryId: null,
       description: "Paid from outside",
     });
+  });
+});
+
+const loan = account({
+  id: "loan",
+  name: "Car loan",
+  type: "LOAN",
+  balance: -8_400_000,
+  borrowedAmount: 12_000_000,
+});
+const interestCategory = {
+  id: "cat-interest",
+  name: "Interest",
+  icon: "percent",
+  color: "INDIGO",
+  type: "EXPENSE",
+  seedKey: "interest",
+  archivedAt: null,
+};
+const otherExpense = { ...interestCategory, id: "cat-food", name: "Food", seedKey: "food" };
+
+function routeLoan(categories: unknown[]) {
+  fetchMock.mockImplementation((url) => {
+    const href = url instanceof Request ? url.url : url.toString();
+    if (href.includes("/api/categories"))
+      return Promise.resolve(json({ data: categories, pagination }));
+    if (href.includes("/api/stats/spending"))
+      return Promise.resolve(json({ groupBy: "category", total: 0, buckets: [] }));
+    if (isTransactions(url)) return Promise.resolve(json({ id: "t1" }, { status: 201 }));
+    return Promise.resolve(json({ data: [main, loan] }));
+  });
+}
+
+function openLoan() {
+  const onClose = vi.fn();
+  renderWithProviders(
+    <QueryProvider>
+      <ToastProvider>
+        <PaySheet account={loan} main={main} open onClose={onClose} />
+      </ToastProvider>
+    </QueryProvider>,
+  );
+  return onClose;
+}
+
+// The sheet keeps both category pickers mounted; only one of them is open.
+async function openSheet(name: string) {
+  const sheets = await screen.findAllByRole("dialog", { name });
+  const shown = sheets.find((sheet) => sheet.hasAttribute("open"));
+  if (!shown) throw new Error(`no ${name} sheet is open`);
+  return shown;
+}
+
+const bodies = () =>
+  fetchMock.mock.calls
+    .filter(([url, init]) => isTransactions(url) && (init?.method ?? "GET") === "POST")
+    .map(([, init]) => JSON.parse(init?.body as string) as Record<string, unknown>);
+
+describe("the instalment split (T-94)", () => {
+  it("splits the instalment into a transfer and an expense, in that order", async () => {
+    routeLoan([interestCategory]);
+    const onClose = openLoan();
+
+    await userEvent.type(await screen.findByLabelText("Amount to pay"), "420000");
+    await userEvent.type(screen.getByLabelText("Of which interest"), "126000");
+
+    expect(
+      await screen.findByText(
+        /Bancolombia −\$420,000 · Car loan \$294,000 less owed\. \$126,000 of that is spending/,
+      ),
+    ).toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: "Pay" }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    expect(bodies()).toMatchObject([
+      { type: "TRANSFER", amount: 294_000, fromAccountId: "banco", toAccountId: "loan" },
+      {
+        type: "EXPENSE",
+        amount: 126_000,
+        fromAccountId: "banco",
+        toAccountId: null,
+        categoryId: "cat-interest",
+        description: "Interest on Car loan",
+      },
+    ]);
+  });
+
+  it("writes one movement while the interest is empty, exactly as before", async () => {
+    routeLoan([interestCategory]);
+    const onClose = openLoan();
+
+    await userEvent.type(await screen.findByLabelText("Amount to pay"), "420000");
+    await userEvent.click(screen.getByRole("button", { name: "Pay" }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    expect(bodies()).toHaveLength(1);
+    expect(bodies()[0]).toMatchObject({ type: "TRANSFER", amount: 420_000 });
+  });
+
+  it("caps the principal, not the instalment: interest may take it past what is owed", async () => {
+    routeLoan([interestCategory]);
+    openLoan();
+
+    await userEvent.type(await screen.findByLabelText("Amount to pay"), "8500000");
+    expect(await screen.findByText(/cannot be paid more than/)).toBeVisible();
+
+    await userEvent.type(screen.getByLabelText("Of which interest"), "200000");
+    await waitFor(() => {
+      expect(screen.queryByText(/cannot be paid more than/)).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Pay" })).toBeEnabled();
+  });
+
+  it("refuses an instalment that is all interest, because nothing would lower the loan", async () => {
+    routeLoan([interestCategory]);
+    openLoan();
+
+    await userEvent.type(await screen.findByLabelText("Amount to pay"), "420000");
+    await userEvent.type(screen.getByLabelText("Of which interest"), "420000");
+
+    expect(await screen.findByText(/cannot be the whole instalment/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Pay" })).toBeDisabled();
+    expect(screen.queryByText(/less owed/)).not.toBeInTheDocument();
+  });
+
+  it("asks where the interest goes when the account has no Interest category", async () => {
+    routeLoan([otherExpense]);
+    openLoan();
+
+    await userEvent.type(await screen.findByLabelText("Amount to pay"), "420000");
+    expect(await screen.findByText(/no Interest category yet/)).toBeVisible();
+    await userEvent.type(screen.getByLabelText("Of which interest"), "126000");
+
+    expect(screen.getByRole("button", { name: "Pay" })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: /^Where the interest goes/ }));
+    const picking = await openSheet("Category");
+    await userEvent.click(await within(picking).findByRole("option", { name: /Food/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Pay" }));
+
+    await waitFor(() => {
+      expect(bodies()).toHaveLength(2);
+    });
+    expect(bodies()[1]).toMatchObject({ type: "EXPENSE", categoryId: "cat-food" });
+  });
+
+  it("keeps the sheet open when only the payment landed, and sends the rest again", async () => {
+    let posts = 0;
+    fetchMock.mockImplementation((url, init) => {
+      const href = url instanceof Request ? url.url : url.toString();
+      if (href.includes("/api/categories"))
+        return Promise.resolve(json({ data: [interestCategory], pagination }));
+      if (isTransactions(url) && (init?.method ?? "GET") === "POST") {
+        posts += 1;
+        return posts === 2
+          ? Promise.resolve(json({ code: "INTERNAL", message: "no" }, { status: 500 }))
+          : Promise.resolve(json({ id: `t${String(posts)}` }, { status: 201 }));
+      }
+      return Promise.resolve(json({ data: [main, loan] }));
+    });
+    const onClose = openLoan();
+
+    await userEvent.type(await screen.findByLabelText("Amount to pay"), "420000");
+    await userEvent.type(screen.getByLabelText("Of which interest"), "126000");
+    await userEvent.click(screen.getByRole("button", { name: "Pay" }));
+
+    expect(await screen.findByText(/Only half of this arrived/)).toBeVisible();
+    expect(onClose).not.toHaveBeenCalled();
+    const again = screen.getByRole("button", { name: "Send it again" });
+
+    await userEvent.click(again);
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+    // Three POSTs, and only one of them is the transfer: the payment is never sent twice.
+    expect(bodies().filter((body) => body.type === "TRANSFER")).toHaveLength(1);
+  });
+
+  it("does not offer the split on a card, or when the money comes from outside", async () => {
+    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    open();
+    expect(await screen.findByLabelText("Amount to pay")).toBeVisible();
+    expect(screen.queryByLabelText("Of which interest")).not.toBeInTheDocument();
+
+    routeLoan([interestCategory]);
+    openLoan();
+    const sheets = await screen.findAllByRole("dialog");
+    const loanSheet = sheets[sheets.length - 1];
+    expect(within(loanSheet ?? document.body).getByLabelText("Of which interest")).toBeVisible();
   });
 });
 
@@ -301,5 +496,18 @@ describe("PaySheet", () => {
     await userEvent.clear(amount);
     expect(screen.getByRole("button", { name: "Pay" })).toBeDisabled();
     expect(screen.queryByText(/less owed/)).not.toBeInTheDocument();
+  });
+});
+
+describe("interestInput", () => {
+  it("is an expense from the account the instalment was paid with", () => {
+    expect(interestInput(main, 126_000, "cat-interest", "Interest on Car loan")).toMatchObject({
+      type: "EXPENSE",
+      amount: 126_000,
+      fromAccountId: "banco",
+      toAccountId: null,
+      categoryId: "cat-interest",
+      description: "Interest on Car loan",
+    });
   });
 });

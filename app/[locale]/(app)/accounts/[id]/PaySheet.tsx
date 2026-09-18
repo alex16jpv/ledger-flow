@@ -13,6 +13,8 @@ import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
+import { useCategoriesQuery } from "@/features/categories/hooks";
+import { InstalmentReadback } from "@/features/transactions/components/InstalmentReadback";
 import { TransferReadback } from "@/features/transactions/components/TransferReadback";
 import { useCreateTransaction } from "@/features/transactions/hooks";
 import { mayHoldOwnMoney } from "@/lib/accounts/debt";
@@ -49,6 +51,24 @@ export function payInput(
   return { ...common, type: "TRANSFER", fromAccountId: from.id, categoryId };
 }
 
+export function interestInput(
+  from: Pick<Account, "id">,
+  amount: number,
+  categoryId: string,
+  description: string,
+  now = new Date(),
+): CreateTransactionInput {
+  return {
+    type: "EXPENSE",
+    amount,
+    date: now.toISOString(),
+    fromAccountId: from.id,
+    toAccountId: null,
+    categoryId,
+    description,
+  };
+}
+
 export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   const t = useTranslations();
   const money = useMoney();
@@ -58,27 +78,64 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   const owed = Math.max(0, -account.balance);
   const capped = !mayHoldOwnMoney(account.type);
   const [amount, setAmount] = useState<number | null>(null);
+  const [interest, setInterest] = useState<number | null>(null);
+  const [chosenInterestCategory, setChosenInterestCategory] = useState<string | null>(null);
+  const [paidPrincipal, setPaidPrincipal] = useState(false);
   // The main account can be the very account being paid, and nothing is paid with itself.
   const [from, setFrom] = useState<Account | null>(main?.id === account.id ? null : (main ?? null));
   const [openedAt] = useState(() => new Date());
   const [outside, setOutside] = useState(false);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const error = create.error ? presentError(create.error) : null;
-  const over = capped && amount !== null && amount > owed;
-  const ready = amount !== null && amount > 0 && !over && (outside || from !== null);
+  const instalment = account.type === "LOAN" && !outside;
+  const splits = instalment && interest !== null && interest > 0;
+  const expenses = useCategoriesQuery("EXPENSE", instalment);
+  const seededInterest = (expenses.data ?? []).find((category) => category.seedKey === "interest");
+  const interestCategory = seededInterest?.id ?? chosenInterestCategory;
+  const interestCategoryName =
+    seededInterest?.name ??
+    (expenses.data ?? []).find((category) => category.id === chosenInterestCategory)?.name ??
+    "";
+  const principal = splits && amount !== null ? amount - interest : amount;
+  const allInterest = splits && principal !== null && principal <= 0;
+  const over = capped && principal !== null && principal > owed;
+  const ready =
+    amount !== null &&
+    amount > 0 &&
+    !over &&
+    !allInterest &&
+    (!splits || interestCategory !== null) &&
+    (outside || from !== null);
 
   async function pay() {
-    if (!ready) return;
+    if (!ready || principal === null) return;
     const input = payInput(
       account,
       outside ? null : from,
-      amount,
+      principal,
       categoryId,
       t("accounts.pay.outsideDescription"),
       openedAt,
     );
     try {
-      await create.mutateAsync({ input, idempotencyKey: keyring.current.keyFor(input) });
+      // The transfer goes first: it is the payment, and a refused interest leaves the debt right.
+      if (!paidPrincipal) {
+        await create.mutateAsync({ input, idempotencyKey: keyring.current.keyFor(input) });
+        if (splits) setPaidPrincipal(true);
+      }
+      if (splits && from !== null && interestCategory !== null) {
+        const expense = interestInput(
+          from,
+          interest,
+          interestCategory,
+          t("accounts.pay.interestDescription", { name: account.name }),
+          openedAt,
+        );
+        await create.mutateAsync({
+          input: expense,
+          idempotencyKey: keyring.current.keyFor(expense),
+        });
+      }
       toast.show({ message: t("accounts.pay.paid") });
       onClose();
     } catch {
@@ -87,7 +144,17 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   }
 
   const readBack =
-    amount === null || amount <= 0 || over ? null : (
+    amount === null || amount <= 0 || over || allInterest ? null : splits && from !== null ? (
+      <InstalmentReadback
+        from={from}
+        to={account}
+        instalment={amount}
+        interest={interest}
+        interestCategory={interestCategoryName}
+        transfer={paidPrincipal ? "saved" : "pending"}
+        expense={paidPrincipal ? "refused" : "pending"}
+      />
+    ) : (
       <TransferReadback
         from={outside ? null : from}
         to={account}
@@ -100,7 +167,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
     <Sheet
       open={open}
       onClose={onClose}
-      unsaved={amount !== null}
+      unsaved={amount !== null && !paidPrincipal}
       title={t("accounts.pay.title", { name: account.name })}
       footer={
         <>
@@ -114,7 +181,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
               void pay();
             }}
           >
-            {t("accounts.pay.pay")}
+            {t(paidPrincipal ? "accounts.pay.sendAgain" : "accounts.pay.pay")}
           </Button>
           <Button variant="ghost" size="lg" block onClick={onClose}>
             {t("common.cancel")}
@@ -148,6 +215,40 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
             </div>
           </Card>
         </Field>
+        {instalment && (
+          <Field
+            label={t("accounts.pay.interest")}
+            optional
+            help={t("accounts.pay.interestHelp")}
+            error={allInterest ? t("accounts.pay.interestOverAmount") : undefined}
+          >
+            <Card className="p-0 pb-1">
+              <AmountInput
+                label={t("accounts.pay.interest")}
+                size="sm"
+                value={interest}
+                onChange={setInterest}
+                invalid={allInterest}
+                className="py-3"
+              />
+            </Card>
+          </Field>
+        )}
+        {instalment && expenses.isSuccess && seededInterest === undefined && (
+          <Field
+            label={t("accounts.pay.interestCategory")}
+            help={t("accounts.pay.interestCategoryHelp")}
+          >
+            <CategoryPicker
+              type="EXPENSE"
+              label={t("accounts.pay.interestCategory")}
+              value={chosenInterestCategory}
+              onChange={(category) => {
+                setChosenInterestCategory(category.id);
+              }}
+            />
+          </Field>
+        )}
         <AccountPicker
           label={t("accounts.pay.from")}
           value={outside ? null : (from?.id ?? null)}

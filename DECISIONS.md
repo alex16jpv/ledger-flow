@@ -5,6 +5,37 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-18 · A loan instalment is two movements, not one (T-94)
+
+- **Context:** the instalment was written as a single TRANSFER, so a $420,000 payment of which $126,000
+  is interest lowered the loan by the whole $420,000 when only **$294,000** paid it down. The bar that
+  reads _what is paid_ ran ahead by the interest **for the life of the loan**, and the $126,000 actually
+  spent never reached Stats, because a transfer is not spending. On a car loan that is the largest
+  expense of the month, invisible. The owner deferred the question on 2026-09-17 («por ahora prefiero
+  sin el campo de interés») and came back to it on 2026-09-18 with both answers priced.
+- **Decision (his):** the **pair**. The Pay sheet on a LOAN gains one optional field, _Of which
+  interest_, and saves a `TRANSFER` of the principal and an `EXPENSE` of the interest, both named on
+  screen before the button is pressed. Left empty, the sheet behaves exactly as before. The backend
+  seeds an **`interest`** category for the expense to land in — the eleventh — and the client finds it
+  by `seedKey`, never by name; an account registered before this gets one extra row asking for a
+  category of its own, mounted from the moment the sheet opens rather than when the amount is typed,
+  because a row that appears mid-amount takes the keyboard away from what is being typed.
+- **Alternatives:** one movement carrying its interest, split by the server — the shape that makes the
+  pair impossible to separate and an instalment one event. It was **not** taken because it is a new
+  shape in the domain rather than a new field: `Transaction`, the OpenAPI the front regenerates from,
+  `/stats/spending`, the offline `lib/local/derive/spending.ts`, the parity fixtures that prove those
+  two agree, a decision about budgets, and three screens that would have to show a movement whose
+  amount is not the amount that left the account. Each is a place the two sides can drift, which is
+  what house rule 4 exists to prevent.
+- **Consequence:** the two are **not atomic** and cannot be — `POST /sync` applies its operations one
+  at a time, and online they are two requests. So the transfer goes **first**, and if the interest is
+  refused the sheet stays open, says which half is saved, and its button becomes _Send it again_, which
+  retries only what is missing; with no network both are queued and a later refusal surfaces in the
+  attention tray, where every refused change already does. Nothing links the pair afterwards: deleting
+  or editing one leaves the other, which is the bill of the answer he did not take, and he was told it
+  before choosing. **The loan ceiling of T-93 now applies to the principal**, which is a fix rather
+  than a side effect: a loan owing $300,000 takes a $420,000 instalment when $126,000 of it is interest.
+
 ## 2026-09-18 · The transfer read-back ends with the two sides and nothing after them (T-96)
 
 - **Context:** the sentence closed with "Your total balance does not change" / «Tu balance total no

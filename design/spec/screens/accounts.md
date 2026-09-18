@@ -201,7 +201,9 @@ other type's form is untouched. The amount borrowed exists because `openingBalan
 creation and never changed — is the balance the day the account was created, not what was borrowed, so
 a loan someone starts tracking halfway through cannot say what its progress is a fraction of. A set of
 terms per type (interest rate, monthly payment, payment day) was drawn and **rejected**
-(`#account-fields-per-type`): nothing reads three of those four until T-86's instalment split exists.
+(`#account-fields-per-type`): nothing read three of those four, and **T-94 did not change that** — the
+instalment split it brought asks for the interest on the sheet, once, rather than storing a rate the
+account would then have to keep true.
 
 **On creation the amount field asks for the debt** (`#account-create-a-debt`): on a CARD, an OVERDRAFT
 or a LOAN it reads _How much do you owe on it right now?_ rather than _Current balance_, entered
@@ -260,14 +262,17 @@ back **as a difference** — "Bancolombia −$1,245,900 · Visa Gold **$1,245,90
 $0 owed" — because that grammar is now the product's on every surface (see [add.md](add.md)), and that
 includes the _Somewhere else_ sheet, which is the same act on the same card. And the sheet carries the
 same **optional TRANSFER category** the form now has, with nothing preselected, so a card payment can
-say so. The presets stay the two it had: `#loan-detail-and-pay` is right that the instalment is the
-ordinary payment on a loan, but a preset for it needs a figure the account does not carry, and that is
-part of T-94.
+say so. `#loan-detail-and-pay` is right that the instalment is the ordinary payment on a loan, but a preset for
+it needs a figure the account does not carry — and T-94 did not add one, so there is still no instalment
+preset. Since T-99 there is one chip, _Everything owed_, and it is a switch.
 
-**The instalment still records as one movement, and that is deliberate for now.** His words: «por ahora
-prefiero sin el campo de interés». About $126,000 of a $420,000 instalment is interest, so the loan
-falls by more than was actually paid off and the interest never reaches Stats — **T-94** on his list,
-with both answers drawn in `#instalment-two-movements` and `#instalment-interest-inside-the-movement`.
+**On a loan the sheet asks how much of the instalment was interest** (`#instalment-two-movements`,
+T-94, his decision of 2026-09-18): one optional field, and filling it saves **two** movements instead of
+one — the transfer that lowers the debt and the expense that is the interest. Empty, nothing changes.
+Both are named before the button is pressed, the ceiling then applies to the **principal** rather than
+to the instalment, and if only one of the two lands the sheet says so and offers to send the other
+again (`#instalment-only-half-arrived`). The whole reasoning, including what this answer costs, is in
+[add.md](add.md).
 
 **A loan cannot be paid more than it owes** (`#pay-a-loan-not-more-than-owed`, T-101): the amount
 refuses anything above what is still owed and says so on the field, because "money of your own on top"
