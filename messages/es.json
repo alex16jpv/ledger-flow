@@ -777,6 +777,7 @@
     "NO_DEFAULT_ACCOUNT": "Elige una cuenta: aún no tienes una principal.",
     "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED": "Tu cuenta principal no se puede archivar. Haz principal otra cuenta primero.",
     "ACCOUNT_LIMIT_REACHED": "Llegaste al límite de 100 cuentas.",
+    "ACCOUNT_FIELD_NOT_FOR_TYPE": "Ese importe no es de este tipo de cuenta. Bórralo o elige otro tipo.",
     "CATEGORY_LIMIT_REACHED": "Llegaste al límite de 200 categorías.",
     "CATEGORY_ARCHIVED": "Esa categoría está archivada. Restáurala o elige otra.",
     "CATEGORY_TYPE_MISMATCH": "Esa categoría no corresponde a este tipo de movimiento.",

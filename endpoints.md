@@ -57,18 +57,19 @@ Archived accounts are hidden unless includeArchived=true.
 
 The first account is marked default automatically. Currency is stamped from the user (mono-currency mode). Active account names are unique per user, case-insensitively ("Efectivo" = "efectivo"; accents still distinct) and trimmed; archiving an account frees its name.
 Accepts an optional client-minted `id` (UUID). An id the user already owns replays with 200 and the stored resource, whatever the payload says now (the row may have been edited elsewhere since); an id that belongs to another user is rejected with 409 ID_TAKEN.
+Two optional amounts belong to the types that have them: `creditLimit` to CARD and OVERDRAFT, `borrowedAmount` to LOAN. On any other type they are 400 ACCOUNT_FIELD_NOT_FOR_TYPE. Both follow the owner's currency precision, like `balance`.
 
 **Body** `CreateAccountInput` (required)
 
 **Responses**
 
-| Status | Schema          | Description                                                                                                                                   |
-| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `Account`       | Replay of a create already made with this client-minted id                                                                                    |
-| `201`  | `Account`       | Account created                                                                                                                               |
-| `400`  | `ErrorResponse` | Validation error (code VALIDATION) or account limit reached (code ACCOUNT_LIMIT_REACHED)                                                      |
-| `401`  | `ErrorResponse` | Unauthorized                                                                                                                                  |
-| `409`  | `ErrorResponse` | An active account with this name already exists (code DUPLICATE, case-insensitive), or the client-minted id is already in use (code ID_TAKEN) |
+| Status | Schema          | Description                                                                                                                                                                                                                                                  |
+| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `200`  | `Account`       | Replay of a create already made with this client-minted id                                                                                                                                                                                                   |
+| `201`  | `Account`       | Account created                                                                                                                                                                                                                                              |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION), account limit reached (code ACCOUNT_LIMIT_REACHED), an amount with more decimals than the currency has (code AMOUNT_PRECISION), or a debt amount sent on a type that has no such field (code ACCOUNT_FIELD_NOT_FOR_TYPE) |
+| `401`  | `ErrorResponse` | Unauthorized                                                                                                                                                                                                                                                 |
+| `409`  | `ErrorResponse` | An active account with this name already exists (code DUPLICATE, case-insensitive), or the client-minted id is already in use (code ID_TAKEN)                                                                                                                |
 
 ### `GET /accounts/{id}`
 
@@ -91,6 +92,8 @@ Also resolves archived accounts (archivedAt tells them apart); only the listing 
 
 ### `PUT /accounts/{id}`
 
+Partial update. `creditLimit` (CARD, OVERDRAFT) and `borrowedAmount` (LOAN) accept null to clear them. A write is judged on the state it leaves behind: changing the type to one without that field is 400 ACCOUNT_FIELD_NOT_FOR_TYPE unless the same request clears it.
+
 **Path**
 
 | Name | Type          | Required | Description |
@@ -101,13 +104,13 @@ Also resolves archived accounts (archivedAt tells them apart); only the listing 
 
 **Responses**
 
-| Status | Schema            | Description                                                                                                                                                                                     |
-| ------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `Account`         | Account updated                                                                                                                                                                                 |
-| `400`  | `ErrorResponse`   | Validation error (code VALIDATION) or account is archived (code RESOURCE_ARCHIVED, restore it first)                                                                                            |
-| `401`  | `ErrorResponse`   | Unauthorized                                                                                                                                                                                    |
-| `404`  | `ErrorResponse`   | Account not found (uniform for missing and not owned)                                                                                                                                           |
-| `409`  | `AccountConflict` | Another active account already uses this name (code DUPLICATE, case-insensitive), or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) |
+| Status | Schema            | Description                                                                                                                                                                                                                                                              |
+| ------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `200`  | `Account`         | Account updated                                                                                                                                                                                                                                                          |
+| `400`  | `ErrorResponse`   | Validation error (code VALIDATION), account is archived (code RESOURCE_ARCHIVED, restore it first), an amount with more decimals than the currency has (code AMOUNT_PRECISION), or a debt amount left on a type that has no such field (code ACCOUNT_FIELD_NOT_FOR_TYPE) |
+| `401`  | `ErrorResponse`   | Unauthorized                                                                                                                                                                                                                                                             |
+| `404`  | `ErrorResponse`   | Account not found (uniform for missing and not owned)                                                                                                                                                                                                                    |
+| `409`  | `AccountConflict` | Another active account already uses this name (code DUPLICATE, case-insensitive), or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy)                                                                          |
 
 ### `DELETE /accounts/{id}`
 

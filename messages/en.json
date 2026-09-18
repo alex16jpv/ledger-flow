@@ -777,6 +777,7 @@
     "NO_DEFAULT_ACCOUNT": "Choose an account: you don’t have a main one yet.",
     "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED": "Your main account can’t be archived. Make another account the main one first.",
     "ACCOUNT_LIMIT_REACHED": "You’ve reached the limit of 100 accounts.",
+    "ACCOUNT_FIELD_NOT_FOR_TYPE": "That amount doesn’t belong to this account type. Clear it or pick another type.",
     "CATEGORY_LIMIT_REACHED": "You’ve reached the limit of 200 categories.",
     "CATEGORY_ARCHIVED": "That category is archived. Restore it or pick another.",
     "CATEGORY_TYPE_MISMATCH": "That category doesn’t match this type of transaction.",
