@@ -14,8 +14,10 @@ amount:
   reading "From your main account".
 - **Income** — the amount in `--income`, the income categories, and the account row reads "Into your
   main account".
-- **Transfer** — no category at all: From and To with the swap button between them, the amount in
-  `--transfer`, and the check that the two accounts differ.
+- **Transfer** — From and To with the swap button between them, the amount in `--transfer`, the check
+  that the two accounts differ, and the category row the other two types have, filtered to the
+  TRANSFER type and optional (T-86): the sheet hands its state to the full form, where that field
+  exists, so a category chosen here is not lost on the way.
 
 `POST /transactions/quick` already accepts `type` (INCOME, EXPENSE, TRANSFER) and both account ids, and
 the offline queue already applies the same per-type defaults, so this costs no sync work.
@@ -57,9 +59,8 @@ selection and return focus to the picker.
 ## Full form (`#full-form-expense`, `#full-form-transfer`)
 
 A segmented control for the type (expense, income, transfer — adjustment left this form with T-85,
-below) that reconfigures the form without losing the amount; the amount; the category (expense and
-income only, filtered by type, never a TRANSFER category — which is one of T-86's open questions,
-below); the account (expense: source; income: destination; transfer: from and to, with a swap button
+below) that reconfigures the form without losing the amount; the amount; the category, filtered to the
+transaction's type and **optional on a transfer** (T-86, below); the account (expense: source; income: destination; transfer: from and to, with a swap button
 and a check that they differ); the date and time (today by default; picking a day
 sends local noon; more than 24 hours ahead returns `FUTURE_DATE` inline) **with the app's own calendar
 and wheel, not the browser's** (`#date-sheet`, `#time-sheet`): the field opens the "Date" sheet with
@@ -139,6 +140,19 @@ same thing comes to read two ways one tap apart.
 Once both accounts are chosen: **"Bancolombia −$500,000 · Visa Gold $500,000 less owed. Your total
 balance does not change."** His words: «la diferencia». The debt side is said in the T-85 vocabulary,
 never as "+$500,000", because on a card more is not better.
+
+**Each side is said in the vocabulary of the account it names**, which is what makes the sentence
+general enough to cover every transfer and not only paying a card (`#full-form-transfer-plain`):
+
+| The side is                    | Money leaves it                | Money arrives at it            |
+| ------------------------------ | ------------------------------ | ------------------------------ |
+| an ordinary account            | "Bancolombia −$300,000"        | "Savings +$300,000"            |
+| a debt — card, overdraft, loan | "Visa Gold $300,000 more owed" | "Visa Gold $300,000 less owed" |
+
+A cash advance — money out of the card and into the bank — is the case the fourth cell exists for, and
+it is why the debt side is never a sign: on a card the direction and the good news point opposite
+ways. The sentence appears only when the amount and both accounts are there; before that there is
+nothing to read back.
 
 **It costs nothing but the sentence.** It repeats the amount just typed and the two names just picked —
 no arithmetic on any balance — so house rule 4 is untouched and it reads identically offline, on a
