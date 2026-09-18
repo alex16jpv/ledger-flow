@@ -146,10 +146,10 @@ export function FiltersSheet({ open, filters, onClose, onApply }: FiltersSheetPr
                   key={type}
                   selected={draft.type === type}
                   onClick={() => {
+                    // A category of another type matches nothing, and an adjustment has none.
                     patch({
                       type,
-                      categoryId:
-                        type === "TRANSFER" || type === "ADJUSTMENT" ? null : draft.categoryId,
+                      categoryId: selectedCategory?.type === type ? draft.categoryId : null,
                     });
                   }}
                 >

@@ -190,6 +190,27 @@ describe("TransactionsScreen", () => {
     expect(push).toHaveBeenCalledWith("/transactions/t2");
   });
 
+  // A category of another type matches nothing: the filter used to keep one and show zero rows.
+  it("drops the chosen category when the type filter moves to another type", async () => {
+    render();
+    await screen.findByRole("region", { name: "Monday, August 31" });
+    await userEvent.click(screen.getByRole("button", { name: /^Filters/ }));
+    const sheet = screen.getByRole("dialog", { name: "Filters" });
+
+    await userEvent.click(within(sheet).getByRole("button", { name: /More/ }));
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "Category" })).getByRole("option", {
+        name: /Coffee/,
+      }),
+    );
+    expect(within(sheet).getByRole("button", { name: "Coffee", pressed: true })).toBeVisible();
+
+    await userEvent.click(within(sheet).getByRole("button", { name: "Income" }));
+    expect(
+      within(sheet).queryByRole("button", { name: "Coffee", pressed: true }),
+    ).not.toBeInTheDocument();
+  });
+
   it("writes filter chips to the URL", async () => {
     render();
     await screen.findByRole("region", { name: "Monday, August 31" });
