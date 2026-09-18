@@ -280,7 +280,7 @@ describe("AdjustBalanceSheet", () => {
     expect(
       screen.getByRole("textbox", { name: "How much do you owe on Car loan right now?" }),
     ).toHaveValue("0");
-    expect(screen.getByText("Recorded: $200,000 of your own money on it")).toBeInTheDocument();
+    expect(screen.getByText("Recorded: $200,000 paid past what it owed")).toBeInTheDocument();
     expect(screen.getByText("An adjustment of −$200,000")).toBeInTheDocument();
   });
 

@@ -957,6 +957,7 @@
       "sideMine": "Your own money",
       "recordedOwed": "Recorded: {amount} owed",
       "recordedMine": "Recorded: {amount} of your own money on it",
+      "recordedLoanPast": "Recorded: {amount} paid past what it owed",
       "deltaLessOwed": "<b>{amount} less owed</b> will be recorded as an adjustment. It does not count as spending or in budgets.",
       "deltaMoreOwed": "<b>{amount} more owed</b> will be recorded as an adjustment. It does not count as spending or in budgets.",
       "sign": "Sign of the balance",

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/lib/testing/render";
 
 import { AmountInput } from "./AmountInput";
+import { Field } from "./Field";
 
 describe("AmountInput", () => {
   it("uses a numeric keyboard for currencies without decimals", () => {
@@ -70,5 +71,19 @@ describe("AmountInput", () => {
     await userEvent.type(input, "12abc");
     expect(input).toHaveValue("12");
     expect(onChange).toHaveBeenLastCalledWith(12);
+  });
+
+  it("paints an amount its field rejects, and points at the reason", () => {
+    renderWithProviders(
+      <Field label="Amount to pay" error="A loan cannot be paid more than it owes.">
+        <AmountInput onChange={vi.fn()} label="Amount to pay" defaultValue={9000} />
+      </Field>,
+    );
+    const input = screen.getByRole("textbox", { name: "Amount to pay" });
+    expect(input).toHaveClass("text-danger");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("A loan cannot be paid more than it owes.").getAttribute("id")).toBe(
+      input.getAttribute("aria-describedby"),
+    );
   });
 });

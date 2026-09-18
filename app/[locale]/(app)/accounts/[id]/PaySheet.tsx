@@ -16,7 +16,7 @@ import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
 import { TransferReadback } from "@/features/transactions/components/TransferReadback";
 import { useCreateTransaction } from "@/features/transactions/hooks";
-import { debtFieldOf } from "@/lib/accounts/debt";
+import { mayHoldOwnMoney } from "@/lib/accounts/debt";
 import { presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { useMoney } from "@/lib/i18n/useMoney";
@@ -57,8 +57,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   const create = useCreateTransaction();
   const keyring = useRef(new IdempotencyKeyring());
   const owed = Math.max(0, -account.balance);
-  // A loan cannot be overpaid: money of your own on top of it means nothing.
-  const isLoan = debtFieldOf(account.type) === "borrowedAmount";
+  const capped = !mayHoldOwnMoney(account.type);
   const [amount, setAmount] = useState<number | null>(owed);
   // The main account can be the very account being paid, and nothing is paid with itself.
   const [from, setFrom] = useState<Account | null>(main?.id === account.id ? null : (main ?? null));
@@ -66,7 +65,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   const [outside, setOutside] = useState(false);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const error = create.error ? presentError(create.error) : null;
-  const over = isLoan && amount !== null && amount > owed;
+  const over = capped && amount !== null && amount > owed;
   const ready = amount !== null && amount > 0 && !over && (outside || from !== null);
 
   async function pay() {

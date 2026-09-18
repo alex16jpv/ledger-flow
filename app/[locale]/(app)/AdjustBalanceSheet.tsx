@@ -25,7 +25,7 @@ import {
   useDeleteTransaction,
   useUpdateTransaction,
 } from "@/features/transactions/hooks";
-import { debtFieldOf } from "@/lib/accounts/debt";
+import { debtFieldOf, mayHoldOwnMoney } from "@/lib/accounts/debt";
 import { presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { nothingChanged } from "@/lib/form/changes";
@@ -94,13 +94,11 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
   const toast = useToast();
   const create = useCreateTransaction();
   const keyring = useRef(new IdempotencyKeyring());
-  const field = debtFieldOf(account.type);
-  const isDebt = field !== null;
-  // A loan cannot hold money of its owner, so the only amount it can be asked for is the debt.
-  const isLoan = field === "borrowedAmount";
-  const preset = isLoan ? Math.max(0, -account.balance) : Math.abs(account.balance);
+  const isDebt = debtFieldOf(account.type) !== null;
+  const ownMoney = mayHoldOwnMoney(account.type);
+  const preset = ownMoney ? Math.abs(account.balance) : Math.max(0, -account.balance);
   const [magnitude, setMagnitude] = useState<number | null>(preset);
-  const [sign, setSign] = useState<Sign>(!isLoan && account.balance > 0 ? "positive" : "negative");
+  const [sign, setSign] = useState<Sign>(ownMoney && account.balance > 0 ? "positive" : "negative");
   const [note, setNote] = useState("");
   const [openedAt] = useState(() => new Date());
   const actual = magnitude === null ? null : sign === "negative" ? -magnitude : magnitude;
@@ -163,7 +161,7 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
               autoFocus
               className="py-4"
             />
-            {!isLoan && (
+            {ownMoney && (
               <Segment<Sign>
                 inline
                 label={t(isDebt ? "accounts.adjust.side" : "accounts.adjust.sign")}
@@ -188,9 +186,11 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
         <p className="text-center text-sm text-text-3">
           {isDebt
             ? t(
-                account.balance > 0
-                  ? "accounts.adjust.recordedMine"
-                  : "accounts.adjust.recordedOwed",
+                account.balance <= 0
+                  ? "accounts.adjust.recordedOwed"
+                  : ownMoney
+                    ? "accounts.adjust.recordedMine"
+                    : "accounts.adjust.recordedLoanPast",
                 { amount: money.format(Math.abs(account.balance)) },
               )
             : t("accounts.adjust.recorded", { amount: money.format(account.balance) })}

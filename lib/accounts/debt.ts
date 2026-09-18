@@ -15,6 +15,10 @@ export function debtFieldOf(type: Account["type"]): DebtField | null {
   return null;
 }
 
+export function mayHoldOwnMoney(type: Account["type"]): boolean {
+  return debtFieldOf(type) !== "borrowedAmount";
+}
+
 export type DebtFoot =
   | { line: "owedOfLimit"; owed: number; limit: number }
   | { line: "paidOfBorrowed"; paid: number; borrowed: number }
@@ -44,7 +48,7 @@ export function readDebt(account: DebtAccount): DebtReading | null {
 
   if (owed < 0) {
     const own = -owed;
-    if (field === "borrowedAmount") {
+    if (!mayHoldOwnMoney(account.type)) {
       return {
         lead: 0,
         word: "owed",

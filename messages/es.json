@@ -957,6 +957,7 @@
       "sideMine": "Dinero tuyo",
       "recordedOwed": "Registrado: {amount} de deuda",
       "recordedMine": "Registrado: {amount} de dinero tuyo encima",
+      "recordedLoanPast": "Registrado: {amount} pagados de más de lo que debía",
       "deltaLessOwed": "<b>Se registrará un ajuste de {amount} menos de deuda</b>. No cuenta como gasto ni en los presupuestos.",
       "deltaMoreOwed": "<b>Se registrará un ajuste de {amount} más de deuda</b>. No cuenta como gasto ni en los presupuestos.",
       "sign": "Signo del saldo",

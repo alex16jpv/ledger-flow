@@ -7,6 +7,7 @@ import { decimalSeparators } from "@/lib/format/money";
 import { useMoney } from "@/lib/i18n/useMoney";
 
 import { cn } from "./cn";
+import { useFieldContext } from "./Field";
 
 export type AmountTone = "default" | "income" | "transfer";
 
@@ -50,6 +51,9 @@ export function AmountInput({
   className,
 }: AmountInputProps) {
   const money = useMoney();
+  const field = useFieldContext();
+  const invalidNow = invalid ?? field?.invalid;
+  const describedByAll = describedBy ?? field?.describedBy;
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingCaret = useRef<number | null>(null);
@@ -103,14 +107,14 @@ export function AmountInput({
         autoComplete="off"
         autoFocus={autoFocus}
         aria-label={label}
-        aria-invalid={invalid ? true : undefined}
-        aria-describedby={describedBy}
+        aria-invalid={invalidNow ? true : undefined}
+        aria-describedby={describedByAll}
         value={text}
         onChange={handleChange}
         placeholder="0"
         className={cn(
           "min-w-[2ch] bg-transparent text-[52px] leading-none font-semibold tracking-[-0.035em] caret-brand outline-none placeholder:text-text-disabled",
-          invalid ? "text-danger" : TONE[tone],
+          invalidNow ? "text-danger" : TONE[tone],
         )}
         style={{ width: `${Math.max(2, text.length + 1)}ch` }}
       />

@@ -60,7 +60,9 @@ The line under it reads the recorded state in the same words the rest of the pro
 of its owner — what it can be is finished — so the sheet asks only _How much do you owe on {name}
 right now?_ and the segment goes with the choice it was offering. The line under it still reads the
 recorded state as it really is, so a loan that landed in credit by another route says so and the
-adjustment that puts it back at zero is one figure away.
+adjustment that puts it back at zero is one figure away — and it says it **without naming that money
+as its owner's**, which on a loan would be the same lie the card is right to tell:
+`Recorded: $200,000 paid past what it owed`.
 
 **The alert only talks debt while the whole movement is debt**, which is the rule the transfer
 readback already follows: a card can hold money of its owner, and then there is no debt to say less
