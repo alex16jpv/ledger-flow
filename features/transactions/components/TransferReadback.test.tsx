@@ -74,7 +74,6 @@ describe("the sentence that reads a transfer back", () => {
     ).toBeVisible();
   });
 
-  // T-100: money from outside has no second side, and it is neither income nor spending.
   it("reads a payment from outside with one side only", () => {
     renderWithProviders(
       <TransferReadback from={null} to={account("Visa Gold", "CARD")} amount={500000} outside />,
@@ -84,7 +83,7 @@ describe("the sentence that reads a transfer back", () => {
     );
   });
 
-  it("says the one side in its own vocabulary, so a card holding your money takes a sign", () => {
+  it("says the one side through the same vocabulary as the two-sided sentence", () => {
     renderWithProviders(
       <TransferReadback
         from={null}

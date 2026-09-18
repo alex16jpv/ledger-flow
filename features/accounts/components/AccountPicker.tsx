@@ -44,8 +44,8 @@ export function AccountPicker({
   const [open, setOpen] = useState(false);
   const accounts = useAccountsQuery(false, open || value !== null);
   const selected = (accounts.data ?? []).find((account) => account.id === value) ?? null;
-  const pickedOutside = outside?.selected ?? false;
-  const chosen = outside?.selected
+  const pickedOutside = outside?.selected === true;
+  const chosen = pickedOutside
     ? `${outside.label} · ${outside.meta}`
     : selected
       ? `${selected.name} · ${money.format(accountLead(selected))}`

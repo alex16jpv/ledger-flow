@@ -338,8 +338,7 @@ test("an income is not offered a card or a loan, and the server refuses one anyw
   expect(((await overpaid.json()) as { code: string }).code).toBe("LOAN_OVERPAID");
 });
 
-// T-100: money from outside is a payment only towards a card or a loan, and it is an adjustment.
-test("a transfer can be paid from somewhere else, and only into a debt account", async ({
+test("a transfer can be paid from somewhere else, and only into an account that owes", async ({
   page,
   request,
 }) => {

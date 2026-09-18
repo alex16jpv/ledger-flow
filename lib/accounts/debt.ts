@@ -10,8 +10,8 @@ export const DEBT_ACCOUNT_TYPES: ReadonlySet<Account["type"]> = new Set([
 // An overdraft holds its owner's money in its ordinary state, so a salary landing there is income (T-93).
 export const INCOME_REFUSED_TYPES: ReadonlySet<Account["type"]> = new Set(["CARD", "LOAN"]);
 
-export function takesOutsideMoney(type: Account["type"]): boolean {
-  return INCOME_REFUSED_TYPES.has(type);
+export function owesMoney(account: Pick<Account, "type" | "balance"> | null | undefined): boolean {
+  return account != null && DEBT_ACCOUNT_TYPES.has(account.type) && account.balance < 0;
 }
 
 export function loanOwed(account: Pick<Account, "type" | "balance"> | null): number | null {

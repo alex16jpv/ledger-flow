@@ -92,7 +92,6 @@ describe("AccountPicker", () => {
     expect(screen.getByRole("option", { name: /Cash/ })).toHaveFocus();
   });
 
-  // The row was in the sheet but the closed picker went back to the placeholder (found in T-100).
   it("keeps saying Somewhere else once it is the chosen row", async () => {
     const onSelect = vi.fn();
     renderWithProviders(

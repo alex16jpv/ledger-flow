@@ -288,15 +288,23 @@ row, same words, the same picker component — the two surfaces share it rather 
 Why an adjustment and not an income is settled in [accounts.md](accounts.md) and does not change here:
 the money is neither income nor spending, it simply never was inside the app.
 
-### It appears only when the _To_ is a card or a loan (`#transfer-from-only-when-it-applies`)
+### It appears only when the _To_ actually owes money (`#transfer-from-only-when-it-applies`)
 
-That is the condition he asked to be defined, and it is not a new rule — it is T-93's, read from the
-other side. Money arriving **from outside** at an account that holds money **is income**, which is what
-the grid in `lag-money-manager/docs/modules/transactions.md` settled, so towards an ordinary account, a
-savings account or an **overdraft** the honest record is an Income and this row has nothing to offer.
-It is exactly the two types where an income is refused, for exactly that reason, so the app reads it
-from the one list and does not keep a second copy of it (T-103 is about publishing that list in the
-contract).
+That is the condition he asked to be defined, and it is **the Pay sheet's own**: paying a debt is
+offered on an account only while it is a debt account **and its balance is below zero**
+(`payable`, in `AccountDetailScreen`), so the row that pays it from outside appears on the same terms.
+One sentence for both screens — an account that **owes money** can be paid, and money reaching it from
+outside is a payment. Everywhere else — an ordinary account, a savings account, a card whose owner has
+money sitting on it, a loan already settled — money from outside **is income**, which is what the grid
+in `lag-money-manager/docs/modules/transactions.md` settled, and the honest record is an Income.
+
+**An overdraft in the red takes it**, and that does not reopen his decision of 2026-09-18 that an
+income may land on an overdraft: a positive overdraft is its ordinary state and a salary landing there
+is income, while an overdraft below zero owes money like any other debt. Both records exist because
+both acts do.
+
+**And it keeps the form out of a dead end.** A loan that owes nothing refuses any amount above zero —
+T-93's ceiling — so offering to pay it from outside would be offering a form that can never be saved.
 
 **Reaching it costs nothing extra.** The _To_ is one field below _From_, and the two intent chips that
 fill a card or a loan set it in one tap; the row is in the picker from the moment the _To_ qualifies.
@@ -315,9 +323,8 @@ keep the same act out of Stats and out of every budget depending only on which f
   refuses one.
 - **The sentence at the bottom loses its left half**: _Visa Gold $500,000 less owed. It does not count
   as income or as spending, because the money never was in Ledger Flow._ There is no second side to
-  name, and the side that is there is said in the same vocabulary the table above sets — a card
-  holding money of its owner's takes a sign, not _less owed_ — so it is the Pay sheet's sentence
-  built out of the product's grammar rather than a second copy of it.
+  name, and the side that is there goes through the same `sideKey` the two-sided sentence uses, so the
+  Pay sheet says it with the very same component instead of a second copy of the text.
 - **The swap button is disabled.** One of the two sides is not an account, so there is nothing to swap
   it with, and the _To_ never takes this row.
 - **The description is the user's if they typed one**, and the Pay sheet's — _Paid from outside Ledger

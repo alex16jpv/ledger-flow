@@ -895,7 +895,6 @@
       "from": "Desde",
       "outside": "Otro sitio",
       "outsideMeta": "no es una cuenta de aquí",
-      "readOutside": "{name} debe {amount} menos. No cuenta como ingreso ni como gasto, porque ese dinero nunca estuvo en Ledger Flow.",
       "outsideDescription": "Pagado desde fuera de Ledger Flow",
       "pay": "Pagar",
       "paid": "Pago registrado"

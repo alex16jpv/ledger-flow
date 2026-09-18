@@ -3993,7 +3993,7 @@ const PAGES = [
       plate(
         "account-picker",
         "Account picker",
-        "The ordinary one: every account the user has, the debt ones read in their own vocabulary. The two rows that come and go are drawn beside it \u2014 a card and a loan leave under <b>Income</b>, and <b>Somewhere else</b> only arrives in the <i>From</i> of a transfer into a card or a loan.",
+        "The ordinary one: every account the user has, the debt ones read in their own vocabulary. The two rows that come and go are drawn beside it \u2014 a card and a loan leave under <b>Income</b>, and <b>Somewhere else</b> only arrives in the <i>From</i> of a transfer into an account that owes money.",
         accountPicker(),
         { added: "2026-09-01", updated: "2026-09-18" },
       ),
@@ -4007,7 +4007,7 @@ const PAGES = [
       plate(
         "transfer-from-somewhere-else",
         "Full form \u00b7 transfer paid from somewhere else",
-        "T-100, his words of 2026-09-17. The Pay sheet's row is now in the full form too, in the <i>From</i> of a transfer: a debt can be paid with money the app does not track \u2014 cash, someone else's transfer, an account never registered \u2014 and nothing here loses that money, so it cannot be a transfer. What it writes is the Pay sheet's movement, a one-sided <b>ADJUSTMENT</b> raising the card, so the rest of the form follows it: <b>no category</b> (an adjustment carries none), the <b>one-sided sentence</b> instead of the two-sided one, and the <b>swap button disabled</b>, because one of the two sides is not an account and the <i>To</i> never takes this row. The loan ceiling of T-93 still applies on the amount. Saved, it can no longer be edited here \u2014 an adjustment left this form with T-85 \u2014 and <code>/transactions/&lt;id&gt;/edit</code> sends it on to the detail.",
+        "T-100, his words of 2026-09-17. The Pay sheet's row is now in the full form too, in the <i>From</i> of a transfer: a debt can be paid with money the app does not track \u2014 cash, someone else's transfer, an account never registered \u2014 and nothing here loses that money, so it cannot be a transfer. What it writes is the Pay sheet's movement, a one-sided <b>ADJUSTMENT</b> raising the card, so the rest of the form follows it: <b>no category</b> (an adjustment carries none), the <b>one-sided sentence</b> instead of the two-sided one, and the <b>swap button disabled</b>, because one of the two sides is not an account and the <i>To</i> never takes this row. The loan ceiling of T-93 still applies on the amount. Saved, it can no longer be edited <i>here</i> \u2014 an adjustment left this form with T-85 \u2014 and <code>/transactions/&lt;id&gt;/edit</code> sends it on to the detail, whose <b>Edit</b> opens the adjustment sheet (T-89).",
         transactionForm("TRANSFER", {
           hint: typeLine("TRANSFER"),
           transfer: OUTSIDE_SIDES,
@@ -4021,7 +4021,7 @@ const PAGES = [
       plate(
         "transfer-from-only-when-it-applies",
         "Account picker \u00b7 the From of a transfer into a card",
-        "The condition he asked to be defined, and it is T-93's rule read from the other side: money arriving <b>from outside</b> at an account that holds money <b>is income</b>, so <b>Somewhere else</b> is offered only when the <i>To</i> is a <b>card</b> or a <b>loan</b> \u2014 exactly the two types where an income is refused, read from the same list rather than a second copy. Towards an ordinary account, a savings account or an <b>overdraft</b> the row is simply absent and the honest record is an Income. It is <b>not offered in the To</b> either (his decision, 2026-09-18): money leaving towards something the app does not track is an <b>Expense</b>, and a second way to record it that is not spending would keep the same act out of Stats and out of every budget. Visa Gold is missing from this list because it is already the <i>To</i>.",
+        "The condition he asked to be defined, and it is <b>the Pay sheet's own</b>: paying a debt is offered on an account only while it is a debt account <b>and its balance is below zero</b>, so the row that pays it from outside appears on the same terms \u2014 one sentence for both screens. Everywhere else money from outside <b>is income</b>: an ordinary account, a savings account, a card whose owner has money sitting on it, a loan already settled. <b>An overdraft in the red takes it</b>, which does not reopen his decision of 2026-09-18 that an income may land on an overdraft \u2014 a positive overdraft is its ordinary state, one below zero owes money like any other debt. It is <b>not offered in the To</b> (his decision, 2026-09-18): money leaving towards something the app does not track is an <b>Expense</b>, and a second way to record it that is not spending would keep the same act out of Stats and out of every budget. Visa Gold is missing from this list because it is already the <i>To</i>.",
         accountPicker("outside"),
         { added: "2026-09-18" },
       ),

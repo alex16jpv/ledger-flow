@@ -181,7 +181,6 @@ const OWNED_BY: Record<keyof TransactionFormValues, readonly (keyof UpdateTransa
   accountId: ["fromAccountId", "toAccountId"],
   fromAccountId: ["fromAccountId", "toAccountId"],
   toAccountId: ["fromAccountId", "toAccountId"],
-  // Money from outside turns the movement into a one-sided ADJUSTMENT with no category (T-100).
   fromOutside: ["type", "fromAccountId", "toAccountId", "categoryId", "description"],
   date: ["date"],
   time: ["date"],

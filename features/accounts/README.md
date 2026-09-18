@@ -93,5 +93,9 @@ _Estimated savings_ by money nobody earned.
 
 `AccountPicker` is the `Picker` row and `AccountPickerSheet` the list behind it, split the way the
 category picker already was (T-89): the sheet is opened on its own by the transfer intent chips, which
-need it filtered to a kind of account (`only`). `PaySheet` reads its movement back through the shared
-`TransferReadback`, so the sentence is the same one the transaction form shows.
+need it filtered to a kind of account (`only`). Both take an `outside` row that is not an account —
+the sheet lists it under the accounts and explains it in the footer, the closed `Picker` keeps saying
+it once it is the choice — and since T-100 the transfer in the full form passes it too, on the same
+condition the Pay sheet itself appears on: the account owes money (`owesMoney`). `PaySheet` reads its
+movement back through the shared `TransferReadback`, including the one-sided sentence for money from
+outside, so the sentence is the same one the transaction form shows.

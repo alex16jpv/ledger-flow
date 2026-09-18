@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { readDebt, splitAccounts, takesOutsideMoney } from "@/lib/accounts/debt";
+import { owesMoney, readDebt, splitAccounts } from "@/lib/accounts/debt";
 import type { Account } from "@/types/api";
 
 const account = (over: Partial<Account>): Account => ({
@@ -186,14 +186,29 @@ describe("splitAccounts", () => {
   });
 });
 
-// T-100: into an account that holds money, money from outside is income, so the row has nothing to offer.
-describe("takesOutsideMoney", () => {
-  it("is the two types where an income is refused, and nothing else", () => {
-    expect(takesOutsideMoney("CARD")).toBe(true);
-    expect(takesOutsideMoney("LOAN")).toBe(true);
-    expect(takesOutsideMoney("OVERDRAFT")).toBe(false);
-    expect(takesOutsideMoney("ACCOUNT")).toBe(false);
-    expect(takesOutsideMoney("SAVINGS")).toBe(false);
-    expect(takesOutsideMoney("CASH")).toBe(false);
+describe("owesMoney", () => {
+  it("is a debt account below zero, and the three types are the only ones that can be", () => {
+    expect(owesMoney(account({ type: "CARD", balance: -1 }))).toBe(true);
+    expect(owesMoney(account({ type: "OVERDRAFT", balance: -1 }))).toBe(true);
+    expect(owesMoney(account({ type: "LOAN", balance: -1 }))).toBe(true);
+    for (const type of [
+      "ACCOUNT",
+      "SAVINGS",
+      "CASH",
+      "DEBIT_CARD",
+      "INVESTMENT",
+      "OTHER",
+    ] as const) {
+      expect(owesMoney(account({ type, balance: -1 }))).toBe(false);
+    }
+  });
+
+  it("is false once the debt is gone, and on nothing at all", () => {
+    expect(owesMoney(account({ type: "CARD", balance: 0 }))).toBe(false);
+    expect(owesMoney(account({ type: "CARD", balance: 100_000 }))).toBe(false);
+    expect(owesMoney(account({ type: "LOAN", balance: 0 }))).toBe(false);
+    expect(owesMoney(account({ type: "OVERDRAFT", balance: 320_000 }))).toBe(false);
+    expect(owesMoney(null)).toBe(false);
+    expect(owesMoney(undefined)).toBe(false);
   });
 });

@@ -84,7 +84,6 @@ describe("transaction form model", () => {
     expect(transactionFormSchema.safeParse(values()).success).toBe(true);
   });
 
-  // T-100: money from outside is not a transfer, because no account of the user's lost it.
   it("writes a transfer paid from outside as a one-sided adjustment", () => {
     expect(
       toTransactionInput(

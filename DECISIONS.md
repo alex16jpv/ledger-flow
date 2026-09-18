@@ -13,25 +13,38 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   existed only in the Pay sheet, where it writes a one-sided `ADJUSTMENT` raising the debt account
   instead of a `TRANSFER`, because no account of the user's lost that money.
 - **Decision:** the transfer in the full form offers the same row in its _From_, from the same
-  `AccountPicker`, and **only when the _To_ is a CARD or a LOAN**. That condition is not new: it is
-  T-93's rule read from the other side — money arriving from outside at an account that holds money
-  **is** income — so the set is `INCOME_REFUSED_TYPES`, exposed as `takesOutsideMoney()` rather than
-  copied. It is **not offered in the _To_** (the owner's decision, 2026-09-18): money leaving towards
-  something the app does not track is an EXPENSE, and a second way to record it that is not spending
-  would keep the same act out of Stats and out of every budget. While it is chosen the category field
-  is gone, the swap button is disabled and the read-back loses its left half.
+  `AccountPicker`, and **only when the _To_ owes money** — `owesMoney()`, which is a debt account with
+  a balance below zero. That is not a new rule either: it is the very condition under which the Pay
+  sheet exists at all (`payable` in `AccountDetailScreen`), so the two screens now say the same thing
+  about the same act, and it is the same test `sideKey` already used to choose a side's vocabulary.
+  Everywhere else money from outside **is** income — an ordinary account, a savings account, a card
+  whose owner has money sitting on it, a loan already paid off — and the honest record is an Income.
+  An **overdraft in the red** therefore takes the row, which does not reopen the owner's decision of
+  2026-09-18 that an income may land on an overdraft: a positive overdraft is its ordinary state, one
+  below zero owes money like any other debt. It is **not offered in the _To_** (the owner's decision,
+  2026-09-18): money leaving towards something the app does not track is an EXPENSE, and a second way
+  to record it that is not spending would keep the same act out of Stats and out of every budget.
+  While it is chosen the category field is gone, the swap button is disabled and the read-back loses
+  its left half.
 - **Alternatives:** offering the row always, which invites an adjustment onto a savings account where
-  the honest record is an income and contradicts T-93 one screen away; and a local `useState` for it
-  instead of `fromOutside` in the form values, which would leave validation, dirty-field tracking and
-  the offline payload each with their own copy of the same fact.
+  the honest record is an income; **keying it on the type alone** (CARD and LOAN, `INCOME_REFUSED_TYPES`),
+  which was the first shape and the independent review took apart — it contradicted the Pay sheet on an
+  overdraft in the red, offered the row on a card that owes nothing, and offered it on a settled loan
+  where T-93's ceiling then refuses every amount, a form that can never be saved; and a local
+  `useState` instead of `fromOutside` in the form values, which would leave validation, dirty-field
+  tracking and the offline payload each with their own copy of the same fact.
 - **Consequence:** `toTransactionInput` can now emit a type the segment does not offer, so the form's
   three types and the payload's four are no longer the same list, and an outside payment saved here
-  can only be deleted afterwards — `isFormTransaction` sends every adjustment to its detail screen,
-  as T-85 decided. `fromOutside` is derived against the current _To_ before it is used, so a `To` that
-  changes type under it can never produce an adjustment on an account that holds money. Two things
-  found on the way and fixed here: the closed picker went back to _Choose an account_ after the row
-  was chosen, in the Pay sheet as much as here, and the outside sentence said "less owed" about a card
-  that owes nothing — it now uses `sideKey`, the same vocabulary the two-sided sentence uses.
+  can only be edited afterwards through the adjustment sheet its detail screen opens (T-89), because
+  `isFormTransaction` sends every adjustment there, as T-85 decided. `fromOutside` is derived against
+  the current _To_ before it is used, so a _To_ that stops owing money under it can never produce an
+  adjustment on an account that holds money. Converting a movement that was still **waiting to be
+  detailed** completes it: an adjustment carries no category, so the inbox rule had to stop treating a
+  category as the only thing that finishes a quick capture, or the movement would sit in _To review_
+  with no screen able to resolve it. Two things found on the way and fixed here: the closed picker went
+  back to _Choose an account_ after the row was chosen, in the Pay sheet as much as here; and the Pay
+  sheet wrote its own outside sentence into `accounts.pay.readOutside` instead of using
+  `TransferReadback`, so the key is gone and both surfaces build the sentence from `sideKey`.
 
 ## 2026-09-18 · An income is not offered a card or a loan, and the server is the one that refuses (T-93)
 

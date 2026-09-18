@@ -895,7 +895,6 @@
       "from": "From",
       "outside": "Somewhere else",
       "outsideMeta": "not an account here",
-      "readOutside": "{name} {amount} less owed. It does not count as income or as spending, because the money never was in Ledger Flow.",
       "outsideDescription": "Paid from outside Ledger Flow",
       "pay": "Pay",
       "paid": "Payment recorded"

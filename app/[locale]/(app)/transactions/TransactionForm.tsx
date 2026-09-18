@@ -29,7 +29,7 @@ import {
   type TransactionFormValues,
 } from "@/features/transactions/form";
 import { useTagsQuery } from "@/features/transactions/hooks";
-import { INCOME_REFUSED_TYPES, loanOwed, takesOutsideMoney } from "@/lib/accounts/debt";
+import { INCOME_REFUSED_TYPES, loanOwed, owesMoney } from "@/lib/accounts/debt";
 import { fieldErrors, presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { dayKey, shiftDayKey } from "@/lib/format/dates";
@@ -119,8 +119,7 @@ export function TransactionForm({
     errors.accountId?.message ?? serverFields.fromAccountId ?? serverFields.toAccountId,
   );
   const target = transfer ? accountOf(toAccountId) : null;
-  // Money from outside is a payment only towards a card or a loan: anywhere else it is income (T-100).
-  const outsideOffered = target !== null && takesOutsideMoney(target.type);
+  const outsideOffered = owesMoney(target);
   const outside = transfer && fromOutside && outsideOffered;
   // A loan cannot be paid more than it owes, and offline the mirror would draw it paid until the sync says no.
   const owedOnTarget = transfer ? loanOwed(target) : null;
@@ -325,7 +324,7 @@ export function TransactionForm({
                     value={field.value}
                     exclude={fromAccountId}
                     onChange={(account) => {
-                      if (!takesOutsideMoney(account.type))
+                      if (!owesMoney(account))
                         form.setValue("fromOutside", false, { shouldDirty: true });
                       field.onChange(account.id);
                     }}
