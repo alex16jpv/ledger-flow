@@ -41,7 +41,8 @@ export function FiltersSheet({ open, filters, onClose, onApply }: FiltersSheetPr
   const [draft, setDraft] = useState<TransactionFilters>(filters);
   const [pickerOpen, setPickerOpen] = useState(false);
   const accounts = useAccountsQuery();
-  const categoryType = draft.type === "INCOME" ? "INCOME" : "EXPENSE";
+  const categoryType =
+    draft.type === "INCOME" || draft.type === "TRANSFER" ? draft.type : "EXPENSE";
   const categories = useCategoriesQuery(categoryType);
   const recent = useRecentCategories(categoryType, categories.data, 4);
   const count = useTransactionsCount(toListQuery(draft, timeZone), open);

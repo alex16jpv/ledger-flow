@@ -292,7 +292,11 @@ describe("QuickAddSheet", () => {
     await screen.findByRole("button", { name: /From your main account.*Bancolombia/ });
 
     await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
-    expect(screen.queryByRole("group", { name: "Category" })).not.toBeInTheDocument();
+    // T-86: a transfer keeps the category row, filtered to the categories marked Transfer.
+    expect(screen.getByRole("group", { name: "Category" })).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => urlOf(input).includes("type=TRANSFER"))).toBe(
+      true,
+    );
     await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "3000");
 
     await userEvent.click(screen.getByRole("button", { name: "Save" }));

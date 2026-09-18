@@ -45,6 +45,11 @@ import { Link, useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 
+import {
+  AdjustBalanceSheet,
+  type EditingAdjustment,
+  editingAdjustment,
+} from "../AdjustBalanceSheet";
 import { FiltersSheet } from "./FiltersSheet";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -67,6 +72,7 @@ export function TransactionsScreen() {
   const categories = useCategoriesQuery();
   const [search, setSearch] = useState(filters.q);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [adjusting, setAdjusting] = useState<EditingAdjustment | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
 
   const lookups = useMemo<TransactionLookups>(
@@ -321,7 +327,9 @@ export function TransactionsScreen() {
             lookups={lookups}
             dayTotals={totals?.byDay}
             onOpen={(transaction) => {
-              router.push(`/transactions/${transaction.id}`);
+              const editing = editingAdjustment(transaction, lookups.accounts);
+              if (editing) setAdjusting(editing);
+              else router.push(`/transactions/${transaction.id}`);
             }}
           />
           <div ref={sentinel} aria-hidden="true" className="h-px" />
@@ -338,6 +346,16 @@ export function TransactionsScreen() {
             </Button>
           )}
         </>
+      )}
+      {adjusting && (
+        <AdjustBalanceSheet
+          account={adjusting.account}
+          adjustment={adjusting.transaction}
+          open
+          onClose={() => {
+            setAdjusting(null);
+          }}
+        />
       )}
       {filtersOpen && (
         <FiltersSheet

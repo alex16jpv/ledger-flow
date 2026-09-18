@@ -44,7 +44,11 @@ import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
 
-import { AdjustBalanceSheet } from "./AdjustBalanceSheet";
+import {
+  AdjustBalanceSheet,
+  type EditingAdjustment,
+  editingAdjustment,
+} from "../../AdjustBalanceSheet";
 import { PaySheet } from "./PaySheet";
 
 type OpenSheet = "adjust" | "pay" | "main" | "archive" | "conflict" | null;
@@ -64,6 +68,7 @@ export function AccountDetailScreen({ id }: { id: string }) {
   const archive = useArchiveAccount();
   const restore = useRestoreAccount();
   const [sheet, setSheet] = useState<OpenSheet>(null);
+  const [adjusting, setAdjusting] = useState<EditingAdjustment | null>(null);
   const notFound = account.error instanceof ApiError && account.error.status === 404;
   const lookups = useMemo<TransactionLookups>(
     () => ({
@@ -325,7 +330,9 @@ export function AccountDetailScreen({ id }: { id: string }) {
                   transactions={rows}
                   lookups={lookups}
                   onOpen={(transaction) => {
-                    router.push(`/transactions/${transaction.id}`);
+                    const editing = editingAdjustment(transaction, lookups.accounts);
+                    if (editing) setAdjusting(editing);
+                    else router.push(`/transactions/${transaction.id}`);
                   }}
                 />
                 {transactions.hasNextPage && (
@@ -359,6 +366,16 @@ export function AccountDetailScreen({ id }: { id: string }) {
               open
               onClose={() => {
                 setSheet(null);
+              }}
+            />
+          )}
+          {adjusting && (
+            <AdjustBalanceSheet
+              account={adjusting.account}
+              adjustment={adjusting.transaction}
+              open
+              onClose={() => {
+                setAdjusting(null);
               }}
             />
           )}

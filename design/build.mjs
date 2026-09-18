@@ -3584,7 +3584,7 @@ const intentChips = (only, taken = "card") =>
     only
       ? intentChip("credit-card", "Pay a card or a loan", true)
       : intentChip("credit-card", "Pay a card", taken === "card") +
-        intentChip("car", "Pay a loan", taken === "loan") +
+        intentChip("hand-coins", "Pay a loan", taken === "loan") +
         intentChip("piggy-bank", "Move to savings", taken === "savings")
   }</div></div>`;
 

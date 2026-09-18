@@ -18,10 +18,10 @@ account goes on — `fromAccountId` for an expense, `toAccountId` for an income,
 Nothing behind it changed: the server and the offline queue applied these same per-type defaults
 already. The draft the full form receives carries the type and the second account too.
 
-W-18 adds the full form model in `form.ts`: one Zod schema for the four types (the account side
-rules live in `superRefine`), `toTransactionInput` maps the form to the API payload (explicit
-nulls so PUT can clear a side), `fromTransaction` prefills the edit form and `draftFromSearchParams`
-reads the quick-add hand-off. `useCreateTransaction`, `useUpdateTransaction`, `useTransactionQuery`
+W-18 adds the full form model in `form.ts`: one Zod schema for the types the form offers (the
+account side rules live in `superRefine`), `toTransactionInput` maps the form to the API payload
+(explicit nulls so PUT can clear a side), `fromTransaction` prefills the edit form and
+`draftFromSearchParams` reads the quick-add hand-off. `useCreateTransaction`, `useUpdateTransaction`, `useTransactionQuery`
 and `useTagsQuery` back the screens in `app/[locale]/(app)/transactions/`.
 
 W-19 adds the list: `filters.ts` parses and serializes the URL filters (period presets, type,
@@ -75,3 +75,28 @@ Date and time are the app's own controls since F-05, not the browser's: a calend
 passes tomorrow as that ceiling, so a date the server would refuse cannot be picked at all — and,
 the other half of F-66, when the device's clock runs more than an hour ahead of the `serverTime` the
 sync answers with, the form says so above the date instead of waiting for the refusal.
+
+T-89 applies what T-85 and T-86 decided about recording a movement, on both surfaces.
+**`FORM_TYPES` is three**: an adjustment repairs a balance rather than recording something that
+happened, so it is created and edited in the account's own **Adjust balance** sheet
+(`app/[locale]/(app)/AdjustBalanceSheet.tsx`, which is why the sheet sits at the app level). An
+adjustment row opens that sheet from every list that can show one — the account's, the global one and
+Home's recent — through `editingAdjustment`, and `/transactions/[id]/edit` hands one back to its
+detail screen; `isFormTransaction` is the narrowing the form's own types need. Editing asks about the
+adjustment's **own amount**, never about today's balance, because recomputing a past adjustment from
+today's figure would silently change what it meant.
+
+`TypeLine` is the line under the segment plus the `?` that opens the three types explained; it binds
+the full form and the quick sheet alike, because a rule that reaches one and not the other is how the
+same thing comes to read two ways one tap apart. **Every type the form offers takes a category**, and
+on a transfer it is optional and filtered to the TRANSFER type — the two categories every user is
+seeded with stop being furniture, so the list filters by them too.
+
+`TransferReadback` says the movement back as a **difference** once the amount and both accounts are
+there: each side speaks the vocabulary of its own account (a sign for an ordinary one, _more owed_ /
+_less owed_ for a debt), it repeats the amount typed and the two names picked, and it does **no
+arithmetic on any balance** — house rule 4 — so it reads identically with no network on a device that
+has never seen those balances. The Pay sheet uses the same component: one grammar, every surface.
+The intent chips above _From_ and _To_ (`IntentChips`, app layer, since they open the account picker
+filtered by type) only fill the two sides in the right direction; they save nothing, add no field and
+touch no category, and a chip whose kind of account nobody has is not offered.

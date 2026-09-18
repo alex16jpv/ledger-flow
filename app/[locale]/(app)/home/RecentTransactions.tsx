@@ -2,7 +2,7 @@
 
 import { Inbox } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { ADD_HREF } from "@/components/shell";
 import { buttonClasses } from "@/components/ui/Button";
@@ -21,10 +21,17 @@ import { useRecentTransactions } from "@/features/transactions/hooks";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 
+import {
+  AdjustBalanceSheet,
+  type EditingAdjustment,
+  editingAdjustment,
+} from "../AdjustBalanceSheet";
+
 export function RecentTransactions() {
   const t = useTranslations();
   const router = useRouter();
   const recent = useRecentTransactions();
+  const [adjusting, setAdjusting] = useState<EditingAdjustment | null>(null);
   const accounts = useAccountsQuery(true);
   const categories = useCategoriesQuery(undefined);
   const lookups = useMemo<TransactionLookups>(
@@ -77,13 +84,25 @@ export function RecentTransactions() {
                 transaction={transaction}
                 lookups={lookups}
                 onOpen={(row) => {
-                  router.push(`/transactions/${row.id}`);
+                  const editing = editingAdjustment(row, lookups.accounts);
+                  if (editing) setAdjusting(editing);
+                  else router.push(`/transactions/${row.id}`);
                 }}
               />
             ))}
           </List>
         )}
       </Card>
+      {adjusting && (
+        <AdjustBalanceSheet
+          account={adjusting.account}
+          adjustment={adjusting.transaction}
+          open
+          onClose={() => {
+            setAdjusting(null);
+          }}
+        />
+      )}
     </section>
   );
 }

@@ -890,7 +890,6 @@
       "from": "From",
       "outside": "Somewhere else",
       "outsideMeta": "not an account here",
-      "readTransfer": "{from} {out} · {name} {amount} less owed. Your total balance does not change.",
       "readOutside": "{name} {amount} less owed. It does not count as income or as spending, because the money never was in Ledger Flow.",
       "outsideDescription": "Paid from outside Ledger Flow",
       "pay": "Pay",
@@ -957,8 +956,13 @@
       "noChange": "The recorded balance already matches. Nothing to adjust.",
       "note": "Note",
       "notePlaceholder": "August bank fee",
+      "amount": "Amount",
+      "editTitle": "Edit adjustment",
+      "editTook": "Recorded on {date}, it took {amount} off {name}. Changing the amount rewrites that difference, not today’s balance.",
+      "editAdded": "Recorded on {date}, it added {amount} to {name}. Changing the amount rewrites that difference, not today’s balance.",
       "save": "Save adjustment",
-      "saved": "Adjustment saved"
+      "saved": "Adjustment saved",
+      "updated": "Adjustment updated"
     },
     "typePicker": {
       "title": "Account type"
@@ -1242,6 +1246,13 @@
     }
   },
   "transactions": {
+    "readback": {
+      "line": "{left} · {right}. Your total balance does not change.",
+      "leaves": "{name} −{amount}",
+      "arrives": "{name} +{amount}",
+      "lessOwed": "{name} {amount} less owed",
+      "moreOwed": "{name} {amount} more owed"
+    },
     "quick": {
       "title": "Add",
       "amount": "Amount",
@@ -1265,6 +1276,8 @@
       "type": "Type",
       "amount": "Amount",
       "category": "Category",
+      "categoryOptional": "Category (optional)",
+      "transferCategoryHelp": "Only the categories you marked as Transfer are offered here.",
       "account": "Account",
       "from": "From",
       "to": "To",
@@ -1272,7 +1285,18 @@
       "direction": "Direction",
       "increase": "Increase balance",
       "decrease": "Decrease balance",
-      "adjustmentHint": "Adjustments fix a balance. They don’t count as spending or income.",
+      "typeLine": {
+        "EXPENSE": "Money leaving one of your accounts and not coming back.",
+        "INCOME": "Money arriving into one of your accounts.",
+        "TRANSFER": "Moves money between two of your own accounts: paying a card, a loan instalment, putting money aside. Nothing is spent and nothing is earned."
+      },
+      "typesHelp": "What the three types mean",
+      "intent": "What are you doing?",
+      "intents": {
+        "card": "Pay a card",
+        "loan": "Pay a loan",
+        "savings": "Move to savings"
+      },
       "description": "Description",
       "descriptionPlaceholder": "What was it?",
       "tags": "Tags",

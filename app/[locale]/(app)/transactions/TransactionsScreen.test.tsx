@@ -122,6 +122,7 @@ function routeFetch() {
 beforeEach(() => {
   fetchMock.mockReset();
   replace.mockReset();
+  push.mockReset();
   search = "period=lastMonth";
   listResponses = [];
   vi.stubGlobal("fetch", fetchMock);
@@ -155,6 +156,38 @@ describe("TransactionsScreen", () => {
     expect(screen.getByRole("region", { name: "Sunday, August 30" })).toHaveTextContent("#coffee");
     expect(screen.getByText("Spent in Last month")).toBeVisible();
     expect(screen.getByRole("button", { name: /^Filters/ })).toHaveTextContent("1");
+  });
+
+  // T-89: an adjustment is repaired where it was made, so its row opens that sheet, not a page.
+  it("opens the Adjust balance sheet on an adjustment row and the detail page on the others", async () => {
+    listResponses = [
+      () =>
+        json({
+          data: [
+            {
+              ...rows[0],
+              id: "t3",
+              type: "ADJUSTMENT",
+              amount: 12300,
+              pendingDetails: false,
+              source: "MANUAL",
+            },
+            rows[1],
+          ],
+          pagination,
+        }),
+    ];
+    render();
+    await userEvent.click(await screen.findByRole("button", { name: /Balance adjustment/ }));
+
+    const sheet = await screen.findByRole("dialog", { name: "Edit adjustment" });
+    expect(within(sheet).getByRole("textbox", { name: "Amount" })).toHaveValue("12,300");
+    expect(within(sheet).getByText(/off Bancolombia/)).toBeVisible();
+    expect(push).not.toHaveBeenCalled();
+
+    await userEvent.click(within(sheet).getByRole("button", { name: "Close" }));
+    await userEvent.click(screen.getByRole("button", { name: /Tinto/ }));
+    expect(push).toHaveBeenCalledWith("/transactions/t2");
   });
 
   it("writes filter chips to the URL", async () => {

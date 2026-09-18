@@ -12,9 +12,10 @@ import { EditTransactionScreen, NewTransactionScreen } from "./TransactionFormSc
 
 const push = vi.fn();
 const back = vi.fn();
+const replace = vi.fn();
 let search = "";
 vi.mock("@/lib/i18n/navigation", () => ({
-  useRouter: () => ({ push, back, replace: vi.fn() }),
+  useRouter: () => ({ push, back, replace }),
   usePathname: () => "/transactions/new",
   Link: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -88,6 +89,7 @@ const calls = (method: string) =>
 beforeEach(() => {
   fetchMock.mockReset();
   push.mockReset();
+  replace.mockReset();
   search = "";
   vi.stubGlobal("fetch", fetchMock);
   routeFetch();
@@ -143,7 +145,8 @@ describe("NewTransactionScreen", () => {
     await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
     expect(screen.getByRole("textbox", { name: "Amount" })).toHaveFocus();
     expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("900");
-    expect(screen.queryByRole("button", { name: /Category/ })).not.toBeInTheDocument();
+    // T-86: the category stays, optional and filtered to the type.
+    expect(screen.getByRole("button", { name: /Category \(optional\)/ })).toBeVisible();
 
     await userEvent.click(screen.getByRole("button", { name: /^From/ }));
     await userEvent.click(screen.getByRole("option", { name: /Bancolombia/ }));
@@ -209,6 +212,61 @@ describe("NewTransactionScreen", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/future|ahead/i);
     expect(push).not.toHaveBeenCalled();
+  });
+
+  // T-85: the fourth type is not a thing that happened to your money, and it left this form.
+  it("offers three types and explains the selected one", async () => {
+    render(<NewTransactionScreen />);
+    const types = await screen.findByRole("group", { name: "Type" });
+    expect(
+      within(types)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Expense", "Income", "Transfer"]);
+    expect(
+      screen.getByText("Money leaving one of your accounts and not coming back."),
+    ).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(screen.getByText("Money arriving into one of your accounts.")).toBeVisible();
+  });
+
+  // T-86: the chip fills the direction, which is the only thing people get backwards.
+  it("an intent chip fills both sides and the form reads the movement back", async () => {
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "300000");
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Move to savings" }));
+
+    expect(screen.getByRole("button", { name: /^From.*Bancolombia/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /^To.*Savings/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Move to savings" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText(/Bancolombia −\$300,000 · Savings \+\$300,000/)).toHaveTextContent(
+      "Your total balance does not change.",
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
+    await waitFor(() => {
+      expect(calls("POST")).toHaveLength(1);
+    });
+    expect(JSON.parse(calls("POST")[0]?.[1]?.body as string)).toMatchObject({
+      type: "TRANSFER",
+      amount: 300000,
+      fromAccountId: "a1",
+      toAccountId: "a2",
+    });
+  });
+
+  it("offers no intent chip for a kind of account nobody has", async () => {
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    expect(await screen.findByRole("button", { name: "Move to savings" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Pay a card" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pay a loan" })).not.toBeInTheDocument();
   });
 });
 
@@ -287,6 +345,24 @@ describe("EditTransactionScreen", () => {
       expect(push).toHaveBeenCalledWith("/transactions");
     });
     expect(calls("PUT")).toHaveLength(0);
+  });
+
+  // T-85: an adjustment is edited in the account's own sheet, so this route hands it back.
+  it("sends an adjustment back to its detail screen instead of showing this form", async () => {
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/api/transactions/t1") && (init?.method ?? "GET") === "GET")
+        return Promise.resolve(json({ ...stored, type: "ADJUSTMENT", categoryId: null }));
+      if (url.includes("/api/accounts"))
+        return Promise.resolve(json({ data: accounts, pagination }));
+      return Promise.resolve(json({ data: [], pagination }));
+    });
+    render(<EditTransactionScreen id="t1" />);
+
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith("/transactions/t1");
+    });
+    expect(screen.queryByRole("group", { name: "Type" })).not.toBeInTheDocument();
   });
 
   it("shows the not-found state for a missing id", async () => {

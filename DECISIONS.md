@@ -3975,3 +3975,39 @@ cover` is set once in the root layout for the standalone display.
   reads oddly in a list of movements; the sheet writes the description so the row says what it is. The
   owner's rule from the same day — an income on a debt account is wrong and the product should refuse
   it — is T-93.
+
+## 2026-09-17 · An adjustment row opens the sheet that made it (T-89)
+
+- **Context:** T-85 took the fourth type out of the transaction form and T-86's chosen plate says an
+  adjustment is edited where it was made. Nothing had implemented either, so the form still offered
+  four types and `/transactions/[id]/edit` was the only way to change one.
+- **Decision:** `FORM_TYPES` is three, and `editingAdjustment` opens **Adjust balance** on the row
+  from every list that can show one — the account's, the global one and Home's recent. The sheet has
+  two modes: creating asks what the real balance is now and computes the difference, editing works on
+  the adjustment's own amount. `/transactions/[id]/edit` redirects an adjustment to its detail screen,
+  whose Edit opens the same sheet. The sheet moved to the `(app)` group root, beside `QuickAddSheet`,
+  because three route folders now compose it and `features/` may not import another feature.
+- **Alternatives:** keeping the row's destination as the detail page and only changing its Edit button
+  (one screen to touch, but it is not what the owner chose; asked and confirmed on 2026-09-17); or
+  leaving the fourth type on the Edit form with the other three disabled (`#adjustment-edit-keeps-the-fourth-type`,
+  a segment four wide in one screen and three in the other).
+- **Consequence:** an adjustment's detail page keeps every entry it had except the row tap, so a
+  stuck one is still resolved from the attention tray and the connection banner, which is where
+  conflicts are reviewed anyway. Editing sends only what moved, and turning a decrease into an
+  increase moves the two account sides rather than the amount.
+
+## 2026-09-17 · One sentence reads a transfer back, said in each side's vocabulary (T-89)
+
+- **Context:** T-86 chose the difference («la diferencia») over the resulting balances, and said the
+  choice reaches the Pay sheet too. The chosen plate only draws a payment to a card, so putting money
+  aside and a cash advance had no drawn sentence.
+- **Decision:** `TransferReadback` takes the two accounts and the amount and composes one line from
+  four side phrasings: a sign for an ordinary account, _more owed_ / _less owed_ for a debt. The form
+  and the Pay sheet both render it, and `design/spec/screens/add.md` states the table.
+- **Alternatives:** a message per surface (the Pay sheet had its own key, and T-96 would have to
+  change both), or reading back what each account will say afterwards — the client doing money
+  arithmetic, which house rule 4 allows only in `lib/local/derive` and only with the projection mark.
+- **Consequence:** the sentence repeats what was just typed and picked, so it costs no request and no
+  arithmetic and reads identically with no network. It still ends in "Your total balance does not
+  change", which is the owner's own copy and what **T-96** is about; when he decides, one key changes
+  both surfaces.

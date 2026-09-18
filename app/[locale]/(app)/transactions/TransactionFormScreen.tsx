@@ -3,7 +3,7 @@
 import { CircleAlert, Trash2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +17,7 @@ import {
   draftFromSearchParams,
   draftToFormValues,
   fromTransaction,
+  isFormTransaction,
   type TransactionFormValues,
 } from "@/features/transactions/form";
 import {
@@ -85,6 +86,13 @@ export function EditTransactionScreen({ id }: { id: string }) {
   const remove = useDeleteTransaction();
   const [confirming, setConfirming] = useState(false);
   const notFound = transaction.error instanceof ApiError && transaction.error.status === 404;
+  const row = transaction.data;
+  const elsewhere = row !== undefined && !isFormTransaction(row);
+
+  // T-85: an adjustment is edited in the account's own sheet, which the detail screen opens.
+  useEffect(() => {
+    if (elsewhere) router.replace(`/transactions/${id}`);
+  }, [elsewhere, id, router]);
 
   async function confirmDelete() {
     try {
@@ -105,19 +113,7 @@ export function EditTransactionScreen({ id }: { id: string }) {
           back(`/transactions/${id}`);
         }}
       />
-      {transaction.isPending ? (
-        <div
-          className="flex flex-col gap-4"
-          role="status"
-          aria-busy="true"
-          aria-label={t("common.loading")}
-        >
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="mx-auto h-16 w-48" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-        </div>
-      ) : transaction.isError ? (
+      {transaction.isError ? (
         <Empty
           tone={notFound ? "neutral" : "danger"}
           icon={<CircleAlert {...iconProps("lg")} />}
@@ -135,15 +131,27 @@ export function EditTransactionScreen({ id }: { id: string }) {
             )
           }
         />
+      ) : !row || elsewhere ? (
+        <div
+          className="flex flex-col gap-4"
+          role="status"
+          aria-busy="true"
+          aria-label={t("common.loading")}
+        >
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="mx-auto h-16 w-48" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
       ) : (
         <TransactionForm
-          defaultValues={fromTransaction(transaction.data, timeZone)}
+          defaultValues={fromTransaction(row, timeZone)}
           submitLabel={t("common.saveChanges")}
           pending={update.isPending}
           error={update.error}
           onSubmit={async (input, _key, changes) => {
             // The same rule as the inbox (P-17): a category is what completes a quick capture.
-            const completes = transaction.data.pendingDetails && input.categoryId != null;
+            const completes = row.pendingDetails && input.categoryId != null;
             if (completes || !nothingChanged(changes))
               await update.mutateAsync(completes ? { ...changes, pendingDetails: false } : changes);
             toast.show({ message: t("transactions.form.updated") });

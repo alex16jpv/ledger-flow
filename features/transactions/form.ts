@@ -15,15 +15,22 @@ export const TRANSACTION_TYPES = [
   "ADJUSTMENT",
 ] as const satisfies readonly CreateTransactionInput["type"][];
 
+// T-85: an adjustment repairs a balance, so it is made and edited in the account, not in this form.
+export const FORM_TYPES = [
+  "EXPENSE",
+  "INCOME",
+  "TRANSFER",
+] as const satisfies readonly TransactionType[];
+
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
-export type AdjustmentDirection = "increase" | "decrease";
+export type FormTransactionType = (typeof FORM_TYPES)[number];
 
 export const TEXT_MAX = 255;
 export const FUTURE_LIMIT_MS = 24 * 60 * 60 * 1000;
 
 export const transactionFormSchema = z
   .object({
-    type: z.enum(TRANSACTION_TYPES),
+    type: z.enum(FORM_TYPES),
     amount: z
       .number({ error: "validation.amountInvalid" })
       .positive({ error: "validation.amountPositive" })
@@ -32,7 +39,6 @@ export const transactionFormSchema = z
     accountId: z.string().nullable(),
     fromAccountId: z.string().nullable(),
     toAccountId: z.string().nullable(),
-    direction: z.enum(["increase", "decrease"]),
     date: z.string().min(1, { error: "validation.required" }),
     time: z.string().nullable(),
     description: z.string().trim().max(TEXT_MAX, { error: "validation.nameMax" }),
@@ -62,10 +68,6 @@ export const transactionFormSchema = z
 
 export type TransactionFormValues = Infer<typeof transactionFormSchema>;
 
-export function categoryAllowed(type: TransactionType): type is "EXPENSE" | "INCOME" {
-  return type === "EXPENSE" || type === "INCOME";
-}
-
 export function defaultFormValues(now: Date, timeZone: string): TransactionFormValues {
   return {
     type: "EXPENSE",
@@ -74,7 +76,6 @@ export function defaultFormValues(now: Date, timeZone: string): TransactionFormV
     accountId: null,
     fromAccountId: null,
     toAccountId: null,
-    direction: "increase",
     ...dateTimeParts(now, timeZone),
     description: "",
     tags: [],
@@ -83,7 +84,7 @@ export function defaultFormValues(now: Date, timeZone: string): TransactionFormV
 }
 
 export interface FormDraft {
-  type?: TransactionType;
+  type?: FormTransactionType;
   amount?: number;
   categoryId?: string;
   accountId?: string;
@@ -91,8 +92,8 @@ export interface FormDraft {
   description?: string;
 }
 
-function draftType(value: string | null): TransactionType | undefined {
-  return TRANSACTION_TYPES.find((type) => type === value);
+function draftType(value: string | null): FormTransactionType | undefined {
+  return FORM_TYPES.find((type) => type === value);
 }
 
 export function draftFromSearchParams(params: URLSearchParams): FormDraft {
@@ -117,7 +118,7 @@ export function draftToFormValues(
     ...base,
     type,
     ...(draft.amount !== undefined ? { amount: draft.amount } : {}),
-    categoryId: categoryAllowed(type) ? (draft.categoryId ?? null) : null,
+    categoryId: draft.categoryId ?? null,
     accountId: type === "TRANSFER" ? null : (draft.accountId ?? null),
     fromAccountId: type === "TRANSFER" ? (draft.accountId ?? null) : null,
     toAccountId: type === "TRANSFER" ? (draft.toAccountId ?? null) : null,
@@ -144,10 +145,6 @@ function accountSides(values: TransactionFormValues): {
       return { fromAccountId: null, toAccountId: values.accountId };
     case "TRANSFER":
       return { fromAccountId: values.fromAccountId, toAccountId: values.toAccountId };
-    case "ADJUSTMENT":
-      return values.direction === "increase"
-        ? { fromAccountId: null, toAccountId: values.accountId }
-        : { fromAccountId: values.accountId, toAccountId: null };
   }
 }
 
@@ -161,7 +158,7 @@ export function toTransactionInput(
     type: values.type,
     amount: values.amount,
     date: dateTimeInstant(values, timeZone, now).toISOString(),
-    categoryId: categoryAllowed(values.type) ? values.categoryId : null,
+    categoryId: values.categoryId,
     ...accountSides(values),
     description: values.description.trim() || null,
     tags: values.tags,
@@ -178,7 +175,6 @@ const OWNED_BY: Record<keyof TransactionFormValues, readonly (keyof UpdateTransa
   accountId: ["fromAccountId", "toAccountId"],
   fromAccountId: ["fromAccountId", "toAccountId"],
   toAccountId: ["fromAccountId", "toAccountId"],
-  direction: ["fromAccountId", "toAccountId"],
   date: ["date"],
   time: ["date"],
   description: ["description"],
@@ -201,7 +197,16 @@ export function toTransactionChanges(
   return Object.fromEntries(Object.entries(input).filter(([key]) => wanted.has(key)));
 }
 
-export function fromTransaction(transaction: Transaction, timeZone: string): TransactionFormValues {
+export type FormTransaction = Omit<Transaction, "type"> & { type: FormTransactionType };
+
+export function isFormTransaction(transaction: Transaction): transaction is FormTransaction {
+  return FORM_TYPES.some((type) => type === transaction.type);
+}
+
+export function fromTransaction(
+  transaction: FormTransaction,
+  timeZone: string,
+): TransactionFormValues {
   const single =
     transaction.type === "TRANSFER" ? null : (transaction.fromAccountId ?? transaction.toAccountId);
   return {
@@ -211,8 +216,6 @@ export function fromTransaction(transaction: Transaction, timeZone: string): Tra
     accountId: single,
     fromAccountId: transaction.type === "TRANSFER" ? transaction.fromAccountId : null,
     toAccountId: transaction.type === "TRANSFER" ? transaction.toAccountId : null,
-    direction:
-      transaction.type === "ADJUSTMENT" && transaction.fromAccountId ? "decrease" : "increase",
     ...dateTimeParts(new Date(transaction.date), timeZone),
     description: transaction.description ?? "",
     tags: transaction.tags,
