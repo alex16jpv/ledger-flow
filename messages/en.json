@@ -858,6 +858,21 @@
       "new": "New account",
       "newHint": "Create it without leaving this form"
     },
+    "summary": {
+      "have": "What you have",
+      "owe": "What you owe"
+    },
+    "debt": {
+      "available": "available",
+      "owed": "owed",
+      "owedOfLimit": "{owed} owed of {limit}",
+      "paidOfBorrowed": "{paid} paid of {borrowed}",
+      "inCredit": "{amount} of your own money sitting on it",
+      "barInUse": "Credit limit in use",
+      "barPaid": "Paid off",
+      "setCreditLimit": "Set a credit limit",
+      "setBorrowedAmount": "Set the amount borrowed"
+    },
     "list": {
       "title": "Accounts",
       "new": "New account",

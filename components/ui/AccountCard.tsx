@@ -1,12 +1,31 @@
-import { Star } from "lucide-react";
+"use client";
+
+import { Star, Target } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { type DebtFoot, readDebt } from "@/lib/accounts/debt";
 import { Link } from "@/lib/i18n/navigation";
+import { useMoney } from "@/lib/i18n/useMoney";
+import { iconProps } from "@/lib/icons/sizes";
 import { type ColorToken, featureColorStyle } from "@/lib/theme/feature-color";
+import type { Account } from "@/types/api";
 
+import { Amount } from "./Amount";
 import { Badge } from "./Badge";
+import { buttonClasses } from "./Button";
 import { cn } from "./cn";
+import { Progress } from "./Progress";
+import { Projected } from "./Projected";
 import { Dot } from "./Tile";
+
+export interface AccountCardDebt {
+  word: ReactNode;
+  bar: number | null;
+  barLabel: string;
+  foot?: ReactNode;
+  action?: ReactNode;
+}
 
 export interface AccountCardProps {
   name: string;
@@ -16,6 +35,7 @@ export interface AccountCardProps {
   mainLabel?: ReactNode;
   archivedLabel?: ReactNode;
   href?: string;
+  debt?: AccountCardDebt;
 }
 
 const CARD =
@@ -33,8 +53,14 @@ export function AccountCard({
   mainLabel,
   archivedLabel,
   href,
+  debt,
 }: AccountCardProps) {
-  const paint = cn(CARD, href !== undefined && OPENS, archivedLabel ? ARCHIVED : null);
+  const stretched = debt?.action !== undefined && href !== undefined;
+  const paint = cn(
+    CARD,
+    href !== undefined && !stretched && OPENS,
+    archivedLabel ? ARCHIVED : null,
+  );
   const body = (
     <>
       <div className="flex items-center gap-2">
@@ -48,10 +74,44 @@ export function AccountCard({
         )}
         {archivedLabel && <Badge>{archivedLabel}</Badge>}
       </div>
-      <span className="text-2xl font-semibold tracking-[-0.02em] tabular-nums">{balance}</span>
-      <span className="text-xs text-text-3">{typeLabel}</span>
+      <div>
+        <span className="block text-2xl font-semibold tracking-[-0.02em] tabular-nums">
+          {balance}
+        </span>
+        <span className="block text-xs text-text-3">
+          {debt ? (
+            <>
+              {debt.word} · {typeLabel}
+            </>
+          ) : (
+            typeLabel
+          )}
+        </span>
+      </div>
+      {debt && (debt.bar !== null || debt.foot) && (
+        <div className="flex flex-col gap-1.5">
+          {debt.bar !== null && <Progress value={debt.bar} thin plain label={debt.barLabel} />}
+          {debt.foot && <span className="text-xs text-text-3">{debt.foot}</span>}
+        </div>
+      )}
     </>
   );
+
+  if (stretched) {
+    return (
+      <div className={paint} style={featureColorStyle(color)}>
+        <Link
+          href={href}
+          aria-label={name}
+          // The card clips its contents, so an inset outline is the ring that survives; a shadow is cut off.
+          className="absolute inset-0 rounded-lg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--focus-ring)"
+        />
+        {body}
+        <div className="relative self-start">{debt.action}</div>
+      </div>
+    );
+  }
+
   return href === undefined ? (
     <div className={paint} style={featureColorStyle(color)}>
       {body}
@@ -86,5 +146,79 @@ export function AccountCardGrid({
     >
       {children}
     </div>
+  );
+}
+
+export interface AccountRowCardProps {
+  account: Account;
+  href?: string;
+  archived?: boolean;
+  projected?: boolean;
+  promptHref?: string;
+}
+
+export function AccountRowCard({
+  account,
+  href,
+  archived = false,
+  projected = false,
+  promptHref,
+}: AccountRowCardProps) {
+  const t = useTranslations();
+  const money = useMoney();
+  const reading = readDebt(account);
+  const footLine = (foot: DebtFoot): string => {
+    if (foot.line === "owedOfLimit") {
+      return t("accounts.debt.owedOfLimit", {
+        owed: money.format(foot.owed),
+        limit: money.format(foot.limit),
+      });
+    }
+    if (foot.line === "paidOfBorrowed") {
+      return t("accounts.debt.paidOfBorrowed", {
+        paid: money.format(foot.paid),
+        borrowed: money.format(foot.borrowed),
+      });
+    }
+    return t("accounts.debt.inCredit", { amount: money.format(foot.amount) });
+  };
+  return (
+    <AccountCard
+      href={href}
+      name={account.name}
+      typeLabel={t(`accountTypes.${account.type}`)}
+      balance={
+        <Projected when={projected}>
+          <Amount value={reading ? reading.lead : account.balance} signed={false} size="lg" />
+        </Projected>
+      }
+      color={account.color}
+      mainLabel={account.isDefault ? t("common.main") : undefined}
+      archivedLabel={archived ? t("accounts.list.archivedBadge") : undefined}
+      debt={
+        reading
+          ? {
+              word: t(`accounts.debt.${reading.word}`),
+              bar: reading.bar,
+              barLabel: t(
+                reading.word === "available" ? "accounts.debt.barInUse" : "accounts.debt.barPaid",
+              ),
+              foot: reading.foot === null ? undefined : footLine(reading.foot),
+              action:
+                reading.missing === null || promptHref === undefined ? undefined : (
+                  <Link
+                    href={promptHref}
+                    className={buttonClasses({ variant: "secondary", size: "sm" })}
+                  >
+                    <Target {...iconProps("sm")} />
+                    {reading.missing === "creditLimit"
+                      ? t("accounts.debt.setCreditLimit")
+                      : t("accounts.debt.setBorrowedAmount")}
+                  </Link>
+                ),
+            }
+          : undefined
+      }
+    />
   );
 }

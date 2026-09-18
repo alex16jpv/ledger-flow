@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useId, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
-import { AccountCard } from "@/components/ui/AccountCard";
+import { AccountRowCard } from "@/components/ui/AccountCard";
 import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
@@ -27,21 +27,14 @@ const NEW_HREF = "/accounts/new";
 const GRID = "grid gap-3 sm:grid-cols-2 lg:grid-cols-3";
 
 function AccountLink({ account, archived = false }: { account: Account; archived?: boolean }) {
-  const t = useTranslations();
   const outbox = useOutbox();
   return (
-    <AccountCard
+    <AccountRowCard
+      account={account}
       href={`/accounts/${account.id}`}
-      name={account.name}
-      typeLabel={t(`accountTypes.${account.type}`)}
-      balance={
-        <Projected when={outbox.projected.balances}>
-          <Amount value={account.balance} signed={false} size="lg" />
-        </Projected>
-      }
-      color={account.color}
-      mainLabel={account.isDefault ? t("common.main") : undefined}
-      archivedLabel={archived ? t("accounts.list.archivedBadge") : undefined}
+      archived={archived}
+      projected={outbox.projected.balances}
+      promptHref={archived ? undefined : `/accounts/${account.id}/edit`}
     />
   );
 }
@@ -131,11 +124,9 @@ export function AccountsView() {
         <>
           <Card className="flex flex-wrap items-end justify-between gap-4">
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-text-3">
-                {t("accounts.list.totalBalance")}
-              </span>
+              <span className="text-xs font-medium text-text-3">{t("accounts.summary.have")}</span>
               <Projected when={outbox.projected.balances}>
-                <Amount value={summary.totalBalance} signed={false} size="hero" />
+                <Amount value={summary.have} signed={false} size="hero" />
               </Projected>
               <span className="text-sm text-text-3">
                 {t("accounts.list.counts", {
@@ -144,16 +135,12 @@ export function AccountsView() {
                 })}
               </span>
             </div>
-            {summary.cardDebt < 0 && (
-              <div className="flex flex-col gap-1 sm:items-end">
-                <span className="text-xs font-medium text-text-3">
-                  {t("accounts.list.cardDebt")}
-                </span>
-                <Projected when={outbox.projected.balances}>
-                  <Amount value={summary.cardDebt} size="lg" />
-                </Projected>
-              </div>
-            )}
+            <div className="flex flex-col gap-1 sm:items-end">
+              <span className="text-xs font-medium text-text-3">{t("accounts.summary.owe")}</span>
+              <Projected when={outbox.projected.balances}>
+                <Amount value={summary.owe} signed={false} size="lg" />
+              </Projected>
+            </div>
           </Card>
           {summary.active.length > 0 && (
             <div className={GRID}>

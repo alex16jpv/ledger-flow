@@ -858,6 +858,21 @@
       "new": "Nueva cuenta",
       "newHint": "Créala sin salir de este formulario"
     },
+    "summary": {
+      "have": "Lo que tienes",
+      "owe": "Lo que debes"
+    },
+    "debt": {
+      "available": "disponible",
+      "owed": "deuda",
+      "owedOfLimit": "Debes {owed} de {limit}",
+      "paidOfBorrowed": "{paid} pagados de {borrowed}",
+      "inCredit": "{amount} de dinero tuyo encima",
+      "barInUse": "Cupo usado",
+      "barPaid": "Pagado",
+      "setCreditLimit": "Poner el cupo",
+      "setBorrowedAmount": "Poner el importe prestado"
+    },
     "list": {
       "title": "Cuentas",
       "new": "Nueva cuenta",

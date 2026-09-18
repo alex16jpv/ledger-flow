@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
 import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
+import { splitAccounts } from "@/lib/accounts/debt";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
@@ -116,7 +117,7 @@ export function HomeView({
 
   const accounts = data.accounts.data;
   const spent = data.spending.data.total;
-  const totalBalance = accounts.reduce((sum, account) => sum + account.balance, 0);
+  const split = splitAccounts(accounts);
 
   return (
     <>
@@ -158,7 +159,8 @@ export function HomeView({
               onCreateBudget={onCreateBudget}
             />
             <StatsRow
-              totalBalance={totalBalance}
+              have={split.have}
+              owe={split.owe}
               accountCount={accounts.length}
               income={data.income.data ?? 0}
               spent={spent}
