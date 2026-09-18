@@ -5,6 +5,47 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-18 · The Pay sheet opens empty and the whole debt is a chip (T-99)
+
+- **Context:** the owner, 2026-09-17: «en el Pay this card. el valor por defecto no puede ser el pagar
+  el valor total. el valor total debe ser la segunda opcion y el usuario debe decider cuanto es lo que
+  paga». The field opened holding `max(0, −balance)`, so the sheet had already decided what was being
+  paid; the only way out was a chip, _Another amount_, whose whole job was to empty it again — and it
+  did not even do that, because `AmountInput` is uncontrolled and kept showing the figure while the
+  Pay button went disabled with nothing saying why.
+- **Decision:** the amount opens **empty and focused**, which is what the Quick add does and what he
+  approved there, and the total becomes **one chip carrying its own figure**, `Everything owed ·
+$1,245,900`, that fills the field. The chip reads as pressed while the typed amount is exactly the
+  debt. _Another amount_ is **gone**: beside an empty focused field it is a control with nothing to do,
+  and the figure it used to hide now travels on the chip that stays. The sheet counts as unsaved from
+  the moment anything is typed, rather than from the moment the amount differs from the debt.
+  The chip is a **switch**, not a button: pressing it again empties the field, which is what its pressed
+  state promises a screen reader and the way back _Another amount_ used to be.
+- **How the chip writes into the field:** `AmountInput` gains an **optional** `value`. It keeps its own
+  text while you type and adjusts it only when the figure it is handed is one it did not itself emit —
+  the state a parent passes down is compared against the last value this input produced, so an echo of
+  your own keystroke can never rewrite a half-typed decimal. Ten of its eleven call sites pass nothing
+  and behave exactly as before.
+- **Alternatives:** keeping both chips with the total second, which is the most literal reading of his
+  sentence but leaves a control whose only act is to empty a field that starts empty; and remounting
+  `AmountInput` with a `key`, which is how the Quick add **clears** it and was the first shape of this
+  change. Seeding a value that way throws the DOM node away: the native undo history goes with it, an
+  IME composition in flight is lost, and where the caret and the focus land after `autoFocus` is the
+  browser's decision rather than ours. The optional prop keeps the node, so the keyboard stays on the
+  chip that was pressed and the next stop is _From_.
+- **Consequence:** the read-back is no longer on screen from the moment the sheet opens, since there is
+  no movement to describe until there is an amount. It is **not** wrapped in a live region: the
+  sentence rewrites on every keystroke, so announcing it would be noise, and the act that needs
+  confirming — pressing the chip — already announces itself through the chip's pressed state. The loan
+  reads right for the first time. `#loan-detail-and-pay` had flagged the
+  preloaded total as "the one part of the sheet that reads wrong on this screen", because the ordinary
+  payment on a loan is the instalment; the sheet now assumes neither. What a _This month's payment_
+  preset would need is still a figure the account does not carry, which is **T-94** and not this. The
+  uncontrolled-field defect the T-101 review found disappears with the starting value it depended on.
+  And `AmountInput` now takes the id of the `Field` around it when there is one: it was minting its own,
+  so the visible label of all eleven call sites pointed at an element that did not exist and the input
+  leaned entirely on its `aria-label`.
+
 ## 2026-09-18 · Money from outside reaches the full form, and only where it is a payment (T-100)
 
 - **Context:** the owner, 2026-09-17: «lo del somewhere else en el account from Tambien tiene que

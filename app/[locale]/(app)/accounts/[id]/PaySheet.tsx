@@ -57,7 +57,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   const keyring = useRef(new IdempotencyKeyring());
   const owed = Math.max(0, -account.balance);
   const capped = !mayHoldOwnMoney(account.type);
-  const [amount, setAmount] = useState<number | null>(owed);
+  const [amount, setAmount] = useState<number | null>(null);
   // The main account can be the very account being paid, and nothing is paid with itself.
   const [from, setFrom] = useState<Account | null>(main?.id === account.id ? null : (main ?? null));
   const [openedAt] = useState(() => new Date());
@@ -100,7 +100,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
     <Sheet
       open={open}
       onClose={onClose}
-      unsaved={amount !== null && amount !== owed}
+      unsaved={amount !== null}
       title={t("accounts.pay.title", { name: account.name })}
       footer={
         <>
@@ -130,7 +130,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
           <Card className="flex flex-col gap-2 p-0 pb-3">
             <AmountInput
               label={t("accounts.pay.amount")}
-              defaultValue={owed}
+              value={amount}
               onChange={setAmount}
               autoFocus
               invalid={over}
@@ -140,18 +140,10 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
               <Chip
                 selected={amount === owed}
                 onClick={() => {
-                  setAmount(owed);
+                  setAmount(amount === owed ? null : owed);
                 }}
               >
-                {t("accounts.pay.everything")}
-              </Chip>
-              <Chip
-                selected={amount !== owed}
-                onClick={() => {
-                  setAmount(null);
-                }}
-              >
-                {t("accounts.pay.another")}
+                {t("accounts.pay.everything", { amount: money.format(owed) })}
               </Chip>
             </div>
           </Card>

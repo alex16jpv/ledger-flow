@@ -1,5 +1,6 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 
 import { renderWithProviders } from "@/lib/testing/render";
 
@@ -85,5 +86,46 @@ describe("AmountInput", () => {
     expect(screen.getByText("A loan cannot be paid more than it owes.").getAttribute("id")).toBe(
       input.getAttribute("aria-describedby"),
     );
+  });
+
+  it("takes a figure written from outside, and does not fight what is being typed", async () => {
+    function Host() {
+      const [value, setValue] = useState<number | null>(null);
+      return (
+        <>
+          <AmountInput value={value} onChange={setValue} label="Amount to pay" />
+          <button
+            type="button"
+            onClick={() => {
+              setValue(1245900);
+            }}
+          >
+            Everything owed
+          </button>
+        </>
+      );
+    }
+    renderWithProviders(<Host />);
+    const input = screen.getByRole("textbox", { name: "Amount to pay" });
+
+    await userEvent.type(input, "3000");
+    expect(input).toHaveValue("3,000");
+
+    await userEvent.click(screen.getByRole("button", { name: "Everything owed" }));
+    expect(input).toHaveValue("1,245,900");
+
+    await userEvent.type(input, "0");
+    expect(input).toHaveValue("12,459,000");
+  });
+
+  it("takes the id of the field around it, so its visible label reaches the input", () => {
+    renderWithProviders(
+      <Field label="Amount to pay">
+        <AmountInput onChange={vi.fn()} label="Amount to pay" />
+      </Field>,
+    );
+    const input = screen.getByRole("textbox", { name: "Amount to pay" });
+    const label = screen.getByText("Amount to pay", { selector: "label span" }).closest("label");
+    expect(label).toHaveAttribute("for", input.getAttribute("id"));
   });
 });

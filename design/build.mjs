@@ -1486,19 +1486,24 @@ ${row("repeat", "GRAY", "Bancolombia → Car loan", "Payment", 420000, "transfer
 <div class="day-head"><span>Aug 5</span><span class="amount">${money(420000, "+")}</span></div>
 ${row("repeat", "GRAY", "Bancolombia → Car loan", "Payment", 420000, "transfer")}</div>`;
 
-const PAY_PRESETS = `<button class="chip selected">Everything owed</button><button class="chip">Another amount</button>`;
-const PAY_OVER_PRESETS = `<button class="chip">Everything owed</button><button class="chip selected">Another amount</button>`;
-
-const paySheet = (a, title, chips, o = {}) => {
+const paySheet = (a, title, o = {}) => {
+  const empty = o.empty === true;
   const amt = o.amount ?? a.owed;
+  const num = empty
+    ? `<span class="num" style="color:var(--text-disabled)">0</span>`
+    : `<span class="num"${o.error ? ' style="color:var(--danger)"' : ""}>${nf.format(amt)}</span>`;
+  const chip = `<button class="chip${!empty && amt === a.owed ? " selected" : ""}">Everything owed \u00b7 ${moneyText(a.owed)}</button>`;
   const read =
     o.read ??
-    `\n<div class="alert neutral">${iconSvg("arrow-left-right")}<span>Bancolombia <b class="amount">${money(amt, "−")}</b> · ${a.name} <b class="amount">${money(amt)}</b> less owed. Your total balance does not change.</span></div>`;
+    (empty
+      ? ""
+      : `\n<div class="alert neutral">${iconSvg("arrow-left-right")}<span>Bancolombia <b class="amount">${money(amt, "\u2212")}</b> \u00b7 ${a.name} <b class="amount">${money(amt)}</b> less owed. Your total balance does not change.</span></div>`);
+  const stopped = empty || Boolean(o.error);
   return sheetWrap(
-    `<div class="stack-sm"><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num"${o.error ? ' style="color:var(--danger)"' : ""}>${nf.format(amt)}</span><span class="caret"></span></div>
-<div class="chips" style="justify-content:center">${chips}</div>${o.error ? `<span class="help error">${iconSvg("circle-alert", "sm")}${o.error}</span>` : ""}</div>
-<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">From</span><span class="val">Bancolombia · $3,420,500</span></span>${iconSvg("chevron-down", "sm")}</button>${o.cat ?? ""}${o.extra ?? ""}${read}
-<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4"${o.error ? " disabled" : ""}>${o.action ?? "Pay"}</button></div>`,
+    `<div class="stack-sm"><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span>${num}<span class="caret"></span></div>
+<div class="chips" style="justify-content:center">${chip}</div>${o.error ? `<span class="help error">${iconSvg("circle-alert", "sm")}${o.error}</span>` : ""}</div>
+<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">From</span><span class="val">Bancolombia \u00b7 $3,420,500</span></span>${iconSvg("chevron-down", "sm")}</button>${o.cat ?? ""}${o.extra ?? ""}${read}
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4"${stopped ? " disabled" : ""}>${o.action ?? "Pay"}</button></div>`,
     title,
   );
 };
@@ -1537,7 +1542,7 @@ const payFlow = (kind) => {
   if (kind === "form") return decidedTransferForm({ amount: nf.format(CARD_OWED) });
   return debtDetail(VISA, {
     ...VISA_DETAIL,
-    sheet: paySheet(VISA, "Pay Visa Gold", PAY_PRESETS, {
+    sheet: paySheet(VISA, "Pay Visa Gold", {
       cat: transferCatRow(null),
     }),
   });
@@ -3687,7 +3692,7 @@ const instalmentSheet = (kind) => {
 <div class="list card flush" style="margin:0">${row("repeat", "GRAY", "Bancolombia → Car loan", "Transfer · pays the loan down", INSTALMENT_PRINCIPAL, "transfer", { badges: '<span class="badge success">Saved</span>' })}${row("percent", "RED", "Car loan interest", "Expense · Interest", INSTALMENT_INTEREST, "expense", { badges: '<span class="badge danger">Refused</span>' })}</div>`,
     },
   }[kind];
-  return paySheet(CARLOAN, "Pay Car loan", PAY_PRESETS, {
+  return paySheet(CARLOAN, "Pay Car loan", {
     amount: INSTALMENT,
     cat: transferCatRow(null),
     extra: parts.extra,
@@ -3763,7 +3768,7 @@ const addMovement = (kind) =>
     "intent-none": () =>
       debtDetail(VISA, {
         ...VISA_DETAIL,
-        sheet: paySheet(VISA, "Pay Visa Gold", PAY_PRESETS, {
+        sheet: paySheet(VISA, "Pay Visa Gold", {
           cat: transferCatRow(null),
         }),
       }),
@@ -4180,7 +4185,7 @@ const PAGES = [
       plate(
         "loan-detail-and-pay",
         "Loan detail \u00b7 and paying it",
-        "The other half of his sentence \u2014 <i>un bot\u00f3n para pagar la tarjeta <b>o el pr\u00e9stamo</b></i> \u2014 drawn because a loan is not a card. It has no limit, so the bar is what is <b>still owed</b> of what was borrowed and the line under it says how much is paid; its opening balance is the loan itself, so the hero\u2019s last line carries it. <b>Pay this loan</b> opens the same sheet as the card, preloaded with everything owed. <b>Two things are true here and not on the card.</b> Paying a loan in full is the rare case, not the common one \u2014 the ordinary payment is the monthly instalment \u2014 so the preset chip is the one part of the sheet that reads wrong on this screen, and a <i>This month\u2019s payment</i> preset would need a field the account does not have: the two it gains are the credit limit and the amount borrowed, and neither is an instalment. And the instalment is the place T-86\u2019s capital-and-interest split lands: under that split one payment is two movements, and this sheet writes one. ",
+        "The other half of his sentence \u2014 <i>un bot\u00f3n para pagar la tarjeta <b>o el pr\u00e9stamo</b></i> \u2014 drawn because a loan is not a card. It has no limit, so the bar is what is <b>still owed</b> of what was borrowed and the line under it says how much is paid; its opening balance is the loan itself, so the hero\u2019s last line carries it. <b>Pay this loan</b> opens the same sheet as the card. <b>Two things are true here and not on the card.</b> Paying a loan in full is the rare case, not the common one \u2014 the ordinary payment is the monthly instalment \u2014 which is why the sheet opening with the whole debt read wrong on this screen; <b>T-99 fixed that for both</b> (`#pay-opens-empty`), and a <i>This month\u2019s payment</i> preset would still need a field the account does not have: the two it gains are the credit limit and the amount borrowed, and neither is an instalment. And the instalment is the place T-86\u2019s capital-and-interest split lands: under that split one payment is two movements, and this sheet writes one. ",
         debtDetail(CARLOAN, LOAN_DETAIL),
         { added: "2026-09-17" },
       ),
@@ -4245,12 +4250,22 @@ const PAGES = [
         { added: "2026-09-18" },
       ),
       plate(
+        "pay-opens-empty",
+        "Pay this card \u00b7 as the sheet opens",
+        "T-99, his words of 2026-09-17: <i>el valor por defecto no puede ser el pagar el valor total. el valor total debe ser la segunda opcion y el usuario debe decider cuanto es lo que paga</i>. The field used to open <b>holding the whole debt</b>, so the sheet had already decided what you were paying and the only way out was a chip that emptied it again. Now it opens <b>empty, with the keyboard up</b> \u2014 what the Quick add does, and what he approved there \u2014 and the total is <b>one chip that fills it</b>, carrying its own figure so nothing is hidden by the change. The chip reads as selected while the typed amount is exactly that, so it also answers <i>have I typed all of it?</i>, and it is a <b>switch</b>: pressing it again empties the field, which is the way back <i>Another amount</i> used to be \u2014 one tap instead of deleting a seven-figure number by hand. <b>Pay stays disabled and no sentence is read back</b> until there is an amount: there is no movement yet to describe. <b>The second chip goes:</b> <i>Another amount</i> existed only to clear a field that arrived full, and beside an empty focused field it is a control with nothing to do. <b>This is also what `#loan-detail-and-pay` flagged</b> \u2014 on a loan the ordinary payment is the instalment, not the whole debt \u2014 and the sheet no longer assumes either; what a <i>This month\u2019s payment</i> preset would need is still a figure the account does not carry, which is T-94.",
+        debtDetail(VISA, {
+          ...VISA_DETAIL,
+          sheet: paySheet(VISA, "Pay Visa Gold", { empty: true, cat: transferCatRow(null) }),
+        }),
+        { added: "2026-09-18" },
+      ),
+      plate(
         "pay-a-loan-not-more-than-owed",
         "Pay this loan \u00b7 not more than it owes",
         "His sentence, 2026-09-17: <i>supongo que se debe de limitar que no se pague de mas</i> \u2014 and on a loan it is a limit, not a warning. Anything above what is still owed is refused on the field, with the figure in the message, and the button stays disabled; the read-back does not appear either, because there is no movement to read back. A CARD and an OVERDRAFT are the opposite case and keep taking it: overpaying a card is real and the bank shows it as money in your favour. ",
         debtDetail(CARLOAN, {
           ...LOAN_DETAIL,
-          sheet: paySheet(CARLOAN, "Pay Car loan", PAY_OVER_PRESETS, {
+          sheet: paySheet(CARLOAN, "Pay Car loan", {
             amount: 9000000,
             error: `A loan cannot be paid more than the ${moneyText(LOAN_OWED)} it still owes.`,
             cat: transferCatRow(null),
@@ -5280,7 +5295,7 @@ const PAGES = [
       plate(
         "pay-a-sheet-on-the-account",
         "Pay · a sheet on the account itself",
-        "<b>Chosen, 2026-09-17.</b> His words: once the accounts work is finished, the pay button is the modal on the account. The card’s own screen, with <b>Pay this card</b> as the one primary action above the four that were already there. It opens a sheet that is the payment and nothing else: the amount <b>preloaded with everything owed</b>, a chip to change it, one <i>From</i> picker on the main account, and a line that reads the result back. <b>That line changed with T-86</b> («la diferencia»): it now reads <i>Bancolombia −$1,245,900 · Visa Gold $1,245,900 less owed. Your total balance does not change.</i> — the difference, not the resulting balance — and the sheet carries the optional Transfer category the form gained at the same time. It is a TRANSFER underneath, with the direction filled in for you, which is the point: paying a debt means sending money <b>towards</b> the card, and that is the step people get backwards. <b>What it costs:</b> a second way to record a transfer, so the rule about doing it the way it is already done has to be paid — the sheet has to reuse the same pickers, the same idempotency key and the same offline queue, not a private copy. Two decisions instead of six, and you never leave the account — and, as the question below shows, a sheet can offer the right thing where the full form hands you a type picker and lets you choose the wrong one.",
+        "<b>Chosen, 2026-09-17.</b> His words: once the accounts work is finished, the pay button is the modal on the account. The card’s own screen, with <b>Pay this card</b> as the one primary action above the four that were already there. It opens a sheet that is the payment and nothing else: the amount, one chip that fills it with everything owed, one <i>From</i> picker on the main account, and a line that reads the result back. <b>The amount is drawn here already typed</b> \u2014 since T-99 the field opens empty and the total is the chip, which is `#pay-opens-empty`. <b>That line changed with T-86</b> («la diferencia»): it now reads <i>Bancolombia −$1,245,900 · Visa Gold $1,245,900 less owed. Your total balance does not change.</i> — the difference, not the resulting balance — and the sheet carries the optional Transfer category the form gained at the same time. It is a TRANSFER underneath, with the direction filled in for you, which is the point: paying a debt means sending money <b>towards</b> the card, and that is the step people get backwards. <b>What it costs:</b> a second way to record a transfer, so the rule about doing it the way it is already done has to be paid — the sheet has to reuse the same pickers, the same idempotency key and the same offline queue, not a private copy. Two decisions instead of six, and you never leave the account — and, as the question below shows, a sheet can offer the right thing where the full form hands you a type picker and lets you choose the wrong one.",
         payFlow("sheet"),
         { added: "2026-09-17", verdict: "chosen", asks: "What the Pay button opens" },
       ),

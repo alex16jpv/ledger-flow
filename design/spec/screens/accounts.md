@@ -215,11 +215,45 @@ and **no net figure** — see [home.md](home.md) for why. The "Card debt" stat i
 ### Paying a debt (`#pay-a-sheet-on-the-account`, `#pay-from-outside-quiet`)
 
 **Pay this card / Pay this loan** is one primary action above the four the detail already had, and it
-opens **a sheet on the account**, not the transaction form: the amount preloaded with everything owed, a
-chip to change it, one _From_ picker, an optional category and a line reading the result back. It is a
+opens **a sheet on the account**, not the transaction form: the amount, one chip that fills it with
+everything owed, one _From_ picker, an optional category and a line reading the result back. It is a
 TRANSFER underneath with the direction filled in — paying a debt means sending money **towards** the
 card, which is the step people get backwards. Underneath it must use the same pickers, the same
 `Idempotency-Key` and the same offline queue as the transaction form, not a private copy (§8.14).
+
+### The amount opens empty and the user says it (`#pay-opens-empty`, T-99)
+
+His words, 2026-09-17: «en el Pay this card. el valor por defecto no puede ser el pagar el valor total.
+el valor total debe ser la segunda opcion y el usuario debe decider cuanto es lo que paga». Until T-99
+the field **opened holding the whole debt**, so the sheet had already decided what you were paying and
+the only way out was a chip that emptied it again.
+
+**Now it opens empty, with the keyboard up**, which is what the Quick add does and what he approved
+there: the first thing to do is say the amount, and nothing is assumed. Underneath it,
+**one chip: `Everything owed · $1,245,900`**, which fills the field — the total, with its figure, as the
+option it is. It reads as selected while the typed amount is exactly that, so the chip is also the
+answer to "have I typed all of it?".
+
+**And the chip is a switch, not a button**: pressing it again empties the field. That is what its
+pressed state promises a screen reader, and it is the way back that _Another amount_ used to be — one
+tap, instead of selecting a seven-figure number and deleting it.
+
+**The second chip goes.** _Another amount_ existed only to clear a field that arrived full; beside a
+field that is already empty and focused it is a control with nothing to do, and both the figure it used
+to hide and the way back it offered now live on the chip that remains.
+
+**This is also what `#loan-detail-and-pay` had flagged**: paying a loan in full is the rare case — the
+ordinary payment is the instalment — so a sheet that opened with the whole debt read wrong on that
+screen. It no longer assumes either. What a _This month's payment_ preset would need is still a figure
+the account does not carry, and that is **T-94**, not this.
+
+**Two consequences inside the sheet.** The unsaved mark of [states.md](states.md) compares against
+**nothing typed** rather than against the debt: with the field empty at the start, anything in it is
+work that would be lost. And the amount field has to be **filled from outside** when the chip is
+pressed, so `AmountInput` takes an optional figure from its parent — it keeps its own text while you
+type and only listens when the figure is one it did not produce, which is what lets a half-typed
+decimal survive. Pressing the chip does not move the keyboard: it stays on the chip, and the next stop
+is _From_.
 
 **Two things T-86 changed here, and they are his decisions, not tidying.** The sheet reads the result
 back **as a difference** — "Bancolombia −$1,245,900 · Visa Gold **$1,245,900 less owed**", not "goes to

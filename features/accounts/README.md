@@ -83,8 +83,12 @@ is only what keeps the client from offering what it would refuse, and the note i
 there was something to leave out.
 
 `PaySheet` (app layer, because it composes transactions) is the one primary action on a debt
-account's own screen: the amount preloaded with everything owed, one `From` picker and the optional
-TRANSFER category, and on a LOAN it refuses anything above what is still owed. It writes a TRANSFER
+account's own screen: the amount, one `From` picker and the optional TRANSFER category, and on a LOAN
+it refuses anything above what is still owed. **The amount opens empty** (T-99), with the keyboard up
+as the Quick add does, and the whole debt is one chip carrying its own figure that fills the field —
+the total is an option, never what the sheet has already decided for you. The chip fills the field by
+remounting `AmountInput` through a `key`, which is how the Quick add resets it too; the sheet counts
+as unsaved from the moment anything is typed. It writes a TRANSFER
 towards the account — paying a debt means sending money
 **towards** the card — through the same queue and the same client-minted id as the form. Its `From`
 picker carries one row that is not an account, for money the app does not track; that writes a
