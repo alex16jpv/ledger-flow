@@ -7,6 +7,9 @@ export const DEBT_ACCOUNT_TYPES: ReadonlySet<Account["type"]> = new Set([
   "LOAN",
 ]);
 
+// An overdraft holds its owner's money in its ordinary state, so a salary landing there is income (T-93).
+export const INCOME_REFUSED_TYPES: ReadonlySet<Account["type"]> = new Set(["CARD", "LOAN"]);
+
 export type DebtField = "creditLimit" | "borrowedAmount";
 
 export function debtFieldOf(type: Account["type"]): DebtField | null {

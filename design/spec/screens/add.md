@@ -224,6 +224,43 @@ Stats, because a transfer is not spending. That is **T-94** on his list, deferre
 answers already drawn and measured — `#instalment-two-movements` (with its half-applied state,
 `#instalment-only-half-arrived`) and `#instalment-interest-inside-the-movement`.
 
+## What the form may offer, by type of account (T-93)
+
+His words, 2026-09-17: "si hacer un income sobre una tarjeta es incorrecto entonces no se debe de
+permitir. ese es el caso especifico pero ahi que revisar que otros casos asi no deberian de
+presentarse". **The rule is the server's** — the whole grid of movement type against account type is
+reviewed and enforced there, because this client is not to be trusted with it. What belongs here is
+the other half: **not offering what the server will refuse, and saying why when it refuses anyway.**
+
+**On Income the account picker leaves out a card and a loan**
+(`#income-picks-only-money-accounts`), and the sheet's note says why in the product's own words:
+_money arriving at a card or a loan is a payment, not income_. Hiding them without a word would leave
+someone hunting for their Visa; the note is the same place the picker already explains _Somewhere
+else_.
+
+**An overdraft stays on the list**, and it is the one debt type that does — his decision of
+2026-09-18, asked while this was built. T-101 settled that a positive balance is an overdraft's
+**ordinary** state: it is the account that holds the money and sometimes dips below zero, so a salary
+landing there is income, and refusing it would take that salary out of _Income this month_. A card and
+a loan have no such reading.
+
+**Switching the type to Income clears an account that is debt**, exactly as it already clears a
+category that belongs to another type. Nothing is silently carried into a shape the server refuses.
+
+**The quick capture follows the same rule**, and it has one case of its own: when the **main account
+is a card** — which is allowed, and a quick expense on it is the most ordinary purchase there is — an
+income cannot land there by default. The picker opens empty and asks for an account instead of
+sending the main one to be refused.
+
+**Expense and Transfer offer everything**, and that is deliberate: spending with a card is what a
+card is for, paying one is the movement the Pay sheet exists for, and a cash advance out of a card is
+real.
+
+**When the server refuses anyway** — a movement queued offline before this shipped, another device, an
+older app — the code lands on the field it is about: `INCOME_ON_DEBT_ACCOUNT` on the account,
+`LOAN_OVERPAID` on the amount, with the sentence that says what to record instead. Never a toast: the
+form is where the wrong choice was made.
+
 ### What was premise, and was not asked
 
 - **Adjustment has already left this form** — T-85's decision (above).

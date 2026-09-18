@@ -25,6 +25,7 @@ import {
   quickAddSchema,
   type QuickAddType,
 } from "@/features/transactions/schemas";
+import { INCOME_REFUSED_TYPES } from "@/lib/accounts/debt";
 import { fieldErrors, presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { isValidationKey, validationMessage } from "@/lib/i18n/validation";
@@ -70,7 +71,13 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
   }, [open, amountKey]);
 
   const defaultAccount = accounts.data?.find((account) => account.isDefault) ?? null;
-  const effectiveAccountId = accountId ?? defaultAccount?.id ?? null;
+  const income = type === "INCOME";
+  const isDebt = (id: string | null): boolean => {
+    const account = accounts.data?.find((row) => row.id === id);
+    return account !== undefined && INCOME_REFUSED_TYPES.has(account.type);
+  };
+  const mainIsDebt = income && isDebt(defaultAccount?.id ?? null);
+  const effectiveAccountId = accountId ?? (mainIsDebt ? null : (defaultAccount?.id ?? null));
   const selectedCategory = categories.data?.find((category) => category.id === categoryId) ?? null;
   const chips =
     selectedCategory && !recent.some((category) => category.id === selectedCategory.id)
@@ -115,6 +122,7 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
     if (next === type) return;
     setType(next);
     setCategoryId(null);
+    if (next === "INCOME" && isDebt(accountId)) setAccountId(null);
     setIssues({});
     quickAdd.reset();
   }
@@ -142,6 +150,10 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
   }
 
   async function save() {
+    if (income && effectiveAccountId === null && mainIsDebt) {
+      setIssues({ accountId: "validation.required" });
+      return;
+    }
     const parsed = quickAddSchema.safeParse(draft());
     if (!parsed.success) {
       setIssues(
@@ -295,6 +307,8 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
               }
               value={effectiveAccountId}
               exclude={transfer ? toAccountId : undefined}
+              omit={income ? INCOME_REFUSED_TYPES : undefined}
+              note={income ? t("accounts.picker.incomeNote") : undefined}
               onChange={(account) => {
                 setAccountId(account.id);
               }}

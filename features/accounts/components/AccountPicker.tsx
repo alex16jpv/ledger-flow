@@ -19,6 +19,8 @@ export interface AccountPickerProps {
   onChange: (account: Account) => void;
   label?: string;
   exclude?: string | null;
+  omit?: ReadonlySet<Account["type"]>;
+  note?: string;
   disabled?: boolean;
   allowCreate?: boolean;
   className?: string;
@@ -30,6 +32,8 @@ export function AccountPicker({
   onChange,
   label,
   exclude = null,
+  omit,
+  note,
   disabled = false,
   allowCreate = true,
   className,
@@ -62,6 +66,8 @@ export function AccountPicker({
         open={open}
         value={value}
         exclude={exclude}
+        omit={omit}
+        note={note}
         allowCreate={allowCreate}
         outside={outside}
         onSelect={onChange}

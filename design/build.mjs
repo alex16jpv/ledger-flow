@@ -2849,7 +2849,7 @@ const categoryPicker = () => {
   });
 };
 
-const accountPicker = () => {
+const accountPicker = (kind = "all") => {
   const r = (name, typ, col, bal, sel = false, neg = false, main = false) => {
     const badge = main ? '<span class="badge brand">Main</span>' : "";
     const amt = `<span class="amount">${neg ? "−" : ""}${money(bal)}</span>`;
@@ -2860,15 +2860,18 @@ const accountPicker = () => {
     return `<button class="row" style="border-top:1px solid var(--border)">${tile(ACCT_TYPE_ICON[a.typ], a.color)}<span class="body"><span class="title"><span>${a.name}</span></span><span class="meta">${face.type}</span></span><span class="right"><span class="amount">${face.lead}</span></span></button>`;
   };
   const outside = `<button class="row" style="border-top:1px solid var(--border)">${tile("circle-dollar-sign", "GRAY")}<span class="body"><span class="title"><span>Somewhere else</span></span><span class="meta">Not an account here</span></span><span class="right"></span></button>`;
+  const income = kind === "income";
   const rows =
     r("Bancolombia", "ACCOUNT", "BLUE", 3420500, true, false, true) +
     r("Cash", "CASH", "GRAY", 184000) +
-    debtRow(VISA) +
-    debtRow(CARLOAN) +
+    (income ? "" : debtRow(VISA) + debtRow(CARLOAN)) +
     r("Savings", "SAVINGS", "GREEN", 8900000) +
-    outside;
+    (income ? "" : outside);
+  const note = income
+    ? "Archived accounts are not listed. Balances update as you save. Money arriving at a card or a loan is a <b>payment</b>, not income: record it as a transfer from wherever it came from."
+    : "Archived accounts are not listed. Balances update as you save. <b>Somewhere else</b> is not an account and creates nothing: it records a payment made with money Ledger Flow does not track.";
   const inner = `<div class="list" style="margin:0 -16px">${rows}</div>
-<p class="xs faint" style="margin:0">Archived accounts are not listed. Balances update as you save. <b>Somewhere else</b> is not an account and creates nothing: it records a payment made with money Ledger Flow does not track.</p>`;
+<p class="xs faint" style="margin:0">${note}</p>`;
   return screen(transactionFormBodyDim(), {
     tab: "",
     side: "",
@@ -3977,6 +3980,13 @@ const PAGES = [
         { added: "2026-09-01" },
       ),
       plate("account-picker", "Account picker", "", accountPicker(), { added: "2026-09-01" }),
+      plate(
+        "income-picks-only-money-accounts",
+        "Account picker \u00b7 on an income",
+        "The form's half of T-93, whose rule lives in the server. An income cannot land on a card or a loan \u2014 money arriving there is a <b>payment</b>, and counted as income it would inflate <i>Income this month</i>, <i>Estimated savings</i> and every income budget with money nobody earned. So under <b>Income</b> the picker leaves those two out, and the note says why rather than leaving someone hunting for their Visa. <b>An overdraft stays</b>, and it is the one debt type that does: his decision of 2026-09-18, because a positive balance is an overdraft's ordinary state and a salary landing there is income. <b>Somewhere else</b> goes with them: money from outside landing on an account that holds money <i>is</i> income, so that row has nothing to offer here. Expense and Transfer are untouched \u2014 spending with a card, paying one and a cash advance out of one are all real. ",
+        accountPicker("income"),
+        { added: "2026-09-18" },
+      ),
       plate(
         "date-sheet",
         "Date",

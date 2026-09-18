@@ -13,6 +13,8 @@ export const ERROR_CODES = [
   "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED",
   "ACCOUNT_LIMIT_REACHED",
   "ACCOUNT_FIELD_NOT_FOR_TYPE",
+  "INCOME_ON_CARD_OR_LOAN",
+  "LOAN_OVERPAID",
   "CATEGORY_LIMIT_REACHED",
   "CATEGORY_ARCHIVED",
   "CATEGORY_TYPE_MISMATCH",
@@ -69,6 +71,12 @@ export const ERROR_TABLE: Readonly<Record<ErrorCode, ErrorPresentation>> = {
   },
   ACCOUNT_LIMIT_REACHED: { scope: "form", messageKey: "errors.ACCOUNT_LIMIT_REACHED" },
   ACCOUNT_FIELD_NOT_FOR_TYPE: { scope: "form", messageKey: "errors.ACCOUNT_FIELD_NOT_FOR_TYPE" },
+  INCOME_ON_CARD_OR_LOAN: {
+    scope: "field",
+    field: "toAccountId",
+    messageKey: "errors.INCOME_ON_CARD_OR_LOAN",
+  },
+  LOAN_OVERPAID: { scope: "field", field: "amount", messageKey: "errors.LOAN_OVERPAID" },
   CATEGORY_LIMIT_REACHED: { scope: "form", messageKey: "errors.CATEGORY_LIMIT_REACHED" },
   CATEGORY_ARCHIVED: {
     scope: "field",
