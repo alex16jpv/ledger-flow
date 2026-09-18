@@ -879,6 +879,23 @@
       "setCreditLimit": "Set a credit limit",
       "setBorrowedAmount": "Set the amount borrowed"
     },
+    "pay": {
+      "card": "Pay this card",
+      "overdraft": "Pay this overdraft",
+      "loan": "Pay this loan",
+      "title": "Pay {name}",
+      "amount": "Amount to pay",
+      "everything": "Everything owed",
+      "another": "Another amount",
+      "from": "From",
+      "outside": "Somewhere else",
+      "outsideMeta": "not an account here",
+      "readTransfer": "{from} {out} · {name} {amount} less owed. Your total balance does not change.",
+      "readOutside": "{name} {amount} less owed. It does not count as income or as spending, because the money never was in Ledger Flow.",
+      "outsideDescription": "Paid from outside Ledger Flow",
+      "pay": "Pay",
+      "paid": "Payment recorded"
+    },
     "list": {
       "title": "Accounts",
       "new": "New account",

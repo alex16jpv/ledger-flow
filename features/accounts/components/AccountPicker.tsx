@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Plus, Wallet } from "lucide-react";
+import { Check, CircleDollarSign, Plus, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createElement, useEffect, useRef, useState } from "react";
 
@@ -31,6 +31,8 @@ export interface AccountPickerProps {
   disabled?: boolean;
   allowCreate?: boolean;
   className?: string;
+  // A debt can be paid with money the app does not track: one row that is not an account.
+  outside?: { label: string; meta: string; selected: boolean; onSelect: () => void };
 }
 
 export function AccountPicker({
@@ -41,6 +43,7 @@ export function AccountPicker({
   disabled = false,
   allowCreate = true,
   className,
+  outside,
 }: AccountPickerProps) {
   const t = useTranslations();
   // The picker prints the same figure as every other surface, and never a number with no word.
@@ -164,6 +167,32 @@ export function AccountPicker({
                   );
                 })}
               </div>
+            )}
+            {outside && !accounts.isPending && (
+              <RowButton
+                role="option"
+                aria-selected={outside.selected}
+                onClick={() => {
+                  outside.onSelect();
+                  close();
+                }}
+                className={cn("border-t border-border", outside.selected && "bg-brand-soft/40")}
+              >
+                <Tile variant="outline">
+                  <CircleDollarSign {...iconProps("md")} />
+                </Tile>
+                <RowBody>
+                  <RowTitle>
+                    <span>{outside.label}</span>
+                  </RowTitle>
+                  <RowMeta items={[outside.meta]} />
+                </RowBody>
+                {outside.selected && (
+                  <RowRight>
+                    <Check {...iconProps("sm")} className="text-brand-text" />
+                  </RowRight>
+                )}
+              </RowButton>
             )}
             {allowCreate && !accounts.isPending && (
               <RowButton

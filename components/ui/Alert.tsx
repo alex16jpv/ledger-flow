@@ -1,4 +1,4 @@
-import { CircleAlert, CircleCheck, Info, TriangleAlert } from "lucide-react";
+import { CircleAlert, CircleCheck, Info, type LucideIcon, TriangleAlert } from "lucide-react";
 import type { HTMLAttributes, ReactNode } from "react";
 
 import { iconProps } from "@/lib/icons/sizes";
@@ -27,6 +27,7 @@ export interface AlertProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"
   tone?: AlertTone;
   title?: ReactNode;
   action?: ReactNode;
+  icon?: LucideIcon;
   children?: ReactNode;
 }
 
@@ -34,11 +35,12 @@ export function Alert({
   tone = "neutral",
   title,
   action,
+  icon,
   className,
   children,
   ...rest
 }: AlertProps) {
-  const Icon = ICON[tone];
+  const Icon = icon ?? ICON[tone];
   return (
     <div
       role={tone === "danger" ? "alert" : undefined}

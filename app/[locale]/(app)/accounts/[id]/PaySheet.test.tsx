@@ -1,0 +1,160 @@
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+import { ToastProvider } from "@/components/ui/Toast";
+import { QueryProvider } from "@/lib/query/QueryProvider";
+import { UUID } from "@/lib/testing/ids";
+import { renderWithProviders } from "@/lib/testing/render";
+import type { Account } from "@/types/api";
+
+import { payInput, PaySheet } from "./PaySheet";
+
+const json = (body: unknown, init: ResponseInit = {}) =>
+  new Response(JSON.stringify(body), { headers: { "content-type": "application/json" }, ...init });
+
+const isTransactions = (url: Parameters<typeof fetch>[0]): boolean =>
+  (url instanceof Request ? url.url : url.toString()).includes("/api/transactions");
+const fetchMock = vi.fn<typeof fetch>();
+
+const account = (over: Partial<Account>): Account => ({
+  id: "visa",
+  name: "Visa Gold",
+  type: "CARD",
+  balance: -1_245_900,
+  openingBalance: 0,
+  color: "PURPLE",
+  userId: "u1",
+  isDefault: false,
+  currency: "COP",
+  archivedAt: null,
+  createdAt: "2026-09-01T00:00:00.000Z",
+  updatedAt: "2026-09-01T00:00:00.000Z",
+  ...over,
+});
+
+const card = account({});
+const main = account({ id: "banco", name: "Bancolombia", type: "ACCOUNT", balance: 3_420_500 });
+
+beforeEach(() => {
+  fetchMock.mockReset();
+  vi.stubGlobal("fetch", fetchMock);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+function open() {
+  const onClose = vi.fn();
+  renderWithProviders(
+    <QueryProvider>
+      <ToastProvider>
+        <PaySheet account={card} main={main} open onClose={onClose} />
+      </ToastProvider>
+    </QueryProvider>,
+  );
+  return onClose;
+}
+
+describe("payInput", () => {
+  it("sends the money towards the debt account, which is the step people get backwards", () => {
+    const input = payInput(card, main, 1_245_900, "cat-1", "Paid from outside");
+
+    expect(input).toMatchObject({
+      type: "TRANSFER",
+      amount: 1_245_900,
+      fromAccountId: "banco",
+      toAccountId: "visa",
+      categoryId: "cat-1",
+    });
+  });
+
+  it("writes a one-sided adjustment when the money never was in the app", () => {
+    const input = payInput(card, null, 500_000, "cat-1", "Paid from outside");
+
+    expect(input).toMatchObject({
+      type: "ADJUSTMENT",
+      fromAccountId: null,
+      toAccountId: "visa",
+      categoryId: null,
+      description: "Paid from outside",
+    });
+  });
+});
+
+describe("PaySheet", () => {
+  it("opens with everything owed and reads the payment back as a difference", async () => {
+    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    open();
+
+    expect(await screen.findByLabelText("Amount to pay")).toHaveValue("1,245,900");
+    expect(
+      screen.getByText(
+        "Bancolombia −$1,245,900 · Visa Gold $1,245,900 less owed. Your total balance does not change.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("records the payment as a transfer towards the card", async () => {
+    fetchMock.mockImplementation((url) =>
+      Promise.resolve(
+        isTransactions(url) ? json({ id: "t1" }, { status: 201 }) : json({ data: [main, card] }),
+      ),
+    );
+    const onClose = open();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Pay" }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+    const call = fetchMock.mock.calls.find(([url]) => isTransactions(url));
+    expect(JSON.parse(call?.[1]?.body as string)).toMatchObject({
+      type: "TRANSFER",
+      amount: 1_245_900,
+      fromAccountId: "banco",
+      toAccountId: "visa",
+    });
+    // What makes a retry safe here is the client-minted id in the body, as everywhere else.
+    expect(JSON.parse(call?.[1]?.body as string)).toMatchObject({
+      id: expect.stringMatching(UUID),
+    });
+  });
+
+  it("pays from outside the app without inventing an income", async () => {
+    fetchMock.mockImplementation((url) =>
+      Promise.resolve(
+        isTransactions(url) ? json({ id: "t1" }, { status: 201 }) : json({ data: [main, card] }),
+      ),
+    );
+    open();
+
+    await userEvent.click(await screen.findByRole("button", { name: /^From/ }));
+    const sheet = screen.getByRole("dialog", { name: "Account" });
+    await userEvent.click(within(sheet).getByRole("option", { name: /Somewhere else/ }));
+
+    expect(
+      screen.getByText(
+        "Visa Gold $1,245,900 less owed. It does not count as income or as spending, because the money never was in Ledger Flow.",
+      ),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Pay" }));
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([url]) => isTransactions(url))).toBe(true);
+    });
+    const call = fetchMock.mock.calls.find(([url]) => isTransactions(url));
+    expect(JSON.parse(call?.[1]?.body as string)).toMatchObject({
+      type: "ADJUSTMENT",
+      fromAccountId: null,
+      toAccountId: "visa",
+    });
+  });
+
+  it("refuses to pay nothing", async () => {
+    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    open();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Another amount" }));
+    expect(screen.getByRole("button", { name: "Pay" })).toBeDisabled();
+  });
+});

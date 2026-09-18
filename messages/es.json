@@ -879,6 +879,23 @@
       "setCreditLimit": "Poner el cupo",
       "setBorrowedAmount": "Poner el importe prestado"
     },
+    "pay": {
+      "card": "Pagar esta tarjeta",
+      "overdraft": "Pagar este sobregiro",
+      "loan": "Pagar este préstamo",
+      "title": "Pagar {name}",
+      "amount": "Importe a pagar",
+      "everything": "Todo lo que debes",
+      "another": "Otro importe",
+      "from": "Desde",
+      "outside": "Otro sitio",
+      "outsideMeta": "no es una cuenta de aquí",
+      "readTransfer": "{from} {out} · {name} debe {amount} menos. Tu balance total no cambia.",
+      "readOutside": "{name} debe {amount} menos. No cuenta como ingreso ni como gasto, porque ese dinero nunca estuvo en Ledger Flow.",
+      "outsideDescription": "Pagado desde fuera de Ledger Flow",
+      "pay": "Pagar",
+      "paid": "Pago registrado"
+    },
     "list": {
       "title": "Cuentas",
       "new": "Nueva cuenta",
