@@ -237,7 +237,9 @@ with both answers drawn in `#instalment-two-movements` and `#instalment-interest
 
 **A loan cannot be paid more than it owes** (`#pay-a-loan-not-more-than-owed`, T-101): the amount
 refuses anything above what is still owed and says so on the field, because "money of your own on top"
-means nothing on a loan. A CARD and an OVERDRAFT keep taking it — overpaying a card is real. And the
+means nothing on a loan. **Since T-93 that ceiling is everywhere the app can reach one**: the transfer
+in the full form, editing an adjustment that raises it, and the server itself, which refuses the
+movement and refuses to create an account already past zero. A CARD and an OVERDRAFT keep taking it — overpaying a card is real. And the
 action itself is only on the screen while the account is below zero, so a loan that is finished has
 nothing to pay from anywhere.
 

@@ -396,6 +396,44 @@ describe("AdjustBalanceSheet, editing one", () => {
     expect(screen.getByText("Adjustment updated")).toBeInTheDocument();
   });
 
+  // T-93: editing an adjustment is the last door into a loan above zero, and it is shut too.
+  it("refuses to push a loan past zero from the editing sheet", async () => {
+    const loan: Account = {
+      ...account,
+      id: "loan",
+      name: "Car loan",
+      type: "LOAN",
+      balance: -100_000,
+      borrowedAmount: 12_000_000,
+    };
+    const paid: Transaction = {
+      ...adjustment,
+      id: "t8",
+      amount: 50_000,
+      fromAccountId: null,
+      toAccountId: "loan",
+    };
+    fetchMock.mockImplementation((input, init) =>
+      Promise.resolve(
+        (init?.method ?? "GET") === "GET" && urlOf(input).includes("/api/accounts/")
+          ? json(loan)
+          : json(paid),
+      ),
+    );
+    await renderEditing(paid);
+
+    const amount = screen.getByRole("textbox", { name: "Amount" });
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "200000");
+    expect(screen.getByText(/cannot be paid more than/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "150000");
+    expect(screen.queryByText(/cannot be paid more than/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled();
+  });
+
   it("turns a decrease into an increase by moving the side, not the amount", async () => {
     routeEditing(() => json(adjustment));
     await renderEditing();
