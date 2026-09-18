@@ -16,6 +16,7 @@ import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
 import { TransferReadback } from "@/features/transactions/components/TransferReadback";
 import { useCreateTransaction } from "@/features/transactions/hooks";
+import { debtFieldOf } from "@/lib/accounts/debt";
 import { presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { useMoney } from "@/lib/i18n/useMoney";
@@ -56,6 +57,8 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   const create = useCreateTransaction();
   const keyring = useRef(new IdempotencyKeyring());
   const owed = Math.max(0, -account.balance);
+  // A loan cannot be overpaid: money of your own on top of it means nothing.
+  const isLoan = debtFieldOf(account.type) === "borrowedAmount";
   const [amount, setAmount] = useState<number | null>(owed);
   // The main account can be the very account being paid, and nothing is paid with itself.
   const [from, setFrom] = useState<Account | null>(main?.id === account.id ? null : (main ?? null));
@@ -63,7 +66,8 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   const [outside, setOutside] = useState(false);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const error = create.error ? presentError(create.error) : null;
-  const ready = amount !== null && amount > 0 && (outside || from !== null);
+  const over = isLoan && amount !== null && amount > owed;
+  const ready = amount !== null && amount > 0 && !over && (outside || from !== null);
 
   async function pay() {
     if (!ready) return;
@@ -85,7 +89,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   }
 
   const readBack =
-    amount === null || amount <= 0 ? null : outside ? (
+    amount === null || amount <= 0 || over ? null : outside ? (
       <Alert tone="neutral" icon={Scale}>
         {t("accounts.pay.readOutside", { name: account.name, amount: money.format(amount) })}
       </Alert>
@@ -120,13 +124,17 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
       }
     >
       <div className="flex flex-col gap-4">
-        <Field label={t("accounts.pay.amount")}>
+        <Field
+          label={t("accounts.pay.amount")}
+          error={over ? t("accounts.pay.overLoan", { amount: money.format(owed) }) : undefined}
+        >
           <Card className="flex flex-col gap-2 p-0 pb-3">
             <AmountInput
               label={t("accounts.pay.amount")}
               defaultValue={owed}
               onChange={setAmount}
               autoFocus
+              invalid={over}
               className="py-4"
             />
             <div className="mx-auto flex gap-2">

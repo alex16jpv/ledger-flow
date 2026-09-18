@@ -165,6 +165,41 @@ describe("PaySheet", () => {
     expect(screen.getByRole("button", { name: /^From/ })).toHaveTextContent("Choose an account");
   });
 
+  it("refuses to pay a loan more than it owes, and says how much that is", async () => {
+    const loan = account({ id: "loan", name: "Car loan", type: "LOAN", balance: -8_400_000 });
+    fetchMock.mockResolvedValue(json({ data: [main, loan] }));
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <PaySheet account={loan} main={main} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+
+    const amount = await screen.findByLabelText("Amount to pay");
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "9000000");
+    expect(
+      screen.getByText("A loan cannot be paid more than the $8,400,000 it still owes."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pay" })).toBeDisabled();
+    expect(screen.queryByText(/less owed/)).not.toBeInTheDocument();
+
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "8400000");
+    expect(screen.getByRole("button", { name: "Pay" })).toBeEnabled();
+  });
+
+  it("keeps letting a card be overpaid, because a bank does too", async () => {
+    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    open();
+
+    const amount = await screen.findByLabelText("Amount to pay");
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "2000000");
+    expect(screen.getByRole("button", { name: "Pay" })).toBeEnabled();
+  });
+
   it("refuses to pay nothing", async () => {
     fetchMock.mockResolvedValue(json({ data: [main, card] }));
     open();

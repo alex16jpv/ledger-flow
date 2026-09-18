@@ -110,8 +110,7 @@ export function AmountInput({
         placeholder="0"
         className={cn(
           "min-w-[2ch] bg-transparent text-[52px] leading-none font-semibold tracking-[-0.035em] caret-brand outline-none placeholder:text-text-disabled",
-          TONE[tone],
-          invalid && "text-danger",
+          invalid ? "text-danger" : TONE[tone],
         )}
         style={{ width: `${Math.max(2, text.length + 1)}ch` }}
       />

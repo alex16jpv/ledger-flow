@@ -56,6 +56,12 @@ it (`#debt-in-credit`).
 The line under it reads the recorded state in the same words the rest of the product uses:
 `Recorded: $1,245,900 owed`, or `Recorded: $4,000,000 of your own money on it`.
 
+**On a LOAN the pair is not offered** (`#adjust-balance-on-a-loan`, T-101). A loan cannot hold money
+of its owner — what it can be is finished — so the sheet asks only _How much do you owe on {name}
+right now?_ and the segment goes with the choice it was offering. The line under it still reads the
+recorded state as it really is, so a loan that landed in credit by another route says so and the
+adjustment that puts it back at zero is one figure away.
+
 **The alert only talks debt while the whole movement is debt**, which is the rule the transfer
 readback already follows: a card can hold money of its owner, and then there is no debt to say less
 or more of. With the recorded balance and the new one both owing, it reads the product's grammar —
@@ -100,7 +106,9 @@ His words, 2026-09-16: "actualmente las uso en positivo osea si mi tarjeta de cr
 100 estoy poniendo el balance de 100 … eso hace que no pueda reflejar la deuda real y hace que la
 matematica del total balance este inflada con dinero que realmente no es mio." The alternatives are
 drawn in `preview/variants.html`; what he chose on **2026-09-17** is below, every question is
-answered, and the rows are in [decisions.md](../decisions.md). Nothing is built yet.
+answered, and the rows are in [decisions.md](../decisions.md). It is built: T-85 shipped the reading
+and the two fields, T-86 the pay sheet's grammar, T-90 repaired the accounts that were carrying their
+limit as a balance, and T-95 and T-101 the two ways past zero.
 
 **The premise, which was never a question.** A debt account already carries a negative balance: an
 expense on a card lowers it, `summarizeAccounts` already adds a "Card debt" from the negative balances
@@ -125,10 +133,13 @@ alternative — one rule for both, the bar always being the debt that is left �
 and empty as you pay, which reads backwards.
 
 **A debt account that owes nothing reads so** (`#debt-in-credit`). A card with a limit and **exactly
-zero** owed still leads with its availability — `$4,000,000 available`, `$0 owed of $4,000,000`, empty
-bar. Only a balance on the owner's side of zero — an overpaid card, an overdraft in its ordinary state
-— reads `$0 owed` with the money on it named as the holder's own. That covers an overdraft in its
-ordinary state, an overpaid card, and — until T-90 runs — every card in the product.
+zero** owed leads with its availability — `$4,000,000 available`, `$0 owed of $4,000,000`, empty bar.
+**Past zero it keeps that same language and adds one clause** (T-101): money of its owner sitting on a
+card is credit that can be spent as well, so a $2,000,000 overdraft holding $320,000 of its own reads
+`$2,320,000 available` with `$0 owed of $2,000,000 · $320,000 of your own money on it` under an empty
+bar. Nothing about the reading changes as the account crosses zero; a figure is added to it. That
+covers an overdraft in its ordinary state, an overpaid card, and — until T-90 runs — every card in the
+product.
 
 **And on day one none of them carries the field either**, so that is what the plate draws: `$0 owed`, the
 money named as the holder's own, **no bar** — a bar needs a scale and there is none — and the prompt still
@@ -142,6 +153,35 @@ account picker — where the row carries the word beside the type, because a fig
 reads as a balance. And inside the account the movements keep the account's point of view while the
 headline takes the owner's: an expense on the card prints as `−$18,400` under a headline about what is
 available, and that expense _reduces_ what is available. Drawn in `#account-detail-as-debt`.
+
+### Past zero, and it is not one state (`#debt-past-zero-on-a-loan`, T-101)
+
+His words, 2026-09-17: "el ajust balance es confuse ya que permite poner positive. por lo que si el
+usuario pone 1 en positive se rompe el balance y el valor que muestra en disponible … si hago pagos en
+un loan que ya esta pago … supongo que se debe de limitar que no se pague de mas. o si ahi casos donde
+eso es possible como supongo que seria las tarjetas entonces hacer que la barra no se rompa y que el
+balance muestre lo que realmente debe". A balance on the owner's side of zero is **three different
+things**, one per type, and until T-101 the product answered all three the same way.
+
+| Type                                                       | What is allowed                                                                                                                              | How it reads                                                                             |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Cash, Bank account, Debit card, Savings, Investment, Other | Everything, as before                                                                                                                        | The balance is what it holds, with its sign. Nothing changes                             |
+| **Credit card**                                            | **It can sit in its owner's favour**: overpaying a card is real and the bank shows it that way. It is not forbidden                          | Available = **the limit plus what is on it**, it says it owes nothing, empty bar         |
+| **Overdraft**                                              | Positive is its **ordinary** state, not an error. Forbidding it would break it                                                               | The same as the card: available = the limit plus the balance                             |
+| **Loan**                                                   | **It cannot be overpaid**: Pay this loan caps the amount at what is still owed, and Adjust balance does not offer _Your own money_ on a loan | If it lands in credit by another route the bar stays **full** and the loan reads as paid |
+
+**What was wrong, measured the same day.** One branch of `readDebt` answered `$0 owed`, an empty bar
+and "your own money" for the three types alike. On a card with a $4,000,000 limit and a single peso of
+its own on it the **availability disappeared**: the account that says `$4,000,000 available` at exactly
+zero said nothing at all one peso past it, while $4,000,001 was there to be spent. On a **loan** the bar
+is what is paid, so it **fell from 90% to 0%** the moment the last instalment cleared the debt — the one
+day it should be full.
+
+**A loan that is paid off is full, and has nothing to pay.** The bar only ever grows, so at zero owed —
+and past it — it is `$12,000,000 paid of $12,000,000`, and the headline is `$0 owed`. Money of its
+owner is not named on a loan, because there is no such thing there: what there is, is a loan that is
+finished. And **Pay this loan is not on the screen at all** while nothing is owed, which is what the
+detail already does with any debt account that is not below zero.
 
 ### Before a limit is set (`#debt-no-limit-prompt`)
 
@@ -192,6 +232,12 @@ part of T-94.
 prefiero sin el campo de interés». About $126,000 of a $420,000 instalment is interest, so the loan
 falls by more than was actually paid off and the interest never reaches Stats — **T-94** on his list,
 with both answers drawn in `#instalment-two-movements` and `#instalment-interest-inside-the-movement`.
+
+**A loan cannot be paid more than it owes** (`#pay-a-loan-not-more-than-owed`, T-101): the amount
+refuses anything above what is still owed and says so on the field, because "money of your own on top"
+means nothing on a loan. A CARD and an OVERDRAFT keep taking it — overpaying a card is real. And the
+action itself is only on the screen while the account is below zero, so a loan that is finished has
+nothing to pay from anywhere.
 
 **The _From_ picker carries one row under the accounts: `Somewhere else · not an account here`.** A debt
 can be paid with money the app does not track — someone else's transfer, cash, an account the user

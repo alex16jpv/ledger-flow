@@ -18,7 +18,8 @@ export function debtFieldOf(type: Account["type"]): DebtField | null {
 export type DebtFoot =
   | { line: "owedOfLimit"; owed: number; limit: number }
   | { line: "paidOfBorrowed"; paid: number; borrowed: number }
-  | { line: "inCredit"; amount: number };
+  | { line: "inCredit"; amount: number }
+  | { line: "inCreditOfLimit"; owed: number; limit: number; own: number };
 
 export interface DebtReading {
   lead: number;
@@ -42,12 +43,34 @@ export function readDebt(account: DebtAccount): DebtReading | null {
   const owed = 0 - toCents(account.balance);
 
   if (owed < 0) {
+    const own = -owed;
+    if (field === "borrowedAmount") {
+      return {
+        lead: 0,
+        word: "owed",
+        bar: scale === null ? null : 1,
+        foot:
+          scale === null
+            ? null
+            : { line: "paidOfBorrowed", paid: fromCents(scale), borrowed: fromCents(scale) },
+        missing,
+      };
+    }
+    if (scale === null) {
+      return {
+        lead: 0,
+        word: "owed",
+        bar: null,
+        foot: { line: "inCredit", amount: fromCents(own) },
+        missing,
+      };
+    }
     return {
-      lead: 0,
-      word: "owed",
-      bar: scale === null ? null : 0,
-      foot: { line: "inCredit", amount: fromCents(-owed) },
-      missing,
+      lead: fromCents(scale + own),
+      word: "available",
+      bar: 0,
+      foot: { line: "inCreditOfLimit", owed: 0, limit: fromCents(scale), own: fromCents(own) },
+      missing: null,
     };
   }
 

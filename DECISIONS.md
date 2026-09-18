@@ -5,6 +5,33 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-18 · Past zero a card keeps its availability and a loan is simply paid (T-101)
+
+- **Context:** `readDebt` answered a balance on the owner's side of zero with one branch for the
+  three debt types: `$0 owed`, an empty bar and "your own money sitting on it". On a CARD with a
+  $4,000,000 limit and one peso of its own the **availability disappeared** — the same account says
+  `$4,000,000 available` at exactly zero — while $4,000,001 was there to be spent; and on a LOAN,
+  whose bar is what has been **paid**, the bar fell from 90% to 0% the day the last instalment
+  cleared the debt. The owner's words on 2026-09-17: «si el usuario pone 1 en positive se rompe el
+  balance y el valor que muestra en disponible … si hago pagos en un loan que ya esta pago … supongo
+  que se debe de limitar que no se pague de mas».
+- **Decision:** the state is read per type, which is how the rest of this reading already works. A
+  CARD or an OVERDRAFT **may** be in credit — overpaying a card is real and a bank shows it, and a
+  positive overdraft is its ordinary state — so what is available becomes the limit plus what is on
+  it, the bar stays empty and the line adds one clause to the sentence it already had at zero
+  (`inCreditOfLimit`). A LOAN **may not**: `PaySheet` refuses an amount above what is still owed and
+  `AdjustBalanceSheet` drops the _Your own money_ side there, and if one lands in credit by another
+  route it reads as finished — `$0 owed`, bar full, nothing named as its owner's.
+- **Alternatives:** forbidding a positive balance on the three alike, which the owner rejected for
+  the card and the overdraft because the state is real; and keeping one branch for the three and
+  merely hiding the bar, which leaves the card unable to say what it still has and the loan unable to
+  say it is finished.
+- **Consequence:** `DebtFoot` gains a fourth line and the design preview's bar check reads only the
+  caption's first clause, so a caption may carry a second one after a middle dot without the check
+  losing its arithmetic. The cap lives in the sheet, not in the API: the server still accepts a
+  TRANSFER that overpays a loan, which is where T-93 sweeps the combinations that should be refused
+  outright.
+
 ## 2026-09-17 · Adjusting a debt account asks the debt, and the pair says what the amount is (T-95)
 
 - **Context:** since T-88 the whole product reads a CARD, an OVERDRAFT or a LOAN as debt — the list,

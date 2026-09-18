@@ -54,6 +54,14 @@ debt: an account whose field is empty says only what is owed and carries a butto
 `/accounts/:id/edit`, which is where the field lives. Money of the owner's own sitting on a debt
 account is named as theirs — the state every card is in until T-90 runs.
 
+**Past zero the three types part ways (T-101).** A CARD or an OVERDRAFT can sit in its owner's
+favour, so it keeps leading with what is available — the limit **plus** what is on it — with `$0 owed
+of $limit · $own of your own money on it` under an empty bar; without the field there is no scale, so
+it says only that the money on it is theirs. A LOAN cannot: it reads as **finished**, `$0 owed` with
+the bar **full**, and money of its owner is never named on one. That is why `PaySheet` caps a loan's
+amount at what is still owed and `AdjustBalanceSheet` drops the _Your own money_ side there, while
+both keep taking it on a card.
+
 The two fields are optional and belong to the types that have them (`creditLimit` on CARD and
 OVERDRAFT, `borrowedAmount` on LOAN). On creation the amount field asks _How much do you owe on it
 right now?_ and stores the answer as the debt; changing an account's type clears the amount the new
@@ -67,7 +75,8 @@ those screens are for.
 
 `PaySheet` (app layer, because it composes transactions) is the one primary action on a debt
 account's own screen: the amount preloaded with everything owed, one `From` picker and the optional
-TRANSFER category. It writes a TRANSFER towards the account — paying a debt means sending money
+TRANSFER category, and on a LOAN it refuses anything above what is still owed. It writes a TRANSFER
+towards the account — paying a debt means sending money
 **towards** the card — through the same queue and the same client-minted id as the form. Its `From`
 picker carries one row that is not an account, for money the app does not track; that writes a
 one-sided ADJUSTMENT, never an income, because an income would lift _Income this month_ and

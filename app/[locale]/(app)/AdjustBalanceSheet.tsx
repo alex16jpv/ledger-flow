@@ -94,9 +94,13 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
   const toast = useToast();
   const create = useCreateTransaction();
   const keyring = useRef(new IdempotencyKeyring());
-  const isDebt = debtFieldOf(account.type) !== null;
-  const [magnitude, setMagnitude] = useState<number | null>(Math.abs(account.balance));
-  const [sign, setSign] = useState<Sign>(account.balance > 0 ? "positive" : "negative");
+  const field = debtFieldOf(account.type);
+  const isDebt = field !== null;
+  // A loan cannot hold money of its owner, so the only amount it can be asked for is the debt.
+  const isLoan = field === "borrowedAmount";
+  const preset = isLoan ? Math.max(0, -account.balance) : Math.abs(account.balance);
+  const [magnitude, setMagnitude] = useState<number | null>(preset);
+  const [sign, setSign] = useState<Sign>(!isLoan && account.balance > 0 ? "positive" : "negative");
   const [note, setNote] = useState("");
   const [openedAt] = useState(() => new Date());
   const actual = magnitude === null ? null : sign === "negative" ? -magnitude : magnitude;
@@ -154,29 +158,31 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
           <Card className="flex flex-col gap-2 p-0 pb-3">
             <AmountInput
               label={label}
-              defaultValue={Math.abs(account.balance)}
+              defaultValue={preset}
               onChange={setMagnitude}
               autoFocus
               className="py-4"
             />
-            <Segment<Sign>
-              inline
-              label={t(isDebt ? "accounts.adjust.side" : "accounts.adjust.sign")}
-              value={sign}
-              onChange={setSign}
-              options={
-                isDebt
-                  ? [
-                      { value: "negative", label: t("accounts.adjust.sideOwed") },
-                      { value: "positive", label: t("accounts.adjust.sideMine") },
-                    ]
-                  : [
-                      { value: "positive", label: t("accounts.adjust.positive") },
-                      { value: "negative", label: t("accounts.adjust.negative") },
-                    ]
-              }
-              className="mx-auto"
-            />
+            {!isLoan && (
+              <Segment<Sign>
+                inline
+                label={t(isDebt ? "accounts.adjust.side" : "accounts.adjust.sign")}
+                value={sign}
+                onChange={setSign}
+                options={
+                  isDebt
+                    ? [
+                        { value: "negative", label: t("accounts.adjust.sideOwed") },
+                        { value: "positive", label: t("accounts.adjust.sideMine") },
+                      ]
+                    : [
+                        { value: "positive", label: t("accounts.adjust.positive") },
+                        { value: "negative", label: t("accounts.adjust.negative") },
+                      ]
+                }
+                className="mx-auto"
+              />
+            )}
           </Card>
         </Field>
         <p className="text-center text-sm text-text-3">

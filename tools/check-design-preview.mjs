@@ -51,12 +51,14 @@ try {
     const html = readFileSync(join(PREVIEW, name), "utf8");
     for (const [, percent, caption] of html.matchAll(BAR)) {
       bars += 1;
+      // A caption may add a clause after a middle dot (T-101); what the bar fills with is the first one.
+      const head = caption.split(" \u00b7 ")[0];
       const parts =
-        /^\$([\d,]+) (?:owed|paid) of \$([\d,]+)$/.exec(caption) ??
-        /^\$([\d,]+) of \$([\d,]+) used/.exec(caption);
+        /^\$([\d,]+) (?:owed|paid) of \$([\d,]+)$/.exec(head) ??
+        /^\$([\d,]+) of \$([\d,]+) used$/.exec(head);
       const expected = parts
         ? Math.round((figure(parts[1]) / figure(parts[2])) * 100)
-        : /of your own money sitting on it$/.test(caption)
+        : /of your own money sitting on it$/.test(head)
           ? 0
           : null;
       if (expected === null || expected !== Number(percent))
