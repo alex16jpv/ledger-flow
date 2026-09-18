@@ -21,7 +21,10 @@ list reloads from the start with the toast "List updated". The export action is 
 
 Period with presets (this week, this month, last month, this year, custom) and two date fields; type
 (all, expenses, income, transfers, explicit adjustments); account (chips with a tile); category (recent
-chips plus "More", which opens the picker, plus "Uncategorized" = `uncategorized=true`); tag (`tag=`);
+chips plus "More", which opens the picker, plus "Uncategorized" = `uncategorized=true`), **offered
+for the type the filter is on** — since T-86 that includes the ones marked Transfer, and a category
+chosen under another type is dropped when the type moves, because that pair matches nothing; tag
+(`tag=`);
 and the switches "Only quick expenses to review" (`pendingDetails=true`) and "Only quick entries"
 (`source=QUICK`). The footer holds "Clear" and a primary button that anticipates the count — "Show 12
 transactions" — by asking with `limit=1` and reading `pagination.total`, which exists on every listing

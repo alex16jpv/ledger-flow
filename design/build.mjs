@@ -1571,7 +1571,7 @@ ${field("Note", "August bank fee", null, { icon: "notebook-pen", opt: true })}
     });
   }
   const sheet = sheetWrap(
-    `<div class="stack-sm"><div class="segment"><button>Increase</button><button aria-pressed="true">Decrease</button></div>
+    `<div class="stack-sm"><div class="segment"><button>Increase balance</button><button aria-pressed="true">Decrease balance</button></div>
 <div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">12,300</span><span class="caret"></span></div></div>
 <div class="alert neutral" style="align-items:center">${iconSvg("scale")}<span>Recorded on <b>Sep 21</b>, it took <b class="amount">${money(12300, "−")}</b> off Bancolombia. Changing the amount rewrites that difference, not today's balance.</span></div>
 ${field("Note", "August bank fee", null, { opt: true })}

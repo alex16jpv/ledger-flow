@@ -77,6 +77,17 @@ let listResponses: (() => Response)[] = [];
 function routeFetch() {
   fetchMock.mockImplementation((input) => {
     const url = urlOf(input);
+    if (url.includes("/api/accounts/a1"))
+      return Promise.resolve(
+        json({
+          id: "a1",
+          name: "Bancolombia",
+          type: "ACCOUNT",
+          balance: 1,
+          isDefault: true,
+          color: "BLUE",
+        }),
+      );
     if (url.includes("/api/accounts"))
       return Promise.resolve(
         json({
@@ -182,7 +193,7 @@ describe("TransactionsScreen", () => {
 
     const sheet = await screen.findByRole("dialog", { name: "Edit adjustment" });
     expect(within(sheet).getByRole("textbox", { name: "Amount" })).toHaveValue("12,300");
-    expect(within(sheet).getByText(/off Bancolombia/)).toBeVisible();
+    expect(await within(sheet).findByText(/off Bancolombia/)).toBeVisible();
     expect(push).not.toHaveBeenCalled();
 
     await userEvent.click(within(sheet).getByRole("button", { name: "Close" }));

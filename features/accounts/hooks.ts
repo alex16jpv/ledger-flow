@@ -29,8 +29,12 @@ export function useAccountsQuery(includeArchived = false, enabled = true) {
   });
 }
 
-export function useAccountQuery(id: string) {
-  return useQuery({ queryKey: accountKeys.detail(id), queryFn: () => fetchAccount(id) });
+export function useAccountQuery(id: string, enabled = true) {
+  return useQuery({
+    queryKey: accountKeys.detail(id),
+    queryFn: () => fetchAccount(id),
+    enabled,
+  });
 }
 
 function useAccountInvalidation() {

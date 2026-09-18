@@ -1,7 +1,6 @@
 "use client";
 
 import { CircleAlert, Hash, Pencil, Repeat, Scale, Trash2 } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { createElement, type ReactNode, useMemo, useState } from "react";
 
@@ -20,7 +19,6 @@ import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery } from "@/features/categories/hooks";
-import { type EditingAdjustment, editingAdjustment } from "@/features/transactions/adjustments";
 import { DeleteTransactionSheet } from "@/features/transactions/components/DeleteTransactionSheet";
 import {
   type TransactionLookups,
@@ -38,10 +36,7 @@ import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { useBackNavigation } from "@/lib/navigation/history";
 import type { Account } from "@/types/api";
 
-// The sheet is opened on demand, so it is not in the initial load of every screen that lists a row.
-const AdjustBalanceSheet = dynamic(() =>
-  import("../../AdjustBalanceSheet").then((module) => module.AdjustBalanceSheet),
-);
+import { useAdjustmentSheet } from "../../useAdjustmentSheet";
 
 function Attribute({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -77,7 +72,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
   const outbox = useOutbox();
   const [confirming, setConfirming] = useState(false);
   const [resolving, setResolving] = useState(false);
-  const [adjusting, setAdjusting] = useState<EditingAdjustment | null>(null);
+  const adjustment = useAdjustmentSheet();
   // F-29: DESIGN §8.12 asks for the conflict sheet from Movements; the way in is here, not a row.
   const stuck = outbox.attentionRows.get(id) ?? null;
   const notFound = transaction.error instanceof ApiError && transaction.error.status === 404;
@@ -101,7 +96,6 @@ export function TransactionDetailScreen({ id }: { id: string }) {
   }
 
   const row = transaction.data;
-  const editable = row ? editingAdjustment(row, lookups.accounts) : null;
   const category = row ? lookups.categories.get(row.categoryId ?? "") : undefined;
   const from = row ? lookups.accounts.get(row.fromAccountId ?? "") : undefined;
   const to = row ? lookups.accounts.get(row.toAccountId ?? "") : undefined;
@@ -275,9 +269,8 @@ export function TransactionDetailScreen({ id }: { id: string }) {
               <Button
                 variant="secondary"
                 size="lg"
-                disabled={editable === null}
                 onClick={() => {
-                  setAdjusting(editable);
+                  adjustment.opened(row);
                 }}
               >
                 <Pencil {...iconProps("sm")} />
@@ -325,16 +318,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
           setConfirming(false);
         }}
       />
-      {adjusting && (
-        <AdjustBalanceSheet
-          account={adjusting.account}
-          adjustment={adjusting.transaction}
-          open
-          onClose={() => {
-            setAdjusting(null);
-          }}
-        />
-      )}
+      {adjustment.sheet}
       <SyncConflictSheet
         open={resolving}
         seq={stuck}

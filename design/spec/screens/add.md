@@ -144,14 +144,20 @@ never as "+$500,000", because on a card more is not better.
 **Each side is said in the vocabulary of the account it names**, which is what makes the sentence
 general enough to cover every transfer and not only paying a card (`#full-form-transfer-plain`):
 
-| The side is                    | Money leaves it                | Money arrives at it            |
-| ------------------------------ | ------------------------------ | ------------------------------ |
-| an ordinary account            | "Bancolombia −$300,000"        | "Savings +$300,000"            |
-| a debt — card, overdraft, loan | "Visa Gold $300,000 more owed" | "Visa Gold $300,000 less owed" |
+| The side is                      | Money leaves it                | Money arrives at it            |
+| -------------------------------- | ------------------------------ | ------------------------------ |
+| an ordinary account              | "Bancolombia −$300,000"        | "Savings +$300,000"            |
+| a debt that owes something       | "Visa Gold $300,000 more owed" | "Visa Gold $300,000 less owed" |
+| a debt holding money of your own | "Visa Gold −$300,000"          | "Visa Gold +$300,000"          |
 
 A cash advance — money out of the card and into the bank — is the case the fourth cell exists for, and
-it is why the debt side is never a sign: on a card the direction and the good news point opposite
-ways. The sentence appears only when the amount and both accounts are there; before that there is
+it is why the debt side is never a sign while something is owed: on a card the direction and the good
+news point opposite ways. **The last row is not a corner case today**: a card reads that way until its
+owner has recorded what it owes, which is what the one-off script of T-90 repairs, so it is the state
+every card in the product is in. Saying "less owed" about a card that owes nothing would contradict
+the account's own card one screen away, which says _$100,000 of your own money sitting on it_. Which
+row applies is the sign the whole product already reads — negative is a debt — so the sentence still
+computes nothing. The sentence appears only when the amount and both accounts are there; before that there is
 nothing to read back.
 
 **It costs nothing but the sentence.** It repeats the amount just typed and the two names just picked —

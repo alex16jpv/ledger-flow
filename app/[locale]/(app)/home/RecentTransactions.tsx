@@ -1,9 +1,8 @@
 "use client";
 
 import { Inbox } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { ADD_HREF } from "@/components/shell";
 import { buttonClasses } from "@/components/ui/Button";
@@ -14,7 +13,6 @@ import { List } from "@/components/ui/Row";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery } from "@/features/categories/hooks";
-import { type EditingAdjustment, editingAdjustment } from "@/features/transactions/adjustments";
 import {
   type TransactionLookups,
   TransactionRow,
@@ -23,16 +21,13 @@ import { useRecentTransactions } from "@/features/transactions/hooks";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 
-// The sheet is opened on demand, so it is not in the initial load of every screen that lists a row.
-const AdjustBalanceSheet = dynamic(() =>
-  import("../AdjustBalanceSheet").then((module) => module.AdjustBalanceSheet),
-);
+import { useAdjustmentSheet } from "../useAdjustmentSheet";
 
 export function RecentTransactions() {
   const t = useTranslations();
   const router = useRouter();
   const recent = useRecentTransactions();
-  const [adjusting, setAdjusting] = useState<EditingAdjustment | null>(null);
+  const adjustment = useAdjustmentSheet();
   const accounts = useAccountsQuery(true);
   const categories = useCategoriesQuery(undefined);
   const lookups = useMemo<TransactionLookups>(
@@ -85,25 +80,14 @@ export function RecentTransactions() {
                 transaction={transaction}
                 lookups={lookups}
                 onOpen={(row) => {
-                  const editing = editingAdjustment(row, lookups.accounts);
-                  if (editing) setAdjusting(editing);
-                  else router.push(`/transactions/${row.id}`);
+                  if (!adjustment.opened(row)) router.push(`/transactions/${row.id}`);
                 }}
               />
             ))}
           </List>
         )}
       </Card>
-      {adjusting && (
-        <AdjustBalanceSheet
-          account={adjusting.account}
-          adjustment={adjusting.transaction}
-          open
-          onClose={() => {
-            setAdjusting(null);
-          }}
-        />
-      )}
+      {adjustment.sheet}
     </section>
   );
 }

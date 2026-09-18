@@ -260,6 +260,25 @@ describe("NewTransactionScreen", () => {
     });
   });
 
+  // A category belongs to one type, so the switch has to put it aside, not throw it away.
+  it("gives each type back the category chosen under it", async () => {
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: /^Category/ }));
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "Category" })).getByRole("option", {
+        name: /Food/,
+      }),
+    );
+    expect(screen.getByRole("button", { name: /Category.*Food/ })).toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(screen.queryByRole("button", { name: /Category.*Food/ })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Expense" }));
+    expect(screen.getByRole("button", { name: /Category.*Food/ })).toBeVisible();
+  });
+
   it("offers no intent chip for a kind of account nobody has", async () => {
     render(<NewTransactionScreen />);
     await screen.findByRole("group", { name: "Type" });

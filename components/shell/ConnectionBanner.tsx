@@ -11,7 +11,6 @@ import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { connectivityStore } from "@/lib/network/connectivity";
 import { localOnlyStore } from "@/lib/network/local-only";
 
-// The shell shows this banner on every screen; resolving a conflict is rare, so its sheet waits.
 const SyncConflictSheet = dynamic(() =>
   import("./SyncConflictSheet").then((module) => module.SyncConflictSheet),
 );

@@ -8,12 +8,14 @@ import { DEBT_ACCOUNT_TYPES } from "@/lib/accounts/debt";
 import { useMoney } from "@/lib/i18n/useMoney";
 import type { Account } from "@/types/api";
 
-type ReadbackAccount = Pick<Account, "name" | "type">;
+type ReadbackAccount = Pick<Account, "name" | "type" | "balance">;
 
 export type SideKey = "leaves" | "arrives" | "lessOwed" | "moreOwed";
 
+// A card or a loan can hold money of your own, and then there is no debt to say less or more of.
 export function sideKey(account: ReadbackAccount, arrives: boolean): SideKey {
-  if (!DEBT_ACCOUNT_TYPES.has(account.type)) return arrives ? "arrives" : "leaves";
+  const owing = DEBT_ACCOUNT_TYPES.has(account.type) && account.balance < 0;
+  if (!owing) return arrives ? "arrives" : "leaves";
   return arrives ? "lessOwed" : "moreOwed";
 }
 

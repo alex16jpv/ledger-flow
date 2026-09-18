@@ -89,7 +89,6 @@ export function EditTransactionScreen({ id }: { id: string }) {
   const row = transaction.data;
   const elsewhere = row !== undefined && !isFormTransaction(row);
 
-  // T-85: an adjustment is edited in the account's own sheet, which the detail screen opens.
   useEffect(() => {
     if (elsewhere) router.replace(`/transactions/${id}`);
   }, [elsewhere, id, router]);

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "./cn";
 
-export type SegmentTone = "default" | "income" | "transfer" | "adjustment";
+export type SegmentTone = "default" | "income" | "transfer";
 
 export interface SegmentOption<T extends string> {
   value: T;
@@ -25,7 +25,6 @@ const TONE: Record<SegmentTone, string> = {
   default: "aria-pressed:text-text",
   income: "aria-pressed:text-income",
   transfer: "aria-pressed:text-transfer",
-  adjustment: "aria-pressed:text-adjustment",
 };
 
 export function Segment<T extends string>({

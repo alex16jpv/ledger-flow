@@ -1277,7 +1277,7 @@
       "amount": "Importe",
       "category": "Categoría",
       "categoryOptional": "Categoría (opcional)",
-      "transferCategoryHelp": "Aquí solo se ofrecen las categorías que marcaste como Transfer.",
+      "transferCategoryHelp": "Aquí solo se ofrecen las categorías de tipo Transferencia.",
       "account": "Cuenta",
       "from": "Desde",
       "to": "Hacia",

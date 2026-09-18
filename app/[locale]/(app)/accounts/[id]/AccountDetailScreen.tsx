@@ -10,7 +10,6 @@ import {
   Scale,
   Star,
 } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -37,7 +36,6 @@ import {
 } from "@/features/accounts/hooks";
 import { findActiveByName } from "@/features/accounts/summary";
 import { useCategoriesQuery } from "@/features/categories/hooks";
-import { type EditingAdjustment, editingAdjustment } from "@/features/transactions/adjustments";
 import { TransactionDayList } from "@/features/transactions/components/TransactionDayList";
 import type { TransactionLookups } from "@/features/transactions/components/TransactionRow";
 import { useTransactionsInfinite } from "@/features/transactions/hooks";
@@ -46,10 +44,8 @@ import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
 
-// The sheet is opened on demand, so it is not in the initial load of every screen that lists a row.
-const AdjustBalanceSheet = dynamic(() =>
-  import("../../AdjustBalanceSheet").then((module) => module.AdjustBalanceSheet),
-);
+import { AdjustBalanceSheet } from "../../AdjustBalanceSheet";
+import { useAdjustmentSheet } from "../../useAdjustmentSheet";
 import { PaySheet } from "./PaySheet";
 
 type OpenSheet = "adjust" | "pay" | "main" | "archive" | "conflict" | null;
@@ -69,7 +65,7 @@ export function AccountDetailScreen({ id }: { id: string }) {
   const archive = useArchiveAccount();
   const restore = useRestoreAccount();
   const [sheet, setSheet] = useState<OpenSheet>(null);
-  const [adjusting, setAdjusting] = useState<EditingAdjustment | null>(null);
+  const adjustment = useAdjustmentSheet();
   const notFound = account.error instanceof ApiError && account.error.status === 404;
   const lookups = useMemo<TransactionLookups>(
     () => ({
@@ -331,9 +327,8 @@ export function AccountDetailScreen({ id }: { id: string }) {
                   transactions={rows}
                   lookups={lookups}
                   onOpen={(transaction) => {
-                    const editing = editingAdjustment(transaction, lookups.accounts);
-                    if (editing) setAdjusting(editing);
-                    else router.push(`/transactions/${transaction.id}`);
+                    if (!adjustment.opened(transaction))
+                      router.push(`/transactions/${transaction.id}`);
                   }}
                 />
                 {transactions.hasNextPage && (
@@ -370,16 +365,7 @@ export function AccountDetailScreen({ id }: { id: string }) {
               }}
             />
           )}
-          {adjusting && (
-            <AdjustBalanceSheet
-              account={adjusting.account}
-              adjustment={adjusting.transaction}
-              open
-              onClose={() => {
-                setAdjusting(null);
-              }}
-            />
-          )}
+          {adjustment.sheet}
           <MakeMainSheet
             account={row}
             previous={previousMain}

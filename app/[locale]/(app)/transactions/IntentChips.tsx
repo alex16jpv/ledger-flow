@@ -23,7 +23,7 @@ const INTENT_ICON: Record<Intent["key"], Account["type"]> = {
   savings: "SAVINGS",
 };
 
-export function intentOf(to: Account | null | undefined): Intent["key"] | null {
+function intentOf(to: Account | null | undefined): Intent["key"] | null {
   if (!to) return null;
   return INTENTS.find((intent) => intent.types.has(to.type))?.key ?? null;
 }
@@ -31,11 +31,12 @@ export function intentOf(to: Account | null | undefined): Intent["key"] | null {
 export interface IntentChipsProps {
   accounts: readonly Account[];
   main: Account | null;
+  from: Account | null;
   to: Account | null;
   onFill: (sides: { from: Account | null; to: Account }) => void;
 }
 
-export function IntentChips({ accounts, main, to, onFill }: IntentChipsProps) {
+export function IntentChips({ accounts, main, from, to, onFill }: IntentChipsProps) {
   const t = useTranslations();
   const [asking, setAsking] = useState<Intent | null>(null);
   const selected = intentOf(to);
@@ -47,7 +48,8 @@ export function IntentChips({ accounts, main, to, onFill }: IntentChipsProps) {
   if (offered.length === 0) return null;
 
   function fill(target: Account) {
-    onFill({ from: main && main.id !== target.id ? main : null, to: target });
+    const source = main?.id === target.id ? from : main;
+    onFill({ from: source?.id === target.id ? null : (source ?? null), to: target });
   }
 
   return (

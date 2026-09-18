@@ -2,7 +2,6 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, Inbox, Search, SlidersHorizontal, WifiOff } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -19,7 +18,6 @@ import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery } from "@/features/categories/hooks";
-import { type EditingAdjustment, editingAdjustment } from "@/features/transactions/adjustments";
 import { PeriodSummary } from "@/features/transactions/components/PeriodSummary";
 import { TransactionDayList } from "@/features/transactions/components/TransactionDayList";
 import type { TransactionLookups } from "@/features/transactions/components/TransactionRow";
@@ -47,10 +45,7 @@ import { Link, useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 
-// The sheet is opened on demand, so it is not in the initial load of every screen that lists a row.
-const AdjustBalanceSheet = dynamic(() =>
-  import("../AdjustBalanceSheet").then((module) => module.AdjustBalanceSheet),
-);
+import { useAdjustmentSheet } from "../useAdjustmentSheet";
 import { FiltersSheet } from "./FiltersSheet";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -73,7 +68,7 @@ export function TransactionsScreen() {
   const categories = useCategoriesQuery();
   const [search, setSearch] = useState(filters.q);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [adjusting, setAdjusting] = useState<EditingAdjustment | null>(null);
+  const adjustment = useAdjustmentSheet();
   const sentinel = useRef<HTMLDivElement>(null);
 
   const lookups = useMemo<TransactionLookups>(
@@ -328,9 +323,7 @@ export function TransactionsScreen() {
             lookups={lookups}
             dayTotals={totals?.byDay}
             onOpen={(transaction) => {
-              const editing = editingAdjustment(transaction, lookups.accounts);
-              if (editing) setAdjusting(editing);
-              else router.push(`/transactions/${transaction.id}`);
+              if (!adjustment.opened(transaction)) router.push(`/transactions/${transaction.id}`);
             }}
           />
           <div ref={sentinel} aria-hidden="true" className="h-px" />
@@ -348,16 +341,7 @@ export function TransactionsScreen() {
           )}
         </>
       )}
-      {adjusting && (
-        <AdjustBalanceSheet
-          account={adjusting.account}
-          adjustment={adjusting.transaction}
-          open
-          onClose={() => {
-            setAdjusting(null);
-          }}
-        />
-      )}
+      {adjustment.sheet}
       {filtersOpen && (
         <FiltersSheet
           open

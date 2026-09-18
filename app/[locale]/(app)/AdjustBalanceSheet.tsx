@@ -12,7 +12,12 @@ import { Field, Input } from "@/components/ui/Field";
 import { Segment } from "@/components/ui/Segment";
 import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
-import { type AdjustmentDirection, directionOf } from "@/features/transactions/adjustments";
+import { useAccountQuery } from "@/features/accounts/hooks";
+import {
+  adjustmentAccountId,
+  type AdjustmentDirection,
+  directionOf,
+} from "@/features/transactions/adjustments";
 import { DeleteTransactionSheet } from "@/features/transactions/components/DeleteTransactionSheet";
 import { TEXT_MAX } from "@/features/transactions/form";
 import {
@@ -39,8 +44,6 @@ export interface AdjustBalanceSheetProps {
   account: Account;
   open: boolean;
   onClose: () => void;
-  // T-89: the same sheet edits an existing adjustment, and then it asks about its own amount.
-  adjustment?: Transaction;
 }
 
 // The design asks for the delta on screen: actual minus recorded, rounded to the currency. The server still books it.
@@ -84,21 +87,7 @@ export function adjustmentChanges(
   };
 }
 
-export function AdjustBalanceSheet({
-  account,
-  open,
-  onClose,
-  adjustment,
-}: AdjustBalanceSheetProps) {
-  if (adjustment) {
-    return (
-      <EditAdjustment account={account} open={open} onClose={onClose} adjustment={adjustment} />
-    );
-  }
-  return <CreateAdjustment account={account} open={open} onClose={onClose} />;
-}
-
-function CreateAdjustment({ account, open, onClose }: Omit<AdjustBalanceSheetProps, "adjustment">) {
+export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceSheetProps) {
   const t = useTranslations();
   const money = useMoney();
   const toast = useToast();
@@ -203,25 +192,28 @@ function CreateAdjustment({ account, open, onClose }: Omit<AdjustBalanceSheetPro
   );
 }
 
-function EditAdjustment({
-  account,
-  open,
-  onClose,
-  adjustment,
-}: AdjustBalanceSheetProps & { adjustment: Transaction }) {
+export interface EditAdjustmentSheetProps {
+  adjustment: Transaction;
+  open: boolean;
+  onClose: () => void;
+}
+
+export function EditAdjustmentSheet({ adjustment, open, onClose }: EditAdjustmentSheetProps) {
   const t = useTranslations();
   const money = useMoney();
   const dates = useDates();
   const toast = useToast();
   const update = useUpdateTransaction(adjustment.id);
   const remove = useDeleteTransaction();
+  const accountId = adjustmentAccountId(adjustment) ?? "";
+  const account = useAccountQuery(accountId, accountId !== "").data;
   const [amount, setAmount] = useState<number | null>(adjustment.amount);
   const [direction, setDirection] = useState<AdjustmentDirection>(directionOf(adjustment));
   const [note, setNote] = useState(adjustment.note ?? "");
   const [confirming, setConfirming] = useState(false);
   const error = update.error ? presentError(update.error) : null;
   const changes =
-    amount === null || amount <= 0
+    amount === null || amount <= 0 || !account
       ? null
       : adjustmentChanges(adjustment, account, amount, direction, note);
 
@@ -305,20 +297,22 @@ function EditAdjustment({
               className="py-4"
             />
           </Card>
-          <Alert tone="neutral" icon={Scale}>
-            {t(
-              directionOf(adjustment) === "decrease"
-                ? "accounts.adjust.editTook"
-                : "accounts.adjust.editAdded",
-              {
-                date: dates.formatDay(new Date(adjustment.date)),
-                amount:
-                  (directionOf(adjustment) === "decrease" ? "−" : "+") +
-                  money.format(adjustment.amount),
-                name: account.name,
-              },
-            )}
-          </Alert>
+          {account && (
+            <Alert tone="neutral" icon={Scale}>
+              {t(
+                directionOf(adjustment) === "decrease"
+                  ? "accounts.adjust.editTook"
+                  : "accounts.adjust.editAdded",
+                {
+                  date: dates.formatDay(new Date(adjustment.date)),
+                  amount:
+                    (directionOf(adjustment) === "decrease" ? "−" : "+") +
+                    money.format(adjustment.amount),
+                  name: account.name,
+                },
+              )}
+            </Alert>
+          )}
           <Field label={t("accounts.adjust.note")} optional>
             <Input
               value={note}

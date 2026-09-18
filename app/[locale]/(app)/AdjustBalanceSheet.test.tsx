@@ -2,13 +2,17 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
-import { editingAdjustment } from "@/features/transactions/adjustments";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 import type { Account, Transaction } from "@/types/api";
 
-import { AdjustBalanceSheet, adjustmentChanges, adjustmentInput } from "./AdjustBalanceSheet";
+import {
+  AdjustBalanceSheet,
+  adjustmentChanges,
+  adjustmentInput,
+  EditAdjustmentSheet,
+} from "./AdjustBalanceSheet";
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { headers: { "content-type": "application/json" }, ...init });
@@ -95,7 +99,7 @@ describe("AdjustBalanceSheet", () => {
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();
     });
-    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    const [url, init] = writes()[0] ?? [];
     expect(url).toBe("/api/transactions");
     expect(new Headers(init?.headers).get("Idempotency-Key")).toBeNull();
     expect(JSON.parse(init?.body as string)).toMatchObject({
@@ -155,33 +159,36 @@ const adjustment: Transaction = {
   updatedAt: "",
 };
 
-function renderSheet(props: Partial<React.ComponentProps<typeof AdjustBalanceSheet>> = {}) {
+function urlOf(input: string | URL | Request): string {
+  if (typeof input === "string") return input;
+  return input instanceof URL ? input.href : input.url;
+}
+
+// The editing sheet reads the account the adjustment names, so a write is not the only route.
+function routeEditing(write: () => Response) {
+  fetchMock.mockImplementation((input, init) =>
+    Promise.resolve(
+      (init?.method ?? "GET") === "GET" && urlOf(input).includes("/api/accounts/")
+        ? json(account)
+        : write(),
+    ),
+  );
+}
+
+const writes = () => fetchMock.mock.calls.filter(([, init]) => (init?.method ?? "GET") !== "GET");
+
+async function renderEditing(row: Transaction = adjustment) {
   const onClose = vi.fn();
   renderWithProviders(
     <QueryProvider>
       <ToastProvider>
-        <AdjustBalanceSheet account={account} open onClose={onClose} {...props} />
+        <EditAdjustmentSheet adjustment={row} open onClose={onClose} />
       </ToastProvider>
     </QueryProvider>,
   );
+  await screen.findByText(/Recorded on/);
   return { onClose };
 }
-
-describe("editingAdjustment", () => {
-  const accounts = new Map([[account.id, account]]);
-
-  it("claims an adjustment on a known account and nothing else", () => {
-    expect(editingAdjustment(adjustment, accounts)).toEqual({ transaction: adjustment, account });
-    expect(
-      editingAdjustment({ ...adjustment, fromAccountId: null, toAccountId: "banco" }, accounts),
-    ).toEqual({
-      transaction: { ...adjustment, fromAccountId: null, toAccountId: "banco" },
-      account,
-    });
-    expect(editingAdjustment({ ...adjustment, type: "EXPENSE" }, accounts)).toBeNull();
-    expect(editingAdjustment(adjustment, new Map())).toBeNull();
-  });
-});
 
 describe("adjustmentChanges", () => {
   it("sends only what moved, and both sides when the direction did", () => {
@@ -204,8 +211,8 @@ describe("adjustmentChanges", () => {
 // T-85: editing works on the adjustment's own amount, never on today's balance.
 describe("AdjustBalanceSheet, editing one", () => {
   it("asks about its own amount, says what it did, and sends only the change", async () => {
-    fetchMock.mockResolvedValue(json({ ...adjustment, amount: 9_000 }));
-    const { onClose } = renderSheet({ adjustment });
+    routeEditing(() => json({ ...adjustment, amount: 9_000 }));
+    const { onClose } = await renderEditing();
 
     expect(screen.getByRole("dialog", { name: "Edit adjustment" })).toBeVisible();
     expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("12,300");
@@ -223,7 +230,7 @@ describe("AdjustBalanceSheet, editing one", () => {
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();
     });
-    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    const [url, init] = writes()[0] ?? [];
     expect(url).toBe("/api/transactions/t7");
     expect(init?.method).toBe("PUT");
     expect(JSON.parse(init?.body as string)).toEqual({ amount: 9_000 });
@@ -231,23 +238,23 @@ describe("AdjustBalanceSheet, editing one", () => {
   });
 
   it("turns a decrease into an increase by moving the side, not the amount", async () => {
-    fetchMock.mockResolvedValue(json(adjustment));
-    renderSheet({ adjustment });
+    routeEditing(() => json(adjustment));
+    await renderEditing();
 
     await userEvent.click(screen.getByRole("button", { name: "Increase balance" }));
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalled();
+      expect(writes()).toHaveLength(1);
     });
-    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+    expect(JSON.parse(writes()[0]?.[1]?.body as string)).toEqual({
       fromAccountId: null,
       toAccountId: "banco",
     });
   });
 
   it("deletes it after confirming", async () => {
-    fetchMock.mockResolvedValue(json({ message: "ok" }));
-    const { onClose } = renderSheet({ adjustment });
+    routeEditing(() => json({ message: "ok" }));
+    const { onClose } = await renderEditing();
 
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     const confirm = screen.getByRole("dialog", { name: "Delete this transaction?" });
@@ -255,15 +262,16 @@ describe("AdjustBalanceSheet, editing one", () => {
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();
     });
-    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("DELETE");
+    expect(writes()[0]?.[1]?.method).toBe("DELETE");
   });
 
   it("saves nothing when nothing moved", async () => {
-    const { onClose } = renderSheet({ adjustment });
+    routeEditing(() => json({ message: "unexpected" }, { status: 500 }));
+    const { onClose } = await renderEditing();
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();
     });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(writes()).toHaveLength(0);
   });
 });

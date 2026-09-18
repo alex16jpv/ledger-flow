@@ -81,6 +81,7 @@ export function TransactionForm({
   );
   const tags = useTagsQuery();
   const keyring = useRef(new IdempotencyKeyring());
+  const chosenPerType = useRef<Partial<Record<FormTransactionType, string | null>>>({});
   const amountInput = useRef<HTMLInputElement>(null);
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
@@ -131,9 +132,11 @@ export function TransactionForm({
   }
 
   function changeType(next: FormTransactionType) {
+    // A category belongs to one type, and the server refuses it on another: each type keeps its own.
+    chosenPerType.current[type] = form.getValues("categoryId");
     // `shouldDirty` because an edit sends only dirty fields, and this is still the user's change.
     form.setValue("type", next, { shouldDirty: true });
-    form.setValue("categoryId", null, { shouldDirty: true });
+    form.setValue("categoryId", chosenPerType.current[next] ?? null, { shouldDirty: true });
     form.clearErrors();
   }
 
@@ -212,6 +215,7 @@ export function TransactionForm({
           <IntentChips
             accounts={known}
             main={known.find((account) => account.isDefault) ?? null}
+            from={accountOf(fromAccountId)}
             to={accountOf(toAccountId)}
             onFill={({ from, to }) => {
               form.setValue("fromAccountId", from?.id ?? null, { shouldDirty: true });

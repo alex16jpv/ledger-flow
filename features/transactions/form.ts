@@ -15,7 +15,6 @@ export const TRANSACTION_TYPES = [
   "ADJUSTMENT",
 ] as const satisfies readonly CreateTransactionInput["type"][];
 
-// T-85: an adjustment repairs a balance, so it is made and edited in the account, not in this form.
 export const FORM_TYPES = [
   "EXPENSE",
   "INCOME",
