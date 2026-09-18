@@ -16,6 +16,7 @@ import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { CategoryPickerSheet } from "@/features/categories/components/CategoryPickerSheet";
 import { useCategoriesQuery, useRecentCategories } from "@/features/categories/hooks";
+import { TypeLine } from "@/features/transactions/components/TypeLine";
 import { useDeleteTransaction, useQuickAdd } from "@/features/transactions/hooks";
 import {
   draftToSearchParams,
@@ -47,13 +48,8 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
   const [type, setType] = useState<QuickAddType>("EXPENSE");
   const transfer = type === "TRANSFER";
   const accounts = useAccountsQuery(false, open);
-  const categories = useCategoriesQuery(transfer ? undefined : type, open && !transfer);
-  const recent = useRecentCategories(
-    transfer ? undefined : type,
-    categories.data,
-    QUICK_RECENT_LIMIT,
-    open,
-  );
+  const categories = useCategoriesQuery(type, open);
+  const recent = useRecentCategories(type, categories.data, QUICK_RECENT_LIMIT, open);
   const quickAdd = useQuickAdd();
   const remove = useDeleteTransaction();
 
@@ -237,6 +233,7 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
             onChange={changeType}
             label={t("transactions.form.type")}
           />
+          <TypeLine type={type} />
           <div className="flex flex-col gap-1">
             <AmountInput
               key={amountKey}
@@ -253,38 +250,36 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
               </span>
             )}
           </div>
-          {!transfer && (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between text-sm">
-                <span className="font-medium text-text-2">{t("transactions.quick.category")}</span>
-                <span className="text-text-3">{t("transactions.quick.categoryHint")}</span>
-              </div>
-              <ChipRow role="group" aria-label={t("transactions.quick.category")}>
-                {chips.map((category) => (
-                  <CategoryChip
-                    key={category.id}
-                    color={category.color}
-                    selected={category.id === categoryId}
-                    icon={<CategoryIcon icon={category.icon} size="sm" />}
-                    onClick={() => {
-                      setCategoryId(category.id === categoryId ? null : category.id);
-                    }}
-                  >
-                    {category.name}
-                  </CategoryChip>
-                ))}
-                <Chip
-                  icon={<MoreHorizontal {...iconProps("sm")} />}
-                  aria-haspopup="dialog"
+          <div className="flex flex-col gap-2">
+            <div className="flex items-baseline justify-between text-sm">
+              <span className="font-medium text-text-2">{t("transactions.quick.category")}</span>
+              <span className="text-text-3">{t("transactions.quick.categoryHint")}</span>
+            </div>
+            <ChipRow role="group" aria-label={t("transactions.quick.category")}>
+              {chips.map((category) => (
+                <CategoryChip
+                  key={category.id}
+                  color={category.color}
+                  selected={category.id === categoryId}
+                  icon={<CategoryIcon icon={category.icon} size="sm" />}
                   onClick={() => {
-                    setPickerOpen(true);
+                    setCategoryId(category.id === categoryId ? null : category.id);
                   }}
                 >
-                  {t("common.more")}
-                </Chip>
-              </ChipRow>
-            </div>
-          )}
+                  {category.name}
+                </CategoryChip>
+              ))}
+              <Chip
+                icon={<MoreHorizontal {...iconProps("sm")} />}
+                aria-haspopup="dialog"
+                onClick={() => {
+                  setPickerOpen(true);
+                }}
+              >
+                {t("common.more")}
+              </Chip>
+            </ChipRow>
+          </div>
           <div className="flex flex-col gap-1">
             <AccountPicker
               label={
@@ -358,19 +353,18 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
           />
         </form>
       </Sheet>
-      {!transfer && (
-        <CategoryPickerSheet
-          open={pickerOpen}
-          onClose={() => {
-            setPickerOpen(false);
-          }}
-          type={type}
-          value={categoryId}
-          onSelect={(category) => {
-            setCategoryId(category.id);
-          }}
-        />
-      )}
+      <CategoryPickerSheet
+        open={pickerOpen}
+        onClose={() => {
+          setPickerOpen(false);
+        }}
+        type={type}
+        value={categoryId}
+        allowCreate={!transfer}
+        onSelect={(category) => {
+          setCategoryId(category.id);
+        }}
+      />
     </>
   );
 }

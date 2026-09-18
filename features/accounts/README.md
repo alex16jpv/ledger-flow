@@ -66,3 +66,8 @@ TRANSFER category. It writes a TRANSFER towards the account — paying a debt me
 picker carries one row that is not an account, for money the app does not track; that writes a
 one-sided ADJUSTMENT, never an income, because an income would lift _Income this month_ and
 _Estimated savings_ by money nobody earned.
+
+`AccountPicker` is the `Picker` row and `AccountPickerSheet` the list behind it, split the way the
+category picker already was (T-89): the sheet is opened on its own by the transfer intent chips, which
+need it filtered to a kind of account (`only`). `PaySheet` reads its movement back through the shared
+`TransferReadback`, so the sentence is the same one the transaction form shows.

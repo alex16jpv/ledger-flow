@@ -44,7 +44,8 @@ import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
 
-import { AdjustBalanceSheet } from "./AdjustBalanceSheet";
+import { AdjustBalanceSheet } from "../../AdjustBalanceSheet";
+import { useAdjustmentSheet } from "../../useAdjustmentSheet";
 import { PaySheet } from "./PaySheet";
 
 type OpenSheet = "adjust" | "pay" | "main" | "archive" | "conflict" | null;
@@ -64,6 +65,7 @@ export function AccountDetailScreen({ id }: { id: string }) {
   const archive = useArchiveAccount();
   const restore = useRestoreAccount();
   const [sheet, setSheet] = useState<OpenSheet>(null);
+  const adjustment = useAdjustmentSheet();
   const notFound = account.error instanceof ApiError && account.error.status === 404;
   const lookups = useMemo<TransactionLookups>(
     () => ({
@@ -325,7 +327,8 @@ export function AccountDetailScreen({ id }: { id: string }) {
                   transactions={rows}
                   lookups={lookups}
                   onOpen={(transaction) => {
-                    router.push(`/transactions/${transaction.id}`);
+                    if (!adjustment.opened(transaction))
+                      router.push(`/transactions/${transaction.id}`);
                   }}
                 />
                 {transactions.hasNextPage && (
@@ -362,6 +365,7 @@ export function AccountDetailScreen({ id }: { id: string }) {
               }}
             />
           )}
+          {adjustment.sheet}
           <MakeMainSheet
             account={row}
             previous={previousMain}

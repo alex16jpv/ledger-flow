@@ -1571,7 +1571,7 @@ ${field("Note", "August bank fee", null, { icon: "notebook-pen", opt: true })}
     });
   }
   const sheet = sheetWrap(
-    `<div class="stack-sm"><div class="segment"><button>Increase</button><button aria-pressed="true">Decrease</button></div>
+    `<div class="stack-sm"><div class="segment"><button>Increase balance</button><button aria-pressed="true">Decrease balance</button></div>
 <div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">12,300</span><span class="caret"></span></div></div>
 <div class="alert neutral" style="align-items:center">${iconSvg("scale")}<span>Recorded on <b>Sep 21</b>, it took <b class="amount">${money(12300, "−")}</b> off Bancolombia. Changing the amount rewrites that difference, not today's balance.</span></div>
 ${field("Note", "August bank fee", null, { opt: true })}
@@ -3555,6 +3555,18 @@ const TWO_SIDES = readbackLine(
   `Bancolombia <b class="amount">${money(PAY_AMOUNT, "−")}</b> · Visa Gold <b class="amount">${money(PAY_AMOUNT)}</b> less owed. <b>Your total balance does not change.</b>`,
 );
 
+const SAVINGS_AMOUNT = 300000;
+const SAVINGS_BAL = 8900000;
+
+const PLAIN_SIDES = {
+  from: ["landmark", "BLUE", `Bancolombia · ${moneyText(BANCO_BAL)}`],
+  to: ["piggy-bank", "GREEN", `Savings · ${moneyText(SAVINGS_BAL)}`],
+};
+
+const PLAIN_TWO_SIDES = readbackLine(
+  `Bancolombia <b class="amount">${money(SAVINGS_AMOUNT, "−")}</b> · Savings <b class="amount">${money(SAVINGS_AMOUNT, "+")}</b>. <b>Your total balance does not change.</b>`,
+);
+
 const projectedFigure = (inner) =>
   `<span class="projected"><b class="amount">${inner}</b><span class="tooltip">${iconSvg("cloud-off")}<span class="tip">Includes changes not yet synced</span></span></span>`;
 
@@ -3563,12 +3575,17 @@ const NEW_BALANCES = readbackLine(
   `\n<span class="help">Worked out on this device from the balances it holds, not sent by the server.</span>`,
 );
 
-const intentChips = (only) =>
+const intentChip = (icon, label, selected) =>
+  `<button class="chip${selected ? " selected" : ""}">${iconSvg(icon, "sm")}${label}</button>`;
+
+const intentChips = (only, taken = "card") =>
   `<div class="stack-sm"><span class="label">What are you doing? <span class="opt">optional</span></span>
 <div class="chips">${
     only
-      ? `<button class="chip selected">${iconSvg("credit-card", "sm")}Pay a card or a loan</button>`
-      : `<button class="chip selected">${iconSvg("credit-card", "sm")}Pay a card</button><button class="chip">${iconSvg("car", "sm")}Pay a loan</button><button class="chip">${iconSvg("piggy-bank", "sm")}Move to savings</button>`
+      ? intentChip("credit-card", "Pay a card or a loan", true)
+      : intentChip("credit-card", "Pay a card", taken === "card") +
+        intentChip("hand-coins", "Pay a loan", taken === "loan") +
+        intentChip("piggy-bank", "Move to savings", taken === "savings")
   }</div></div>`;
 
 const SEED_CAT_ICON = {
@@ -3908,6 +3925,21 @@ const PAGES = [
         "Everything T-86 settled, on one screen: the line and the <b>?</b>, the three intent chips that fill <i>From</i> and <i>To</i> in the right direction, the optional category — only the ones marked Transfer — and the sentence that reads the movement back as a difference.",
         decidedTransferForm(),
         { added: "2026-09-01", updated: "2026-09-17" },
+      ),
+      plate(
+        "full-form-transfer-plain",
+        "Full form · a transfer that is not a debt",
+        "The same sentence, in the grammar of the accounts it names: an ordinary account takes a sign, a debt takes <i>more owed</i> or <i>less owed</i>. Putting money aside is the case that shows the plain half, and a cash advance — out of the card, into the bank — is the case the fourth cell of the table in <code>spec/screens/add.md</code> exists for. The intent chips sit above <i>From</i> with <b>Move to savings</b> taken.",
+        transactionForm("TRANSFER", {
+          hint: typeLine("TRANSFER"),
+          transfer: PLAIN_SIDES,
+          amount: nf.format(SAVINGS_AMOUNT),
+          intents: intentChips(false, "savings"),
+          cat: transferCatRow(null),
+          readback: PLAIN_TWO_SIDES,
+          description: "Monthly saving",
+        }),
+        { added: "2026-09-17" },
       ),
       plate(
         "category-picker",
@@ -5183,7 +5215,7 @@ const PAGES = [
       plate(
         "transfer-said-in-a-line-on-the-quick-sheet",
         "The same line, and the same ?, on the quick sheet",
-        "<b>Chosen by the same answer</b>, because it was never a separate one: the rule binds <b>both</b> places a movement is written. The quick sheet is where a transfer is most likely to be recorded in a hurry, and a rule that lands on one screen and not the other is how the same thing ends up reading two ways a tap apart — T-85 spent a whole review pass on exactly that. On Transfer the sheet had already lost its category row, so the line takes room the type had just freed.",
+        "<b>Chosen by the same answer</b>, because it was never a separate one: the rule binds <b>both</b> places a movement is written. The quick sheet is where a transfer is most likely to be recorded in a hurry, and a rule that lands on one screen and not the other is how the same thing ends up reading two ways a tap apart — T-85 spent a whole review pass on exactly that. On Transfer the sheet carries the same category row as the other two types, filtered to the ones marked Transfer, so the line is the one thing the type adds here.",
         addMovement("line-quick"),
         { added: "2026-09-17", verdict: "chosen", asks: "How the form says what each type is" },
       ),

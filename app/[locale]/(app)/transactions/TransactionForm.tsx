@@ -15,17 +15,18 @@ import { Field, Input, Textarea } from "@/components/ui/Field";
 import { Segment, type SegmentOption } from "@/components/ui/Segment";
 import { TagsInput } from "@/components/ui/TagsInput";
 import { AccountPicker } from "@/features/accounts/components/AccountPicker";
+import { useAccountsQuery } from "@/features/accounts/hooks";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
+import { TransferReadback } from "@/features/transactions/components/TransferReadback";
+import { TypeLine } from "@/features/transactions/components/TypeLine";
 import {
-  type AdjustmentDirection,
-  categoryAllowed,
+  FORM_TYPES,
+  type FormTransactionType,
   isTooFarAhead,
   toTransactionChanges,
   toTransactionInput,
-  TRANSACTION_TYPES,
   transactionFormSchema,
   type TransactionFormValues,
-  type TransactionType,
 } from "@/features/transactions/form";
 import { useTagsQuery } from "@/features/transactions/hooks";
 import { fieldErrors, presentError } from "@/lib/api/errors";
@@ -37,11 +38,12 @@ import { iconProps } from "@/lib/icons/sizes";
 import { aheadOfServer, clockStore } from "@/lib/local/clock";
 import type { CreateTransactionInput, UpdateTransactionInput } from "@/types/api";
 
+import { IntentChips } from "./IntentChips";
+
 const TYPE_TONE = {
   EXPENSE: "default",
   INCOME: "income",
   TRANSFER: "transfer",
-  ADJUSTMENT: "adjustment",
 } as const;
 
 export interface TransactionFormProps {
@@ -79,6 +81,7 @@ export function TransactionForm({
   );
   const tags = useTagsQuery();
   const keyring = useRef(new IdempotencyKeyring());
+  const chosenPerType = useRef<Partial<Record<FormTransactionType, string | null>>>({});
   const amountInput = useRef<HTMLInputElement>(null);
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
@@ -92,19 +95,20 @@ export function TransactionForm({
   useEffect(() => {
     amountInput.current?.focus();
   }, [type]);
+  const transfer = type === "TRANSFER";
+  const amount = useWatch({ control: form.control, name: "amount" });
   const fromAccountId = useWatch({ control: form.control, name: "fromAccountId" });
   const toAccountId = useWatch({ control: form.control, name: "toAccountId" });
+  const accounts = useAccountsQuery(false, transfer);
+  const known = accounts.data ?? [];
+  const accountOf = (id: string | null) => known.find((account) => account.id === id) ?? null;
   const serverFields = fieldErrors(error);
   const formError = error && Object.keys(serverFields).length === 0 ? presentError(error) : null;
-  const typeOptions: SegmentOption<TransactionType>[] = TRANSACTION_TYPES.map((value) => ({
+  const typeOptions: SegmentOption<FormTransactionType>[] = FORM_TYPES.map((value) => ({
     value,
     label: t(`transactionTypes.${value}`),
     tone: TYPE_TONE[value],
   }));
-  const directionOptions: SegmentOption<AdjustmentDirection>[] = [
-    { value: "increase", label: t("transactions.form.increase"), tone: "income" },
-    { value: "decrease", label: t("transactions.form.decrease") },
-  ];
   const accountError = validationMessage(
     t,
     errors.accountId?.message ?? serverFields.fromAccountId ?? serverFields.toAccountId,
@@ -127,10 +131,12 @@ export function TransactionForm({
     }
   }
 
-  function changeType(next: TransactionType) {
+  function changeType(next: FormTransactionType) {
+    // A category belongs to one type, and the server refuses it on another: each type keeps its own.
+    chosenPerType.current[type] = form.getValues("categoryId");
     // `shouldDirty` because an edit sends only dirty fields, and this is still the user's change.
     form.setValue("type", next, { shouldDirty: true });
-    if (!categoryAllowed(next)) form.setValue("categoryId", null, { shouldDirty: true });
+    form.setValue("categoryId", chosenPerType.current[next] ?? null, { shouldDirty: true });
     form.clearErrors();
   }
 
@@ -143,12 +149,15 @@ export function TransactionForm({
       className="flex flex-col gap-5"
     >
       {formError && <Alert tone="danger">{t(formError.messageKey)}</Alert>}
-      <Segment
-        options={typeOptions}
-        value={type}
-        onChange={changeType}
-        label={t("transactions.form.type")}
-      />
+      <div className="flex flex-col gap-2">
+        <Segment
+          options={typeOptions}
+          value={type}
+          onChange={changeType}
+          label={t("transactions.form.type")}
+        />
+        <TypeLine type={type} />
+      </div>
       <Controller
         control={form.control}
         name="amount"
@@ -172,132 +181,140 @@ export function TransactionForm({
           </div>
         )}
       />
-      {type === "ADJUSTMENT" && (
-        <Alert tone="neutral">{t("transactions.form.adjustmentHint")}</Alert>
-      )}
-      {categoryAllowed(type) && (
+      <Controller
+        control={form.control}
+        name="categoryId"
+        render={({ field }) => (
+          <div className="flex flex-col gap-1">
+            <CategoryPicker
+              type={type}
+              value={field.value}
+              allowCreate={!transfer}
+              label={t(
+                transfer ? "transactions.form.categoryOptional" : "transactions.form.category",
+              )}
+              onChange={(category) => {
+                field.onChange(category.id);
+              }}
+            />
+            {transfer && (
+              <span className="text-sm text-text-3">
+                {t("transactions.form.transferCategoryHelp")}
+              </span>
+            )}
+            {serverFields.categoryId && (
+              <span role="alert" className="text-sm text-danger">
+                {validationMessage(t, serverFields.categoryId)}
+              </span>
+            )}
+          </div>
+        )}
+      />
+      {transfer ? (
+        <div className="flex flex-col gap-3">
+          <IntentChips
+            accounts={known}
+            main={known.find((account) => account.isDefault) ?? null}
+            from={accountOf(fromAccountId)}
+            to={accountOf(toAccountId)}
+            onFill={({ from, to }) => {
+              form.setValue("fromAccountId", from?.id ?? null, { shouldDirty: true });
+              form.setValue("toAccountId", to.id, { shouldDirty: true });
+              form.clearErrors(["fromAccountId", "toAccountId"]);
+            }}
+          />
+          <div className="flex flex-col gap-2">
+            <Controller
+              control={form.control}
+              name="fromAccountId"
+              render={({ field }) => (
+                <div className="flex flex-col gap-1">
+                  <AccountPicker
+                    label={t("transactions.form.from")}
+                    value={field.value}
+                    exclude={toAccountId}
+                    onChange={(account) => {
+                      field.onChange(account.id);
+                    }}
+                  />
+                  {(errors.fromAccountId ?? serverFields.fromAccountId) && (
+                    <span role="alert" className="text-sm text-danger">
+                      {validationMessage(
+                        t,
+                        errors.fromAccountId?.message ?? serverFields.fromAccountId,
+                      )}
+                    </span>
+                  )}
+                </div>
+              )}
+            />
+            <div className="flex justify-center">
+              <Button
+                variant="secondary"
+                size="sm"
+                iconOnly
+                round
+                aria-label={t("transactions.form.swap")}
+                onClick={() => {
+                  form.setValue("fromAccountId", toAccountId, { shouldDirty: true });
+                  form.setValue("toAccountId", fromAccountId, { shouldDirty: true });
+                }}
+              >
+                <ArrowUpDown {...iconProps("sm")} />
+              </Button>
+            </div>
+            <Controller
+              control={form.control}
+              name="toAccountId"
+              render={({ field }) => (
+                <div className="flex flex-col gap-1">
+                  <AccountPicker
+                    label={t("transactions.form.to")}
+                    value={field.value}
+                    exclude={fromAccountId}
+                    onChange={(account) => {
+                      field.onChange(account.id);
+                    }}
+                  />
+                  {(errors.toAccountId ?? serverFields.toAccountId) && (
+                    <span role="alert" className="text-sm text-danger">
+                      {validationMessage(
+                        t,
+                        errors.toAccountId?.message ?? serverFields.toAccountId,
+                      )}
+                    </span>
+                  )}
+                </div>
+              )}
+            />
+          </div>
+          <TransferReadback
+            from={accountOf(fromAccountId)}
+            to={accountOf(toAccountId)}
+            amount={amount}
+          />
+        </div>
+      ) : (
         <Controller
           control={form.control}
-          name="categoryId"
+          name="accountId"
           render={({ field }) => (
             <div className="flex flex-col gap-1">
-              <CategoryPicker
-                type={type}
+              <AccountPicker
+                label={t("transactions.form.account")}
                 value={field.value}
-                onChange={(category) => {
-                  field.onChange(category.id);
+                onChange={(account) => {
+                  field.onChange(account.id);
                 }}
-                label={t("transactions.form.category")}
               />
-              {serverFields.categoryId && (
+              {accountError && (
                 <span role="alert" className="text-sm text-danger">
-                  {validationMessage(t, serverFields.categoryId)}
+                  {accountError}
                 </span>
               )}
             </div>
           )}
         />
-      )}
-      {type === "TRANSFER" ? (
-        <div className="flex flex-col gap-2">
-          <Controller
-            control={form.control}
-            name="fromAccountId"
-            render={({ field }) => (
-              <div className="flex flex-col gap-1">
-                <AccountPicker
-                  label={t("transactions.form.from")}
-                  value={field.value}
-                  exclude={toAccountId}
-                  onChange={(account) => {
-                    field.onChange(account.id);
-                  }}
-                />
-                {(errors.fromAccountId ?? serverFields.fromAccountId) && (
-                  <span role="alert" className="text-sm text-danger">
-                    {validationMessage(
-                      t,
-                      errors.fromAccountId?.message ?? serverFields.fromAccountId,
-                    )}
-                  </span>
-                )}
-              </div>
-            )}
-          />
-          <div className="flex justify-center">
-            <Button
-              variant="secondary"
-              size="sm"
-              iconOnly
-              round
-              aria-label={t("transactions.form.swap")}
-              onClick={() => {
-                form.setValue("fromAccountId", toAccountId, { shouldDirty: true });
-                form.setValue("toAccountId", fromAccountId, { shouldDirty: true });
-              }}
-            >
-              <ArrowUpDown {...iconProps("sm")} />
-            </Button>
-          </div>
-          <Controller
-            control={form.control}
-            name="toAccountId"
-            render={({ field }) => (
-              <div className="flex flex-col gap-1">
-                <AccountPicker
-                  label={t("transactions.form.to")}
-                  value={field.value}
-                  exclude={fromAccountId}
-                  onChange={(account) => {
-                    field.onChange(account.id);
-                  }}
-                />
-                {(errors.toAccountId ?? serverFields.toAccountId) && (
-                  <span role="alert" className="text-sm text-danger">
-                    {validationMessage(t, errors.toAccountId?.message ?? serverFields.toAccountId)}
-                  </span>
-                )}
-              </div>
-            )}
-          />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          <Controller
-            control={form.control}
-            name="accountId"
-            render={({ field }) => (
-              <div className="flex flex-col gap-1">
-                <AccountPicker
-                  label={t("transactions.form.account")}
-                  value={field.value}
-                  onChange={(account) => {
-                    field.onChange(account.id);
-                  }}
-                />
-                {accountError && (
-                  <span role="alert" className="text-sm text-danger">
-                    {accountError}
-                  </span>
-                )}
-              </div>
-            )}
-          />
-          {type === "ADJUSTMENT" && (
-            <Controller
-              control={form.control}
-              name="direction"
-              render={({ field }) => (
-                <Segment
-                  options={directionOptions}
-                  value={field.value}
-                  onChange={field.onChange}
-                  label={t("transactions.form.direction")}
-                />
-              )}
-            />
-          )}
-        </div>
       )}
       {skew && (
         <Alert tone="warning">

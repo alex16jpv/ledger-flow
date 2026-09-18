@@ -77,6 +77,17 @@ let listResponses: (() => Response)[] = [];
 function routeFetch() {
   fetchMock.mockImplementation((input) => {
     const url = urlOf(input);
+    if (url.includes("/api/accounts/a1"))
+      return Promise.resolve(
+        json({
+          id: "a1",
+          name: "Bancolombia",
+          type: "ACCOUNT",
+          balance: 1,
+          isDefault: true,
+          color: "BLUE",
+        }),
+      );
     if (url.includes("/api/accounts"))
       return Promise.resolve(
         json({
@@ -122,6 +133,7 @@ function routeFetch() {
 beforeEach(() => {
   fetchMock.mockReset();
   replace.mockReset();
+  push.mockReset();
   search = "period=lastMonth";
   listResponses = [];
   vi.stubGlobal("fetch", fetchMock);
@@ -155,6 +167,59 @@ describe("TransactionsScreen", () => {
     expect(screen.getByRole("region", { name: "Sunday, August 30" })).toHaveTextContent("#coffee");
     expect(screen.getByText("Spent in Last month")).toBeVisible();
     expect(screen.getByRole("button", { name: /^Filters/ })).toHaveTextContent("1");
+  });
+
+  // T-89: an adjustment is repaired where it was made, so its row opens that sheet, not a page.
+  it("opens the Adjust balance sheet on an adjustment row and the detail page on the others", async () => {
+    listResponses = [
+      () =>
+        json({
+          data: [
+            {
+              ...rows[0],
+              id: "t3",
+              type: "ADJUSTMENT",
+              amount: 12300,
+              pendingDetails: false,
+              source: "MANUAL",
+            },
+            rows[1],
+          ],
+          pagination,
+        }),
+    ];
+    render();
+    await userEvent.click(await screen.findByRole("button", { name: /Balance adjustment/ }));
+
+    const sheet = await screen.findByRole("dialog", { name: "Edit adjustment" });
+    expect(within(sheet).getByRole("textbox", { name: "Amount" })).toHaveValue("12,300");
+    expect(await within(sheet).findByText(/off Bancolombia/)).toBeVisible();
+    expect(push).not.toHaveBeenCalled();
+
+    await userEvent.click(within(sheet).getByRole("button", { name: "Close" }));
+    await userEvent.click(screen.getByRole("button", { name: /Tinto/ }));
+    expect(push).toHaveBeenCalledWith("/transactions/t2");
+  });
+
+  // A category of another type matches nothing: the filter used to keep one and show zero rows.
+  it("drops the chosen category when the type filter moves to another type", async () => {
+    render();
+    await screen.findByRole("region", { name: "Monday, August 31" });
+    await userEvent.click(screen.getByRole("button", { name: /^Filters/ }));
+    const sheet = screen.getByRole("dialog", { name: "Filters" });
+
+    await userEvent.click(within(sheet).getByRole("button", { name: /More/ }));
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "Category" })).getByRole("option", {
+        name: /Coffee/,
+      }),
+    );
+    expect(within(sheet).getByRole("button", { name: "Coffee", pressed: true })).toBeVisible();
+
+    await userEvent.click(within(sheet).getByRole("button", { name: "Income" }));
+    expect(
+      within(sheet).queryByRole("button", { name: "Coffee", pressed: true }),
+    ).not.toBeInTheDocument();
   });
 
   it("writes filter chips to the URL", async () => {

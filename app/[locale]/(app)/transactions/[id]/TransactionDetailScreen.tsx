@@ -36,6 +36,8 @@ import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { useBackNavigation } from "@/lib/navigation/history";
 import type { Account } from "@/types/api";
 
+import { useAdjustmentSheet } from "../../useAdjustmentSheet";
+
 function Attribute({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 border-t border-border py-3 first:border-t-0">
@@ -70,6 +72,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
   const outbox = useOutbox();
   const [confirming, setConfirming] = useState(false);
   const [resolving, setResolving] = useState(false);
+  const adjustment = useAdjustmentSheet();
   // F-29: DESIGN §8.12 asks for the conflict sheet from Movements; the way in is here, not a row.
   const stuck = outbox.attentionRows.get(id) ?? null;
   const notFound = transaction.error instanceof ApiError && transaction.error.status === 404;
@@ -262,13 +265,26 @@ export function TransactionDetailScreen({ id }: { id: string }) {
             <Attribute label={t("transactions.detail.currency")}>{row.currency}</Attribute>
           </Card>
           <div className="grid grid-cols-2 gap-3">
-            <Link
-              href={`/transactions/${row.id}/edit`}
-              className={buttonClasses({ variant: "secondary", size: "lg" })}
-            >
-              <Pencil {...iconProps("sm")} />
-              {t("transactions.detail.edit")}
-            </Link>
+            {row.type === "ADJUSTMENT" ? (
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => {
+                  adjustment.opened(row);
+                }}
+              >
+                <Pencil {...iconProps("sm")} />
+                {t("transactions.detail.edit")}
+              </Button>
+            ) : (
+              <Link
+                href={`/transactions/${row.id}/edit`}
+                className={buttonClasses({ variant: "secondary", size: "lg" })}
+              >
+                <Pencil {...iconProps("sm")} />
+                {t("transactions.detail.edit")}
+              </Link>
+            )}
             <Button
               variant="danger"
               size="lg"
@@ -302,6 +318,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
           setConfirming(false);
         }}
       />
+      {adjustment.sheet}
       <SyncConflictSheet
         open={resolving}
         seq={stuck}

@@ -15,20 +15,29 @@ function uniqueAmount(): number {
   return 100_000 + Math.floor(Math.random() * 899_999);
 }
 
+interface Row {
+  id: string;
+  amount: number;
+  type: string;
+  description: string | null;
+  note: string | null;
+  tags: string[];
+  fromAccountId: string | null;
+  toAccountId: string | null;
+  categoryId: string | null;
+}
+
+async function rows(request: Request): Promise<Row[]> {
+  const list = (await (await request.get("/api/transactions?limit=50")).json()) as { data: Row[] };
+  return list.data;
+}
+
 async function findByAmount(request: Request, amount: number) {
-  const list = (await (await request.get("/api/transactions?limit=50")).json()) as {
-    data: {
-      id: string;
-      amount: number;
-      type: string;
-      description: string | null;
-      tags: string[];
-      fromAccountId: string | null;
-      toAccountId: string | null;
-      categoryId: string | null;
-    }[];
-  };
-  return list.data.find((row) => row.amount === amount);
+  return (await rows(request)).find((row) => row.amount === amount);
+}
+
+async function findByNote(request: Request, note: string) {
+  return (await rows(request)).find((row) => row.note === note);
 }
 
 test("a transaction is created, edited and deleted from the full form", async ({
@@ -104,19 +113,25 @@ test("a transfer refuses the same account on both sides and swaps them", async (
   await request.delete(`/api/transactions/${created?.id}`, { headers: { origin: APP } });
 });
 
-test("an adjustment sends only the chosen side, and a far-future date cannot be chosen at all", async ({
+// T-85/T-86: the fourth type left this form, and each of the three says what it is.
+test("the form offers three types, says what the one selected is, and stops at tomorrow", async ({
   page,
   request,
 }) => {
   await signIn(page, request);
-  const amount = uniqueAmount();
   await page.goto("/transactions/new");
-  await page.getByRole("button", { name: "Adjustment" }).click();
-  await expect(page.getByRole("button", { name: /^Category/ })).toHaveCount(0);
-  await page.getByRole("textbox", { name: "Amount" }).fill(String(amount));
-  await page.getByRole("button", { name: /^Account/ }).click();
-  await page.getByRole("dialog", { name: "Account" }).getByRole("option", { name: /Cash/ }).click();
-  await page.getByRole("button", { name: "Decrease balance" }).click();
+  await expect(page.getByRole("group", { name: "Type" }).getByRole("button")).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Adjustment" })).toHaveCount(0);
+  // The shell keeps the quick sheet mounted with the same line inside it, hence the scope.
+  await expect(
+    page.getByRole("main").getByText("Money leaving one of your accounts and not coming back."),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "What the three types mean" }).click();
+  const explained = page.getByRole("dialog", { name: "What the three types mean" });
+  await expect(explained.getByText("Nothing is spent and nothing is earned.")).toBeVisible();
+  await explained.getByRole("button", { name: "Close" }).click();
+
   // F-05: the calendar stops at tomorrow, so the error this used to provoke is unreachable.
   await page.getByRole("button", { name: /^Date/ }).click();
   const calendar = page.getByRole("dialog", { name: "Date" });
@@ -124,12 +139,78 @@ test("an adjustment sends only the chosen side, and a far-future date cannot be 
   await expect(
     calendar.getByText("Days after tomorrow are not available:", { exact: false }),
   ).toBeVisible();
-  await calendar.getByRole("button", { name: "Yesterday" }).click();
-  await calendar.getByRole("button", { name: "Done" }).click();
+});
+
+// T-86: only a browser shows that the chip filled both sides and what the sentence then says.
+test("a chip fills the two sides, the form reads the movement back, and the transfer keeps a category", async ({
+  page,
+  request,
+}) => {
+  await signIn(page, request);
+  const amount = uniqueAmount();
+  await page.goto("/transactions/new");
+  await page.getByRole("button", { name: "Transfer" }).click();
+  await page.getByRole("textbox", { name: "Amount" }).fill(String(amount));
+  await page.getByRole("button", { name: "Pay a card" }).click();
+
+  await expect(page.getByRole("button", { name: /^From.*Bancolombia/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^To.*Visa Gold/ })).toBeVisible();
+  await expect(page.getByText(/Visa Gold .* less owed/)).toBeVisible();
+  await expect(page.getByText(/Bancolombia −/)).toBeVisible();
+
+  await page.getByRole("button", { name: /^Category \(optional\)/ }).click();
+  await page
+    .getByRole("dialog", { name: "Category" })
+    .getByRole("option", { name: /Credit Card Payment/ })
+    .click();
   await page.getByRole("button", { name: "Save transaction" }).click();
   await expect(page.getByText("Transaction saved")).toBeVisible();
+
   const created = await findByAmount(request, amount);
-  expect(created).toMatchObject({ type: "ADJUSTMENT", toAccountId: null, categoryId: null });
-  expect(created?.fromAccountId).toBeTruthy();
+  expect(created?.type).toBe("TRANSFER");
+  expect(created?.categoryId).toBeTruthy();
   await request.delete(`/api/transactions/${created?.id}`, { headers: { origin: APP } });
+});
+
+// T-89: an adjustment is made and edited in the account, on its own amount and never on today's balance.
+test("an adjustment is made in the account and edited from its own list", async ({
+  page,
+  request,
+}) => {
+  await signIn(page, request);
+  const note = `E2E adjust ${Date.now()}`;
+  const accounts = (await (await request.get("/api/accounts?limit=50")).json()) as {
+    data: { id: string; name: string }[];
+  };
+  const cash = accounts.data.find((account) => account.name === "Cash");
+  await page.goto(`/accounts/${cash?.id}`);
+
+  await page.getByRole("button", { name: "Adjust balance" }).click();
+  const adjusting = page.getByRole("dialog", { name: "Adjust balance" });
+  await adjusting.getByRole("textbox", { name: /Actual balance in Cash/ }).fill("777777");
+  await adjusting.getByRole("textbox", { name: /^Note/ }).fill(note);
+  await adjusting.getByRole("button", { name: "Save adjustment" }).click();
+  await expect(page.getByText("Adjustment saved")).toBeVisible();
+
+  const created = await findByNote(request, note);
+  expect(created?.type).toBe("ADJUSTMENT");
+
+  const row = page.getByRole("button", { name: /Balance adjustment/ }).first();
+  await row.click();
+  const editing = page.getByRole("dialog", { name: "Edit adjustment" });
+  await expect(editing.getByText(/Cash/)).toBeVisible();
+  const amount = uniqueAmount();
+  await editing.getByRole("textbox", { name: "Amount" }).fill(String(amount));
+  await editing.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Adjustment updated")).toBeVisible();
+  expect((await findByNote(request, note))?.amount).toBe(amount);
+
+  await row.click();
+  await editing.getByRole("button", { name: "Delete" }).click();
+  await page
+    .getByRole("dialog", { name: "Delete this transaction?" })
+    .getByRole("button", { name: "Delete" })
+    .click();
+  await expect(page.getByText("Transaction deleted")).toBeVisible();
+  expect((await request.get(`/api/transactions/${created?.id}`)).status()).toBe(404);
 });

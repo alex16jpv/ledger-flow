@@ -45,6 +45,7 @@ import { Link, useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 
+import { useAdjustmentSheet } from "../useAdjustmentSheet";
 import { FiltersSheet } from "./FiltersSheet";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -67,6 +68,7 @@ export function TransactionsScreen() {
   const categories = useCategoriesQuery();
   const [search, setSearch] = useState(filters.q);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const adjustment = useAdjustmentSheet();
   const sentinel = useRef<HTMLDivElement>(null);
 
   const lookups = useMemo<TransactionLookups>(
@@ -321,7 +323,7 @@ export function TransactionsScreen() {
             lookups={lookups}
             dayTotals={totals?.byDay}
             onOpen={(transaction) => {
-              router.push(`/transactions/${transaction.id}`);
+              if (!adjustment.opened(transaction)) router.push(`/transactions/${transaction.id}`);
             }}
           />
           <div ref={sentinel} aria-hidden="true" className="h-px" />
@@ -339,6 +341,7 @@ export function TransactionsScreen() {
           )}
         </>
       )}
+      {adjustment.sheet}
       {filtersOpen && (
         <FiltersSheet
           open

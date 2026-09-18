@@ -14,8 +14,10 @@ amount:
   reading "From your main account".
 - **Income** — the amount in `--income`, the income categories, and the account row reads "Into your
   main account".
-- **Transfer** — no category at all: From and To with the swap button between them, the amount in
-  `--transfer`, and the check that the two accounts differ.
+- **Transfer** — From and To with the swap button between them, the amount in `--transfer`, the check
+  that the two accounts differ, and the category row the other two types have, filtered to the
+  TRANSFER type and optional (T-86): the sheet hands its state to the full form, where that field
+  exists, so a category chosen here is not lost on the way.
 
 `POST /transactions/quick` already accepts `type` (INCOME, EXPENSE, TRANSFER) and both account ids, and
 the offline queue already applies the same per-type defaults, so this costs no sync work.
@@ -57,9 +59,8 @@ selection and return focus to the picker.
 ## Full form (`#full-form-expense`, `#full-form-transfer`)
 
 A segmented control for the type (expense, income, transfer — adjustment left this form with T-85,
-below) that reconfigures the form without losing the amount; the amount; the category (expense and
-income only, filtered by type, never a TRANSFER category — which is one of T-86's open questions,
-below); the account (expense: source; income: destination; transfer: from and to, with a swap button
+below) that reconfigures the form without losing the amount; the amount; the category, filtered to the
+transaction's type and **optional on a transfer** (T-86, below); the account (expense: source; income: destination; transfer: from and to, with a swap button
 and a check that they differ); the date and time (today by default; picking a day
 sends local noon; more than 24 hours ahead returns `FUTURE_DATE` inline) **with the app's own calendar
 and wheel, not the browser's** (`#date-sheet`, `#time-sheet`): the field opens the "Date" sheet with
@@ -140,6 +141,25 @@ Once both accounts are chosen: **"Bancolombia −$500,000 · Visa Gold $500,000 
 balance does not change."** His words: «la diferencia». The debt side is said in the T-85 vocabulary,
 never as "+$500,000", because on a card more is not better.
 
+**Each side is said in the vocabulary of the account it names**, which is what makes the sentence
+general enough to cover every transfer and not only paying a card (`#full-form-transfer-plain`):
+
+| The side is                      | Money leaves it                | Money arrives at it            |
+| -------------------------------- | ------------------------------ | ------------------------------ |
+| an ordinary account              | "Bancolombia −$300,000"        | "Savings +$300,000"            |
+| a debt that owes something       | "Visa Gold $300,000 more owed" | "Visa Gold $300,000 less owed" |
+| a debt holding money of your own | "Visa Gold −$300,000"          | "Visa Gold +$300,000"          |
+
+A cash advance — money out of the card and into the bank — is the case the fourth cell exists for, and
+it is why the debt side is never a sign while something is owed: on a card the direction and the good
+news point opposite ways. **The last row is not a corner case today**: a card reads that way until its
+owner has recorded what it owes, which is what the one-off script of T-90 repairs, so it is the state
+every card in the product is in. Saying "less owed" about a card that owes nothing would contradict
+the account's own card one screen away, which says _$100,000 of your own money sitting on it_. Which
+row applies is the sign the whole product already reads — negative is a debt — so the sentence still
+computes nothing. The sentence appears only when the amount and both accounts are there; before that there is
+nothing to read back.
+
 **It costs nothing but the sentence.** It repeats the amount just typed and the two names just picked —
 no arithmetic on any balance — so house rule 4 is untouched and it reads identically offline, on a
 device that has never seen those balances. The alternative, reading back what each account **will say
@@ -159,6 +179,11 @@ savings**. A chip **saves nothing and adds no field** — it fills the two sides
 which is the only thing people get wrong, because paying a debt means sending money **towards** the
 card. _Pay a card_ puts the main account in _From_ and the card in _To_; with more than one card it
 opens the account picker already filtered to cards. Everything stays editable afterwards.
+
+**A chip nobody can use is not drawn.** Each one names a kind of account — a card or an overdraft, a
+loan, a savings account — so with none of that kind there is nothing for it to fill and it does not
+appear; with several it opens the picker filtered to them. On the seeded account set that means two
+chips, not three.
 
 **A chip does not touch the category.** Preselecting one would be the chip setting a field, which is
 not what it was described as when he chose it, and on a loan there is no seeded category to preselect:

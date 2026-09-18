@@ -130,6 +130,31 @@ describe("the balance projection", () => {
     );
   });
 
+  // T-86: a transfer carries a category now, and the queue must not drop what the form sent.
+  it("keeps a transfer's category in the mirror and in the operation it queues", async () => {
+    const fixture = parityFixture("cop-bogota");
+    const vault = await vaultOf(fixture);
+    const [from, to] = fixture.accounts;
+    const categoryId = fixture.transactions.find((row) => row.categoryId)?.categoryId ?? null;
+    expect(categoryId).not.toBeNull();
+
+    const queued = await createTransaction(
+      {
+        type: "TRANSFER",
+        amount: 500_000,
+        date: "2026-03-10T12:00:00.000Z",
+        fromAccountId: from!.id,
+        toAccountId: to!.id,
+        categoryId,
+      },
+      "33333333-3333-7333-8333-333333333333",
+    );
+
+    expect(queued.categoryId).toBe(categoryId);
+    const [operation] = await pendingOperations(vault.db);
+    expect(operation?.payload).toMatchObject({ body: { type: "TRANSFER", categoryId } });
+  });
+
   it("leaves an account no queued operation touches exactly where the server left it", async () => {
     const fixture = parityFixture("cop-bogota");
     const vault = await vaultOf(fixture);

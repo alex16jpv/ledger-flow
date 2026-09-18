@@ -21,10 +21,13 @@ import { useRecentTransactions } from "@/features/transactions/hooks";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 
+import { useAdjustmentSheet } from "../useAdjustmentSheet";
+
 export function RecentTransactions() {
   const t = useTranslations();
   const router = useRouter();
   const recent = useRecentTransactions();
+  const adjustment = useAdjustmentSheet();
   const accounts = useAccountsQuery(true);
   const categories = useCategoriesQuery(undefined);
   const lookups = useMemo<TransactionLookups>(
@@ -77,13 +80,14 @@ export function RecentTransactions() {
                 transaction={transaction}
                 lookups={lookups}
                 onOpen={(row) => {
-                  router.push(`/transactions/${row.id}`);
+                  if (!adjustment.opened(row)) router.push(`/transactions/${row.id}`);
                 }}
               />
             ))}
           </List>
         )}
       </Card>
+      {adjustment.sheet}
     </section>
   );
 }

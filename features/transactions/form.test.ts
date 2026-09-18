@@ -5,6 +5,7 @@ import {
   draftFromSearchParams,
   draftToFormValues,
   fromTransaction,
+  isFormTransaction,
   isTooFarAhead,
   toTransactionChanges,
   toTransactionInput,
@@ -56,13 +57,14 @@ describe("transaction form model", () => {
         values({ type: "TRANSFER", fromAccountId: "a1", toAccountId: "a2", categoryId: "c1" }),
         BOGOTA,
       ),
-    ).toMatchObject({ categoryId: null, fromAccountId: "a1", toAccountId: "a2" });
-    expect(
-      toTransactionInput(values({ type: "ADJUSTMENT", direction: "decrease" }), BOGOTA),
-    ).toMatchObject({ categoryId: null, fromAccountId: "a1", toAccountId: null });
-    expect(
-      toTransactionInput(values({ type: "ADJUSTMENT", direction: "increase" }), BOGOTA),
-    ).toMatchObject({ fromAccountId: null, toAccountId: "a1" });
+    ).toMatchObject({ categoryId: "c1", fromAccountId: "a1", toAccountId: "a2" });
+  });
+
+  // T-85: the form offers three types, because an adjustment is made inside the account.
+  it("refuses a type this form does not offer", () => {
+    expect(transactionFormSchema.safeParse({ ...values(), type: "ADJUSTMENT" }).success).toBe(
+      false,
+    );
   });
 
   it("validates accounts per type with message keys", () => {
@@ -118,9 +120,8 @@ describe("transaction form model", () => {
       tags: ["monthly"],
       note: "",
     });
-    expect(
-      fromTransaction({ ...transaction, type: "ADJUSTMENT", toAccountId: null }, BOGOTA),
-    ).toMatchObject({ accountId: "a1", direction: "decrease" });
+    expect(isFormTransaction({ ...transaction, type: "ADJUSTMENT" })).toBe(false);
+    expect(isFormTransaction(transaction)).toBe(true);
   });
 
   it("reads only valid draft fields from the quick-add hand-off", () => {
@@ -201,7 +202,7 @@ describe("the draft the quick sheet hands to the full form", () => {
     });
   });
 
-  it("keeps one account and drops a category the type cannot take", () => {
+  it("carries the category over, because every type this form offers takes one (T-86)", () => {
     const income = draftToFormValues(
       draftFromSearchParams(new URLSearchParams("type=INCOME&accountId=a1&categoryId=c1")),
       base,
@@ -218,7 +219,7 @@ describe("the draft the quick sheet hands to the full form", () => {
       draftFromSearchParams(new URLSearchParams("type=TRANSFER&accountId=a1&categoryId=c1")),
       base,
     );
-    expect(transfer.categoryId).toBeNull();
+    expect(transfer).toMatchObject({ fromAccountId: "a1", categoryId: "c1" });
   });
 
   it("falls back to the form's own type when the draft carries none", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight, Scale } from "lucide-react";
+import { Scale } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 
@@ -14,6 +14,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
+import { TransferReadback } from "@/features/transactions/components/TransferReadback";
 import { useCreateTransaction } from "@/features/transactions/hooks";
 import { presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
@@ -88,15 +89,8 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
       <Alert tone="neutral" icon={Scale}>
         {t("accounts.pay.readOutside", { name: account.name, amount: money.format(amount) })}
       </Alert>
-    ) : from === null ? null : (
-      <Alert tone="neutral" icon={ArrowLeftRight}>
-        {t("accounts.pay.readTransfer", {
-          from: from.name,
-          out: `−${money.format(amount)}`,
-          name: account.name,
-          amount: money.format(amount),
-        })}
-      </Alert>
+    ) : (
+      <TransferReadback from={from} to={account} amount={amount} />
     );
 
   return (

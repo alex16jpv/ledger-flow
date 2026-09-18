@@ -890,7 +890,6 @@
       "from": "Desde",
       "outside": "Otro sitio",
       "outsideMeta": "no es una cuenta de aquí",
-      "readTransfer": "{from} {out} · {name} debe {amount} menos. Tu balance total no cambia.",
       "readOutside": "{name} debe {amount} menos. No cuenta como ingreso ni como gasto, porque ese dinero nunca estuvo en Ledger Flow.",
       "outsideDescription": "Pagado desde fuera de Ledger Flow",
       "pay": "Pagar",
@@ -957,8 +956,13 @@
       "noChange": "El saldo registrado ya coincide. No hay nada que ajustar.",
       "note": "Nota",
       "notePlaceholder": "Comisión bancaria de agosto",
+      "amount": "Importe",
+      "editTitle": "Editar ajuste",
+      "editTook": "Registrado el {date}, le quitó {amount} a {name}. Cambiar el importe reescribe esa diferencia, no el saldo de hoy.",
+      "editAdded": "Registrado el {date}, le sumó {amount} a {name}. Cambiar el importe reescribe esa diferencia, no el saldo de hoy.",
       "save": "Registrar ajuste",
-      "saved": "Ajuste registrado"
+      "saved": "Ajuste registrado",
+      "updated": "Ajuste actualizado"
     },
     "typePicker": {
       "title": "Tipo de cuenta"
@@ -1242,6 +1246,13 @@
     }
   },
   "transactions": {
+    "readback": {
+      "line": "{left} · {right}. Tu balance total no cambia.",
+      "leaves": "{name} −{amount}",
+      "arrives": "{name} +{amount}",
+      "lessOwed": "{name} debe {amount} menos",
+      "moreOwed": "{name} debe {amount} más"
+    },
     "quick": {
       "title": "Añadir",
       "amount": "Importe",
@@ -1265,6 +1276,8 @@
       "type": "Tipo",
       "amount": "Importe",
       "category": "Categoría",
+      "categoryOptional": "Categoría (opcional)",
+      "transferCategoryHelp": "Aquí solo se ofrecen las categorías de tipo Transferencia.",
       "account": "Cuenta",
       "from": "Desde",
       "to": "Hacia",
@@ -1272,7 +1285,18 @@
       "direction": "Dirección",
       "increase": "Aumentar saldo",
       "decrease": "Disminuir saldo",
-      "adjustmentHint": "Los ajustes corrigen un saldo. No cuentan como gasto ni ingreso.",
+      "typeLine": {
+        "EXPENSE": "Dinero que sale de una de tus cuentas y no vuelve.",
+        "INCOME": "Dinero que entra en una de tus cuentas.",
+        "TRANSFER": "Mueve dinero entre dos cuentas tuyas: pagar una tarjeta, la cuota de un préstamo, apartar dinero. No se gasta ni se gana nada."
+      },
+      "typesHelp": "Qué significa cada uno de los tres tipos",
+      "intent": "¿Qué estás haciendo?",
+      "intents": {
+        "card": "Pagar una tarjeta",
+        "loan": "Pagar un préstamo",
+        "savings": "Pasar a ahorros"
+      },
       "description": "Descripción",
       "descriptionPlaceholder": "¿Qué fue?",
       "tags": "Etiquetas",
