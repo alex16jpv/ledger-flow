@@ -2,6 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, Inbox, Search, SlidersHorizontal, WifiOff } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -18,6 +19,7 @@ import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery } from "@/features/categories/hooks";
+import { type EditingAdjustment, editingAdjustment } from "@/features/transactions/adjustments";
 import { PeriodSummary } from "@/features/transactions/components/PeriodSummary";
 import { TransactionDayList } from "@/features/transactions/components/TransactionDayList";
 import type { TransactionLookups } from "@/features/transactions/components/TransactionRow";
@@ -45,11 +47,10 @@ import { Link, useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 
-import {
-  AdjustBalanceSheet,
-  type EditingAdjustment,
-  editingAdjustment,
-} from "../AdjustBalanceSheet";
+// The sheet is opened on demand, so it is not in the initial load of every screen that lists a row.
+const AdjustBalanceSheet = dynamic(() =>
+  import("../AdjustBalanceSheet").then((module) => module.AdjustBalanceSheet),
+);
 import { FiltersSheet } from "./FiltersSheet";
 
 const SEARCH_DEBOUNCE_MS = 300;

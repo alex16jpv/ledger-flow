@@ -33,6 +33,7 @@ import {
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { currentVault } from "@/lib/local/repository/read";
 import type { OutboxOperation } from "@/lib/local/schema";
+import { reportError } from "@/lib/observability/reporter";
 
 type Names = ReadonlyMap<string, string>;
 
@@ -114,9 +115,15 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
   useEffect(() => {
     if (!open || seq === null) return;
     let live = true;
-    void load(seq).then((next) => {
-      if (live) setLoaded({ seq, view: next });
-    });
+    void load(seq)
+      // The mirror can be closed or wiped mid-read — logout, another tab — and then there is nothing left to resolve.
+      .catch((error: unknown): View => {
+        reportError(error, "vault");
+        return { kind: "empty" };
+      })
+      .then((next) => {
+        if (live) setLoaded({ seq, view: next });
+      });
     return () => {
       live = false;
     };

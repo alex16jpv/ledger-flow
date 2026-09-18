@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
@@ -10,7 +11,10 @@ import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { connectivityStore } from "@/lib/network/connectivity";
 import { localOnlyStore } from "@/lib/network/local-only";
 
-import { SyncConflictSheet } from "./SyncConflictSheet";
+// The shell shows this banner on every screen; resolving a conflict is rare, so its sheet waits.
+const SyncConflictSheet = dynamic(() =>
+  import("./SyncConflictSheet").then((module) => module.SyncConflictSheet),
+);
 
 // F-72: raise it if the flash comes back on a slow link; lower it to announce a real wait sooner.
 export const PENDING_GRACE_MS = 1_000;
@@ -134,13 +138,15 @@ export function ConnectionBanner({ signedOut = false, onSignIn }: ConnectionBann
             },
           ]}
         />
-        <SyncConflictSheet
-          open={reviewing !== null}
-          seq={reviewing}
-          onClose={() => {
-            setReviewing(null);
-          }}
-        />
+        {reviewing !== null && (
+          <SyncConflictSheet
+            open
+            seq={reviewing}
+            onClose={() => {
+              setReviewing(null);
+            }}
+          />
+        )}
       </>
     );
   }

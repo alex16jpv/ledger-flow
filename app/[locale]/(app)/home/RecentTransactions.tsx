@@ -1,6 +1,7 @@
 "use client";
 
 import { Inbox } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -13,6 +14,7 @@ import { List } from "@/components/ui/Row";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery } from "@/features/categories/hooks";
+import { type EditingAdjustment, editingAdjustment } from "@/features/transactions/adjustments";
 import {
   type TransactionLookups,
   TransactionRow,
@@ -21,11 +23,10 @@ import { useRecentTransactions } from "@/features/transactions/hooks";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 
-import {
-  AdjustBalanceSheet,
-  type EditingAdjustment,
-  editingAdjustment,
-} from "../AdjustBalanceSheet";
+// The sheet is opened on demand, so it is not in the initial load of every screen that lists a row.
+const AdjustBalanceSheet = dynamic(() =>
+  import("../AdjustBalanceSheet").then((module) => module.AdjustBalanceSheet),
+);
 
 export function RecentTransactions() {
   const t = useTranslations();

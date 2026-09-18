@@ -1,6 +1,7 @@
 "use client";
 
 import { CircleAlert, Hash, Pencil, Repeat, Scale, Trash2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { createElement, type ReactNode, useMemo, useState } from "react";
 
@@ -19,6 +20,7 @@ import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery } from "@/features/categories/hooks";
+import { type EditingAdjustment, editingAdjustment } from "@/features/transactions/adjustments";
 import { DeleteTransactionSheet } from "@/features/transactions/components/DeleteTransactionSheet";
 import {
   type TransactionLookups,
@@ -36,11 +38,10 @@ import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { useBackNavigation } from "@/lib/navigation/history";
 import type { Account } from "@/types/api";
 
-import {
-  AdjustBalanceSheet,
-  type EditingAdjustment,
-  editingAdjustment,
-} from "../../AdjustBalanceSheet";
+// The sheet is opened on demand, so it is not in the initial load of every screen that lists a row.
+const AdjustBalanceSheet = dynamic(() =>
+  import("../../AdjustBalanceSheet").then((module) => module.AdjustBalanceSheet),
+);
 
 function Attribute({ label, children }: { label: string; children: ReactNode }) {
   return (

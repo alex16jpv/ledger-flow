@@ -12,6 +12,7 @@ import { Field, Input } from "@/components/ui/Field";
 import { Segment } from "@/components/ui/Segment";
 import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
+import { type AdjustmentDirection, directionOf } from "@/features/transactions/adjustments";
 import { DeleteTransactionSheet } from "@/features/transactions/components/DeleteTransactionSheet";
 import { TEXT_MAX } from "@/features/transactions/form";
 import {
@@ -33,7 +34,6 @@ import type {
 } from "@/types/api";
 
 type Sign = "positive" | "negative";
-type Direction = "increase" | "decrease";
 
 export interface AdjustBalanceSheetProps {
   account: Account;
@@ -64,30 +64,11 @@ export function adjustmentInput(
   };
 }
 
-export interface EditingAdjustment {
-  transaction: Transaction;
-  account: Account;
-}
-
-// T-89: an adjustment row opens this sheet instead of the transaction form, in every list.
-export function editingAdjustment(
-  transaction: Transaction,
-  accounts: ReadonlyMap<string, Account>,
-): EditingAdjustment | null {
-  if (transaction.type !== "ADJUSTMENT") return null;
-  const account = accounts.get(transaction.fromAccountId ?? transaction.toAccountId ?? "");
-  return account ? { transaction, account } : null;
-}
-
-export function directionOf(adjustment: Pick<Transaction, "toAccountId">): Direction {
-  return adjustment.toAccountId ? "increase" : "decrease";
-}
-
 export function adjustmentChanges(
   adjustment: Pick<Transaction, "amount" | "note" | "toAccountId">,
   account: Pick<Account, "id">,
   amount: number,
-  direction: Direction,
+  direction: AdjustmentDirection,
   note: string,
 ): UpdateTransactionInput {
   const trimmed = note.trim() || null;
@@ -235,7 +216,7 @@ function EditAdjustment({
   const update = useUpdateTransaction(adjustment.id);
   const remove = useDeleteTransaction();
   const [amount, setAmount] = useState<number | null>(adjustment.amount);
-  const [direction, setDirection] = useState<Direction>(directionOf(adjustment));
+  const [direction, setDirection] = useState<AdjustmentDirection>(directionOf(adjustment));
   const [note, setNote] = useState(adjustment.note ?? "");
   const [confirming, setConfirming] = useState(false);
   const error = update.error ? presentError(update.error) : null;
@@ -305,7 +286,7 @@ function EditAdjustment({
       >
         <div className="flex flex-col gap-4">
           <Card className="flex flex-col gap-2 p-0 pb-3">
-            <Segment<Direction>
+            <Segment<AdjustmentDirection>
               inline
               label={t("transactions.form.direction")}
               value={direction}

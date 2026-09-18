@@ -10,6 +10,7 @@ import {
   Scale,
   Star,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -36,6 +37,7 @@ import {
 } from "@/features/accounts/hooks";
 import { findActiveByName } from "@/features/accounts/summary";
 import { useCategoriesQuery } from "@/features/categories/hooks";
+import { type EditingAdjustment, editingAdjustment } from "@/features/transactions/adjustments";
 import { TransactionDayList } from "@/features/transactions/components/TransactionDayList";
 import type { TransactionLookups } from "@/features/transactions/components/TransactionRow";
 import { useTransactionsInfinite } from "@/features/transactions/hooks";
@@ -44,11 +46,10 @@ import { Link, useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
 
-import {
-  AdjustBalanceSheet,
-  type EditingAdjustment,
-  editingAdjustment,
-} from "../../AdjustBalanceSheet";
+// The sheet is opened on demand, so it is not in the initial load of every screen that lists a row.
+const AdjustBalanceSheet = dynamic(() =>
+  import("../../AdjustBalanceSheet").then((module) => module.AdjustBalanceSheet),
+);
 import { PaySheet } from "./PaySheet";
 
 type OpenSheet = "adjust" | "pay" | "main" | "archive" | "conflict" | null;

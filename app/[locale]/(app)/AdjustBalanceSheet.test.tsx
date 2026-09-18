@@ -2,17 +2,13 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { editingAdjustment } from "@/features/transactions/adjustments";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 import type { Account, Transaction } from "@/types/api";
 
-import {
-  AdjustBalanceSheet,
-  adjustmentChanges,
-  adjustmentInput,
-  editingAdjustment,
-} from "./AdjustBalanceSheet";
+import { AdjustBalanceSheet, adjustmentChanges, adjustmentInput } from "./AdjustBalanceSheet";
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { headers: { "content-type": "application/json" }, ...init });
