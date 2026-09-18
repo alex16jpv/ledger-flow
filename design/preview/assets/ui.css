@@ -77,6 +77,8 @@
 .grid-3 { display: grid; grid-template-columns: 1fr; gap: var(--sp-4); }
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 @container app (min-width: 600px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+.stats.pairs { grid-template-columns: 1fr 1fr; }
+@container app (max-width: 599.9px) { .stats.pairs > .card:nth-child(3) { grid-column: 1 / -1; } }
 .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
 .section-head .link { font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--brand-text); }
 .stack { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
@@ -330,6 +332,9 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .account-card .name { font-weight: var(--fw-medium); flex: 1; min-width: 0; }
 .account-card .type { font-size: var(--fs-xs); color: var(--text-3); }
 .account-card.archived > *, .account-card.archived::before { opacity: .6; }
+.account-card .stretch { position: absolute; inset: 0; z-index: 0; border-radius: inherit; }
+.account-card .stretch:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.account-card > *:not(.stretch) { position: relative; }
 .hscroll { display: flex; gap: var(--sp-3); overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--sp-4)); padding: var(--sp-1) var(--sp-4); scroll-snap-type: x mandatory; }
 .hscroll::-webkit-scrollbar { display: none; }
 .hscroll > * { flex: 0 0 min(72%, 260px); scroll-snap-align: start; }
