@@ -78,13 +78,17 @@ sync answers with, the form says so above the date instead of waiting for the re
 
 T-89 applies what T-85 and T-86 decided about recording a movement, on both surfaces.
 **`FORM_TYPES` is three**: an adjustment repairs a balance rather than recording something that
-happened, so it is created and edited in the account's own **Adjust balance** sheet
-(`app/[locale]/(app)/AdjustBalanceSheet.tsx`, which is why the sheet sits at the app level). An
-adjustment row opens that sheet from every list that can show one — the account's, the global one and
-Home's recent — through `editingAdjustment`, and `/transactions/[id]/edit` hands one back to its
-detail screen; `isFormTransaction` is the narrowing the form's own types need. Editing asks about the
-adjustment's **own amount**, never about today's balance, because recomputing a past adjustment from
-today's figure would silently change what it meant.
+happened, so it is created in **Adjust balance** and edited in `EditAdjustmentSheet`, both in
+`app/[locale]/(app)/AdjustBalanceSheet.tsx` — at the app level because four screens compose them.
+`useAdjustmentSheet` holds the state and the lazy import once, and every list that can show an
+adjustment (the account's, the global one, Home's recent, the detail screen) asks it first and
+navigates only when the row is something else; `/transactions/[id]/edit` hands an adjustment back to
+its detail screen, and `isFormTransaction` is the narrowing the form's own types need. The editing
+sheet reads **the one account it names** (`adjustmentAccountId` + `useAccountQuery`), never the
+accounts list: a list that has not arrived, or an account past the hundredth it never returns (T-38),
+would otherwise decide where the row goes. Editing asks about the adjustment's **own amount**, never
+about today's balance, because recomputing a past adjustment from today's figure would silently
+change what it meant.
 
 `TypeLine` is the line under the segment plus the `?` that opens the three types explained; it binds
 the full form and the quick sheet alike, because a rule that reaches one and not the other is how the
@@ -93,10 +97,13 @@ on a transfer it is optional and filtered to the TRANSFER type — the two categ
 seeded with stop being furniture, so the list filters by them too.
 
 `TransferReadback` says the movement back as a **difference** once the amount and both accounts are
-there: each side speaks the vocabulary of its own account (a sign for an ordinary one, _more owed_ /
-_less owed_ for a debt), it repeats the amount typed and the two names picked, and it does **no
-arithmetic on any balance** — house rule 4 — so it reads identically with no network on a device that
-has never seen those balances. The Pay sheet uses the same component: one grammar, every surface.
+there: each side speaks the vocabulary of its own account — a sign for an ordinary one, _more owed_ /
+_less owed_ for a debt **that owes something**, and a sign again for a card or a loan holding money of
+its owner, which is every card until the script of T-90 has run. It repeats the amount typed and the
+two names picked and does **no arithmetic on any balance** — house rule 4 — so it reads identically
+with no network on a device that has never seen those balances. The Pay sheet uses the same component: one grammar, every surface.
 The intent chips above _From_ and _To_ (`IntentChips`, app layer, since they open the account picker
 filtered by type) only fill the two sides in the right direction; they save nothing, add no field and
-touch no category, and a chip whose kind of account nobody has is not offered.
+touch no category, a chip whose kind of account nobody has is not offered, and none of them empties a
+_From_ it has nothing to put back. Switching the type puts the chosen category aside per type rather
+than dropping it, because a round trip through the segment used to lose it.

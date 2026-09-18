@@ -3981,12 +3981,15 @@ cover` is set once in the root layout for the standalone display.
 - **Context:** T-85 took the fourth type out of the transaction form and T-86's chosen plate says an
   adjustment is edited where it was made. Nothing had implemented either, so the form still offered
   four types and `/transactions/[id]/edit` was the only way to change one.
-- **Decision:** `FORM_TYPES` is three, and `editingAdjustment` opens **Adjust balance** on the row
-  from every list that can show one — the account's, the global one and Home's recent. The sheet has
-  two modes: creating asks what the real balance is now and computes the difference, editing works on
-  the adjustment's own amount. `/transactions/[id]/edit` redirects an adjustment to its detail screen,
-  whose Edit opens the same sheet. The sheet moved to the `(app)` group root, beside `QuickAddSheet`,
-  because three route folders now compose it and `features/` may not import another feature.
+- **Decision:** `FORM_TYPES` is three, and `useAdjustmentSheet` opens the adjustment on the row from
+  every list that can show one — the account's, the global one, Home's recent and the detail screen.
+  Creating (`AdjustBalanceSheet`) asks what the real balance is now and computes the difference;
+  editing (`EditAdjustmentSheet`) works on the adjustment's own amount and reads **the one account it
+  names** by id, so neither the accounts list arriving late nor an account past the hundredth one that
+  list returns (T-38) can decide where a row goes. `/transactions/[id]/edit` redirects an adjustment to
+  its detail screen, whose Edit opens the same sheet. Both sheets live at the `(app)` group root,
+  beside `QuickAddSheet`, because four route folders compose them and `features/` may not import
+  another feature.
 - **Alternatives:** keeping the row's destination as the detail page and only changing its Edit button
   (one screen to touch, but it is not what the owner chose; asked and confirmed on 2026-09-17); or
   leaving the fourth type on the Edit form with the other three disabled (`#adjustment-edit-keeps-the-fourth-type`,
@@ -4002,8 +4005,12 @@ cover` is set once in the root layout for the standalone display.
   choice reaches the Pay sheet too. The chosen plate only draws a payment to a card, so putting money
   aside and a cash advance had no drawn sentence.
 - **Decision:** `TransferReadback` takes the two accounts and the amount and composes one line from
-  four side phrasings: a sign for an ordinary account, _more owed_ / _less owed_ for a debt. The form
-  and the Pay sheet both render it, and `design/spec/screens/add.md` states the table.
+  four side phrasings: a sign for an ordinary account, and _more owed_ / _less owed_ for a debt **that
+  owes something**. A card or a loan holding money of its owner takes the sign as well — that is every
+  card until the one-off script of T-90 has run, and saying "less owed" there would contradict the
+  account's own card, which says _$100,000 of your own money sitting on it_. Which phrasing applies is
+  the sign the whole product already reads, so nothing is computed. The form and the Pay sheet both
+  render it, and `design/spec/screens/add.md` states the table.
 - **Alternatives:** a message per surface (the Pay sheet had its own key, and T-96 would have to
   change both), or reading back what each account will say afterwards — the client doing money
   arithmetic, which house rule 4 allows only in `lib/local/derive` and only with the projection mark.
