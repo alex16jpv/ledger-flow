@@ -1266,7 +1266,8 @@
       "leaves": "{name} −{amount}",
       "arrives": "{name} +{amount}",
       "lessOwed": "{name} {amount} less owed",
-      "moreOwed": "{name} {amount} more owed"
+      "moreOwed": "{name} {amount} more owed",
+      "outside": "{side}. It does not count as income or as spending, because the money never was in Ledger Flow."
     },
     "quick": {
       "title": "Add",

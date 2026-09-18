@@ -562,6 +562,7 @@ const transactionForm = (
     intents = "",
     cat: catSlot = null,
     sheet = "",
+    swap = true,
   } = {},
 ) => {
   const seg = [
@@ -588,7 +589,7 @@ const transactionForm = (
     ];
     accounts = `${intents}<div class="stack-sm">
 <button class="picker">${tile(fromIcon, fromColor, "sm")}<span class="body"><span class="lbl">From</span><span class="val">${fromValue}</span></span>${iconSvg("chevron-down", "sm")}</button>
-<div style="display:flex;justify-content:center;margin:-4px 0"><button class="btn secondary icon-only sm round" aria-label="Swap">${iconSvg("arrow-left-right", "sm")}</button></div>
+<div style="display:flex;justify-content:center;margin:-4px 0"><button class="btn secondary icon-only sm round" aria-label="Swap"${swap ? "" : " disabled"}>${iconSvg("arrow-left-right", "sm")}</button></div>
 <button class="picker">${tile(toIcon, toColor, "sm")}<span class="body"><span class="lbl">To</span><span class="val">${toValue}</span></span>${iconSvg("chevron-down", "sm")}</button></div>`;
     cat = "";
   } else {
@@ -1571,7 +1572,7 @@ const outsideSheet = (kind) => {
   return sheetWrap(
     `<div class="stack-sm"><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">${nf.format(CARD_OWED)}</span><span class="caret"></span></div>
 <div class="chips" style="justify-content:center"><button class="chip selected">Everything owed</button><button class="chip">Another amount</button></div></div>
-<button class="picker">${tile("circle-dollar-sign", "GRAY", "sm")}<span class="body"><span class="lbl">From</span><span class="val">Somewhere else · not an account here</span></span>${iconSvg("chevron-down", "sm")}</button>
+<button class="picker">${tile("circle-dollar-sign", "NONE", "sm")}<span class="body"><span class="lbl">From</span><span class="val">Somewhere else · not an account here</span></span>${iconSvg("chevron-down", "sm")}</button>
 ${lines}
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Pay</button></div>`,
     "Pay Visa Gold",
@@ -2859,17 +2860,20 @@ const accountPicker = (kind = "all") => {
     const face = debtFace(DEBT_LEAD, a);
     return `<button class="row" style="border-top:1px solid var(--border)">${tile(ACCT_TYPE_ICON[a.typ], a.color)}<span class="body"><span class="title"><span>${a.name}</span></span><span class="meta">${face.type}</span></span><span class="right"><span class="amount">${face.lead}</span></span></button>`;
   };
-  const outside = `<button class="row" style="border-top:1px solid var(--border)">${tile("circle-dollar-sign", "GRAY")}<span class="body"><span class="title"><span>Somewhere else</span></span><span class="meta">Not an account here</span></span><span class="right"></span></button>`;
+  const outside = `<button class="row" style="border-top:1px solid var(--border)">${tile("circle-dollar-sign", "NONE")}<span class="body"><span class="title"><span>Somewhere else</span></span><span class="meta">Not an account here</span></span><span class="right"></span></button>`;
   const income = kind === "income";
+  const offersOutside = kind === "outside";
   const rows =
     r("Bancolombia", "ACCOUNT", "BLUE", 3420500, true, false, true) +
     r("Cash", "CASH", "GRAY", 184000) +
-    (income ? "" : debtRow(VISA) + debtRow(CARLOAN)) +
+    (income ? "" : (offersOutside ? "" : debtRow(VISA)) + debtRow(CARLOAN)) +
     r("Savings", "SAVINGS", "GREEN", 8900000) +
-    (income ? "" : outside);
+    (offersOutside ? outside : "");
   const note = income
     ? "Archived accounts are not listed. Balances update as you save. Money arriving at a card or a loan is a <b>payment</b>, not income: record it as a transfer from wherever it came from."
-    : "Archived accounts are not listed. Balances update as you save. <b>Somewhere else</b> is not an account and creates nothing: it records a payment made with money Ledger Flow does not track.";
+    : offersOutside
+      ? "Archived accounts are not listed. Balances update as you save. <b>Somewhere else</b> is not an account and creates nothing: it records a payment made with money Ledger Flow does not track."
+      : "Archived accounts are not listed. Balances update as you save.";
   const inner = `<div class="list" style="margin:0 -16px">${rows}</div>
 <p class="xs faint" style="margin:0">${note}</p>`;
   return screen(transactionFormBodyDim(), {
@@ -3589,6 +3593,13 @@ const TWO_SIDES = readbackLine(
 const SAVINGS_AMOUNT = 300000;
 const SAVINGS_BAL = 8900000;
 
+const OUTSIDE_SIDES = {
+  from: ["circle-dollar-sign", "NONE", "Somewhere else \u00b7 not an account here"],
+  to: ["credit-card", "PURPLE", `Visa Gold \u00b7 ${moneyText(CARD_AVAILABLE)} available`],
+};
+
+const OUTSIDE_ONE_SIDE = `\n<div class="alert neutral">${iconSvg("scale")}<span>Visa Gold <b class="amount">${money(PAY_AMOUNT)}</b> less owed. It does not count as income or as spending, because the money never was in Ledger Flow.</span></div>`;
+
 const PLAIN_SIDES = {
   from: ["landmark", "BLUE", `Bancolombia · ${moneyText(BANCO_BAL)}`],
   to: ["piggy-bank", "GREEN", `Savings · ${moneyText(SAVINGS_BAL)}`],
@@ -3979,12 +3990,39 @@ const PAGES = [
         categoryPicker(),
         { added: "2026-09-01" },
       ),
-      plate("account-picker", "Account picker", "", accountPicker(), { added: "2026-09-01" }),
+      plate(
+        "account-picker",
+        "Account picker",
+        "The ordinary one: every account the user has, the debt ones read in their own vocabulary. The two rows that come and go are drawn beside it \u2014 a card and a loan leave under <b>Income</b>, and <b>Somewhere else</b> only arrives in the <i>From</i> of a transfer into a card or a loan.",
+        accountPicker(),
+        { added: "2026-09-01", updated: "2026-09-18" },
+      ),
       plate(
         "income-picks-only-money-accounts",
         "Account picker \u00b7 on an income",
         "The form's half of T-93, whose rule lives in the server. An income cannot land on a card or a loan \u2014 money arriving there is a <b>payment</b>, and counted as income it would inflate <i>Income this month</i>, <i>Estimated savings</i> and every income budget with money nobody earned. So under <b>Income</b> the picker leaves those two out, and the note says why rather than leaving someone hunting for their Visa. <b>An overdraft stays</b>, and it is the one debt type that does: his decision of 2026-09-18, because a positive balance is an overdraft's ordinary state and a salary landing there is income. <b>Somewhere else</b> goes with them: money from outside landing on an account that holds money <i>is</i> income, so that row has nothing to offer here. Expense and Transfer are untouched \u2014 spending with a card, paying one and a cash advance out of one are all real. ",
         accountPicker("income"),
+        { added: "2026-09-18" },
+      ),
+      plate(
+        "transfer-from-somewhere-else",
+        "Full form \u00b7 transfer paid from somewhere else",
+        "T-100, his words of 2026-09-17. The Pay sheet's row is now in the full form too, in the <i>From</i> of a transfer: a debt can be paid with money the app does not track \u2014 cash, someone else's transfer, an account never registered \u2014 and nothing here loses that money, so it cannot be a transfer. What it writes is the Pay sheet's movement, a one-sided <b>ADJUSTMENT</b> raising the card, so the rest of the form follows it: <b>no category</b> (an adjustment carries none), the <b>one-sided sentence</b> instead of the two-sided one, and the <b>swap button disabled</b>, because one of the two sides is not an account and the <i>To</i> never takes this row. The loan ceiling of T-93 still applies on the amount. Saved, it can no longer be edited here \u2014 an adjustment left this form with T-85 \u2014 and <code>/transactions/&lt;id&gt;/edit</code> sends it on to the detail.",
+        transactionForm("TRANSFER", {
+          hint: typeLine("TRANSFER"),
+          transfer: OUTSIDE_SIDES,
+          amount: nf.format(PAY_AMOUNT),
+          intents: intentChips(false),
+          readback: OUTSIDE_ONE_SIDE,
+          swap: false,
+        }),
+        { added: "2026-09-18" },
+      ),
+      plate(
+        "transfer-from-only-when-it-applies",
+        "Account picker \u00b7 the From of a transfer into a card",
+        "The condition he asked to be defined, and it is T-93's rule read from the other side: money arriving <b>from outside</b> at an account that holds money <b>is income</b>, so <b>Somewhere else</b> is offered only when the <i>To</i> is a <b>card</b> or a <b>loan</b> \u2014 exactly the two types where an income is refused, read from the same list rather than a second copy. Towards an ordinary account, a savings account or an <b>overdraft</b> the row is simply absent and the honest record is an Income. It is <b>not offered in the To</b> either (his decision, 2026-09-18): money leaving towards something the app does not track is an <b>Expense</b>, and a second way to record it that is not spending would keep the same act out of Stats and out of every budget. Visa Gold is missing from this list because it is already the <i>To</i>.",
+        accountPicker("outside"),
         { added: "2026-09-18" },
       ),
       plate(

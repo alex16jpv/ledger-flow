@@ -125,6 +125,14 @@ function routeFetchWithDebt() {
   });
 }
 
+// A transfer keeps three account sheets mounted — From, To and the intent chips — so the open one wins.
+async function openAccountSheet() {
+  const sheets = await screen.findAllByRole("dialog", { name: "Account" });
+  const shown = sheets.find((sheet) => sheet.hasAttribute("open"));
+  if (!shown) throw new Error("no account sheet is open");
+  return shown;
+}
+
 const calls = (method: string) =>
   fetchMock.mock.calls.filter(([, init]) => (init?.method ?? "GET") === method);
 
@@ -371,6 +379,107 @@ describe("NewTransactionScreen", () => {
     await userEvent.clear(screen.getByRole("textbox", { name: "Amount" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "800");
     expect(screen.queryByText(/cannot be paid more than/)).not.toBeInTheDocument();
+  });
+
+  // T-100: money from outside is a payment only towards a card or a loan; anywhere else it is income.
+  it("offers Somewhere else in the From only when the To is a card or a loan", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Move to savings" }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+
+    const plain = await openAccountSheet();
+    expect(within(plain).queryByRole("option", { name: /Somewhere else/ })).not.toBeInTheDocument();
+    await userEvent.click(within(plain).getByRole("button", { name: "Close" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Pay a loan" }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+    const debt = await openAccountSheet();
+    expect(within(debt).getByRole("option", { name: /Somewhere else/ })).toBeVisible();
+    expect(within(debt).getByText(/is not an account and creates nothing/)).toBeVisible();
+  });
+
+  it("writes a debt paid from outside as a one-sided adjustment", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "30");
+    await userEvent.click(await screen.findByRole("button", { name: "Pay a loan" }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+    await userEvent.click(
+      within(await openAccountSheet()).getByRole("option", { name: /Somewhere else/ }),
+    );
+
+    expect(screen.getByRole("button", { name: /From.*Somewhere else/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Swap accounts" })).toBeDisabled();
+    expect(screen.queryByText(/marked as Transfer are offered here/)).not.toBeInTheDocument();
+    expect(screen.getByText(/never was in Ledger Flow/)).toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
+    await waitFor(() => {
+      expect(calls("POST")).toHaveLength(1);
+    });
+    expect(JSON.parse(calls("POST")[0]?.[1]?.body as string)).toMatchObject({
+      type: "ADJUSTMENT",
+      amount: 30,
+      fromAccountId: null,
+      toAccountId: "a4",
+      categoryId: null,
+      description: "Paid from outside Ledger Flow",
+    });
+  });
+
+  it("keeps the description the user typed instead of the one it writes for them", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "30");
+    await userEvent.click(await screen.findByRole("button", { name: "Pay a loan" }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+    await userEvent.click(
+      within(await openAccountSheet()).getByRole("option", { name: /Somewhere else/ }),
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: /^Description/ }),
+      "My mother paid it",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
+
+    await waitFor(() => {
+      expect(calls("POST")).toHaveLength(1);
+    });
+    expect(JSON.parse(calls("POST")[0]?.[1]?.body as string)).toMatchObject({
+      type: "ADJUSTMENT",
+      description: "My mother paid it",
+    });
+  });
+
+  it("takes the row away, and the choice with it, when the To stops being a card or a loan", async () => {
+    routeFetchWithDebt();
+    render(<NewTransactionScreen />);
+    await screen.findByRole("group", { name: "Type" });
+    await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "30");
+    await userEvent.click(await screen.findByRole("button", { name: "Pay a loan" }));
+    await userEvent.click(screen.getByRole("button", { name: /^From/ }));
+    await userEvent.click(
+      within(await openAccountSheet()).getByRole("option", { name: /Somewhere else/ }),
+    );
+    expect(screen.getByRole("button", { name: /From.*Somewhere else/ })).toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: /^To/ }));
+    await userEvent.click(
+      within(await openAccountSheet()).getByRole("option", { name: /Savings/ }),
+    );
+
+    expect(screen.getByRole("button", { name: /^From/ })).toHaveTextContent("Choose an account");
+    await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
+    expect(calls("POST")).toHaveLength(0);
+    expect(await screen.findByText("This field is required.")).toBeVisible();
   });
 
   it("offers no intent chip for a kind of account nobody has", async () => {

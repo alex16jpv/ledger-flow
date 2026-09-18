@@ -1266,7 +1266,8 @@
       "leaves": "{name} −{amount}",
       "arrives": "{name} +{amount}",
       "lessOwed": "{name} debe {amount} menos",
-      "moreOwed": "{name} debe {amount} más"
+      "moreOwed": "{name} debe {amount} más",
+      "outside": "{side}. No cuenta como ingreso ni como gasto, porque ese dinero nunca estuvo en Ledger Flow."
     },
     "quick": {
       "title": "Añadir",

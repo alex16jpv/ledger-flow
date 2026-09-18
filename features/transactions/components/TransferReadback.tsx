@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, Scale } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Alert } from "@/components/ui/Alert";
@@ -23,19 +23,29 @@ export interface TransferReadbackProps {
   from: ReadbackAccount | null | undefined;
   to: ReadbackAccount | null | undefined;
   amount: number | null;
+  outside?: boolean;
 }
 
-export function TransferReadback({ from, to, amount }: TransferReadbackProps) {
+export function TransferReadback({ from, to, amount, outside = false }: TransferReadbackProps) {
   const t = useTranslations("transactions.readback");
   const money = useMoney();
-  if (!from || !to || amount === null || !Number.isFinite(amount) || amount <= 0) return null;
+  if (!to || amount === null || !Number.isFinite(amount) || amount <= 0) return null;
   const formatted = money.format(amount);
+  const right = t(sideKey(to, true), { name: to.name, amount: formatted });
+
+  if (outside)
+    return (
+      <Alert tone="neutral" icon={Scale}>
+        {t("outside", { side: right })}
+      </Alert>
+    );
+  if (!from) return null;
 
   return (
     <Alert tone="neutral" icon={ArrowLeftRight}>
       {t("line", {
         left: t(sideKey(from, false), { name: from.name, amount: formatted }),
-        right: t(sideKey(to, true), { name: to.name, amount: formatted }),
+        right,
       })}
     </Alert>
   );

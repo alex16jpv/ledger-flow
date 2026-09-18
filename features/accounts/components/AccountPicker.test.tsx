@@ -92,6 +92,30 @@ describe("AccountPicker", () => {
     expect(screen.getByRole("option", { name: /Cash/ })).toHaveFocus();
   });
 
+  // The row was in the sheet but the closed picker went back to the placeholder (found in T-100).
+  it("keeps saying Somewhere else once it is the chosen row", async () => {
+    const onSelect = vi.fn();
+    renderWithProviders(
+      <QueryProvider>
+        <AccountPicker
+          value={null}
+          onChange={vi.fn()}
+          label="From"
+          outside={{
+            label: "Somewhere else",
+            meta: "not an account here",
+            selected: true,
+            onSelect,
+          }}
+        />
+      </QueryProvider>,
+    );
+    expect(
+      await screen.findByRole("button", { name: /From.*Somewhere else · not an account here/ }),
+    ).toBeVisible();
+    expect(screen.queryByText("Choose an account")).not.toBeInTheDocument();
+  });
+
   it("creates an account inline and selects it", async () => {
     const onChange = vi.fn();
     renderWithProviders(

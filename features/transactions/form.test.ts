@@ -84,6 +84,58 @@ describe("transaction form model", () => {
     expect(transactionFormSchema.safeParse(values()).success).toBe(true);
   });
 
+  // T-100: money from outside is not a transfer, because no account of the user's lost it.
+  it("writes a transfer paid from outside as a one-sided adjustment", () => {
+    expect(
+      toTransactionInput(
+        values({
+          type: "TRANSFER",
+          fromAccountId: null,
+          toAccountId: "a2",
+          categoryId: "c1",
+          fromOutside: true,
+        }),
+        BOGOTA,
+      ),
+    ).toMatchObject({
+      type: "ADJUSTMENT",
+      categoryId: null,
+      fromAccountId: null,
+      toAccountId: "a2",
+    });
+  });
+
+  it("keeps the From out of the payload even if an account was chosen before", () => {
+    expect(
+      toTransactionInput(
+        values({ type: "TRANSFER", fromAccountId: "a1", toAccountId: "a2", fromOutside: true }),
+        BOGOTA,
+      ),
+    ).toMatchObject({ type: "ADJUSTMENT", fromAccountId: null, toAccountId: "a2" });
+  });
+
+  it("leaves the other two types alone when the flag is somehow set", () => {
+    expect(toTransactionInput(values({ fromOutside: true }), BOGOTA)).toMatchObject({
+      type: "EXPENSE",
+      fromAccountId: "a1",
+    });
+  });
+
+  it("stops asking for a From once the money comes from outside", () => {
+    const issues = (input: TransactionFormValues) =>
+      transactionFormSchema
+        .safeParse(input)
+        .error?.issues.map((i) => `${String(i.path[0])}:${i.message}`);
+    expect(issues(values({ type: "TRANSFER", fromAccountId: null, toAccountId: "a2" }))).toEqual([
+      "fromAccountId:validation.required",
+    ]);
+    expect(
+      transactionFormSchema.safeParse(
+        values({ type: "TRANSFER", fromAccountId: null, toAccountId: "a2", fromOutside: true }),
+      ).success,
+    ).toBe(true);
+  });
+
   it("flags dates more than a day ahead", () => {
     expect(isTooFarAhead({ date: "2026-09-23", time: "14:00" }, BOGOTA, NOW)).toBe(false);
     expect(isTooFarAhead({ date: "2026-09-24", time: "09:00" }, BOGOTA, NOW)).toBe(true);
@@ -169,6 +221,16 @@ describe("what an edit sends", () => {
     expect(toTransactionChanges(input, { accountId: true })).toEqual({
       fromAccountId: "a1",
       toAccountId: null,
+    });
+  });
+
+  it("sends the type, both sides, the category and the description when the money came from outside", () => {
+    expect(toTransactionChanges({ ...input, type: "ADJUSTMENT" }, { fromOutside: true })).toEqual({
+      type: "ADJUSTMENT",
+      categoryId: "c1",
+      fromAccountId: "a1",
+      toAccountId: null,
+      description: "Taxi",
     });
   });
 

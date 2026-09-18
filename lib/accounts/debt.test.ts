@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { readDebt, splitAccounts } from "@/lib/accounts/debt";
+import { readDebt, splitAccounts, takesOutsideMoney } from "@/lib/accounts/debt";
 import type { Account } from "@/types/api";
 
 const account = (over: Partial<Account>): Account => ({
@@ -183,5 +183,17 @@ describe("splitAccounts", () => {
       have: -50000,
       owe: 0,
     });
+  });
+});
+
+// T-100: into an account that holds money, money from outside is income, so the row has nothing to offer.
+describe("takesOutsideMoney", () => {
+  it("is the two types where an income is refused, and nothing else", () => {
+    expect(takesOutsideMoney("CARD")).toBe(true);
+    expect(takesOutsideMoney("LOAN")).toBe(true);
+    expect(takesOutsideMoney("OVERDRAFT")).toBe(false);
+    expect(takesOutsideMoney("ACCOUNT")).toBe(false);
+    expect(takesOutsideMoney("SAVINGS")).toBe(false);
+    expect(takesOutsideMoney("CASH")).toBe(false);
   });
 });
