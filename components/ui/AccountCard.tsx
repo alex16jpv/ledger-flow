@@ -26,6 +26,7 @@ export interface AccountCardDebt {
   barLabel: string;
   foot?: ReactNode;
   action?: ReactNode;
+  projected?: boolean;
 }
 
 export interface AccountCardProps {
@@ -92,10 +93,13 @@ export function AccountCard({
         </span>
       </div>
       {debt && (debt.bar !== null || debt.foot) && (
-        <div className="flex flex-col gap-1.5">
-          {debt.bar !== null && <Progress value={debt.bar} thin plain label={debt.barLabel} />}
-          {debt.foot && <span className="text-xs text-text-3">{debt.foot}</span>}
-        </div>
+        // Both read the same balance, so one mark covers the pair (components.md 24).
+        <Projected when={debt.projected ?? false} align="center" className="w-full">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            {debt.bar !== null && <Progress value={debt.bar} thin plain label={debt.barLabel} />}
+            {debt.foot && <span className="text-xs text-text-3">{debt.foot}</span>}
+          </div>
+        </Projected>
       )}
     </>
   );
@@ -172,7 +176,11 @@ export interface AccountReading {
 }
 
 /** The one reading four surfaces print: the list, Home, the picker and the form's preview. */
-export function useAccountReading(account: DebtAccount, promptHref?: string): AccountReading {
+export function useAccountReading(
+  account: DebtAccount,
+  promptHref?: string,
+  projected = false,
+): AccountReading {
   const t = useTranslations();
   const money = useMoney();
   const reading = readDebt(account);
@@ -195,6 +203,7 @@ export function useAccountReading(account: DebtAccount, promptHref?: string): Ac
   return {
     lead: reading.lead,
     debt: {
+      projected,
       word: t(`accounts.debt.${reading.word}`),
       bar: reading.bar,
       barLabel: t(
@@ -230,7 +239,7 @@ export function AccountRowCard({
   promptHref,
 }: AccountRowCardProps) {
   const t = useTranslations();
-  const { lead, debt } = useAccountReading(account, promptHref);
+  const { lead, debt } = useAccountReading(account, promptHref, projected);
   return (
     <AccountCard
       href={href}

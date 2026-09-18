@@ -57,10 +57,12 @@ export function AccountHero({ account }: { account: Account }) {
       </Projected>
       {debt && <span className="text-sm text-text-2">{debt.word}</span>}
       {debt && (debt.bar !== null || debt.foot) && (
-        <div className="mt-0.5 flex flex-col gap-1.5">
-          {debt.bar !== null && <Progress value={debt.bar} thin plain label={debt.barLabel} />}
-          {debt.foot && <span className="text-sm text-text-3">{debt.foot}</span>}
-        </div>
+        <Projected when={outbox.projected.balances} align="center" className="mt-0.5 w-full">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            {debt.bar !== null && <Progress value={debt.bar} thin plain label={debt.barLabel} />}
+            {debt.foot && <span className="text-sm text-text-3">{debt.foot}</span>}
+          </div>
+        </Projected>
       )}
       <span className="text-sm text-text-3">
         {t("accounts.detail.openingLine", {

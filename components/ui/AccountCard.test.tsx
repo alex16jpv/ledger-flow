@@ -94,6 +94,14 @@ describe("AccountRowCard", () => {
     expect(screen.getByText("$4,000,000 of your own money sitting on it")).toBeInTheDocument();
   });
 
+  it("marks the bar and its line as a projection, not only the headline", () => {
+    renderWithProviders(
+      <AccountRowCard account={account({ creditLimit: 4000000 })} href="/a" projected />,
+    );
+
+    expect(screen.getAllByRole("img", { name: "Includes changes not yet synced" })).toHaveLength(2);
+  });
+
   it("leaves an account that is not debt exactly as it was", () => {
     renderWithProviders(
       <AccountRowCard account={account({ type: "ACCOUNT", balance: 3420500 })} href="/a" />,
