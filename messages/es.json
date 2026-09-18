@@ -1260,7 +1260,7 @@
   },
   "transactions": {
     "readback": {
-      "line": "{left} · {right}. Tu balance total no cambia.",
+      "line": "{left} · {right}.",
       "leaves": "{name} −{amount}",
       "arrives": "{name} +{amount}",
       "lessOwed": "{name} debe {amount} menos",

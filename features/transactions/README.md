@@ -101,7 +101,9 @@ there: each side speaks the vocabulary of its own account — a sign for an ordi
 _less owed_ for a debt **that owes something**, and a sign again for a card or a loan holding money of
 its owner, which is every card until the script of T-90 has run. It repeats the amount typed and the
 two names picked and does **no arithmetic on any balance** — house rule 4 — so it reads identically
-with no network on a device that has never seen those balances. The Pay sheet uses the same component: one grammar, every surface.
+with no network on a device that has never seen those balances, and since T-96 it **ends there**: the
+clause about a total balance named a figure no screen has shown since T-85. The Pay sheet uses the same
+component: one grammar, every surface.
 The intent chips above _From_ and _To_ (`IntentChips`, app layer, since they open the account picker
 filtered by type) only fill the two sides in the right direction; they save nothing, add no field and
 touch no category, a chip whose kind of account nobody has is not offered, and none of them empties a

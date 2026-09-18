@@ -107,9 +107,7 @@ describe("PaySheet", () => {
       "true",
     );
     expect(
-      screen.getByText(
-        "Bancolombia −$1,245,900 · Visa Gold $1,245,900 less owed. Your total balance does not change.",
-      ),
+      screen.getByText("Bancolombia −$1,245,900 · Visa Gold $1,245,900 less owed."),
     ).toBeInTheDocument();
   });
 
@@ -123,9 +121,7 @@ describe("PaySheet", () => {
       "false",
     );
     expect(
-      screen.getByText(
-        "Bancolombia −$300,000 · Visa Gold $300,000 less owed. Your total balance does not change.",
-      ),
+      screen.getByText("Bancolombia −$300,000 · Visa Gold $300,000 less owed."),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pay" })).toBeEnabled();
   });

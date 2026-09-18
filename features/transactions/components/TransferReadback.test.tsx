@@ -45,9 +45,8 @@ describe("the sentence that reads a transfer back", () => {
         amount={500000}
       />,
     );
-    expect(
-      screen.getByText(/Bancolombia −\$500,000 · Visa Gold \$500,000 less owed/),
-    ).toHaveTextContent("Your total balance does not change.");
+    // T-96: the two sides are the whole sentence; it no longer points at a total no screen shows.
+    expect(screen.getByText("Bancolombia −$500,000 · Visa Gold $500,000 less owed.")).toBeVisible();
   });
 
   it("reads money put aside with the plain signs", () => {
