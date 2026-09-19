@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { ERROR_TABLE, isErrorCode } from "@/lib/api/errors";
@@ -470,16 +470,7 @@ export function AttentionScreen() {
             >
               {t("states.attention.confirmCta")}
             </Button>
-            <Button
-              size="lg"
-              block
-              variant="ghost"
-              onClick={() => {
-                setConfirming(null);
-              }}
-            >
-              {t("common.cancel")}
-            </Button>
+            <SheetCancel />
           </>
         }
       >

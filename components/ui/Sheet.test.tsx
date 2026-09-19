@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { renderWithProviders } from "@/lib/testing/render";
 
-import { EXPAND_DRAG_PX, Sheet, useUnsavedGuard } from "./Sheet";
+import { EXPAND_DRAG_PX, Sheet, SheetCancel, useUnsavedGuard } from "./Sheet";
 
 describe("Sheet", () => {
   it("opens as a modal dialog labelled by its title and closes from the button", async () => {
@@ -189,26 +189,53 @@ describe("Sheet", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it("does not ask when the form has nothing typed, and never asks on the close button (T-78)", async () => {
+  it("does not ask when the form has nothing typed, whichever exit is used (T-104)", async () => {
     const onClose = vi.fn();
-    const { unmount } = renderWithProviders(
-      <Sheet open onClose={onClose} title="Adjust balance">
+    renderWithProviders(
+      <Sheet open onClose={onClose} title="Adjust balance" footer={<SheetCancel />}>
         <Typed unsaved={false} />
       </Sheet>,
     );
-    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
-    expect(onClose).toHaveBeenCalledOnce();
-    unmount();
 
-    const onCloseTyped = vi.fn();
-    renderWithProviders(
-      <Sheet open onClose={onCloseTyped} title="Adjust balance">
-        <Typed unsaved />
-      </Sheet>,
-    );
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
-    expect(onCloseTyped).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(onClose).toHaveBeenCalledTimes(3);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it.each([["Close"], ["Cancel"]])(
+    "asks before leaving through %s with something typed (T-104)",
+    async (name) => {
+      const onClose = vi.fn();
+      renderWithProviders(
+        <Sheet open onClose={onClose} title="Adjust balance" footer={<SheetCancel />}>
+          <Typed unsaved />
+        </Sheet>,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name }));
+
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByRole("alert")).toHaveTextContent("Are you sure you want to leave?");
+      expect(screen.getByRole("button", { name: "Keep editing" })).toHaveFocus();
+      // The footer is replaced by the question, so the exit that asked is no longer there to press.
+      expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+      expect(screen.getByRole("button", { name })).toHaveFocus();
+
+      await userEvent.click(screen.getByRole("button", { name }));
+      await userEvent.click(screen.getByRole("button", { name: "Leave" }));
+      expect(onClose).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("refuses to render a Cancel outside a sheet, rather than one that closes nothing (T-104)", () => {
+    const noise = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(() => renderWithProviders(<SheetCancel />)).toThrow(/inside a Sheet/);
+    noise.mockRestore();
   });
 
   it("drops the question when what reported it goes away (T-78)", () => {

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { RenameRestoreSheet } from "@/components/ui/RenameRestoreSheet";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import type { Category } from "@/types/api";
 
 import { CATEGORY_NAME_MAX } from "../schemas";
@@ -24,7 +24,6 @@ export function ArchiveCategorySheet({
   onClose: () => void;
 }) {
   const t = useTranslations("categories.archive");
-  const tc = useTranslations("common");
   return (
     <Sheet
       open={open}
@@ -35,9 +34,7 @@ export function ArchiveCategorySheet({
           <Button variant="dangerSolid" size="lg" block loading={pending} onClick={onConfirm}>
             {t("confirm")}
           </Button>
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {tc("cancel")}
-          </Button>
+          <SheetCancel />
         </>
       }
     >

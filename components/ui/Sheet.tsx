@@ -24,6 +24,27 @@ import { cn } from "./cn";
 
 const UnsavedContext = createContext<((id: string, unsaved: boolean) => void) | null>(null);
 
+const DismissContext = createContext<(() => void) | null>(null);
+
+export function SheetCancel({
+  children,
+  variant = "ghost",
+  className,
+}: {
+  children?: ReactNode;
+  variant?: "ghost" | "secondary";
+  className?: string;
+}) {
+  const t = useTranslations("common");
+  const dismiss = useContext(DismissContext);
+  if (!dismiss) throw new Error("SheetCancel must be rendered inside a Sheet");
+  return (
+    <Button variant={variant} size="lg" block={!className} className={className} onClick={dismiss}>
+      {children ?? t("cancel")}
+    </Button>
+  );
+}
+
 export function useUnsavedGuard(unsaved: boolean): void {
   const report = useContext(UnsavedContext);
   const id = useId();
@@ -83,6 +104,7 @@ export function Sheet({
   const [reported, setReported] = useState<readonly string[]>([]);
   const [asking, setAsking] = useState(false);
   const keep = useRef<HTMLButtonElement>(null);
+  const footerBox = useRef<HTMLDivElement>(null);
   const returnTo = useRef<HTMLElement | null>(null);
   const questionId = useId();
   const report = useCallback((id: string, value: boolean) => {
@@ -101,7 +123,14 @@ export function Sheet({
   }, [open]);
 
   useEffect(() => {
-    if (asking) keep.current?.focus();
+    if (asking) {
+      keep.current?.focus();
+      return;
+    }
+    const back = returnTo.current;
+    returnTo.current = null;
+    // The footer is swapped out while the question is up, so the exit that asked may be gone with it.
+    (back?.isConnected ? back : footerBox.current?.querySelector<HTMLElement>(FOCUSABLE))?.focus();
   }, [asking]);
 
   // axe `scrollable-region-focusable`: a tab stop only when nothing inside the body can take one.
@@ -111,9 +140,6 @@ export function Sheet({
 
   function keepEditing() {
     setAsking(false);
-    const back = returnTo.current;
-    returnTo.current = null;
-    back?.focus();
   }
 
   function requestClose() {
@@ -140,6 +166,7 @@ export function Sheet({
 
   function handleClose(event: SyntheticEvent<HTMLDialogElement>) {
     if (event.target !== event.currentTarget) return;
+    returnTo.current = null;
     setAsking(false);
     if (open) onClose();
   }
@@ -243,7 +270,7 @@ export function Sheet({
               size="sm"
               iconOnly
               round
-              onClick={onClose}
+              onClick={requestClose}
               aria-label={t("close")}
             >
               <X {...iconProps("sm")} />
@@ -278,6 +305,7 @@ export function Sheet({
                   className="flex-1"
                   aria-describedby={questionId}
                   onClick={() => {
+                    returnTo.current = null;
                     setAsking(false);
                     onClose();
                   }}
@@ -287,7 +315,13 @@ export function Sheet({
               </div>
             </div>
           ) : (
-            footer && <div className="flex flex-col gap-2">{footer}</div>
+            footer && (
+              <DismissContext.Provider value={requestClose}>
+                <div ref={footerBox} className="flex flex-col gap-2">
+                  {footer}
+                </div>
+              </DismissContext.Provider>
+            )
           )}
         </div>
       </div>

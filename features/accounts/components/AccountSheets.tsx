@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { RenameRestoreSheet } from "@/components/ui/RenameRestoreSheet";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import type { Account } from "@/types/api";
 
 import { ACCOUNT_NAME_MAX } from "../schemas";
@@ -26,7 +26,6 @@ export function MakeMainSheet({
   onClose,
 }: ConfirmSheetProps & { account: Account; previous: Account | undefined }) {
   const t = useTranslations("accounts.main");
-  const tc = useTranslations("common");
   return (
     <Sheet
       open={open}
@@ -37,9 +36,7 @@ export function MakeMainSheet({
           <Button size="lg" block loading={pending} onClick={onConfirm}>
             {t("confirm")}
           </Button>
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {tc("cancel")}
-          </Button>
+          <SheetCancel />
         </>
       }
     >
@@ -59,7 +56,6 @@ export function ArchiveAccountSheet({
   onClose,
 }: ConfirmSheetProps & { account: Account }) {
   const t = useTranslations("accounts.archive");
-  const tc = useTranslations("common");
   return (
     <Sheet
       open={open}
@@ -70,9 +66,7 @@ export function ArchiveAccountSheet({
           <Button variant="dangerSolid" size="lg" block loading={pending} onClick={onConfirm}>
             {t("confirm")}
           </Button>
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {tc("cancel")}
-          </Button>
+          <SheetCancel />
         </>
       }
     >

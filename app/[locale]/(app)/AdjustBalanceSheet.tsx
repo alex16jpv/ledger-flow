@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Field";
 import { Segment } from "@/components/ui/Segment";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { useAccountQuery } from "@/features/accounts/hooks";
 import {
@@ -145,9 +145,7 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
           >
             {t("accounts.adjust.save")}
           </Button>
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {t("common.cancel")}
-          </Button>
+          <SheetCancel />
         </>
       }
     >

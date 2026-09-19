@@ -11,7 +11,7 @@ import { Amount } from "@/components/ui/Amount";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Empty } from "@/components/ui/Empty";
 import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
@@ -252,16 +252,7 @@ export function ReviewScreen() {
             >
               {t("transactions.review.confirmCta", { count: ready.length })}
             </Button>
-            <Button
-              variant="ghost"
-              size="lg"
-              block
-              onClick={() => {
-                setConfirming(false);
-              }}
-            >
-              {t("common.cancel")}
-            </Button>
+            <SheetCancel />
           </>
         }
       >

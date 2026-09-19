@@ -8,7 +8,7 @@ import { Amount } from "@/components/ui/Amount";
 import { Button } from "@/components/ui/Button";
 import { DateTimeField, type DateTimeValue } from "@/components/ui/DateTimeField";
 import { Field, Input } from "@/components/ui/Field";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { dateTimeInstant, dateTimeParts } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
@@ -368,11 +368,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
 
   function footer() {
     if (view.kind !== "resolve") {
-      return (
-        <Button size="lg" block variant="secondary" onClick={onClose}>
-          {common("close")}
-        </Button>
-      );
+      return <SheetCancel variant="secondary">{common("close")}</SheetCancel>;
     }
     const { operation } = view;
     // A refusal for good repeats, so discarding leads and Try again is the second chance.

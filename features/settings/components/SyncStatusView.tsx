@@ -22,7 +22,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { List, Row, RowBody, RowLink, RowMeta, RowTitle } from "@/components/ui/Row";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
@@ -434,16 +434,7 @@ export function SyncStatusView() {
             >
               {t("resync.confirm")}
             </Button>
-            <Button
-              variant="ghost"
-              size="lg"
-              block
-              onClick={() => {
-                setConfirming(false);
-              }}
-            >
-              {t("resync.cancel")}
-            </Button>
+            <SheetCancel>{t("resync.cancel")}</SheetCancel>
           </div>
         }
       >

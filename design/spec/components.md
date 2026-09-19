@@ -47,11 +47,12 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     `prefers-reduced-transparency`. **It closes on a tap anywhere outside the sheet and on ESC**,
     except in the two sheets that turn `dismissible` off: the three exits of local mode, where a
     choice has to be made, and the expired-session sheet, which outside local mode has only one way
-    out. **A sheet whose form has something typed does not close on that tap, and ESC does not close
-    it either**: it asks in place, with "Keep editing" as the primary and focused action and "Leave"
-    as the quiet one, the body inert behind the question, and ESC answering "Keep editing". The close
-    button stays the deliberate exit that does not ask (T-78, drawn as `unsaved-before-leaving` in
-    [screens/states.md](screens/states.md)).
+    out. **A sheet whose form has something typed does not close on any of its four
+    exits**: it asks in place, with "Keep editing" as the primary and focused action and "Leave" as
+    the quiet one, the body inert behind the question, and ESC answering "Keep editing" (T-78, drawn
+    as `unsaved-before-leaving` in [screens/states.md](screens/states.md)). **Since T-104 the four ask** (his decision, 2026-09-18:
+    «para evirar problemas de miss click»). The footer's Cancel is `SheetCancel`, which the sheet
+    renders inside itself, so it asks the same question the other three do.
     **The 36×4 bar is decoration in every sheet but quick add**, where it is 44×4 and is a control that
     opens the full form: see [screens/add.md](screens/add.md). Its target is 64×28 around that bar, a
     pull **downwards** does nothing at all, and while the unsaved question is up the bar is inert like

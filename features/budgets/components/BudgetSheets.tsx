@@ -7,7 +7,7 @@ import { Alert } from "@/components/ui/Alert";
 import { AmountInput } from "@/components/ui/AmountInput";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { Link } from "@/lib/i18n/navigation";
 import { useMoney } from "@/lib/i18n/useMoney";
 import type { Budget } from "@/types/api";
@@ -32,7 +32,6 @@ export function OverrideSheet({
   onClose,
 }: OverrideSheetProps) {
   const t = useTranslations("budgets.detail");
-  const tc = useTranslations("common");
   const money = useMoney();
   const [amount, setAmount] = useState<number | null>(budget.amount);
   const valid = amount !== null && amount >= 0 && amount !== budget.amount;
@@ -57,9 +56,7 @@ export function OverrideSheet({
           >
             {t("overrideSave")}
           </Button>
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {tc("cancel")}
-          </Button>
+          <SheetCancel />
         </>
       }
     >
@@ -98,7 +95,6 @@ export function ArchiveBudgetSheet({
   onClose: () => void;
 }) {
   const t = useTranslations("budgets.detail");
-  const tc = useTranslations("common");
   return (
     <Sheet
       open={open}
@@ -109,9 +105,7 @@ export function ArchiveBudgetSheet({
           <Button variant="dangerSolid" size="lg" block loading={pending} onClick={onConfirm}>
             {t("archive")}
           </Button>
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {tc("cancel")}
-          </Button>
+          <SheetCancel />
         </>
       }
     >
@@ -155,9 +149,7 @@ export function RestoreBudgetConflictSheet({
               {t("restoreConflict.open", { name: conflict.name })}
             </Link>
           )}
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {tc("close")}
-          </Button>
+          <SheetCancel>{tc("close")}</SheetCancel>
         </>
       }
     >

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
 import { List, Row, RowBody, RowMeta, RowMetaDot, RowTitle } from "@/components/ui/Row";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
@@ -169,16 +169,7 @@ export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<voi
             >
               {t("settings.sessions.signOutOthersConfirm")}
             </Button>
-            <Button
-              variant="ghost"
-              size="lg"
-              block
-              onClick={() => {
-                setConfirming(false);
-              }}
-            >
-              {t("common.cancel")}
-            </Button>
+            <SheetCancel />
           </>
         }
       >

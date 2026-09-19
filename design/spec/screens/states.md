@@ -31,8 +31,9 @@ server fails and when something has to be confirmed.
   ESC does the same, so a half-written form would go with it. When there is something to lose, neither
   closes: the sheet asks in place — a `warning` alert where the footer was, "Keep editing" as the
   primary and focused action, "Leave" as a quiet `dangerGhost` — and the body goes inert, so nothing
-  behind the question can be pressed. ESC answers "Keep editing". The close button is the deliberate
-  exit and does not ask, and a sheet with nothing typed closes on the first tap. Which sheets count as
+  behind the question can be pressed. ESC answers "Keep editing". Since T-104 the **close button and
+  the footer's Cancel ask the same question**, because those are the two a thumb hits by accident; a
+  sheet with nothing typed closes on the first tap, whichever exit it is. Which sheets count as
   having something to lose is listed in `../../../DECISIONS.md` under T-78.
 - **An address that cannot name a row** answers **404 with no request at all**, and shows the public
   404 ([public.md](public.md) `#not-found`) — there is no separate in-app 404. A detail route's `[id]`
