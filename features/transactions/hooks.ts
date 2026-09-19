@@ -62,7 +62,7 @@ export interface QuickAddResult {
 }
 
 // P-17: the quick endpoint always flags pendingDetails; a follow-up PUT completes what it can.
-// A transfer is complete when it is saved: the inbox is for a quick capture missing its category.
+// A transfer needs no category, so only a failed follow-up leaves one waiting in the inbox.
 export async function quickAddWithDetails({
   input,
   description,

@@ -15,7 +15,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
-import { useCategoriesQuery, useRecentCategories } from "@/features/categories/hooks";
+import { useCategoriesQuery } from "@/features/categories/hooks";
 import type { TransactionLookups } from "@/features/transactions/components/TransactionRow";
 import {
   useBatchComplete,
@@ -52,9 +52,7 @@ export function ReviewScreen() {
   const list = useTransactionsInfinite(PENDING_QUERY);
   const summary = usePendingSummary();
   const accounts = useAccountsQuery(true);
-  const categories = useCategoriesQuery("EXPENSE");
   const allCategories = useCategoriesQuery(undefined);
-  const recent = useRecentCategories("EXPENSE", categories.data, 4);
   const batch = useBatchComplete();
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
   const [failures, setFailures] = useState<Record<string, ErrorMessageKey>>({});
@@ -203,7 +201,6 @@ export function ReviewScreen() {
                 );
               }}
               lookups={lookups}
-              recent={recent}
               focused={transaction.id === focus}
               errorKey={failures[transaction.id] ?? null}
               droppedCategory={dropped.has(transaction.id)}

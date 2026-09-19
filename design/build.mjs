@@ -408,7 +408,7 @@ ${heroChart}
 <div class="progress color-INDIGO" style="flex:1"><span class="fill" style="width:64%"></span>${paceMark()}</div>
 <span class="small muted" style="white-space:nowrap">64% of monthly budget</span></div>
 </section>`;
-  const pend = `<a class="alert warning" href="#" style="align-items:center">${iconSvg("inbox")}<span style="flex:1"><b>3 quick expenses to review</b> · $47,900 in total</span>${iconSvg("chevron-right", "sm")}</a>`;
+  const pend = `<a class="alert warning" href="#" style="align-items:center">${iconSvg("inbox")}<span style="flex:1"><b>3 quick entries to review</b> · $47,900 in total</span>${iconSvg("chevron-right", "sm")}</a>`;
   const installRisk =
     notice === "risk"
       ? `<span class="small muted">This browser can also delete what you record offline after a few days without opening the site. Installing the app stops that.</span>`
@@ -1109,6 +1109,11 @@ const transactionDetail = ({ pending = false, conflict = false } = {}) => {
   });
 };
 
+const REVIEW_CHIPS = {
+  expense: ["Food", "Coffee", "Transport", "Lifestyle"],
+  income: ["Salary", "Business", "Other income"],
+};
+
 const reviewInbox = ({ dropped = false, confirm = false } = {}) => {
   const item = (
     amt,
@@ -1116,18 +1121,19 @@ const reviewInbox = ({ dropped = false, confirm = false } = {}) => {
     acct,
     done = false,
     note = "",
+    kind = "expense",
   ) => `<div class="card stack" style="gap:12px">
-<div class="hstack" style="gap:12px">${tile("hash", "NONE")}<span class="body" style="flex:1;display:flex;flex-direction:column"><span class="amount-lg amount">${money(amt, "−")}</span><span class="small faint">${when} · ${acct}</span></span><span class="badge warning">${iconSvg("inbox")}To review</span></div>${note}
-<div class="chips">${catChip("Food", done)}${catChip("Coffee")}${catChip("Transport")}${catChip("Lifestyle")}<button class="chip">${iconSvg("search", "sm")}Other</button></div>
+<div class="hstack" style="gap:12px">${tile("hash", "NONE")}<span class="body" style="flex:1;display:flex;flex-direction:column"><span class="amount-lg">${amount(amt, kind)}</span><span class="small faint">${when} · ${acct}</span></span><span class="badge warning">${iconSvg("inbox")}To review</span></div>${note}
+<div class="chips">${REVIEW_CHIPS[kind].map((name, i) => catChip(name, done && i === 0)).join("")}<button class="chip">${iconSvg("search", "sm")}Other</button></div>
 <div class="input" style="height:40px"><span class="${done ? "value" : "placeholder"}" style="flex:1">${done ? "Lunch with Laura" : "Description (optional)"}</span></div>
 <div class="hstack" style="gap:8px;justify-content:flex-end"><button class="btn ghost sm">Open full form</button><button class="btn ${done ? "primary" : "secondary"} sm">${iconSvg("check", "sm")}Done</button></div></div>`;
-  const body = `<div class="alert neutral">${iconSvg("info")}<span>Quick expenses already reduced your balance and already count toward your total budget. Here you just name and categorize them.</span></div>
-${item(12500, "Today 8:42", "Bancolombia", true)}${item(15400, "Yesterday 13:05", "Bancolombia", dropped, dropped ? `<div class="alert warning">${iconSvg("archive")}<span>Its category had been archived, so the server saved it without one. Pick another.</span></div>` : "")}${item(20000, "Sat 19 · 21:40", "Cash")}
+  const body = `<div class="alert neutral">${iconSvg("info")}<span>Your quick entries already moved your balance, and the expenses among them already count toward your total budget. Here you just name and categorize them.</span></div>
+${item(12500, "Today 8:42", "Bancolombia", true)}${item(15400, "Yesterday 13:05", "Bancolombia", dropped, dropped ? `<div class="alert warning">${iconSvg("archive")}<span>Its category had been archived, so the server saved it without one. Pick another.</span></div>` : "")}${item(1200000, "Sat 19 · 21:40", "Bancolombia", false, "", "income")}
 <button class="btn primary lg block" style="position:sticky;bottom:8px">${iconSvg("check", "sm")}Save all · ${dropped ? 2 : 1}</button>`;
   const sh = confirm
     ? sheetWrap(
         `<div class="alert warning">${iconSvg("info")}<span><b>Each one keeps the category and description it has right now.</b><br>1 stays pending because it has no category yet.</span></div><div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.2">Save 2</button></div>`,
-        "Save 2 expenses?",
+        "Save 2 entries?",
       )
     : "";
   return screen(body, {
@@ -1136,7 +1142,7 @@ ${item(12500, "Today 8:42", "Bancolombia", true)}${item(15400, "Yesterday 13:05"
     back: true,
     title: "To review · 3",
     narrow: true,
-    actions: `<span class="small muted amount">${money(47900)}</span>`,
+    actions: `<span class="small muted amount">${money(1227900)}</span>`,
     sheet: sh,
   });
 };
@@ -2714,7 +2720,7 @@ const filtersSheet = () => {
 <div class="field"><span class="label">Account</span><div class="chips">${acc("landmark", "BLUE", "Bancolombia", true)}${acc("banknote", "GRAY", "Cash")}${acc("credit-card", "PURPLE", "Visa Gold")}${acc("piggy-bank", "GREEN", "Savings")}</div></div>
 <div class="field"><span class="label">Category</span><div class="chips">${catChip("Food")}${catChip("Transport", true)}${catChip("Coffee")}${catChip("Lifestyle")}<button class="chip">${iconSvg("search", "sm")}More</button><button class="chip">${iconSvg("hash", "sm")}Uncategorized</button></div></div>
 <div class="field"><span class="label">Tag</span><div class="input" style="height:40px">${iconSvg("tag", "sm")}<span class="placeholder" style="flex:1">#latte, #groceries…</span></div></div>
-<div class="hstack" style="gap:10px"><button class="switch" aria-checked="true" aria-label="Only quick expenses to review"></button><span class="small">Only quick expenses to review</span></div>
+<div class="hstack" style="gap:10px"><button class="switch" aria-checked="true" aria-label="Only what is still to review"></button><span class="small">Only what is still to review</span></div>
 <div class="hstack" style="gap:10px"><button class="switch" aria-checked="false" aria-label="Only quick entries"></button><span class="small">Only quick entries (source QUICK)</span></div>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Clear</button><button class="btn primary lg" style="flex:1.4">Show 12 transactions</button></div></div>`;
   return screen(settingsBodyDim(), {
@@ -3884,7 +3890,7 @@ const PAGES = [
     file: "home.html",
     title: "Home",
     group: "Screens",
-    note: "The month's spending is the lead figure — the app exists to show the small daily spending — with a bar per day and progress against the global budget. The amber strip is the inbox of quick expenses still to detail. On desktop the same content splits into two columns.",
+    note: "The month's spending is the lead figure — the app exists to show the small daily spending — with a bar per day and progress against the global budget. The amber strip is the inbox of quick entries still to detail. On desktop the same content splits into two columns.",
     plates: [
       plate(
         "home",
@@ -4089,7 +4095,7 @@ const PAGES = [
     file: "transactions.html",
     title: "Transactions",
     group: "Screens",
-    note: "Grouped by day with a daily total; filter chips mirror the API's filters and a summary heads the period. The detail shows everything the backend keeps, including the source. The review inbox completes a quick expense inline: category chips, description and Done.",
+    note: "Grouped by day with a daily total; filter chips mirror the API's filters and a summary heads the period. The detail shows everything the backend keeps, including the source. The review inbox completes a quick entry inline — an expense or an income, each with the categories of its own type: category chips, description and Done.",
     plates: [
       plate("list", "List", "Search, filters and infinite scroll.", transactions(), {
         added: "2026-09-01",
@@ -4098,14 +4104,14 @@ const PAGES = [
       plate(
         "review-inbox",
         "Review inbox",
-        "Quick expenses to name and categorise, saved in one batch.",
+        "Quick entries to name and categorise, saved in one batch. An income reads as an income and is offered income categories (T-98).",
         reviewInbox(),
         { added: "2026-09-01" },
       ),
       plate(
         "filters",
         "Filters",
-        "Period with presets and a range, type, account, category, tag, only quick expenses to review, only quick entries. The main button says how many results are waiting.",
+        "Period with presets and a range, type, account, category, tag, only what is still to review, only quick entries. The main button says how many results are waiting.",
         filtersSheet(),
         { added: "2026-09-01" },
       ),
@@ -4119,7 +4125,7 @@ const PAGES = [
       plate(
         "dropped-category",
         "Review inbox · category dropped by the server",
-        "Its category had been archived elsewhere, so the server saved the expense without one.",
+        "Its category had been archived elsewhere, so the server saved the entry without one.",
         reviewInbox({ dropped: true }),
         { added: "2026-09-06" },
       ),

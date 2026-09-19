@@ -175,7 +175,7 @@
   "home": {
     "greeting": "Hola, {name}",
     "greetingPlain": "Hola",
-    "pendingReview": "{count, plural, one {# gasto rápido por revisar} other {# gastos rápidos por revisar}}",
+    "pendingReview": "{count, plural, one {# captura rápida por revisar} other {# capturas rápidas por revisar}}",
     "pendingTotal": "· {amount} en total",
     "spending": "Gasto de {month}",
     "dayOf": "Día {day} de {total}",
@@ -191,7 +191,6 @@
     "budgets": "Presupuestos",
     "accounts": "Cuentas",
     "recent": "Movimientos recientes",
-    "quickExpense": "Gasto rápido",
     "toReview": "Por revisar",
     "empty": {
       "accounts": {
@@ -1358,7 +1357,11 @@
       "spentIn": "Gastado en {period}",
       "income": "Ingresos",
       "count": "Movimientos",
-      "quickExpense": "Gasto rápido",
+      "quick": {
+        "EXPENSE": "Gasto rápido",
+        "INCOME": "Ingreso rápido",
+        "TRANSFER": "Traslado rápido"
+      },
       "toReview": "Por revisar",
       "toReviewCount": "Por revisar · {count}",
       "uncategorized": "Sin categoría",
@@ -1404,7 +1407,7 @@
       "category": "Categoría",
       "tag": "Etiqueta",
       "tagPlaceholder": "#latte, #mercado…",
-      "pendingOnly": "Solo gastos rápidos por revisar",
+      "pendingOnly": "Solo lo que falta por revisar",
       "quickOnly": "Solo capturas rápidas",
       "clear": "Limpiar",
       "show": "Mostrar {count, plural, one {# movimiento} other {# movimientos}}",
@@ -1426,7 +1429,7 @@
         "IMPORT": "Importado"
       },
       "edit": "Editar",
-      "pendingBody": "Este gasto rápido aún necesita categoría y descripción.",
+      "pendingBody": "Esta captura rápida todavía necesita categoría y descripción.",
       "complete": "Completar",
       "unknownAccount": "Cuenta desconocida",
       "created": "Creado {created}",
@@ -1436,7 +1439,7 @@
     "review": {
       "title": "Por revisar",
       "titleCount": "Por revisar · {count}",
-      "intro": "Los gastos rápidos ya descontaron tu saldo y ya cuentan en tu presupuesto total. Aquí solo les pones nombre y categoría.",
+      "intro": "Tus capturas rápidas ya movieron tu saldo, y los gastos que haya entre ellas ya cuentan en tu presupuesto total. Aquí solo les pones nombre y categoría.",
       "droppedCategory": "Su categoría estaba archivada, así que el servidor lo guardó sin ella. Elige otra.",
       "when": "{day} {time} · {account}",
       "other": "Otra",
@@ -1446,15 +1449,15 @@
       "saved": "Detalles guardados",
       "empty": {
         "title": "Todo detallado",
-        "body": "Todos los gastos rápidos tienen categoría y descripción.",
+        "body": "Todas las capturas rápidas tienen categoría y descripción.",
         "cta": "Ir al inicio"
       },
       "saveAll": "Guardar todo · {count}",
-      "confirmTitle": "¿Guardar {count, plural, one {# gasto} other {# gastos}}?",
+      "confirmTitle": "¿Guardar {count, plural, one {# captura} other {# capturas}}?",
       "confirmBody": "Cada uno conserva la categoría y la descripción que tiene ahora.",
       "confirmSkipped": "{count, plural, one {# queda pendiente porque aún no tiene categoría.} other {# quedan pendientes porque aún no tienen categoría.}}",
       "confirmCta": "Guardar {count}",
-      "batchSaved": "{count, plural, one {# gasto guardado} other {# gastos guardados}}",
+      "batchSaved": "{count, plural, one {# captura guardada} other {# capturas guardadas}}",
       "batchPartial": "{saved} guardados · {failed} con error"
     }
   },
@@ -1649,7 +1652,7 @@
       "date": "Martes, 22 de septiembre",
       "greeting": "Hola, John",
       "initials": "JD",
-      "pending": "3 gastos rápidos por revisar · {amount} en total",
+      "pending": "3 capturas rápidas por revisar · {amount} en total",
       "spending": "Gasto de septiembre",
       "dayOf": "Día 22 de 30",
       "barDay": "{day} sept · {amount}",

@@ -14,15 +14,23 @@ import { cn } from "@/components/ui/cn";
 import { Input } from "@/components/ui/Field";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
+import type { CategoryType } from "@/features/categories/api";
 import { CategoryPickerSheet } from "@/features/categories/components/CategoryPickerSheet";
+import { useCategoriesQuery, useRecentCategories } from "@/features/categories/hooks";
 import type { TransactionLookups } from "@/features/transactions/components/TransactionRow";
+import { amountKind } from "@/features/transactions/groups";
 import { useUpdateTransaction } from "@/features/transactions/hooks";
 import { type ErrorMessageKey, presentError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
-import type { Category, Transaction } from "@/types/api";
+import type { Transaction } from "@/types/api";
+
+// An ADJUSTMENT is the one movement the server refuses a category on, so it has no list to offer.
+export function reviewCategoryType(type: Transaction["type"]): CategoryType | null {
+  return type === "ADJUSTMENT" ? null : type;
+}
 
 export interface ReviewDraft {
   categoryId: string | null;
@@ -34,7 +42,6 @@ interface ReviewCardProps {
   draft: ReviewDraft;
   onDraftChange: (draft: ReviewDraft) => void;
   lookups: TransactionLookups;
-  recent: readonly Category[];
   focused: boolean;
   errorKey: ErrorMessageKey | null;
   // F-57: the server saved this movement without its category because it was archived offline.
@@ -46,7 +53,6 @@ export function ReviewCard({
   draft,
   onDraftChange,
   lookups,
-  recent,
   focused,
   errorKey,
   droppedCategory = false,
@@ -63,7 +69,10 @@ export function ReviewCard({
     if (focused) card.current?.scrollIntoView({ block: "center" });
   }, [focused]);
 
-  const account = lookups.accounts.get(transaction.fromAccountId ?? "");
+  const account = lookups.accounts.get(transaction.fromAccountId ?? transaction.toAccountId ?? "");
+  const categoryType = reviewCategoryType(transaction.type);
+  const categories = useCategoriesQuery(categoryType ?? undefined, categoryType !== null);
+  const recent = useRecentCategories(categoryType ?? undefined, categories.data, 4);
   const selected = lookups.categories.get(draft.categoryId ?? "");
   const chips =
     selected && !recent.some((category) => category.id === selected.id)
@@ -107,7 +116,7 @@ export function ReviewCard({
           <Hash {...iconProps("md")} />
         </Tile>
         <span className="flex min-w-0 flex-1 flex-col">
-          <Amount value={transaction.amount} kind="expense" size="lg" />
+          <Amount value={transaction.amount} kind={amountKind(transaction.type)} size="lg" />
           <span className="text-sm text-text-3">
             {t("transactions.review.when", {
               day: dayLabel,
@@ -120,32 +129,34 @@ export function ReviewCard({
       </div>
       {errorKey && <Alert tone="danger">{t(errorKey)}</Alert>}
       {droppedCategory && <Alert tone="warning">{t("transactions.review.droppedCategory")}</Alert>}
-      <ChipRow role="group" aria-label={t("transactions.form.category")}>
-        {chips.map((category) => (
-          <CategoryChip
-            key={category.id}
-            color={category.color}
-            selected={category.id === draft.categoryId}
-            icon={<CategoryIcon icon={category.icon} size="sm" />}
+      {categoryType !== null && (
+        <ChipRow role="group" aria-label={t("transactions.form.category")}>
+          {chips.map((category) => (
+            <CategoryChip
+              key={category.id}
+              color={category.color}
+              selected={category.id === draft.categoryId}
+              icon={<CategoryIcon icon={category.icon} size="sm" />}
+              onClick={() => {
+                onDraftChange({
+                  ...draft,
+                  categoryId: category.id === draft.categoryId ? null : category.id,
+                });
+              }}
+            >
+              {category.name}
+            </CategoryChip>
+          ))}
+          <Chip
+            aria-haspopup="dialog"
             onClick={() => {
-              onDraftChange({
-                ...draft,
-                categoryId: category.id === draft.categoryId ? null : category.id,
-              });
+              setPickerOpen(true);
             }}
           >
-            {category.name}
-          </CategoryChip>
-        ))}
-        <Chip
-          aria-haspopup="dialog"
-          onClick={() => {
-            setPickerOpen(true);
-          }}
-        >
-          {t("transactions.review.other")}
-        </Chip>
-      </ChipRow>
+            {t("transactions.review.other")}
+          </Chip>
+        </ChipRow>
+      )}
       <Input
         value={draft.description}
         onChange={(event) => {
@@ -175,17 +186,19 @@ export function ReviewCard({
           {t("transactions.review.done")}
         </Button>
       </div>
-      <CategoryPickerSheet
-        open={pickerOpen}
-        onClose={() => {
-          setPickerOpen(false);
-        }}
-        type="EXPENSE"
-        value={draft.categoryId}
-        onSelect={(category) => {
-          onDraftChange({ ...draft, categoryId: category.id });
-        }}
-      />
+      {categoryType !== null && (
+        <CategoryPickerSheet
+          open={pickerOpen}
+          onClose={() => {
+            setPickerOpen(false);
+          }}
+          type={categoryType}
+          value={draft.categoryId}
+          onSelect={(category) => {
+            onDraftChange({ ...draft, categoryId: category.id });
+          }}
+        />
+      )}
     </Card>
   );
 }

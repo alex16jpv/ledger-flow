@@ -49,6 +49,29 @@ afterEach(async () => {
 });
 
 describe("a movement row", () => {
+  // T-98: a quick capture with nothing else to show read "Quick expense", whatever its type.
+  it.each([
+    ["EXPENSE" as const, "Quick expense"],
+    ["INCOME" as const, "Quick income"],
+  ])("names an unnamed quick %s after its own type", (type, title) => {
+    renderWithProviders(
+      <TransactionRow
+        transaction={{
+          ...row(),
+          type,
+          description: null,
+          categoryId: null,
+          source: "QUICK",
+          ...(type === "INCOME" ? { fromAccountId: null, toAccountId: "a1" } : {}),
+        }}
+        lookups={lookups}
+        onOpen={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(title)).toBeVisible();
+  });
+
   it("says nothing about syncing when the queue does not hold it", async () => {
     await queueOf([{ entityId: "t9" }]);
     renderWithProviders(<TransactionRow transaction={row()} lookups={lookups} onOpen={vi.fn()} />);

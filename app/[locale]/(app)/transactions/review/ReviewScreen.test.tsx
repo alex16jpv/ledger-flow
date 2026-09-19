@@ -7,6 +7,7 @@ import { profileRecord, transactionRecord } from "@/lib/local/schema";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
 import { openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
+import type { Transaction } from "@/types/api";
 
 import { ReviewScreen } from "./ReviewScreen";
 
@@ -25,7 +26,22 @@ const json = (body: unknown, init: ResponseInit = {}) =>
 const fetchMock = vi.fn<typeof fetch>();
 const scrollSpy = vi.fn();
 const pagination = { limit: 30, offset: 0, total: 2, hasMore: false, nextCursor: null };
-const INITIAL = [
+type PendingRow = Pick<
+  Transaction,
+  | "id"
+  | "type"
+  | "amount"
+  | "date"
+  | "categoryId"
+  | "description"
+  | "fromAccountId"
+  | "toAccountId"
+  | "tags"
+  | "note"
+  | "pendingDetails"
+  | "source"
+>;
+const INITIAL: PendingRow[] = [
   {
     id: "q1",
     type: "EXPENSE",
@@ -241,13 +257,13 @@ describe("ReviewScreen", () => {
     const first = document.querySelector<HTMLElement>('[data-transaction-id="q1"]');
     const second = document.querySelector<HTMLElement>('[data-transaction-id="q2"]');
     if (!first || !second) throw new Error("cards not rendered");
-    await userEvent.click(within(first).getByRole("button", { name: "Coffee" }));
+    await userEvent.click(await within(first).findByRole("button", { name: "Coffee" }));
     await userEvent.type(within(first).getByRole("textbox", { name: "Description" }), "Latte");
     expect(screen.getByRole("button", { name: "Save all · 1" })).toBeVisible();
     await userEvent.click(within(second).getByRole("button", { name: "Food" }));
     await userEvent.click(screen.getByRole("button", { name: "Save all · 2" }));
 
-    const dialog = screen.getByRole("dialog", { name: "Save 2 expenses?" });
+    const dialog = screen.getByRole("dialog", { name: "Save 2 entries?" });
     expect(dialog).toHaveTextContent(
       "Each one keeps the category and description it has right now.",
     );
@@ -269,6 +285,68 @@ describe("ReviewScreen", () => {
       expect(document.querySelector('[data-transaction-id="q1"]')).toBeNull();
     });
     expect(within(second).getByRole("alert")).toHaveTextContent(/archived/);
+  });
+
+  // T-98: the inbox took every pending row but offered every card the categories of an expense.
+  it("offers a quick income its own categories, in the chips and in the picker", async () => {
+    pending = [
+      {
+        id: "q1",
+        type: "INCOME",
+        amount: 1200000,
+        date: "2026-08-31T13:42:00Z",
+        categoryId: null,
+        description: null,
+        fromAccountId: null,
+        toAccountId: "a1",
+        tags: [],
+        note: null,
+        pendingDetails: true,
+        source: "QUICK",
+      },
+    ];
+    search = "";
+    const inner = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/api/categories") && url.includes("type=INCOME"))
+        return Promise.resolve(
+          json({
+            data: [
+              { id: "i1", name: "Salary", icon: "briefcase", color: "GREEN", type: "INCOME" },
+              { id: "i2", name: "Freelance", icon: "coins", color: "TEAL", type: "INCOME" },
+            ],
+            pagination,
+          }),
+        );
+      if (url.includes("/api/stats/spending") && url.includes("type=INCOME"))
+        return Promise.resolve(
+          json({
+            groupBy: "category",
+            total: 0,
+            buckets: [{ key: "i1", total: 3, count: 3, avg: 1 }],
+          }),
+        );
+      return inner(input, init);
+    });
+    render();
+
+    const card = await screen.findByRole("group", { name: "Category" });
+    await waitFor(() => {
+      expect(within(card).getByRole("button", { name: "Salary" })).toBeVisible();
+    });
+    expect(within(card).queryByRole("button", { name: "Coffee" })).toBeNull();
+    expect(within(card).queryByRole("button", { name: "Food" })).toBeNull();
+
+    await userEvent.click(within(card).getByRole("button", { name: "Other" }));
+    const picker = await screen.findByRole("dialog", { name: "Category" });
+    expect(await within(picker).findByRole("option", { name: /Freelance/ })).toBeVisible();
+    expect(within(picker).queryByRole("option", { name: /Coffee/ })).toBeNull();
+    // It reads as money coming in, into the account it landed on.
+    const row = document.querySelector<HTMLElement>('[data-transaction-id="q1"]');
+    if (!row) throw new Error("card q1 not rendered");
+    expect(within(row).getByText(/1,200,000/)).toHaveTextContent(/^\+/);
+    expect(within(row).getByText(/Bancolombia/)).toBeVisible();
   });
 
   it("shows the all-reviewed state when nothing is pending", async () => {

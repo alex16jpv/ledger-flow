@@ -11,7 +11,7 @@ by default), the type, "To review · n", "Uncategorized" and recent tags. A summ
 day's total, in the user's zone.
 
 A row shows the category tile (or a neutral `hash` when there is none), the description or the
-category's name or "Quick expense", the time · the account, and the amount signed by type; an
+category's name or "Quick expense" / "Quick income" for a quick entry with neither, the time · the account, and the amount signed by type; an
 ADJUSTMENT carries an "Adjustment" badge and a `scale` tile; a QUICK entry still to detail carries an
 amber background and its badge. Infinite scroll through `hasMore`/`nextCursor`; on `INVALID_CURSOR` the
 list reloads from the start with the toast "List updated". The export action is visible and inactive
@@ -25,7 +25,7 @@ chips plus "More", which opens the picker, plus "Uncategorized" = `uncategorized
 for the type the filter is on** — since T-86 that includes the ones marked Transfer, and a category
 chosen under another type is dropped when the type moves, because that pair matches nothing; tag
 (`tag=`);
-and the switches "Only quick expenses to review" (`pendingDetails=true`) and "Only quick entries"
+and the switches "Only what is still to review" (`pendingDetails=true`) and "Only quick entries"
 (`source=QUICK`). The footer holds "Clear" and a primary button that anticipates the count — "Show 12
 transactions" — by asking with `limit=1` and reading `pagination.total`, which exists on every listing
 and respects the filters. Active filters appear as selected chips in the list and can be removed one by
@@ -62,18 +62,41 @@ that can answer, the list never leaves the device.
 
 ## Review inbox (`#review-inbox`)
 
-An explanatory alert (the money already left the balance and already counts against the global budget),
-then one card per quick add with the amount, the date · the account, chips of the most used categories
-plus "Other" (the full picker), a description and "Done" (`PUT` with `categoryId`, `description`,
-`pendingDetails: false`); "Open full form" leads to the form. After the last one, an empty state, "All
-detailed", with a way back to Home.
+An explanatory alert (the money already moved the balance, and the expenses among them already count
+against the global budget), then one card per quick add with the amount, the date · the account, chips
+of the most used categories plus "Other" (the full picker), a description and "Done" (`PUT` with
+`categoryId`, `description`, `pendingDetails: false`); "Open full form" leads to the form. After the
+last one, an empty state, "All detailed", with a way back to Home.
+
+**The inbox is not only expenses (T-98).** What reaches it is a quick capture still waiting to be
+completed, and since T-73 the Quick add records an **income** too. Almost always that is an expense or
+an income with no category: a transfer is completed by the follow-up `PUT` the Quick add sends, and
+only reaches the inbox when that `PUT` failed. Each card therefore reads **its own type**, whichever it
+is, and nothing on it is fixed to expense:
+
+- the amount takes its type's colour and sign — an expense `−$12,500` in `--expense`, an income
+  `+$1,200,000` in `--income` — which is how money in and out is told apart everywhere else;
+- the account named is the one the movement touches: the source of an expense, the destination of an
+  income. Naming the source of an income left the line saying "Unknown account";
+- the chips and the "Other" picker offer **the categories of that type**. Offering expense categories
+  to an income is what made the server answer `CATEGORY_TYPE_MISMATCH` on save, with no way out of the
+  card.
+
+An **adjustment** is the one movement that can carry no category at all, so a card for one shows no
+chips and no picker — only its description and "Open full form". Nothing the product does puts one
+here: the server refuses an `ADJUSTMENT` at the quick endpoint.
+
+The screen's copy names them **entries**, not expenses, for the same reason: "Save n entries?",
+"n entries saved", and in the list's filters "Only what is still to review", which no longer echoes
+"Only quick entries" next to it. Only the alert still names expenses, and only for the half of the
+sentence that is about budgets, which is true of expenses alone.
 
 **Save all** (`#save-all-confirmation`): a pinned footer button, "Save all · n", saves every card that
 already has a category in one pass, each with its own category and description. It confirms in a sheet,
-"Save n expenses?" ("Each one keeps the category and description it has right now." plus "k stay
-pending because they have no category yet."), with the call to action "Save n". The semantics are per
-item: the saved ones disappear, the one that fails keeps its error on its card; toasts read "n expenses
-saved" and "n saved · m with errors".
+"Save n entries?" ("Each one keeps the category and description it has right now." plus "k stay pending
+because they have no category yet."), with the call to action "Save n". The semantics are per item: the
+saved ones disappear, the one that fails keeps its error on its card; toasts read "n entries saved" and
+"n saved · m with errors".
 
 **A category the server dropped** (`#dropped-category`): if the expense was saved **without** its
 category because it had been archived on another device while this one had no connection, the card

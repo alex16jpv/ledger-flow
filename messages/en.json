@@ -175,7 +175,7 @@
   "home": {
     "greeting": "Hi, {name}",
     "greetingPlain": "Hi",
-    "pendingReview": "{count, plural, one {# quick expense to review} other {# quick expenses to review}}",
+    "pendingReview": "{count, plural, one {# quick entry to review} other {# quick entries to review}}",
     "pendingTotal": "· {amount} in total",
     "spending": "{month} spending",
     "dayOf": "Day {day} of {total}",
@@ -191,7 +191,6 @@
     "budgets": "Budgets",
     "accounts": "Accounts",
     "recent": "Recent transactions",
-    "quickExpense": "Quick expense",
     "toReview": "To review",
     "empty": {
       "accounts": {
@@ -1358,7 +1357,11 @@
       "spentIn": "Spent in {period}",
       "income": "Income",
       "count": "Transactions",
-      "quickExpense": "Quick expense",
+      "quick": {
+        "EXPENSE": "Quick expense",
+        "INCOME": "Quick income",
+        "TRANSFER": "Quick transfer"
+      },
       "toReview": "To review",
       "toReviewCount": "To review · {count}",
       "uncategorized": "Uncategorized",
@@ -1404,7 +1407,7 @@
       "category": "Category",
       "tag": "Tag",
       "tagPlaceholder": "#latte, #groceries…",
-      "pendingOnly": "Only quick expenses to review",
+      "pendingOnly": "Only what is still to review",
       "quickOnly": "Only quick entries",
       "clear": "Clear",
       "show": "Show {count, plural, one {# transaction} other {# transactions}}",
@@ -1426,7 +1429,7 @@
         "IMPORT": "Import"
       },
       "edit": "Edit",
-      "pendingBody": "This quick expense still needs a category and a description.",
+      "pendingBody": "This quick entry still needs a category and a description.",
       "complete": "Complete",
       "unknownAccount": "Unknown account",
       "created": "Created {created}",
@@ -1436,7 +1439,7 @@
     "review": {
       "title": "To review",
       "titleCount": "To review · {count}",
-      "intro": "Quick expenses already reduced your balance and already count toward your total budget. Here you just name and categorize them.",
+      "intro": "Your quick entries already moved your balance, and the expenses among them already count toward your total budget. Here you just name and categorize them.",
       "droppedCategory": "Its category had been archived, so the server saved it without one. Pick another.",
       "when": "{day} {time} · {account}",
       "other": "Other",
@@ -1446,15 +1449,15 @@
       "saved": "Details saved",
       "empty": {
         "title": "All reviewed",
-        "body": "Every quick expense has a category and a description.",
+        "body": "Every quick entry has a category and a description.",
         "cta": "Go home"
       },
       "saveAll": "Save all · {count}",
-      "confirmTitle": "Save {count, plural, one {# expense} other {# expenses}}?",
+      "confirmTitle": "Save {count, plural, one {# entry} other {# entries}}?",
       "confirmBody": "Each one keeps the category and description it has right now.",
       "confirmSkipped": "{count, plural, one {# stays pending because it has no category yet.} other {# stay pending because they have no category yet.}}",
       "confirmCta": "Save {count}",
-      "batchSaved": "{count, plural, one {# expense saved} other {# expenses saved}}",
+      "batchSaved": "{count, plural, one {# entry saved} other {# entries saved}}",
       "batchPartial": "{saved} saved · {failed} with errors"
     }
   },
@@ -1649,7 +1652,7 @@
       "date": "Tuesday, September 22",
       "greeting": "Hi, John",
       "initials": "JD",
-      "pending": "3 quick expenses to review · {amount} in total",
+      "pending": "3 quick entries to review · {amount} in total",
       "spending": "September spending",
       "dayOf": "Day 22 of 30",
       "barDay": "Sep {day} · {amount}",

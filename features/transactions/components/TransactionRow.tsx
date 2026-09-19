@@ -44,7 +44,7 @@ export function transactionTitle(
   const category = lookups.categories.get(transaction.categoryId ?? "");
   if (category) return category.name;
   return transaction.source === "QUICK"
-    ? t("transactions.list.quickExpense")
+    ? t(`transactions.list.quick.${transaction.type}`)
     : t(`transactionTypes.${transaction.type}`);
 }
 
