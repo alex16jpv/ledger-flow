@@ -49,4 +49,6 @@ empty ones are shown as "—".
   holds others back.
 - **Nothing left to resolve** (`#nothing-to-resolve`): a `success` alert, "This change is no longer
   waiting to sync.", with a Close button — for when another tab resolved it first. While it opens, the
-  sheet says "Reading what's waiting…".
+  sheet says "Reading what's waiting…". **In this state the sheet closes on the first try** (T-109):
+  a name or a date typed into the comparison belongs to a conflict that is no longer there, so asking
+  "are you sure you want to leave?" would be asking about work that cannot be saved anyway.

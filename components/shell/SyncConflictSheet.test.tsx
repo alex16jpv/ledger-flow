@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
@@ -168,6 +168,38 @@ describe("the Resolve sync conflict sheet", () => {
     expect(await screen.findByText("Nothing left to resolve")).toBeInTheDocument();
     // The sheet's own dismiss and the footer's way out.
     expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(2);
+  });
+
+  it("stops asking about a rename when another tab resolved the conflict (T-109)", async () => {
+    const vault = await vaultWith([
+      {
+        entity: "account",
+        entityId: "a1",
+        action: "restore",
+        payload: { body: {} },
+        lastError: "DUPLICATE",
+        serverRow: account({ id: "a7", name: "Cash", updatedAt: T1 }),
+        baseUpdatedAt: undefined,
+      },
+    ]);
+    const onClose = vi.fn();
+    renderWithProviders(
+      <ToastProvider>
+        <SyncConflictSheet open seq={1} onClose={onClose} />
+      </ToastProvider>,
+    );
+    const name = await screen.findByRole("textbox");
+    await userEvent.clear(name);
+    await userEvent.type(name, "Efectivo");
+
+    await vault.db.delete("outbox", 1);
+    await refreshOutboxStatus(vault.db);
+    expect(await screen.findByText("Nothing left to resolve")).toBeInTheDocument();
+
+    // What was typed belongs to a conflict that is gone: there is nothing left to lose by leaving.
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(onClose).toHaveBeenCalled();
   });
 
   it("warns before overwriting a server version it was never told", async () => {

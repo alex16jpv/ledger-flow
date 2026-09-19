@@ -349,6 +349,16 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
     );
   }
 
+  // What was typed is only worth a question while the field that holds it is still on screen.
+  function stillSendable(): boolean {
+    if (view.kind === "empty") return false;
+    if (view.kind === "loading") return renameTo !== null || correctedTo !== null;
+    return (
+      (isNameTaken(view.operation) && renameTo !== null) ||
+      (isFutureDate(view.operation) && correctedTo !== null)
+    );
+  }
+
   // Only the refused date renames the sheet: it stopped being a comparison and became a correction.
   function sheetTitle(): string {
     return view.kind === "resolve" && isFutureDate(view.operation)
@@ -473,7 +483,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
     <Sheet
       open={open}
       onClose={onClose}
-      unsaved={renameTo !== null || correctedTo !== null}
+      unsaved={stillSendable()}
       title={sheetTitle()}
       footer={footer()}
     >

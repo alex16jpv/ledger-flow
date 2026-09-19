@@ -117,7 +117,8 @@ export function Sheet({
   }
 
   function requestClose() {
-    if (asking) {
+    // `question`, not `asking`: what was worth asking about can go away while the question is up.
+    if (question) {
       keepEditing();
       return;
     }

@@ -237,6 +237,31 @@ describe("Sheet", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("takes the next exit when what was worth asking about goes away (T-109)", () => {
+    const onClose = vi.fn();
+    function Body({ unsaved }: { unsaved: boolean }) {
+      useUnsavedGuard(unsaved);
+      return <input aria-label="Name" />;
+    }
+    const { rerender } = renderWithProviders(
+      <Sheet open onClose={onClose} title="Resolve" footer={<button>Save</button>}>
+        <Body unsaved />
+      </Sheet>,
+    );
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+
+    rerender(
+      <Sheet open onClose={onClose} title="Resolve" footer={<button>Save</button>}>
+        <Body unsaved={false} />
+      </Sheet>,
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it("stays closed when open is false", () => {
     renderWithProviders(
       <Sheet open={false} onClose={vi.fn()} title="Hidden">

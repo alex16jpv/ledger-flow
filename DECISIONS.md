@@ -4100,6 +4100,13 @@ cover` is set once in the root layout for the standalone display.
 
 ## 2026-09-15 · A sheet with something typed asks before it lets go (T-78)
 
+> **Narrowed on 2026-09-18 (T-109):** "something typed" is not enough. The sync conflict sheet named
+> below asked about a rename whose conflict another tab had already resolved, so `stillSendable()`
+> ties the flag to the field that is **on screen**: nothing in the empty view, the typed value in the
+> loading one (it comes back when the read lands), and in the resolve view only the field the current
+> operation actually renders. `Sheet` drops a question that stops applying while it is up, instead of
+> leaving an answer nobody can see.
+
 - **Decision:** a tap outside a sheet, and ESC, stop closing it when the form inside has something to
   lose. The sheet asks in place instead: a `warning` alert where the footer was, with **Keep editing**
   as the primary action — focused, and what ESC answers while the question is up — and **Leave** as the
