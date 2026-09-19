@@ -7,7 +7,7 @@ import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 
 import { Button } from "./Button";
 import { cn } from "./cn";
-import { Sheet } from "./Sheet";
+import { Sheet, SheetCancel } from "./Sheet";
 
 // 7.28: the value is `HH:mm` in the user's zone, shown the way the language reads time.
 export interface TimePickerSheetProps {
@@ -110,9 +110,7 @@ export function TimePickerSheet({
       width="sm"
       footer={
         <div className="flex gap-2">
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {t("cancel")}
-          </Button>
+          <SheetCancel />
           <Button
             size="lg"
             block

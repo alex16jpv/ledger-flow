@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Field } from "@/components/ui/Field";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
@@ -185,9 +185,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
           >
             {t(paidPrincipal ? "accounts.pay.sendAgain" : "accounts.pay.pay")}
           </Button>
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {t("common.cancel")}
-          </Button>
+          <SheetCancel />
         </>
       }
     >

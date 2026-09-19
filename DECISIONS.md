@@ -168,6 +168,31 @@ $1,245,900`, that fills the field. The chip reads as pressed while the typed amo
   sheet wrote its own outside sentence into `accounts.pay.readOutside` instead of using
   `TransferReadback`, so the key is gone and both surfaces build the sentence from `sideKey`.
 
+## 2026-09-18 · All four of a sheet's exits ask, not two (T-104)
+
+- **Context:** T-78 put the guard on `requestClose`, and only **two** of the four exits went through
+  it — `Escape` and the tap outside. The header's **X** called `onClose` straight (`Sheet.tsx`), and so
+  did the **Cancel** every sheet painted in its own footer, because that Cancel was wired to the
+  parent's `onClose` prop and never entered the component that holds the guard. The same sheet behaved
+  two ways: you typed an amount, pressed Cancel, and it was gone with no word; you pressed Escape and it
+  asked. T-99 sharpened it — the Pay sheet counts as unsaved from the first keystroke now, so the
+  inconsistency shows on every use.
+- **Decision (his), asked with the three options:** **the four ask.** His words, 2026-09-18: «dejemos la
+  confirmacion para el cancel. para evirar problemas de miss click». The reason is the accidental press,
+  not consistency for its own sake: an X or a Cancel hit by mistake costs a form, and the extra tap costs
+  someone who did mean to discard almost nothing.
+- **Alternatives, both put to him:** the X asks and Cancel does not, reading an explicit Cancel as "yes,
+  throw it away" — which is defensible until you notice Cancel sits under the thumb; and dropping the
+  question from Escape so at least the sheet is coherent, which trades a lost form for a tidier rule.
+- **Consequence:** a footer's Cancel is now `SheetCancel`, exported from `Sheet` and rendered **inside**
+  it, so it reads the guard through context and cannot go around it — a Cancel wired to the parent's
+  `onClose` is exactly how this was broken, and the next one would break it the same way. It throws when
+  rendered outside a sheet rather than closing nothing. Twenty-three cancels across sixteen files lost their
+  hand-rolled button, and with it six `useTranslations` that had nothing left to translate. A footer that needs another look or
+  another layout says so with `variant` or `className` rather than rolling its own: `SyncConflictSheet`
+  keeps `secondary` because there the button is the only way out, and `WipeDeviceSheet` keeps `flex-1`, because there the button is the only way out rather than the
+  quiet half of a pair.
+
 ## 2026-09-18 · The zero-decimal currencies come from the contract, not from a list kept here (T-67)
 
 - **Context:** T-66 froze the set of currencies this client paints without decimals — 34 codes, CLDR's
@@ -4100,7 +4125,10 @@ cover` is set once in the root layout for the standalone display.
 
 ## 2026-09-15 · A sheet with something typed asks before it lets go (T-78)
 
-> **Narrowed on 2026-09-18 (T-109):** "something typed" is not enough. The sync conflict sheet named
+> **Its scope was widened on 2026-09-18 (T-104):** the close button and the footer's Cancel ask the
+> same question now, so all four exits do.
+>
+> **And narrowed the same day (T-109):** "something typed" is not enough. The sync conflict sheet named
 > below asked about a rename whose conflict another tab had already resolved, so `stillSendable()`
 > ties the flag to the field that is **on screen**: nothing in the empty view, the typed value in the
 > loading one (it comes back when the read lands), and in the resolve view only the field the current
@@ -4114,7 +4142,9 @@ cover` is set once in the root layout for the standalone display.
   unreachable: four of the sheets that report keep their submit inside the body rather than in the
   footer, so replacing the footer alone left a live Save and a live "Back to list" under the question.
   The close button is unchanged: it is the deliberate exit and does not ask, which leaves ESC and the X
-  asymmetric on purpose — one is a dismissal, the other a decision.
+  asymmetric on purpose — one is a dismissal, the other a decision. (**This half was reversed by T-104
+  on 2026-09-18**, his decision: the four exits ask, because the X and Cancel are the two a thumb hits
+  by accident.)
 - **Why:** the owner's words, after the tap-outside close of T-75 landed the same day — "tocar fuera
   de un formulario deberia de advertir antes de cerrarlo. algo como estas seguro que quieres salir?".
   Closing was the new way out, and it threw a half-written movement away in silence.

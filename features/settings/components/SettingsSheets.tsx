@@ -7,7 +7,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { CurrencyPicker } from "@/components/ui/CurrencyPicker";
 import { Field, Input } from "@/components/ui/Field";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { TimeZonePicker } from "@/components/ui/TimeZonePicker";
 import { presentError } from "@/lib/api/errors";
 
@@ -44,9 +44,7 @@ export function CurrencySheet({
       title={t("settings.currency.sheetTitle")}
       footer={
         locked ? (
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {t("common.close")}
-          </Button>
+          <SheetCancel>{t("common.close")}</SheetCancel>
         ) : (
           <>
             <Button
@@ -60,9 +58,7 @@ export function CurrencySheet({
             >
               {t("common.save")}
             </Button>
-            <Button variant="ghost" size="lg" block onClick={onClose}>
-              {t("common.cancel")}
-            </Button>
+            <SheetCancel />
           </>
         )
       }
@@ -124,9 +120,7 @@ export function TimeZoneSheet({
           >
             {t("common.save")}
           </Button>
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {t("common.cancel")}
-          </Button>
+          <SheetCancel />
         </>
       }
     >
@@ -173,9 +167,7 @@ export function DeleteAccountSheet({
           >
             {t("settings.delete.confirm")}
           </Button>
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {t("common.cancel")}
-          </Button>
+          <SheetCancel />
         </>
       }
     >
@@ -221,9 +213,7 @@ export function SignOutSheet({
           <Button variant="dangerSolid" size="lg" block onClick={onDiscard}>
             {t("settings.signOutPending.discard")}
           </Button>
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {t("common.cancel")}
-          </Button>
+          <SheetCancel />
         </>
       }
     >

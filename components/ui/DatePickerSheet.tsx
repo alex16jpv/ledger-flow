@@ -11,7 +11,7 @@ import { iconProps } from "@/lib/icons/sizes";
 import { Button } from "./Button";
 import { Chip, ChipRow } from "./Chip";
 import { cn } from "./cn";
-import { Sheet } from "./Sheet";
+import { Sheet, SheetCancel } from "./Sheet";
 
 // 7.28: days are plain `YYYY-MM-DD` keys, never Date objects — a calendar day, not an instant.
 export interface DatePickerSheetProps {
@@ -152,9 +152,7 @@ export function DatePickerSheet({
       width="sm"
       footer={
         <div className="flex gap-2">
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {t("cancel")}
-          </Button>
+          <SheetCancel />
           <Button
             size="lg"
             block

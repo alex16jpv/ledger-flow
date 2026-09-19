@@ -4749,9 +4749,9 @@ const PAGES = [
       plate(
         "unsaved-before-leaving",
         "Leaving a form with something typed",
-        "A tap outside a sheet closes it, so a half-written form would go with it. When there is something to lose, the tap does not close: the sheet asks, in place, and “Keep editing” is the primary action. The close button is the deliberate exit and does not ask. A sheet with nothing typed closes on the first tap, as it should.",
+        "A tap outside a sheet closes it, so a half-written form would go with it. When there is something to lose, none of the four exits closes: the sheet asks, in place, and “Keep editing” is the primary action. Since T-104 the close button and the footer’s Cancel ask the same question, because those are the two a thumb hits by accident. A sheet with nothing typed closes on the first tap, as it should.",
         state("sin-guardar"),
-        { added: "2026-09-15" },
+        { added: "2026-09-15", updated: "2026-09-18" },
       ),
       plate(
         "archive-confirmation",

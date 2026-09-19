@@ -1,12 +1,11 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { type SubmitEvent, useState } from "react";
 
 import { Alert } from "./Alert";
 import { Button } from "./Button";
 import { Field, Input } from "./Field";
-import { Sheet } from "./Sheet";
+import { Sheet, SheetCancel } from "./Sheet";
 
 export interface RenameRestoreSheetProps {
   open: boolean;
@@ -36,7 +35,6 @@ export function RenameRestoreSheet({
   onConfirm,
   onClose,
 }: RenameRestoreSheetProps) {
-  const t = useTranslations("common");
   const [name, setName] = useState(currentName);
   const trimmed = name.trim();
   const unchanged = trimmed.toLocaleLowerCase() === currentName.trim().toLocaleLowerCase();
@@ -65,9 +63,7 @@ export function RenameRestoreSheet({
           >
             {confirmLabel(trimmed)}
           </Button>
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {t("cancel")}
-          </Button>
+          <SheetCancel />
         </>
       }
     >

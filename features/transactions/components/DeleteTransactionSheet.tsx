@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 
 export interface DeleteTransactionSheetProps {
   open: boolean;
@@ -30,9 +30,7 @@ export function DeleteTransactionSheet({
           <Button variant="dangerSolid" size="lg" block loading={pending} onClick={onConfirm}>
             {t("common.delete")}
           </Button>
-          <Button variant="ghost" size="lg" block onClick={onClose}>
-            {t("common.cancel")}
-          </Button>
+          <SheetCancel />
         </>
       }
     >
