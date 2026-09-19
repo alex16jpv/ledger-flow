@@ -333,7 +333,8 @@ describe("the rules the fixtures fix", () => {
     );
     expect(balanceOf(bogota, "savings")).toBe(5500000);
     expect(balanceOf(bogota, "savings", withoutTransfers)).toBe(5000000);
-    expect(balanceOf(bogota, "bank", withoutTransfers)).toBe(balanceOf(bogota, "bank") + 500000);
+    expect(balanceOf(bogota, "card", withoutTransfers)).toBe(balanceOf(bogota, "card") - 300000);
+    expect(balanceOf(bogota, "bank", withoutTransfers)).toBe(balanceOf(bogota, "bank") + 800000);
   });
 });
 

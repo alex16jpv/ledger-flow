@@ -537,7 +537,13 @@ not exist yet**, so today unsent work always survives a logout.
 
 `parity.test.ts` runs the four fixture scenarios (`cop-bogota`, `eur-madrid`, `jpy-tokyo`,
 `usd-new-york`): `deriveBalances` straight against `expected.balances`, and the pending tray
-through the repository over a test vault against `expected.pending`. Everything else `npm run test`
+through the repository over a test vault against `expected.pending`. Every `expected.spending`
+query runs through `deriveSpending`, and every one a URL can actually ask for runs through the
+repository as well — the untyped ones are left out of that half on purpose, because `type` defaults
+to EXPENSE before the request is built. A query added to the backend's scenarios lands here with no
+change needed, which is how T-97 pinned a **transfer grouped by its category** — what the "Recent"
+strip asks for on a transfer — and a transfer grouped by **account**, which proves it is keyed by
+the account the money left and not by both of its ends. Everything else `npm run test`
 covers against a real IndexedDB
 (`fake-indexeddb`, wired in `vitest.setup.ts`): the stores and every index key, both migration policies with 20 queued operations
 inside, the blocked path, the purge rules, the multi-page pull with its overlap and its stalled feed,

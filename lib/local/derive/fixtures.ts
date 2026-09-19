@@ -1,4 +1,4 @@
-import type { StatsResponse, StatsSplit, SyncBudget, SyncTransaction } from "@/types/api";
+import type { Category, StatsResponse, StatsSplit, SyncBudget, SyncTransaction } from "@/types/api";
 
 import copBogota from "./fixtures/cop-bogota.json";
 import eurMadrid from "./fixtures/eur-madrid.json";
@@ -36,7 +36,7 @@ export interface FixtureCategory {
   key: string;
   id: string;
   name: string;
-  type: "EXPENSE" | "INCOME";
+  type: NonNullable<Category["type"]>;
   archivedAt: string | null;
 }
 
