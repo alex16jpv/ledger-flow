@@ -29,7 +29,7 @@ test("the list groups last month's seed by day, filters from the URL and survive
 
   await page.getByRole("button", { name: /^Filters/ }).click();
   const sheet = page.getByRole("dialog", { name: "Filters" });
-  await sheet.getByRole("switch", { name: "Only quick expenses to review" }).click();
+  await sheet.getByRole("switch", { name: "Only what is still to review" }).click();
   await expect(sheet.getByRole("button", { name: /^Show \d+ transactions?$/ })).toBeVisible();
   await sheet.getByRole("button", { name: /^Show / }).click();
   await expect(page).toHaveURL(/pending=1/);
@@ -100,7 +100,7 @@ test("a row opens its detail, which edits and deletes the transaction", async ({
   await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}$`));
   await expect(page.getByRole("heading", { level: 1, name: "Transaction" })).toBeVisible();
   await expect(
-    page.getByText("This quick expense still needs a category and a description."),
+    page.getByText("This quick entry still needs a category and a description."),
   ).toBeVisible();
   await expect(page.getByText("Quick add")).toBeVisible();
   await expectNoAxeViolations(page);

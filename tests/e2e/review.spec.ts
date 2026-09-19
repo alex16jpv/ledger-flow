@@ -44,6 +44,45 @@ test("the inbox completes a quick expense in place and the pending counter drops
   await request.delete(`/api/transactions/${created.id}`, { headers: { origin: APP } });
 });
 
+// T-98: the inbox offered every card expense categories, so the server refused a quick income.
+test("the inbox completes a quick income with a category the server accepts", async ({
+  page,
+  request,
+}) => {
+  await signIn(page, request);
+  const amount = 100_000 + Math.floor(Math.random() * 899_999);
+  const created = (await (
+    await request.post("/api/transactions/quick", {
+      headers: { origin: APP },
+      data: { amount, type: "INCOME" },
+    })
+  ).json()) as { id: string };
+  await page.goto(`/transactions/review?focus=${created.id}`);
+  const card = page.locator(`[data-transaction-id="${created.id}"]`);
+  await expect(card).toBeVisible();
+  // The chips are its own type's, and not one of them belongs to an expense.
+  await expect(card.getByRole("button", { name: "Salary" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "Coffee" })).toHaveCount(0);
+
+  await card.getByRole("button", { name: "Other" }).click();
+  await page
+    .getByRole("dialog", { name: "Category" })
+    .getByRole("option", { name: "Salary" })
+    .click();
+  await card.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText("Details saved")).toBeVisible();
+  await expect(card).toHaveCount(0);
+
+  const row = (await (await request.get(`/api/transactions/${created.id}`)).json()) as {
+    type: string;
+    pendingDetails: boolean;
+    categoryId: string | null;
+  };
+  expect(row).toMatchObject({ type: "INCOME", pendingDetails: false });
+  expect(row.categoryId).toBeTruthy();
+  await request.delete(`/api/transactions/${created.id}`, { headers: { origin: APP } });
+});
+
 test("the Complete link on a pending detail lands on its card", async ({ page, request }) => {
   await signIn(page, request);
   const amount = 100_000 + Math.floor(Math.random() * 899_999);
@@ -112,9 +151,9 @@ test("Save all completes the categorized cards, one guarded operation per row", 
     }
   });
   await page.getByRole("button", { name: "Save all · 2" }).click();
-  const dialog = page.getByRole("dialog", { name: "Save 2 expenses?" });
+  const dialog = page.getByRole("dialog", { name: "Save 2 entries?" });
   await dialog.getByRole("button", { name: "Save 2" }).click();
-  await expect(page.getByText("2 expenses saved")).toBeVisible();
+  await expect(page.getByText("2 entries saved")).toBeVisible();
   await expect(page.getByRole("heading", { name: "All reviewed" })).toBeVisible();
   // F-77: the toast can be on screen before Playwright saw the request, so the batch is polled.
   await expect.poll(() => batches).toHaveLength(1);

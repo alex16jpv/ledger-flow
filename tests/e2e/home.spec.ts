@@ -19,7 +19,7 @@ test("home shows the pending alert, the day bars, the top budgets and the latest
   await page.goto("/home");
   await expect(page.getByRole("heading", { level: 1, name: /^Hi, / })).toBeVisible();
 
-  const alert = page.getByRole("link", { name: /quick expenses? to review/ });
+  const alert = page.getByRole("link", { name: /quick entr(y|ies) to review/ });
   await expect(alert).toBeVisible();
   await expect(alert).toContainText(/\$\d/);
   const chart = page.getByRole("group", { name: "Spending per day" });

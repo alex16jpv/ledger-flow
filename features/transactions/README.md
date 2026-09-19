@@ -33,11 +33,11 @@ The screen and the filters sheet live in `app/[locale]/(app)/transactions/`.
 
 W-20 adds the detail screen (`app/[locale]/(app)/transactions/[id]/`): hero with the category tile
 and the signed amount, the attribute table, Edit (the W-18 form) and Delete through the shared
-`DeleteTransactionSheet`, and a warning with "Complete" on pending quick expenses that points at the
+`DeleteTransactionSheet`, and a warning with "Complete" on pending quick entries that points at the
 W-21 inbox.
 
 W-21 adds the review inbox (`app/[locale]/(app)/transactions/review/`): one card per pending quick
-expense with the recent category chips, "Other" for the full picker, a description field and "Done",
+entry with the recent category chips, "Other" for the full picker, a description field and "Done",
 which `PUT`s `categoryId`, `description` and `pendingDetails: false`; the pending count in the shell
 follows because the mutation invalidates the transactions domain.
 
@@ -120,3 +120,10 @@ choice with it; `toTransactionInput` then writes an `ADJUSTMENT` with one side, 
 the user typed none — the Pay sheet's description. `TransferReadback` takes `outside` and says the
 single side through the same `sideKey`, which is why the Pay sheet renders it too instead of writing
 that sentence itself.
+
+Since T-98 the inbox is not expenses-only: a quick **income** lands there too, so each card asks for
+the categories of **its own** type — `ReviewCard` reads them itself rather than being handed one list,
+which is also what keeps a type that is not on screen from being fetched — and paints the amount with
+its type's colour and sign over the account the movement touches. `reviewCategoryType` is the single
+place that says which types can carry a category at all. In the list, `transactionTitle` names a quick
+entry with nothing else to show after its type ("Quick income", not "Quick expense").

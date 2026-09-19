@@ -168,6 +168,34 @@ $1,245,900`, that fills the field. The chip reads as pressed while the typed amo
   sheet wrote its own outside sentence into `accounts.pay.readOutside` instead of using
   `TransferReadback`, so the key is gone and both surfaces build the sentence from `sideKey`.
 
+## 2026-09-18 · The review inbox is for every quick entry, and each card reads its own type (T-98)
+
+- **Context:** the inbox lists `pendingDetails=true` without filtering by type, and since T-73 the
+  Quick add records an income too, so a quick income with no category lands there. Every card then
+  assumed expense: the picker was `type="EXPENSE"`, the chips were the expense recents, the amount was
+  painted `kind="expense"` and the account named was `fromAccountId`, which an income does not have. The
+  card offered categories the server refuses, answered `CATEGORY_TYPE_MISMATCH` on save, and left no way
+  out of it. The screen's copy said "expenses" in seven places about rows that are not.
+- **Decision (his), asked with the three options priced:** the inbox is for **all of it**. Each card
+  offers the categories of its own type and reads as its own type, and the copy stops saying expenses —
+  the product word is **entries** ("captura rápida" in Spanish), which `source=QUICK` already used. The
+  alert keeps naming expenses in the half of its sentence that is about budgets, because only an expense
+  counts against one.
+- **Alternatives, both put to him:** fixing only the picker, one line, which stops the refusal and
+  leaves the screen calling an income an expense; and filtering the inbox down to expenses, which keeps
+  the copy true but strands a quick income with no screen that reminds you of it, and would force the
+  "To review · n" counter to count something narrower than what is pending.
+- **Consequence:** `ReviewCard` asks for its own type's categories instead of being handed one list from
+  the screen. That is what makes N types work without the screen enumerating them — React Query dedupes
+  by key, so N cards of one type cost one read and a type that is not on screen is never fetched — and it
+  is how `CategoryPickerSheet` already works. `reviewCategoryType` is the one place that says which
+  movement types can carry a category: an `ADJUSTMENT` cannot, so its card shows no chips and no picker,
+  which nothing in this product can produce but the type system requires an answer for. Found on the way
+  and fixed here: the list gave a quick income with nothing else to show the title "Quick expense", the
+  same assumption one screen over, so that label is now per type. **Left open as T-106:** the total
+  beside "To review" and in Home's alert is a plain sum of the amounts, so an income waiting there is now
+  added to the expenses instead of set against them.
+
 ## 2026-09-18 · The list of types an income is refused is pinned to the contract, not copied (T-103)
 
 - **Context:** T-93 left this client with `INCOME_REFUSED_TYPES`, a hand-written `["CARD", "LOAN"]`,
