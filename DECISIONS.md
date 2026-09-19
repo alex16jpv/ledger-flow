@@ -27,6 +27,26 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   the form, which is the point: it states the difference and stops. Nothing else in the product claims a
   total balance any more.
 
+## 2026-09-18 · A loan paid past zero is in neither figure (T-102)
+
+- **Context:** `splitAccounts` added any positive balance to _What you have_. After T-101 a loan past
+  zero reads on its own card as **finished** — `$0 owed`, the bar full, and the money of its owner's
+  deliberately unnamed, because it means nothing on a loan — while the header of that same screen and
+  the figures on Home counted it. Two numbers contradicting each other one screen apart, which is what
+  T-101 existed to stop.
+- **Decision (his, asked with both readings drawn):** it counts in **neither**. `splitAccounts` skips a
+  positive balance on a LOAN, so the header agrees with the card.
+- **Alternatives:** counting it, which is defensible — the money is real and the bank owes it — and
+  which he rejected because the screen says that loan has nothing.
+- **Consequence:** that money appears in no figure until the bank returns it, which is the cost he
+  accepted. It barely widens: since T-93 the server refuses any movement that would leave a loan above
+  zero and refuses to create an account already past it, so **on the server** only a row written before
+  that can be in this state. A device can still **project** it for a while: these figures are computed
+  on the offline mirror, so a phone that has downloaded someone else's payment while its own is still
+  in the outbox reads the loan above zero until the sync refuses one of them. A CARD and an OVERDRAFT are untouched: there the money **is** named on the card, so
+  counting it is what agrees with it. The condition is `mayHoldOwnMoney`, the same predicate the card
+  reading already uses, so the two cannot drift.
+
 ## 2026-09-18 · The Pay sheet opens empty and the whole debt is a chip (T-99)
 
 - **Context:** the owner, 2026-09-17: «en el Pay this card. el valor por defecto no puede ser el pagar

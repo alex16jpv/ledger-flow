@@ -212,6 +212,17 @@ positive and stored as the debt. That field is where the habit T-90 has to repai
 It takes the same shape Home does: **What you have** as the headline and **What you owe** beside it,
 and **no net figure** — see [home.md](home.md) for why. The "Card debt" stat it carries today goes.
 
+**A loan paid past zero counts in neither figure** (T-102, his decision of 2026-09-18). T-101 settled
+that money of its owner's on a loan means nothing — the card reads _$0 owed_ with the bar full and does
+not name it — so a header that counted it would contradict the card one screen down, which is the very
+thing T-101 existed to stop. A card and an overdraft are the opposite case: there the money **is**
+named on the card, so counting it is what agrees with it. Since T-93 the server refuses any movement
+that would leave a loan above zero, so **on the server** this is a state only an older row can be in.
+A device can still project it for a while, because these figures are read off the offline mirror: a
+phone that has downloaded another device's payment while its own is still waiting sees the loan above
+zero until the sync refuses one. Either way the fix is to stop a contradiction, not to change how the
+product reads.
+
 ### Paying a debt (`#pay-a-sheet-on-the-account`, `#pay-from-outside-quiet`)
 
 **Pay this card / Pay this loan** is one primary action above the four the detail already had, and it

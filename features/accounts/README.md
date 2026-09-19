@@ -71,7 +71,10 @@ and a cleared field leaves the row exactly as the server answers it: absent, not
 
 The summary card and Home's stats row say **what you have** and **what you owe**, with no net figure
 anywhere: a car loan against a bank account reads negative for years, and that is not the number
-those screens are for.
+those screens are for. `splitAccounts` decides what goes where, and since T-102 a **loan past zero is
+in neither**: its card reads as finished and never names that money, so a header that counted it
+would contradict the card one screen down. It is the same `mayHoldOwnMoney` the card reading uses, so
+the two cannot drift. A card and an overdraft are the opposite case and keep counting.
 
 **The account picker filters by what a movement may touch (T-93).** The sheet takes `only` (the
 intent chips' positive filter) and `omit` (a negative one), plus a `note` appended to its footer.

@@ -178,6 +178,20 @@ describe("splitAccounts", () => {
     ).toEqual({ have: 4320000, owe: 0 });
   });
 
+  it("leaves a loan paid past zero out of both figures, as its own card reads it", () => {
+    expect(
+      splitAccounts([
+        account({ type: "ACCOUNT", balance: 3_420_500 }),
+        account({ type: "LOAN", balance: 200_000 }),
+      ]),
+    ).toEqual({ have: 3_420_500, owe: 0 });
+    expect(splitAccounts([account({ type: "LOAN", balance: 0 })])).toEqual({ have: 0, owe: 0 });
+    expect(splitAccounts([account({ type: "LOAN", balance: -8_400_000 })])).toEqual({
+      have: 0,
+      owe: 8_400_000,
+    });
+  });
+
   it("does not turn an ordinary account in the red into a debt", () => {
     expect(splitAccounts([account({ type: "ACCOUNT", balance: -50000 })])).toEqual({
       have: -50000,
