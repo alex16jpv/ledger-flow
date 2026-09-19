@@ -67,7 +67,7 @@ test("a new user creates, retypes, archives and restores categories, and restore
 }) => {
   await signUp(page, request);
   await page.goto("/categories");
-  await expect(page.getByRole("button", { name: "Expense · 5", pressed: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Expense · 6", pressed: true })).toBeVisible();
 
   await page.getByRole("link", { name: "New category" }).first().click();
   await expect(page).toHaveURL(/\/categories\/new\?type=EXPENSE$/);

@@ -411,3 +411,56 @@ test("a transfer can be paid from somewhere else, and only into an account that 
   };
   expect(after.balance).toBe(-2_000_000 + amount);
 });
+
+test("a loan instalment is saved as a payment and an interest expense", async ({
+  page,
+  request,
+}) => {
+  const signedUp = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: { name: "Instalment E2E", email: uniqueEmail("instalment"), password: "LedgerFlow!2026" },
+  });
+  expect(signedUp.ok()).toBe(true);
+  await page.context().addCookies((await request.storageState()).cookies);
+
+  const account = async (data: Record<string, unknown>): Promise<{ id: string }> => {
+    const response = await request.post("/api/accounts", { headers: { origin: APP }, data });
+    expect(response.status()).toBe(201);
+    return (await response.json()) as { id: string };
+  };
+  await account({ name: "Bank", type: "ACCOUNT", balance: 20_000_000 });
+  const loan = await account({
+    name: "Car loan",
+    type: "LOAN",
+    balance: -8_400_000,
+    borrowedAmount: 12_000_000,
+  });
+
+  await page.goto(`/accounts/${loan.id}`);
+  await page.getByRole("button", { name: /Pay this loan/ }).click();
+  const paying = page.getByRole("dialog", { name: "Pay Car loan" });
+  await paying.getByRole("textbox", { name: "Amount to pay" }).fill("420000");
+  await paying.getByRole("textbox", { name: "Of which interest" }).fill("126000");
+  await expect(paying.getByText(/Car loan \$294,000 less owed/)).toBeVisible();
+  await paying.getByRole("button", { name: "Pay", exact: true }).click();
+  await expect(page.getByText("Payment recorded")).toBeVisible();
+
+  const saved = await rows(request);
+  const transfer = saved.find((row) => row.type === "TRANSFER" && row.amount === 294_000);
+  const interest = saved.find((row) => row.type === "EXPENSE" && row.amount === 126_000);
+  expect(transfer).toMatchObject({ toAccountId: loan.id });
+  expect(interest?.description).toBe("Interest on Car loan");
+  expect(interest?.toAccountId).toBeNull();
+
+  const categories = (await (await request.get("/api/categories?type=EXPENSE")).json()) as {
+    data: { id: string; seedKey: string | null }[];
+  };
+  const seeded = categories.data.find((row) => row.seedKey === "interest");
+  expect(seeded).toBeDefined();
+  expect(interest?.categoryId).toBe(seeded?.id);
+
+  const after = (await (await request.get(`/api/accounts/${loan.id}`)).json()) as {
+    balance: number;
+  };
+  expect(after.balance).toBe(-8_400_000 + 294_000);
+});

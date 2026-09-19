@@ -10,6 +10,12 @@ import { cn } from "./cn";
 import { useFieldContext } from "./Field";
 
 export type AmountTone = "default" | "income" | "transfer";
+export type AmountInputSize = "lg" | "sm";
+
+const SIZE: Record<AmountInputSize, { symbol: string; input: string }> = {
+  lg: { symbol: "text-xl", input: "text-[52px] tracking-[-0.035em]" },
+  sm: { symbol: "text-base", input: "text-[28px] tracking-[-0.02em]" },
+};
 
 const TONE: Record<AmountTone, string> = {
   default: "text-text",
@@ -21,6 +27,7 @@ export interface AmountInputProps {
   defaultValue?: number | null;
   value?: number | null;
   tone?: AmountTone;
+  size?: AmountInputSize;
   onChange: (value: number | null) => void;
   label: string;
   autoFocus?: boolean;
@@ -44,6 +51,7 @@ export function AmountInput({
   defaultValue = null,
   value,
   tone = "default",
+  size = "lg",
   onChange,
   label,
   autoFocus,
@@ -109,7 +117,9 @@ export function AmountInput({
       htmlFor={id}
       className={cn("flex items-baseline justify-center gap-1 px-4 py-6 tabular-nums", className)}
     >
-      <span className="text-xl font-medium text-text-3">{money.parts(0).symbol}</span>
+      <span className={cn("font-medium text-text-3", SIZE[size].symbol)}>
+        {money.parts(0).symbol}
+      </span>
       <input
         ref={attachRef}
         id={id}
@@ -124,7 +134,8 @@ export function AmountInput({
         onChange={handleChange}
         placeholder="0"
         className={cn(
-          "min-w-[2ch] bg-transparent text-[52px] leading-none font-semibold tracking-[-0.035em] caret-brand outline-none placeholder:text-text-disabled",
+          "min-w-[2ch] bg-transparent leading-none font-semibold caret-brand outline-none placeholder:text-text-disabled",
+          SIZE[size].input,
           invalidNow ? "text-danger" : TONE[tone],
         )}
         style={{ width: `${Math.max(2, text.length + 1)}ch` }}

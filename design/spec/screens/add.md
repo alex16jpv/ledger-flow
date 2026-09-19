@@ -216,21 +216,74 @@ refuses a category only when its type and the transaction's differ (`Transaction
 `/stats/spending` already groups transfers by category. What it buys is drawn in
 `#transfer-categories-in-the-list`.
 
-### A loan instalment stays one movement (`#instalment-one-movement`)
+### A loan instalment is two movements (`#instalment-two-movements`, T-94)
 
-His words: «por ahora prefiero sin el campo de interés. tengo que pensarlo más a futuro cómo hacerlo.»
-So the Pay sheet keeps its single movement, its two presets and its optional category: no interest
-field, no second movement, nothing new on the server. **And no instalment preset**: T-85 had already
-worked out that a _This month's payment_ preset needs a figure the account does not have
-(`#loan-detail-and-pay`), so where that figure would come from is part of what T-94 has to settle, not
-something to invent here.
+**His decision, 2026-09-18**, taken with both answers priced in front of him. He had deferred it on
+2026-09-17 — «por ahora prefiero sin el campo de interés. tengo que pensarlo más a futuro cómo hacerlo»
+— and what he came back to is the pair.
 
-**What stays wrong is written down, not forgotten.** About $126,000 of a $420,000 instalment is
-interest, so the loan falls by the whole $420,000 when only $294,000 paid it down: the bar that says
-_what is paid_ runs ahead by the interest for the life of the loan, and the interest never appears in
-Stats, because a transfer is not spending. That is **T-94** on his list, deferred by him, with both
-answers already drawn and measured — `#instalment-two-movements` (with its half-applied state,
-`#instalment-only-half-arrived`) and `#instalment-interest-inside-the-movement`.
+**What was wrong, and it is the whole reason.** A $420,000 instalment of which $126,000 is interest was
+written as one transfer, so the loan fell by the whole $420,000 when only **$294,000** paid it down: the
+bar that says _what is paid_ ran ahead by the interest **for the life of the loan**, and the $126,000
+actually spent never reached Stats, because a transfer is not spending. On a car loan that is the
+largest expense of the month, invisible.
+
+**The Pay sheet on a loan gains one optional field, _Of which interest_**, and writing the payment then
+saves **two** movements in one action: a `TRANSFER` of the principal that lowers the loan, and an
+`EXPENSE` of the interest. Both are named on screen before the button is pressed, so nothing is written
+that was not read first. Left empty, the sheet behaves exactly as it does today.
+
+**Where the interest lands.** A category seeded for it, `Interest` — the eleventh, added to the backend
+for this. The app finds it by its **`seedKey`**, never by its name, so renaming it keeps the link, and
+someone who has it never sees a field about it. **Someone who does not** — every account registered
+before T-94, until they restore the defaults — gets one more row on the sheet, _Where the interest
+goes_, asking for a category of their own. It appears **as soon as the sheet knows there is none** —
+the categories are asked for when the sheet opens, not when the interest is typed — because a row that
+arrives mid-amount takes the keyboard away from what is being typed. If that question cannot be
+answered the row is still drawn, with the picker's own error inside it: a button that stays dead
+without saying why is the thing this product does not do.
+
+**The ceiling of T-93 now applies to the principal, not to the instalment**, and that is a fix rather
+than a side effect: a loan owing $300,000 can take a $420,000 instalment of which $126,000 is interest,
+because only $294,000 reaches the debt. Refusing it would have been arithmetic nobody asked for. For
+the same reason **_Everything owed_ fills the instalment that leaves the loan at zero** — the debt plus
+the interest on top — and reads as taken while the **principal** is exactly what is owed, not while the
+typed figure is.
+
+**An instalment that is all interest is refused**, and that is a limit of this sheet rather than of the
+product: nothing would reach the debt, and _Pay this loan_ is the screen for paying it down. A month
+where the whole payment is interest is recorded as the expense it is, from the transaction form.
+
+**The split is two figures the user typed, subtracted in minor units.** It is the only arithmetic the
+sheet does and it never touches a balance, which is what house rule 4 draws the line around; done in
+major units, a currency with cents would drift by a fraction and the offline mirror would keep the
+drift.
+
+**And no instalment preset**, which has not changed: T-85 worked out that a _This month's payment_
+preset needs a figure the account does not carry (`#loan-detail-and-pay`), and the two fields a loan
+gained are the amount borrowed and the credit limit. The instalment is typed.
+
+### When only half of the pair lands (`#instalment-only-half-arrived`)
+
+**The two are not atomic and cannot be made so**: `POST /sync` applies its operations one at a time
+(`SyncBatchService.applyOne`), and online they are two requests. So the transfer is written **first** —
+it is the payment, the thing the user came to do — and if the interest is refused, **the sheet stays
+open**, says which half is saved and which is not, and its button becomes _Send it again_, which
+retries only what is missing. Between the two the figures on screen are right and the story is
+incomplete: the loan has already fallen by $294,000 and the interest is nowhere.
+
+**With no network this state does not appear here.** Both movements are queued and the sheet closes;
+if the server later refuses one, it surfaces where every refused change does, in the attention tray of
+[attention-tray.md](attention-tray.md). One place per situation, not two.
+
+**While that state is on screen nothing below it can be changed.** The amount, the interest, the chip
+and the _From_ are frozen, so _Send it again_ can only send what failed; and the sheet still counts as
+having something to lose, so closing it asks first. Without both of those the sheet would offer to
+resend one thing and send another, or lose the interest without a word.
+
+**What it costs, said plainly because he was told it before choosing:** the pair can be separated
+afterwards. Deleting or editing one of the two does not touch the other, and the app does not link
+them — that would be a field on the movement, which is the bill of the answer he did not take.
 
 ## What the form may offer, by type of account (T-93)
 

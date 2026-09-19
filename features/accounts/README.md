@@ -90,7 +90,8 @@ typecheck here instead of leaving the picker quietly offering what would be refu
 
 `PaySheet` (app layer, because it composes transactions) is the one primary action on a debt
 account's own screen: the amount, one `From` picker and the optional TRANSFER category, and on a LOAN
-it refuses anything above what is still owed. **The amount opens empty** (T-99), with the keyboard up
+it refuses anything above what is still owed — since T-94 that ceiling applies to the **principal**, not
+to the instalment. **The amount opens empty** (T-99), with the keyboard up
 as the Quick add does, and the whole debt is one chip carrying its own figure that fills the field —
 the total is an option, never what the sheet has already decided for you. The chip fills the field by
 remounting `AmountInput` through a `key`, which is how the Quick add resets it too; the sheet counts
@@ -109,3 +110,12 @@ it once it is the choice — and since T-100 the transfer in the full form passe
 condition the Pay sheet itself appears on: the account owes money (`owesMoney`). `PaySheet` reads its
 movement back through the shared `TransferReadback`, including the one-sided sentence for money from
 outside, so the sentence is the same one the transaction form shows.
+
+**On a LOAN the sheet also asks how much of the instalment was interest** (T-94, the owner's decision of
+2026-09-18). Filled, it saves **two** movements instead of one: the `TRANSFER` of the principal first,
+because that is the payment, and then an `EXPENSE` for the interest against the seeded `interest`
+category, which the client finds by `seedKey` and never by name — an account without it is asked for one
+in a row that mounts with the sheet. The two are not atomic (`POST /sync` applies its operations one at a
+time), so when only the transfer lands the sheet stays open, `InstalmentReadback` marks which half is
+saved and which was refused, and the button becomes _Send it again_ and resends only the interest. With
+no network both are queued and a later refusal surfaces in the attention tray, not here.
