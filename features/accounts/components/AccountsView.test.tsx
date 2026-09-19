@@ -45,6 +45,33 @@ afterEach(() => {
 });
 
 describe("AccountsView", () => {
+  it("agrees with the card about a loan paid past zero: neither figure counts it (T-102)", async () => {
+    fetchMock.mockResolvedValue(
+      list([
+        account("cash", "Cash", { type: "CASH", balance: 184_000 }),
+        account("banco", "Bancolombia", { balance: 3_420_500, isDefault: true }),
+        account("loan", "Car loan", {
+          type: "LOAN",
+          balance: 200_000,
+          borrowedAmount: 12_000_000,
+        }),
+      ]),
+    );
+    renderWithProviders(
+      <QueryProvider>
+        <AccountsView />
+      </QueryProvider>,
+    );
+
+    expect(await screen.findByText("3,604,500")).toBeInTheDocument();
+    expect(screen.queryByText("3,804,500")).not.toBeInTheDocument();
+    expect(screen.queryByText("200,000")).not.toBeInTheDocument();
+    const loan = screen.getByRole("link", { name: /Car loan/ });
+    expect(loan).toHaveTextContent("0");
+    expect(loan).toHaveTextContent("owed · Loan");
+    expect(loan).toHaveTextContent("$12,000,000 paid of $12,000,000");
+  });
+
   it("says what you have and what you owe, and keeps archived accounts folded", async () => {
     fetchMock.mockResolvedValue(
       list([

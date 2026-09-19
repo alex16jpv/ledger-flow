@@ -31,7 +31,8 @@ T-88 split the stats row's first card in two: **What you have** and **What you o
 `splitAccounts` in `lib/accounts/debt.ts`, the same call the Accounts summary makes — and **no net
 figure**, because a car loan against a bank account reads negative for years. A debt account below
 zero is what you owe, and since T-102 a **loan** past zero is in neither figure: its card reads as
-finished and does not name that money, so a header that counted it would contradict the card. The row is four cards
+finished and does not name that money, so a header that counted it would contradict
+the card. The row is four cards
 in two pairs; _Estimated savings_ keeps its floor, so a phone still shows three. The carousel prints
 each account through the same reading as the Accounts list, so a card leads with what is available
 on both screens or on neither.

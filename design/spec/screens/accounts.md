@@ -217,8 +217,11 @@ that money of its owner's on a loan means nothing — the card reads _$0 owed_ w
 not name it — so a header that counted it would contradict the card one screen down, which is the very
 thing T-101 existed to stop. A card and an overdraft are the opposite case: there the money **is**
 named on the card, so counting it is what agrees with it. Since T-93 the server refuses any movement
-that would leave a loan above zero, so this is a state only an older row can be in: the fix is to stop
-a contradiction that is already inherited, not to change how the product reads.
+that would leave a loan above zero, so **on the server** this is a state only an older row can be in.
+A device can still project it for a while, because these figures are read off the offline mirror: a
+phone that has downloaded another device's payment while its own is still waiting sees the loan above
+zero until the sync refuses one. Either way the fix is to stop a contradiction, not to change how the
+product reads.
 
 ### Paying a debt (`#pay-a-sheet-on-the-account`, `#pay-from-outside-quiet`)
 

@@ -123,12 +123,8 @@ export function splitAccounts(accounts: readonly Account[]): AccountsSplit {
   let owe = 0;
   for (const account of accounts) {
     const cents = toCents(account.balance);
-    if (DEBT_ACCOUNT_TYPES.has(account.type) && cents < 0) {
-      owe -= cents;
-      continue;
-    }
-    if (!mayHoldOwnMoney(account.type)) continue;
-    have += cents;
+    if (owesMoney(account)) owe -= cents;
+    else if (mayHoldOwnMoney(account.type)) have += cents;
   }
   return { have: fromCents(have), owe: fromCents(owe) };
 }

@@ -40,8 +40,10 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   which he rejected because the screen says that loan has nothing.
 - **Consequence:** that money appears in no figure until the bank returns it, which is the cost he
   accepted. It barely widens: since T-93 the server refuses any movement that would leave a loan above
-  zero and refuses to create an account already past it, so only a row written before that can be in
-  this state. A CARD and an OVERDRAFT are untouched: there the money **is** named on the card, so
+  zero and refuses to create an account already past it, so **on the server** only a row written before
+  that can be in this state. A device can still **project** it for a while: these figures are computed
+  on the offline mirror, so a phone that has downloaded someone else's payment while its own is still
+  in the outbox reads the loan above zero until the sync refuses one of them. A CARD and an OVERDRAFT are untouched: there the money **is** named on the card, so
   counting it is what agrees with it. The condition is `mayHoldOwnMoney`, the same predicate the card
   reading already uses, so the two cannot drift.
 
