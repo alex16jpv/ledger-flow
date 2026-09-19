@@ -83,7 +83,10 @@ loan — and the note that says why: money arriving there is a payment, and the 
 income. An **overdraft** is not on that list, because a positive balance is its ordinary state and a
 salary landing there is income (owner's decision, 2026-09-18). The rule itself is the server's; this
 is only what keeps the client from offering what it would refuse, and the note is shown only when
-there was something to leave out.
+there was something to leave out. Since T-103 the list is not this repository's to decide: the
+contract publishes it as `IncomeRefusedAccountType`, and `lib/api/contract.test.ts` pins
+`INCOME_REFUSED_ON` to it, so the first regeneration after the server changes the rule fails
+typecheck here instead of leaving the picker quietly offering what would be refused.
 
 `PaySheet` (app layer, because it composes transactions) is the one primary action on a debt
 account's own screen: the amount, one `From` picker and the optional TRANSFER category, and on a LOAN
