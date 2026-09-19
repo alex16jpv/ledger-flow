@@ -37,8 +37,15 @@ describe("summarizeAccounts", () => {
 
   it("says what you have and what you owe over the active accounts only", () => {
     const summary = summarizeAccounts(accounts);
-    expect(summary.have).toBe(184_000 + 3_420_500 + 500_000);
+    expect(summary.have).toBe(184_000 + 3_420_500);
     expect(summary.owe).toBe(1_245_900);
+  });
+
+  it("leaves the loan paid past zero out of both, as its own card reads it (T-102)", () => {
+    const withoutLoan = summarizeAccounts(accounts.filter((a) => a.id !== "loan"));
+
+    expect(summarizeAccounts(accounts).have).toBe(withoutLoan.have);
+    expect(summarizeAccounts(accounts).owe).toBe(withoutLoan.owe);
   });
 });
 

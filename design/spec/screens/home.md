@@ -113,6 +113,10 @@ against a few in the bank, so a net total would read negative for years — unti
 that is a true figure nobody wants on the screen they open to record a coffee. Net worth is a real
 number; it is not this screen's number.
 
+**What each figure takes in is stated once, in [accounts.md](accounts.md)**, because the two screens
+read the same split: a debt account below zero is what you owe, and a **loan paid past zero is in
+neither** (T-102).
+
 _Income this month_ and _Estimated savings_ **both stay** — he asked for it explicitly, after a first
 draft dropped the savings card. The row is four cards in **two pairs**: what you have and what you owe
 above, income and savings below. `Estimated savings` takes a 600px floor — it had 640 — so a phone
