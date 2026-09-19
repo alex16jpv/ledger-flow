@@ -168,6 +168,36 @@ $1,245,900`, that fills the field. The chip reads as pressed while the typed amo
   sheet wrote its own outside sentence into `accounts.pay.readOutside` instead of using
   `TransferReadback`, so the key is gone and both surfaces build the sentence from `sideKey`.
 
+## 2026-09-18 · The zero-decimal currencies come from the contract, not from a list kept here (T-67)
+
+- **Context:** T-66 froze the set of currencies this client paints without decimals — 34 codes, CLDR's
+  united with the backend's ISO exponent-0 list — because a phone's ICU and a desktop's disagreed about
+  COP. It stopped the device deciding a rule about money, but it left the **two repositories** deciding
+  it separately: the backend kept only ISO's **17**, so `currencyDecimals` answered `2` for the other
+  seventeen — COP among them, the default currency. The app refused to type a cent in a peso and the
+  server took it anyway, through all four paths that write money. Rows like that already exist, typed
+  before T-66; and because each one rounds on its own, three rows of `1.000,50` add up to `3.002` at the
+  top of the screen and paint `1.001` three times underneath.
+- **Decision:** the backend adopts the same 34 and **publishes them** as `ZeroDecimalCurrency`, the way
+  T-103 published the account types an income is refused. The list here stays a literal — a formatter
+  needs a value and `openapi-typescript` emits types — but it is pinned: `as const satisfies readonly
+ZeroDecimalCurrency[]` rejects a code the server does not treat as zero-decimal, and
+  `lib/api/contract.test.ts` asserts the two unions are **equal**, which rejects one the server does and
+  this client still prints with cents. What T-66 called "read from nowhere else" now means read from the
+  contract, which is the only place both repositories can read.
+- **The owner decided the other half, on 2026-09-18:** only forward. His words: «para la t-67 solo se
+  hace la solución para lo nuevo lo anterior no deberia de causar problemas». No repair script for the
+  rows already stored, and nobody reads his production database to count them.
+- **Alternatives:** leaving the backend at 17 and having this client accept two decimals in those
+  seventeen, which paints a centavo nobody in Colombia writes and reopens T-66; and publishing the
+  **minor units per currency** rather than the zero-decimal list, which is the shape multi-currency
+  stage 3 will need but says more than either side can honour today — storage is integer cents, so the
+  ISO three-decimal currencies stay capped at two whatever the contract says.
+- **Consequence:** an amount with cents in one of the 34 is now `400 AMOUNT_PRECISION` on a transaction
+  (the `/sync` batch included), an account balance and both budget amounts — verified against the
+  running server on each one. A client still holding the old list can refuse what the server takes; it
+  cannot make the server take it.
+
 ## 2026-09-18 · The review inbox is for every quick entry, and each card reads its own type (T-98)
 
 - **Context:** the inbox lists `pendingDetails=true` without filtering by type, and since T-73 the
@@ -3901,6 +3931,13 @@ cover` is set once in the root layout for the standalone display.
   that **is** the user's money on that line comes from the API's day buckets.
 
 ## 2026-09-13 · The currency's minor unit is ours, not the device's (T-66)
+
+> **Half of this was superseded on 2026-09-18 (T-67):** the set is no longer "read from nowhere else".
+> The backend adopted the same 34 codes and publishes them as `ZeroDecimalCurrency`, and the list here
+> is pinned to that — so **the regeneration recipe below no longer holds either**: regenerating from
+> `Intl` here alone now fails `satisfies` and the contract test. A currency that changes lands in
+> `lag-money-manager/src/shared/currency.ts` first and comes back through `npm run gen:api-types`.
+> Everything else below still holds, including why COP is in it.
 
 - **Problem:** the same COP balance read as `$1,284,300` on a desktop browser and `$1,284,300.00`
   on a phone. `fractionDigits` asked `Intl.NumberFormat(...).resolvedOptions()`, and ICU versions

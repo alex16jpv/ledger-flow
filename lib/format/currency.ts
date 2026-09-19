@@ -1,3 +1,5 @@
+import type { ZeroDecimalCurrency } from "@/types/api";
+
 export const DEFAULT_CURRENCY_CODE = "COP";
 
 const REGION_CURRENCY: Record<string, string> = {
@@ -71,7 +73,7 @@ const REGION_CURRENCY: Record<string, string> = {
 };
 
 // Frozen, not asked: a device's ICU says COP has 0 decimals here and 2 on an older phone.
-const ZERO_DECIMAL_CURRENCIES = new Set([
+export const ZERO_DECIMAL_CURRENCIES = [
   "AFN",
   "ALL",
   "BIF",
@@ -106,12 +108,14 @@ const ZERO_DECIMAL_CURRENCIES = new Set([
   "XOF",
   "XPF",
   "YER",
-]);
+] as const satisfies readonly ZeroDecimalCurrency[];
+
+const ZERO_DECIMAL = new Set<string>(ZERO_DECIMAL_CURRENCIES);
 
 const DEFAULT_FRACTION_DIGITS = 2;
 
 export function currencyFractionDigits(code: string): number {
-  return ZERO_DECIMAL_CURRENCIES.has(code.toUpperCase()) ? 0 : DEFAULT_FRACTION_DIGITS;
+  return ZERO_DECIMAL.has(code.toUpperCase()) ? 0 : DEFAULT_FRACTION_DIGITS;
 }
 
 export function currencyForRegion(region: string | undefined | null): string {

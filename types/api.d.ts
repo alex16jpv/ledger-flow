@@ -1062,7 +1062,7 @@ export type paths = {
                         "application/json": components["schemas"]["Budget"];
                     };
                 };
-                /** @description Validation error. Codes include BUDGET_PERIOD_OVERLAP (a budget for this category and period type already exists; CUSTOM budgets only conflict when their date windows intersect), CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH. */
+                /** @description Validation error. Codes include BUDGET_PERIOD_OVERLAP (a budget for this category and period type already exists; CUSTOM budgets only conflict when their date windows intersect), AMOUNT_PRECISION (an amount with decimals in a `ZeroDecimalCurrency`), CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH. */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1198,7 +1198,7 @@ export type paths = {
                         "application/json": components["schemas"]["Budget"];
                     };
                 };
-                /** @description Validation error. Codes include RESOURCE_ARCHIVED (writing to an archived budget), BUDGET_PERIOD_OVERLAP, CATEGORY_ARCHIVED (assigning an archived category; keeping one it already had is allowed), CATEGORY_TYPE_MISMATCH. */
+                /** @description Validation error. Codes include RESOURCE_ARCHIVED (writing to an archived budget), BUDGET_PERIOD_OVERLAP, AMOUNT_PRECISION (only when the write carries an amount), CATEGORY_ARCHIVED (assigning an archived category; keeping one it already had is allowed), CATEGORY_TYPE_MISMATCH. */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1351,7 +1351,7 @@ export type paths = {
                         "application/json": components["schemas"]["Budget"];
                     };
                 };
-                /** @description Validation error, or RESOURCE_ARCHIVED when the budget is archived */
+                /** @description Validation error (AMOUNT_PRECISION when the amount has decimals the currency has not), or RESOURCE_ARCHIVED when the budget is archived */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2479,7 +2479,7 @@ export type paths = {
                         "application/json": components["schemas"]["Transaction"];
                     };
                 };
-                /** @description Validation error. Codes include FUTURE_DATE (date more than 24h in the future), CURRENCY_MISMATCH (transfer between accounts with different currencies), INCOME_ON_CARD_OR_LOAN (an income landing on an account type listed in `IncomeRefusedAccountType`), LOAN_OVERPAID (a movement that would leave a LOAN above zero), CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH, IDEMPOTENCY_KEY_INVALID (malformed Idempotency-Key header). */
+                /** @description Validation error. Codes include FUTURE_DATE (date more than 24h in the future), CURRENCY_MISMATCH (transfer between accounts with different currencies), INCOME_ON_CARD_OR_LOAN (an income landing on an account type listed in `IncomeRefusedAccountType`), AMOUNT_PRECISION (decimals in a `ZeroDecimalCurrency`), LOAN_OVERPAID (a movement that would leave a LOAN above zero), CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH, IDEMPOTENCY_KEY_INVALID (malformed Idempotency-Key header). */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2616,7 +2616,7 @@ export type paths = {
                         "application/json": components["schemas"]["Transaction"];
                     };
                 };
-                /** @description Validation error. Codes include FUTURE_DATE, CURRENCY_MISMATCH, INCOME_ON_CARD_OR_LOAN (an income moved onto an account type listed in `IncomeRefusedAccountType`) and LOAN_OVERPAID (a movement that would leave a LOAN above zero), both checked again whenever the edit moves money, CATEGORY_ARCHIVED (assigning an archived category; keeping the one it already had is allowed), CATEGORY_TYPE_MISMATCH. */
+                /** @description Validation error. Codes include FUTURE_DATE, CURRENCY_MISMATCH, INCOME_ON_CARD_OR_LOAN (an income moved onto an account type listed in `IncomeRefusedAccountType`), AMOUNT_PRECISION (only when the edit carries an amount) and LOAN_OVERPAID (a movement that would leave a LOAN above zero), the first and the last checked again whenever the edit moves money, CATEGORY_ARCHIVED (assigning an archived category; keeping the one it already had is allowed), CATEGORY_TYPE_MISMATCH. */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -3773,6 +3773,11 @@ export type components = {
             /** @description Present (true) only when register revived a soft-deleted account. */
             reactivated?: boolean;
         };
+        /**
+         * @description The currencies this API stores with no minor unit. An amount carrying decimals in one of them is rejected with 400 AMOUNT_PRECISION wherever one is written: a transaction, an account balance, a credit limit or a borrowed amount, a budget amount and a budget period override, through the /sync batch as well as through these routes. It is judged on the amount a request carries, never on one already stored, so a row written before a currency joined this list stays editable in everything but its amount. Read this list instead of copying it; a client that keeps its own can refuse what the server takes, or offer what the server refuses. The ISO three-decimal currencies are absent on purpose: storage is integer cents, so they are capped at two.
+         * @enum {string}
+         */
+        ZeroDecimalCurrency: "AFN" | "ALL" | "BIF" | "CLP" | "COP" | "DJF" | "GNF" | "HUF" | "IDR" | "IQD" | "IRR" | "ISK" | "JPY" | "KMF" | "KPW" | "KRW" | "LAK" | "LBP" | "MGA" | "MMK" | "PKR" | "PYG" | "RWF" | "SLL" | "SOS" | "SYP" | "UGX" | "UYI" | "VND" | "VUV" | "XAF" | "XOF" | "XPF" | "YER";
     };
     responses: never;
     parameters: {
@@ -3832,6 +3837,7 @@ export type UpdateCategoryInput = components['schemas']['UpdateCategoryInput'];
 export type UpdateTransactionInput = components['schemas']['UpdateTransactionInput'];
 export type UpdateUserInput = components['schemas']['UpdateUserInput'];
 export type User = components['schemas']['User'];
+export type ZeroDecimalCurrency = components['schemas']['ZeroDecimalCurrency'];
 export type ParameterIfMatch = components['parameters']['IfMatch'];
 export type $defs = Record<string, never>;
 export type operations = Record<string, never>;
