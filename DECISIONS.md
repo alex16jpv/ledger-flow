@@ -129,6 +129,33 @@ $1,245,900`, that fills the field. The chip reads as pressed while the typed amo
   sheet wrote its own outside sentence into `accounts.pay.readOutside` instead of using
   `TransferReadback`, so the key is gone and both surfaces build the sentence from `sideKey`.
 
+## 2026-09-18 · The list of types an income is refused is pinned to the contract, not copied (T-103)
+
+- **Context:** T-93 left this client with `INCOME_REFUSED_TYPES`, a hand-written `["CARD", "LOAN"]`,
+  because the backend published the **code** `INCOME_ON_CARD_OR_LOAN` but not the **rule**: which
+  account types trigger it lived in prose inside the endpoint descriptions, where no generator can
+  reach it. The entry below called that "the one place where this client repeats a rule the server
+  owns", and the list had already changed once — an overdraft came out of it the same day it was
+  written. Nothing would have said so: the only thing that compares the two repositories is an e2e
+  that asks the server for the three cases, and it catches the drift after it ships.
+- **Decision:** the backend publishes the list as a schema, `IncomeRefusedAccountType`, so
+  `npm run gen:api-types` brings it into `types/api.d.ts` the way it already brings the error codes.
+  Here the literal stays a literal — `openapi-typescript` emits types, never values, and a picker
+  needs a value — but it is **pinned in both directions**: `INCOME_REFUSED_ON` is declared
+  `satisfies readonly IncomeRefusedAccountType[]`, which rejects a type the contract does not refuse,
+  and `lib/api/contract.test.ts` asserts its member union **equals** the contract's, which rejects one
+  the contract refuses and this client still offers. A change on the server now fails typecheck here,
+  with the two types named, as soon as `npm run check:contract` has brought the new document in.
+- **Alternatives:** teaching `tools/gen-api-types.mjs` to emit runtime arrays for the contract's
+  string enums, which would delete the literal outright but introduces a second generated artifact and
+  a naming convention for one enum, while `ERROR_CODES`, `COLOR_TOKENS` and `CATEGORY_ICON_KEYS` — the
+  three lists with exactly this problem — are all already pinned the way above, in the same file;
+  and leaving the copy and trusting the e2e, which is what T-93 did and what this task exists to undo.
+- **Consequence:** `INCOME_REFUSED_TYPES` is now derived from the pinned tuple rather than built from
+  its own literal, so the picker and the quick capture keep taking a `ReadonlySet` and nothing else in
+  the client changed. The rule is still the server's and still enforced there: what moved is where this
+  client reads it from.
+
 ## 2026-09-18 · An income is not offered a card or a loan, and the server is the one that refuses (T-93)
 
 - **Context:** nothing related the type of a movement to the type of the account it touches. An

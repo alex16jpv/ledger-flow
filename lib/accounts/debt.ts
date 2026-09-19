@@ -1,5 +1,5 @@
 import { fromCents, toCents } from "@/lib/local/derive/money";
-import type { Account } from "@/types/api";
+import type { Account, IncomeRefusedAccountType } from "@/types/api";
 
 export const DEBT_ACCOUNT_TYPES: ReadonlySet<Account["type"]> = new Set([
   "CARD",
@@ -7,8 +7,12 @@ export const DEBT_ACCOUNT_TYPES: ReadonlySet<Account["type"]> = new Set([
   "LOAN",
 ]);
 
-// An overdraft holds its owner's money in its ordinary state, so a salary landing there is income (T-93).
-export const INCOME_REFUSED_TYPES: ReadonlySet<Account["type"]> = new Set(["CARD", "LOAN"]);
+export const INCOME_REFUSED_ON = [
+  "CARD",
+  "LOAN",
+] as const satisfies readonly IncomeRefusedAccountType[];
+
+export const INCOME_REFUSED_TYPES: ReadonlySet<Account["type"]> = new Set(INCOME_REFUSED_ON);
 
 export function owesMoney(account: Pick<Account, "type" | "balance"> | null | undefined): boolean {
   return account != null && DEBT_ACCOUNT_TYPES.has(account.type) && account.balance < 0;

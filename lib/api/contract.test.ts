@@ -1,3 +1,4 @@
+import { INCOME_REFUSED_ON, INCOME_REFUSED_TYPES } from "@/lib/accounts/debt";
 import { ERROR_CODES, type ErrorCode } from "@/lib/api/errors";
 import { CATEGORY_ICON_KEYS, type CategoryIconKey } from "@/lib/icons/category-icons";
 import { COLOR_TOKENS, type ColorToken } from "@/lib/theme/feature-color";
@@ -10,15 +11,20 @@ type Expect<T extends true> = T;
 type ApiColor = NonNullable<components["schemas"]["Account"]["color"]>;
 type ApiIcon = NonNullable<components["schemas"]["Category"]["icon"]>;
 type ApiErrorCode = NonNullable<components["schemas"]["ErrorResponse"]["code"]>;
+type ApiIncomeRefused = components["schemas"]["IncomeRefusedAccountType"];
 
 export type ColorsMatchContract = Expect<Equal<ColorToken, ApiColor>>;
 export type IconsMatchContract = Expect<Equal<CategoryIconKey, ApiIcon>>;
 export type ErrorCodesMatchContract = Expect<Equal<ErrorCode, ApiErrorCode>>;
+export type IncomeRefusalMatchesContract = Expect<
+  Equal<(typeof INCOME_REFUSED_ON)[number], ApiIncomeRefused>
+>;
 
 describe("contract with types/api.d.ts", () => {
   it("keeps the runtime lists aligned with the generated enums", () => {
     expect(COLOR_TOKENS).toHaveLength(16);
     expect(CATEGORY_ICON_KEYS).toHaveLength(105);
     expect(ERROR_CODES.length).toBeGreaterThan(20);
+    expect(INCOME_REFUSED_TYPES.size).toBe(INCOME_REFUSED_ON.length);
   });
 });
