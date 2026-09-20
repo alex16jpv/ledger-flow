@@ -69,9 +69,12 @@ owe you across every group and what they have already paid. ✅ Creating a group
 already exist, or from scratch, and `Split this` over a single one. ✅ The split sheet in its four
 modes, with the odd peso going to whoever paid. ✅ Getting paid — money that is not income, partial
 payments, cash outside the app, and the case where the two of you owe each other — ✅ writing off, and
-✅ archiving a group with people still owing. Everything here is drawn
-([screens/shared.md](screens/shared.md)) and **nothing of it is built yet**: the backend arrives with
-T-113…T-119 and the screens with T-120…T-124. 🔮 Inviting somebody by email and letting them see the
+✅ archiving a group with people still owing, ✅ a group two people paid for, and ✅ the contact
+picker, where the paging and the two limits are said. ⬜ Loading and error, and ⬜ the `Percent` and
+`Exact` modes of the split sheet, are specified and not drawn: their plates are made by the session
+that builds the screen, before its code, like every other screen's states (D-36). Everything is
+written in [screens/shared.md](screens/shared.md) and **nothing of it is built yet**: the backend
+arrives with T-113…T-119 and the screens with T-120…T-124. 🔮 Inviting somebody by email and letting them see the
 group in their own app is the second delivery, with the notification system it needs.
 
 ## Categories ✅

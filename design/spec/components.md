@@ -180,8 +180,9 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
 35. **Selectable row (`row` with a `box`)** — the same 60px row every list already draws, with a 20px
     checkbox first. Used where a screen picks from something that already exists — the transactions
     that go into a shared group — so the thing being picked is shown exactly as the list shows it,
-    never as a stripped-down copy. The whole row is the label, the footer button counts what is
-    selected and adds up their amounts, and nothing is selected by a scroll.
+    never as a stripped-down copy. The box is a real `input[type=checkbox]` visually replaced by the 20px square, the whole
+    row is its `<label>`, and its accessible name is the row's own title and metadata. The footer button
+    counts what is selected and adds up their amounts, and nothing is selected by a scroll.
 
 **Every chart obeys the same contract**, and every shape has exactly one implementation: a slot — a
 bar, a cell, a column, a pair — carries its name and its amount as its accessible name (a position on

@@ -8,7 +8,10 @@ Search (on the client over the loaded page, plus a `tag` filter when it starts w
 chips — "Filters" with the count of active filters (it opens the filters sheet), the period (this month
 by default), the type, "To review · n", "Uncategorized" and recent tags. A summary card for the period
 (spent, income, number of transactions). The list is grouped by day, with a `day-head` carrying the
-day's total, in the user's zone.
+day's total, in the user's zone. **Those figures are gross**: a row's amount, a day's total and the
+period summary are what moved through the accounts, which is what a list of movements is for. Stats
+and the budgets use what counts as yours, which for a shared expense is smaller — the two are not the
+same number and the detail is where the difference is explained ([shared.md](shared.md)).
 
 A row shows the category tile (or a neutral `hash` when there is none), the description or the
 category's name or "Quick expense" / "Quick income" for a quick entry with neither, the time · the account, and the amount signed by type; an
@@ -83,11 +86,16 @@ A participant can read `Paid` here and `Partially paid` in the group, because a 
 
 ## Deleting one people have paid for (`#delete-a-shared-expense`)
 
-The ordinary delete confirmation, plus what it drags: the payments recorded against this expense go
-with it, and the group loses an expense. It names them and says what each balance does. It also offers
-what was probably meant — **writing it off**, which keeps the expense and its history — because
-"nobody is going to pay me" and "this never happened" are different statements and only one of them is
-a deletion.
+The ordinary delete confirmation, plus what it drags — and the surprising half is what it does **not**
+do. **No payment is deleted**: a payment belongs to the person, not to one expense, so what has
+arrived stays and re-imputes over the expenses that are left, each of which records it in its history.
+What does change is **what everybody owes**, because the group now costs less and every share falls
+with it — which can leave somebody who already paid ahead of their new share. The sheet says both, and
+names the account and the figure it moves.
+
+It also offers what was probably meant — **writing it off**, which keeps the expense and its history —
+because "nobody is going to pay me" and "this never happened" are different statements and only one of
+them is a deletion.
 
 ## A row with something queued
 
