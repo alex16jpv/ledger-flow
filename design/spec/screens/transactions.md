@@ -13,7 +13,12 @@ day's total, in the user's zone.
 A row shows the category tile (or a neutral `hash` when there is none), the description or the
 category's name or "Quick expense" / "Quick income" for a quick entry with neither, the time · the account, and the amount signed by type; an
 ADJUSTMENT carries an "Adjustment" badge and a `scale` tile; a QUICK entry still to detail carries an
-amber background and its badge. Infinite scroll through `hasMore`/`nextCursor`; on `INVALID_CURSOR` the
+amber background and its badge. A **shared** one carries a `users` badge and, under the amount, **your
+share** — the owner's decision: the row keeps the full amount on the right, because that is what left
+the account and what the month is counting today, and says underneath what the split says is fairly
+yours. The third figure — what counts as yours right now, somewhere between the two and moving with
+every payment — belongs in the detail, next to the history that explains it
+([shared.md](shared.md)). Infinite scroll through `hasMore`/`nextCursor`; on `INVALID_CURSOR` the
 list reloads from the start with the toast "List updated". The export action is visible and inactive
 ("soon").
 
@@ -45,6 +50,31 @@ positioned on that item.
 alert, "Some changes need your attention. This transaction has a change the server hasn't taken.", with
 a "Review" button that opens the conflict sheet over that operation. It is the second way into that
 sheet, besides the red stripe.
+
+## A shared expense (`#shared-expense`)
+
+Between the hero and the attributes, a card for the group. It leads with **what counts as yours** —
+the figure Stats and the budgets use — and one sentence saying how it got there: your share, plus
+whatever is still owed or was written off. Then a row per participant with their share and their
+state, and two actions, `Edit split` and `Settle up`. The attribute table gains a **Shared group** row
+that opens the group.
+
+**Then the history, and it is not an extra.** One line per event that could have changed the figure,
+with its date, what happened and the figure it left behind — and an event that changed nothing says
+so. That is the point: splitting an expense and writing one off **never** move it, because the money
+had already left the account; only a payment does, and it moves the month the expense happened in.
+Without this list, a figure that falls two weeks later in a month already closed is inexplicable.
+
+A participant can read `Paid` here and `Partially paid` in the group, because a payment covers the
+**oldest expense first** ([shared.md](shared.md)).
+
+## Deleting one people have paid for (`#delete-a-shared-expense`)
+
+The ordinary delete confirmation, plus what it drags: the payments recorded against this expense go
+with it, and the group loses an expense. It names them and says what each balance does. It also offers
+what was probably meant — **writing it off**, which keeps the expense and its history — because
+"nobody is going to pay me" and "this never happened" are different statements and only one of them is
+a deletion.
 
 ## A row with something queued
 

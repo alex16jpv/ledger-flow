@@ -37,13 +37,13 @@ One **plate** is one mockup: a named screen or state, with its own anchor. Plate
 pages belong to **groups**, and the sidebar is the map. Every plate carries the date it arrived, so
 `changes.html` can list what is new and the sidebar can flag it.
 
-| Group       | Pages                                                                                                              |
-| ----------- | ------------------------------------------------------------------------------------------------------------------ |
-| —           | `index` (start here), `in-review`, `changes`                                                                       |
-| Foundations | `foundations`                                                                                                      |
-| Screens     | `home` `add` `access` `transactions` `accounts` `categories` `budgets` `budget-detail` `stats` `settings` `public` |
-| States      | `states` `sync-stripes` `conflicts` `attention-tray` `local-mode`                                                  |
-| Decisions   | `variants`                                                                                                         |
+| Group       | Pages                                                                                                                       |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------- |
+| —           | `index` (start here), `in-review`, `changes`                                                                                |
+| Foundations | `foundations`                                                                                                               |
+| Screens     | `home` `add` `access` `transactions` `accounts` `shared` `categories` `budgets` `budget-detail` `stats` `settings` `public` |
+| States      | `states` `sync-stripes` `conflicts` `attention-tray` `local-mode`                                                           |
+| Decisions   | `variants`                                                                                                                  |
 
 **`in-review.html` is the queue.** A design being worked on gets `review: true` in the page model:
 it then shows up only there, never on its own page, until the owner approves it. Approving means

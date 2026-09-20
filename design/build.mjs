@@ -87,6 +87,7 @@ const sidebar = (active) => `<aside class="sidebar">
 <button class="btn primary block cta">${iconSvg("plus", "sm")} Add</button>
 ${navlink("house", "Home", active == "inicio")}${navlink("list", "Transactions", active == "mov", 3)}
 ${navlink("chart-pie", "Budgets", active == "pres")}${navlink("wallet", "Accounts", active == "cuentas")}
+${navlink("users", "Shared", active == "shared")}
 ${navlink("chart-column", "Stats", active == "stats")}${navlink("tags", "Categories", active == "cat")}
 <div class="footer">${navlink("settings", "Settings", active == "ajustes")}
 <a class="navlink" href="#"><span class="avatar" style="width:28px;height:28px;font-size:11px">JD</span><span class="truncate">John Doe</span></a></div></aside>`;
@@ -434,11 +435,15 @@ ${installRisk}
         ? `<div class="card stat"><span class="k">What you have</span><span class="v amount">${money(YOURS)}</span><span class="d faint">3 accounts</span></div>
 <div class="card stat"><span class="k">What you owe</span><span class="v amount">${money(OWED)}</span><span class="d faint">A card and a loan</span></div>`
         : `<div class="card stat"><span class="k">Total balance</span><span class="v amount">${money(NET)}</span><span class="d faint">${debt === "unchanged" ? "5 accounts" : `${moneyText(YOURS)} yours − ${moneyText(OWED)} owed`}</span></div>`;
+  const owedLine =
+    debt === "two-cards"
+      ? `<a class="card hstack" href="#" style="padding:10px 14px;gap:10px">${iconSvg("users")}<span class="small" style="flex:1"><b class="amount">$562,600</b> owed to you · <span class="muted">you owe <b class="amount">$60,000</b></span></span>${iconSvg("chevron-right", "sm")}</a>`
+      : "";
   const stats = `${statsHead}<section class="stats${debt === "two-cards" ? " pairs" : ""}">
 ${totalCard}
 ${income}
 ${savings}
-</section>`;
+</section>${owedLine}`;
   const bud = (name, spent, limit, note, warn = "") => {
     const [ic, col] = CATS[name];
     const pct = Math.min(100, round((spent / limit) * 100));
@@ -1057,7 +1062,7 @@ ${row("briefcase", "GREEN", "August salary", "Bancolombia", 4200000, "income")}
 ${row("repeat", "GRAY", "Bancolombia → Savings", "Transfer", 1000000, "transfer")}
 ${row("car", "BLUE", "Uber to work", "18:10 · Visa Gold", 18400)}
 <div class="day-head"><span>Sunday 20</span><span class="amount">${money(272600, "−")}</span></div>
-${row("utensils", "ORANGE", "Carulla groceries", "Bancolombia", 78900, "expense", { sub: "#groceries" })}
+${row("utensils", "ORANGE", "Carulla groceries", "Bancolombia", 78900, "expense", { badges: `<span class="badge">${iconSvg("users")}Shared</span>`, sub: "Your share $26,300" })}
 ${row("scale", "NONE", "Balance adjustment · Cash", "Reconciliation", 7500, "adjustment", { badges: '<span class="badge">Adjustment</span>' })}
 ${row("zap", "AMBER", "EPM electricity", "Bancolombia", 186200)}
 </div>
@@ -1070,34 +1075,97 @@ ${row("zap", "AMBER", "EPM electricity", "Bancolombia", 186200)}
   });
 };
 
-const transactionDetail = ({ pending = false, conflict = false } = {}) => {
+const SHARE_HISTORY = [
+  ["Aug 29", "Recorded · paid from Bancolombia", 1200000, false],
+  ["Sep 12", "Split 4 ways in Cartagena trip", 1200000, true],
+  ["Sep 18", "Ana Ruiz paid $300,000", 900000, false],
+  ["Sep 20", "Beto Cano paid $300,000", 600000, false],
+  ["Sep 21", "Lucía Mesa written off", 600000, true],
+];
+
+const transactionDetail = ({
+  pending = false,
+  conflict = false,
+  shared = false,
+  splitting = false,
+  sheet = "",
+} = {}) => {
   let pend = pending
     ? `<div class="alert warning" style="align-items:center">${iconSvg("inbox")}<span style="flex:1"><b>Quick expense to review.</b> Add a category and description so it counts where it should.</span><button class="btn sm ink">Complete</button></div>`
     : "";
   if (conflict) {
     pend = `<div class="alert danger" style="align-items:center">${iconSvg("circle-alert")}<span style="flex:1"><b>Some changes need your attention.</b> This transaction has a change the server hasn’t taken.</span><button class="btn sm danger solid">Review</button></div>`;
   }
-  const info = [
-    ["Category", `<span class="hstack">${tile("car", "BLUE", "sm")}Transport</span>`],
-    ["Account", `<span class="hstack">${tile("credit-card", "PURPLE", "sm")}Visa Gold</span>`],
-    ["Date", "Monday, September 21 · 18:10"],
-    [
-      "Tags",
-      '<span class="hstack"><span class="tag">work</span><span class="tag">latte</span></span>',
-    ],
-    ["Note", "Rain, missed the bus."],
-    ["Source", '<span class="badge">Manual</span>'],
-    ["Currency", '<span class="mono muted">COP</span>'],
-  ];
+  const info = shared
+    ? [
+        ["Category", `<span class="hstack">${tile("plane", "CYAN", "sm")}Travel</span>`],
+        ["Account", `<span class="hstack">${tile("landmark", "BLUE", "sm")}Bancolombia</span>`],
+        ["Date", "Saturday, August 29 · 09:20"],
+        ["Shared group", '<a class="link" href="#">Cartagena trip</a>'],
+        ["Source", '<span class="badge">Manual</span>'],
+        ["Currency", '<span class="mono muted">COP</span>'],
+      ]
+    : splitting
+      ? [
+          ["Category", `<span class="hstack">${tile("utensils", "ORANGE", "sm")}Food</span>`],
+          ["Account", `<span class="hstack">${tile("landmark", "BLUE", "sm")}Bancolombia</span>`],
+          ["Date", "Friday, August 28 · 19:05"],
+          ["Source", '<span class="badge">Manual</span>'],
+          ["Currency", '<span class="mono muted">COP</span>'],
+        ]
+      : [
+          ["Category", `<span class="hstack">${tile("car", "BLUE", "sm")}Transport</span>`],
+          [
+            "Account",
+            `<span class="hstack">${tile("credit-card", "PURPLE", "sm")}Visa Gold</span>`,
+          ],
+          ["Date", "Monday, September 21 · 18:10"],
+          [
+            "Tags",
+            '<span class="hstack"><span class="tag">work</span><span class="tag">latte</span></span>',
+          ],
+          ["Note", "Rain, missed the bus."],
+          ["Source", '<span class="badge">Manual</span>'],
+          ["Currency", '<span class="mono muted">COP</span>'],
+        ];
   const rows = info
     .map(
       ([k, v]) =>
         `<div class="hstack" style="justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);gap:16px"><span class="small muted">${k}</span><span style="text-align:right;font-weight:500;font-size:14px">${v}</span></div>`,
     )
     .join("");
-  const body = `${pend}<div class="card stack-sm color-BLUE" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${tile("car", "BLUE", "lg")}<span class="amount-hero" style="font-size:36px">${money(18400, "−")}</span><span class="h3">Uber to work</span><span class="small muted">Expense · Visa Gold</span></div>
+  const hero = shared
+    ? `<div class="card stack-sm color-CYAN" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${tile("plane", "CYAN", "lg")}<span class="amount-hero" style="font-size:36px">${money(1200000, "−")}</span><span class="h3">Flights</span><span class="small muted">Expense · Bancolombia</span><span class="badge">${iconSvg("users")}Shared · Cartagena trip</span></div>`
+    : splitting
+      ? `<div class="card stack-sm color-ORANGE" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${tile("utensils", "ORANGE", "lg")}<span class="amount-hero" style="font-size:36px">${money(100000, "−")}</span><span class="h3">Groceries for the trip</span><span class="small muted">Expense · Bancolombia</span></div>`
+      : `<div class="card stack-sm color-BLUE" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${tile("car", "BLUE", "lg")}<span class="amount-hero" style="font-size:36px">${money(18400, "−")}</span><span class="h3">Uber to work</span><span class="small muted">Expense · Visa Gold</span></div>`;
+  const sharedCard = shared
+    ? `<section class="card color-TEAL stack-sm">
+<div class="card-head"><h3 class="h3">${tile("users", "TEAL", "sm")}Cartagena trip</h3><a class="link" href="#">Open group</a></div>
+<span class="amount-lg amount">${money(600000)}</span>
+<span class="small muted">counts as yours, and it is what Stats and your budgets use. Your share is ${moneyText(300000)}; Lucía’s ${moneyText(300000)} was written off, so it stays yours.</span>
+<div class="list" style="margin:0 -16px 0">
+${personRow("You", "Your share · Travel, August", 300000, "yours")}
+${personRow("Ana Ruiz", "Paid Sep 18", 300000, "of $300,000", STATE_BADGE.paid)}
+${personRow("Beto Cano", "Paid Sep 20 · oldest expense first", 300000, "of $300,000", STATE_BADGE.paid)}
+${personRow("Lucía Mesa", "Written off Sep 21", 300000, "never paid", STATE_BADGE.off)}
+</div>
+<div class="hstack" style="gap:10px"><button class="btn secondary" style="flex:1">${iconSvg("split", "sm")}Edit split</button><button class="btn secondary" style="flex:1">${iconSvg("hand-coins", "sm")}Settle up</button></div></section>
+<section class="card">
+<div class="card-head"><h3 class="h3">What has counted as yours</h3><span class="small faint">5 changes</span></div>
+${SHARE_HISTORY.map(
+  ([when, why, figure, same]) =>
+    `<div class="hstack" style="justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);gap:16px"><span class="small" style="display:flex;gap:8px"><b class="mono faint" style="font-size:11px;white-space:nowrap;padding-top:2px">${when}</b><span>${why}</span></span><span style="display:inline-flex;flex-direction:column;align-items:flex-end;white-space:nowrap"><span class="amount" style="font-weight:600">${money(figure)}</span>${same ? '<span class="sub">no change</span>' : ""}</span></div>`,
+).join("")}
+<p class="xs faint" style="margin:10px 0 0">Splitting an expense and writing one off never move the figure: the money had already left your account. Only a payment does, and it moves the month the expense happened in.</p></section>`
+    : "";
+  const actions = splitting
+    ? `<div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("split", "sm")}Split this</button><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn danger lg" style="flex:1">${iconSvg("trash-2", "sm")}Delete</button></div>`
+    : `<div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn danger lg" style="flex:1">${iconSvg("trash-2", "sm")}Delete</button></div>`;
+  const body = `${pend}${hero}
+${sharedCard}
 <div class="card" style="padding:4px 16px">${rows}</div>
-<div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn danger lg" style="flex:1">${iconSvg("trash-2", "sm")}Delete</button></div>
+${actions}
 <p class="xs faint" style="text-align:center;margin:0">Created Sep 21 18:12 · edited Sep 21 18:15</p>`;
   return screen(body, {
     tab: "mov",
@@ -1105,10 +1173,25 @@ const transactionDetail = ({ pending = false, conflict = false } = {}) => {
     back: true,
     title: "Transaction",
     narrow: true,
+    sheet,
     actions: `<button class="btn ghost icon-only round" aria-label="More">${iconSvg("ellipsis")}</button>`,
   });
 };
 
+const deleteSharedSheet = () =>
+  transactionDetail({
+    shared: true,
+    sheet: sheetWrap(
+      `<div class="alert danger">${iconSvg("triangle-alert")}<span><b>Two people have already paid you for this.</b> Deleting it removes the expense and the ${moneyText(600000)} of payments recorded against it, and Cartagena trip drops from 5 expenses to 4.</span></div>
+<div class="list card flush">
+<div class="row" style="cursor:default">${tile("hand-coins", "GRAY")}<span class="body"><span class="title">Ana Ruiz paid $300,000</span><span class="meta">Sep 18 · into Bancolombia</span></span><span class="right"><span class="amount">${money(300000)}</span><span class="sub">will be removed</span></span></div>
+<div class="row" style="cursor:default">${tile("hand-coins", "GRAY")}<span class="body"><span class="title">Beto Cano paid $300,000</span><span class="meta">Sep 20 · into Bancolombia</span></span><span class="right"><span class="amount">${money(300000)}</span><span class="sub">will be removed</span></span></div>
+</div>
+<p class="small muted" style="margin:0">Bancolombia goes back up by ${moneyText(1200000)} and down by ${moneyText(600000)}. If what you meant was that you are not getting the rest back, <b>write it off</b> instead: that keeps the expense and its history.</p>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn danger solid lg" style="flex:1.4">Delete anyway</button></div>`,
+      "Delete Flights?",
+    ),
+  });
 const REVIEW_CHIPS = {
   expense: ["Food", "Coffee", "Transport", "Lifestyle"],
   income: ["Salary", "Business", "Other income"],
@@ -3799,7 +3882,7 @@ const addMovement = (kind) =>
 const navMenuSheet = (withAccounts) => {
   const acc = withAccounts ? settingsRow("wallet", "Accounts", "4 accounts", "", "BLUE") : "";
   return sheetWrap(
-    `<div class="list card flush">${acc}${settingsRow("chart-column", "Stats", "Where the money went", "", "TEAL")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}${settingsRow("settings", "Settings", "Profile, currency, appearance", "", "GRAY")}</div>
+    `<div class="list card flush">${acc}${settingsRow("users", "Shared", "$562,600 owed to you", "", "PURPLE")}${settingsRow("chart-column", "Stats", "Where the money went", "", "TEAL")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}${settingsRow("settings", "Settings", "Profile, currency, appearance", "", "GRAY")}</div>
 <div class="list card flush"><a class="row" href="#"><span class="avatar" style="width:32px;height:32px;font-size:12px">JD</span><span class="body"><span class="title">John Doe</span><span class="meta">john@example.com</span></span>${iconSvg("chevron-right", "sm")}</a></div>`,
     "More",
   );
@@ -3853,6 +3936,302 @@ const sheetHandleVariant = (kind) => {
   return home({ sheet: quickSheet({ type: "expense", handle: "wide", extra }) });
 };
 
+// ── Shared expenses · T-110 and T-111 ───────────────────────────────────────
+const PEOPLE = {
+  You: ["JD", "GRAY"],
+  "Ana Ruiz": ["AR", "PINK"],
+  "Beto Cano": ["BC", "TEAL"],
+  "Lucía Mesa": ["LM", "AMBER"],
+  "Diego Pardo": ["DP", "INDIGO"],
+};
+
+const face = (name, size = "") => {
+  const [initials, color] = PEOPLE[name];
+  return `<span class="avatar person ${size} color-${color}" aria-hidden="true">${initials}</span>`;
+};
+
+const personRow = (name, meta, amt, note, badge = "") =>
+  `<a class="row" href="#">${face(name)}
+<span class="body"><span class="title"><span class="truncate">${name}</span>${badge}</span><span class="meta">${meta}</span></span>
+<span class="right"><span class="amount">${money(amt)}</span><span class="sub">${note}</span></span></a>`;
+
+const STATE_BADGE = {
+  paid: '<span class="badge success">Paid</span>',
+  partial: '<span class="badge warning">Partially paid</span>',
+  unpaid: '<span class="badge">Not paid</span>',
+  off: `<span class="badge">${iconSvg("circle-x")}Written off</span>`,
+};
+
+const OWED_TO_YOU = 562600;
+const YOU_OWE = 60000;
+
+const sharedSummary = () =>
+  `<div class="card" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div class="stat"><span class="k">Owed to you</span><span class="amount-hero" style="font-size:32px">${money(OWED_TO_YOU)}</span><span class="small faint">2 people · 2 shared groups</span></div>
+<div class="stat" style="text-align:right;align-items:flex-end"><span class="k">You owe</span><span class="amount-lg amount">${money(YOU_OWE)}</span></div></div>`;
+
+const sharedSeg = (on) =>
+  `<div class="segment"><button aria-pressed="${String(on === "people")}">${iconSvg("user", "sm")}People</button><button aria-pressed="${String(on === "groups")}">${iconSvg("users", "sm")}Shared groups</button></div>`;
+
+const sharedScreen = (body, o = {}) =>
+  screen(body, {
+    tab: "mas",
+    side: "shared",
+    title: "Shared",
+    actions: `<button class="btn primary desktop-only">${iconSvg("plus", "sm")}New shared group</button><button class="btn secondary icon-only round mobile-only" aria-label="New shared group">${iconSvg("plus")}</button>`,
+    ...o,
+  });
+
+const sharedPeopleBody = () => `${sharedSeg("people")}
+${sharedSummary()}
+<section class="stack-sm"><div class="section-head"><h3 class="h3">Owes you</h3><span class="small muted amount">${money(OWED_TO_YOU)}</span></div>
+<div class="list card flush">
+${personRow("Beto Cano", "Cartagena trip · Night out", 546300, "owes you", STATE_BADGE.partial)}
+${personRow("Ana Ruiz", "Night out", 16300, "owes you", STATE_BADGE.unpaid)}
+</div></section>
+<section class="stack-sm"><div class="section-head"><h3 class="h3">You owe</h3><span class="small muted amount">${money(YOU_OWE)}</span></div>
+<div class="list card flush">
+${personRow("Diego Pardo", "Diego’s birthday gift", 60000, "you owe", STATE_BADGE.unpaid)}
+</div></section>
+<button class="card hstack" style="justify-content:space-between;cursor:pointer;text-align:left;padding:12px 16px"><span class="hstack">${iconSvg("circle-check")}<span style="font-weight:500">Settled</span><span class="badge">2</span></span>${iconSvg("chevron-down", "sm")}</button>
+<div class="hstack" style="justify-content:space-between;padding:0 2px"><span class="xs faint">3 of 3 people with something open</span><button class="btn ghost sm">${iconSvg("plus", "sm")}Add a person</button></div>`;
+
+const sharedPeople = () => sharedScreen(sharedPeopleBody());
+
+const groupRow = (name, color, when, people, total, yours, pct, gauge, badge = "") =>
+  `<a class="row color-${color}" href="#">${tile("users", color)}
+<span class="body"><span class="title"><span class="truncate">${name}</span>${badge}</span><span class="meta">${when} · ${people} people</span>
+<span style="display:flex;flex-direction:column;gap:3px;padding-top:6px"><div class="progress thin"><span class="fill" style="width:${pct}%"></span></div><span class="xs faint">${gauge}</span></span></span>
+<span class="right"><span class="amount">${money(total)}</span><span class="sub">Your share ${moneyText(yours)}</span></span></a>`;
+
+const sharedGroups = () =>
+  sharedScreen(`${sharedSeg("groups")}
+${sharedSummary()}
+<div class="list card flush">
+${groupRow("Cartagena trip", "TEAL", "Aug 29 – Sep 12", 4, 3200000, 800000, 46, "$1,100,000 paid of $2,400,000")}
+${groupRow("Night out", "PURPLE", "Sep 20", 3, 228900, 76300, 0, "$0 paid of $62,600")}
+${groupRow("Diego’s birthday gift", "PINK", "Sep 8", 3, 180000, 60000, 0, "$0 paid of $60,000", '<span class="badge">You owe</span>')}
+</div>
+<button class="card hstack" style="justify-content:space-between;cursor:pointer;text-align:left;padding:12px 16px"><span class="hstack">${iconSvg("circle-check")}<span style="font-weight:500">Settled</span><span class="badge">1</span></span>${iconSvg("chevron-down", "sm")}</button>
+<div class="list card flush">
+${groupRow("Office lunch", "AMBER", "Aug 27", 5, 240000, 48000, 100, "$192,000 paid of $192,000", '<span class="badge success">Settled</span>')}
+</div>`);
+
+const sharedEmpty = () =>
+  sharedScreen(`${sharedSeg("groups")}
+<div class="empty"><span class="tile lg outline">${iconSvg("users")}</span>
+<span class="h3">Nothing shared yet</span>
+<p class="small muted" style="max-width:34ch;margin:0">A shared group is one outing or one trip: you add the expenses, say who was in, and Ledger Flow keeps track of who has paid you back.</p>
+<div class="hstack" style="gap:8px;padding-top:8px"><button class="btn primary">${iconSvg("plus", "sm")}New shared group</button><button class="btn secondary">Add a person</button></div></div>`);
+
+const GROUP_LINES = [
+  ["Flights", "plane", "CYAN", "Aug 29", 1200000, 300000],
+  ["Hotel", "house", "BROWN", "Aug 30", 1400000, 350000],
+  ["Dinner at La Cevichería", "utensils", "ORANGE", "Sep 2", 360000, 90000],
+  ["Boat to Barú", "ship", "BLUE", "Sep 8", 160000, 40000],
+  ["Taxi to the airport", "car", "BLUE", "Sep 12", 80000, 20000],
+];
+
+const groupDetail = ({ sheet = "" } = {}) => {
+  const lines = GROUP_LINES.map(
+    ([name, icon, color, when, total, yours]) =>
+      `<a class="row" href="#">${tile(icon, color)}<span class="body"><span class="title"><span class="truncate">${name}</span></span><span class="meta">${when} · you paid</span></span><span class="right">${amount(total, "expense")}<span class="sub">Your share ${moneyText(yours)}</span></span></a>`,
+  ).join("");
+  const body = `<section class="card color-TEAL stack-sm" style="gap:6px;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--f)"></span>
+<div class="hstack" style="justify-content:space-between">${tile("users", "TEAL")}<span class="badge outline">${iconSvg("calendar")}Aug 29 – Sep 12</span></div>
+<span class="eyebrow" style="margin-top:6px">4 people · open</span><span class="h2">Cartagena trip</span>
+<span class="amount-hero" style="font-size:32px">${money(2100000)}</span>
+<span class="small muted">counts as yours · total <b class="amount">${money(3200000)}</b> · your share <b class="amount">${money(800000)}</b></span>
+<div style="display:flex;flex-direction:column;gap:4px;padding-top:10px"><div class="progress thin"><span class="fill" style="width:46%"></span></div><span class="xs faint">$1,100,000 paid of $2,400,000</span></div>
+<span class="small muted" style="padding-top:2px">${moneyText(500000)} is still owed to you, and ${moneyText(800000)} was written off — that part stays counted as yours.</span></section>
+<div class="grid-2" style="grid-template-columns:1fr 1fr;gap:10px"><button class="btn primary">${iconSvg("hand-coins", "sm")}Settle up</button><button class="btn secondary">${iconSvg("plus", "sm")}Add expense</button><button class="btn secondary">${iconSvg("pencil", "sm")}Edit</button><button class="btn secondary">${iconSvg("archive", "sm")}Archive</button></div>
+<section class="stack-sm"><div class="section-head"><h3 class="h3">People</h3><span class="small muted">Equal split</span></div>
+<div class="list card flush">
+${personRow("You", "Your share of the $3,200,000", 800000, "yours")}
+${personRow("Ana Ruiz", "Paid Sep 18 · into Bancolombia", 800000, "of $800,000", STATE_BADGE.paid)}
+${personRow("Beto Cano", "Paid $300,000 on Sep 20", 500000, "still owed", STATE_BADGE.partial)}
+${personRow("Lucía Mesa", "Written off Sep 21 · stays yours", 800000, "never paid", STATE_BADGE.off)}
+</div></section>
+<section class="stack-sm"><div class="section-head"><h3 class="h3">Expenses · 5</h3><a class="link" href="#">Add expense</a></div>
+<div class="list card flush">${lines}</div></section>`;
+  return screen(body, {
+    tab: "mas",
+    side: "shared",
+    back: true,
+    title: "Shared group",
+    sheet,
+    actions: `<button class="btn ghost icon-only round" aria-label="More">${iconSvg("ellipsis")}</button>`,
+  });
+};
+
+const personDetail = () =>
+  screen(
+    `<div class="card color-TEAL stack-sm" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${face("Beto Cano", "lg")}
+<span class="h2">Beto Cano</span><span class="small muted">beto@example.com</span>
+<span class="amount-hero" style="font-size:36px">${money(546300)}</span>
+<span class="small muted">owes you, across 2 shared groups</span>
+<button class="btn primary lg" style="margin-top:6px">${iconSvg("hand-coins", "sm")}Settle up</button></div>
+<section class="stack-sm"><div class="section-head"><h3 class="h3">Shared groups</h3></div>
+<div class="list card flush">
+<a class="row" href="#">${tile("users", "TEAL")}<span class="body"><span class="title"><span class="truncate">Cartagena trip</span>${STATE_BADGE.partial}</span><span class="meta">Aug 29 – Sep 12 · paid $300,000 of $800,000</span></span><span class="right"><span class="amount">${money(500000)}</span><span class="sub">owes you</span></span></a>
+<a class="row" href="#">${tile("users", "PURPLE")}<span class="body"><span class="title"><span class="truncate">Night out</span>${STATE_BADGE.unpaid}</span><span class="meta">Sep 20 · nothing paid yet</span></span><span class="right"><span class="amount">${money(46300)}</span><span class="sub">owes you</span></span></a>
+</div></section>
+<section class="stack-sm"><div class="section-head"><h3 class="h3">Payments</h3></div>
+<div class="list card flush">
+<a class="row" href="#">${tile("hand-coins", "GRAY")}<span class="body"><span class="title"><span class="truncate">Paid you $300,000</span></span><span class="meta">Sep 20 · into Bancolombia</span></span><span class="right"><span class="amount">${money(300000)}</span><span class="sub">Cartagena trip</span></span></a>
+</div></section>
+<div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn secondary lg" style="flex:1">${iconSvg("archive", "sm")}Archive</button></div>
+<p class="xs faint" style="text-align:center;margin:0">A person is not an account. Paying Beto back never touches your balances, Stats, Budgets or Categories.</p>`,
+    { tab: "mas", side: "shared", back: true, title: "Person", narrow: true },
+  );
+
+const newContact = () =>
+  sharedScreen(sharedPeopleBody(), {
+    sheet: sheetWrap(
+      `<div class="stack">${field("Name", "Beto Cano", null, { icon: "user" })}
+<div class="field"><span class="label">Colour</span>${swatches("TEAL")}</div>
+${field("Email", null, "beto@example.com", { icon: "globe", opt: true, help: "Only so you can invite them to a shared group later. Nothing is sent today." })}
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.2">Add person</button></div></div>`,
+      "New person",
+    ),
+  });
+
+const contactChip = (name, on = true) =>
+  `<button class="chip${on ? " selected" : ""}">${face(name, "sm")}${name}${on ? iconSvg("x", "sm") : ""}</button>`;
+
+const newGroup = () =>
+  screen(
+    `<div class="stack">
+${field("Name", "Cartagena trip", null, { icon: "users" })}
+<div class="field"><span class="label">Colour</span>${swatches("TEAL")}</div>
+<div class="field"><span class="label">Who was in</span>
+<div class="chips" style="flex-wrap:wrap;overflow:visible">${contactChip("You")}${contactChip("Ana Ruiz")}${contactChip("Beto Cano")}${contactChip("Lucía Mesa")}<button class="chip">${iconSvg("plus", "sm")}Add a person</button></div>
+<span class="help">You are in the group like everyone else, with a share of your own.</span></div>
+<div class="field"><span class="label">Split by default</span>
+<div class="segment"><button aria-pressed="true">Equal</button><button aria-pressed="false">Percent</button><button aria-pressed="false">Exact</button><button aria-pressed="false">Fixed + rest</button></div>
+<span class="help">Every expense you add takes this split without asking. You can change it on any single expense.</span></div>
+<div class="field"><span class="label">Expenses</span>
+<button class="picker">${tile("list", "GRAY", "sm")}<span class="body"><span class="lbl">Pick from my transactions</span><span class="val">3 selected · $2,960,000</span></span>${iconSvg("chevron-right", "sm")}</button>
+<button class="btn ghost sm" style="align-self:flex-start;padding-left:0">${iconSvg("plus", "sm")}Or record a new expense</button></div>
+<div class="alert neutral">${iconSvg("info")}<span>Splitting changes nothing today: an expense keeps counting in full until someone pays you back.</span></div>
+<button class="btn primary lg block">Create shared group</button></div>`,
+    { tab: "mas", side: "shared", back: true, title: "New shared group", narrow: true },
+  );
+
+const pickRow = (icon, color, title, meta, amt, on) =>
+  `<label class="row" style="cursor:pointer"><span class="box${on ? " on" : ""}">${on ? iconSvg("check", "sm") : ""}</span>${tile(icon, color)}
+<span class="body"><span class="title"><span class="truncate">${title}</span></span><span class="meta">${meta}</span></span>
+<span class="right">${amount(amt, "expense")}</span></label>`;
+
+const pickTransactions = () =>
+  groupDetail({
+    sheet: sheetWrap(
+      `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span class="placeholder" style="flex:1">Search description, note or tag</span></div>
+<div class="chips"><button class="chip selected">August – September</button><button class="chip">${iconSvg("wallet", "sm")}Any account</button><button class="chip">Expenses</button></div>
+<div class="list" style="margin:0 -16px;max-height:320px;overflow:auto">
+${pickRow("plane", "CYAN", "Flights", "Aug 29 · Bancolombia", 1200000, true)}
+${pickRow("house", "BROWN", "Hotel", "Aug 30 · Visa Gold", 1400000, true)}
+${pickRow("utensils", "ORANGE", "Dinner at La Cevichería", "Sep 2 · Visa Gold", 360000, true)}
+${pickRow("coffee", "BROWN", "Pergamino Coffee", "Sep 3 · Cash", 9800, false)}
+</div>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Add 3 · ${moneyText(2960000)}</button></div>`,
+      "Pick from my transactions",
+    ),
+  });
+
+const budgetsNotice = () =>
+  groupDetail({
+    sheet: sheetWrap(
+      `<div class="alert info">${iconSvg("info")}<span><b>Nothing changes in your budgets today.</b> All three keep counting in full — ${moneyText(2960000)} across Travel, Housing and Food — because the money left your accounts and nobody has paid you back yet.</span></div>
+<div class="list card flush">
+<div class="row" style="cursor:default">${tile("plane", "CYAN")}<span class="body"><span class="title">Flights</span><span class="meta">Aug 29 · Travel</span></span><span class="right">${amount(1200000, "expense")}<span class="sub">yours until paid</span></span></div>
+<div class="row" style="cursor:default">${tile("house", "BROWN")}<span class="body"><span class="title">Hotel</span><span class="meta">Aug 30 · Housing</span></span><span class="right">${amount(1400000, "expense")}<span class="sub">yours until paid</span></span></div>
+<div class="row" style="cursor:default">${tile("utensils", "ORANGE")}<span class="body"><span class="title">Dinner at La Cevichería</span><span class="meta">Sep 2 · Food</span></span><span class="right">${amount(360000, "expense")}<span class="sub">yours until paid</span></span></div>
+</div>
+<p class="small muted" style="margin:0">When someone pays you back, the expense falls <b>in the month it happened</b> — August for the flights, September for the dinner — so a month you had already closed can change. Every change is kept in the expense’s history.</p>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Add 3 expenses</button></div>`,
+      "Add 3 transactions to Cartagena trip?",
+    ),
+  });
+
+const splitRow = (name, value, o = {}) =>
+  `<div class="hstack" style="gap:12px">${face(name)}<span class="truncate" style="flex:1;min-width:0;font-weight:500">${name}</span>
+${o.lock === undefined ? "" : `<button class="btn ghost icon-only sm round" aria-label="${o.lock ? "Fixed for this person" : "Takes a share of the rest"}" aria-pressed="${String(o.lock)}">${iconSvg(o.lock ? "lock" : "percent", "sm")}</button>`}
+<span class="input" style="width:132px;height:40px;justify-content:flex-end${o.lock ? ";border-color:var(--brand)" : ""}"><span class="value amount">${value}</span></span></div>`;
+
+const splitSheet = (mode = "equal") => {
+  const seg = `<div class="segment"><button aria-pressed="${String(mode === "equal")}">Equal</button><button aria-pressed="false">Percent</button><button aria-pressed="false">Exact</button><button aria-pressed="${String(mode === "fixed")}">Fixed + rest</button></div>`;
+  const rows =
+    mode === "equal"
+      ? `${splitRow("You", "$33,334")}${splitRow("Ana Ruiz", "$33,333")}${splitRow("Beto Cano", "$33,333")}`
+      : `${splitRow("You", "$40,000", { lock: false })}${splitRow("Ana Ruiz", "$40,000", { lock: false })}${splitRow("Beto Cano", "$20,000", { lock: true })}`;
+  const note =
+    mode === "equal"
+      ? `<div class="alert neutral">${iconSvg("info")}<span>$100,000 does not divide by three, so the odd $1 goes to <b>you</b>, the one who paid. The shares always add up to the expense.</span></div>`
+      : `<div class="alert neutral">${iconSvg("info")}<span>Beto is fixed at $20,000. The other $80,000 is split between the two of you, and it moves on its own when his figure changes.</span></div>`;
+  return sheetWrap(
+    `${seg}
+<div class="stack-sm" style="gap:10px;padding-top:4px">${rows}</div>
+<div class="hstack" style="justify-content:space-between;border-top:1px solid var(--border);padding-top:12px"><span class="small muted">Left to assign</span><span class="amount" style="font-weight:600">$0</span></div>
+${note}
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.2">Save split</button></div>`,
+    `Split ${moneyText(100000)} · Groceries for the trip`,
+  );
+};
+
+const settleUp = (kind = "full") => {
+  if (kind === "both") {
+    return sheetWrap(
+      `<div class="inset stack-sm" style="gap:8px">
+<div class="hstack" style="justify-content:space-between"><span class="small muted">Ana owes you</span><span class="amount">${money(46300)}</span></div>
+<div class="hstack" style="justify-content:space-between"><span class="small muted">You owe Ana</span><span class="amount">${money(30000)}</span></div>
+<div class="hstack" style="justify-content:space-between;border-top:1px solid var(--border);padding-top:8px"><span class="small" style="font-weight:600">She sends you</span><span class="amount" style="font-weight:600">${money(16300)}</span></div></div>
+<div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">16,300</span><span class="caret"></span></div>
+<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">Where it arrives</span><span class="val">Bancolombia</span></span>${iconSvg("chevron-down", "sm")}</button>
+<div class="alert neutral">${iconSvg("info")}<span><b>This records two things.</b> ${moneyText(46300)} arriving in Bancolombia, which is not income, and your ${moneyText(30000)} share of <b>Concert tickets</b> as an expense in Lifestyle dated September 20, the day of the tickets. Your balance moves by ${moneyText(16300)}, which is what she sends.</span></div>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Record payment</button></div>`,
+      "Settle up with Ana",
+    );
+  }
+  if (kind === "partial") {
+    return sheetWrap(
+      `<div class="inset hstack" style="justify-content:space-between"><span class="small muted">Beto owes you</span><span class="amount">${money(546300)}</span></div>
+<div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">200,000</span><span class="caret"></span></div>
+<button class="picker">${tile("banknote", "GRAY", "sm")}<span class="body"><span class="lbl">Where it arrives</span><span class="val">Outside the app · cash</span></span>${iconSvg("chevron-down", "sm")}</button>
+<div class="alert warning">${iconSvg("triangle-alert")}<span><b>No movement, and no balance changes.</b> You told us the cash never reached an account you keep here. The expenses still fall by ${moneyText(200000)}, because that money did come back to you.</span></div>
+<div class="stack-sm" style="gap:6px"><span class="small muted">It covers, oldest expense first:</span>
+<div class="hstack" style="justify-content:space-between"><span class="small">Cartagena trip · Flights <span class="faint">Aug 29</span></span><span class="amount small">${money(200000)}</span></div>
+<span class="xs faint">Beto stays <b>Partially paid</b>, with ${moneyText(346300)} left.</span></div>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Record payment</button></div>`,
+      "Record a payment from Beto",
+    );
+  }
+  return sheetWrap(
+    `<div class="inset hstack" style="justify-content:space-between"><span class="small muted">Beto owes you</span><span class="amount">${money(546300)}</span></div>
+<div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">546,300</span><span class="caret"></span></div>
+<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">Where it arrives</span><span class="val">Bancolombia</span></span>${iconSvg("chevron-down", "sm")}</button>
+<button class="picker">${tile("calendar", "GRAY", "sm")}<span class="body"><span class="lbl">Date</span><span class="val">Today · September 22</span></span>${iconSvg("chevron-down", "sm")}</button>
+<div class="alert neutral">${iconSvg("info")}<span><b>This is not income.</b> It lowers each expense in the month it happened: ${moneyText(500000)} in Cartagena trip, over August and September, and ${moneyText(46300)} in Night out.</span></div>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Mark as paid</button></div>`,
+    "Settle up with Beto",
+  );
+};
+
+const writeOffSheet = () =>
+  sheetWrap(
+    `<div class="alert neutral">${iconSvg("info")}<span><b>No figure changes.</b> You paid it, and it has counted as yours since the day of each expense. Writing off only says you have stopped expecting it back.</span></div>
+<p class="small muted" style="margin:0">Lucía’s row will read <b>Written off</b> and Cartagena trip can be settled. You can undo it while the group is open.</p>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn danger solid lg" style="flex:1.2">Write off ${moneyText(800000)}</button></div>`,
+    "Write off Lucía’s $800,000?",
+  );
+
+const archiveGroupSheet = () =>
+  sheetWrap(
+    `<div class="alert warning">${iconSvg("triangle-alert")}<span><b>${moneyText(500000)} is still owed to you.</b> Archiving writes it off: Beto’s row will read Written off and the amount stays counted as yours, exactly as it is today.</span></div>
+<p class="small muted" style="margin:0">Nothing is deleted and no figure moves. An archived group stays readable, and you can restore it.</p>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn danger solid lg" style="flex:1.6">Archive and write off ${moneyText(500000)}</button></div>`,
+    "Archive Cartagena trip?",
+  );
+
 const plate = (id, title, note, html, o = {}) => ({ id, title, note, html, ...o });
 const plateDay = (p) => p.updated ?? p.added;
 
@@ -3895,9 +4274,9 @@ const PAGES = [
       plate(
         "home",
         "Home",
-        "Spending, review inbox, budgets, accounts and recent transactions.",
+        "Spending, review inbox, budgets, accounts and recent transactions. Under the four figures, one line for what people owe you and what you owe them \u2014 never added to <i>What you have</i>, because it is not money you have.",
         home(),
-        { added: "2026-09-01" },
+        { added: "2026-09-01", updated: "2026-09-20" },
       ),
       plate(
         "install-card",
@@ -4097,9 +4476,13 @@ const PAGES = [
     group: "Screens",
     note: "Grouped by day with a daily total; filter chips mirror the API's filters and a summary heads the period. The detail shows everything the backend keeps, including the source. The review inbox completes a quick entry inline — an expense or an income, each with the categories of its own type: category chips, description and Done.",
     plates: [
-      plate("list", "List", "Search, filters and infinite scroll.", transactions(), {
-        added: "2026-09-01",
-      }),
+      plate(
+        "list",
+        "List",
+        "Search, filters and infinite scroll. A shared expense keeps the full amount on the right \u2014 that is what left the account \u2014 and says your share underneath.",
+        transactions(),
+        { added: "2026-09-01", updated: "2026-09-20" },
+      ),
       plate("detail", "Detail", "", transactionDetail(), { added: "2026-09-01" }),
       plate(
         "review-inbox",
@@ -4135,6 +4518,20 @@ const PAGES = [
         "",
         reviewInbox({ confirm: true }),
         { added: "2026-09-06" },
+      ),
+      plate(
+        "shared-expense",
+        "A shared expense, and its history",
+        "The figure that counts is neither the total nor your share: it is the $600,000 in between, and it moves every time somebody pays. The history is the record of how it got there, and it says plainly that splitting and writing off changed nothing \u2014 the money had already left the account. Beto reads <i>Paid</i> here and <i>Partially paid</i> in the group, because a payment covers the oldest expense first.",
+        transactionDetail({ shared: true }),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "delete-a-shared-expense",
+        "Deleting one people have paid for",
+        "The confirmation names what it drags: the two payments recorded against it disappear with it, and the group loses an expense. It also offers the thing the user probably meant \u2014 writing it off, which keeps the expense and its history.",
+        deleteSharedSheet(),
+        { added: "2026-09-20" },
       ),
       plate(
         "offline-without-a-copy",
@@ -4286,6 +4683,126 @@ const PAGES = [
         "The form that starts the habit. Today <i>Current balance</i> is a plain amount box, so \u201cmy card has a limit of 100\u201d becomes a balance of 100 \u2014 which is how the cards got into the state T-90 has to repair. On a CARD, an OVERDRAFT or a LOAN the field asks the question instead: <b>How much do you owe on it right now?</b>, entered as a plain positive figure and stored as the debt, with the credit limit beside it and a preview card that reads back what the account will look like. Every other type keeps the field it has. <b>The alternative was drawn and dropped:</b> keeping \u201cCurrent balance\u201d with an increase/decrease control beside it, which puts a sign decision in front of someone on the one screen where the whole confusion starts. ",
         createDebtAccount(),
         { added: "2026-09-17" },
+      ),
+    ],
+  },
+  {
+    file: "shared.html",
+    title: "Shared",
+    group: "Screens",
+    note: "Expenses split with other people, and who has paid you back. A shared group is one outing or one trip, so it has a date range and never a month. The lead figure everywhere is what still counts as yours: an expense is born entirely yours and only falls when somebody actually pays, which is why nothing here can be read as money you already have.",
+    plates: [
+      plate(
+        "people",
+        "People",
+        "The face the section opens on: the net per person across every group, split into who owes you and who you owe, with the settled ones folded away. The amounts are neutral and unsigned — a debt between people is neither income nor spending, and the word says the direction.",
+        sharedPeople(),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "groups",
+        "Shared groups",
+        "The other face. Each group carries its date range — Cartagena trip runs from August into September — the number of people, what it cost in total, your share of it, and a bar of what has come back to you.",
+        sharedGroups(),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "group",
+        "A shared group",
+        "The detail. It leads with the $2,100,000 that still counts as yours, not with the $3,200,000 the trip cost nor with the $800,000 that is fairly yours: that middle figure is the one Stats and the budgets use. Four people, four states, and the writing-off of Lucía’s share is why the figure will never reach $800,000.",
+        groupDetail(),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "person",
+        "A person",
+        "One contact across every group, with what they have already paid and how. A contact is an entity of its own, never an account: nothing here reaches balances, Stats, Budgets or Categories.",
+        personDetail(),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "empty",
+        "Nothing shared yet",
+        "The first thing anyone sees. It explains what a shared group is in one sentence and offers the two ways in.",
+        sharedEmpty(),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "new-person",
+        "New person",
+        "Name, colour and an optional email. The email is an identifier for inviting them later — nothing is sent, and the sheet says so rather than leaving the field to be guessed at.",
+        newContact(),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "new-group",
+        "New shared group",
+        "Built around the real habit: the expenses already exist, recorded with the Quick add during the night, and the group is assembled the next day. The default split is chosen once here and every expense inherits it without asking.",
+        newGroup(),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "pick-transactions",
+        "Picking expenses that already exist",
+        "The same list as Transactions with a checkbox, over the group’s own range and any account. Creating an expense from inside the group is the other way in, and it lands in the same place.",
+        pickTransactions(),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "what-changes-in-budgets",
+        "What adding them changes",
+        "The warning that has to come before saving, and the surprising part is that <b>nothing moves today</b>. The money left the account, so the three expenses keep counting in full until somebody pays; when they do, the figure falls in the month the expense happened, which is how a closed month can change.",
+        budgetsNotice(),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "split-equal",
+        "Splitting · equal, and the odd peso",
+        "The default, and the case the Colombian peso forces: $100,000 does not divide by three. The remainder goes to whoever paid, the sheet says so in words, and the shares always add up to the expense — the same arithmetic the server and the offline projection have to reproduce to the peso.",
+        transactionDetail({ splitting: true, sheet: splitSheet("equal") }),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "split-fixed",
+        "Splitting · one person fixed, the rest shared",
+        "“Pepito only pays 50”, in the owner’s words. Beto is pinned at $20,000 and the remaining $80,000 keeps splitting itself between the other two; percent and exact are the same sheet with a different unit.",
+        transactionDetail({ splitting: true, sheet: splitSheet("fixed") }),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "settle-up",
+        "Settle up",
+        "The money coming back. It is not income: it arrives in an account, it carries no category, and it lowers each expense in the month that expense happened rather than today.",
+        groupDetail({ sheet: settleUp("full") }),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "settle-up-both-ways",
+        "Settle up when you owe them too",
+        "Ana paid for the tickets, so the two of you owe each other. One payment settles everything between the two people and writes both halves: the $46,300 coming in, and your $30,000 share of the tickets as an expense in Lifestyle dated the day of the tickets. The balance moves by the $16,300 she actually sends.",
+        sharedScreen(sharedPeopleBody(), { sheet: settleUp("both") }),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "record-a-payment",
+        "A partial payment, and cash outside the app",
+        "Part of it, in cash that never reached an account kept here. No movement and no balance change — and the sheet says that plainly — but the expenses still fall, because the money did come back. What it covers is imputed oldest expense first, which is why Beto can be Partially paid in the group and fully paid on its first expense.",
+        groupDetail({ sheet: settleUp("partial") }),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "write-off",
+        "Writing off what is not coming back",
+        "The answer to the owner’s worry, and it is that there is nothing to do: no figure changes, because the money was counted as his from the day he paid it. It is a decision and a line in the history, and it can be undone while the group is open.",
+        groupDetail({ sheet: writeOffSheet() }),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "archive-with-people-owing",
+        "Archiving with people still owing",
+        "Archiving is the one action that writes off on your behalf, so it says exactly what it will do and what it will not: the amount stays counted as yours, and nothing is deleted.",
+        groupDetail({ sheet: archiveGroupSheet() }),
+        { added: "2026-09-20" },
       ),
     ],
   },
