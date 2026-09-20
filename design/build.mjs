@@ -42,7 +42,7 @@ const money = (v, sign = "") => `${sign}<span class="cur">$</span>${nf.format(Ma
 const moneyText = (v, sign = "") => `${sign}$${nf.format(Math.abs(v))}`;
 
 const amount = (v, kind = "expense", cls = "") => {
-  const sign = { expense: "−", income: "+", transfer: "", adjustment: "±" }[kind];
+  const sign = { expense: "−", income: "+", transfer: "", adjustment: "±", settlement: "+" }[kind];
   return `<span class="amount ${kind} ${cls}">${sign}${money(v)}</span>`;
 };
 
@@ -1049,7 +1049,7 @@ const onboarding = (step) => {
   );
 };
 
-const transactions = () => {
+const transactions = ({ settlement = false } = {}) => {
   const body = `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span class="placeholder" style="flex:1">Search description, note or tag</span></div>
 <div class="chips"><button class="chip">${iconSvg("sliders-horizontal", "sm")}Filters <span class="badge brand" style="height:16px;padding:0 5px">2</span></button><button class="chip selected">September</button><button class="chip">Expenses</button><button class="chip">Income</button><button class="chip">Transfers</button><button class="chip">${iconSvg("inbox", "sm")}To review · 3</button><button class="chip">Uncategorized</button><button class="chip">#latte</button></div>
 <div class="card stat" style="flex-direction:row;justify-content:space-between;align-items:center;padding:12px 16px"><div><span class="k">Spent in September</span><div class="v amount" style="font-size:20px">${money(1284300)}</div></div><div style="text-align:right"><span class="k">Income</span><div class="amount income" style="font-size:15px">${money(4200000, "+")}</div></div><div style="text-align:right"><span class="k">Transactions</span><div style="font-weight:600;font-size:15px">48</div></div></div>
@@ -1061,7 +1061,8 @@ ${row("coffee", "BROWN", "Pergamino Coffee", "7:55 · Cash", 9800, "expense", { 
 ${row("briefcase", "GREEN", "August salary", "Bancolombia", 4200000, "income")}
 ${row("repeat", "GRAY", "Bancolombia → Savings", "Transfer", 1000000, "transfer")}
 ${row("car", "BLUE", "Uber to work", "18:10 · Visa Gold", 18400)}
-<div class="day-head"><span>Sunday 20</span><span class="amount">${money(272600, "−")}</span></div>
+<div class="day-head"><span>Sunday 20</span><span class="amount">${settlement ? money(27400, "+") : money(272600, "−")}</span></div>
+${settlement ? row("hand-coins", "GRAY", "Beto Cano", "10:15 · Bancolombia", 300000, "settlement", { badges: `<span class="badge">${iconSvg("hand-coins")}Payment</span>`, sub: "Cartagena trip" }) : ""}
 ${row("utensils", "ORANGE", "Carulla groceries", "Bancolombia", 78900, "expense", { badges: `<span class="badge">${iconSvg("users")}Shared</span>`, sub: "Your share $26,300" })}
 ${row("scale", "NONE", "Balance adjustment · Cash", "Reconciliation", 7500, "adjustment", { badges: '<span class="badge">Adjustment</span>' })}
 ${row("zap", "AMBER", "EPM electricity", "Bancolombia", 186200)}
@@ -2799,7 +2800,7 @@ const filtersSheet = () => {
   const inner = `<div class="stack" style="gap:16px">
 <div class="field"><span class="label">Period</span><div class="chips">${periods}</div>
 <div class="input-group" style="margin-top:6px"><div class="input">${iconSvg("calendar", "sm")}<span class="value">Sep 1</span></div><div class="input">${iconSvg("calendar", "sm")}<span class="value">Sep 30</span></div></div></div>
-<div class="field"><span class="label">Type</span><div class="chips"><button class="chip selected">All</button><button class="chip">Expenses</button><button class="chip">Income</button><button class="chip">Transfers</button><button class="chip">${iconSvg("scale", "sm")}Adjustments</button></div></div>
+<div class="field"><span class="label">Type</span><div class="chips"><button class="chip selected">All</button><button class="chip">Expenses</button><button class="chip">Income</button><button class="chip">Transfers</button><button class="chip">${iconSvg("scale", "sm")}Adjustments</button><button class="chip">${iconSvg("hand-coins", "sm")}Payments between people</button></div></div>
 <div class="field"><span class="label">Account</span><div class="chips">${acc("landmark", "BLUE", "Bancolombia", true)}${acc("banknote", "GRAY", "Cash")}${acc("credit-card", "PURPLE", "Visa Gold")}${acc("piggy-bank", "GREEN", "Savings")}</div></div>
 <div class="field"><span class="label">Category</span><div class="chips">${catChip("Food")}${catChip("Transport", true)}${catChip("Coffee")}${catChip("Lifestyle")}<button class="chip">${iconSvg("search", "sm")}More</button><button class="chip">${iconSvg("hash", "sm")}Uncategorized</button></div></div>
 <div class="field"><span class="label">Tag</span><div class="input" style="height:40px">${iconSvg("tag", "sm")}<span class="placeholder" style="flex:1">#latte, #groceries…</span></div></div>
@@ -4017,15 +4018,14 @@ ${groupRow("Office lunch", "AMBER", "Aug 27", 5, 240000, 48000, 100, "$192,000 p
 </div>`);
 
 const sharedEmpty = () =>
-  sharedScreen(`${sharedSeg("groups")}
-<div class="empty"><span class="tile lg outline">${iconSvg("users")}</span>
+  sharedScreen(`<div class="empty"><span class="tile lg outline">${iconSvg("users")}</span>
 <span class="h3">Nothing shared yet</span>
 <p class="small muted" style="max-width:34ch;margin:0">A shared group is one outing or one trip: you add the expenses, say who was in, and Ledger Flow keeps track of who has paid you back.</p>
 <div class="hstack" style="gap:8px;padding-top:8px"><button class="btn primary">${iconSvg("plus", "sm")}New shared group</button><button class="btn secondary">Add a person</button></div></div>`);
 
 const GROUP_LINES = [
   ["Flights", "plane", "CYAN", "Aug 29", 1200000, 300000],
-  ["Hotel", "house", "BROWN", "Aug 30", 1400000, 350000],
+  ["Hotel", "bed", "BROWN", "Aug 30", 1400000, 350000],
   ["Dinner at La Cevichería", "utensils", "ORANGE", "Sep 2", 360000, 90000],
   ["Boat to Barú", "ship", "BLUE", "Sep 8", 160000, 40000],
   ["Taxi to the airport", "car", "BLUE", "Sep 12", 80000, 20000],
@@ -4080,7 +4080,7 @@ const personDetail = () =>
 <a class="row" href="#">${tile("hand-coins", "GRAY")}<span class="body"><span class="title"><span class="truncate">Paid you $300,000</span></span><span class="meta">Sep 20 · into Bancolombia</span></span><span class="right"><span class="amount">${money(300000)}</span><span class="sub">Cartagena trip</span></span></a>
 </div></section>
 <div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn secondary lg" style="flex:1">${iconSvg("archive", "sm")}Archive</button></div>
-<p class="xs faint" style="text-align:center;margin:0">A person is not an account. Paying Beto back never touches your balances, Stats, Budgets or Categories.</p>`,
+<p class="xs faint" style="text-align:center;margin:0">A person is not an account: Beto has no balance of his own and never appears among your accounts, in a transfer, or in Stats by account. The money moves in your accounts, as it always has.</p>`,
     { tab: "mas", side: "shared", back: true, title: "Person", narrow: true },
   );
 
@@ -4096,7 +4096,7 @@ ${field("Email", null, "beto@example.com", { icon: "globe", opt: true, help: "On
   });
 
 const contactChip = (name, on = true) =>
-  `<button class="chip${on ? " selected" : ""}">${face(name, "sm")}${name}${on ? iconSvg("x", "sm") : ""}</button>`;
+  `<button class="chip${on ? " selected" : ""}"${name === "You" ? " disabled" : ""}>${face(name, "sm")}${name}${on && name !== "You" ? iconSvg("x", "sm") : ""}</button>`;
 
 const newGroup = () =>
   screen(
@@ -4129,7 +4129,7 @@ const pickTransactions = () =>
 <div class="chips"><button class="chip selected">August – September</button><button class="chip">${iconSvg("wallet", "sm")}Any account</button><button class="chip">Expenses</button></div>
 <div class="list" style="margin:0 -16px;max-height:320px;overflow:auto">
 ${pickRow("plane", "CYAN", "Flights", "Aug 29 · Bancolombia", 1200000, true)}
-${pickRow("house", "BROWN", "Hotel", "Aug 30 · Visa Gold", 1400000, true)}
+${pickRow("bed", "BROWN", "Hotel", "Aug 30 · Visa Gold", 1400000, true)}
 ${pickRow("utensils", "ORANGE", "Dinner at La Cevichería", "Sep 2 · Visa Gold", 360000, true)}
 ${pickRow("coffee", "BROWN", "Pergamino Coffee", "Sep 3 · Cash", 9800, false)}
 </div>
@@ -4141,10 +4141,10 @@ ${pickRow("coffee", "BROWN", "Pergamino Coffee", "Sep 3 · Cash", 9800, false)}
 const budgetsNotice = () =>
   groupDetail({
     sheet: sheetWrap(
-      `<div class="alert info">${iconSvg("info")}<span><b>Nothing changes in your budgets today.</b> All three keep counting in full — ${moneyText(2960000)} across Travel, Housing and Food — because the money left your accounts and nobody has paid you back yet.</span></div>
+      `<div class="alert info">${iconSvg("info")}<span><b>Nothing changes in your budgets today.</b> All three keep counting in full — ${moneyText(2960000)} across Travel, Lodging and Food — because the money left your accounts and nobody has paid you back yet.</span></div>
 <div class="list card flush">
 <div class="row" style="cursor:default">${tile("plane", "CYAN")}<span class="body"><span class="title">Flights</span><span class="meta">Aug 29 · Travel</span></span><span class="right">${amount(1200000, "expense")}<span class="sub">yours until paid</span></span></div>
-<div class="row" style="cursor:default">${tile("house", "BROWN")}<span class="body"><span class="title">Hotel</span><span class="meta">Aug 30 · Housing</span></span><span class="right">${amount(1400000, "expense")}<span class="sub">yours until paid</span></span></div>
+<div class="row" style="cursor:default">${tile("bed", "BROWN")}<span class="body"><span class="title">Hotel</span><span class="meta">Aug 30 · Lodging</span></span><span class="right">${amount(1400000, "expense")}<span class="sub">yours until paid</span></span></div>
 <div class="row" style="cursor:default">${tile("utensils", "ORANGE")}<span class="body"><span class="title">Dinner at La Cevichería</span><span class="meta">Sep 2 · Food</span></span><span class="right">${amount(360000, "expense")}<span class="sub">yours until paid</span></span></div>
 </div>
 <p class="small muted" style="margin:0">When someone pays you back, the expense falls <b>in the month it happened</b> — August for the flights, September for the dinner — so a month you had already closed can change. Every change is kept in the expense’s history.</p>
@@ -4179,6 +4179,16 @@ ${note}
 };
 
 const settleUp = (kind = "full") => {
+  if (kind === "owe") {
+    return sheetWrap(
+      `<div class="inset hstack" style="justify-content:space-between"><span class="small muted">You owe Diego</span><span class="amount">${money(60000)}</span></div>
+<div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">60,000</span><span class="caret"></span></div>
+<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">Where it comes from</span><span class="val">Bancolombia</span></span>${iconSvg("chevron-down", "sm")}</button>
+<div class="alert neutral">${iconSvg("info")}<span><b>This one is an expense of yours.</b> It records ${moneyText(60000)} in <b>Lifestyle</b> dated September 8, the day of the gift, because that is when the money was spent \u2014 so it counts in Stats and in that month\u2019s budget, like any other expense.</span></div>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Pay ${moneyText(60000)}</button></div>`,
+      "Pay Diego",
+    );
+  }
   if (kind === "both") {
     return sheetWrap(
       `<div class="inset stack-sm" style="gap:8px">
@@ -4198,8 +4208,8 @@ const settleUp = (kind = "full") => {
 <div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">200,000</span><span class="caret"></span></div>
 <button class="picker">${tile("banknote", "GRAY", "sm")}<span class="body"><span class="lbl">Where it arrives</span><span class="val">Outside the app · cash</span></span>${iconSvg("chevron-down", "sm")}</button>
 <div class="alert warning">${iconSvg("triangle-alert")}<span><b>No movement, and no balance changes.</b> You told us the cash never reached an account you keep here. The expenses still fall by ${moneyText(200000)}, because that money did come back to you.</span></div>
-<div class="stack-sm" style="gap:6px"><span class="small muted">It covers, oldest expense first:</span>
-<div class="hstack" style="justify-content:space-between"><span class="small">Cartagena trip · Flights <span class="faint">Aug 29</span></span><span class="amount small">${money(200000)}</span></div>
+<div class="stack-sm" style="gap:6px"><span class="small muted">It covers, oldest expense first — Flights is already paid:</span>
+<div class="hstack" style="justify-content:space-between"><span class="small">Cartagena trip · Hotel <span class="faint">Aug 30</span></span><span class="amount small">${money(200000)}</span></div>
 <span class="xs faint">Beto stays <b>Partially paid</b>, with ${moneyText(346300)} left.</span></div>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Record payment</button></div>`,
       "Record a payment from Beto",
@@ -4494,9 +4504,9 @@ const PAGES = [
       plate(
         "filters",
         "Filters",
-        "Period with presets and a range, type, account, category, tag, only what is still to review, only quick entries. The main button says how many results are waiting.",
+        "Period with presets and a range, type \u2014 now including payments between people \u2014 account, category, tag, only what is still to review, only quick entries. The main button says how many results are waiting.",
         filtersSheet(),
-        { added: "2026-09-01" },
+        { added: "2026-09-01", updated: "2026-09-20" },
       ),
       plate(
         "detail-with-unsynced-change",
@@ -4518,6 +4528,13 @@ const PAGES = [
         "",
         reviewInbox({ confirm: true }),
         { added: "2026-09-06" },
+      ),
+      plate(
+        "a-payment-between-people",
+        "A payment between people in the list",
+        "The fifth kind of movement. It is money arriving, so the day\u2019s total moves with it \u2014 but it is <b>not income</b>: it is drawn neutral with a <code>hand-coins</code> tile and a <i>Payment</i> badge, it carries no category, and Stats and the budgets leave it out, exactly as they leave out an adjustment. The type filter gains it; the Add form does not, because a payment is recorded from <i>Settle up</i> and nowhere else.",
+        transactions({ settlement: true }),
+        { added: "2026-09-20" },
       ),
       plate(
         "shared-expense",
@@ -4781,6 +4798,13 @@ const PAGES = [
         "Settle up when you owe them too",
         "Ana paid for the tickets, so the two of you owe each other. One payment settles everything between the two people and writes both halves: the $46,300 coming in, and your $30,000 share of the tickets as an expense in Lifestyle dated the day of the tickets. The balance moves by the $16,300 she actually sends.",
         sharedScreen(sharedPeopleBody(), { sheet: settleUp("both") }),
+        { added: "2026-09-20" },
+      ),
+      plate(
+        "pay-somebody-back",
+        "Paying somebody back",
+        "The other direction, and it is not a payment at all from your ledger\u2019s point of view: it is <b>your expense</b>, created with the category of the line you are paying for and <b>dated that line</b>, so it lands in the month the money was spent. Where the payment covers lines of several categories it writes one expense per category, each with its own date, which is what keeps Stats exact.",
+        sharedScreen(sharedPeopleBody(), { sheet: settleUp("owe") }),
         { added: "2026-09-20" },
       ),
       plate(

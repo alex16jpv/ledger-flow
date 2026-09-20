@@ -25,7 +25,7 @@ list reloads from the start with the toast "List updated". The export action is 
 ## Filters (`#filters`)
 
 Period with presets (this week, this month, last month, this year, custom) and two date fields; type
-(all, expenses, income, transfers, explicit adjustments); account (chips with a tile); category (recent
+(all, expenses, income, transfers, explicit adjustments, payments between people); account (chips with a tile); category (recent
 chips plus "More", which opens the picker, plus "Uncategorized" = `uncategorized=true`), **offered
 for the type the filter is on** — since T-86 that includes the ones marked Transfer, and a category
 chosen under another type is dropped when the type moves, because that pair matches nothing; tag
@@ -50,6 +50,19 @@ positioned on that item.
 alert, "Some changes need your attention. This transaction has a change the server hasn't taken.", with
 a "Review" button that opens the conflict sheet over that operation. It is the second way into that
 sheet, besides the red stripe.
+
+## A payment between people (`#a-payment-between-people`)
+
+The fifth kind of movement, and the list has to show it: money arrived in an account, so a list that
+hid it would not explain the balance. It reads as what it is — a `hand-coins` tile, the person's name,
+a **Payment** badge, the shared group underneath, and the amount **neutral with a `+`**. It
+is not income: no category, out of Stats and out of Budgets, exactly like an adjustment, and never
+green ([shared.md](shared.md)).
+
+The day's total moves with it, because the day's total is what the day did to your money. **The type
+filter gains it**; the Add form does not, because a payment is recorded from `Settle up` and nowhere
+else, and a type in the form that the form cannot correctly create is the contradiction T-86 had to
+undo for Transfer categories.
 
 ## A shared expense (`#shared-expense`)
 

@@ -96,10 +96,16 @@ so and carries no movement of yours until you settle with them.
 One contact across every group: what they owe you or you owe them, the groups they appear in with their
 state in each, and the payments already made. `Settle up` is the primary action.
 
-**A person is not an account**, and this screen says so at the bottom in one line. That is the whole
-reason the contact is an entity of its own: paying Beto back must not touch balances, Stats, Budgets or
-Categories, and every one of those would need a "except for people" exception if a person were an
-account. A person has no type, no limit, no available balance and no `Pay this card`.
+**A person is not an account**, and this screen says so at the bottom in one line: a person has no
+balance of their own and never appears among your accounts, in the account picker, in a transfer, in
+`Stats groupBy=account` or inside what you have and what you owe. The money still moves in **your**
+accounts — a collection arrives in one, paying somebody back leaves one — and that is the only place
+it ever moves.
+
+That is the whole reason the contact is an entity of its own. As an account, every one of those ten
+surfaces would need an "except for people" exception, and the one that got forgotten would teach a
+person as if they were a bank or add their debt to your net worth. A person has no type, no limit, no
+available balance and no `Pay this card`.
 
 A contact is **archived, never deleted**, its name is unique per user like an account's, and its
 **email is an identifier for inviting them later** — nothing is sent today, and the sheet that asks for
@@ -153,7 +159,7 @@ than somewhere accidental. This is not decoration: the server and the offline pr
 produce the same shares to the peso, or a difference appears that nobody can explain — which is what
 the parity fixtures in `lib/local/derive` exist to prevent.
 
-## Getting paid, and paying (`#settle-up`, `#settle-up-both-ways`, `#record-a-payment`)
+## Getting paid, and paying (`#settle-up`, `#settle-up-both-ways`, `#record-a-payment`, `#pay-somebody-back`)
 
 **One sheet**, `Settle up`, reached from a person's row, from a group, or from a shared expense.
 `Mark as paid` and `Record a payment` are the same sheet with the amount prefilled full or left to
@@ -168,6 +174,12 @@ type. It always settles **everything open between the two people**, and it says 
   movement is created and no balance changes**, and the sheet says that plainly; the expenses still
   fall, because that money did come back. It is the one place where what counts as yours moves without
   an account moving, and it moves because the user said the money arrived.
+- **Paying somebody back is not a payment at all, from your ledger's side** (`#pay-somebody-back`):
+  it is **your expense**, created with the category of the line you are paying for and **dated that
+  line**, so it lands in the month the money was spent. Where what you pay covers lines of several
+  categories it writes **one expense per category**, each with its own date, and the sheet lists them
+  before saving. One expense with a category you pick would be less typing and a worse figure: the
+  owner asked for the categories to come out exact, and this is where that is won or lost.
 - **When you owe them too, one payment writes both halves** (`#settle-up-both-ways`). Ana paid for the
   tickets and you paid for the rest, so the sheet shows the two directions and the net she actually
   sends, and then says what it will record: the collection arriving, **and** your share of her line as
@@ -188,7 +200,9 @@ deleted, and the group stays readable.
 ## The four states
 
 - **Data** — the plates above.
-- **Empty** (`#empty`) — one sentence explaining what a shared group is, and the two ways in.
+- **Empty** (`#empty`) — one sentence explaining what a shared group is, and the two ways in. With
+  nothing at all the two faces are not drawn: there is nothing to switch between, and a segmented
+  control over two empty lists is a control that does nothing.
 - **Loading** — the list skeleton of [states.md](states.md), with the two summary figures as
   skeletons too: they are the part somebody came to read.
 - **Error** — the screen's error with its reference, and, offline with no local copy, the honest
