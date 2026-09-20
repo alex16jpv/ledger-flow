@@ -4864,7 +4864,7 @@ const PAGES = [
       plate(
         "group-with-another-payer",
         "A shared group somebody else also paid for",
-        "The owner’s own example, and the case a one-payer group cannot show: Ana paid for the tickets. That line is <b>not an expense of yours</b> — no movement of yours exists for it — so it is drawn neutral and says so, and it becomes your expense only when you pay her. What you can collect is the <b>net</b> between each pair: Ana owes you $46,300 and you owe her $30,000, so she sends $16,300.",
+        "The owner’s own example, and the case a one-payer group cannot show: Ana paid for the tickets. That line is <b>not an expense of yours</b> — no movement of yours exists for it — so it is drawn neutral and says so, and it becomes your expense only when you pay her. What you can collect is the <b>net</b> between each pair: Ana owes you $56,300 and you owe her $30,000, so she sends $26,300. The fuel carries its own split, because Beto did not ride.",
         nightOut(),
         { added: "2026-09-20" },
       ),
@@ -4962,7 +4962,7 @@ const PAGES = [
       plate(
         "settle-up-both-ways",
         "Settle up when you owe them too",
-        "Ana paid for the tickets, so the two of you owe each other. One payment settles everything between the two people and writes both halves: the $46,300 coming in, and your $30,000 share of the tickets as an expense in Lifestyle dated the day of the tickets. The balance moves by the $16,300 she actually sends.",
+        "Ana paid for the tickets, so the two of you owe each other. One payment settles everything between the two people and writes both halves: the $56,300 coming in, and your $30,000 share of the tickets as an expense dated the day of the tickets, in a category you pick. The balance moves by the $26,300 she actually sends.",
         sharedScreen(sharedPeopleBody(), { sheet: settleUp("both") }),
         { added: "2026-09-20" },
       ),
