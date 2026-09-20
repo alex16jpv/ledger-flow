@@ -86,11 +86,19 @@ not the figures, not the list, not a filter.
 
 The header leads with **what still counts as yours**, with the total and your share under it as
 context, then the bar of what has been collected, then the one sentence that explains the gap — what is
-still owed and what was written off. Then the four actions: `Settle up`, `Add expense`, `Edit`,
-`Archive`.
+still owed and what was written off. Then `Settle up` as the one primary action, and under it
+`Add expense`, `Add people`, `Edit` and `Archive`.
 
-**People**, one row each, with the split named once above them. **You are a row like everybody else**,
-with a share of your own. Four states:
+**A group is not closed when it is created** (`#add-people`). `Add people` opens the same contact sheet
+the form uses, and asks the question that comes with it rather than deciding it: **are they in the
+expenses already recorded?** Off — the default — they are in what you add from now on and in none of
+what is there. On, every share is recalculated and the sheet says by how much, **including who ends up
+ahead of what they now owe**, because somebody who already paid the old share will be. Nothing
+collected is undone and what counts as yours does not move: only the shares do.
+
+**People**, one row each, with the group's split named once above them **as its default** — it is a
+link, and it opens the same sheet a single expense opens. **You are a row like everybody else**, with a
+share of your own. Four states:
 
 | State            | Where it comes from                                 |
 | ---------------- | --------------------------------------------------- |
@@ -134,8 +142,13 @@ transactions that are already there — over the group's own range, any account,
 same row the list already draws. Recording a new expense from inside the group is the other way in and
 lands in the same place.
 
-**A new expense inherits the group's split without asking.** The split sheet is for changing one
-expense, never for defining the rule again.
+**The group's split is a default, not a rule** (`#split-one-expense`). A new expense inherits it
+without asking, and **any expense can carry its own** in any of the four modes: a trip that splits
+equally can have one dinner by exact amounts. An expense that went its own way reads **`Custom split`**
+in the group's list, so the exceptions are visible without opening them, and the sheet says plainly
+what it touches — this expense, and nothing else. The same sheet, opened from the link above the
+group's People, edits the default; changing the default does not go back and rewrite an expense that
+was set by hand.
 
 **`Split this`** on a single transaction is the same thing seen from the other end: it creates a group
 of one expense, named after it. There is one concept, not two — an expense is split because it belongs
@@ -164,8 +177,22 @@ One sheet, four modes on a segmented control:
 figure and the remainder redistributes itself the moment it changes. Shares ("Ana pays 2") are not in
 v1.
 
+### Guests, on one expense (`#split-with-guests`)
+
+An outing of four that, for one night, was twenty-four people. **The group stays a group of four**: the
+guests belong to **that expense alone**, and the split sheet has a row for them with a **head count**.
+
+They count as **as many shares as there are of them** and as **one row to collect from**. $240,000
+between four friends and twenty guests is 24 shares of $10,000: $40,000 between the four, $200,000 for
+the block. You can record what the block pays, in full or in part, and you cannot say who inside it
+paid what — the control you give up for a trail you would otherwise not have at all.
+
+Guests are **not contacts**: they never reach People, they cannot be reused on another expense, and
+they go when the expense goes. Somebody you want real control over is added to the group instead. The
+row works in all four modes — by heads under `Equal`, by a figure you type under the others.
+
 Under the rows, **what is left to assign**, always visible, and the sheet cannot be saved while it is
-not zero. The shares always add up to the expense.
+not zero. The shares always add up to the expense, guests included.
 
 **The odd peso goes to whoever paid**, and the sheet says so in words. $100,000 does not divide by
 three and the Colombian peso has no cents (T-67), so the remainder has to land somewhere chosen rather

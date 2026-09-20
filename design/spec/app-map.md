@@ -67,7 +67,9 @@ across every group, and **Shared groups**, each with its date range because a gr
 the detail of a group with its participants, their four states and its expenses. ✅ A person: what they
 owe you across every group and what they have already paid. ✅ Creating a group from transactions that
 already exist, or from scratch, and `Split this` over a single one. ✅ The split sheet in its four
-modes, with the odd peso going to whoever paid. ✅ Getting paid — money that is not income, partial
+modes, with the odd peso going to whoever paid, ✅ an expense carrying its own split instead of the
+group's, and ✅ an expense with **guests**, who weigh a head count and settle as one row. ✅ Adding
+people after the group exists, with the question of what happens to the expenses already recorded. ✅ Getting paid — money that is not income, partial
 payments, cash outside the app, and the case where the two of you owe each other — ✅ writing off, and
 ✅ archiving a group with people still owing, ✅ a group two people paid for, and ✅ the contact
 picker, where the paging and the two limits are said. ⬜ Loading and error, and ⬜ the `Percent` and
