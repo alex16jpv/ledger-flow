@@ -96,6 +96,11 @@ what is there. On, every share is recalculated and the sheet says by how much, *
 ahead of what they now owe**, because somebody who already paid the old share will be. Nothing
 collected is undone and what counts as yours does not move: only the shares do.
 
+**Taking somebody out** is the same door and the narrow case: it is offered only while they have **no
+share in any expense and nothing paid**. Once either exists, removing them would have to either delete
+money that arrived or silently hand their share to everyone else, so the group offers what actually
+applies instead — settle with them, or write off what they owe.
+
 **People**, one row each, with the group's split named once above them **as its default** — it is a
 link, and it opens the same sheet a single expense opens. **You are a row like everybody else**, with a
 share of your own. Four states:
@@ -187,9 +192,16 @@ between four friends and twenty guests is 24 shares of $10,000: $40,000 between 
 the block. You can record what the block pays, in full or in part, and you cannot say who inside it
 paid what — the control you give up for a trail you would otherwise not have at all.
 
-Guests are **not contacts**: they never reach People, they cannot be reused on another expense, and
-they go when the expense goes. Somebody you want real control over is added to the group instead. The
-row works in all four modes — by heads under `Equal`, by a figure you type under the others.
+Once the expense is saved the block is **somebody to collect from**: it appears in that expense's
+shared card with its own state, and in the group's People section **under the expense's name**, so
+what it owes is inside the group's figures and not floating outside them. Its four states are
+everybody else's, `Written off` included. `Settle up` on it takes a full or a partial amount, like any
+other row.
+
+Guests are **not contacts**: they never reach People — the section — they cannot be reused on another
+expense, and they go when the expense goes. Somebody you want real control over is added to the group
+instead. The row works in all four modes — by heads under `Equal`, by a figure you type under the
+others.
 
 Under the rows, **what is left to assign**, always visible, and the sheet cannot be saved while it is
 not zero. The shares always add up to the expense, guests included.
