@@ -117,7 +117,6 @@ function PartyBody({ person, note }: { person: PartyView; note: string }) {
   );
 }
 
-// Somebody with nothing open is a row that reads; the rest is a row that settles or takes back.
 function PartyRow({
   person,
   note,
@@ -265,7 +264,6 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
   const [writingOff, setWritingOff] = useState<PartyView | null>(null);
   const [undoing, setUndoing] = useState<PartyView | null>(null);
   const [archiving, setArchiving] = useState(false);
-  // The written-off ceiling is what the row gets back if you take the decision back.
   const ceilingOf = (person: PartyView): number =>
     view.group.writeOffs.find(
       (one) => one.contactId === person.contactId && one.expenseId === person.expenseId,
@@ -541,7 +539,6 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
     try {
       await archive.mutateAsync({
         id: view.group.id,
-        // Archiving writes off what is still owed, and the mirror has to say so as well.
         owing: view.people
           .filter((person) => person.owesYou > 0)
           .map((person) => ({

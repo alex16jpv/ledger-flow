@@ -134,8 +134,8 @@ test("settling up lowers what counts as yours, in the month the expense happened
     .getByRole("button", { name: /^Dinner/ })
     .first()
     .click();
-  await expect(page.getByText("Counts as yours")).toBeVisible();
-  await expect(page.getByText("History", { exact: true })).toBeVisible();
+  await expect(page.getByText(/counts as yours, and it is what Stats/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(page.getByText("Somebody paid you back")).toBeVisible();
   await expectNoAxeViolations(page);
 });

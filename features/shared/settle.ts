@@ -136,7 +136,8 @@ const guestParty = (section: SharedSection, view: GroupView, person: PartyView):
     name: person.name,
     color: person.color,
     owedToYou: person.owesYou,
-    youOwe: person.youOwe,
+    // A block that paid ahead is money of theirs in your account, and giving it back is a payment.
+    youOwe: fromCents(toCents(person.youOwe) + toCents(person.surplus)),
     surplus: person.surplus,
     groups: [{ id: view.group.id, name: view.group.name }],
   });

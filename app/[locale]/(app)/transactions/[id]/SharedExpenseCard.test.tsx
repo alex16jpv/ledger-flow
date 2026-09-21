@@ -121,16 +121,20 @@ describe("the shared card of a movement", () => {
   it("leads with what counts as yours and says how it got there", () => {
     render(50_000);
 
-    expect(screen.getByText("Counts as yours")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Night out" })).toBeInTheDocument();
     expect(screen.getAllByText(/50,000/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Your share is .* everybody has settled/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/counts as yours.*Your share is .* everybody has settled/),
+    ).toBeInTheDocument();
   });
 
   it("keeps the history that explains a figure falling weeks later", () => {
     render(0);
 
-    expect(screen.getByText("History")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "History" })).toBeInTheDocument();
     expect(screen.getByText("Split with other people")).toBeInTheDocument();
     expect(screen.getByText("Somebody paid you back")).toBeInTheDocument();
+    // An event that changed nothing says so: splitting never moves the figure.
+    expect(screen.getByText("no change")).toBeInTheDocument();
   });
 });

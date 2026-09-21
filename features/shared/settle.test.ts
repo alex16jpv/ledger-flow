@@ -157,6 +157,33 @@ describe("what one settle-up covers", () => {
     expect(plan.yourLines).toEqual([]);
   });
 
+  // Owing each other the same nets to nothing, and that settle-up is still a settle-up.
+  it("records both halves when the two debts cancel out", () => {
+    const rows = nightOut();
+    rows.expenses = [
+      sharedExpense({
+        id: "s1",
+        description: "Food",
+        date: "2026-08-10T20:00:00.000Z",
+        amount: 60_000,
+        split: equalSplit(60_000, [null, ANA]),
+      }),
+      sharedExpense({
+        id: "s2",
+        description: "Tickets",
+        date: "2026-08-14T20:00:00.000Z",
+        amount: 60_000,
+        paidByContactId: ANA,
+        split: equalSplit(60_000, [null, ANA]),
+      }),
+    ];
+    const ana = partyFor(rows, ANA);
+
+    expect(ana).toMatchObject({ owedToYou: 30_000, youOwe: 30_000, net: 0 });
+    expect(hasSomethingToSettle(ana)).toBe(true);
+    expect(planSettlement(ana, 0)).toMatchObject({ collected: 30_000, paid: 30_000, cash: 0 });
+  });
+
   it("settles a block of guests over the one expense it lives in", () => {
     const rows = nightOut();
     rows.expenses = [

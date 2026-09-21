@@ -40,7 +40,7 @@ import { useBackNavigation } from "@/lib/navigation/history";
 import type { Account } from "@/types/api";
 
 import { useAdjustmentSheet } from "../../useAdjustmentSheet";
-import { owingParties, SharedExpenseCard } from "./SharedExpenseCard";
+import { deleteImpact, owingParties, SharedExpenseCard } from "./SharedExpenseCard";
 
 function Attribute({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -301,8 +301,19 @@ export function TransactionDetailScreen({ id }: { id: string }) {
             )}
             <Attribute label={t("transactions.detail.currency")}>{row.currency}</Attribute>
           </Card>
+          {shared.isError && row.sharedExpenseId !== null && (
+            <Alert tone="danger" title={t("transactions.detail.shared.unreadable")}>
+              <LoadErrorBody error={shared.error} />
+            </Alert>
+          )}
           {shared.section && group && expense && (
-            <SharedExpenseCard row={row} section={shared.section} view={group} expense={expense} />
+            <SharedExpenseCard
+              row={row}
+              section={shared.section}
+              view={group}
+              expense={expense}
+              categoryName={category?.name}
+            />
           )}
           {/* Decision 4: splitting a loose expense creates a shared group of one. */}
           {row.type === "EXPENSE" && row.sharedExpenseId === null && (
@@ -382,7 +393,16 @@ export function TransactionDetailScreen({ id }: { id: string }) {
       <DeleteTransactionSheet
         open={confirming}
         pending={remove.isPending}
-        shared={expense !== undefined}
+        shared={
+          shared.section && group && expense && row
+            ? {
+                groupName: group.group.name,
+                accountName: (from ?? to)?.name ?? unknownAccount,
+                amount: row.amount,
+                ...deleteImpact(shared.section, group, expense),
+              }
+            : undefined
+        }
         onWriteOff={
           // Only when one person is left owing is "write it off" a single, unambiguous act.
           onlyDebtor && group

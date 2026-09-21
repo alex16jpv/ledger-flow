@@ -44,8 +44,7 @@ export async function liveRowsInWindow(
   return withCountsAsYours(db, rows);
 }
 
-// What a movement counts as yours falls the moment a payment is recorded, and with no network that
-// payment is only in the mirror: the figure the budgets and Stats measure is worked out from it.
+// A payment queued here has not reached the movements the server stamps this figure on.
 async function withCountsAsYours(
   db: IDBPDatabase<VaultSchema>,
   rows: SyncTransaction[],

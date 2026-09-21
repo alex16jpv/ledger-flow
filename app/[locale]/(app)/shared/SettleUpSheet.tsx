@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
+import { Amount } from "@/components/ui/Amount";
 import { AmountInput } from "@/components/ui/AmountInput";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -16,6 +17,7 @@ import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
 import { useRecordSettlement } from "@/features/shared/hooks";
 import {
+  hasSomethingToSettle,
   planSettlement,
   settleableAmount,
   type SettleParty,
@@ -39,12 +41,11 @@ export interface SettleUpSheetProps {
 
 function Summary({ party }: { party: SettleParty }) {
   const t = useTranslations("shared.settle");
-  const money = useMoney();
   const both = party.owedToYou > 0 && party.youOwe > 0;
   const line = (label: string, amount: number) => (
     <div className="flex items-baseline justify-between gap-3">
       <span className="text-sm text-text-3">{label}</span>
-      <span className="font-mono tabular-nums">{money.format(amount)}</span>
+      <Amount value={amount} signed={false} />
     </div>
   );
   return (
@@ -56,7 +57,7 @@ function Summary({ party }: { party: SettleParty }) {
           <span className="text-sm">
             {party.net >= 0 ? t("theySend", { name: party.name }) : t("youSend")}
           </span>
-          <span className="font-mono tabular-nums">{money.format(settleableAmount(party))}</span>
+          <Amount value={settleableAmount(party)} signed={false} />
         </div>
       )}
     </Card>
@@ -65,7 +66,6 @@ function Summary({ party }: { party: SettleParty }) {
 
 function Coverage({ plan }: { plan: SettlePlan }) {
   const t = useTranslations("shared.settle");
-  const money = useMoney();
   const dates = useDates();
   if (plan.covers.length === 0) return null;
   return (
@@ -77,7 +77,7 @@ function Coverage({ plan }: { plan: SettlePlan }) {
             {line.groupName} · {line.description ?? t("noDescription")}{" "}
             <span className="text-text-3">{dates.formatDay(new Date(line.date))}</span>
           </span>
-          <span className="font-mono tabular-nums">{money.format(line.covered)}</span>
+          <Amount value={line.covered} signed={false} size="sm" />
         </div>
       ))}
     </div>
@@ -106,8 +106,9 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
   const over = toCents(cash) > toCents(most);
   const needsCategory = plan.yourLines.length > 0 && !outside;
   const missingCategory = plan.yourLines.some((line) => !(perLine[line.expenseId] ?? categoryId));
+  // Two people owing each other the same net to nothing, and that settle-up is still a settle-up.
   const ready =
-    cash > 0 &&
+    (cash > 0 || (most === 0 && hasSomethingToSettle(party))) &&
     !over &&
     (outside || accountId !== null) &&
     (!needsCategory || !missingCategory) &&

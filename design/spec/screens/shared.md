@@ -265,6 +265,11 @@ the parity fixtures in `lib/local/derive` exist to prevent.
 `Mark as paid` and `Record a payment` are the same sheet with the amount prefilled full or left to
 type. It settles **everything open between you and one counterparty**, and it says what it covers.
 
+**A door that reaches more than one counterparty asks who first** (`#settle-up-who`): the group's own
+`Settle up`, and a shared expense's, list everybody with something open — their name and the net, with
+the word for its direction — and open the sheet on the one that is picked. A row that reaches exactly
+one person opens the sheet straight away, because a list of one is a question with one answer.
+
 A counterparty is **a person or a guest block**. For a person that means every group; for a block it
 means the one expense it lives in, which is all there is — a block has no other expense to net
 against, no email and no cross-group history, and the sheet simply shows less rather than pretending
@@ -299,6 +304,11 @@ otherwise.
   so a partial payment never leaves you with an expense you have not paid for.
 
 ## Writing off, and archiving (`#write-off`, `#archive-with-people-owing`)
+
+**`Write off`** is reached from the settle-up sheet of the person who owes it — the other answer to
+the same row — and **taking it back is the row itself** (`#undo-write-off`): somebody who reads
+`Written off` opens a confirmation saying what they owe again and that no figure of yours moves either
+way, which is true in both directions.
 
 **`Write off`** answers the owner's worry, and the answer is that there is nothing to do: no figure
 changes, because the money was counted as his from the day he paid it. The sheet says exactly that.

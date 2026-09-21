@@ -1,5 +1,6 @@
-import { deriveShared, partyKey, type PersonState } from "@/lib/local/derive";
+import { deriveShared, fromCents, partyKey, type PersonState, toCents } from "@/lib/local/derive";
 import type { SharedLedgerRows } from "@/lib/local/repository";
+import type { SharedExpenseLookup, SharedLookup, SharedPaymentLookup } from "@/lib/shared/lookup";
 import type { ColorToken } from "@/lib/theme/feature-color";
 import type { Contact, Settlement, SharedExpense, SharedGroup, SharedShare } from "@/types/api";
 
@@ -130,11 +131,13 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     const { rows: tally, yours } = tallies(expenses, ledger.collected);
     const fronted = expenses
       .filter((expense) => expense.paidByContactId === null)
-      .reduce((sum, expense) => sum + expense.amount, 0);
-    // Paying somebody back for their line is an expense of yours, and it is this outing's cost.
+      .reduce((cents, expense) => cents + toCents(expense.amount), 0);
     const paidBack = expenses
       .filter((expense) => expense.paidByContactId !== null)
-      .reduce((sum, expense) => sum + (ledger.collected.get(`${expense.id}|user`) ?? 0), 0);
+      .reduce(
+        (cents, expense) => cents + toCents(ledger.collected.get(`${expense.id}|user`) ?? 0),
+        0,
+      );
     const people = view.people.map((person): PartyView => {
       const contact = person.contactId === null ? undefined : byId.get(person.contactId);
       const held = tally.get(person.key) ?? { share: 0, paid: 0 };
@@ -154,18 +157,18 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
       };
     });
     const owed = people.reduce(
-      (sum, person) => sum + Math.max(0, person.owesYou - person.youOwe),
+      (cents, person) => cents + Math.max(0, toCents(person.owesYou) - toCents(person.youOwe)),
       0,
     );
     groups.push({
       group,
       expenses: [...expenses].sort(newestFirst),
-      countsAsYours: fronted - view.collected + paidBack,
+      countsAsYours: fromCents(fronted - toCents(view.collected) + paidBack),
       collected: view.collected,
       writtenOff: view.writtenOff,
-      owed,
+      owed: fromCents(owed),
       youOwe: view.youOwe,
-      barTotal: view.collected + owed + view.writtenOff,
+      barTotal: fromCents(toCents(view.collected) + owed + toCents(view.writtenOff)),
       people,
       you: { share: yours },
     });
@@ -189,9 +192,9 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
         youOwe: 0,
         groups: new Set<string>(),
       };
-      held.owesYou += person.owesYou;
+      held.owesYou += toCents(person.owesYou);
       // Per counterparty, not per group: the same surplus shows in each and must be taken once.
-      held.youOwe += person.youOwe;
+      held.youOwe += toCents(person.youOwe);
       held.groups.add(view.group.id);
       nets.set(person.contactId, held);
     }
@@ -213,14 +216,14 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
   }
   const people: PersonView[] = [...nets].map(([contactId, held]) => {
     const contact = byId.get(contactId);
-    const youOwe = held.youOwe + (surplusOf.get(contactId) ?? 0);
+    const youOwe = held.youOwe + toCents(surplusOf.get(contactId) ?? 0);
     return {
       contactId,
       name: contact?.name ?? "",
       color: contact?.color ?? null,
-      owesYou: held.owesYou,
-      youOwe,
-      net: held.owesYou - youOwe,
+      owesYou: fromCents(held.owesYou),
+      youOwe: fromCents(youOwe),
+      net: fromCents(held.owesYou - youOwe),
       surplus: surplusOf.get(contactId) ?? 0,
       groups: [...held.groups].map((id) => ({ id, name: nameOf.get(id) ?? "" })),
     };
@@ -235,8 +238,13 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     settlements: [...rows.settlements].sort(newestFirst),
     people,
     guests: { owed: guestsOwed, groupCount: guestGroups.size },
-    owedToYou: people.reduce((sum, person) => sum + Math.max(0, person.net), 0) + guestsOwed,
-    youOwe: people.reduce((sum, person) => sum + Math.max(0, -person.net), 0),
+    owedToYou: fromCents(
+      people.reduce((cents, person) => cents + Math.max(0, toCents(person.net)), 0) +
+        toCents(guestsOwed),
+    ),
+    youOwe: fromCents(
+      people.reduce((cents, person) => cents + Math.max(0, -toCents(person.net)), 0),
+    ),
   };
 }
 
@@ -246,26 +254,16 @@ export const groupView = (section: SharedSection, id: string): GroupView | undef
 export const personView = (section: SharedSection, contactId: string): PersonView | undefined =>
   section.people.find((view) => view.contactId === contactId);
 
-export interface SharedExpenseLookup {
-  yourShare: number;
-  groupId: string;
-  groupName: string;
-}
-
-export interface SharedPaymentLookup {
-  name: string;
-  groups: string[];
-}
-
-export interface SharedLookup {
-  expenses: ReadonlyMap<string, SharedExpenseLookup>;
-  payments: ReadonlyMap<string, SharedPaymentLookup>;
-}
-
-// What a movement's own row needs of the shared layer, with no feature reading another.
 export function sharedLookup(section: SharedSection): SharedLookup {
   const expenses = new Map<string, SharedExpenseLookup>();
   const names = new Map<string, { name: string; groups: Set<string> }>();
+  // A person keeps their name once the group is settled, archived, or they are: People holds them.
+  for (const person of section.people) {
+    names.set(`contact:${person.contactId}`, {
+      name: person.name,
+      groups: new Set(person.groups.map((group) => group.name)),
+    });
+  }
   for (const view of section.groups) {
     for (const expense of view.expenses) {
       expenses.set(expense.id, {
@@ -275,6 +273,7 @@ export function sharedLookup(section: SharedSection): SharedLookup {
       });
     }
     for (const person of view.people) {
+      if (person.contactId !== null) continue;
       const held = names.get(person.key) ?? { name: person.name, groups: new Set<string>() };
       held.groups.add(view.group.name);
       names.set(person.key, held);

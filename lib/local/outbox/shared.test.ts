@@ -11,7 +11,8 @@ import type { SharedSplit } from "@/types/api";
 
 import { setCurrentVault } from "../repository/read";
 import { profileRecord, sharedExpenseRecord, sharedGroupRecord } from "../schema";
-import { pendingOperations } from "./queue";
+import { pendingOperations, writeTransaction } from "./queue";
+import { reconcileRow } from "./reconcile";
 import {
   archiveSharedGroup,
   createSharedExpense,
@@ -332,6 +333,141 @@ describe("giving up on what somebody owes", () => {
       id: "g1",
       owing: [{ contactId: ANA, expenseId: null, amount: 500_000 }],
     });
+
+    const row = (await vault.db.get("sharedGroups", "g1"))?.row;
+    expect(row?.archivedAt).not.toBeNull();
+    expect(row?.writeOffs).toEqual([
+      { kind: "CONTACT", contactId: ANA, expenseId: null, amount: 500_000, at: expect.any(String) },
+    ]);
+  });
+});
+
+describe("what a payment puts on the wire", () => {
+  it("sends the two halves, the account and a category per line, with the first as the fallback", async () => {
+    await vaultWith();
+    reportOnline(true);
+    answerBatch(fetchMock);
+
+    await recordSettlement({
+      id: "p1",
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 56_300,
+      paid: 30_000,
+      outsideApp: false,
+      accountId: "a1",
+      lines: [
+        {
+          expenseId: "e9",
+          date: "2026-08-14T20:00:00.000Z",
+          description: "Tickets",
+          amount: 30_000,
+          categoryId: "c1",
+        },
+      ],
+      refunded: 0,
+    });
+
+    const sent = operationsOf(fetchMock.mock.calls[0]?.[1])[0];
+    expect(sent).toMatchObject({ entity: "settlement", action: "create" });
+    expect(sent?.payload.body).toEqual({
+      id: "p1",
+      contactId: ANA,
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 56_300,
+      paid: 30_000,
+      accountId: "a1",
+      categoryId: "c1",
+      categories: [{ expenseId: "e9", categoryId: "c1" }],
+    });
+  });
+
+  it("names the block of guests instead of a contact, and carries no account in cash", async () => {
+    await vaultWith();
+    reportOnline(true);
+    answerBatch(fetchMock);
+
+    await recordSettlement({
+      id: "p2",
+      counterparty: { contactId: null, expenseId: "e4" },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 200_000,
+      paid: 0,
+      outsideApp: true,
+      accountId: null,
+      lines: [],
+      refunded: 0,
+    });
+
+    expect(operationsOf(fetchMock.mock.calls[0]?.[1])[0]?.payload.body).toEqual({
+      id: "p2",
+      expenseId: "e4",
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 200_000,
+      outsideApp: true,
+    });
+  });
+
+  it("writes the movement that hands a surplus back out of the account", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+
+    await recordSettlement({
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 0,
+      paid: 20_000,
+      outsideApp: false,
+      accountId: "a1",
+      lines: [],
+      refunded: 20_000,
+    });
+
+    const movements = (await vault.db.getAll("transactions")).map((record) => record.row);
+    expect(
+      movements.map((row) => [row.type, row.amount, row.fromAccountId, row.categoryId]),
+    ).toEqual([["SETTLEMENT", 20_000, "a1", null]]);
+    const [operation] = await pendingOperations(vault.db);
+    expect(operation?.payload).toMatchObject({
+      effect: { after: { amount: 20_000, fromAccountId: "a1", toAccountId: null } },
+    });
+  });
+
+  it("writes no expense of yours when you paid them in cash the app never held", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+
+    await recordSettlement({
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 0,
+      paid: 30_000,
+      outsideApp: true,
+      accountId: null,
+      lines: [],
+      refunded: 0,
+    });
+
+    expect(await vault.db.getAll("transactions")).toEqual([]);
+  });
+});
+
+// D-23: a pull landing while the write is still queued must not lose what it projected.
+describe("what a pull sees while the group's write is still queued", () => {
+  it("keeps the write-off the archive gave up on your behalf", async () => {
+    const vault = await vaultWith();
+    const stored = sharedGroup({ id: "g1", updatedAt: "2026-09-01T00:00:00.000Z" });
+    await vault.db.put("sharedGroups", sharedGroupRecord(stored));
+    reportOnline(false);
+
+    await archiveSharedGroup({
+      id: "g1",
+      owing: [{ contactId: ANA, expenseId: null, amount: 500_000 }],
+    });
+
+    const tx = writeTransaction(vault.db);
+    await reconcileRow(tx, "sharedGroup", "g1", stored);
+    await tx.done;
 
     const row = (await vault.db.get("sharedGroups", "g1"))?.row;
     expect(row?.archivedAt).not.toBeNull();

@@ -471,7 +471,7 @@ export function deriveShared(input: SharedLedgerInput): SharedLedger {
 
 export function countsAsYours(
   transaction: { amount: number; sharedExpenseId: string | null },
-  ledger: Pick<SharedLedger, "cameBack">,
+  ledger: { cameBack: ReadonlyMap<string, number> },
 ): number {
   if (transaction.sharedExpenseId === null) return transaction.amount;
   const back = ledger.cameBack.get(transaction.sharedExpenseId);

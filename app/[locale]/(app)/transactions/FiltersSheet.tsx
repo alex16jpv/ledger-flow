@@ -1,6 +1,6 @@
 "use client";
 
-import { Tag } from "lucide-react";
+import { HandCoins, Scale, Tag } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -153,6 +153,11 @@ export function FiltersSheet({ open, filters, onClose, onApply }: FiltersSheetPr
                     });
                   }}
                 >
+                  {type === "ADJUSTMENT" ? (
+                    <Scale {...iconProps("sm")} />
+                  ) : type === "SETTLEMENT" ? (
+                    <HandCoins {...iconProps("sm")} />
+                  ) : null}
                   {t(`list.types.${type}`)}
                 </Chip>
               ))}

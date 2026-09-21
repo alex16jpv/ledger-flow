@@ -357,7 +357,7 @@ export function archiveSharedGroup({ id, owing }: ArchivedGroup): Promise<SyncSh
       entity: "sharedGroup",
       entityId: id,
       action: "archive",
-      payload: {},
+      payload: { archivedOwing: owing },
       project: async (tx, occurredAt) => {
         const group = await currentGroup(tx, id);
         const kept = group.writeOffs.filter(
@@ -414,8 +414,7 @@ type MintedMovement = Pick<
   "id" | "type" | "amount" | "date" | "fromAccountId" | "toAccountId" | "categoryId" | "description"
 >;
 
-// The server mints these when it takes the payment; the device mints its own so the list, the day
-// totals and the balance move together with no network, and `confirm` drops them for the real ones.
+// The device mints its own so the list, the day totals and the balance move together with no network.
 function mintMovements(input: NewSettlement): MintedMovement[] {
   const { accountId } = input;
   if (input.outsideApp || accountId === null) return [];
@@ -500,17 +499,23 @@ function netEffect(input: NewSettlement): MoneyEffect | undefined {
   };
 }
 
+// The section adds its figures up; a currency with cents must not reach the wire as 30000.0000004.
+const exact = (amount: number): number => fromCents(toCents(amount));
+
 const settlementBody = (input: NewSettlement, id: string): CreateSettlementInput => ({
   id,
   ...(input.counterparty.contactId ? { contactId: input.counterparty.contactId } : {}),
   ...(input.counterparty.expenseId ? { expenseId: input.counterparty.expenseId } : {}),
   date: input.date,
-  ...(input.collected > 0 ? { collected: input.collected } : {}),
-  ...(input.paid > 0 ? { paid: input.paid } : {}),
+  ...(input.collected > 0 ? { collected: exact(input.collected) } : {}),
+  ...(input.paid > 0 ? { paid: exact(input.paid) } : {}),
   ...(input.outsideApp ? { outsideApp: true } : {}),
   ...(input.accountId && !input.outsideApp ? { accountId: input.accountId } : {}),
   ...(input.lines.length > 0
     ? {
+        // One per line, and the first as the fallback: the server may impute onto a line this
+        // device did not plan for, and a line with no category is refused.
+        categoryId: input.lines[0]?.categoryId,
         categories: input.lines.map((line) => ({
           expenseId: line.expenseId,
           categoryId: line.categoryId,
@@ -558,7 +563,6 @@ export function recordSettlement(input: NewSettlement): Promise<Settlement> {
             .objectStore("transactions")
             .put(transactionRecord(mintedRow(movement, id, owner)));
         }
-        // The payment is posted against the counterparty and the lines it covers, so those go first.
         const dependsOn = await dependenciesOf(tx, [
           { entity: "contact" as const, id: input.counterparty.contactId },
           { entity: "sharedExpense" as const, id: input.counterparty.expenseId },

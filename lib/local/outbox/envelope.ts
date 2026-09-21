@@ -38,8 +38,10 @@ export interface OperationPayload {
   effect?: MoneyEffect;
   // Mirror rows this write minted that the server mints its own of: dropped when it answers.
   minted?: string[];
-  // The ceiling a write-off gave up on. The wire does not carry it: the server works it out.
+  // What a write-off gave up on, and what archiving gives up on for everybody still owing. The
+  // wire carries neither: the server works them out, and the mirror has to say the same thing.
   writtenOff?: number;
+  archivedOwing?: { contactId: string | null; expenseId: string | null; amount: number }[];
 }
 
 // uuid v7: valid for the server's `z.string().uuid()`, and the prefix keeps the queue readable.

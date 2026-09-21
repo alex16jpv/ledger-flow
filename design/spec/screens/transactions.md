@@ -72,6 +72,10 @@ filter gains it**; the Add form does not, because a payment is recorded from `Se
 else, and a type in the form that the form cannot correctly create is the contradiction T-86 had to
 undo for Transfer categories.
 
+**Its detail offers no Edit and no Delete** (`#payment-detail`): the money belongs to the payment, and
+the server refuses to move it on its own. The screen says that in one line rather than offering two
+buttons that always fail — and it does not promise a door that does not exist yet either.
+
 ## A shared expense (`#shared-expense`)
 
 Between the hero and the attributes, a card for the group. It leads with **what counts as yours** —

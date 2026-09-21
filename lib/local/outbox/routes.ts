@@ -101,7 +101,6 @@ function partyOf(payload: OperationPayload): string {
   return partyId;
 }
 
-// The server minted its own movements for this payment, so the device's projections make way.
 async function dropMinted(tx: WriteTransaction, operation: OutboxOperation): Promise<void> {
   const store = tx.objectStore("transactions");
   for (const id of operationPayload(operation).minted ?? []) await store.delete(id);

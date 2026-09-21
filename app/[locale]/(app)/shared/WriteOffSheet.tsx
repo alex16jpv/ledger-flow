@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import type { GroupView, PartyView } from "@/features/shared/ledger";
 import { useMoney } from "@/lib/i18n/useMoney";
+import { fromCents, toCents } from "@/lib/local/derive/money";
 
 export interface WriteOffSheetProps {
   view: GroupView;
@@ -27,8 +28,9 @@ export function WriteOffSheet({
 }: WriteOffSheetProps) {
   const t = useTranslations("shared.writeOff");
   const money = useMoney();
-  // What is still open after this one is what tells the group whether anybody is left owing.
-  const left = view.owed - person.owesYou;
+  const left = view.people
+    .filter((one) => one.key !== person.key)
+    .reduce((cents, one) => cents + Math.max(0, toCents(one.owesYou) - toCents(one.youOwe)), 0);
   return (
     <Sheet
       open={open}
@@ -53,7 +55,7 @@ export function WriteOffSheet({
             : t("rowReadsWrittenOff", { name: person.name })}{" "}
           {left <= 0 && view.youOwe <= 0
             ? t("becomesSettled", { name: view.group.name })
-            : t("stillOwed", { amount: money.format(Math.max(0, left)) })}{" "}
+            : t("stillOwed", { amount: money.format(fromCents(left)) })}{" "}
           {t("undoable")}
         </p>
       </div>

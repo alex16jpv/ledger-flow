@@ -157,11 +157,27 @@ const RULES: Partial<Record<RouteKey, Rule>> = {
       ),
     };
   },
-  // Archiving writes off what is still owed, and the server's answer is what brings those back.
-  "sharedGroup:archive": (row, operation) => ({
-    ...(row as SyncSharedGroup),
-    archivedAt: operation.occurredAt,
-  }),
+  // Archiving writes off what is still owed on your behalf, so the mirror has to say that too.
+  "sharedGroup:archive": (row, operation) => {
+    const group = row as SyncSharedGroup;
+    const owing = operationPayload(operation).archivedOwing ?? [];
+    return {
+      ...group,
+      archivedAt: operation.occurredAt,
+      writeOffs: [
+        ...group.writeOffs.filter(
+          (one) => !owing.some((party) => samePartyAs(one, party.contactId, party.expenseId)),
+        ),
+        ...owing.map((party) => ({
+          kind: party.expenseId === null ? ("CONTACT" as const) : ("GUESTS" as const),
+          contactId: party.contactId,
+          expenseId: party.expenseId,
+          amount: party.amount,
+          at: operation.occurredAt,
+        })),
+      ],
+    };
+  },
 
   "transaction:update": (row, operation) => merge(row as SyncTransaction, operation),
   "transaction:delete": (row, operation) => ({

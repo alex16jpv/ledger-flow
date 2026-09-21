@@ -12,18 +12,16 @@ import { useMoney } from "@/lib/i18n/useMoney";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
+import type { SharedLookup } from "@/lib/shared/lookup";
 import type { Account, Category, Transaction } from "@/types/api";
 
 import { amountKind } from "../groups";
 
-// Plain maps the app layer fills from the shared section: a feature never imports another.
 export interface TransactionLookups {
   accounts: ReadonlyMap<string, Account>;
   categories: ReadonlyMap<string, Category>;
-  shared?: {
-    expenses: ReadonlyMap<string, { yourShare: number; groupName: string }>;
-    payments: ReadonlyMap<string, { name: string; groups: string[] }>;
-  };
+  // The app layer fills it from the shared section: a feature never imports another.
+  shared?: SharedLookup;
 }
 
 export interface TransactionRowProps {
@@ -47,7 +45,6 @@ export function transactionTitle(
     if (from && to) return `${from} → ${to}`;
   }
   if (transaction.type === "ADJUSTMENT") return t("transactions.list.balanceAdjustment");
-  // A payment reads as the person it was with: it has no category and needs none.
   if (transaction.type === "SETTLEMENT") {
     const payment = lookups.shared?.payments.get(transaction.sharedSettlementId ?? "");
     if (payment?.name) return payment.name;
@@ -140,7 +137,6 @@ export function TransactionRow({ transaction, lookups, dated, onOpen }: Transact
       </RowBody>
       <RowRight
         sub={
-          // The row keeps the gross amount and says underneath what the split says is fairly yours.
           shared
             ? t("transactions.list.yourShare", { amount: money.format(shared.yourShare) })
             : payment

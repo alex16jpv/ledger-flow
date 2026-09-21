@@ -1096,6 +1096,7 @@ const SHARE_HISTORY = [
 ];
 
 const transactionDetail = ({
+  payment = false,
   pending = false,
   conflict = false,
   shared = false,
@@ -1146,11 +1147,13 @@ const transactionDetail = ({
         `<div class="hstack" style="justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);gap:16px"><span class="small muted">${k}</span><span style="text-align:right;font-weight:500;font-size:14px">${v}</span></div>`,
     )
     .join("");
-  const hero = shared
-    ? `<div class="card stack-sm color-CYAN" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${tile("plane", "CYAN", "lg")}<span class="amount-hero" style="font-size:36px">${money(1200000, "−")}</span><span class="h3">Flights</span><span class="small muted">Expense · Bancolombia</span><span class="badge">${iconSvg("users")}Shared · Cartagena trip</span></div>`
-    : splitting
-      ? `<div class="card stack-sm color-ORANGE" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${tile("utensils", "ORANGE", "lg")}<span class="amount-hero" style="font-size:36px">${money(100000, "−")}</span><span class="h3">Groceries for the trip</span><span class="small muted">Expense · Bancolombia</span></div>`
-      : `<div class="card stack-sm color-BLUE" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${tile("car", "BLUE", "lg")}<span class="amount-hero" style="font-size:36px">${money(18400, "−")}</span><span class="h3">Uber to work</span><span class="small muted">Expense · Visa Gold</span></div>`;
+  const hero = payment
+    ? `<div class="card stack-sm color-GRAY" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${tile("hand-coins", "GRAY", "lg")}<span class="amount-hero" style="font-size:36px">${money(300000, "+")}</span><span class="h3">Beto Cano</span><span class="small muted">Payment · Bancolombia</span><span class="badge">${iconSvg("hand-coins")}Cartagena trip</span></div>`
+    : shared
+      ? `<div class="card stack-sm color-CYAN" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${tile("plane", "CYAN", "lg")}<span class="amount-hero" style="font-size:36px">${money(1200000, "−")}</span><span class="h3">Flights</span><span class="small muted">Expense · Bancolombia</span><span class="badge">${iconSvg("users")}Shared · Cartagena trip</span></div>`
+      : splitting
+        ? `<div class="card stack-sm color-ORANGE" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${tile("utensils", "ORANGE", "lg")}<span class="amount-hero" style="font-size:36px">${money(100000, "−")}</span><span class="h3">Groceries for the trip</span><span class="small muted">Expense · Bancolombia</span></div>`
+        : `<div class="card stack-sm color-BLUE" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${tile("car", "BLUE", "lg")}<span class="amount-hero" style="font-size:36px">${money(18400, "−")}</span><span class="h3">Uber to work</span><span class="small muted">Expense · Visa Gold</span></div>`;
   const sharedCard = shared
     ? `<section class="card color-TEAL stack-sm">
 <div class="card-head"><h3 class="h3">${tile("users", "TEAL", "sm")}Cartagena trip</h3><a class="link" href="#">Open group</a></div>
@@ -1171,9 +1174,11 @@ ${SHARE_HISTORY.map(
 ).join("")}
 <p class="xs faint" style="margin:10px 0 0">Splitting an expense and writing one off never move the figure: the money had already left your account. Only a payment does, and it moves the month the expense happened in.</p></section>`
     : "";
-  const actions = splitting
-    ? `<div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("split", "sm")}Split this</button><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn danger lg" style="flex:1">${iconSvg("trash-2", "sm")}Delete</button></div>`
-    : `<div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn danger lg" style="flex:1">${iconSvg("trash-2", "sm")}Delete</button></div>`;
+  const actions = payment
+    ? `<div class="alert neutral">${iconSvg("info")}<span>This movement belongs to a payment between people, so it is not edited or deleted on its own.</span></div>`
+    : splitting
+      ? `<div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("split", "sm")}Split this</button><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn danger lg" style="flex:1">${iconSvg("trash-2", "sm")}Delete</button></div>`
+      : `<div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn danger lg" style="flex:1">${iconSvg("trash-2", "sm")}Delete</button></div>`;
   const body = `${pend}${hero}
 ${sharedCard}
 <div class="card" style="padding:4px 16px">${rows}</div>
@@ -4289,6 +4294,25 @@ const settleUp = (kind = "full") => {
   );
 };
 
+const settleUpWho = () =>
+  sheetWrap(
+    `<p class="small muted" style="margin:0">This group has more than one person with something open, so it asks before it settles.</p>
+<div class="list card flush">
+${personRow("Ana Ruiz", "Cartagena trip", 26300, "owes you")}
+${personRow("Beto Cano", "Cartagena trip", 526300, "owes you")}
+${personRow("Diego Pardo", "Cartagena trip", 60000, "you owe")}
+</div>
+<p class="xs faint" style="margin:0">A row that reaches exactly one person opens the sheet straight away: a list of one is a question with one answer.</p>`,
+    "Who are you settling with?",
+  );
+
+const undoWriteOffSheet = () =>
+  sheetWrap(
+    `<p class="small muted" style="margin:0">Beto owes the ${moneyText(500000)} again, and the history says so. <b>No figure of yours moves either way</b> — it counted as yours the day it left your account, and it still does.</p>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Owe the ${moneyText(500000)} again</button></div>`,
+    "Take back the write-off for Beto Cano?",
+  );
+
 const writeOffSheet = () =>
   sheetWrap(
     `<div class="alert neutral">${iconSvg("info")}<span><b>No figure changes.</b> You paid it, and it has counted as yours since the day of each expense. Writing off only says you have stopped expecting it back.</span></div>
@@ -4716,6 +4740,13 @@ const PAGES = [
         { added: "2026-09-06" },
       ),
       plate(
+        "payment-detail",
+        "A payment\u2019s own detail",
+        "Its money belongs to the payment, and the server refuses to move it on its own, so the screen offers no Edit and no Delete and says why in one line rather than two buttons that always fail.",
+        transactionDetail({ payment: true }),
+        { added: "2026-09-21" },
+      ),
+      plate(
         "a-payment-between-people",
         "A payment between people in the list",
         "The fifth kind of movement. It is money arriving, so the day\u2019s total moves with it \u2014 but it is <b>not income</b>: it is drawn neutral with a <code>hand-coins</code> tile and a <i>Payment</i> badge, it carries no category, and Stats and the budgets leave it out, exactly as they leave out an adjustment. The type filter gains it; the Add form does not, because a payment is recorded from <i>Settle up</i> and nowhere else.",
@@ -5055,6 +5086,20 @@ const PAGES = [
         "Part of it, in cash that never reached an account kept here. No movement and no balance change — and the sheet says that plainly — but the expenses still fall, because the money did come back. What it covers is imputed oldest expense first, which is why Beto can be Partially paid in the group and fully paid on its first expense.",
         groupDetail({ sheet: settleUp("partial") }),
         { added: "2026-09-20" },
+      ),
+      plate(
+        "settle-up-who",
+        "Settle up · who first",
+        "A door that can reach more than one counterparty asks before it settles: the group's own <b>Settle up</b> and a shared expense's list everybody with something open, with the net and the word for its direction, and open the sheet on the one that is picked.",
+        groupDetail({ sheet: settleUpWho() }),
+        { added: "2026-09-21" },
+      ),
+      plate(
+        "undo-write-off",
+        "Taking a write-off back",
+        "The row of somebody who reads <b>Written off</b> is the way back: it says what they owe again and that no figure of yours moves either way, which is true in both directions. It stops being possible once the group is archived.",
+        groupDetail({ sheet: undoWriteOffSheet() }),
+        { added: "2026-09-21" },
       ),
       plate(
         "write-off",

@@ -1,6 +1,6 @@
 "use client";
 
-import { Users } from "lucide-react";
+import { ChevronRight, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { useContactsQuery, useSharedSection } from "@/features/shared/hooks";
@@ -21,10 +21,10 @@ export function OwedLine() {
   return (
     <Link
       href="/shared"
-      className="flex items-center gap-2 px-1 text-sm text-text-2 hover:text-text"
+      className="flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-text-2 hover:bg-surface-2"
     >
-      <Users {...iconProps("sm")} className="text-text-3" />
-      <span>
+      <Users {...iconProps("sm")} className="shrink-0 text-text-3" />
+      <span className="min-w-0 flex-1">
         {section.youOwe > 0
           ? t("owedBothWays", {
               owed: money.format(section.owedToYou),
@@ -32,6 +32,7 @@ export function OwedLine() {
             })
           : t("owedToYou", { owed: money.format(section.owedToYou) })}
       </span>
+      <ChevronRight {...iconProps("sm")} className="shrink-0 text-text-3" />
     </Link>
   );
 }

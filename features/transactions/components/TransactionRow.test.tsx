@@ -104,7 +104,9 @@ describe("a movement row", () => {
         lookups={{
           ...lookups,
           shared: {
-            expenses: new Map([["s1", { yourShare: 26_300, groupName: "Night out" }]]),
+            expenses: new Map([
+              ["s1", { yourShare: 26_300, groupId: "g1", groupName: "Night out" }],
+            ]),
             payments: new Map(),
           },
         }}
