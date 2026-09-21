@@ -186,6 +186,70 @@ describe("TransactionDetailScreen", () => {
     });
   });
 
+  // The line said the payment was the door; T-138 built it, and this is the movement's side of it.
+  it("undoes the payment a movement belongs to, and takes the movement with it", async () => {
+    const payment = {
+      id: "p1",
+      userId: "u1",
+      counterparty: { kind: "CONTACT", contactId: "k1", expenseId: null },
+      date: "2026-08-23T12:00:00.000Z",
+      collected: 20000,
+      paid: 0,
+      outsideApp: false,
+      currency: "COP",
+      deletedAt: null,
+      createdAt: "2026-08-23T12:00:00.000Z",
+      updatedAt: "2026-08-23T12:00:00.000Z",
+    };
+    const movement = {
+      ...stored,
+      type: "SETTLEMENT",
+      amount: 20000,
+      categoryId: null,
+      description: null,
+      fromAccountId: null,
+      toAccountId: "a1",
+      sharedSettlementId: "p1",
+    };
+    const base = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/api/settlements/p1") && init?.method === "DELETE")
+        return Promise.resolve(json({ message: "ok" }));
+      if (url.startsWith("/api/settlements"))
+        return Promise.resolve(json({ data: [payment], pagination }));
+      if (url.startsWith("/api/contacts"))
+        return Promise.resolve(
+          json({ data: [{ id: "k1", name: "Ana Ruiz", color: "TEAL" }], pagination }),
+        );
+      if (url.startsWith("/api/shared-groups"))
+        return Promise.resolve(json({ data: [], pagination }));
+      if (url.endsWith("/api/transactions/t1") && (init?.method ?? "GET") === "GET")
+        return Promise.resolve(json(movement));
+      return base?.(input, init) ?? Promise.reject(new Error("no route"));
+    });
+    render();
+
+    // Its money belongs to the payment: no Edit, no Delete, and one door that does work.
+    expect(await screen.findByText(/belongs to a payment between people/)).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Edit" })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "Undo the payment" }));
+    const sheet = screen.getByRole("dialog", { name: "Undo this payment?" });
+    expect(sheet).toHaveTextContent("The $20,000 they paid you goes back to being owed");
+
+    await userEvent.click(within(sheet).getByRole("button", { name: /^Undo the payment$/ }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/transactions");
+    });
+    expect(
+      fetchMock.mock.calls.some(
+        ([input, init]) =>
+          init?.method === "DELETE" && urlOf(input).endsWith("/api/settlements/p1"),
+      ),
+    ).toBe(true);
+  });
+
   it("shows the not-found state for a missing id", async () => {
     render("nope");
     expect(

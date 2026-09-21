@@ -10,8 +10,11 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { List, Row, RowBody, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Tile } from "@/components/ui/Tile";
+import { useToast } from "@/components/ui/Toast";
 import { StateBadge } from "@/features/shared/components/parts";
+import { useDeleteSettlement } from "@/features/shared/hooks";
 import type { GroupView, PartyView, SharedSection } from "@/features/shared/ledger";
+import { presentError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
@@ -19,10 +22,12 @@ import { iconProps } from "@/lib/icons/sizes";
 import type { PersonState } from "@/lib/local/derive";
 import { fromCents, toCents } from "@/lib/local/derive/money";
 import { countsAsYours as countsAsYoursOf } from "@/lib/local/derive/shared";
-import type { SharedExpense, SharedHistoryEntry, Transaction } from "@/types/api";
+import type { Settlement, SharedExpense, SharedHistoryEntry, Transaction } from "@/types/api";
 
 import { EditSplitSheet } from "../../shared/EditSplitSheet";
+import { PaymentRows } from "../../shared/PaymentRows";
 import { SettleUpFlow } from "../../shared/SettleUpFlow";
+import { UndoPaymentSheet } from "../../shared/UndoPaymentSheet";
 
 export interface SharedExpenseCardProps {
   row: Transaction;
@@ -134,10 +139,14 @@ export function SharedExpenseCard({
   categoryName,
 }: SharedExpenseCardProps) {
   const t = useTranslations("transactions.detail.shared");
+  const whole = useTranslations();
   const money = useMoney();
   const dates = useDates();
   const [editing, setEditing] = useState(false);
   const [settling, setSettling] = useState(false);
+  const [undoing, setUndoing] = useState<Settlement | null>(null);
+  const undoPayment = useDeleteSettlement();
+  const toast = useToast();
   const yours = expense.split.shares.find((share) => share.party === "USER")?.amount ?? 0;
   const countsAsYours = countsAsYoursOf(row, section);
   const shares = sharesOf(section, view, expense);
@@ -148,6 +157,23 @@ export function SharedExpenseCard({
   const writtenOffCents = shares
     .filter((one) => one.state === "WRITTEN_OFF")
     .reduce((cents, one) => cents + toCents(one.share) - toCents(one.paid), 0);
+
+  // A block of guests lives in this expense alone, so this is the only place its payments are read.
+  const guestPayments = section.settlements.filter(
+    (one) => one.counterparty.expenseId === expense.id,
+  );
+  const guestName = shares.find((one) => one.guests)?.name ?? "";
+
+  async function confirmUndo(settlement: Settlement) {
+    try {
+      await undoPayment.mutateAsync(settlement.id);
+      setUndoing(null);
+      toast.show({ message: whole("shared.undoPayment.done") });
+    } catch (error) {
+      setUndoing(null);
+      toast.show({ message: whole(presentError(error).messageKey), tone: "danger" });
+    }
+  }
 
   const noteOf = (one: ShareRow): string => {
     if (one.state === "WRITTEN_OFF" && one.writtenOffAt) {
@@ -225,6 +251,28 @@ export function SharedExpenseCard({
             </Row>
           ))}
         </List>
+        {guestPayments.length > 0 && (
+          <>
+            <h4 className="px-1 pt-1 text-sm font-semibold">{t("guestPayments")}</h4>
+            <List>
+              <PaymentRows rows={guestPayments} onUndo={setUndoing} />
+            </List>
+          </>
+        )}
+        {undoing && (
+          <UndoPaymentSheet
+            open
+            settlement={undoing}
+            name={guestName}
+            pending={undoPayment.isPending}
+            onClose={() => {
+              setUndoing(null);
+            }}
+            onConfirm={() => {
+              void confirmUndo(undoing);
+            }}
+          />
+        )}
         <div className="flex gap-3">
           <Button
             variant="secondary"

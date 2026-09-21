@@ -71,7 +71,10 @@ All four have an outbox route, so `applyPage` hands them to `reconcile.ts` like 
 payment is the one write whose **movements the server mints**: the device mints its own so the list,
 the day totals and the balance move together with no network, marks them with `sharedSettlementId`,
 remembers their ids in the operation's `payload.minted`, and drops them when the server answers
-(`DECISIONS.md`, T-123).
+(`DECISIONS.md`, T-123). **Undoing one takes them with it** (T-138): the mirror is walked for the
+movements carrying that `sharedSettlementId` — the server's own ids by then, never the minted ones —
+they are tombstoned with the payment, and the operation carries **one** effect, the net of what they
+did to the account, so the balance goes back exactly the way the payment moved it.
 
 What the endpoints derive on every read — a group's `totals`, its `status`, and the state of each
 person in it, which no endpoint exposes at all — is derived here too, by `derive/shared.ts`, from the

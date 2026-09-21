@@ -1104,6 +1104,7 @@ const transactionDetail = ({
   conflict = false,
   shared = false,
   splitting = false,
+  guestPayments = false,
   sheet = "",
 } = {}) => {
   let pend = pending
@@ -1168,6 +1169,15 @@ ${personRow("Ana Ruiz", "Paid Sep 18", 300000, "of $300,000", STATE_BADGE.paid)}
 ${personRow("Beto Cano", "Paid Sep 20 · oldest expense first", 300000, "of $300,000", STATE_BADGE.paid)}
 ${personRow("Lucía Mesa", "Written off Sep 21", 300000, "never paid", STATE_BADGE.off)}
 </div>
+${
+  guestPayments
+    ? `<h4 class="h3" style="font-size:14px;padding:4px 0 0">Paid by the guests</h4>
+<div class="list" style="margin:0 -16px 0">
+<a class="row" href="#">${tile("hand-coins", "GRAY")}<span class="body"><span class="title"><span class="truncate">Paid you ${moneyText(120000)}</span></span><span class="meta">Sep 21</span></span><span class="right"><span class="amount">${money(120000)}</span></span></a>
+<a class="row" href="#">${tile("hand-coins", "GRAY")}<span class="body"><span class="title"><span class="truncate">Paid you ${moneyText(80000)}</span></span><span class="meta">Sep 20 · in cash, outside the app</span></span><span class="right"><span class="amount">${money(80000)}</span></span></a>
+</div>`
+    : ""
+}
 <div class="hstack" style="gap:10px"><button class="btn secondary" style="flex:1">${iconSvg("split", "sm")}Edit split</button><button class="btn secondary" style="flex:1">${iconSvg("hand-coins", "sm")}Settle up</button></div></section>
 <section class="card">
 <div class="card-head"><h3 class="h3">What has counted as yours</h3><span class="small faint">5 entries</span></div>
@@ -1178,7 +1188,8 @@ ${SHARE_HISTORY.map(
 <p class="xs faint" style="margin:10px 0 0">Splitting an expense and writing one off never move the figure: the money had already left your account. Only a payment does, and it moves the month the expense happened in.</p></section>`
     : "";
   const actions = payment
-    ? `<div class="alert neutral">${iconSvg("info")}<span>This movement belongs to a payment between people, so it is not edited or deleted on its own.</span></div>`
+    ? `<div class="alert neutral">${iconSvg("info")}<span>This movement belongs to a payment between people, so it is not edited or deleted on its own.</span></div>
+<button class="btn danger lg block">${iconSvg("undo-2", "sm")}Undo the payment</button>`
     : splitting
       ? `<div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("split", "sm")}Split this</button><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn danger lg" style="flex:1">${iconSvg("trash-2", "sm")}Delete</button></div>`
       : `<div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn danger lg" style="flex:1">${iconSvg("trash-2", "sm")}Delete</button></div>`;
@@ -4121,7 +4132,7 @@ ${personRow("Lucía Mesa", "Written off Sep 21 · the $800,000 stays yours", 800
   });
 };
 
-const personDetail = () =>
+const personDetail = ({ sheet = "" } = {}) =>
   screen(
     `<div class="card color-TEAL stack-sm" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${face("Beto Cano", "lg")}
 <span class="h2">Beto Cano</span><span class="small muted">beto@example.com</span>
@@ -4135,12 +4146,24 @@ const personDetail = () =>
 </div></section>
 <section class="stack-sm"><div class="section-head"><h3 class="h3">Payments</h3></div>
 <div class="list card flush">
-<a class="row" href="#">${tile("hand-coins", "GRAY")}<span class="body"><span class="title"><span class="truncate">Paid you $300,000</span></span><span class="meta">Sep 20 · into Bancolombia</span></span><span class="right"><span class="amount">${money(300000)}</span><span class="sub">Cartagena trip</span></span></a>
+<a class="row" href="#">${tile("hand-coins", "GRAY")}<span class="body"><span class="title"><span class="truncate">Paid you $300,000</span></span><span class="meta">Sep 20</span></span><span class="right"><span class="amount">${money(300000)}</span></span></a>
+<a class="row" href="#">${tile("hand-coins", "GRAY")}<span class="body"><span class="title"><span class="truncate">Paid you $26,300</span></span><span class="meta">Sep 12 · in cash, outside the app</span></span><span class="right"><span class="amount">${money(26300)}</span></span></a>
 </div></section>
 <div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn secondary lg" style="flex:1">${iconSvg("archive", "sm")}Archive</button></div>
 <p class="xs faint" style="text-align:center;margin:0">A person is not an account: Beto has no balance of his own and never appears among your accounts, in a transfer, or in Stats by account. The money moves in your accounts, as it always has.</p>`,
-    { tab: "mas", side: "shared", back: true, title: "Person" },
+    { tab: "mas", side: "shared", back: true, title: "Person", sheet },
   );
+
+const undoPayment = () =>
+  personDetail({
+    sheet: sheetWrap(
+      `<div class="alert warning">${iconSvg("triangle-alert")}<span><b>${moneyText(300000)} goes back to being owed.</b> Undoing a payment is not a refund: what was recorded stops having happened, and no new movement is written.</span></div>
+<p class="small muted" style="margin:0">The movement it wrote goes with it, because that money is the payment's. What counts as yours goes <b>back up</b> on the expenses it had lowered, each in the month that expense happened, and each one keeps the change in its history.</p>
+<p class="small muted" style="margin:0">Nothing else is undone: no expense leaves its group, and what was written off stays written off. Everything else Beto Cano has paid is imputed again over what is still open, oldest first.</p>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn danger solid lg" style="flex:1.4">Undo the ${moneyText(300000)}</button></div>`,
+      "Undo this payment?",
+    ),
+  });
 
 const newContact = () =>
   sharedScreen(sharedPeopleBody(), {
@@ -4818,9 +4841,9 @@ const PAGES = [
       plate(
         "payment-detail",
         "A payment\u2019s own detail",
-        "Its money belongs to the payment, and the server refuses to move it on its own, so the screen offers no Edit and no Delete and says why in one line rather than two buttons that always fail.",
+        "Its money belongs to the payment, and the server refuses to move it on its own, so the screen offers no Edit and no Delete and says why in one line rather than two buttons that always fail. Under that line is the door that <b>does</b> exist: <code>Undo the payment</code> takes the payment and this movement together (<code>shared.html#undo-a-payment</code>).",
         transactionDetail({ payment: true }),
-        { added: "2026-09-21" },
+        { added: "2026-09-21", updated: "2026-09-21" },
       ),
       plate(
         "a-payment-between-people",
@@ -4835,6 +4858,13 @@ const PAGES = [
         "The figure that counts is neither the total nor your share: it is the $600,000 in between, and it moves every time somebody pays. The history is the record of how it got there, and it says plainly that splitting and writing off changed nothing \u2014 the money had already left the account. Beto reads <i>Paid</i> here and <i>Partially paid</i> in the group, because a payment covers the oldest expense first.",
         transactionDetail({ shared: true }),
         { added: "2026-09-20" },
+      ),
+      plate(
+        "shared-expense-guest-payments",
+        "A shared expense · what the guests have paid",
+        "A block of guests lives in <b>this expense alone</b>: it is not a person, it never reaches the <code>People</code> face, and it has no page of its own. So its payments are listed here and nowhere else, and each one undoes itself like any other (<code>shared.html#undo-a-payment</code>). Without this list a payment to a block could not be taken back \u2014 and the expense could not be deleted either, because the server refuses to lose a block that has paid.",
+        transactionDetail({ shared: true, guestPayments: true }),
+        { added: "2026-09-21" },
       ),
       plate(
         "delete-a-shared-expense",
@@ -5036,6 +5066,13 @@ const PAGES = [
         "One contact across every group, with what they have already paid and how. A contact is an entity of its own, never an account: nothing here reaches balances, Stats, Budgets or Categories.",
         personDetail(),
         { added: "2026-09-20" },
+      ),
+      plate(
+        "undo-a-payment",
+        "Undoing a payment",
+        "A payment recorded by mistake is <b>undone, never balanced with a second one</b>: a payment the other way is a real event, and using it to fix a typo leaves two movements that never happened. The sheet says what reaches further than the row it was opened from \u2014 the movement goes with it, what counts as yours goes <b>back up</b> in the month each expense happened, and everything else that person has paid is imputed again over what is still open. What it does <b>not</b> touch: no expense leaves the group and a write-off stays a write-off. Reached from here and from the movement's own detail (<code>transactions.html#payment-detail</code>).",
+        undoPayment(),
+        { added: "2026-09-21" },
       ),
       plate(
         "empty",

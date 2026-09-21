@@ -243,3 +243,60 @@ test("recording a new expense from inside the group writes the movement and the 
   await page.goto("/transactions");
   await expect(page.getByText("Your share $60,000")).toBeVisible();
 });
+
+test("a payment recorded by mistake is undone, and the movement goes with it", async ({
+  page,
+  request,
+}) => {
+  await signUp(page, request);
+  await anExpense(request, 100_000, "Dinner");
+
+  await page.goto("/shared");
+  await page.getByRole("button", { name: "Add a person" }).click();
+  await page.getByPlaceholder("Beto Cano").fill("Beto Cano");
+  await page.getByRole("button", { name: "Add person" }).click();
+  await expect(page.getByText("Person added")).toBeVisible();
+
+  await page.getByRole("link", { name: "New shared group" }).first().click();
+  await page.getByPlaceholder("Cartagena trip").fill("Night out");
+  await page.getByRole("button", { name: "Add a person" }).click();
+  await page.getByRole("checkbox", { name: /Beto Cano/ }).check({ force: true });
+  await page.getByRole("button", { name: "Add 1" }).click();
+  await page.getByRole("button", { name: "Pick from my transactions" }).click();
+  await page.getByRole("checkbox", { name: /Dinner/ }).check({ force: true });
+  await page.getByRole("button", { name: /^Add 1 · / }).click();
+  await page.getByRole("button", { name: "Create shared group" }).click();
+  await page.getByRole("button", { name: "Add 1 expense" }).click();
+
+  await page.getByRole("button", { name: "Settle up" }).click();
+  const settle = page.getByRole("dialog", { name: "Settle up with Beto Cano" });
+  await settle.getByRole("button", { name: /Where it arrives/ }).click();
+  await page.getByRole("option", { name: /Bancolombia Dinner/ }).click();
+  await settle.getByRole("button", { name: "Record payment" }).click();
+  await expect(page.getByText("Payment recorded")).toBeVisible();
+  await expect(page.getByText("Paid in full")).toBeVisible();
+
+  // The movement it wrote is in the list, and its detail says the payment is the only door to it.
+  await page.goto("/transactions");
+  await expect(page.getByRole("button", { name: /Beto Cano/ })).toBeVisible();
+
+  // Paid in full, so his row is folded away in the section: the person's own page is the way there.
+  const contacts = await request.get("/api/contacts", { headers: { origin: APP } });
+  const beto = ((await contacts.json()) as { data: { id: string }[] }).data[0];
+  await page.goto(`/shared/people/${beto?.id ?? ""}`);
+  await expect(page.getByRole("heading", { level: 2, name: "Beto Cano" })).toBeVisible();
+  await page.getByRole("button", { name: /Paid you \$50,000/ }).click();
+  const sheet = page.getByRole("dialog", { name: "Undo this payment?" });
+  await expect(sheet).toContainText("The $50,000 they paid you goes back to being owed");
+  await expect(sheet).toContainText("The movement it wrote goes with it");
+  await expectNoAxeViolations(page);
+  await sheet.getByRole("button", { name: "Undo the payment" }).click();
+  await expect(page.getByText("Payment undone")).toBeVisible();
+
+  // What was owed is owed again, the payment is gone from the list, and so is its movement.
+  await expect(page.getByText(/owes you, across/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Paid you/ })).toHaveCount(0);
+  await page.goto("/transactions");
+  await expect(page.getByRole("button", { name: /Beto Cano/ })).toHaveCount(0);
+  await expect(page.getByText("Your share $50,000")).toBeVisible();
+});

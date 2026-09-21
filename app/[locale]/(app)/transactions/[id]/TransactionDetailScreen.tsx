@@ -1,6 +1,16 @@
 "use client";
 
-import { CircleAlert, Hash, Pencil, Repeat, Scale, Split, Trash2 } from "lucide-react";
+import {
+  CircleAlert,
+  HandCoins,
+  Hash,
+  Pencil,
+  Repeat,
+  Scale,
+  Split,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createElement, type ReactNode, useMemo, useState } from "react";
 
@@ -20,7 +30,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery } from "@/features/categories/hooks";
 import { SplitThisSheet } from "@/features/shared/components/SplitThisSheet";
-import { useSharedSection, useWriteOff } from "@/features/shared/hooks";
+import { useDeleteSettlement, useSharedSection, useWriteOff } from "@/features/shared/hooks";
 import { type PartyView, sharedLookup } from "@/features/shared/ledger";
 import { DeleteTransactionSheet } from "@/features/transactions/components/DeleteTransactionSheet";
 import {
@@ -39,6 +49,7 @@ import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { useBackNavigation } from "@/lib/navigation/history";
 import type { Account } from "@/types/api";
 
+import { UndoPaymentSheet } from "../../shared/UndoPaymentSheet";
 import { useAdjustmentSheet } from "../../useAdjustmentSheet";
 import { deleteImpact, owingParties, SharedExpenseCard } from "./SharedExpenseCard";
 
@@ -74,8 +85,10 @@ export function TransactionDetailScreen({ id }: { id: string }) {
   const categories = useCategoriesQuery(undefined);
   const remove = useDeleteTransaction();
   const writeOff = useWriteOff();
+  const undoPayment = useDeleteSettlement();
   const outbox = useOutbox();
   const [confirming, setConfirming] = useState(false);
+  const [undoing, setUndoing] = useState(false);
   const [splitting, setSplitting] = useState(false);
   const [resolving, setResolving] = useState(false);
   const adjustment = useAdjustmentSheet();
@@ -102,6 +115,20 @@ export function TransactionDetailScreen({ id }: { id: string }) {
       ? owingParties(shared.section, group, expense).filter((one) => one.owesYou > 0)
       : [];
   const onlyDebtor = debtors.length === 1 ? debtors[0] : undefined;
+  // Its money belongs to the payment, so the payment is the door, and this is where it is found.
+  const payment = shared.section?.settlements.find((one) => one.id === row?.sharedSettlementId);
+  const paymentGroups = lookups.shared?.payments.get(row?.sharedSettlementId ?? "")?.groups ?? [];
+
+  async function confirmUndo(settlementId: string) {
+    try {
+      await undoPayment.mutateAsync(settlementId);
+      toast.show({ message: t("shared.undoPayment.done") });
+      router.push("/transactions");
+    } catch (error) {
+      setUndoing(false);
+      toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
+    }
+  }
 
   async function forgive(groupId: string, person: PartyView) {
     try {
@@ -214,11 +241,13 @@ export function TransactionDetailScreen({ id }: { id: string }) {
             ) : (
               <Tile
                 size="lg"
-                color={row.type === "TRANSFER" ? "GRAY" : null}
+                color={row.type === "TRANSFER" || row.type === "SETTLEMENT" ? "GRAY" : null}
                 className="bg-surface-2 text-text-2"
               >
                 {row.type === "ADJUSTMENT" ? (
                   <Scale {...iconProps("lg")} />
+                ) : row.type === "SETTLEMENT" ? (
+                  <HandCoins {...iconProps("lg")} />
                 ) : row.type === "TRANSFER" ? (
                   <Repeat {...iconProps("lg")} />
                 ) : (
@@ -231,6 +260,13 @@ export function TransactionDetailScreen({ id }: { id: string }) {
             <span className="text-sm text-text-3">
               {[t(`transactionTypes.${row.type}`), (from ?? to)?.name].filter(Boolean).join(" · ")}
             </span>
+            {/* Which outing it settled: the row in the list says it too, and the hero is where it is read. */}
+            {paymentGroups.length > 0 && (
+              <Badge>
+                <HandCoins aria-hidden="true" />
+                {paymentGroups.join(" · ")}
+              </Badge>
+            )}
           </Card>
           <Card className="px-4 py-1">
             {category && (
@@ -301,8 +337,15 @@ export function TransactionDetailScreen({ id }: { id: string }) {
             )}
             <Attribute label={t("transactions.detail.currency")}>{row.currency}</Attribute>
           </Card>
-          {shared.isError && row.sharedExpenseId !== null && (
-            <Alert tone="danger" title={t("transactions.detail.shared.unreadable")}>
+          {shared.isError && (row.sharedExpenseId !== null || row.sharedSettlementId !== null) && (
+            <Alert
+              tone="danger"
+              title={t(
+                row.sharedExpenseId !== null
+                  ? "transactions.detail.shared.unreadable"
+                  : "transactions.detail.shared.paymentUnreadable",
+              )}
+            >
               <LoadErrorBody error={shared.error} />
             </Alert>
           )}
@@ -330,7 +373,24 @@ export function TransactionDetailScreen({ id }: { id: string }) {
           )}
           {/* Its money belongs to the payment, and the payment is the only door to it. */}
           {row.type === "SETTLEMENT" ? (
-            <Alert tone="neutral">{t("transactions.detail.settlementLocked")}</Alert>
+            <div className="flex flex-col gap-3">
+              <Alert tone="neutral">{t("transactions.detail.settlementLocked")}</Alert>
+              {/* While it is coming the door says so; it is never a button that cannot work. */}
+              {(payment !== undefined || shared.isPending) && (
+                <Button
+                  variant="danger"
+                  size="lg"
+                  block
+                  loading={shared.isPending}
+                  onClick={() => {
+                    setUndoing(true);
+                  }}
+                >
+                  <Undo2 {...iconProps("sm")} />
+                  {t("shared.undoPayment.action")}
+                </Button>
+              )}
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {row.type === "ADJUSTMENT" ? (
@@ -376,6 +436,20 @@ export function TransactionDetailScreen({ id }: { id: string }) {
                 })}
           </p>
         </>
+      )}
+      {undoing && payment && (
+        <UndoPaymentSheet
+          open
+          settlement={payment}
+          name={lookups.shared?.payments.get(payment.id)?.name ?? ""}
+          pending={undoPayment.isPending}
+          onClose={() => {
+            setUndoing(false);
+          }}
+          onConfirm={() => {
+            void confirmUndo(payment.id);
+          }}
+        />
       )}
       {/* Mounted only while it is open: its title carries the movement's own description. */}
       {row && splitting && (

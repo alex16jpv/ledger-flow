@@ -13,7 +13,6 @@ import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
 import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { List, RowBody, rowClasses, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
-import { Row } from "@/components/ui/Row";
 import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
@@ -23,6 +22,7 @@ import { StateBadge } from "@/features/shared/components/parts";
 import {
   useArchiveContact,
   useContactQuery,
+  useDeleteSettlement,
   useRestoreContact,
   useSharedSection,
 } from "@/features/shared/hooks";
@@ -30,18 +30,25 @@ import { personView, type SharedSection } from "@/features/shared/ledger";
 import { hasSomethingToSettle, settlePerson } from "@/features/shared/settle";
 import { presentError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
-import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
-import type { Contact } from "@/types/api";
+import type { Contact, Settlement } from "@/types/api";
 
+import { PaymentRows } from "../../PaymentRows";
 import { SettleUpSheet } from "../../SettleUpSheet";
+import { UndoPaymentSheet } from "../../UndoPaymentSheet";
 
-function Payments({ section, contactId }: { section: SharedSection; contactId: string }) {
+function Payments({
+  section,
+  contactId,
+  onUndo,
+}: {
+  section: SharedSection;
+  contactId: string;
+  onUndo: (settlement: Settlement) => void;
+}) {
   const t = useTranslations("shared.person");
-  const money = useMoney();
-  const dates = useDates();
   const rows = section.settlements.filter((one) => one.counterparty.contactId === contactId);
   if (rows.length === 0) return null;
   return (
@@ -49,45 +56,22 @@ function Payments({ section, contactId }: { section: SharedSection; contactId: s
       <h2 className="px-1 text-md font-semibold">{t("payments")}</h2>
       <Card flush>
         <List>
-          {rows.map((one) => {
-            const incoming = one.collected > 0;
-            return (
-              <Row key={one.id}>
-                <Tile color="GRAY">
-                  <HandCoins {...iconProps("md")} />
-                </Tile>
-                <RowBody>
-                  <RowTitle>
-                    <span>
-                      {incoming
-                        ? t("paidYou", { amount: money.format(one.collected) })
-                        : t("youPaid", { amount: money.format(one.paid) })}
-                    </span>
-                  </RowTitle>
-                  <RowMeta
-                    items={[
-                      dates.formatDay(new Date(one.date)),
-                      // Cash the app never saw: no movement was written and no balance moved.
-                      one.outsideApp ? t("outsideApp") : null,
-                    ].filter(Boolean)}
-                  />
-                </RowBody>
-                <RowRight>
-                  <Amount
-                    value={incoming ? one.collected : one.paid}
-                    kind={incoming ? "settlement" : "settlementOut"}
-                  />
-                </RowRight>
-              </Row>
-            );
-          })}
+          <PaymentRows rows={rows} onUndo={onUndo} />
         </List>
       </Card>
     </section>
   );
 }
 
-function PersonBody({ contact, section }: { contact: Contact; section: SharedSection }) {
+function PersonBody({
+  contact,
+  section,
+  onUndo,
+}: {
+  contact: Contact;
+  section: SharedSection;
+  onUndo: (settlement: Settlement) => void;
+}) {
   const t = useTranslations();
   const money = useMoney();
   const view = personView(section, contact.id);
@@ -154,7 +138,7 @@ function PersonBody({ contact, section }: { contact: Contact; section: SharedSec
           </Card>
         </section>
       )}
-      <Payments section={section} contactId={contact.id} />
+      <Payments section={section} contactId={contact.id} onUndo={onUndo} />
       {/* A person is not an account, and this is where the section says so. */}
       <p className="px-1 text-center text-xs text-text-3">{t("shared.person.notAnAccount")}</p>
     </>
@@ -169,7 +153,9 @@ export function PersonScreen({ id }: { id: string }) {
   const shared = useSharedSection();
   const archive = useArchiveContact();
   const restore = useRestoreContact();
+  const undo = useDeleteSettlement();
   const [sheet, setSheet] = useState<"edit" | "archive" | "settle" | null>(null);
+  const [undoing, setUndoing] = useState<Settlement | null>(null);
   const row = contact.data;
   const party = shared.section ? settlePerson(shared.section, id) : undefined;
   // The figure is the ledger's, not the contact's: neither half may draw without the other.
@@ -184,6 +170,17 @@ export function PersonScreen({ id }: { id: string }) {
       toast.show({ message: t("shared.person.archived") });
     } catch (error) {
       setSheet(null);
+      toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
+    }
+  }
+
+  async function confirmUndo(settlement: Settlement) {
+    try {
+      await undo.mutateAsync(settlement.id);
+      setUndoing(null);
+      toast.show({ message: t("shared.undoPayment.done") });
+    } catch (error) {
+      setUndoing(null);
       toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
     }
   }
@@ -233,7 +230,7 @@ export function PersonScreen({ id }: { id: string }) {
         />
       ) : (
         <>
-          <PersonBody contact={row} section={shared.section} />
+          <PersonBody contact={row} section={shared.section} onUndo={setUndoing} />
           {party && hasSomethingToSettle(party) && (
             <Button
               size="lg"
@@ -327,6 +324,20 @@ export function PersonScreen({ id }: { id: string }) {
               party={party}
               onClose={() => {
                 setSheet(null);
+              }}
+            />
+          )}
+          {undoing && (
+            <UndoPaymentSheet
+              open
+              settlement={undoing}
+              name={row.name}
+              pending={undo.isPending}
+              onClose={() => {
+                setUndoing(null);
+              }}
+              onConfirm={() => {
+                void confirmUndo(undoing);
               }}
             />
           )}

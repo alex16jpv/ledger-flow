@@ -87,6 +87,7 @@ export {
   archiveSharedGroup,
   createSharedExpense,
   createSharedGroup,
+  deleteSettlement,
   type EditedGroup,
   type NewSettlement,
   type NewSharedExpense,

@@ -22,6 +22,7 @@ export {
   createContact,
   createSharedExpense,
   createSharedGroup,
+  deleteSettlement,
   recordSettlement,
   removeParticipant,
   restoreContact,

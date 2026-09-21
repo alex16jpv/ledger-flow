@@ -71,6 +71,15 @@ and it is offered only while they have no share and nothing paid.
 they imply — the two modes that mean something without a total — and the new-group form, the edit sheet
 and `Add people` in a percentage group all render that one, not three.
 
+**A payment is undone, never balanced with a second one.** `settlement:delete` is the ninth outbox
+action of the section: the mirror tombstones the payment and the movements it wrote, and the derivation
+does the rest — what counts as yours goes back up on the expenses it had lowered, and everything else
+that person has paid is imputed again over what is still open. `PaymentRows` is the one list and
+`UndoPaymentSheet` the one sheet, opened from the three places a payment is read: a person's
+`Payments`, the movement's own detail — which already said its money belonged to the payment and now
+offers the door it was naming — and, for a **block of guests**, the shared card of the expense it lives
+in, which is the only place a block is read at all.
+
 **Giving up moves no figure.** A write-off stores the decision and the ceiling that was open when it
 was taken; archiving a group writes off what is still owed on your behalf. Neither touches a figure of
 yours: that money was counted as yours from the day it left the account.

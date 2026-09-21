@@ -592,6 +592,88 @@ export function recordSettlement(input: NewSettlement): Promise<Settlement> {
   });
 }
 
+// The movements a payment wrote are found on them, never on it: the server mints its own ids.
+async function movementsOf(tx: WriteTransaction, settlementId: string): Promise<SyncTransaction[]> {
+  const rows: SyncTransaction[] = [];
+  for (const record of await tx.objectStore("transactions").getAll()) {
+    if (record.row.sharedSettlementId === settlementId && record.deleted === 0) {
+      rows.push(record.row);
+    }
+  }
+  return rows;
+}
+
+// They share one account, so what they did to it is one figure — the same shape `netEffect` writes.
+function undoEffect(rows: SyncTransaction[]): MoneyEffect | undefined {
+  let cents = 0;
+  let accountId: string | null = null;
+  for (const row of rows) {
+    const account = row.toAccountId ?? row.fromAccountId;
+    if (account === null) continue;
+    accountId ??= account;
+    cents += row.toAccountId === null ? -toCents(row.amount) : toCents(row.amount);
+  }
+  if (accountId === null || cents === 0) return undefined;
+  return {
+    before: {
+      type: "SETTLEMENT",
+      amount: fromCents(Math.abs(cents)),
+      fromAccountId: cents < 0 ? accountId : null,
+      toAccountId: cents > 0 ? accountId : null,
+      deletedAt: null,
+    },
+    after: null,
+  };
+}
+
+export function deleteSettlement(id: string): Promise<unknown> {
+  const removed: string[] = [];
+  return write<unknown>({
+    local: {
+      entity: "settlement",
+      entityId: id,
+      action: "delete",
+      // Filled by the projection, which is where the mirror says what the payment wrote.
+      payload: { removed },
+      project: async (tx, occurredAt) => {
+        const store = tx.objectStore("settlements");
+        const previous = await store.get(id);
+        if (!previous) {
+          throw new NotProjectableError(`payment ${id}, which the mirror does not hold`);
+        }
+        await store.put(
+          settlementRecord(
+            { ...previous.row, deletedAt: occurredAt, updatedAt: occurredAt },
+            previous.server,
+          ),
+        );
+        // Its money belongs to the payment: what it wrote goes when it goes.
+        const written = await movementsOf(tx, id);
+        removed.push(...written.map((row) => row.id));
+        for (const row of written) {
+          const record = await tx.objectStore("transactions").get(row.id);
+          await tx
+            .objectStore("transactions")
+            .put(transactionRecord({ ...row, deletedAt: occurredAt }, record?.server));
+        }
+        const effect = undoEffect(written);
+        return {
+          ...(effect ? { effect } : {}),
+          dependsOn: [],
+          undo: async (undoTx) => {
+            await undoTx.objectStore("settlements").put(previous);
+            for (const row of written) {
+              const record = await undoTx.objectStore("transactions").get(row.id);
+              await undoTx.objectStore("transactions").put(transactionRecord(row, record?.server));
+            }
+          },
+        };
+      },
+    },
+    optimistic: () => null,
+  });
+}
+
 export interface EditedGroup {
   id: string;
   name: string;
