@@ -18,7 +18,9 @@ export type BudgetRow = Pick<
 export type BudgetTransaction = Pick<
   SyncTransaction,
   "type" | "amount" | "date" | "dayKey" | "categoryId" | "deletedAt"
->;
+> &
+  // Absent on a row written before splitting existed, and then the whole amount is yours.
+  Partial<Pick<SyncTransaction, "countsAsYours">>;
 
 export interface DerivedBudgetView {
   periodKey: string;
@@ -55,7 +57,8 @@ export function deriveBudgetView(
     ) {
       return cents;
     }
-    return cents + toCents(transaction.amount);
+    // What a budget measures is what is left as yours: every payment lowers it in the expense's month.
+    return cents + toCents(transaction.countsAsYours ?? transaction.amount);
   }, 0);
 
   const override = budget.amountOverrides[period.key];

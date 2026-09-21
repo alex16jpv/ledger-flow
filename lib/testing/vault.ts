@@ -1,6 +1,17 @@
 import { dayKey } from "@/lib/format/dates";
 import { openVault, type VaultDefinition, type VaultHandle } from "@/lib/local/db";
-import type { Account, Category, SyncBudget, SyncTransaction, User } from "@/types/api";
+import type {
+  Account,
+  Category,
+  Contact,
+  Settlement,
+  SharedExpense,
+  SyncBudget,
+  SyncChangesResponse,
+  SyncSharedGroup,
+  SyncTransaction,
+  User,
+} from "@/types/api";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const PROFILE_TIME_ZONE = "America/Bogota";
@@ -55,10 +66,11 @@ export function category(overrides: Partial<Category> = {}): Category {
 
 export function transaction(overrides: Partial<SyncTransaction> = {}): SyncTransaction {
   const date = overrides.date ?? "2026-08-01T10:00:00.000Z";
+  const amount = overrides.amount ?? 20.29;
   return {
     id: "t1",
     type: "EXPENSE",
-    amount: 20.29,
+    amount,
     date,
     // The day the server would have frozen, so a row given another date carries the matching one.
     dayKey: dayKey(new Date(date), PROFILE_TIME_ZONE),
@@ -72,6 +84,12 @@ export function transaction(overrides: Partial<SyncTransaction> = {}): SyncTrans
     pendingDetails: false,
     source: "MANUAL",
     currency: "COP",
+    // The whole amount is yours until a split and a payment say otherwise.
+    countsAsYours: amount,
+    sharedExpenseId: null,
+    sharedGroupId: null,
+    sharedSettlementId: null,
+    sharedHistory: [],
     deletedAt: null,
     createdAt: "2026-08-01T10:00:00.000Z",
     updatedAt: "2026-08-01T10:00:00.000Z",
@@ -98,6 +116,98 @@ export function budget(overrides: Partial<SyncBudget> = {}): SyncBudget {
     archivedAt: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-08-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function contact(overrides: Partial<Contact> = {}): Contact {
+  return {
+    id: "k1",
+    name: "Ana",
+    color: "BLUE",
+    linkedUserId: null,
+    userId: USER_ID,
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-08-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function sharedGroup(overrides: Partial<SyncSharedGroup> = {}): SyncSharedGroup {
+  return {
+    id: "g1",
+    name: "Cartagena",
+    color: "TEAL",
+    participants: [{ contactId: null, addedAt: "2026-08-01T00:00:00.000Z" }],
+    defaultSplit: { mode: "EQUAL", shares: [] },
+    writeOffs: [],
+    userId: USER_ID,
+    currency: "COP",
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-08-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function sharedExpense(overrides: Partial<SharedExpense> = {}): SharedExpense {
+  const amount = overrides.amount ?? 100000;
+  return {
+    id: "s1",
+    groupId: "g1",
+    description: "Cena",
+    date: "2026-08-10T20:00:00.000Z",
+    amount,
+    paidByContactId: null,
+    customSplit: false,
+    split: {
+      mode: "EQUAL",
+      guests: null,
+      shares: [
+        { party: "USER", contactId: null, percent: null, fixedAmount: null, amount, collected: 0 },
+      ],
+    },
+    userId: USER_ID,
+    currency: "COP",
+    deletedAt: null,
+    createdAt: "2026-08-10T20:00:00.000Z",
+    updatedAt: "2026-08-10T20:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function settlement(overrides: Partial<Settlement> = {}): Settlement {
+  return {
+    id: "p1",
+    userId: USER_ID,
+    counterparty: { kind: "CONTACT", contactId: "k1", expenseId: null },
+    date: "2026-08-18T10:00:00.000Z",
+    collected: 0,
+    paid: 0,
+    outsideApp: false,
+    currency: "COP",
+    deletedAt: null,
+    createdAt: "2026-08-18T10:00:00.000Z",
+    updatedAt: "2026-08-18T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+// Every entity the feed carries, so a test names only the rows its case is about.
+export function changes(
+  overrides: Partial<SyncChangesResponse["changes"]> = {},
+): SyncChangesResponse["changes"] {
+  return {
+    user: null,
+    accounts: [],
+    categories: [],
+    transactions: [],
+    budgets: [],
+    contacts: [],
+    sharedGroups: [],
+    sharedExpenses: [],
+    settlements: [],
     ...overrides,
   };
 }

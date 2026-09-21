@@ -6,6 +6,8 @@ export const QUERY_DOMAINS = {
   accounts: ["accounts"],
   categories: ["categories"],
   budgets: ["budgets"],
+  contacts: ["contacts"],
+  shared: ["shared"],
   stats: ["stats"],
   home: ["home"],
   // The mirror's copy of the user (F-63); the session itself is `sessionKeys`, and stays a server read.
@@ -18,6 +20,8 @@ export const MIRROR_BACKED_DOMAINS = [
   QUERY_DOMAINS.categories,
   QUERY_DOMAINS.transactions,
   QUERY_DOMAINS.budgets,
+  QUERY_DOMAINS.contacts,
+  QUERY_DOMAINS.shared,
   QUERY_DOMAINS.home,
   QUERY_DOMAINS.stats,
   QUERY_DOMAINS.profile,

@@ -1,6 +1,6 @@
 "use client";
 
-import { CloudOff, Hash, Repeat, Scale } from "lucide-react";
+import { CloudOff, HandCoins, Hash, Repeat, Scale, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Amount } from "@/components/ui/Amount";
@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/Badge";
 import { RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Tile } from "@/components/ui/Tile";
 import { useDates } from "@/lib/i18n/useDates";
+import { useMoney } from "@/lib/i18n/useMoney";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
+import type { SharedLookup } from "@/lib/shared/lookup";
 import type { Account, Category, Transaction } from "@/types/api";
 
 import { amountKind } from "../groups";
@@ -18,6 +20,8 @@ import { amountKind } from "../groups";
 export interface TransactionLookups {
   accounts: ReadonlyMap<string, Account>;
   categories: ReadonlyMap<string, Category>;
+  // The app layer fills it from the shared section: a feature never imports another.
+  shared?: SharedLookup;
 }
 
 export interface TransactionRowProps {
@@ -41,6 +45,11 @@ export function transactionTitle(
     if (from && to) return `${from} → ${to}`;
   }
   if (transaction.type === "ADJUSTMENT") return t("transactions.list.balanceAdjustment");
+  if (transaction.type === "SETTLEMENT") {
+    const payment = lookups.shared?.payments.get(transaction.sharedSettlementId ?? "");
+    if (payment?.name) return payment.name;
+    return t("transactionTypes.SETTLEMENT");
+  }
   const category = lookups.categories.get(transaction.categoryId ?? "");
   if (category) return category.name;
   return transaction.source === "QUICK"
@@ -54,6 +63,9 @@ export function TransactionRow({ transaction, lookups, dated, onOpen }: Transact
   const outbox = useOutbox();
   const category = lookups.categories.get(transaction.categoryId ?? "");
   const account = lookups.accounts.get(transaction.fromAccountId ?? transaction.toAccountId ?? "");
+  const money = useMoney();
+  const shared = lookups.shared?.expenses.get(transaction.sharedExpenseId ?? "");
+  const payment = lookups.shared?.payments.get(transaction.sharedSettlementId ?? "");
   // F-16 (a): an unconfirmed movement says so on its own row, since the figures include it.
   const queued = outbox.queuedRows.has(transaction.id);
   const stuck = outbox.attentionRows.has(transaction.id);
@@ -79,11 +91,15 @@ export function TransactionRow({ transaction, lookups, dated, onOpen }: Transact
         </Tile>
       ) : (
         <Tile
-          color={transaction.type === "TRANSFER" ? "GRAY" : null}
+          color={
+            transaction.type === "TRANSFER" || transaction.type === "SETTLEMENT" ? "GRAY" : null
+          }
           className="bg-surface-2 text-text-2"
         >
           {transaction.type === "ADJUSTMENT" ? (
             <Scale {...iconProps("md")} />
+          ) : transaction.type === "SETTLEMENT" ? (
+            <HandCoins {...iconProps("md")} />
           ) : transaction.type === "TRANSFER" ? (
             <Repeat {...iconProps("md")} />
           ) : (
@@ -104,17 +120,33 @@ export function TransactionRow({ transaction, lookups, dated, onOpen }: Transact
             <Badge tone="warning">{t("transactions.list.toReview")}</Badge>
           )}
           {transaction.type === "ADJUSTMENT" && <Badge>{t("transactionTypes.ADJUSTMENT")}</Badge>}
+          {transaction.type === "SETTLEMENT" && (
+            <Badge>
+              <HandCoins aria-hidden="true" />
+              {t("transactions.list.payment")}
+            </Badge>
+          )}
+          {transaction.sharedExpenseId !== null && (
+            <Badge>
+              <Users aria-hidden="true" />
+              {t("transactions.list.shared")}
+            </Badge>
+          )}
         </RowTitle>
         <RowMeta items={meta} />
       </RowBody>
       <RowRight
         sub={
-          transaction.tags.length > 0
-            ? transaction.tags.map((tag) => `#${tag}`).join(" ")
-            : undefined
+          shared
+            ? t("transactions.list.yourShare", { amount: money.format(shared.yourShare) })
+            : payment
+              ? payment.groups.join(" · ")
+              : transaction.tags.length > 0
+                ? transaction.tags.map((tag) => `#${tag}`).join(" ")
+                : undefined
         }
       >
-        <Amount value={transaction.amount} kind={amountKind(transaction.type)} />
+        <Amount value={transaction.amount} kind={amountKind(transaction)} />
       </RowRight>
     </RowButton>
   );

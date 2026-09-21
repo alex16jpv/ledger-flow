@@ -9,6 +9,19 @@ export const OUTBOX_ACTIONS = {
   category: ["create", "update", "archive", "restore"],
   transaction: ["create", "quickAdd", "update", "delete"],
   budget: ["create", "update", "archive", "restore", "setOverride", "clearOverride"],
+  contact: ["create", "update", "archive", "restore"],
+  sharedGroup: [
+    "create",
+    "update",
+    "addParticipants",
+    "removeParticipant",
+    "archive",
+    "restore",
+    "writeOff",
+    "undoWriteOff",
+  ],
+  sharedExpense: ["create", "update"],
+  settlement: ["create"],
 } as const satisfies Record<OutboxEntity, readonly string[]>;
 
 export type OutboxAction<E extends OutboxEntity = OutboxEntity> =
@@ -29,7 +42,15 @@ export interface MoneyEffect {
 export interface OperationPayload {
   body?: unknown;
   query?: Record<string, string>;
+  // What the path carries besides the row's own id, which is what `POST /sync` calls `params`.
+  params?: { groupId?: string; partyId?: string };
   effect?: MoneyEffect;
+  // Mirror rows this write minted that the server mints its own of: dropped when it answers.
+  minted?: string[];
+  // What a write-off gave up on, and what archiving gives up on for everybody still owing. The
+  // wire carries neither: the server works them out, and the mirror has to say the same thing.
+  writtenOff?: number;
+  archivedOwing?: { contactId: string | null; expenseId: string | null; amount: number }[];
 }
 
 // uuid v7: valid for the server's `z.string().uuid()`, and the prefix keeps the queue readable.

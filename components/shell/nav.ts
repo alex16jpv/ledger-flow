@@ -1,8 +1,18 @@
 import type { LucideIcon } from "lucide-react";
-import { ChartColumn, ChartPie, Ellipsis, House, List, Settings, Tags, Wallet } from "lucide-react";
+import {
+  ChartColumn,
+  ChartPie,
+  Ellipsis,
+  House,
+  List,
+  Settings,
+  Tags,
+  Users,
+  Wallet,
+} from "lucide-react";
 
 export type NavKey =
-  "home" | "transactions" | "budgets" | "accounts" | "stats" | "categories" | "settings";
+  "home" | "transactions" | "budgets" | "accounts" | "shared" | "stats" | "categories" | "settings";
 
 export interface NavItem {
   key: NavKey;
@@ -15,6 +25,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: "transactions", href: "/transactions", icon: List },
   { key: "budgets", href: "/budgets", icon: ChartPie },
   { key: "accounts", href: "/accounts", icon: Wallet },
+  { key: "shared", href: "/shared", icon: Users },
   { key: "stats", href: "/stats", icon: ChartColumn },
   { key: "categories", href: "/categories", icon: Tags },
 ];

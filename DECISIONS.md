@@ -4390,3 +4390,180 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** the sentence repeats what was just typed and picked, so it costs no request and no
   arithmetic and reads identically with no network. **Reversed in part on 2026-09-18 (T-96):** it no
   longer ends in "Your total balance does not change" — see that entry.
+
+## 2026-09-21 · An expense that inherits the group's split sends none (T-122)
+
+- **Context:** a shared expense can take the group's default or carry its own, and `customSplit` is
+  what the list reads to show `Custom split`. The server decides it one way: **it is true when the
+  create or the update carries a `split`**, and false when it resolves the default itself
+  (`SharedExpenseService`). A client that always sent the resolved shares would mark every ordinary
+  expense as carrying its own.
+- **Decision:** `createSharedExpense` sends `split` **only** when the row says `customSplit`. The
+  device still resolves the shares for the mirror — with `resolveShares` from `lib/local/derive`, the
+  arithmetic the parity fixtures hold against the server — so the figures are there with no network,
+  but what goes on the wire is what the server needs to reach the same answer. `Use the group's
+split` sends `useGroupSplit: true` and projects the default resolved here.
+- **Alternatives:** sending the shares always and a flag beside them. It would put the same fact in
+  two places on the wire, which is how they end up disagreeing, and it would need the server to trust
+  a figure the client computed.
+- **Consequence:** the sheet that splits a loose movement (`Split this`) decides between the two: a
+  plain `Equal` or `Percent` split becomes the group's default and the expense inherits it; `Exact`
+  and `Fixed + rest`, or a block of guests, are the expense's own, because a default has no total to
+  divide. `sharedGroup` and `sharedExpense` join the outbox, and its payload gains `params` — the
+  nested route needs the group id, which is what `POST /sync` already calls `params`.
+- **Where the screens live:** the group detail, the transaction picker and the sheet that says what
+  adding them changes read accounts, categories and transactions, so they sit in the **app layer**
+  and not in `features/shared` — a feature never imports another feature (§3), and the account
+  detail set the precedent.
+
+## 2026-09-21 · The Shared section reads one ledger, not one list per screen (T-121)
+
+- **Context:** a payment is imputed **per counterparty across every group** (T-120), and the API
+  publishes no per-person figure anywhere: `GET /shared-groups` answers a group's `totals` and
+  `status`, and nothing answers what one person owes you in all. Three screens — the two faces of the
+  section, a group and a person — need the same arithmetic over the same rows.
+- **Decision:** one read, `readSharedLedger()`, brings **every group, every live expense and every
+  live payment**, and `features/shared/ledger.ts` turns them into what each screen draws with the
+  parity-tested `deriveShared`. From the copy that is four `getAll`s in one pass; with no copy yet it
+  is the groups drained, then each group's expenses and the payments. The lists then page **on the
+  screen** — the settled ones fold away, and the row count is said out loud — rather than against the
+  server, which could not answer the question anyway.
+- **Alternatives:** a paged `GET /shared-groups` per face plus `GET /shared-groups/{id}/expenses` per
+  group, reading the server's own `share.collected`. It is cheaper with no copy and it is what
+  `readSharedGroups` was written for in T-120, but it cannot answer the People face at all, and it
+  would leave **two** arithmetics — the server's rollup and the device's — in a section whose whole
+  point is that a queued payment moves the figures before the server has seen it (T-123).
+  `readSharedGroups` and `readSharedGroup` are replaced by the ledger read for that reason.
+- **Consequence:** the section is one query key. A device with no local copy pays one request per
+  group on the first read of the section, which is the case the mirror exists to make rare; if that
+  ever becomes the common path, the answer is a figure the server publishes, not a second
+  arithmetic here. `contact` becomes the **fifth outbox entity**, so a person can be added with no
+  network like an account or a category, and the change feed now reconciles contacts through the
+  outbox instead of writing them straight to the store.
+- **The two detail routes are nested** — `/shared/groups/[id]` and `/shared/people/[id]` — so
+  `templatePath`, `detailRouteId` and `namesUnknownRow` find the id wherever the template puts it
+  instead of assuming the second segment. An archived group folds away with the settled ones and says
+  so on its row: it is the only way back into one.
+
+## 2026-09-21 · The shared layer is stored as the fact and derived on every read (T-120)
+
+- **Context:** the backend answers a shared group's `totals` and `status` by working them out on every
+  read, and it exposes **no** per-person endpoint at all — where each person stands is the device's to
+  produce. Meanwhile Stats and the budgets stopped measuring a movement's `amount` and now measure
+  `countsAsYours`, which the change feed sends on every row. The mirror had to learn both halves or
+  the section could not exist with no network while the rest of the product does.
+- **Decision:** the four collections ride the feed into four mirror stores of their own
+  (`contacts`, `sharedGroups`, `sharedExpenses`, `settlements`), and `lib/local/derive/shared.ts`
+  works out from them exactly what the server works out: the split, the imputation of every payment,
+  what each movement counts as yours, a group's totals and status, and the state of each person.
+  `readSharedGroups` composes the endpoint's own answer out of the stored row plus that derivation, so
+  the figures come from one place whichever screen asks. **Reversed in part on 2026-09-21 (T-121):**
+  `readSharedGroups` and `readSharedGroup` gave way to one read of the whole ledger — see that entry. `deriveSpending` and `deriveBudgetView` read
+  `countsAsYours ?? amount` and exclude `SETTLEMENT` beside `ADJUSTMENT` when no type is named.
+- **Alternatives:** storing `totals` and `status` as the feed's group sends them — it does not send
+  them, on purpose (`docs/modules/sync.md`), because a rollup kept in step across expense writes,
+  re-splits, payments and write-offs is the thing this feature refuses to keep anywhere.
+- **What reads which figure, because the module answers both:** every screen reads the **stored**
+  `countsAsYours` the feed sends on each movement, and `deriveSpending` and `deriveBudgetView` sum
+  that field. The module's own `countsAsYours()`, `resolveShares` and `impute` are the arithmetic a
+  write with no network needs — the splits and payments T-122 and T-123 record before the server has
+  seen them — and until then their consumer of record is the `cop-shared` parity fixture, which is
+  what proves they agree with the server to the minor unit. They stay out of `derive/index.ts`, which
+  carries what the app reaches for.
+- **Consequence:** house rule 4 gains a fifth figure the client computes, so it is held by the
+  `cop-shared` parity fixture like the others, and the split arithmetic is a second reading of
+  `src/shared/splitShares.ts` rather than a port that imports it. The imputation is **per
+  counterparty, not per group** — it reads every live expense where that person holds a share, across
+  every group — so a person's `surplus` is the same figure on their row in each group and must never
+  be added up. The mirror goes to schema version 2 and mirror version 3: the stores are created, and
+  the copy is re-pulled once.
+
+## 2026-09-21 · A settle-up projects the shared layer, and mints the movements the server will mint again (T-123)
+
+- **Context:** `POST /settlements` writes the movements itself — one `SETTLEMENT` in, one ordinary
+  `EXPENSE` per line of theirs you cover, one `SETTLEMENT` out for what goes back — and **mints their
+  ids on the server**: `CreateSettlementInput` has no field for them. With no network the device still
+  has to be consistent: the balance moved, the list has a row for it, the day total agrees with both,
+  and Stats and the budgets fall.
+- **Decision:** `settlement` becomes the **eighth outbox entity**, and its projection does three
+  things. It puts the payment in the mirror with the id the client minted, which is the id the server
+  is given, so every figure in `Shared` moves at once. It carries a **net `effect`** — one synthetic
+  `SETTLEMENT` on the account, `collected − paid` — which is what `projectBalances` reads. And it
+  **mints the movements as mirror rows of its own**, marked with `sharedSettlementId`; the operation
+  remembers their ids in `payload.minted`, and `confirm` deletes them when the server answers, so the
+  pull that follows the round brings the real ones. Nothing is left behind and nothing is duplicated.
+- **Alternatives:** projecting no movement at all and waiting for the pull. Rejected: the balance
+  would move while the list said nothing had happened, which is exactly the kind of screen house
+  rule 6 forbids. Keeping the minted rows and reconciling them against the server's by shape.
+  Rejected: two rows that look alike are not the same row, and guessing is worse than replacing.
+- **What counts as yours is overlaid, not stored** (`repository/window.ts`): a payment lowers
+  `countsAsYours` on the movements it covers, and that figure is the one Stats and the budgets sum.
+  Writing it onto the mirror's rows would be undone by the next pull while the payment is still
+  queued, so `liveRowsInWindow` works it out from the shared stores with `countsAsYours()`
+  (`lib/local/derive/shared.ts`) — the arithmetic T-120 wrote for exactly this — and only for a row
+  whose expense the ledger knows. Rows with nothing shared in the window pay nothing for it.
+- **The ceiling of a write-off travels beside the body, not in it.** What is given up is _what was
+  open when you decided_, capped again by what is open now; the server works it out, so the wire does
+  not carry it, but the mirror has to hold it and the reproject rule has to restate it. It rides in
+  `payload.writtenOff`, next to `effect` and `minted`, rather than as a field the server would drop.
+- **The group's lead figure gained the other half.** It was _what you fronted less what came back_;
+  paying somebody back for their line is **an expense of yours and part of what the outing cost**, so
+  it adds what you have paid on lines others fronted. The server does not stamp a group on that
+  expense, so the figure is derived from the shared layer, never from the movement.
+- **Consequence:** `PersonScreen` moves to the **app layer**, beside its route, because `Settle up`
+  is its primary action and the sheet composes the account and category pickers — a feature never
+  imports another feature. `sharedGroup` gains `writeOff`, `undoWriteOff` and `archive`, so giving up
+  and archiving work with no network like every other write.
+
+## 2026-09-21 · The shared layer reaches the ordinary screens through plain maps (T-124)
+
+- **Context:** a movement's row has to say **your share**, a payment has to read as the person it was
+  with, and the detail has to lead with **what counts as yours** and show the history that explains
+  it. All three are facts of `features/shared`, and `features/transactions` may never import it (§3).
+- **Decision:** `TransactionLookups` gains an optional `shared` of **plain maps** — expense id → your
+  share, payment id → who and which groups — and the **app layer** fills it from the section with
+  `sharedLookup()`. The row and the title read maps, not a feature. The detail's card, which needs the
+  section itself and composes the split sheet and the settle-up flow, is an app-layer component beside
+  its route, like the group detail.
+- **The section is only read when the screen holds something shared.** The list asks for it when a
+  loaded row carries `sharedExpenseId` or `sharedSettlementId`; the detail, when that one movement
+  does; Home, only once there is at least one contact, which is one cheap request instead of the
+  ledger. A device with no copy would otherwise pay one request per group to draw a list of coffees.
+- **`Edit split` and `Settle up` are one component each, not two copies.** `EditSplitSheet` and
+  `SettleUpFlow` came out of the group detail so the movement's card opens exactly the same sheets;
+  `SettleUpFlow` asks who first when a door can reach more than one counterparty, and goes straight
+  to the sheet when it can reach one.
+- **The design gained the case it was missing.** `#a-payment-between-people` only ever drew the
+  payment that **arrives**; giving somebody back what they paid ahead leaves the account. The plate now
+  draws the pair and the day's total is the two of them together, because a kind of movement drawn in
+  one direction only is a kind half the product has never seen.
+- **Consequence:** `FILTER_TYPES` is a list of its own, next to `FORM_TYPES` and `TRANSACTION_TYPES`:
+  the filter offers the fifth kind and the form cannot create one. The mirror's transaction list gained
+  its own `LIST_TYPES` so the filter answers with no network; `/stats/spending` keeps the four it had,
+  because a payment is not spending.
+
+## 2026-09-21 · Adding people to a group that exists: the preview is the server's, the reading is the device's (T-136)
+
+- **Context:** the design asks the sheet to show **the whole result before it happens** — each new
+  share, what everybody has paid, who ends up ahead of what they owe, and what a written-off amount
+  becomes. `POST /shared-groups/{id}/participants/preview` answers only the first of the four:
+  `shareBefore`, `shareAfter` and how many expenses it would re-split or leave alone.
+- **Decision:** the two halves are put together in the sheet. The **server** answers what nobody else
+  can — the re-split, whose rule table is its own (a default re-splits, an own `EQUAL` re-divides, an
+  own `FIXED_REST` takes the newcomer into the rest, an own `PERCENT` or `EXACT` is left alone) — and
+  the **device** answers the rest from the section it already derives: what each person has paid, the
+  surplus that a falling share leaves them with, and the ceiling a write-off stored.
+- **Applying it to the expenses already recorded needs a connection**, and the switch says so when
+  there is none. Adding people **without** applying is an append to `participants` and works offline
+  like every other write, as do editing the group, taking somebody out and restoring it. Writing a
+  second copy of that re-split rule table here is the alternative, and it is the thing this feature
+  refuses to do anywhere: an arithmetic with no fixture holding it to the server's.
+- **Alternatives:** asking the backend to carry the other three figures in the preview. It is the
+  better end state and it is not this repository's to write; it would also mean the server reading a
+  user's payments to answer a question about shares, which is the boundary `shared-groups` keeps.
+- **Consequence:** `sharedGroup` gains four more outbox actions — `update`, `addParticipants`,
+  `removeParticipant` and `restore` — each with its reproject rule, and taking somebody out takes
+  **their write-off with them**, because coming back must not come back forgiven. The contact picker
+  gained the rows it could not draw before: somebody already in the group reads rather than picks, and
+  where taking them out applies, it is offered there. `DefaultSplitFields` came out of the new-group
+  form so the three places that set a default render one control.

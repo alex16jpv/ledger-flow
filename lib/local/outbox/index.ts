@@ -31,6 +31,7 @@ export {
   serverStamp,
   TEXT_FIELDS,
 } from "./conflict";
+export { archiveContact, createContact, restoreContact, updateContact } from "./contacts";
 export {
   AUTO_MERGE_ATTEMPTS,
   BACKOFF_MAX_MS,
@@ -79,6 +80,29 @@ export {
   retryOperations,
 } from "./resolve";
 export { ROUTES, serverBaseline } from "./routes";
+export {
+  type AddedParticipants,
+  addParticipants,
+  type ArchivedGroup,
+  archiveSharedGroup,
+  createSharedExpense,
+  createSharedGroup,
+  type EditedGroup,
+  type NewSettlement,
+  type NewSharedExpense,
+  type NewSharedGroup,
+  recordSettlement,
+  type RemovedParticipant,
+  removeParticipant,
+  restoreSharedGroup,
+  type SavedSplit,
+  saveSharedSplit,
+  type SettledLine,
+  undoWriteOff,
+  updateSharedGroup,
+  writeOffParty,
+  type WriteOffTarget,
+} from "./shared";
 export {
   EMPTY_OUTBOX,
   type OutboxProjection,

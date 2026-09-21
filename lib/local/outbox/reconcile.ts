@@ -1,12 +1,25 @@
-import type { Account, Category, SyncBudget, SyncTransaction } from "@/types/api";
+import type {
+  Account,
+  Category,
+  Contact,
+  Settlement,
+  SharedExpense,
+  SyncBudget,
+  SyncSharedGroup,
+  SyncTransaction,
+} from "@/types/api";
 
 import {
   accountRecord,
   budgetRecord,
   categoryRecord,
+  contactRecord,
   type OutboxEntity,
   type OutboxOperation,
   PROFILE_KEY,
+  settlementRecord,
+  sharedExpenseRecord,
+  sharedGroupRecord,
   transactionRecord,
 } from "../schema";
 import { type MoneyEffect, operationPayload } from "./envelope";
@@ -25,6 +38,10 @@ const STORE_OF = {
   category: "categories",
   transaction: "transactions",
   budget: "budgets",
+  contact: "contacts",
+  sharedGroup: "sharedGroups",
+  sharedExpense: "sharedExpenses",
+  settlement: "settlements",
 } as const satisfies Record<OutboxEntity, string>;
 
 const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
@@ -67,6 +84,20 @@ export async function reconcileRow(
     await tx.objectStore("categories").put(categoryRecord(row as Category, kept as Category));
   } else if (entity === "budget") {
     await tx.objectStore("budgets").put(budgetRecord(row as SyncBudget, kept as SyncBudget));
+  } else if (entity === "contact") {
+    await tx.objectStore("contacts").put(contactRecord(row as Contact, kept as Contact));
+  } else if (entity === "sharedGroup") {
+    await tx
+      .objectStore("sharedGroups")
+      .put(sharedGroupRecord(row as SyncSharedGroup, kept as SyncSharedGroup));
+  } else if (entity === "sharedExpense") {
+    await tx
+      .objectStore("sharedExpenses")
+      .put(sharedExpenseRecord(row as SharedExpense, kept as SharedExpense));
+  } else if (entity === "settlement") {
+    await tx
+      .objectStore("settlements")
+      .put(settlementRecord(row as Settlement, kept as Settlement));
   } else {
     await tx
       .objectStore("transactions")

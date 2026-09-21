@@ -10,8 +10,8 @@ import {
   type VaultSchema,
 } from "./schema";
 
-export const VAULT_SCHEMA_VERSION = 1;
-export const MIRROR_VERSION = 2;
+export const VAULT_SCHEMA_VERSION = 2;
+export const MIRROR_VERSION = 3;
 export const OUTBOX_VERSION = 1;
 
 // Invariant 7: null means the operation cannot be carried forward, so the upgrade blocks.
@@ -61,11 +61,23 @@ export function isVaultSupported(): boolean {
 function createStores(db: IDBPDatabase<VaultSchema>): void {
   if (!db.objectStoreNames.contains("profile")) db.createObjectStore("profile", { keyPath: "id" });
 
-  for (const name of ["accounts", "categories", "budgets"] as const) {
+  for (const name of ["accounts", "categories", "budgets", "contacts", "sharedGroups"] as const) {
     if (db.objectStoreNames.contains(name)) continue;
     const store = db.createObjectStore(name, { keyPath: "id" });
     store.createIndex("updatedAt", "updatedAt");
     store.createIndex("archived", "archived");
+  }
+
+  if (!db.objectStoreNames.contains("sharedExpenses")) {
+    const store = db.createObjectStore("sharedExpenses", { keyPath: "id" });
+    store.createIndex("updatedAt", "updatedAt");
+    store.createIndex("deleted", "deleted");
+  }
+
+  if (!db.objectStoreNames.contains("settlements")) {
+    const store = db.createObjectStore("settlements", { keyPath: "id" });
+    store.createIndex("updatedAt", "updatedAt");
+    store.createIndex("deleted", "deleted");
   }
 
   if (!db.objectStoreNames.contains("transactions")) {

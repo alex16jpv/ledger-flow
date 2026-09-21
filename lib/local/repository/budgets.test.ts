@@ -2,6 +2,7 @@ import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import {
   budget,
   category,
+  changes as feedChanges,
   openTestVault,
   profile,
   transaction,
@@ -75,13 +76,12 @@ interface Seed {
 function feedPage(seed: Seed): SyncChangesResponse {
   return {
     serverTime: REFERENCE,
-    changes: {
+    changes: feedChanges({
       user: seed.user === undefined ? profile() : seed.user,
-      accounts: [],
       categories: seed.categories ?? [category({ id: "c1" })],
       transactions: seed.transactions ?? [],
       budgets: seed.budgets ?? [],
-    },
+    }),
     pagination: { limit: 500, count: 1, hasMore: false, nextCursor: "v1|done|" },
   };
 }

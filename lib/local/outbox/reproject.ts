@@ -1,6 +1,16 @@
-import type { Account, Category, SyncBudget, SyncTransaction } from "@/types/api";
+import type {
+  Account,
+  Category,
+  Contact,
+  Settlement,
+  SharedExpense,
+  SyncBudget,
+  SyncSharedGroup,
+  SyncTransaction,
+} from "@/types/api";
 
 import { resolvePeriod } from "../derive";
+import { withoutParticipant } from "../derive/shared";
 import type { OutboxEntity, OutboxOperation } from "../schema";
 import { operationPayload } from "./envelope";
 import { patch } from "./projected";
@@ -10,7 +20,15 @@ import type { RouteKey } from "./routes";
 export const willBeSent = (operation: OutboxOperation): boolean =>
   operation.status === "pending" || operation.status === "sending";
 
-export type MirrorRow = Account | Category | SyncTransaction | SyncBudget;
+export type MirrorRow =
+  | Account
+  | Category
+  | SyncTransaction
+  | SyncBudget
+  | Contact
+  | SyncSharedGroup
+  | SharedExpense
+  | Settlement;
 
 // Grouped by row, in `seq` order, which is the order they will reach the server.
 export interface QueuedMirror {
@@ -44,6 +62,22 @@ export function queuedMirror(
     }
   }
   return { rows, touched, defaultAccountId, timezone };
+}
+
+const samePartyAs = (
+  one: SyncSharedGroup["writeOffs"][number],
+  contactId: string | null,
+  expenseId: string | null,
+): boolean => one.contactId === contactId && one.expenseId === expenseId;
+
+function writeOffTarget(operation: OutboxOperation): {
+  contactId: string | null;
+  expenseId: string | null;
+} {
+  const body = bodyOf(operation);
+  const expenseId = typeof body.expenseId === "string" ? body.expenseId : null;
+  const contactId = typeof body.contactId === "string" ? body.contactId : null;
+  return { contactId: expenseId === null ? contactId : null, expenseId };
 }
 
 const bodyOf = (operation: OutboxOperation): Record<string, unknown> => {
@@ -85,6 +119,96 @@ const RULES: Partial<Record<RouteKey, Rule>> = {
   }),
   "category:restore": (row, operation) =>
     merge({ ...(row as Category), archivedAt: null }, operation),
+
+  "contact:update": (row, operation) => merge(row as Contact, operation),
+  "contact:archive": (row, operation) => ({
+    ...(row as Contact),
+    archivedAt: operation.occurredAt,
+  }),
+  "contact:restore": (row, operation) =>
+    merge({ ...(row as Contact), archivedAt: null }, operation),
+
+  // A split saved on an expense is the whole body, shares included, so the merge is the row.
+  "sharedExpense:update": (row, operation) => merge(row as SharedExpense, operation),
+
+  "sharedGroup:update": (row, operation) => merge(row as SyncSharedGroup, operation),
+  "sharedGroup:restore": (row) => ({ ...(row as SyncSharedGroup), archivedAt: null }),
+  "sharedGroup:addParticipants": (row, operation) => {
+    const group = row as SyncSharedGroup;
+    const body = bodyOf(operation);
+    const contactIds = Array.isArray(body.contactIds) ? (body.contactIds as string[]) : [];
+    return {
+      ...group,
+      ...(body.defaultSplit
+        ? { defaultSplit: body.defaultSplit as SyncSharedGroup["defaultSplit"] }
+        : {}),
+      participants: [
+        ...group.participants,
+        ...contactIds
+          .filter((contactId) => !group.participants.some((one) => one.contactId === contactId))
+          .map((contactId) => ({ contactId, addedAt: operation.occurredAt })),
+      ],
+    };
+  },
+  "sharedGroup:removeParticipant": (row, operation) => {
+    const group = row as SyncSharedGroup;
+    const partyId = operationPayload(operation).params?.partyId;
+    if (partyId === undefined) return group;
+    return {
+      ...group,
+      participants: group.participants.filter((one) => one.contactId !== partyId),
+      writeOffs: group.writeOffs.filter((one) => one.contactId !== partyId),
+      defaultSplit: withoutParticipant(group.defaultSplit, partyId),
+    };
+  },
+  "sharedGroup:writeOff": (row, operation) => {
+    const group = row as SyncSharedGroup;
+    const { contactId, expenseId } = writeOffTarget(operation);
+    return {
+      ...group,
+      writeOffs: [
+        ...group.writeOffs.filter((one) => !samePartyAs(one, contactId, expenseId)),
+        {
+          kind: expenseId === null ? ("CONTACT" as const) : ("GUESTS" as const),
+          contactId,
+          expenseId,
+          amount: operationPayload(operation).writtenOff ?? 0,
+          at: operation.occurredAt,
+        },
+      ],
+    };
+  },
+  "sharedGroup:undoWriteOff": (row, operation) => {
+    const group = row as SyncSharedGroup;
+    const partyId = operationPayload(operation).params?.partyId;
+    return {
+      ...group,
+      writeOffs: group.writeOffs.filter(
+        (one) => one.contactId !== partyId && one.expenseId !== partyId,
+      ),
+    };
+  },
+  // Archiving writes off what is still owed on your behalf, so the mirror has to say that too.
+  "sharedGroup:archive": (row, operation) => {
+    const group = row as SyncSharedGroup;
+    const owing = operationPayload(operation).archivedOwing ?? [];
+    return {
+      ...group,
+      archivedAt: operation.occurredAt,
+      writeOffs: [
+        ...group.writeOffs.filter(
+          (one) => !owing.some((party) => samePartyAs(one, party.contactId, party.expenseId)),
+        ),
+        ...owing.map((party) => ({
+          kind: party.expenseId === null ? ("CONTACT" as const) : ("GUESTS" as const),
+          contactId: party.contactId,
+          expenseId: party.expenseId,
+          amount: party.amount,
+          at: operation.occurredAt,
+        })),
+      ],
+    };
+  },
 
   "transaction:update": (row, operation) => merge(row as SyncTransaction, operation),
   "transaction:delete": (row, operation) => ({

@@ -11,13 +11,13 @@ mirror says it cannot.
 
 ## The hard line: disposable mirror, sacred outbox
 
-|                                                | mirror (`profile`, `accounts`, `categories`, `transactions`, `budgets`) | outbox                                                  |
-| ---------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------- |
-| What it is                                     | a copy of the server, re-downloadable                                   | writes that have not reached the server                 |
-| Losing it costs                                | one pull                                                                | the user's data                                         |
-| On a version bump                              | cleared and re-pulled                                                   | migrated one operation at a time, or the upgrade blocks |
-| On logout                                      | always cleared                                                          | kept unless the caller confirms discarding it           |
-| On session expiry / app update / cache cleanup | untouched                                                               | untouched (invariant 7)                                 |
+|                                                | mirror (`profile`, `accounts`, `categories`, `transactions`, `budgets`, `contacts`, `sharedGroups`, `sharedExpenses`, `settlements`) | outbox                                                  |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| What it is                                     | a copy of the server, re-downloadable                                                                                                | writes that have not reached the server                 |
+| Losing it costs                                | one pull                                                                                                                             | the user's data                                         |
+| On a version bump                              | cleared and re-pulled                                                                                                                | migrated one operation at a time, or the upgrade blocks |
+| On logout                                      | always cleared                                                                                                                       | kept unless the caller confirms discarding it           |
+| On session expiry / app update / cache cleanup | untouched                                                                                                                            | untouched (invariant 7)                                 |
 
 They share one database because **IndexedDB transactions cannot span two databases** and O-F4 has to
 write the entity and its operation atomically (plan §4.1). Nothing here ever calls `deleteDatabase`
@@ -49,7 +49,8 @@ fixtures, and that comparison only means something if the server's shape arrives
 
 IndexedDB will not index a boolean or a null, so:
 
-- flags are `0`/`1`: `archived` on accounts/categories/budgets, `deleted` on transactions;
+- flags are `0`/`1`: `archived` on accounts, categories, budgets, contacts and shared groups,
+  `deleted` on transactions, shared expenses and payments;
 - anything an index must skip is **omitted**, not stored as null: `liveDate` is absent on tombstones,
   `pendingReview` exists only on live rows that need review, and null foreign keys are left out;
 - `dateCursor` is the compound `["liveDate", "id"]`. IndexedDB skips a record when any part of a
@@ -57,6 +58,36 @@ IndexedDB will not index a boolean or a null, so:
   the `id` half breaks ties between two transactions on the same date.
 
 Rows are applied by `id` with `put`, so the deliberate 60-second cursor overlap (D-14) costs nothing.
+
+## The shared layer
+
+`contacts`, `sharedGroups`, `sharedExpenses` and `settlements` hold the **fact** — the outing, its
+people, its lines, the split, who fronted each one and what has been settled — and nothing of the
+ledger: no account, no category, no note and no link to a movement. Those live on the user's own
+transactions, which carry `countsAsYours`, `sharedExpenseId`, `sharedGroupId`, `sharedSettlementId`
+and `sharedHistory` and travel in `transactions` as they always did.
+
+All four have an outbox route, so `applyPage` hands them to `reconcile.ts` like everything else. A
+payment is the one write whose **movements the server mints**: the device mints its own so the list,
+the day totals and the balance move together with no network, marks them with `sharedSettlementId`,
+remembers their ids in the operation's `payload.minted`, and drops them when the server answers
+(`DECISIONS.md`, T-123).
+
+What the endpoints derive on every read — a group's `totals`, its `status`, and the state of each
+person in it, which no endpoint exposes at all — is derived here too, by `derive/shared.ts`, from the
+stored rows. The rules it reproduces to the minor unit are the backend's own
+(`fixtures/offline/README.md`), and `derive/parity.test.ts` holds it to the `cop-shared` fixture:
+
+- a split is `floor(total × its parts ÷ all the parts)` and the odd minor unit goes **whole to
+  whoever fronted it**, in every mode, so the result never depends on the order of the rows;
+- a payment belongs to the **person**, not to the line: it covers the **oldest line first** across
+  every group shared with them, ties broken by expense id;
+- what you hand over covers your own lines first, and whatever is left of it is their money going
+  back, so it comes off what they gave you **before** any of that is imputed;
+- what a movement counts as yours is `amount − what came back`, and `ADJUSTMENT` and `SETTLEMENT` are
+  excluded from spending **by their type**, never by that figure;
+- a write-off gives up on what was open when it was decided — the ceiling is stored on the group —
+  capped again by what is open now, and it moves no figure of yours.
 
 ## Filling it: `pull.ts`
 

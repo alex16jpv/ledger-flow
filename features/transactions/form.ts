@@ -21,8 +21,18 @@ export const FORM_TYPES = [
   "TRANSFER",
 ] as const satisfies readonly TransactionType[];
 
+// The list shows the fifth kind and the filter offers it; the form cannot create one (T-124).
+export const FILTER_TYPES = [
+  "EXPENSE",
+  "INCOME",
+  "TRANSFER",
+  "ADJUSTMENT",
+  "SETTLEMENT",
+] as const satisfies readonly Transaction["type"][];
+
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 export type FormTransactionType = (typeof FORM_TYPES)[number];
+export type FilterTransactionType = (typeof FILTER_TYPES)[number];
 
 export const TEXT_MAX = 255;
 export const FUTURE_LIMIT_MS = 24 * 60 * 60 * 1000;

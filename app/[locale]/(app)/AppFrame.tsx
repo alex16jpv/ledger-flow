@@ -16,6 +16,7 @@ import {
 } from "@/components/shell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { useAccountCount, useCategorySummary } from "@/features/settings/hooks";
+import { useSharedSection } from "@/features/shared/hooks";
 import { usePendingCount } from "@/features/transactions/hooks";
 import { readSessionMarker, vaultUserFor } from "@/lib/auth/marker";
 import { LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
@@ -74,6 +75,7 @@ function Frame({ children }: { children: ReactNode }) {
   const user = session.user ?? mirrorProfile;
   const accountCount = useAccountCount(moreOpen);
   const categorySummary = useCategorySummary(moreOpen);
+  const shared = useSharedSection(moreOpen);
   // F-38: what the pull writes into the mirror only reaches the screens through an invalidation.
   const onMirrorChanged = useCallback(() => {
     void invalidateMirrorBacked(queryClient);
@@ -128,6 +130,7 @@ function Frame({ children }: { children: ReactNode }) {
         userEmail={user?.email ?? ""}
         accountCount={accountCount.data}
         categoryCounts={categorySummary.data}
+        owedToYou={shared.section?.owedToYou}
       />
       <QuickAddSheet
         open={quickAdd.open}

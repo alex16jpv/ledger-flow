@@ -27,6 +27,7 @@ export function wireOperation(
   const payload = operationPayload(operation);
   const body = bodyOf(payload.body);
   const reference = payload.query?.reference;
+  const params = payload.params;
   return {
     opId: operation.opId,
     seq: rank,
@@ -38,6 +39,7 @@ export function wireOperation(
     payload: {
       ...(body === undefined ? {} : { body }),
       ...(reference === undefined ? {} : { query: { reference } }),
+      ...(params === undefined ? {} : { params }),
     },
     ...(guarded && operation.baseUpdatedAt !== undefined
       ? { baseUpdatedAt: operation.baseUpdatedAt }

@@ -14,7 +14,7 @@ without being here first (D-36).
 | [icons.md](icons.md)                 | Lucide, the fixed interface icons and the curated category set      |
 | [app-map.md](app-map.md)             | Every screen against the backend, with its state                    |
 | [layout.md](layout.md)               | Tab bar, sidebar, breakpoints, page header                          |
-| [components.md](components.md)       | The 33 components and how they behave                               |
+| [components.md](components.md)       | The 35 components and how they behave                               |
 | [accessibility.md](accessibility.md) | Contrast, keyboard, names, perceived performance                    |
 | [decisions.md](decisions.md)         | Every decision with its date and its reason                         |
 
@@ -27,6 +27,7 @@ without being here first (D-36).
 | [screens/access.md](screens/access.md)                 | `access.html`         |
 | [screens/transactions.md](screens/transactions.md)     | `transactions.html`   |
 | [screens/accounts.md](screens/accounts.md)             | `accounts.html`       |
+| [screens/shared.md](screens/shared.md)                 | `shared.html`         |
 | [screens/categories.md](screens/categories.md)         | `categories.html`     |
 | [screens/budgets.md](screens/budgets.md)               | `budgets.html`        |
 | [screens/budget-detail.md](screens/budget-detail.md)   | `budget-detail.html`  |

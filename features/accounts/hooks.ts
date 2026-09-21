@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { REFERENCE_STALE_TIME_MS } from "@/lib/query/client";
 import { QUERY_DOMAINS } from "@/lib/query/domains";
 import type { RestoreInput, UpdateAccountInput } from "@/types/api";
 
@@ -15,9 +16,6 @@ import {
   updateAccount,
 } from "./api";
 import { accountKeys } from "./keys";
-
-// Reference data changes only through our own mutations, which invalidate it: a long staleTime saves round trips.
-export const REFERENCE_STALE_TIME_MS = 5 * 60 * 1000;
 
 export function useAccountsQuery(includeArchived = false, enabled = true) {
   return useQuery({

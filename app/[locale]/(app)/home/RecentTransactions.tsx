@@ -13,6 +13,8 @@ import { List } from "@/components/ui/Row";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery } from "@/features/categories/hooks";
+import { useSharedSection } from "@/features/shared/hooks";
+import { sharedLookup } from "@/features/shared/ledger";
 import {
   type TransactionLookups,
   TransactionRow,
@@ -30,12 +32,19 @@ export function RecentTransactions() {
   const adjustment = useAdjustmentSheet();
   const accounts = useAccountsQuery(true);
   const categories = useCategoriesQuery(undefined);
+  // Only a list that holds something shared pays for the section: most never do.
+  const shared = useSharedSection(
+    (recent.rows ?? []).some(
+      (row) => row.sharedExpenseId !== null || row.sharedSettlementId !== null,
+    ),
+  );
   const lookups = useMemo<TransactionLookups>(
     () => ({
       accounts: new Map((accounts.data ?? []).map((account) => [account.id, account])),
       categories: new Map((categories.data ?? []).map((category) => [category.id, category])),
+      ...(shared.section ? { shared: sharedLookup(shared.section) } : {}),
     }),
-    [accounts.data, categories.data],
+    [accounts.data, categories.data, shared.section],
   );
 
   return (

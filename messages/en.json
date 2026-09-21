@@ -60,11 +60,13 @@
     "add": "Add",
     "budgets": "Budgets",
     "accounts": "Accounts",
+    "shared": "Shared",
     "stats": "Stats",
     "categories": "Categories",
     "settings": "Settings",
     "more": "More",
     "moreStats": "Where the money went",
+    "moreShared": "{amount} owed to you",
     "moreSettings": "Profile, currency, appearance",
     "search": "Search",
     "pendingCount": "{count, plural, one {# to review} other {# to review}}"
@@ -214,7 +216,9 @@
       "install": "Install",
       "how": "How",
       "dismiss": "Not now"
-    }
+    },
+    "owedBothWays": "{owed} owed to you · you owe {owe}",
+    "owedToYou": "{owed} owed to you"
   },
   "settings": {
     "title": "Settings",
@@ -574,7 +578,11 @@
         "account": "account",
         "category": "category",
         "transaction": "movement",
-        "budget": "budget"
+        "budget": "budget",
+        "contact": "person",
+        "sharedGroup": "shared group",
+        "sharedExpense": "shared expense",
+        "settlement": "payment"
       },
       "actions": {
         "create": "This device asked to create this {what}.",
@@ -585,7 +593,11 @@
         "restore": "This device asked to restore this {what}.",
         "setDefault": "This device asked to make this {what} the default.",
         "setOverride": "This device asked to change this {what}’s amount for one period.",
-        "clearOverride": "This device asked to remove this {what}’s amount for one period."
+        "clearOverride": "This device asked to remove this {what}’s amount for one period.",
+        "writeOff": "This device asked to write off what is still owed in this {what}.",
+        "undoWriteOff": "This device asked to take back a write-off in this {what}.",
+        "addParticipants": "This device asked to add people to this {what}.",
+        "removeParticipant": "This device asked to take somebody out of this {what}."
       },
       "fields": {
         "name": "Name",
@@ -782,6 +794,18 @@
     "CATEGORY_ARCHIVED": "That category is archived. Restore it or pick another.",
     "CATEGORY_TYPE_MISMATCH": "That category doesn’t match this type of transaction.",
     "CATEGORY_TYPE_LOCKED": "This category already has transactions, so its type can’t change. Create a new category instead.",
+    "CONTACT_LIMIT_REACHED": "You’ve reached the limit of contacts. Archive one you no longer split with.",
+    "PARTICIPANT_LIMIT_REACHED": "This shared group is full. Remove somebody before adding another.",
+    "PARTICIPANT_ALREADY_IN_GROUP": "Somebody on this list is already in the group.",
+    "PARTICIPANT_NOT_IN_GROUP": "That person isn’t in this shared group.",
+    "PARTICIPANT_IN_USE": "That person has a share of an expense here. Settle it or write it off instead.",
+    "SPLIT_INVALID": "The shares don’t add up to the expense.",
+    "SHARED_EXPENSE_LINKED": "This expense is a movement of yours: change its amount, date or description on the transaction.",
+    "TRANSACTION_ALREADY_SHARED": "That movement is already in a shared group.",
+    "TRANSACTION_NOT_SPLITTABLE": "Only an expense can be split with other people.",
+    "SETTLEMENT_OVER_PAID": "That’s more than you owe them and more than they’ve paid ahead.",
+    "SETTLEMENT_MOVEMENT_LOCKED": "A settle-up recorded this movement. Undo the payment and it goes with it.",
+    "GUEST_BLOCK_HAS_PAYMENTS": "Its block of guests has paid. Undo those payments first.",
     "RESOURCE_ARCHIVED": "This item is archived. Restore it first.",
     "BUDGET_PERIOD_OVERLAP": "A budget for this period and category already exists.",
     "CURRENCY_LOCKED": "Your currency is locked because you already have accounts.",
@@ -1275,6 +1299,314 @@
       "confirmEmpty": "Restore"
     }
   },
+  "shared": {
+    "title": "Shared",
+    "faces": {
+      "label": "What to show",
+      "people": "People",
+      "groups": "Shared groups"
+    },
+    "summary": {
+      "owedToYou": "Owed to you",
+      "youOwe": "You owe",
+      "counts": "{open, plural, one {# person} other {# people}} with something open · {contacts, plural, one {# contact} other {# contacts}}"
+    },
+    "people": {
+      "owesYou": "Owes you",
+      "youOwe": "You owe",
+      "owesYouWord": "owes you",
+      "youOweWord": "you owe",
+      "settled": "Settled",
+      "showing": "{shown} with something open · {total, plural, one {# person} other {# people}} in all",
+      "guests": "{amount} more from guests, in {count, plural, one {# shared group} other {# shared groups}}",
+      "add": "Add a person"
+    },
+    "groups": {
+      "people": "{count, plural, one {# person} other {# people}}",
+      "yourShare": "Your share {amount}",
+      "bar": "{paid} paid of {total}",
+      "barLabel": "Paid back of {name}",
+      "youOwe": "You owe {amount}",
+      "settled": "Settled",
+      "settledBadge": "Settled",
+      "archived": "Archived"
+    },
+    "empty": {
+      "title": "Nothing shared yet",
+      "body": "A shared group is one outing or one trip: you add the expenses, say who was in, and Ledger Flow keeps track of who has paid you back."
+    },
+    "states": {
+      "NOT_PAID": "Not paid",
+      "PARTIALLY_PAID": "Partially paid",
+      "PAID": "Paid",
+      "WRITTEN_OFF": "Written off"
+    },
+    "form": {
+      "title": "New person",
+      "editTitle": "Edit person",
+      "create": "Add person",
+      "created": "Person added",
+      "saved": "Changes saved",
+      "name": "Name",
+      "namePlaceholder": "Beto Cano",
+      "color": "Color",
+      "email": "Email",
+      "emailPlaceholder": "beto@example.com",
+      "emailHelp": "Only so you can invite them to a shared group later. Nothing is sent today.",
+      "duplicate": "You already have an active person named “{name}”. Names are case-insensitive.",
+      "groupTitle": "New shared group",
+      "groupName": "Name",
+      "groupNamePlaceholder": "Cartagena trip",
+      "groupDuplicate": "You already have an active shared group named “{name}”. Names are case-insensitive.",
+      "groupCreated": "Shared group created",
+      "createGroup": "Create shared group",
+      "whoWasIn": "Who was in",
+      "whoWasInHelp": "You are in the group like everyone else, with a share of your own.",
+      "defaultSplit": "Split by default",
+      "defaultSplitHelp": "Every expense you add takes this without asking, and any of them can then go its own way — by exact amounts too, which only an expense can have, because only an expense has a total. Changing this later never goes back over what is already recorded.",
+      "expenses": "Expenses",
+      "pickFromTransactions": "Pick from my transactions",
+      "picked": "{count} selected · {amount}",
+      "pickNone": "None yet",
+      "nothingChanges": "Splitting changes nothing today: an expense keeps counting in full until someone pays you back.",
+      "limit": "Up to {contacts} people in all.",
+      "percentLeft": "{percent}%"
+    },
+    "group": {
+      "title": "Shared group",
+      "you": "You",
+      "share": "share",
+      "people": "People",
+      "expenses": "Expenses · {count}",
+      "lead": "counts as yours · total {total} · your share {share}",
+      "gap": "{owed} is still owed to you.",
+      "gapWithWriteOff": "{owed} is still owed to you, and {writtenOff} was written off — that part stays counted as yours.",
+      "status": {
+        "OPEN": "open",
+        "SETTLED": "settled",
+        "ARCHIVED": "archived"
+      },
+      "defaultSplit": {
+        "EQUAL": "Equal split by default",
+        "PERCENT": "Percentage split by default"
+      },
+      "yourShare": "Your share {amount}",
+      "paidBy": "{name} paid",
+      "customSplit": "Custom split",
+      "youPaid": "you paid",
+      "notInYourLedger": "not in your ledger",
+      "noDescription": "Expense",
+      "missing": {
+        "title": "This shared group doesn’t exist.",
+        "body": "It may have been deleted, or this device has not seen it yet."
+      },
+      "noExpenses": {
+        "title": "No expenses yet",
+        "body": "A shared group holds the expenses of one outing: the ones you already recorded, or new ones."
+      },
+      "notes": {
+        "yourPart": "You put in {amount} of the {total}",
+        "nothingFromYou": "Nothing to collect from yourself",
+        "writtenOff": "Written off {date} · the {amount} stays yours",
+        "ahead": "{amount} ahead of what they owe",
+        "bothWays": "Owes you {owed} · you owe them {owe}",
+        "youOwe": "You owe them {amount}",
+        "paid": "Paid in full",
+        "partly": "Paid {paid} · {open} still owed",
+        "notPaid": "Nothing paid yet · owes you {amount}"
+      },
+      "addExpense": "Add expense",
+      "expensesAdded": "{count, plural, one {# expense added} other {# expenses added}}",
+      "settleUp": "Settle up",
+      "archive": "Archive",
+      "whoToSettle": "Who are you settling with?",
+      "edit": "Edit",
+      "restore": "Restore",
+      "restored": "{name} is back",
+      "isArchived": "This shared group is archived. What was owed here was written off, and nothing is deleted."
+    },
+    "person": {
+      "title": "Person",
+      "owesYou": "owes you, across {count, plural, one {# shared group} other {# shared groups}}",
+      "youOwe": "you owe, across {count, plural, one {# shared group} other {# shared groups}}",
+      "groups": "Shared groups",
+      "paidOf": "Paid {paid} of {share}",
+      "payments": "Payments",
+      "paidYou": "Paid you {amount}",
+      "youPaid": "You paid {amount}",
+      "outsideApp": "cash outside the app",
+      "notAnAccount": "A person is not an account: they have no balance of their own and never appear among your accounts, in a transfer, or in Stats by account. The money moves in your accounts, as it always has.",
+      "edit": "Edit",
+      "restore": "Restore",
+      "restored": "Person restored",
+      "archived": "Person archived",
+      "isArchived": "This person is archived: they are out of the pickers and their name is free again. The groups and the payments that name them stay readable.",
+      "archive": {
+        "label": "Archive",
+        "title": "Archive {name}?",
+        "body": "The groups and the payments that name them stay readable and no figure moves. You can restore them anytime.",
+        "confirm": "Archive"
+      }
+    },
+    "picker": {
+      "title": "Who was in",
+      "search": "Search a name or an email",
+      "showing": "Showing {shown} of {total} contacts",
+      "loadMore": "Load more",
+      "newPerson": "New person",
+      "add": "Add {count}",
+      "limits": "Up to {people} people in one shared group, and up to {contacts} contacts. This group would have {inGroup}.",
+      "failed": "The people could not be read. Try again in a moment.",
+      "none": "Nobody here by that name."
+    },
+    "pickExpenses": {
+      "title": "Pick from my transactions",
+      "search": "Search description, note or tag",
+      "add": "Add {count} · {amount}",
+      "loadMore": "Load more",
+      "none": "Nothing to add: every expense you have is already in a shared group, or none matches what you typed.",
+      "noDescription": "Expense",
+      "failed": "The list could not be read. Try again in a moment."
+    },
+    "whatChanges": {
+      "title": "{count, plural, one {Add # transaction to {name}?} other {Add # transactions to {name}?}}",
+      "confirm": "{count, plural, one {Add # expense} other {Add # expenses}}",
+      "nothingChanges": "Nothing changes in your budgets today. They all keep counting in full — {amount} across {categories} — because the money left your accounts and nobody has paid you back yet.",
+      "yoursUntilPaid": "yours until paid",
+      "whenSomebodyPays": "When someone pays you back, the expense falls in the month it happened, so a month you had already closed can change. Every change is kept in the expense’s history.",
+      "noDescription": "Expense"
+    },
+    "split": {
+      "mode": "How to split it",
+      "modes": {
+        "EQUAL": "Equal",
+        "PERCENT": "Percent",
+        "EXACT": "Exact",
+        "FIXED_REST": "Fixed + rest"
+      },
+      "whoWasIn": "Who was in",
+      "addPerson": "Add a person",
+      "addGuests": "Add guests",
+      "guests": {
+        "label": "Guests on this expense",
+        "help": "People you are not going to name. Each one weighs a share, and you collect from all of them as a single row.",
+        "count": "How many guests",
+        "shares": "{people} people + {guests} guests = {shares} shares",
+        "row": "Guests · {count}",
+        "remove": "Take the guests out"
+      },
+      "shareOf": "What {name} pays",
+      "leftToAssign": "Left to assign",
+      "oddUnit": "The odd unit goes to whoever paid, so the shares always add up to the expense.",
+      "invalid": {
+        "SHORT": "The shares do not add up to the expense yet.",
+        "OVER": "The shares add up to more than the expense.",
+        "NOBODY_TAKES_THE_REST": "Somebody has to take the rest: unpin at least one.",
+        "NEGATIVE": "A share cannot be negative.",
+        "MISSING": "Every share needs its own figure in this split."
+      },
+      "useGroupSplit": "Use the group’s split",
+      "takesTheRest": "{name} takes a share of the rest",
+      "fixedFor": "Fixed for {name}",
+      "looseTitle": "Split this · {description}",
+      "title": "Split {amount} · {description}",
+      "splitIt": "Split it",
+      "save": "Save split",
+      "creates": "It creates a shared group called {name} with these people, so this expense lives where every other shared one does. You can rename it or add more expenses to it later.",
+      "thisExpenseOnly": "This expense only. {name} keeps its default and so does every other expense in it; this one will read Custom split in the list.",
+      "saved": "Split saved",
+      "done": "Expense split"
+    },
+    "new": "New shared group",
+    "offline": "The section will load when you’re back online. Nothing you add here is lost meanwhile.",
+    "settle": {
+      "title": "Settle up with {name}",
+      "payTitle": "Pay {name}",
+      "owesYou": "{name} owes you",
+      "youOwe": "You owe {name}",
+      "theySend": "{name} sends you",
+      "youSend": "You send",
+      "amount": "Amount",
+      "over": "That is more than the {amount} open between you.",
+      "date": "Date",
+      "arrives": "Where it arrives",
+      "leaves": "Where it comes from",
+      "outside": "Nowhere here",
+      "outsideMeta": "Cash in hand",
+      "outsideTitle": "No movement, and no balance changes.",
+      "outsideBody": "You told us the cash never reached an account you keep here. The expenses still fall by {amount}, because that money did come back.",
+      "notIncomeTitle": "This is not income.",
+      "notIncomeBody": "It arrives in an account, carries no category, and lowers each expense in the month that expense happened.",
+      "yourExpenseTitle": "This one is an expense of yours.",
+      "yourExpenseBody": "It records {amount} dated the day of each line you are covering, because that is when the money was spent. The category is yours to choose: a shared group carries none.",
+      "bothTitle": "This records two things.",
+      "bothBody": "{collected} arriving in your account, which is not income, and your {paid} share of their lines as expenses dated the day of each one. Your balance moves by {net}.",
+      "category": "Category for the expenses this records",
+      "categoryFor": "Category for your {amount} of {description}",
+      "categoryForLine": "Category for {description} · {date} · {amount}",
+      "refunded": "{amount} of it is their money going back to them: you never spent it, so it carries no category and stays out of Stats and Budgets.",
+      "covers": "It covers, oldest expense first:",
+      "noDescription": "Expense",
+      "partialFirst": "Less than the whole covers what they owe you first, oldest expense first; what you owe them is recorded only once that is square.",
+      "record": "Record payment",
+      "pay": "Pay {amount}",
+      "writeOff": "Write off {amount}",
+      "recorded": "Payment recorded"
+    },
+    "writeOff": {
+      "title": "Write off the {amount} {name} still owes?",
+      "noFigureMoves": "No figure changes.",
+      "body": "You paid it, and it has counted as yours since the day of each expense. Writing off only says you have stopped expecting it back.",
+      "keepsWhatWasPaid": "{name} keeps the {amount} they did pay; the rest of their row reads Written off.",
+      "rowReadsWrittenOff": "{name}’s row will read Written off.",
+      "becomesSettled": "With nobody left owing, {name} becomes Settled.",
+      "stillOwed": "{amount} stays owed to you here.",
+      "undoable": "You can undo this until the group is archived.",
+      "confirm": "Write off {amount}",
+      "done": "What {name} owed is written off",
+      "undoTitle": "Take back the write-off for {name}?",
+      "undoBody": "{name} owes the {amount} again, and the history says so. No figure of yours moves either way.",
+      "undoConfirm": "Owe the {amount} again",
+      "undone": "{name} owes it again"
+    },
+    "archiveGroup": {
+      "title": "Archive {name}?",
+      "stillOwed": "{amount} is still owed to you.",
+      "writesItOff": "Archiving writes it off: those rows will read Written off and the amount stays counted as yours, exactly as it is today.",
+      "body": "Nothing is deleted and no figure moves. An archived group stays readable, and you can restore it.",
+      "confirm": "Archive",
+      "confirmWithWriteOff": "Archive and write off {amount}",
+      "done": "{name} is archived"
+    },
+    "edit": {
+      "title": "Edit this shared group",
+      "saved": "Shared group saved",
+      "splitNotRetroactive": "Changing the default never goes back: it applies to the expenses you add from now on, and to nothing already recorded."
+    },
+    "addPeople": {
+      "title": "Add people",
+      "add": "Add {count}",
+      "added": "{count, plural, one {1 person added} other {# people added}}",
+      "takenOut": "{name} is out of this group",
+      "applyToExisting": "{count, plural, one {Put them into the 1 expense already here} other {Put them into the # expenses already here}}",
+      "applyNeedsNetwork": "Putting them into the expenses already here needs a connection: the shares are worked out on the server.",
+      "howItWouldEndUp": "How {name} would end up",
+      "previewFailed": "That could not be worked out. Try again in a moment.",
+      "shareSub": "share",
+      "nothingMoves": "What counts as yours does not move: {amount}, exactly as it is now. Only the shares do. Nothing anybody paid is undone, and somebody left ahead is money you now owe them.",
+      "untouched": "{count, plural, one {1 expense carries its own percentage or exact split and is left alone: a figure for somebody who was not there would be invented.} other {# expenses carry their own percentage or exact split and are left alone: a figure for somebody who was not there would be invented.}}",
+      "wholeGroupOrNone": "{count, plural, one {Left off, they are in what you add from now on and in none of the 1 already here.} other {Left off, they are in what you add from now on and in none of the # already here.}} It is the whole group or none of it; to leave them out of one, set that expense’s own split afterwards.",
+      "yourShareOf": "Your share would be {amount}",
+      "writtenOffBecomes": "Written off · {before} becomes {after}",
+      "nowAhead": "Paid {paid} · now {ahead} ahead",
+      "paidAndOwes": "Paid {paid} · {owed} still owed",
+      "nothingPaid": "Nothing paid yet",
+      "alreadyIn": "Already in",
+      "takeOut": "Take {name} out",
+      "applyToExistingOne": "{count, plural, one {Put {name} into the 1 expense already here} other {Put {name} into the # expenses already here}}",
+      "addOne": "Add {name}"
+    }
+  },
   "transactions": {
     "readback": {
       "line": "{left} · {right}.",
@@ -1395,9 +1727,13 @@
         "EXPENSE": "Expenses",
         "INCOME": "Income",
         "TRANSFER": "Transfers",
-        "ADJUSTMENT": "Adjustments"
+        "ADJUSTMENT": "Adjustments",
+        "SETTLEMENT": "Payments between people"
       },
-      "tagChip": "#{tag}"
+      "tagChip": "#{tag}",
+      "payment": "Payment",
+      "shared": "Shared",
+      "yourShare": "Your share {amount}"
     },
     "filters": {
       "title": "Filters",
@@ -1434,7 +1770,50 @@
       "unknownAccount": "Unknown account",
       "created": "Created {created}",
       "createdEdited": "Created {created} · edited {edited}",
-      "dateTime": "{date} · {time}"
+      "dateTime": "{date} · {time}",
+      "split": "Split this",
+      "shared": {
+        "lead": "counts as yours, and it is what Stats and your budgets use. Your share is {share}, and {owed} is still owed to you.",
+        "leadWithWriteOff": "counts as yours, and it is what Stats and your budgets use. Your share is {share}, {owed} is still owed to you and {writtenOff} was written off, so it stays yours.",
+        "leadSettled": "counts as yours, and it is what Stats and your budgets use. Your share is {share}, and everybody has settled.",
+        "editSplit": "Edit split",
+        "settleUp": "Settle up",
+        "group": "Shared group",
+        "history": "History",
+        "reasons": {
+          "SPLIT": "Split with other people",
+          "SPLIT_EDITED": "Split edited",
+          "AMOUNT_CHANGED": "Amount changed",
+          "UNSPLIT": "Taken out of its shared group",
+          "PAYMENT": "Somebody paid you back",
+          "REIMPUTED": "Payments imputed again",
+          "WRITE_OFF": "Written off",
+          "WRITE_OFF_UNDONE": "Write-off taken back"
+        },
+        "deleteWriteOff": "If what you mean is that you are not getting the rest back, write it off instead: that keeps the expense and its history.",
+        "writeOffInstead": "Write it off instead",
+        "openGroup": "Open group",
+        "you": "You",
+        "yoursSub": "yours",
+        "ofShare": "of {amount}",
+        "paidAll": "Paid in full",
+        "paidSome": "Paid {amount} of it",
+        "neverPaid": "Nothing paid yet",
+        "writtenOffOn": "Written off {date}",
+        "entries": "{count, plural, one {# entry} other {# entries}}",
+        "noChange": "no change",
+        "historyNote": "Splitting an expense and writing one off never move the figure: the money had already left your account. Only a payment does, and it moves the month the expense happened in.",
+        "deleteChangesOwed": "This changes what everybody owes.",
+        "deleteCost": "Without it, {name} costs {cost} and every share falls with it.",
+        "deleteNoPayment": "No payment is deleted.",
+        "deleteArrived": "A payment belongs to the person, not to this expense: the {amount} that has arrived stays, and it moves to the expenses that are left. Each of them will say so in its history.",
+        "deleteRow": "paid {paid} · would owe {owed}",
+        "aheadSub": "ahead",
+        "stillOwedSub": "still owed",
+        "deleteGoesBack": "{account} goes back up by {amount}, and nothing else moves.",
+        "unreadable": "This one is split with other people, and that could not be read."
+      },
+      "settlementLocked": "This movement belongs to a payment between people, so it is not edited or deleted on its own."
     },
     "review": {
       "title": "To review",
@@ -1465,7 +1844,8 @@
     "EXPENSE": "Expense",
     "INCOME": "Income",
     "TRANSFER": "Transfer",
-    "ADJUSTMENT": "Adjustment"
+    "ADJUSTMENT": "Adjustment",
+    "SETTLEMENT": "Payment"
   },
   "stats": {
     "title": "Stats",

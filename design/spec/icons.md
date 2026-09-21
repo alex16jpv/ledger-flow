@@ -8,7 +8,7 @@ Interface icons always come with a visible label or an `aria-label`.
 ## Interface icons (fixed)
 
 Home `house` · Transactions `list` · Budgets `chart-pie` · Accounts `wallet` · Stats `chart-column` ·
-Categories `tags` · Settings `settings` · Add `plus` · To review `inbox` · Search `search` · Filters
+Categories `tags` · Shared `users` · Settings `settings` · Add `plus` · To review `inbox` · Search `search` · Filters
 `sliders-horizontal` · Archive `archive` · Restore `archive-restore` · Edit `pencil` · Main account
 `star` · Transfer `repeat` / `arrow-left-right` · Balance adjustment `scale` · Income `trending-up` ·
 Expense `trending-down` · Tag `tag` · Note `notebook-pen` · Date `calendar` · Time `clock` · Sessions

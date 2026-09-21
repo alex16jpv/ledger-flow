@@ -5,6 +5,7 @@ import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import {
   account,
   category,
+  changes,
   openTestVault,
   profile,
   transaction,
@@ -52,13 +53,12 @@ const fetchMock = vi.fn<typeof fetch>();
 function feedPage(user: User | null): SyncChangesResponse {
   return {
     serverTime: "2026-09-03T12:00:00.000Z",
-    changes: {
+    changes: changes({
       user,
       accounts: [cash, gone],
       categories: [dining, gym],
       transactions: [pending, alsoPending, settled],
-      budgets: [],
-    },
+    }),
     pagination: { limit: 500, count: 7, hasMore: false, nextCursor: "v1|done|" },
   };
 }

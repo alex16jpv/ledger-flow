@@ -314,6 +314,11 @@ const adjustment: Transaction = {
   pendingDetails: false,
   source: "MANUAL",
   currency: "COP",
+  countsAsYours: 12_300,
+  sharedExpenseId: null,
+  sharedGroupId: null,
+  sharedSettlementId: null,
+  sharedHistory: [],
   createdAt: "",
   updatedAt: "",
 };

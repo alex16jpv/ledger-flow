@@ -3,7 +3,7 @@ import { account, openTestVault, profile, wipeVaults } from "@/lib/testing/vault
 import type { SyncTransaction } from "@/types/api";
 
 import { deriveBalances } from "../derive";
-import { PARITY_FIXTURES, type ParityFixture, parityFixture } from "../derive/fixtures";
+import { mirrorRows, PARITY_FIXTURES, type ParityFixture, parityFixture } from "../derive/fixtures";
 import { setCurrentVault } from "../repository/read";
 import { accountRecord, profileRecord, transactionRecord } from "../schema";
 import { projectBalances } from "./projection";
@@ -29,6 +29,11 @@ function mirrorRow(userId: string, currency: string, row: ParityFixture["transac
     pendingDetails: row.pendingDetails,
     source: row.source,
     currency,
+    countsAsYours: row.countsAsYours ?? row.amount,
+    sharedExpenseId: null,
+    sharedGroupId: null,
+    sharedSettlementId: null,
+    sharedHistory: [],
     deletedAt: row.deletedAt,
     createdAt: date,
     updatedAt: date,
@@ -37,7 +42,7 @@ function mirrorRow(userId: string, currency: string, row: ParityFixture["transac
 
 // The mirror holds the balance the server sent, which is the oracle's figure over the same rows.
 function serverBalances(fixture: ParityFixture) {
-  const derived = deriveBalances(fixture.accounts, fixture.transactions);
+  const derived = deriveBalances(fixture.accounts, mirrorRows(fixture));
   return fixture.accounts.map((row) => ({
     ...row,
     balance: derived.find((entry) => entry.accountId === row.id)?.balance ?? 0,
@@ -94,7 +99,7 @@ describe("the balance projection", () => {
   it.each(PARITY_FIXTURES.map((fixture) => [fixture.id, fixture] as const))(
     "is the mirror's own figure with an empty queue (%s)",
     (_id, fixture) => {
-      const oracle = deriveBalances(fixture.accounts, fixture.transactions);
+      const oracle = deriveBalances(fixture.accounts, mirrorRows(fixture));
 
       expect(projectBalances(serverBalances(fixture), [])).toEqual(oracle);
       expect(oracle).toEqual(

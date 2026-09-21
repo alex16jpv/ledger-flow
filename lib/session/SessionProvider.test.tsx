@@ -6,6 +6,7 @@ import { refreshSession, resetRefreshState } from "@/lib/api/refresh";
 import { countPendingOperations } from "@/lib/local/db";
 import { accountRecord, type OutboxOperation } from "@/lib/local/schema";
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
 import { account, openTestVault, wipeVaults } from "@/lib/testing/vault";
 
@@ -15,9 +16,6 @@ import { SessionProvider, useSession } from "./SessionProvider";
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { headers: { "content-type": "application/json" }, ...init });
 const fetchMock = vi.fn<typeof fetch>();
-const urlOf = (input: string | URL | Request) =>
-  typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-
 const statuses: string[] = [];
 
 function Probe() {

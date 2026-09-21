@@ -14,7 +14,7 @@ import { type DayWindow, dayWindow, sumAmounts, widenedBound, withinDays } from 
 import type { TransactionRecord, VaultSchema } from "../schema";
 import { byKey, idList, oneOf, sent, unsupported } from "./params";
 import { mirrorNotFound, read } from "./read";
-import { bounds, TYPES } from "./stats";
+import { bounds } from "./stats";
 import { dateCursorRange, mirrorTimeZone } from "./window";
 
 export type TransactionQuery = Record<string, QueryValue>;
@@ -22,6 +22,14 @@ export type TransactionQuery = Record<string, QueryValue>;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 const SOURCES = new Set<SyncTransaction["source"]>(["MANUAL", "QUICK", "IMPORT"]);
+// The list answers for every kind there is, payments between people included; Stats does not.
+const LIST_TYPES = new Set<SyncTransaction["type"]>([
+  "EXPENSE",
+  "INCOME",
+  "TRANSFER",
+  "ADJUSTMENT",
+  "SETTLEMENT",
+]);
 const BOOLEANS = new Set(["true", "false"]);
 
 // Anything outside this list would make the mirror answer a question it did not apply.
@@ -88,7 +96,7 @@ function toMirrorFilter(
   const { from, to } = window;
 
   // Every one of these the server answers with a 400, so the mirror declines rather than guesses.
-  const type = oneOf<SyncTransaction["type"]>(params.get("type"), TYPES);
+  const type = oneOf<SyncTransaction["type"]>(params.get("type"), LIST_TYPES);
   const source = oneOf<SyncTransaction["source"]>(params.get("source"), SOURCES);
   const rawUncategorized = oneOf(params.get("uncategorized"), BOOLEANS);
   const rawPending = oneOf(params.get("pendingDetails"), BOOLEANS);

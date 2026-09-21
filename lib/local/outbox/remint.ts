@@ -31,6 +31,19 @@ function rewriteBody(body: unknown, oldId: string, newId: string): unknown {
   return changed ? next : body;
 }
 
+// A nested route carries the parent's id in `params`, and it moves with the parent like any other.
+function rewriteParams(params: unknown, oldId: string, newId: string): unknown {
+  if (typeof params !== "object" || params === null) return params;
+  const next = { ...(params as Record<string, unknown>) };
+  let changed = false;
+  for (const key of ["groupId", "partyId"]) {
+    if (next[key] !== oldId) continue;
+    next[key] = newId;
+    changed = true;
+  }
+  return changed ? next : params;
+}
+
 // `projectBalances` keys an effect by account id, so the rows inside it move with the account.
 function rewriteEffect(effect: unknown, oldId: string, newId: string): unknown {
   if (typeof effect !== "object" || effect === null) return effect;
@@ -153,10 +166,20 @@ export async function remint(
   for (const operation of await outbox.getAll()) {
     const mine = operation.entity === entity && operation.entityId === oldId;
     const depends = operation.dependsOn.includes(oldId);
-    const payload = operation.payload as { body?: unknown; effect?: unknown } | undefined;
+    const payload = operation.payload as
+      { body?: unknown; effect?: unknown; params?: unknown } | undefined;
     const body = rewriteBody(payload?.body, oldId, newId);
     const effect = rewriteEffect(payload?.effect, oldId, newId);
-    if (!mine && !depends && body === payload?.body && effect === payload?.effect) continue;
+    const params = rewriteParams(payload?.params, oldId, newId);
+    if (
+      !mine &&
+      !depends &&
+      body === payload?.body &&
+      effect === payload?.effect &&
+      params === payload?.params
+    ) {
+      continue;
+    }
     const next: OutboxOperation = {
       ...operation,
       ...(mine ? { entityId: newId, status: "pending", lastError: null, reminted: true } : {}),
@@ -165,6 +188,7 @@ export async function remint(
         ...payload,
         ...(body === undefined ? {} : { body }),
         ...(effect === undefined ? {} : { effect }),
+        ...(params === undefined ? {} : { params }),
       },
     };
     await outbox.put(next);

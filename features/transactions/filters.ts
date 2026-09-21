@@ -9,7 +9,7 @@ import {
   yearWindow,
 } from "@/lib/format/dates";
 
-import type { TransactionType } from "./form";
+import { FILTER_TYPES, type FilterTransactionType } from "./form";
 
 export const PERIOD_PRESETS = ["week", "month", "lastMonth", "year", "custom", "all"] as const;
 export type PeriodPreset = (typeof PERIOD_PRESETS)[number];
@@ -18,7 +18,7 @@ export interface TransactionFilters {
   period: PeriodPreset;
   from: string | null;
   to: string | null;
-  type: TransactionType | null;
+  type: FilterTransactionType | null;
   accountId: string | null;
   categoryId: string | null;
   uncategorized: boolean;
@@ -42,7 +42,7 @@ export const DEFAULT_FILTERS: TransactionFilters = {
   q: "",
 };
 
-const TYPES = new Set<string>(["EXPENSE", "INCOME", "TRANSFER", "ADJUSTMENT"]);
+const TYPES = new Set<string>(FILTER_TYPES);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function nonEmpty(value: string | null): string | null {
@@ -65,7 +65,7 @@ export function parseFilters(params: URLSearchParams): TransactionFilters {
     period: custom ? "custom" : isPreset(period) && period !== "custom" ? period : "month",
     from: custom ? from : null,
     to: custom ? to : null,
-    type: type && TYPES.has(type) ? (type as TransactionType) : null,
+    type: type && TYPES.has(type) ? (type as FilterTransactionType) : null,
     accountId: nonEmpty(params.get("account")),
     categoryId: nonEmpty(params.get("category")),
     uncategorized: params.get("uncategorized") === "1",

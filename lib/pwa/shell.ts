@@ -7,6 +7,7 @@ const APP_SEGMENTS = [
   "transactions",
   "budgets",
   "accounts",
+  "shared",
   "categories",
   "stats",
   "settings",
@@ -24,6 +25,8 @@ export const SHELL_PATHS = [
   "/budgets/past",
   "/accounts",
   "/accounts/new",
+  "/shared",
+  "/shared/new",
   "/categories",
   "/categories/new",
   "/stats",
@@ -45,7 +48,23 @@ export const DETAIL_TEMPLATES = [
   "/budgets/[id]",
   "/budgets/[id]/edit",
   "/categories/[id]/edit",
+  "/shared/groups/[id]",
+  "/shared/people/[id]",
 ] as const;
+
+// The id a path carries for one of the templates above, or undefined when it matches none of them.
+export function detailRouteId(pathname: string): string | undefined {
+  const segments = pathname.split("/");
+  for (const template of DETAIL_TEMPLATES) {
+    const parts = template.split("/");
+    if (parts.length !== segments.length) continue;
+    const at = parts.indexOf("[id]");
+    if (parts.every((part, index) => part === "[id]" || part === segments[index])) {
+      return segments[at];
+    }
+  }
+  return undefined;
+}
 
 // A valid UUID no row will ever have: the request that warms a template has to name some id.
 export const TEMPLATE_ID = "00000000-0000-7000-8000-000000000000";
@@ -85,14 +104,14 @@ export function isShellPath(pathname: string): boolean {
   return (APP_SEGMENTS as readonly string[]).includes(segment);
 }
 
-// `/accounts/<uuid>` and `/accounts/<uuid>/edit` become their template; every other path is itself.
+// `/accounts/<uuid>` and `/shared/groups/<uuid>` become their template; every other path is itself.
 export function templatePath(pathname: string): string {
   const segments = pathname.split("/");
   const at = localeOf(pathname) === DEFAULT_LOCALE ? 2 : 3;
-  const id = segments[at];
-  if (!isEntityId(id)) return pathname;
   if (!(APP_SEGMENTS as readonly string[]).includes(segments[at - 1] ?? "")) return pathname;
-  return [...segments.slice(0, at), "[id]", ...segments.slice(at + 1)].join("/");
+  const id = segments.findIndex((segment, index) => index >= at && isEntityId(segment));
+  if (id === -1) return pathname;
+  return [...segments.slice(0, id), "[id]", ...segments.slice(id + 1)].join("/");
 }
 
 // F-06 with F-48: query strings and row ids change the URL, not the document behind it.

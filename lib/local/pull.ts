@@ -79,6 +79,22 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
     news ||= await isNews(tx.objectStore("budgets"), row.id, row.updatedAt);
     await reconcileRow(tx, "budget", row.id, row, context);
   }
+  for (const row of changes.contacts) {
+    news ||= await isNews(tx.objectStore("contacts"), row.id, row.updatedAt);
+    await reconcileRow(tx, "contact", row.id, row, context);
+  }
+  for (const row of changes.sharedGroups) {
+    news ||= await isNews(tx.objectStore("sharedGroups"), row.id, row.updatedAt);
+    await reconcileRow(tx, "sharedGroup", row.id, row, context);
+  }
+  for (const row of changes.sharedExpenses) {
+    news ||= await isNews(tx.objectStore("sharedExpenses"), row.id, row.updatedAt);
+    await reconcileRow(tx, "sharedExpense", row.id, row, context);
+  }
+  for (const row of changes.settlements) {
+    news ||= await isNews(tx.objectStore("settlements"), row.id, row.updatedAt);
+    await reconcileRow(tx, "settlement", row.id, row, context);
+  }
 
   const meta = tx.objectStore("meta");
   // Stored verbatim: the cursor is opaque, and the next run resumes from it whatever it encodes.

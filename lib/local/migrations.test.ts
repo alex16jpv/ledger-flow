@@ -7,11 +7,13 @@ import {
   MIRROR_VERSION,
   type OutboxMigrations,
   VAULT,
+  VAULT_SCHEMA_VERSION,
   type VaultDefinition,
   vaultExists,
 } from "./db";
 import {
   accountRecord,
+  MIRROR_STORES,
   type OutboxOperation,
   transactionRecord,
   vaultDatabaseName,
@@ -96,8 +98,9 @@ describe("schema migrations", () => {
   it("carries 20 pending operations through a structural version bump", async () => {
     await seedQueue("u1", 20);
 
-    const upgraded = await openTestVault("u1", definition({ schemaVersion: 2 }));
-    expect(upgraded.db.version).toBe(2);
+    const next = VAULT_SCHEMA_VERSION + 1;
+    const upgraded = await openTestVault("u1", definition({ schemaVersion: next }));
+    expect(upgraded.db.version).toBe(next);
     expect(await upgraded.db.count("outbox")).toBe(20);
     const stored = await upgraded.db.getAll("outbox");
     expect(stored.map((op) => op.seq)).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
@@ -118,8 +121,14 @@ describe("schema migrations", () => {
     await bare.put("outbox", operation(1));
     bare.close();
 
-    const upgraded = await openTestVault("u1", definition({ schemaVersion: 2 }));
-    expect([...upgraded.db.objectStoreNames]).toContain("budgets");
+    const upgraded = await openTestVault("u1", definition({ schemaVersion: VAULT_SCHEMA_VERSION }));
+    for (const store of MIRROR_STORES) {
+      expect([...upgraded.db.objectStoreNames]).toContain(store);
+    }
+    expect([...upgraded.db.transaction("sharedExpenses").store.indexNames].sort()).toEqual([
+      "deleted",
+      "updatedAt",
+    ]);
     expect(await upgraded.db.count("outbox")).toBe(1);
   });
 });

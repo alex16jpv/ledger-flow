@@ -1,5 +1,5 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { account, openTestVault, wipeVaults } from "@/lib/testing/vault";
+import { account, changes as feedChanges, openTestVault, wipeVaults } from "@/lib/testing/vault";
 import type { Account, AccountList, SyncChangesResponse } from "@/types/api";
 
 import { pullChanges } from "../pull";
@@ -18,7 +18,7 @@ const fetchMock = vi.fn<typeof fetch>();
 function feedPage(accounts: Account[]): SyncChangesResponse {
   return {
     serverTime: "2026-09-03T12:00:00.000Z",
-    changes: { user: null, accounts, categories: [], transactions: [], budgets: [] },
+    changes: feedChanges({ accounts }),
     pagination: { limit: 500, count: accounts.length, hasMore: false, nextCursor: "v1|done|" },
   };
 }

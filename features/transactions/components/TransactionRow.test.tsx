@@ -95,4 +95,57 @@ describe("a movement row", () => {
     expect(screen.getByText("Needs attention")).toBeInTheDocument();
     expect(screen.queryByText("Pending sync")).not.toBeInTheDocument();
   });
+
+  // The row keeps the gross amount — that is what left the account — and says your share under it.
+  it("keeps the whole amount on a shared expense and says your share underneath", () => {
+    renderWithProviders(
+      <TransactionRow
+        transaction={{ ...row(), amount: 78_900, sharedExpenseId: "s1", sharedGroupId: "g1" }}
+        lookups={{
+          ...lookups,
+          shared: {
+            expenses: new Map([
+              ["s1", { yourShare: 26_300, groupId: "g1", groupName: "Night out" }],
+            ]),
+            payments: new Map(),
+          },
+        }}
+        onOpen={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Shared")).toBeInTheDocument();
+    expect(screen.getByText("Your share $26,300")).toBeInTheDocument();
+    expect(screen.getByText(/78,900/)).toBeInTheDocument();
+  });
+
+  it("reads a payment as the person it was with, neutral and with its group underneath", () => {
+    renderWithProviders(
+      <TransactionRow
+        transaction={{
+          ...row(),
+          type: "SETTLEMENT",
+          description: null,
+          categoryId: null,
+          amount: 300_000,
+          fromAccountId: null,
+          toAccountId: "a1",
+          sharedSettlementId: "p1",
+        }}
+        lookups={{
+          ...lookups,
+          shared: {
+            expenses: new Map(),
+            payments: new Map([["p1", { name: "Beto Cano", groups: ["Cartagena trip"] }]]),
+          },
+        }}
+        onOpen={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Beto Cano")).toBeInTheDocument();
+    expect(screen.getByText("Payment")).toBeInTheDocument();
+    expect(screen.getByText("Cartagena trip")).toBeInTheDocument();
+    expect(screen.getByText(/\+/)).toBeInTheDocument();
+  });
 });

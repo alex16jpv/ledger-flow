@@ -60,11 +60,13 @@
     "add": "Registrar",
     "budgets": "Presupuestos",
     "accounts": "Cuentas",
+    "shared": "Compartidos",
     "stats": "Estadísticas",
     "categories": "Categorías",
     "settings": "Ajustes",
     "more": "Más",
     "moreStats": "En qué se fue el dinero",
+    "moreShared": "{amount} que te deben",
     "moreSettings": "Perfil, moneda, apariencia",
     "search": "Buscar",
     "pendingCount": "{count, plural, one {# por revisar} other {# por revisar}}"
@@ -214,7 +216,9 @@
       "install": "Instalar",
       "how": "Cómo",
       "dismiss": "Ahora no"
-    }
+    },
+    "owedBothWays": "{owed} que te deben · debes {owe}",
+    "owedToYou": "{owed} que te deben"
   },
   "settings": {
     "title": "Ajustes",
@@ -574,7 +578,11 @@
         "account": "cuenta",
         "category": "categoría",
         "transaction": "movimiento",
-        "budget": "presupuesto"
+        "budget": "presupuesto",
+        "contact": "persona",
+        "sharedGroup": "grupo compartido",
+        "sharedExpense": "gasto compartido",
+        "settlement": "pago"
       },
       "actions": {
         "create": "Este dispositivo pidió crear este {what}.",
@@ -585,7 +593,11 @@
         "restore": "Este dispositivo pidió restaurar este {what}.",
         "setDefault": "Este dispositivo pidió hacer principal este {what}.",
         "setOverride": "Este dispositivo pidió cambiar el importe de este {what} para un período.",
-        "clearOverride": "Este dispositivo pidió quitar el importe de este {what} para un período."
+        "clearOverride": "Este dispositivo pidió quitar el importe de este {what} para un período.",
+        "writeOff": "Este dispositivo pidió dar por perdido lo que aún se debe en este {what}.",
+        "undoWriteOff": "Este dispositivo pidió deshacer un perdón en este {what}.",
+        "addParticipants": "Este dispositivo pidió añadir personas a este {what}.",
+        "removeParticipant": "Este dispositivo pidió sacar a alguien de este {what}."
       },
       "fields": {
         "name": "Nombre",
@@ -782,6 +794,18 @@
     "CATEGORY_ARCHIVED": "Esa categoría está archivada. Restáurala o elige otra.",
     "CATEGORY_TYPE_MISMATCH": "Esa categoría no corresponde a este tipo de movimiento.",
     "CATEGORY_TYPE_LOCKED": "Esta categoría ya tiene movimientos, así que su tipo no puede cambiar. Crea una categoría nueva.",
+    "CONTACT_LIMIT_REACHED": "Llegaste al límite de contactos. Archiva alguno con quien ya no compartes gastos.",
+    "PARTICIPANT_LIMIT_REACHED": "Este grupo compartido está lleno. Saca a alguien antes de añadir a otra persona.",
+    "PARTICIPANT_ALREADY_IN_GROUP": "Alguien de esta lista ya está en el grupo.",
+    "PARTICIPANT_NOT_IN_GROUP": "Esa persona no está en este grupo compartido.",
+    "PARTICIPANT_IN_USE": "Esa persona tiene parte en un gasto de aquí. Sáldalo o dalo por perdido.",
+    "SPLIT_INVALID": "Las partes no suman el gasto.",
+    "SHARED_EXPENSE_LINKED": "Este gasto es un movimiento tuyo: cambia su importe, su fecha o su descripción en el movimiento.",
+    "TRANSACTION_ALREADY_SHARED": "Ese movimiento ya está en un grupo compartido.",
+    "TRANSACTION_NOT_SPLITTABLE": "Solo un gasto se puede repartir con otras personas.",
+    "SETTLEMENT_OVER_PAID": "Eso es más de lo que le debes y más de lo que te ha adelantado.",
+    "SETTLEMENT_MOVEMENT_LOCKED": "Este movimiento lo registró un cobro. Deshaz el pago y se va con él.",
+    "GUEST_BLOCK_HAS_PAYMENTS": "Su bloque de invitados ya pagó. Deshaz esos pagos primero.",
     "RESOURCE_ARCHIVED": "Este elemento está archivado. Restáuralo primero.",
     "BUDGET_PERIOD_OVERLAP": "Ya existe un presupuesto para este período y categoría.",
     "CURRENCY_LOCKED": "Tu moneda está bloqueada porque ya tienes cuentas.",
@@ -1275,6 +1299,314 @@
       "confirmEmpty": "Restaurar"
     }
   },
+  "shared": {
+    "title": "Compartidos",
+    "faces": {
+      "label": "Qué mostrar",
+      "people": "Personas",
+      "groups": "Grupos compartidos"
+    },
+    "summary": {
+      "owedToYou": "Te deben",
+      "youOwe": "Debes",
+      "counts": "{open, plural, one {# persona} other {# personas}} con algo abierto · {contacts, plural, one {# contacto} other {# contactos}}"
+    },
+    "people": {
+      "owesYou": "Te deben",
+      "youOwe": "Debes",
+      "owesYouWord": "te debe",
+      "youOweWord": "le debes",
+      "settled": "Saldadas",
+      "showing": "{shown} con algo abierto · {total, plural, one {# persona} other {# personas}} en total",
+      "guests": "{amount} más de invitados, en {count, plural, one {# grupo compartido} other {# grupos compartidos}}",
+      "add": "Añadir una persona"
+    },
+    "groups": {
+      "people": "{count, plural, one {# persona} other {# personas}}",
+      "yourShare": "Tu parte {amount}",
+      "bar": "{paid} pagado de {total}",
+      "barLabel": "Devuelto de {name}",
+      "youOwe": "Debes {amount}",
+      "settled": "Saldados",
+      "settledBadge": "Saldado",
+      "archived": "Archivado"
+    },
+    "empty": {
+      "title": "Todavía no compartes nada",
+      "body": "Un grupo compartido es una salida o un viaje: añades los gastos, dices quién estaba y Ledger Flow lleva la cuenta de quién te ha pagado."
+    },
+    "states": {
+      "NOT_PAID": "Sin pagar",
+      "PARTIALLY_PAID": "Pagado en parte",
+      "PAID": "Pagado",
+      "WRITTEN_OFF": "Dado por perdido"
+    },
+    "form": {
+      "title": "Nueva persona",
+      "editTitle": "Editar persona",
+      "create": "Añadir persona",
+      "created": "Persona añadida",
+      "saved": "Cambios guardados",
+      "name": "Nombre",
+      "namePlaceholder": "Beto Cano",
+      "color": "Color",
+      "email": "Correo",
+      "emailPlaceholder": "beto@example.com",
+      "emailHelp": "Solo para poder invitarle a un grupo compartido más adelante. Hoy no se envía nada.",
+      "duplicate": "Ya tienes una persona activa llamada «{name}». Los nombres no distinguen mayúsculas.",
+      "groupTitle": "Nuevo grupo compartido",
+      "groupName": "Nombre",
+      "groupNamePlaceholder": "Viaje a Cartagena",
+      "groupDuplicate": "Ya tienes un grupo compartido activo llamado «{name}». Los nombres no distinguen mayúsculas.",
+      "groupCreated": "Grupo compartido creado",
+      "createGroup": "Crear grupo compartido",
+      "whoWasIn": "Quién estaba",
+      "whoWasInHelp": "Tú estás en el grupo como todos los demás, con una parte propia.",
+      "defaultSplit": "Reparto por defecto",
+      "defaultSplitHelp": "Cada gasto que añadas toma este reparto sin preguntar, y cualquiera puede luego ir por su cuenta —también por importes exactos, que solo un gasto puede tener, porque solo un gasto tiene total—. Cambiarlo más adelante nunca vuelve atrás sobre lo ya registrado.",
+      "expenses": "Gastos",
+      "pickFromTransactions": "Elegir de mis movimientos",
+      "picked": "{count} elegidos · {amount}",
+      "pickNone": "Todavía ninguno",
+      "nothingChanges": "Repartir no cambia nada hoy: un gasto sigue contando entero hasta que alguien te pague.",
+      "limit": "Hasta {contacts} personas en total.",
+      "percentLeft": "{percent}%"
+    },
+    "group": {
+      "title": "Grupo compartido",
+      "you": "Tú",
+      "share": "parte",
+      "people": "Personas",
+      "expenses": "Gastos · {count}",
+      "lead": "cuenta como tuyo · total {total} · tu parte {share}",
+      "gap": "Todavía te deben {owed}.",
+      "gapWithWriteOff": "Todavía te deben {owed}, y {writtenOff} se dio por perdido: esa parte sigue contando como tuya.",
+      "status": {
+        "OPEN": "abierto",
+        "SETTLED": "saldado",
+        "ARCHIVED": "archivado"
+      },
+      "defaultSplit": {
+        "EQUAL": "Por defecto, a partes iguales",
+        "PERCENT": "Por defecto, por porcentaje"
+      },
+      "yourShare": "Tu parte {amount}",
+      "paidBy": "Pagó {name}",
+      "customSplit": "Reparto propio",
+      "youPaid": "lo pagaste tú",
+      "notInYourLedger": "no está en tus movimientos",
+      "noDescription": "Gasto",
+      "missing": {
+        "title": "Este grupo compartido no existe.",
+        "body": "Puede que se haya borrado, o que este dispositivo todavía no lo haya visto."
+      },
+      "noExpenses": {
+        "title": "Todavía no hay gastos",
+        "body": "Un grupo compartido guarda los gastos de una salida: los que ya registraste o gastos nuevos."
+      },
+      "notes": {
+        "yourPart": "Pusiste {amount} de los {total}",
+        "nothingFromYou": "No hay nada que cobrarte a ti",
+        "writtenOff": "Dado por perdido el {date} · los {amount} siguen siendo tuyos",
+        "ahead": "{amount} de más sobre lo que debe",
+        "bothWays": "Te debe {owed} · le debes {owe}",
+        "youOwe": "Le debes {amount}",
+        "paid": "Pagado del todo",
+        "partly": "Pagó {paid} · faltan {open}",
+        "notPaid": "Todavía no ha pagado nada · te debe {amount}"
+      },
+      "addExpense": "Añadir gasto",
+      "expensesAdded": "{count, plural, one {# gasto añadido} other {# gastos añadidos}}",
+      "settleUp": "Saldar",
+      "archive": "Archivar",
+      "whoToSettle": "¿Con quién estás saldando?",
+      "edit": "Editar",
+      "restore": "Restaurar",
+      "restored": "{name} vuelve a estar activo",
+      "isArchived": "Este grupo compartido está archivado. Lo que se debía aquí se dio por perdido, y no se ha borrado nada."
+    },
+    "person": {
+      "title": "Persona",
+      "owesYou": "te debe, en {count, plural, one {# grupo compartido} other {# grupos compartidos}}",
+      "youOwe": "le debes, en {count, plural, one {# grupo compartido} other {# grupos compartidos}}",
+      "groups": "Grupos compartidos",
+      "paidOf": "Pagó {paid} de {share}",
+      "payments": "Pagos",
+      "paidYou": "Te pagó {amount}",
+      "youPaid": "Le pagaste {amount}",
+      "outsideApp": "efectivo fuera de la app",
+      "notAnAccount": "Una persona no es una cuenta: no tiene saldo propio y nunca aparece entre tus cuentas, en una transferencia ni en las estadísticas por cuenta. El dinero se mueve en tus cuentas, como siempre.",
+      "edit": "Editar",
+      "restore": "Restaurar",
+      "restored": "Persona restaurada",
+      "archived": "Persona archivada",
+      "isArchived": "Esta persona está archivada: sale de los selectores y su nombre vuelve a estar libre. Los grupos y los pagos que la nombran se siguen leyendo.",
+      "archive": {
+        "label": "Archivar",
+        "title": "¿Archivar a {name}?",
+        "body": "Los grupos y los pagos que la nombran se siguen leyendo y ninguna cifra se mueve. Puedes restaurarla cuando quieras.",
+        "confirm": "Archivar"
+      }
+    },
+    "picker": {
+      "title": "Quién estaba",
+      "search": "Busca un nombre o un correo",
+      "showing": "Mostrando {shown} de {total} contactos",
+      "loadMore": "Ver más",
+      "newPerson": "Nueva persona",
+      "add": "Añadir {count}",
+      "limits": "Hasta {people} personas en un grupo compartido, y hasta {contacts} contactos. Este grupo quedaría con {inGroup}.",
+      "failed": "No se pudo leer la lista de personas. Inténtalo de nuevo en un momento.",
+      "none": "Nadie con ese nombre."
+    },
+    "pickExpenses": {
+      "title": "Elegir de mis movimientos",
+      "search": "Busca en la descripción, la nota o las etiquetas",
+      "add": "Añadir {count} · {amount}",
+      "loadMore": "Ver más",
+      "none": "No hay nada que añadir: todos tus gastos ya están en un grupo compartido, o ninguno coincide con lo que escribiste.",
+      "noDescription": "Gasto",
+      "failed": "No se pudo leer la lista. Inténtalo de nuevo en un momento."
+    },
+    "whatChanges": {
+      "title": "{count, plural, one {¿Añadir # movimiento a {name}?} other {¿Añadir # movimientos a {name}?}}",
+      "confirm": "{count, plural, one {Añadir # gasto} other {Añadir # gastos}}",
+      "nothingChanges": "Hoy no cambia nada en tus presupuestos. Los tres siguen contando enteros —{amount} entre {categories}— porque el dinero salió de tus cuentas y todavía no te ha pagado nadie.",
+      "yoursUntilPaid": "tuyo hasta que paguen",
+      "whenSomebodyPays": "Cuando alguien te pague, el gasto baja en el mes en que ocurrió, así que un mes que ya dabas por cerrado puede cambiar. Cada cambio queda guardado en el historial del gasto.",
+      "noDescription": "Gasto"
+    },
+    "split": {
+      "mode": "Cómo se reparte",
+      "modes": {
+        "EQUAL": "Igual",
+        "PERCENT": "Porcentaje",
+        "EXACT": "Exacto",
+        "FIXED_REST": "Fijo + resto"
+      },
+      "whoWasIn": "Quién estaba",
+      "addPerson": "Añadir una persona",
+      "addGuests": "Añadir invitados",
+      "guests": {
+        "label": "Invitados en este gasto",
+        "help": "Gente a la que no vas a poner nombre. Cada uno pesa una parte, y les cobras a todos como una sola fila.",
+        "count": "Cuántos invitados",
+        "shares": "{people} personas + {guests} invitados = {shares} partes",
+        "row": "Invitados · {count}",
+        "remove": "Quitar los invitados"
+      },
+      "shareOf": "Lo que paga {name}",
+      "leftToAssign": "Falta por repartir",
+      "oddUnit": "El sobrante es de quien pagó, así que las partes siempre suman el gasto.",
+      "invalid": {
+        "SHORT": "Las partes todavía no suman el gasto.",
+        "OVER": "Las partes suman más que el gasto.",
+        "NOBODY_TAKES_THE_REST": "Alguien tiene que llevarse el resto: suelta al menos a uno.",
+        "NEGATIVE": "Una parte no puede ser negativa.",
+        "MISSING": "Cada parte necesita su propia cifra en este reparto."
+      },
+      "useGroupSplit": "Usar el reparto del grupo",
+      "takesTheRest": "{name} se lleva una parte del resto",
+      "fixedFor": "Fijo para {name}",
+      "looseTitle": "Repartir · {description}",
+      "title": "Repartir {amount} · {description}",
+      "splitIt": "Repartirlo",
+      "save": "Guardar reparto",
+      "creates": "Crea un grupo compartido llamado {name} con estas personas, para que este gasto viva donde viven todos los compartidos. Luego puedes cambiarle el nombre o añadirle más gastos.",
+      "thisExpenseOnly": "Solo este gasto. {name} mantiene su reparto por defecto y los demás gastos también; este pasará a leerse «Reparto propio» en la lista.",
+      "saved": "Reparto guardado",
+      "done": "Gasto repartido"
+    },
+    "new": "Nuevo grupo compartido",
+    "offline": "La sección se cargará cuando vuelvas a tener conexión. Nada de lo que añadas aquí se pierde mientras tanto.",
+    "settle": {
+      "title": "Saldar con {name}",
+      "payTitle": "Pagar a {name}",
+      "owesYou": "{name} te debe",
+      "youOwe": "Le debes a {name}",
+      "theySend": "{name} te envía",
+      "youSend": "Envías",
+      "amount": "Importe",
+      "over": "Es más de los {amount} que hay abiertos entre ustedes.",
+      "date": "Fecha",
+      "arrives": "Dónde llega",
+      "leaves": "De dónde sale",
+      "outside": "En ninguna de aquí",
+      "outsideMeta": "Efectivo en mano",
+      "outsideTitle": "Sin movimiento y sin cambio de saldo.",
+      "outsideBody": "Nos dijiste que el efectivo nunca llegó a una cuenta que lleves aquí. Los gastos bajan igual {amount}, porque ese dinero sí volvió.",
+      "notIncomeTitle": "Esto no es un ingreso.",
+      "notIncomeBody": "Llega a una cuenta, no lleva categoría y baja cada gasto en el mes en que ocurrió ese gasto.",
+      "yourExpenseTitle": "Este es un gasto tuyo.",
+      "yourExpenseBody": "Registra {amount} con la fecha de cada línea que estás cubriendo, porque es cuando se gastó el dinero. La categoría la eliges tú: un grupo compartido no lleva ninguna.",
+      "bothTitle": "Esto registra dos cosas.",
+      "bothBody": "{collected} que llegan a tu cuenta, que no son un ingreso, y tu parte de {paid} de sus líneas como gastos con la fecha de cada una. Tu saldo se mueve {net}.",
+      "category": "Categoría de los gastos que esto registra",
+      "categoryFor": "Categoría de tus {amount} de {description}",
+      "categoryForLine": "Categoría de {description} · {date} · {amount}",
+      "refunded": "{amount} de eso es dinero suyo que vuelve a ellos: nunca lo gastaste, así que no lleva categoría y queda fuera de Stats y Budgets.",
+      "covers": "Cubre, del gasto más viejo al más nuevo:",
+      "noDescription": "Gasto",
+      "partialFirst": "Menos del total cubre primero lo que te deben, del gasto más viejo al más nuevo; lo que tú debes se registra solo cuando eso queda saldado.",
+      "record": "Registrar pago",
+      "pay": "Pagar {amount}",
+      "writeOff": "Dar por perdidos {amount}",
+      "recorded": "Pago registrado"
+    },
+    "writeOff": {
+      "title": "¿Dar por perdidos los {amount} que {name} aún debe?",
+      "noFigureMoves": "No cambia ninguna cifra.",
+      "body": "Tú lo pagaste, y cuenta como tuyo desde el día de cada gasto. Darlo por perdido solo dice que dejaste de esperarlo.",
+      "keepsWhatWasPaid": "{name} conserva los {amount} que sí pagó; el resto de su fila dice Written off.",
+      "rowReadsWrittenOff": "La fila de {name} dirá Written off.",
+      "becomesSettled": "Sin nadie debiendo, {name} pasa a Settled.",
+      "stillOwed": "Aquí siguen debiéndote {amount}.",
+      "undoable": "Puedes deshacerlo mientras el grupo no esté archivado.",
+      "confirm": "Dar por perdidos {amount}",
+      "done": "Lo que debía {name} queda dado por perdido",
+      "undoTitle": "¿Deshacer el perdón de {name}?",
+      "undoBody": "{name} vuelve a deber los {amount}, y el historial lo dice. Ninguna cifra tuya se mueve.",
+      "undoConfirm": "Que vuelva a deber {amount}",
+      "undone": "{name} lo vuelve a deber"
+    },
+    "archiveGroup": {
+      "title": "¿Archivar {name}?",
+      "stillOwed": "Aún te deben {amount}.",
+      "writesItOff": "Archivar lo da por perdido: esas filas dirán Written off y el importe sigue contando como tuyo, igual que hoy.",
+      "body": "No se borra nada y ninguna cifra se mueve. Un grupo archivado se sigue leyendo, y puedes restaurarlo.",
+      "confirm": "Archivar",
+      "confirmWithWriteOff": "Archivar y dar por perdidos {amount}",
+      "done": "{name} queda archivado"
+    },
+    "edit": {
+      "title": "Editar este grupo compartido",
+      "saved": "Grupo compartido guardado",
+      "splitNotRetroactive": "Cambiar el reparto por defecto nunca va hacia atrás: se aplica a los gastos que añadas desde ahora, y a nada de lo ya registrado."
+    },
+    "addPeople": {
+      "title": "Añadir personas",
+      "add": "Añadir {count}",
+      "added": "{count, plural, one {1 persona añadida} other {# personas añadidas}}",
+      "takenOut": "{name} ya no está en este grupo",
+      "applyToExisting": "{count, plural, one {Meterlas en el gasto que ya hay} other {Meterlas en los # gastos que ya hay}}",
+      "applyNeedsNetwork": "Meterlas en los gastos que ya hay necesita conexión: las partes las calcula el servidor.",
+      "howItWouldEndUp": "Cómo quedaría {name}",
+      "previewFailed": "No se ha podido calcular. Inténtalo en un momento.",
+      "shareSub": "parte",
+      "nothingMoves": "Lo que cuenta como tuyo no se mueve: {amount}, igual que ahora. Solo cambian las partes. No se deshace nada de lo que ya pagaron, y quien quede pagando de más es dinero que ahora le debes tú.",
+      "untouched": "{count, plural, one {1 gasto lleva su propio reparto por porcentaje o importe exacto y se deja como está: habría que inventar una cifra para quien no estuvo.} other {# gastos llevan su propio reparto por porcentaje o importe exacto y se dejan como están: habría que inventar una cifra para quien no estuvo.}}",
+      "wholeGroupOrNone": "{count, plural, one {Sin activarlo, entran en lo que añadas desde ahora y en nada del gasto que ya hay.} other {Sin activarlo, entran en lo que añadas desde ahora y en nada de los # gastos que ya hay.}} Es el grupo entero o nada; para dejarlas fuera de uno, ponle después su propio reparto a ese gasto.",
+      "yourShareOf": "Tu parte sería {amount}",
+      "writtenOffBecomes": "Dado por perdido · {before} pasa a {after}",
+      "nowAhead": "Pagó {paid} · ahora {ahead} de más",
+      "paidAndOwes": "Pagó {paid} · aún debe {owed}",
+      "nothingPaid": "Aún no ha pagado nada",
+      "alreadyIn": "Ya está",
+      "takeOut": "Sacar a {name}",
+      "applyToExistingOne": "{count, plural, one {Meter a {name} en el gasto que ya hay} other {Meter a {name} en los # gastos que ya hay}}",
+      "addOne": "Añadir a {name}"
+    }
+  },
   "transactions": {
     "readback": {
       "line": "{left} · {right}.",
@@ -1395,9 +1727,13 @@
         "EXPENSE": "Gastos",
         "INCOME": "Ingresos",
         "TRANSFER": "Transferencias",
-        "ADJUSTMENT": "Ajustes"
+        "ADJUSTMENT": "Ajustes",
+        "SETTLEMENT": "Pagos entre personas"
       },
-      "tagChip": "#{tag}"
+      "tagChip": "#{tag}",
+      "payment": "Pago",
+      "shared": "Compartido",
+      "yourShare": "Tu parte {amount}"
     },
     "filters": {
       "title": "Filtros",
@@ -1434,7 +1770,50 @@
       "unknownAccount": "Cuenta desconocida",
       "created": "Creado {created}",
       "createdEdited": "Creado {created} · editado {edited}",
-      "dateTime": "{date} · {time}"
+      "dateTime": "{date} · {time}",
+      "split": "Repartir esto",
+      "shared": {
+        "lead": "cuenta como tuyo, y es lo que miden Stats y tus presupuestos. Tu parte es {share} y aún te deben {owed}.",
+        "leadWithWriteOff": "cuenta como tuyo, y es lo que miden Stats y tus presupuestos. Tu parte es {share}, aún te deben {owed} y {writtenOff} se dio por perdido, así que sigue siendo tuyo.",
+        "leadSettled": "cuenta como tuyo, y es lo que miden Stats y tus presupuestos. Tu parte es {share} y todos han saldado.",
+        "editSplit": "Editar reparto",
+        "settleUp": "Saldar",
+        "group": "Grupo compartido",
+        "history": "Historial",
+        "reasons": {
+          "SPLIT": "Repartido con otras personas",
+          "SPLIT_EDITED": "Reparto editado",
+          "AMOUNT_CHANGED": "Importe cambiado",
+          "UNSPLIT": "Sacado de su grupo compartido",
+          "PAYMENT": "Alguien te pagó",
+          "REIMPUTED": "Pagos imputados de nuevo",
+          "WRITE_OFF": "Dado por perdido",
+          "WRITE_OFF_UNDONE": "Perdón deshecho"
+        },
+        "deleteWriteOff": "Si lo que quieres decir es que no te van a pagar el resto, mejor dalo por perdido: así conservas el gasto y su historial.",
+        "writeOffInstead": "Mejor darlo por perdido",
+        "openGroup": "Abrir el grupo",
+        "you": "Tú",
+        "yoursSub": "tuyo",
+        "ofShare": "de {amount}",
+        "paidAll": "Pagado del todo",
+        "paidSome": "Ha pagado {amount}",
+        "neverPaid": "Aún no ha pagado nada",
+        "writtenOffOn": "Dado por perdido el {date}",
+        "entries": "{count, plural, one {# entrada} other {# entradas}}",
+        "noChange": "sin cambio",
+        "historyNote": "Repartir un gasto y darlo por perdido nunca mueven la cifra: el dinero ya había salido de tu cuenta. Solo lo hace un cobro, y lo mueve en el mes en que ocurrió el gasto.",
+        "deleteChangesOwed": "Esto cambia lo que debe cada quien.",
+        "deleteCost": "Sin él, {name} cuesta {cost} y todas las partes bajan con él.",
+        "deleteNoPayment": "No se borra ningún cobro.",
+        "deleteArrived": "Un cobro pertenece a la persona, no a este gasto: los {amount} que han llegado se quedan y pasan a los gastos que quedan. Cada uno lo dirá en su historial.",
+        "deleteRow": "pagó {paid} · debería {owed}",
+        "aheadSub": "de más",
+        "stillOwedSub": "aún debe",
+        "deleteGoesBack": "{account} sube {amount}, y nada más se mueve.",
+        "unreadable": "Este está repartido con otras personas, y eso no se ha podido leer."
+      },
+      "settlementLocked": "Este movimiento pertenece a un pago entre personas, así que no se edita ni se borra por su cuenta."
     },
     "review": {
       "title": "Por revisar",
@@ -1465,7 +1844,8 @@
     "EXPENSE": "Gasto",
     "INCOME": "Ingreso",
     "TRANSFER": "Transferencia",
-    "ADJUSTMENT": "Ajuste"
+    "ADJUSTMENT": "Ajuste",
+    "SETTLEMENT": "Pago"
   },
   "stats": {
     "title": "Estadísticas",

@@ -1,5 +1,5 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { account, wipeVaults } from "@/lib/testing/vault";
+import { account, changes as feedChanges, wipeVaults } from "@/lib/testing/vault";
 import type { SyncChangesResponse } from "@/types/api";
 
 import { VAULT } from "./db";
@@ -18,13 +18,7 @@ const meResponse = () =>
 
 const feed: SyncChangesResponse = {
   serverTime: "2026-09-03T12:00:00.000Z",
-  changes: {
-    user: null,
-    accounts: [account({ id: "a1" })],
-    categories: [],
-    transactions: [],
-    budgets: [],
-  },
+  changes: feedChanges({ accounts: [account({ id: "a1" })] }),
   pagination: { limit: 500, count: 1, hasMore: false, nextCursor: "v1|done|" },
 };
 

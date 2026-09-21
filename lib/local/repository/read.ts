@@ -88,6 +88,8 @@ export async function read<T>(
 export function mirrorPage<T extends { id: string }>(
   rows: T[],
   limit: number,
+  // What the whole list holds, which is not `rows.length` once a cursor has cut its head off.
+  total = rows.length,
 ): { data: T[]; pagination: Pagination } {
   const data = rows.slice(0, limit);
   const hasMore = data.length < rows.length;
@@ -96,7 +98,7 @@ export function mirrorPage<T extends { id: string }>(
     pagination: {
       limit,
       offset: 0,
-      total: rows.length,
+      total,
       hasMore,
       nextCursor: hasMore ? (data.at(-1)?.id ?? null) : null,
     },

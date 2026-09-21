@@ -1,4 +1,5 @@
 import type { OutboxOperation } from "../schema";
+import { operationPayload } from "./envelope";
 import { pendingOperations, type VaultDb } from "./queue";
 
 // F-16 with invariant 2: from the first queued write these figures become projections.
@@ -43,7 +44,9 @@ const needsAttention = (operation: OutboxOperation): boolean =>
 
 function projectionOf(operations: OutboxOperation[]): OutboxProjection {
   // A queued movement moves every money figure at once; an account create only its opening.
-  const money = operations.some((operation) => operation.entity === "transaction");
+  const money = operations.some(
+    (operation) => operation.entity === "transaction" || operation.entity === "settlement",
+  );
   return {
     balances:
       money ||
@@ -64,7 +67,12 @@ function summarise(operations: OutboxOperation[]): OutboxStatus {
     blocked: blocked.filter((seq) => operations.some((operation) => operation.seq === seq)),
     pending: operations.length,
     attention: stuck.length,
-    queuedRows: new Set(operations.map((operation) => operation.entityId)),
+    queuedRows: new Set(
+      operations.flatMap((operation) => [
+        operation.entityId,
+        ...(operationPayload(operation).minted ?? []),
+      ]),
+    ),
     // Reversed so the lowest `seq` on a row is the one that survives the collapse into a map.
     attentionRows: new Map(
       [...stuck].reverse().map((operation) => [operation.entityId, operation.seq]),

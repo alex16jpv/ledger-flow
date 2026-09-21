@@ -1,3 +1,4 @@
+import type { AmountKind } from "@/components/ui/Amount";
 import { dayKey } from "@/lib/format/dates";
 import type { Transaction } from "@/types/api";
 
@@ -20,10 +21,11 @@ export function groupByDay(transactions: readonly Transaction[], timeZone: strin
   return groups;
 }
 
-export function amountKind(
-  type: Transaction["type"],
-): "expense" | "income" | "transfer" | "adjustment" {
-  switch (type) {
+export type AmountRow = Pick<Transaction, "type" | "fromAccountId">;
+
+// A payment between people goes both ways: collecting reaches an account, giving back leaves one.
+export function amountKind(row: AmountRow): AmountKind {
+  switch (row.type) {
     case "EXPENSE":
       return "expense";
     case "INCOME":
@@ -32,5 +34,7 @@ export function amountKind(
       return "transfer";
     case "ADJUSTMENT":
       return "adjustment";
+    case "SETTLEMENT":
+      return row.fromAccountId === null ? "settlement" : "settlementOut";
   }
 }

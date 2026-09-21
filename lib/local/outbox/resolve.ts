@@ -16,11 +16,25 @@ const isCreate = (action: string): boolean => action === "create" || action === 
 const stuck = (operation: OutboxOperation): boolean =>
   operation.status === "conflict" || operation.status === "failed";
 
-const STORE_OF: Record<OutboxEntity, "accounts" | "categories" | "transactions" | "budgets"> = {
+const STORE_OF: Record<
+  OutboxEntity,
+  | "accounts"
+  | "categories"
+  | "transactions"
+  | "budgets"
+  | "contacts"
+  | "sharedGroups"
+  | "sharedExpenses"
+  | "settlements"
+> = {
   account: "accounts",
   category: "categories",
   transaction: "transactions",
   budget: "budgets",
+  contact: "contacts",
+  sharedGroup: "sharedGroups",
+  sharedExpense: "sharedExpenses",
+  settlement: "settlements",
 };
 
 // D-24: the baseline kept aside is at least as fresh as the 409's `current`, which only backs it.

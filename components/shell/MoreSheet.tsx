@@ -8,6 +8,7 @@ import { List, RowBody, rowClasses, RowMeta, RowTitle } from "@/components/ui/Ro
 import { Sheet } from "@/components/ui/Sheet";
 import { Tile } from "@/components/ui/Tile";
 import { Link, usePathname } from "@/lib/i18n/navigation";
+import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import type { ColorToken } from "@/lib/theme/feature-color";
 
@@ -26,10 +27,12 @@ interface MoreSheetProps {
   userEmail: string;
   accountCount?: number;
   categoryCounts?: CategoryCounts;
+  owedToYou?: number;
 }
 
 const TILE_COLOR: Partial<Record<NavKey, ColorToken>> = {
   accounts: "BLUE",
+  shared: "PURPLE",
   stats: "TEAL",
   categories: "ORANGE",
   settings: "GRAY",
@@ -42,8 +45,10 @@ export function MoreSheet({
   userEmail,
   accountCount,
   categoryCounts,
+  owedToYou,
 }: MoreSheetProps) {
   const t = useTranslations();
+  const money = useMoney();
   const pathname = usePathname();
 
   function metaFor(key: NavKey) {
@@ -58,6 +63,10 @@ export function MoreSheet({
             active: categoryCounts.active,
             archived: categoryCounts.archived,
           });
+    if (key === "shared")
+      return owedToYou === undefined
+        ? undefined
+        : t("nav.moreShared", { amount: money.format(owedToYou) });
     if (key === "stats") return t("nav.moreStats");
     if (key === "settings") return t("nav.moreSettings");
     return undefined;

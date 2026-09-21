@@ -67,10 +67,11 @@ async function load(seq: number): Promise<View> {
   if (!operation || (operation.status !== "conflict" && operation.status !== "failed")) {
     return { kind: "empty" };
   }
-  // The mirror holds every account and category: a sheet printing raw ids would be useless.
+  // The mirror holds every account, category and person: a sheet printing raw ids would be useless.
   const names = new Map<string, string>();
   for (const record of await vault.db.getAll("accounts")) names.set(record.id, record.row.name);
   for (const record of await vault.db.getAll("categories")) names.set(record.id, record.row.name);
+  for (const record of await vault.db.getAll("contacts")) names.set(record.id, record.row.name);
   return {
     kind: "resolve",
     operation,

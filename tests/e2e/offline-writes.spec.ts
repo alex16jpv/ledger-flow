@@ -1,6 +1,7 @@
 import { expect, test } from "../fixtures";
 import {
   addButton,
+  APP,
   coldStart,
   expectPending,
   freshUser,
@@ -140,4 +141,91 @@ test("a reply lost after the server applied it replays as a duplicate, not as a 
   expect(after[0]?.amount).toBe(amount);
   const [account] = await listAccounts(request);
   expect(account?.balance).toBe(user.openingBalance - amount);
+});
+
+// T-123: the one write whose movements the server mints, so the device mints its own and drops them.
+test("a settle-up with no network moves every figure, and the server's movement replaces the device's", async ({
+  page,
+  request,
+  context,
+}) => {
+  test.setTimeout(300_000);
+  const user = await freshUser(request, "settle");
+  await signInAs(context, request, user);
+
+  const [account] = await listAccounts(request);
+  const categories = await request.get("/api/categories?type=EXPENSE&limit=1");
+  const spent = 100_000;
+  const expense = await request.post("/api/transactions", {
+    headers: { origin: APP },
+    data: {
+      type: "EXPENSE",
+      amount: spent,
+      date: "2026-09-20T20:00:00.000Z",
+      description: "Dinner",
+      fromAccountId: account?.id,
+      categoryId: ((await categories.json()) as { data: { id: string }[] }).data[0]?.id,
+    },
+  });
+  const created = (await expense.json()) as { id: string };
+  const person = await request.post("/api/contacts", {
+    headers: { origin: APP },
+    data: { name: "Beto Cano", color: "BLUE" },
+  });
+  const contact = (await person.json()) as { id: string };
+  const group = await request.post("/api/shared-groups", {
+    headers: { origin: APP },
+    data: { name: "Night out", contactIds: [contact.id] },
+  });
+  const outing = (await group.json()) as { id: string };
+  const line = await request.post(`/api/shared-groups/${outing.id}/expenses`, {
+    headers: { origin: APP },
+    data: { transactionId: created.id },
+  });
+  expect(line.ok()).toBe(true);
+
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+  // A group's page is a nested template the worker only caches once it has been opened (T-01).
+  await page.goto(`/shared/groups/${outing.id}`);
+  await expect(page.getByRole("heading", { level: 2, name: "Night out" })).toBeVisible();
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText("You’re offline.")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Night out" })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole("button", { name: "Settle up" }).click();
+  const sheet = page.getByRole("dialog", { name: "Settle up with Beto Cano" });
+  await sheet.getByRole("button", { name: /Where it arrives/ }).click();
+  await page.getByRole("option").first().click();
+  await sheet.getByRole("button", { name: "Record payment" }).click();
+  await expect(sheet).toBeHidden();
+
+  // Nothing left the device, and every figure moved all the same.
+  expect((await vaultState(page))?.pending).toBe(1);
+  await expect(page.getByText("Paid in full")).toBeVisible();
+  await page.goto("/transactions");
+  await expect(page.getByText("Your share $50,000")).toBeVisible();
+  // The payment the device minted is in the list, neutral and with its person's name.
+  await expect(page.getByText("Payment").first()).toBeVisible();
+  await page.goto("/accounts");
+  await expect(page.getByText(/4,950,000/).first()).toBeVisible();
+
+  await context.setOffline(false);
+  await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
+
+  // Exactly one payment reached the server, and the device's own copy of it is gone.
+  const settlements = await request.get("/api/settlements?limit=100");
+  expect(((await settlements.json()) as { data: unknown[] }).data).toHaveLength(1);
+  const rows = await listTransactions(request);
+  expect(rows.filter((row) => row.type === "SETTLEMENT")).toHaveLength(1);
+  const [reread] = await listAccounts(request);
+  expect(reread?.balance).toBe(user.openingBalance - spent + 50_000);
+  await page.goto("/transactions");
+  await expect(page.getByRole("button", { name: /Pending sync/ })).toHaveCount(0);
+  await expect(page.getByText("Payment")).toHaveCount(1);
 });

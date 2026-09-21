@@ -36,13 +36,17 @@ describe("vault schema", () => {
       "accounts",
       "budgets",
       "categories",
+      "contacts",
       "meta",
       "outbox",
       "profile",
+      "settlements",
+      "sharedExpenses",
+      "sharedGroups",
       "transactions",
     ]);
 
-    const tx = db.transaction(["transactions", "outbox", "accounts"]);
+    const tx = db.transaction(["transactions", "outbox", "accounts", "sharedExpenses"]);
     expect([...tx.objectStore("transactions").indexNames].sort()).toEqual([
       "categoryId",
       "date",
@@ -55,6 +59,10 @@ describe("vault schema", () => {
     ]);
     expect([...tx.objectStore("outbox").indexNames].sort()).toEqual(["entity", "opId", "status"]);
     expect([...tx.objectStore("accounts").indexNames].sort()).toEqual(["archived", "updatedAt"]);
+    expect([...tx.objectStore("sharedExpenses").indexNames].sort()).toEqual([
+      "deleted",
+      "updatedAt",
+    ]);
     await tx.done;
   });
 

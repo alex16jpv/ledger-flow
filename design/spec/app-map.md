@@ -60,6 +60,25 @@ balance**: the user enters the real balance, the app computes the delta and crea
 Errors: `DEFAULT_ACCOUNT_ARCHIVE_BLOCKED` (a notice in the detail), `DUPLICATE` (inline), and
 `ACCOUNT_LIMIT_REACHED` as an alert above the create button.
 
+## Shared ✅
+
+Expenses split with other people. ✅ The section with its two faces — **People**, the net per person
+across every group, and **Shared groups**, each with its date range because a group has no month — and
+the detail of a group with its participants, their four states and its expenses. ✅ A person: what they
+owe you across every group and what they have already paid. ✅ Creating a group from transactions that
+already exist, or from scratch, and `Split this` over a single one. ✅ The split sheet in its four
+modes, with the odd peso going to whoever paid, ✅ an expense carrying its own split instead of the
+group's, and ✅ an expense with **guests**, who weigh a head count and settle as one row. ✅ Adding
+people after the group exists, with the question of what happens to the expenses already recorded. ✅ Getting paid — money that is not income, partial
+payments, cash outside the app, and the case where the two of you owe each other — ✅ writing off, and
+✅ archiving a group with people still owing, ✅ a group two people paid for, and ✅ the contact
+picker, where the paging and the two limits are said. ⬜ Loading and error, and ⬜ the `Percent` and
+`Exact` modes of the split sheet, are specified and not drawn: their plates are made by the session
+that builds the screen, before its code, like every other screen's states (D-36). Everything is
+written in [screens/shared.md](screens/shared.md) and **nothing of it is built yet**: the backend
+arrives with T-113…T-119 and the screens with T-120…T-124. 🔮 Inviting somebody by email and letting them see the
+group in their own app is the second delivery, with the notification system it needs.
+
 ## Categories ✅
 
 A grid per type (expense, income, transfer) with icon and colour; archived ones in a folded section;

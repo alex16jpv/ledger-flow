@@ -127,3 +127,30 @@ which is also what keeps a type that is not on screen from being fetched — and
 its type's colour and sign over the account the movement touches. `reviewCategoryType` is the single
 place that says which types can carry a category at all. In the list, `transactionTitle` names a quick
 entry with nothing else to show after its type ("Quick income", not "Quick expense").
+
+Since T-120 the list carries a **fifth** kind of movement, the payment between people a settle-up
+writes. `reviewCategoryType` refuses a category on it as it does on an adjustment, and `amountKind`
+reads the **row** rather than the type alone, because a payment goes both ways: collecting reaches an
+account and is signed `+`, giving somebody their surplus back leaves one and is signed `−`. Both are
+neutral in colour — money moved, but it was neither income nor spending. A payment has no quick label
+because it is recorded from `Settle up` and nowhere else.
+
+A movement also carries **what counts as yours** — what left the account minus what has come back for
+it — and the list deliberately does not read it: a row's amount, a day's total and the summary stay
+gross, because a list of movements is what moved through the accounts. Stats and the budgets are the
+ones that measure the other figure.
+
+**T-124 made the shared layer visible where it is used.** A row of a shared expense carries a `users`
+badge and says **your share** under the gross amount; a payment reads as **the person it was with**,
+with a `hand-coins` tile, a `Payment` badge and the group underneath. Neither reads the shared feature:
+`TransactionLookups` gains **plain maps** the app layer fills from the section (`sharedLookup`), so a
+feature still never imports another, and the section is only asked for when the loaded page actually
+holds something shared. The **type filter** gains the fifth kind (`FILTER_TYPES`); the Add form does
+not (`FORM_TYPES`), because a payment is recorded from `Settle up` and nowhere else.
+
+The detail is where the third figure lives: a card leading with **what counts as yours**, a row per
+participant with their state — which can read `Paid` here and `Partially paid` in the group, because a
+payment covers the oldest expense first — `Edit split` and `Settle up`, a `Shared group` attribute, and
+**the history**, one line per event with the figure it left behind. Deleting one people have paid for
+says what it drags and what it does not: no payment is deleted, and writing it off is offered instead
+when exactly one person is left owing, which is when that is a single unambiguous act.

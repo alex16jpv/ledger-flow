@@ -5,6 +5,7 @@ import { useMemo } from "react";
 
 import { dayKey, localNoon, toIsoWindow, trailingDaysWindow } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
+import { REFERENCE_STALE_TIME_MS } from "@/lib/query/client";
 import { QUERY_DOMAINS } from "@/lib/query/domains";
 import type { Category, RestoreInput, StatsBucket, UpdateCategoryInput } from "@/types/api";
 
@@ -25,8 +26,6 @@ import { CATEGORY_TYPES } from "./schemas";
 
 export const RECENT_DAYS = 90;
 export const RECENT_LIMIT = 3;
-
-export const REFERENCE_STALE_TIME_MS = 5 * 60 * 1000;
 
 export function useCategoriesQuery(type?: CategoryType, enabled = true, includeArchived = false) {
   return useQuery({

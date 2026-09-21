@@ -1,3 +1,4 @@
+import { urlOf } from "@/lib/testing/http";
 import {
   answerBatch,
   applied,
@@ -45,9 +46,6 @@ const json = (body: unknown, init: ResponseInit = {}) =>
 
 const fetchMock = vi.fn<typeof fetch>();
 const cash = account({ id: "a1", name: "Cash", balance: 1000, openingBalance: 1000 });
-
-const urlOf = (input: string | URL | Request): string =>
-  typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
 
 const calls = () => fetchMock.mock.calls.map(([input, init]) => `${init?.method} ${urlOf(input)}`);
 

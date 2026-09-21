@@ -157,6 +157,11 @@ describe("transaction form model", () => {
       pendingDetails: false,
       source: "MANUAL",
       currency: "COP",
+      countsAsYours: 500,
+      sharedExpenseId: null,
+      sharedGroupId: null,
+      sharedSettlementId: null,
+      sharedHistory: [],
       createdAt: "",
       updatedAt: "",
     } satisfies Transaction;
