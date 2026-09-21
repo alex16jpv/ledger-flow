@@ -4391,6 +4391,31 @@ cover` is set once in the root layout for the standalone display.
   arithmetic and reads identically with no network. **Reversed in part on 2026-09-18 (T-96):** it no
   longer ends in "Your total balance does not change" — see that entry.
 
+## 2026-09-21 · An expense that inherits the group's split sends none (T-122)
+
+- **Context:** a shared expense can take the group's default or carry its own, and `customSplit` is
+  what the list reads to show `Custom split`. The server decides it one way: **it is true when the
+  create or the update carries a `split`**, and false when it resolves the default itself
+  (`SharedExpenseService`). A client that always sent the resolved shares would mark every ordinary
+  expense as carrying its own.
+- **Decision:** `createSharedExpense` sends `split` **only** when the row says `customSplit`. The
+  device still resolves the shares for the mirror — with `resolveShares` from `lib/local/derive`, the
+  arithmetic the parity fixtures hold against the server — so the figures are there with no network,
+  but what goes on the wire is what the server needs to reach the same answer. `Use the group's
+split` sends `useGroupSplit: true` and projects the default resolved here.
+- **Alternatives:** sending the shares always and a flag beside them. It would put the same fact in
+  two places on the wire, which is how they end up disagreeing, and it would need the server to trust
+  a figure the client computed.
+- **Consequence:** the sheet that splits a loose movement (`Split this`) decides between the two: a
+  plain `Equal` or `Percent` split becomes the group's default and the expense inherits it; `Exact`
+  and `Fixed + rest`, or a block of guests, are the expense's own, because a default has no total to
+  divide. `sharedGroup` and `sharedExpense` join the outbox, and its payload gains `params` — the
+  nested route needs the group id, which is what `POST /sync` already calls `params`.
+- **Where the screens live:** the group detail, the transaction picker and the sheet that says what
+  adding them changes read accounts, categories and transactions, so they sit in the **app layer**
+  and not in `features/shared` — a feature never imports another feature (§3), and the account
+  detail set the precedent.
+
 ## 2026-09-21 · The Shared section reads one ledger, not one list per screen (T-121)
 
 - **Context:** a payment is imputed **per counterparty across every group** (T-120), and the API

@@ -5,7 +5,10 @@ import type {
   BudgetAmountOverrideInput,
   Category,
   Contact,
+  SharedExpense,
+  SharedGroup,
   SyncBudget,
+  SyncSharedGroup,
   SyncTransaction,
   Transaction,
 } from "@/types/api";
@@ -92,7 +95,15 @@ export async function serverBaseline(
 ): Promise<MirrorRow | undefined> {
   if (entity === "budget") return budgetBaseline(tx, raw as Budget);
   if (entity === "transaction") return toSyncRow(raw as Transaction);
-  return raw as Account | Category | Contact;
+  // The group's view adds `totals` and `status`, which are derived on every read and never stored.
+  if (entity === "sharedGroup") {
+    const view = raw as SharedGroup;
+    const row: Record<string, unknown> = { ...view };
+    delete row.totals;
+    delete row.status;
+    return row as SyncSharedGroup;
+  }
+  return raw as Account | Category | Contact | SharedExpense;
 }
 
 async function confirmRow(tx: WriteTransaction, entity: OutboxEntity, raw: unknown): Promise<void> {
@@ -225,6 +236,30 @@ export const ROUTES: Record<RouteKey, Route> = {
     send: ({ entityId }, guard) =>
       api<unknown>(`/transactions/${entityId}`, { method: "DELETE", ...ifMatch(guard) }),
     confirm: (tx, _result, operation) => reconcileRemoval(tx, operation),
+  }),
+
+  "sharedGroup:create": route<SharedGroup>({
+    send: ({ payload }) =>
+      api<SharedGroup>("/shared-groups", { method: "POST", body: payload.body }),
+    confirm: (tx, row) => confirmRow(tx, "sharedGroup", row),
+  }),
+
+  "sharedExpense:create": route<SharedExpense>({
+    send: ({ payload }) =>
+      api<SharedExpense>(`/shared-groups/${payload.params?.groupId}/expenses`, {
+        method: "POST",
+        body: payload.body,
+      }),
+    confirm: (tx, row) => confirmRow(tx, "sharedExpense", row),
+  }),
+  "sharedExpense:update": route<SharedExpense>({
+    send: ({ entityId, payload }, guard) =>
+      api<SharedExpense>(`/shared-groups/${payload.params?.groupId}/expenses/${entityId}`, {
+        method: "PUT",
+        body: payload.body,
+        ...ifMatch(guard),
+      }),
+    confirm: (tx, row) => confirmRow(tx, "sharedExpense", row),
   }),
 
   "budget:create": route<Budget>({

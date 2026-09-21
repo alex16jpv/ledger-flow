@@ -21,9 +21,14 @@ export {
   type LedgerSettlement,
   partyKey,
   type PersonState,
+  resolveShares,
   type SharedGroupView,
   type SharedLedger,
   type SharedPerson,
+  type SplitInput,
+  SplitInvalidError,
+  type SplitMode,
+  type SplitRow,
 } from "./shared";
 export {
   deriveSpending,

@@ -26,6 +26,7 @@ export const SHELL_PATHS = [
   "/accounts",
   "/accounts/new",
   "/shared",
+  "/shared/new",
   "/categories",
   "/categories/new",
   "/stats",

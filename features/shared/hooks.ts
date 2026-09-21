@@ -1,19 +1,23 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { REFERENCE_STALE_TIME_MS } from "@/lib/query/client";
-import { QUERY_DOMAINS } from "@/lib/query/domains";
+import { invalidateMoneyMovement, QUERY_DOMAINS } from "@/lib/query/domains";
 import type { RestoreInput, UpdateContactInput } from "@/types/api";
 
 import {
   archiveContact,
   createContact,
+  createSharedExpense,
+  createSharedGroup,
   fetchContact,
   fetchContacts,
+  fetchContactsPage,
   fetchSharedLedger,
   restoreContact,
+  saveSharedSplit,
   updateContact,
 } from "./api";
 import { contactKeys, sharedKeys } from "./keys";
@@ -34,6 +38,31 @@ export function useContactQuery(id: string, enabled = true) {
     queryFn: () => fetchContact(id),
     enabled,
   });
+}
+
+// The sheet that picks people pages, and it says how many of how many it is showing.
+export const CONTACT_PICKER_PAGE = 20;
+
+export function useContactsPage(enabled = true) {
+  const query = useInfiniteQuery({
+    queryKey: contactKeys.page(),
+    queryFn: ({ pageParam }) =>
+      fetchContactsPage({ cursor: pageParam, limit: CONTACT_PICKER_PAGE }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) =>
+      last.pagination.hasMore ? (last.pagination.nextCursor ?? undefined) : undefined,
+    enabled,
+  });
+  return {
+    contacts: query.data?.pages.flatMap((page) => page.data) ?? [],
+    total: query.data?.pages[0]?.pagination.total ?? 0,
+    hasMore: query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    isPending: query.isPending,
+    fetchNextPage: () => {
+      void query.fetchNextPage();
+    },
+  };
 }
 
 export function useSharedLedgerQuery(enabled = true) {
@@ -71,6 +100,32 @@ export function useSharedSection(enabled = true): SharedSectionQuery {
       void contacts.refetch();
     },
   };
+}
+
+function useSharedInvalidation() {
+  const queryClient = useQueryClient();
+  return async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: QUERY_DOMAINS.shared }),
+      // A movement that joins a group gains its share, and a group's figures read its movements.
+      invalidateMoneyMovement(queryClient),
+    ]);
+  };
+}
+
+export function useCreateSharedGroup() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({ mutationFn: createSharedGroup, onSuccess: invalidate });
+}
+
+export function useCreateSharedExpense() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({ mutationFn: createSharedExpense, onSuccess: invalidate });
+}
+
+export function useSaveSharedSplit() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({ mutationFn: saveSharedSplit, onSuccess: invalidate });
 }
 
 function useContactInvalidation() {

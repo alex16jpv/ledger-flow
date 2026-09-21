@@ -4196,15 +4196,19 @@ ${o.lock === undefined ? "" : `<button class="btn ghost icon-only sm round" aria
 <span class="input" style="width:132px;height:40px;justify-content:flex-end${o.lock ? ";border-color:var(--brand)" : ""}"><span class="value amount">${value}</span></span></div>`;
 
 const splitSheet = (mode = "equal", loose = false) => {
-  const seg = `<div class="segment"><button aria-pressed="${String(mode === "equal")}">Equal</button><button aria-pressed="false">Percent</button><button aria-pressed="false">Exact</button><button aria-pressed="${String(mode === "fixed")}">Fixed + rest</button></div>`;
+  const seg = `<div class="segment"><button aria-pressed="${String(mode === "equal")}">Equal</button><button aria-pressed="${String(mode === "percent")}">Percent</button><button aria-pressed="false">Exact</button><button aria-pressed="${String(mode === "fixed")}">Fixed + rest</button></div>`;
   const rows =
     mode === "equal"
       ? `${splitRow("You", "$33,334")}${splitRow("Ana Ruiz", "$33,333")}${splitRow("Beto Cano", "$33,333")}`
-      : `${splitRow("You", "$40,000", { lock: false })}${splitRow("Ana Ruiz", "$40,000", { lock: false })}${splitRow("Beto Cano", "$20,000", { lock: true })}`;
+      : mode === "percent"
+        ? `${splitRow("You", "50%")}${splitRow("Ana Ruiz", "30%")}${splitRow("Beto Cano", "20%")}`
+        : `${splitRow("You", "$40,000", { lock: false })}${splitRow("Ana Ruiz", "$40,000", { lock: false })}${splitRow("Beto Cano", "$20,000", { lock: true })}`;
   const note =
     mode === "equal"
       ? `<div class="alert neutral">${iconSvg("info")}<span>$100,000 does not divide by three, so the odd $1 goes to <b>you</b>, the one who paid. The shares always add up to the expense.</span></div>`
-      : `<div class="alert neutral">${iconSvg("info")}<span>Beto is fixed at $20,000. The other $80,000 is split between the two of you, and it moves on its own when his figure changes.</span></div>`;
+      : mode === "percent"
+        ? `<div class="alert neutral">${iconSvg("info")}<span>The same sheet with a different unit: you type percentages and it shows the money \u2014 ${moneyText(50000)}, ${moneyText(30000)} and ${moneyText(20000)}. They have to add up to 100.</span></div>`
+        : `<div class="alert neutral">${iconSvg("info")}<span>Beto is fixed at $20,000. The other $80,000 is split between the two of you, and it moves on its own when his figure changes.</span></div>`;
   const who = loose
     ? `<div class="field"><span class="label">Who was in</span>
 <div class="chips" style="flex-wrap:wrap;overflow:visible">${contactChip("You")}${contactChip("Ana Ruiz")}${contactChip("Beto Cano")}<button class="chip">${iconSvg("plus", "sm")}Add a person</button></div></div>`
@@ -4986,6 +4990,13 @@ const PAGES = [
         "“Pepito only pays 50”, in the owner’s words. Beto is pinned at $20,000 and the remaining $80,000 keeps splitting itself between the other two; percent and exact are the same sheet with a different unit.",
         transactionDetail({ splitting: true, sheet: splitSheet("fixed", true) }),
         { added: "2026-09-20" },
+      ),
+      plate(
+        "split-percent",
+        "Splitting · by percentage",
+        "The same sheet with a different unit, which is all <code>Percent</code> and <code>Exact</code> are: you type a percentage each and the sheet shows the money. They have to add up to 100, and what is left to assign says so until they do.",
+        transactionDetail({ splitting: true, sheet: splitSheet("percent", true) }),
+        { added: "2026-09-21" },
       ),
       plate(
         "split-one-expense",

@@ -31,6 +31,17 @@ no copy yet. Writes go through `lib/local/outbox`: `contact` is an entity of the
 account or a category, so a person can be added, renamed or archived with no network. A person is
 **archived, never deleted**: the groups and the payments that name them stay readable.
 
+**Splitting.** `split.ts` is the sheet's model — the four modes, the block of guests, what is left to
+assign — and it resolves through `resolveShares` (`lib/local/derive`), the same arithmetic the server
+runs, so a split made with no network agrees with it to the minor unit. `write.ts` turns a group's
+default into what a new expense inherits. An expense that inherits **sends no split**: the server
+resolves the default itself, and carrying one is exactly what sets `customSplit`. `Split this` on a
+loose movement creates a shared group of one, because there is one concept and not two.
+
+The screens that compose other features — the group detail, the transaction picker and the sheet that
+says what adding them changes — live in the **app layer**, like the account detail does, because a
+feature never imports another feature.
+
 A person is **not an account** — no balance of their own, never in the account picker, in a transfer
 or in `Stats groupBy=account` — and their screen says so in one line, because that is the whole
 reason a contact is an entity of its own.

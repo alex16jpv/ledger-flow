@@ -81,6 +81,14 @@ export {
 } from "./resolve";
 export { ROUTES, serverBaseline } from "./routes";
 export {
+  createSharedExpense,
+  createSharedGroup,
+  type NewSharedExpense,
+  type NewSharedGroup,
+  type SavedSplit,
+  saveSharedSplit,
+} from "./shared";
+export {
   EMPTY_OUTBOX,
   type OutboxProjection,
   type OutboxStatus,

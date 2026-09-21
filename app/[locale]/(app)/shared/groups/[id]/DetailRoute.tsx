@@ -1,7 +1,8 @@
 "use client";
 
-import { SharedGroupScreen } from "@/features/shared/components/SharedGroupScreen";
 import { useDetailRouteId } from "@/lib/navigation/detail";
+
+import { SharedGroupScreen } from "./SharedGroupScreen";
 
 // F-48: the id comes from the URL, not `params`: the worker serves one entry per template.
 export function SharedGroupRoute() {

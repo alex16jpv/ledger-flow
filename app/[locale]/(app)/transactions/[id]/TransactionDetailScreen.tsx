@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, Hash, Pencil, Repeat, Scale, Trash2 } from "lucide-react";
+import { CircleAlert, Hash, Pencil, Repeat, Scale, Split, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createElement, type ReactNode, useMemo, useState } from "react";
 
@@ -19,6 +19,7 @@ import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery } from "@/features/categories/hooks";
+import { SplitThisSheet } from "@/features/shared/components/SplitThisSheet";
 import { DeleteTransactionSheet } from "@/features/transactions/components/DeleteTransactionSheet";
 import {
   type TransactionLookups,
@@ -71,6 +72,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
   const remove = useDeleteTransaction();
   const outbox = useOutbox();
   const [confirming, setConfirming] = useState(false);
+  const [splitting, setSplitting] = useState(false);
   const [resolving, setResolving] = useState(false);
   const adjustment = useAdjustmentSheet();
   // F-29: DESIGN §8.12 asks for the conflict sheet from Movements; the way in is here, not a row.
@@ -259,6 +261,19 @@ export function TransactionDetailScreen({ id }: { id: string }) {
             </Attribute>
             <Attribute label={t("transactions.detail.currency")}>{row.currency}</Attribute>
           </Card>
+          {/* Decision 4: splitting a loose expense creates a shared group of one. */}
+          {row.type === "EXPENSE" && row.sharedExpenseId === null && (
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => {
+                setSplitting(true);
+              }}
+            >
+              <Split {...iconProps("sm")} />
+              {t("transactions.detail.split")}
+            </Button>
+          )}
           <div className="grid grid-cols-2 gap-3">
             {row.type === "ADJUSTMENT" ? (
               <Button
@@ -302,6 +317,18 @@ export function TransactionDetailScreen({ id }: { id: string }) {
                 })}
           </p>
         </>
+      )}
+      {row && (
+        <SplitThisSheet
+          open={splitting}
+          transaction={row}
+          onClose={() => {
+            setSplitting(false);
+          }}
+          onDone={(groupId) => {
+            router.push(`/shared/groups/${groupId}`);
+          }}
+        />
       )}
       <DeleteTransactionSheet
         open={confirming}

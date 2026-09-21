@@ -577,7 +577,9 @@
         "category": "categoría",
         "transaction": "movimiento",
         "budget": "presupuesto",
-        "contact": "persona"
+        "contact": "persona",
+        "sharedGroup": "grupo compartido",
+        "sharedExpense": "gasto compartido"
       },
       "actions": {
         "create": "Este dispositivo pidió crear este {what}.",
@@ -1344,7 +1346,22 @@
       "email": "Correo",
       "emailPlaceholder": "beto@example.com",
       "emailHelp": "Solo para poder invitarle a un grupo compartido más adelante. Hoy no se envía nada.",
-      "duplicate": "Ya tienes una persona activa llamada «{name}». Los nombres no distinguen mayúsculas."
+      "duplicate": "Ya tienes una persona activa llamada «{name}». Los nombres no distinguen mayúsculas.",
+      "groupTitle": "Nuevo grupo compartido",
+      "groupName": "Nombre",
+      "groupNamePlaceholder": "Viaje a Cartagena",
+      "groupDuplicate": "Ya tienes un grupo compartido activo llamado «{name}». Los nombres no distinguen mayúsculas.",
+      "groupCreated": "Grupo compartido creado",
+      "createGroup": "Crear grupo compartido",
+      "whoWasIn": "Quién estaba",
+      "whoWasInHelp": "Tú estás en el grupo como todos los demás, con una parte propia.",
+      "defaultSplit": "Reparto por defecto",
+      "defaultSplitHelp": "Cada gasto que añadas toma este reparto sin preguntar, y cualquiera puede luego ir por su cuenta —también por importes exactos, que solo un gasto puede tener, porque solo un gasto tiene total—. Cambiarlo más adelante nunca vuelve atrás sobre lo ya registrado.",
+      "expenses": "Gastos",
+      "pickFromTransactions": "Elegir de mis movimientos",
+      "picked": "{count} elegidos · {amount}",
+      "pickNone": "Todavía ninguno",
+      "nothingChanges": "Repartir no cambia nada hoy: un gasto sigue contando entero hasta que alguien te pague."
     },
     "group": {
       "title": "Grupo compartido",
@@ -1387,7 +1404,9 @@
         "paid": "Pagado del todo",
         "partly": "Pagó {paid} · faltan {open}",
         "notPaid": "Todavía no ha pagado nada · te debe {amount}"
-      }
+      },
+      "addExpense": "Añadir gasto",
+      "expensesAdded": "{count, plural, one {# gasto añadido} other {# gastos añadidos}}"
     },
     "person": {
       "title": "Persona",
@@ -1411,7 +1430,67 @@
         "body": "Los grupos y los pagos que la nombran se siguen leyendo y ninguna cifra se mueve. Puedes restaurarla cuando quieras.",
         "confirm": "Archivar"
       }
-    }
+    },
+    "picker": {
+      "title": "Quién estaba",
+      "search": "Busca un nombre o un correo",
+      "showing": "Mostrando {shown} de {total} contactos",
+      "loadMore": "Ver más",
+      "newPerson": "Nueva persona",
+      "add": "Añadir {count}",
+      "limits": "Hasta {people} personas en un grupo compartido, y hasta {contacts} contactos. Este grupo quedaría con {inGroup}."
+    },
+    "pickExpenses": {
+      "title": "Elegir de mis movimientos",
+      "search": "Busca en la descripción, la nota o las etiquetas",
+      "add": "Añadir {count} · {amount}",
+      "loadMore": "Ver más",
+      "none": "No hay nada que añadir: todos tus gastos ya están en un grupo compartido, o ninguno coincide con lo que escribiste.",
+      "noDescription": "Gasto"
+    },
+    "whatChanges": {
+      "title": "¿Añadir {count} movimientos a {name}?",
+      "confirm": "Añadir {count} gastos",
+      "nothingChanges": "Hoy no cambia nada en tus presupuestos. Los tres siguen contando enteros —{amount} entre {categories}— porque el dinero salió de tus cuentas y todavía no te ha pagado nadie.",
+      "yoursUntilPaid": "tuyo hasta que paguen",
+      "whenSomebodyPays": "Cuando alguien te pague, el gasto baja en el mes en que ocurrió, así que un mes que ya dabas por cerrado puede cambiar. Cada cambio queda guardado en el historial del gasto."
+    },
+    "split": {
+      "mode": "Cómo se reparte",
+      "modes": {
+        "EQUAL": "Igual",
+        "PERCENT": "Porcentaje",
+        "EXACT": "Exacto",
+        "FIXED_REST": "Fijo + resto"
+      },
+      "whoWasIn": "Quién estaba",
+      "addPerson": "Añadir una persona",
+      "addGuests": "Añadir invitados",
+      "guests": {
+        "label": "Invitados en este gasto",
+        "help": "Gente a la que no vas a poner nombre. Cada uno pesa una parte, y les cobras a todos como una sola fila.",
+        "count": "Cuántos invitados",
+        "shares": "{people} personas + {guests} invitados = {shares} partes",
+        "row": "Invitados · {count}",
+        "remove": "Quitar los invitados"
+      },
+      "shareOf": "Lo que paga {name}",
+      "leftToAssign": "Falta por repartir",
+      "oddUnit": "El sobrante es de quien pagó, así que las partes siempre suman el gasto.",
+      "invalid": "Las partes todavía no suman el gasto.",
+      "useGroupSplit": "Usar el reparto del grupo",
+      "takesTheRest": "{name} se lleva una parte del resto",
+      "fixedFor": "Fijo para {name}",
+      "looseTitle": "Repartir · {description}",
+      "title": "Repartir {amount} · {description}",
+      "splitIt": "Repartirlo",
+      "save": "Guardar reparto",
+      "creates": "Crea un grupo compartido llamado {name} con estas personas, para que este gasto viva donde viven todos los compartidos. Luego puedes cambiarle el nombre o añadirle más gastos.",
+      "thisExpenseOnly": "Solo este gasto. {name} mantiene su reparto por defecto y los demás gastos también; este pasará a leerse «Reparto propio» en la lista.",
+      "saved": "Reparto guardado",
+      "done": "Gasto repartido"
+    },
+    "new": "Nuevo grupo compartido"
   },
   "transactions": {
     "readback": {
@@ -1572,7 +1651,8 @@
       "unknownAccount": "Cuenta desconocida",
       "created": "Creado {created}",
       "createdEdited": "Creado {created} · editado {edited}",
-      "dateTime": "{date} · {time}"
+      "dateTime": "{date} · {time}",
+      "split": "Repartir esto"
     },
     "review": {
       "title": "Por revisar",

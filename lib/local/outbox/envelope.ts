@@ -10,6 +10,8 @@ export const OUTBOX_ACTIONS = {
   transaction: ["create", "quickAdd", "update", "delete"],
   budget: ["create", "update", "archive", "restore", "setOverride", "clearOverride"],
   contact: ["create", "update", "archive", "restore"],
+  sharedGroup: ["create"],
+  sharedExpense: ["create", "update"],
 } as const satisfies Record<OutboxEntity, readonly string[]>;
 
 export type OutboxAction<E extends OutboxEntity = OutboxEntity> =
@@ -30,6 +32,8 @@ export interface MoneyEffect {
 export interface OperationPayload {
   body?: unknown;
   query?: Record<string, string>;
+  // What the path carries besides the row's own id, which is what `POST /sync` calls `params`.
+  params?: { groupId?: string; partyId?: string };
   effect?: MoneyEffect;
 }
 

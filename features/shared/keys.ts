@@ -3,7 +3,7 @@ import { QUERY_DOMAINS } from "@/lib/query/domains";
 export const contactKeys = {
   all: QUERY_DOMAINS.contacts,
   list: (includeArchived = false) => [...contactKeys.all, "list", { includeArchived }] as const,
-  page: (cursor?: string) => [...contactKeys.all, "page", { cursor: cursor ?? null }] as const,
+  page: () => [...contactKeys.all, "page"] as const,
   detail: (id: string) => [...contactKeys.all, "detail", id] as const,
 };
 

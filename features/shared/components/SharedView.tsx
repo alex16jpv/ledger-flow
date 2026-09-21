@@ -9,7 +9,7 @@ import { Avatar } from "@/components/shell/Avatar";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/cn";
 import { Empty } from "@/components/ui/Empty";
@@ -30,6 +30,8 @@ import { TwoFigures } from "./parts";
 type Face = "people" | "groups";
 
 const FACES: readonly Face[] = ["people", "groups"];
+
+const NEW_HREF = "/shared/new";
 
 const parseFace = (value: string | null): Face =>
   (FACES as readonly string[]).includes(value ?? "") ? (value as Face) : "people";
@@ -124,7 +126,28 @@ export function SharedView() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={t("shared.title")} />
+      <PageHeader
+        title={t("shared.title")}
+        actions={
+          <>
+            <span className="md:hidden">
+              <Link
+                href={NEW_HREF}
+                aria-label={t("shared.new")}
+                className={buttonClasses({ variant: "secondary", iconOnly: true, round: true })}
+              >
+                <Plus {...iconProps("md")} />
+              </Link>
+            </span>
+            <span className="hidden md:inline-flex">
+              <Link href={NEW_HREF} className={buttonClasses({})}>
+                <Plus {...iconProps("sm")} />
+                {t("shared.new")}
+              </Link>
+            </span>
+          </>
+        }
+      />
       {isPending ? (
         <div
           className="flex flex-col gap-4"
@@ -166,14 +189,20 @@ export function SharedView() {
           title={t("shared.empty.title")}
           body={t("shared.empty.body")}
           action={
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setNewPerson(true);
-              }}
-            >
-              {t("shared.people.add")}
-            </Button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link href={NEW_HREF} className={buttonClasses({})}>
+                <Plus {...iconProps("sm")} />
+                {t("shared.new")}
+              </Link>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setNewPerson(true);
+                }}
+              >
+                {t("shared.people.add")}
+              </Button>
+            </div>
           }
         />
       ) : (

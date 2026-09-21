@@ -1,4 +1,12 @@
-import type { Account, Category, Contact, SyncBudget, SyncTransaction } from "@/types/api";
+import type {
+  Account,
+  Category,
+  Contact,
+  SharedExpense,
+  SyncBudget,
+  SyncSharedGroup,
+  SyncTransaction,
+} from "@/types/api";
 
 import { resolvePeriod } from "../derive";
 import type { OutboxEntity, OutboxOperation } from "../schema";
@@ -10,7 +18,8 @@ import type { RouteKey } from "./routes";
 export const willBeSent = (operation: OutboxOperation): boolean =>
   operation.status === "pending" || operation.status === "sending";
 
-export type MirrorRow = Account | Category | SyncTransaction | SyncBudget | Contact;
+export type MirrorRow =
+  Account | Category | SyncTransaction | SyncBudget | Contact | SyncSharedGroup | SharedExpense;
 
 // Grouped by row, in `seq` order, which is the order they will reach the server.
 export interface QueuedMirror {
@@ -93,6 +102,9 @@ const RULES: Partial<Record<RouteKey, Rule>> = {
   }),
   "contact:restore": (row, operation) =>
     merge({ ...(row as Contact), archivedAt: null }, operation),
+
+  // A split saved on an expense is the whole body, shares included, so the merge is the row.
+  "sharedExpense:update": (row, operation) => merge(row as SharedExpense, operation),
 
   "transaction:update": (row, operation) => merge(row as SyncTransaction, operation),
   "transaction:delete": (row, operation) => ({

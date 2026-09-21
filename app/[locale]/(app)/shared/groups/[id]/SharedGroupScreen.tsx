@@ -1,7 +1,8 @@
 "use client";
 
-import { Calendar, Receipt, Users } from "lucide-react";
+import { Calendar, Plus, Receipt, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import { Avatar } from "@/components/shell/Avatar";
 import { PageHeader } from "@/components/shell/PageHeader";
@@ -12,20 +13,31 @@ import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
 import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Progress } from "@/components/ui/Progress";
-import { List, Row, RowBody, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
+import { List, Row, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
+import { useToast } from "@/components/ui/Toast";
+import { useGroupRange } from "@/features/shared/components/GroupRowLink";
+import { StateBadge } from "@/features/shared/components/parts";
+import { type SplitPerson, SplitSheet } from "@/features/shared/components/SplitSheet";
+import {
+  useContactsQuery,
+  useCreateSharedExpense,
+  useSaveSharedSplit,
+  useSharedSection,
+} from "@/features/shared/hooks";
+import { type GroupView, groupView, type PartyView } from "@/features/shared/ledger";
+import { draftFromGroup, expenseFromTransaction, inheritedSplit } from "@/features/shared/write";
+import { presentError } from "@/lib/api/errors";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
 import { featureColorStyle } from "@/lib/theme/feature-color";
-import type { SharedExpense, SharedGroup } from "@/types/api";
+import type { SharedExpense, SharedGroup, SharedSplit, Transaction } from "@/types/api";
 
-import { useSharedSection } from "../hooks";
-import { type GroupView, groupView, type PartyView } from "../ledger";
-import { useGroupRange } from "./GroupRowLink";
-import { StateBadge } from "./parts";
+import { TransactionPickerSheet } from "../../TransactionPickerSheet";
+import { WhatChangesSheet } from "../../WhatChangesSheet";
 
 // What a row says about somebody, which is the same thing the figures beside it are saying.
 function useNoteOf(view: GroupView): (person: PartyView) => string {
@@ -90,14 +102,22 @@ function PartyRow({ person, note }: { person: PartyView; note: string }) {
   );
 }
 
-function ExpenseRow({ expense, payer }: { expense: SharedExpense; payer: string }) {
+function ExpenseRow({
+  expense,
+  payer,
+  onSplit,
+}: {
+  expense: SharedExpense;
+  payer: string;
+  onSplit: () => void;
+}) {
   const t = useTranslations("shared.group");
   const money = useMoney();
   const dates = useDates();
   const yours = expense.split.shares.find((share) => share.party === "USER")?.amount ?? 0;
   const mine = expense.paidByContactId === null;
   return (
-    <Row>
+    <RowButton onClick={onSplit}>
       <Tile color={mine ? null : "GRAY"}>
         <Receipt {...iconProps("md")} />
       </Tile>
@@ -118,7 +138,7 @@ function ExpenseRow({ expense, payer }: { expense: SharedExpense; payer: string 
       <RowRight sub={t("yourShare", { amount: money.format(yours) })}>
         <Amount value={expense.amount} kind={mine ? "expense" : "settlement"} signed={false} />
       </RowRight>
-    </Row>
+    </RowButton>
   );
 }
 
@@ -193,13 +213,59 @@ function GroupHero({ view }: { view: GroupView }) {
 function GroupBody({ view }: { view: GroupView }) {
   const t = useTranslations();
   const money = useMoney();
+  const toast = useToast();
   const noteOf = useNoteOf(view);
+  const contacts = useContactsQuery(true);
+  const createExpense = useCreateSharedExpense();
+  const saveSplit = useSaveSharedSplit();
+  const [picking, setPicking] = useState(false);
+  const [adding, setAdding] = useState<Transaction[]>([]);
+  const [splitting, setSplitting] = useState<SharedExpense | null>(null);
   const payerOf = (expense: SharedExpense): string =>
     view.people.find((person) => person.contactId === expense.paidByContactId)?.name ?? "";
+
+  const you = t("shared.group.you");
+  const byId = new Map((contacts.data ?? []).map((row) => [row.id, row]));
+  // Everybody the group holds, you included, whether or not they are in an expense yet.
+  const people: SplitPerson[] = view.group.participants.map((participant) => {
+    const contact = participant.contactId === null ? undefined : byId.get(participant.contactId);
+    return {
+      contactId: participant.contactId,
+      name: participant.contactId === null ? you : (contact?.name ?? ""),
+      color: contact?.color ?? null,
+    };
+  });
+
+  function fail(error: unknown) {
+    toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
+  }
+
+  async function addExpenses() {
+    try {
+      for (const transaction of adding) {
+        await createExpense.mutateAsync(expenseFromTransaction(view.group, transaction));
+      }
+      toast.show({ message: t("shared.group.expensesAdded", { count: adding.length }) });
+      setAdding([]);
+    } catch (error) {
+      setAdding([]);
+      fail(error);
+    }
+  }
 
   return (
     <>
       <GroupHero view={view} />
+      <Button
+        variant="secondary"
+        size="lg"
+        onClick={() => {
+          setPicking(true);
+        }}
+      >
+        <Plus {...iconProps("sm")} />
+        {t("shared.group.addExpense")}
+      </Button>
       <section className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between px-1">
           <h2 className="text-md font-semibold">{t("shared.group.people")}</h2>
@@ -253,14 +319,121 @@ function GroupBody({ view }: { view: GroupView }) {
           <Card flush>
             <List>
               {view.expenses.map((expense) => (
-                <ExpenseRow key={expense.id} expense={expense} payer={payerOf(expense)} />
+                <ExpenseRow
+                  key={expense.id}
+                  expense={expense}
+                  payer={payerOf(expense)}
+                  onSplit={() => {
+                    setSplitting(expense);
+                  }}
+                />
               ))}
             </List>
           </Card>
         )}
       </section>
+      <TransactionPickerSheet
+        open={picking}
+        onClose={() => {
+          setPicking(false);
+        }}
+        onDone={(transactions) => {
+          setPicking(false);
+          setAdding(transactions);
+        }}
+      />
+      <WhatChangesSheet
+        open={adding.length > 0}
+        onClose={() => {
+          setAdding([]);
+        }}
+        groupName={view.group.name}
+        transactions={adding}
+        pending={createExpense.isPending}
+        onConfirm={() => {
+          void addExpenses();
+        }}
+      />
+      {splitting && (
+        <SplitSheet
+          key={splitting.id}
+          open
+          onClose={() => {
+            setSplitting(null);
+          }}
+          title={t("shared.split.title", {
+            amount: money.format(splitting.amount),
+            description: splitting.description ?? t("shared.group.noDescription"),
+          })}
+          total={splitting.amount}
+          currency={splitting.currency}
+          people={people}
+          payerContactId={splitting.paidByContactId}
+          initial={draftOf(splitting, view)}
+          note={t("shared.split.thisExpenseOnly", { name: view.group.name })}
+          saveLabel={t("shared.split.save")}
+          pending={saveSplit.isPending}
+          onUseGroupSplit={
+            splitting.customSplit
+              ? () => {
+                  void backToTheGroups(splitting);
+                }
+              : undefined
+          }
+          onSave={({ split }) => {
+            void save(splitting, split);
+          }}
+        />
+      )}
     </>
   );
+
+  async function save(expense: SharedExpense, split: SharedSplit) {
+    try {
+      await saveSplit.mutateAsync({
+        id: expense.id,
+        groupId: expense.groupId,
+        split,
+        projected: split,
+      });
+      setSplitting(null);
+      toast.show({ message: t("shared.split.saved") });
+    } catch (error) {
+      setSplitting(null);
+      fail(error);
+    }
+  }
+
+  async function backToTheGroups(expense: SharedExpense) {
+    try {
+      await saveSplit.mutateAsync({
+        id: expense.id,
+        groupId: expense.groupId,
+        split: null,
+        projected: inheritedSplit(view.group, expense.amount, expense.paidByContactId),
+      });
+      setSplitting(null);
+      toast.show({ message: t("shared.split.saved") });
+    } catch (error) {
+      setSplitting(null);
+      fail(error);
+    }
+  }
+}
+
+// What the sheet opens on: the split this expense carries today, read back as a draft.
+function draftOf(expense: SharedExpense, view: GroupView) {
+  if (!expense.customSplit) return draftFromGroup(view.group);
+  return {
+    mode: expense.split.mode,
+    guests: expense.split.guests,
+    inputs: Object.fromEntries(
+      expense.split.shares.map((share) => [
+        share.party === "GUESTS" ? "guests" : (share.contactId ?? "user"),
+        expense.split.mode === "PERCENT" ? share.percent : share.fixedAmount,
+      ]),
+    ),
+  };
 }
 
 export function SharedGroupScreen({ id }: { id: string }) {

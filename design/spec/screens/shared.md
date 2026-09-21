@@ -321,9 +321,8 @@ deleted, and the group stays readable.
 - **Error** (`#error`) — the screen's error with its reference, and, offline with no local copy, the
   honest empty state Transactions uses.
 
-**The `Percent` and `Exact` modes of the split sheet are still not drawn**: they are the same sheet
-with a different unit, and their plates are made by the session that builds that sheet, before its
-code, which is how every other screen's states arrived (D-36).
+`Percent` (`#split-percent`) and `Exact` (`#split-one-expense`) are the same sheet with a different
+unit, and what is left to assign is what says the figures do not add up yet.
 
 Offline, everything in this section is projected from the local mirror like every other figure, and
 whatever includes an unconfirmed write carries the projection mark (component 24). What is shared with

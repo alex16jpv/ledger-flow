@@ -91,7 +91,8 @@ export interface TransactionRecord extends MirrorRecord<SyncTransaction> {
   pendingReview?: 1;
 }
 
-export type OutboxEntity = "account" | "category" | "transaction" | "budget" | "contact";
+export type OutboxEntity =
+  "account" | "category" | "transaction" | "budget" | "contact" | "sharedGroup" | "sharedExpense";
 export type OutboxStatus = "pending" | "sending" | "conflict" | "failed";
 
 export interface OutboxOperation {
@@ -203,12 +204,30 @@ export function contactRecord(row: Contact, server?: Contact): ContactRecord {
   };
 }
 
-export function sharedGroupRecord(row: SyncSharedGroup): SharedGroupRecord {
-  return { id: row.id, row, updatedAt: row.updatedAt, archived: row.archivedAt ? 1 : 0 };
+export function sharedGroupRecord(
+  row: SyncSharedGroup,
+  server?: SyncSharedGroup,
+): SharedGroupRecord {
+  return {
+    id: row.id,
+    row,
+    updatedAt: row.updatedAt,
+    archived: row.archivedAt ? 1 : 0,
+    ...(server ? { server } : {}),
+  };
 }
 
-export function sharedExpenseRecord(row: SharedExpense): SharedExpenseRecord {
-  return { id: row.id, row, updatedAt: row.updatedAt, deleted: row.deletedAt ? 1 : 0 };
+export function sharedExpenseRecord(
+  row: SharedExpense,
+  server?: SharedExpense,
+): SharedExpenseRecord {
+  return {
+    id: row.id,
+    row,
+    updatedAt: row.updatedAt,
+    deleted: row.deletedAt ? 1 : 0,
+    ...(server ? { server } : {}),
+  };
 }
 
 export function settlementRecord(row: Settlement): SettlementRecord {

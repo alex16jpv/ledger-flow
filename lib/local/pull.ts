@@ -5,13 +5,7 @@ import { rememberServerTime } from "./clock";
 import type { VaultHandle } from "./db";
 import { writeTransaction } from "./outbox/queue";
 import { reconcileContext, reconcileRow } from "./outbox/reconcile";
-import {
-  PROFILE_KEY,
-  profileRecord,
-  settlementRecord,
-  sharedExpenseRecord,
-  sharedGroupRecord,
-} from "./schema";
+import { PROFILE_KEY, profileRecord, settlementRecord } from "./schema";
 
 export const PULL_PAGE_LIMIT = 500;
 
@@ -89,15 +83,15 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
     news ||= await isNews(tx.objectStore("contacts"), row.id, row.updatedAt);
     await reconcileRow(tx, "contact", row.id, row, context);
   }
-  // A group, an expense and a payment have no queue of their own yet: nothing to reproject on them.
   for (const row of changes.sharedGroups) {
     news ||= await isNews(tx.objectStore("sharedGroups"), row.id, row.updatedAt);
-    await tx.objectStore("sharedGroups").put(sharedGroupRecord(row));
+    await reconcileRow(tx, "sharedGroup", row.id, row, context);
   }
   for (const row of changes.sharedExpenses) {
     news ||= await isNews(tx.objectStore("sharedExpenses"), row.id, row.updatedAt);
-    await tx.objectStore("sharedExpenses").put(sharedExpenseRecord(row));
+    await reconcileRow(tx, "sharedExpense", row.id, row, context);
   }
+  // A payment has no queue of its own yet: there is nothing to reproject over these rows.
   for (const row of changes.settlements) {
     news ||= await isNews(tx.objectStore("settlements"), row.id, row.updatedAt);
     await tx.objectStore("settlements").put(settlementRecord(row));
