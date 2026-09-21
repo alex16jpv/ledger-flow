@@ -115,7 +115,7 @@ export function TransactionRow({ transaction, lookups, dated, onOpen }: Transact
             : undefined
         }
       >
-        <Amount value={transaction.amount} kind={amountKind(transaction.type)} />
+        <Amount value={transaction.amount} kind={amountKind(transaction)} />
       </RowRight>
     </RowButton>
   );

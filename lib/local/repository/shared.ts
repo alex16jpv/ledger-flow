@@ -1,7 +1,7 @@
 import { api } from "@/lib/api/client";
 import type { SharedGroup, SharedGroupList } from "@/types/api";
 
-import { deriveShared, type SharedGroupView } from "../derive/shared";
+import { deriveShared, type SharedGroupView } from "../derive";
 import type { VaultDb } from "../outbox/queue";
 import { mirrorPage, read } from "./read";
 
@@ -60,7 +60,7 @@ export function readSharedGroups(params: SharedGroupListParams = {}): Promise<Sh
   );
 }
 
-// The API answers for an archived group too, so the mirror does not filter here either.
+// A group has no tombstone, so an id the copy lacks falls through to the server instead of a 404.
 export function readSharedGroup(id: string): Promise<SharedGroup> {
   return read<SharedGroup>(
     () => api<SharedGroup>(`/shared-groups/${id}`),

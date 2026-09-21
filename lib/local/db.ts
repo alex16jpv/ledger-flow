@@ -72,7 +72,6 @@ function createStores(db: IDBPDatabase<VaultSchema>): void {
     const store = db.createObjectStore("sharedExpenses", { keyPath: "id" });
     store.createIndex("updatedAt", "updatedAt");
     store.createIndex("deleted", "deleted");
-    store.createIndex("groupId", "groupId");
   }
 
   if (!db.objectStoreNames.contains("settlements")) {

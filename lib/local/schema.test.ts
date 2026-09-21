@@ -61,7 +61,6 @@ describe("vault schema", () => {
     expect([...tx.objectStore("accounts").indexNames].sort()).toEqual(["archived", "updatedAt"]);
     expect([...tx.objectStore("sharedExpenses").indexNames].sort()).toEqual([
       "deleted",
-      "groupId",
       "updatedAt",
     ]);
     await tx.done;

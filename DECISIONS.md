@@ -4407,9 +4407,14 @@ cover` is set once in the root layout for the standalone display.
   `countsAsYours ?? amount` and exclude `SETTLEMENT` beside `ADJUSTMENT` when no type is named.
 - **Alternatives:** storing `totals` and `status` as the feed's group sends them — it does not send
   them, on purpose (`docs/modules/sync.md`), because a rollup kept in step across expense writes,
-  re-splits, payments and write-offs is the thing this feature refuses to keep anywhere; or deriving
-  `countsAsYours` here instead of reading the stored field — the same figure worked out twice, and
-  wrong on a row whose group this device has not pulled yet.
+  re-splits, payments and write-offs is the thing this feature refuses to keep anywhere.
+- **What reads which figure, because the module answers both:** every screen reads the **stored**
+  `countsAsYours` the feed sends on each movement, and `deriveSpending` and `deriveBudgetView` sum
+  that field. The module's own `countsAsYours()`, `resolveShares` and `impute` are the arithmetic a
+  write with no network needs — the splits and payments T-122 and T-123 record before the server has
+  seen them — and until then their consumer of record is the `cop-shared` parity fixture, which is
+  what proves they agree with the server to the minor unit. They stay out of `derive/index.ts`, which
+  carries what the app reaches for.
 - **Consequence:** house rule 4 gains a fifth figure the client computes, so it is held by the
   `cop-shared` parity fixture like the others, and the split arithmetic is a second reading of
   `src/shared/splitShares.ts` rather than a port that imports it. The imputation is **per

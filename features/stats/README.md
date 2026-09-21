@@ -89,3 +89,8 @@ position, so on a phone the `readout` could only ever say the last day. It is no
 turns the pointer's x into the nearest position, which the mouse drives by moving and a finger by
 pressing and sliding. The positions are still not controls, so the chart stays one `role="img"` whose
 name is the card's sentence; the surface is `touch-pan-y`, so a flick down the page still scrolls.
+
+Since T-120 every figure here measures a movement's **`countsAsYours`** rather than its amount, so a
+shared expense counts only for the part that is really yours. The fifth kind of movement, the payment
+between people, is excluded from spending **by its type**, exactly as an adjustment is, and appears
+only when a query names it.

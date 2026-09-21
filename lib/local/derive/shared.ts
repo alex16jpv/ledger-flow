@@ -1,3 +1,4 @@
+import type { ErrorCode } from "@/lib/api/errors";
 import { currencyFractionDigits } from "@/lib/format/currency";
 import type {
   Settlement,
@@ -48,6 +49,8 @@ export interface SplitInput {
 }
 
 export class SplitInvalidError extends Error {
+  readonly code = "SPLIT_INVALID" satisfies ErrorCode;
+
   constructor(message: string) {
     super(message);
     this.name = "SplitInvalidError";
@@ -150,7 +153,6 @@ export function resolveShares(input: SplitInput): number[] {
           : fixedRestShares(totalMinor, input.rows, scale);
 
   const assigned = shares.reduce((sum, share) => sum + share, 0);
-  // Whatever is left over after flooring goes whole to whoever fronted it, in every mode.
   return shares.map((share, index) =>
     index === input.payerIndex ? (share + totalMinor - assigned) / scale : share / scale,
   );
@@ -173,7 +175,6 @@ export interface Imputation {
 const oldestFirst = (a: OwedLine, b: OwedLine): number =>
   Date.parse(a.date) - Date.parse(b.date) || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
 
-// A payment belongs to the person, not to the line: it covers the oldest line first.
 export function impute(lines: readonly OwedLine[], pool: number): Imputation {
   let left = Math.max(0, pool);
   const settled = new Map<string, number>();
@@ -193,8 +194,7 @@ export interface SharedPerson {
   expenseId: string | null;
   owesYou: number;
   youOwe: number;
-  // What they handed over beyond every line of theirs. Per counterparty, not per group: the same
-  // figure shows on their row in each group shared with them and must never be added up.
+  // Per counterparty, not per group: the same figure shows in each group and never adds up.
   surplus: number;
   state: PersonState;
 }
@@ -208,7 +208,6 @@ export interface SharedGroupView {
   collected: number;
   writtenOff: number;
   expenseCount: number;
-  // A group has no period: what it has is the range of the lines in it.
   dateFrom: string | null;
   dateTo: string | null;
   status: "OPEN" | "SETTLED";
@@ -249,44 +248,65 @@ interface Settled {
   ahead: Map<string, number>;
 }
 
+interface Owed {
+  theyOwe: OwedLine[];
+  youOwe: OwedLine[];
+}
+
 function imputeEverything(
   expenses: readonly LedgerExpense[],
   settlements: readonly LedgerSettlement[],
   parties: ReadonlySet<string>,
 ): Settled {
-  const covered = new Map<string, number>();
-  const ahead = new Map<string, number>();
+  const owed = new Map<string, Owed>();
+  const linesOf = (key: string): Owed => {
+    const found = owed.get(key);
+    if (found) return found;
+    const fresh: Owed = { theyOwe: [], youOwe: [] };
+    owed.set(key, fresh);
+    return fresh;
+  };
 
-  for (const key of parties) {
-    const [kind, id] = key.split(":");
-    const theirShare = (expense: LedgerExpense): SharedShare | undefined =>
-      expense.split.shares.find((share) =>
-        kind === "guests"
-          ? share.party === "GUESTS" && expense.id === id
-          : share.party === "CONTACT" && share.contactId === id,
-      );
-
-    const theyOweLines: OwedLine[] = [];
-    const youOweLines: OwedLine[] = [];
-    for (const expense of expenses) {
-      const theirs = theirShare(expense);
-      if (expense.paidByContactId === null && theirs) {
-        theyOweLines.push({ key: expense.id, date: expense.date, owed: toCents(theirs.amount) });
+  for (const expense of expenses) {
+    const mine = expense.paidByContactId === null;
+    for (const share of expense.split.shares) {
+      const key = shareKey(expense, share);
+      if (mine && key !== null) {
+        linesOf(key).theyOwe.push({
+          key: expense.id,
+          date: expense.date,
+          owed: toCents(share.amount),
+        });
       }
-      const yours = expense.split.shares.find(isYours);
-      if (kind === "contact" && expense.paidByContactId === id && yours) {
-        youOweLines.push({ key: expense.id, date: expense.date, owed: toCents(yours.amount) });
+      if (mine || !isYours(share)) continue;
+      const payer = `contact:${expense.paidByContactId}`;
+      if (parties.has(payer)) {
+        linesOf(payer).youOwe.push({
+          key: expense.id,
+          date: expense.date,
+          owed: toCents(share.amount),
+        });
       }
     }
+  }
 
-    const mine = settlements.filter((one) => partyKey(one.counterparty) === key);
-    const theyOwe = mine.reduce((sum, one) => sum + toCents(one.collected), 0);
-    const youOwe = mine.reduce((sum, one) => sum + toCents(one.paid), 0);
+  const pools = new Map<string, { theyOwe: number; youOwe: number }>();
+  for (const one of settlements) {
+    const key = partyKey(one.counterparty);
+    const pool = pools.get(key) ?? { theyOwe: 0, youOwe: 0 };
+    pool.theyOwe += toCents(one.collected);
+    pool.youOwe += toCents(one.paid);
+    pools.set(key, pool);
+  }
 
-    // What you handed over covers your own lines first; whatever is left of it is their money going
-    // back, so it comes off what they gave you before any of that is imputed.
-    const yours = impute(youOweLines, youOwe);
-    const theirs = impute(theyOweLines, theyOwe - yours.surplus);
+  const covered = new Map<string, number>();
+  const ahead = new Map<string, number>();
+  for (const key of parties) {
+    const lines = owed.get(key) ?? { theyOwe: [], youOwe: [] };
+    const pool = pools.get(key) ?? { theyOwe: 0, youOwe: 0 };
+    // What is left of what you handed over is their money back, and it comes off their pool first.
+    const yours = impute(lines.youOwe, pool.youOwe);
+    const theirs = impute(lines.theyOwe, pool.theyOwe - yours.surplus);
     ahead.set(key, theirs.surplus);
     for (const [expenseId, amount] of theirs.settled) covered.set(`${expenseId}|${key}`, amount);
     for (const [expenseId, amount] of yours.settled) covered.set(`user|${expenseId}`, amount);
@@ -335,7 +355,6 @@ function viewOf(
       if (isYours(share)) {
         yourShare += toCents(share.amount);
         if (expense.paidByContactId === null) continue;
-        // A line somebody else fronted: your share of it is what you owe them until you pay.
         const covered = settled.covered.get(`user|${expense.id}`) ?? 0;
         const open = Math.max(0, toCents(share.amount) - covered);
         youOwe += open;
@@ -421,7 +440,6 @@ export function deriveShared(input: SharedLedgerInput): SharedLedger {
     let back = 0;
     for (const share of expense.split.shares) {
       if (isYours(share)) {
-        // Your own share is settled only on a line somebody else fronted, by what you handed over.
         collected.set(
           `${expense.id}|user`,
           mine ? 0 : fromCents(settled.covered.get(`user|${expense.id}`) ?? 0),
@@ -451,7 +469,6 @@ export function deriveShared(input: SharedLedgerInput): SharedLedger {
   };
 }
 
-// The amount is what left the account; this is what is left of it once what came back is imputed.
 export function countsAsYours(
   transaction: { amount: number; sharedExpenseId: string | null },
   ledger: Pick<SharedLedger, "cameBack">,

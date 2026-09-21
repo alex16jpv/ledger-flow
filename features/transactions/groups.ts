@@ -21,8 +21,11 @@ export function groupByDay(transactions: readonly Transaction[], timeZone: strin
   return groups;
 }
 
-export function amountKind(type: Transaction["type"]): AmountKind {
-  switch (type) {
+export type AmountRow = Pick<Transaction, "type" | "fromAccountId">;
+
+// A payment between people goes both ways: collecting reaches an account, giving back leaves one.
+export function amountKind(row: AmountRow): AmountKind {
+  switch (row.type) {
     case "EXPENSE":
       return "expense";
     case "INCOME":
@@ -32,6 +35,6 @@ export function amountKind(type: Transaction["type"]): AmountKind {
     case "ADJUSTMENT":
       return "adjustment";
     case "SETTLEMENT":
-      return "settlement";
+      return row.fromAccountId === null ? "settlement" : "settlementOut";
   }
 }

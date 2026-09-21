@@ -66,8 +66,7 @@ export interface ErrorPresentation {
   messageKey: ErrorMessageKey;
 }
 
-// Where each code is shown and, for a field error, which field. Its message key is the code
-// itself, so it is derived rather than repeated on every row.
+// Where each code is shown, and its field when it is a field error. Its key is the code itself.
 const SHOWN: Readonly<Record<ErrorCode, readonly [ErrorScope, string?]>> = {
   VALIDATION: ["form"],
   INVALID_ID: ["screen"],

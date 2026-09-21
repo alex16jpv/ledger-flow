@@ -194,12 +194,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
                 )}
               </Tile>
             )}
-            <Amount
-              value={row.amount}
-              kind={amountKind(row.type)}
-              size="hero"
-              className="text-[36px]"
-            />
+            <Amount value={row.amount} kind={amountKind(row)} size="hero" className="text-[36px]" />
             <h2 className="text-md font-semibold">{transactionTitle(row, lookups, t)}</h2>
             <span className="text-sm text-text-3">
               {[t(`transactionTypes.${row.type}`), (from ?? to)?.name].filter(Boolean).join(" · ")}

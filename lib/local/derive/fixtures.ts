@@ -1,3 +1,4 @@
+import { dayKey } from "@/lib/format/dates";
 import type {
   Category,
   SharedShare,
@@ -13,6 +14,7 @@ import copShared from "./fixtures/cop-shared.json";
 import eurMadrid from "./fixtures/eur-madrid.json";
 import jpyTokyo from "./fixtures/jpy-tokyo.json";
 import usdNewYork from "./fixtures/usd-new-york.json";
+import { fromCents, toCents } from "./money";
 
 // Vendored verbatim from the backend with `npm run fixtures:sync`; `parity.test.ts` catches drift.
 
@@ -230,24 +232,20 @@ export const PARITY_FIXTURES = [
   usdNewYork,
 ] as unknown[] as [ParityFixture, ParityFixture, ParityFixture, ParityFixture, ParityFixture];
 
-/**
- * The movements a settle-up writes. Their ids are minted on the server, so no fixture row can name
- * them and none is written; a mirror holding the real feed has them among `transactions`, and
- * `expected.balances` counts them. Every settle-up of a fixture names the default account.
- */
+// A settle-up's movements carry ids the server mints, so no fixture names them; it moved the default.
 function settlementRows(fixture: ParityFixture): FixtureTransaction[] {
   const into = fixture.accounts.find((account) => account.isDefault)?.id ?? null;
   return (fixture.settlements ?? [])
     .filter((one) => one.deletedAt === null && !one.outsideApp)
     .map((one, index) => {
-      const moved = one.collected - one.paid;
+      const moved = toCents(one.collected) - toCents(one.paid);
       return {
         key: `settlement:${one.key}`,
         id: `settlement-${index}`,
         type: "SETTLEMENT",
-        amount: Math.abs(moved),
+        amount: fromCents(Math.abs(moved)),
         date: one.date,
-        dayKey: one.date.slice(0, 10),
+        dayKey: dayKey(new Date(one.date), fixture.user.timezone),
         description: null,
         categoryId: null,
         fromAccountId: moved < 0 ? into : null,

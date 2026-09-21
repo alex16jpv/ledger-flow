@@ -127,3 +127,15 @@ which is also what keeps a type that is not on screen from being fetched — and
 its type's colour and sign over the account the movement touches. `reviewCategoryType` is the single
 place that says which types can carry a category at all. In the list, `transactionTitle` names a quick
 entry with nothing else to show after its type ("Quick income", not "Quick expense").
+
+Since T-120 the list carries a **fifth** kind of movement, the payment between people a settle-up
+writes. `reviewCategoryType` refuses a category on it as it does on an adjustment, and `amountKind`
+reads the **row** rather than the type alone, because a payment goes both ways: collecting reaches an
+account and is signed `+`, giving somebody their surplus back leaves one and is signed `−`. Both are
+neutral in colour — money moved, but it was neither income nor spending. A payment has no quick label
+because it is recorded from `Settle up` and nowhere else.
+
+A movement also carries **what counts as yours** — what left the account minus what has come back for
+it — and the list deliberately does not read it: a row's amount, a day's total and the summary stay
+gross, because a list of movements is what moved through the accounts. Stats and the budgets are the
+ones that measure the other figure.

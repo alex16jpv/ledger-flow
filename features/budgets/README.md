@@ -84,3 +84,9 @@ at all, draws one the same way instead of always writing `INDIGO`.
 Since T-78 `GlobalBudgetForm` reports a typed amount to the sheet around it (`useUnsavedGuard`), and
 the period override sheet passes `unsaved` directly, so neither is thrown away by a tap outside
 without asking.
+
+Since T-120 a budget's `spent` measures each movement's **`countsAsYours`** — what left the account
+minus what has come back for it — rather than its amount, with and without network alike. So a
+shared expense counts in full until somebody pays, and a payment lowers it **in the month the expense
+happened**, which can move a period that was already closed; the movement's own history is what
+explains it.

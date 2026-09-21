@@ -348,6 +348,52 @@ describe("the rules the fixtures fix", () => {
   });
 });
 
+describe("the fifth kind of movement", () => {
+  const shared = parityFixture("cop-shared");
+  const window = {
+    from: "2026-08-01T00:00:00-05:00",
+    to: "2026-09-01T00:00:00-05:00",
+    timeZone: "America/Bogota",
+  };
+
+  // Every settle-up of the fixture but the one paid in cash, which moves no account.
+  const moved = 40000 + 22000 + 40000 + 5000;
+
+  it("is no more spending than an adjustment is, unless the query names it", () => {
+    expect(
+      deriveSpending(mirrorRows(shared), { groupBy: "category", type: null, ...window }),
+    ).toEqual({
+      total: 215000,
+      buckets: [{ key: shared.categories[0]!.id, total: 215000, count: 4, avg: 53750 }],
+    });
+    expect(
+      deriveSpending(mirrorRows(shared), { groupBy: "category", type: "SETTLEMENT", ...window })
+        .total,
+    ).toBe(moved);
+  });
+
+  it("measures what is left as yours, never the amount that moved", () => {
+    const gross = shared.transactions.reduce((sum, row) => sum + row.amount, 0);
+    expect(gross).toBe(305000);
+    expect(
+      deriveSpending(mirrorRows(shared), { groupBy: "day", type: "EXPENSE", ...window }).total,
+    ).toBe(215000);
+  });
+
+  it("shows in a listing that names no type, with its own amount", async () => {
+    await vaultOf(shared);
+    const page = await readTransactions({
+      from: window.from,
+      to: window.to,
+      limit: 100,
+      includeSummary: true,
+    });
+    expect(page.data.filter((row) => row.type === "SETTLEMENT")).toHaveLength(4);
+    // The list is gross: it is what moved through the accounts, not what is left as yours.
+    expect(page.summary?.totalAmount).toBe(305000 + moved);
+  });
+});
+
 describe("the vendored copy", () => {
   it("holds the five scenarios", () => {
     expect(PARITY_FIXTURES.map((fixture) => fixture.id)).toEqual([

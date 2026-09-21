@@ -15,23 +15,14 @@ export { type DayWindow, dayWindow, widenedBound, withinDays } from "./days";
 export { fromCents, runningTotals, sumAmounts, toCents } from "./money";
 export { type PeriodDefinition, type ResolvedPeriod, resolvePeriod } from "./period";
 export {
-  countsAsYours,
   deriveShared,
-  impute,
   type LedgerExpense,
   type LedgerGroup,
   type LedgerSettlement,
-  type LedgerWriteOff,
-  type OwedLine,
   type PersonState,
-  resolveShares,
   type SharedGroupView,
   type SharedLedger,
   type SharedPerson,
-  type SplitInput,
-  SplitInvalidError,
-  type SplitMode,
-  type SplitRow,
 } from "./shared";
 export {
   deriveSpending,

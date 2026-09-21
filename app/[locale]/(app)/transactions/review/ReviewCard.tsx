@@ -116,7 +116,7 @@ export function ReviewCard({
           <Hash {...iconProps("md")} />
         </Tile>
         <span className="flex min-w-0 flex-1 flex-col">
-          <Amount value={transaction.amount} kind={amountKind(transaction.type)} size="lg" />
+          <Amount value={transaction.amount} kind={amountKind(transaction)} size="lg" />
           <span className="text-sm text-text-3">
             {t("transactions.review.when", {
               day: dayLabel,

@@ -161,7 +161,7 @@ describe("shared groups through the repository", () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/shared-groups?limit=50");
   });
 
-  it("forgets a group the feed deleted along with its expenses", async () => {
+  it("leaves an expense the feed deleted out of the group's totals", async () => {
     await mirrorOf({
       sharedGroups: [trip],
       sharedExpenses: [dinner, { ...dinner, id: "s2", deletedAt: "2026-08-19T00:00:00.000Z" }],

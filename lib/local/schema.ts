@@ -77,7 +77,7 @@ export interface DeletableRecord<T> extends MirrorRecord<T> {
   deleted: 0 | 1;
 }
 
-export type SharedExpenseRecord = DeletableRecord<SharedExpense> & { groupId: string };
+export type SharedExpenseRecord = DeletableRecord<SharedExpense>;
 export type SettlementRecord = DeletableRecord<Settlement>;
 
 export interface TransactionRecord extends MirrorRecord<SyncTransaction> {
@@ -126,7 +126,7 @@ export interface VaultSchema extends DBSchema {
   sharedExpenses: {
     key: string;
     value: SharedExpenseRecord;
-    indexes: { updatedAt: string; deleted: number; groupId: string };
+    indexes: { updatedAt: string; deleted: number };
   };
   settlements: {
     key: string;
@@ -202,13 +202,7 @@ export function sharedGroupRecord(row: SyncSharedGroup): SharedGroupRecord {
 }
 
 export function sharedExpenseRecord(row: SharedExpense): SharedExpenseRecord {
-  return {
-    id: row.id,
-    row,
-    updatedAt: row.updatedAt,
-    deleted: row.deletedAt ? 1 : 0,
-    groupId: row.groupId,
-  };
+  return { id: row.id, row, updatedAt: row.updatedAt, deleted: row.deletedAt ? 1 : 0 };
 }
 
 export function settlementRecord(row: Settlement): SettlementRecord {
