@@ -47,7 +47,8 @@ const withTotals = (
   },
 });
 
-const groups = [withTotals(sharedGroup({ id: "g1", name: "Night out" }))];
+const nightOut = withTotals(sharedGroup({ id: "g1", name: "Night out" }));
+const groups = [nightOut];
 const expenses = [
   sharedExpense({
     id: "s1",
@@ -155,6 +156,24 @@ describe("SharedView", () => {
     const row = await screen.findByRole("link", { name: /Night out/ });
     expect(row).toHaveTextContent("Your share $40,000");
     expect(within(row).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+  });
+
+  // The server answers SETTLED for a group with nothing in it, which is not a group to fold away.
+  it("keeps a group you have just made on the open list", async () => {
+    serve({
+      groups: [
+        {
+          ...nightOut,
+          status: "SETTLED",
+          totals: { ...nightOut.totals, amount: 0, expenseCount: 0, owedToYou: 0 },
+        },
+      ],
+      expenses: [],
+    });
+    search = "face=groups";
+    view();
+
+    expect(await screen.findByRole("link", { name: /Night out/ })).toBeInTheDocument();
   });
 
   it("says there is nothing yet rather than drawing two empty faces", async () => {

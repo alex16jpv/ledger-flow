@@ -120,8 +120,10 @@ export function SharedView() {
   }, [section]);
   const groups = useMemo(() => {
     const rows = section?.groups ?? [];
+    // A group with no expenses is settled by arithmetic and new by intent: it does not fold away.
     const folded = (view: GroupView) =>
-      view.group.status === "SETTLED" || view.group.archivedAt !== null;
+      view.group.archivedAt !== null ||
+      (view.group.status === "SETTLED" && view.group.totals.expenseCount > 0);
     return { open: rows.filter((view) => !folded(view)), folded: rows.filter(folded) };
   }, [section]);
 

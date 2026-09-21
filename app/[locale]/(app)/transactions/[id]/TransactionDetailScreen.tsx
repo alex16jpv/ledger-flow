@@ -318,9 +318,10 @@ export function TransactionDetailScreen({ id }: { id: string }) {
           </p>
         </>
       )}
-      {row && (
+      {/* Mounted only while it is open: its title carries the movement's own description. */}
+      {row && splitting && (
         <SplitThisSheet
-          open={splitting}
+          open
           transaction={row}
           onClose={() => {
             setSplitting(false);

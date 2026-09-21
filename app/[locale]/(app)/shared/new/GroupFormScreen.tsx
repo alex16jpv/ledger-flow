@@ -154,7 +154,7 @@ export function GroupFormScreen() {
               }}
             >
               <Plus {...iconProps("sm")} />
-              {t("shared.picker.newPerson")}
+              {t("shared.split.addPerson")}
             </Chip>
           </div>
         </Field>
