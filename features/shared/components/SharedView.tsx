@@ -358,12 +358,14 @@ export function SharedView() {
           )}
         </>
       )}
-      <ContactFormSheet
-        open={newPerson}
-        onClose={() => {
-          setNewPerson(false);
-        }}
-      />
+      {newPerson && (
+        <ContactFormSheet
+          open
+          onClose={() => {
+            setNewPerson(false);
+          }}
+        />
+      )}
     </div>
   );
 }

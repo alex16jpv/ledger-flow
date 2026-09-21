@@ -72,6 +72,9 @@ test("a person, a group made from a movement already recorded, and what it count
   await expect(page.getByText(/1 selected · /)).toBeVisible();
 
   await page.getByRole("button", { name: "Create shared group" }).click();
+  // What it changes in the budgets is said before saving, and the answer is: nothing, today.
+  await expect(page.getByText(/Nothing changes in your budgets today/)).toBeVisible();
+  await page.getByRole("button", { name: "Add 1 expense" }).click();
 
   // The detail leads with what still counts as yours, which splitting does not lower.
   await expect(page.getByRole("heading", { level: 1, name: "Shared group" })).toBeVisible();

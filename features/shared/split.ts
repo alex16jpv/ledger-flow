@@ -1,3 +1,4 @@
+import { currencyFractionDigits } from "@/lib/format/currency";
 import { resolveShares, type SplitMode, type SplitRow } from "@/lib/local/derive";
 import type { ColorToken } from "@/lib/theme/feature-color";
 import type { SharedShare, SharedSplit } from "@/types/api";
@@ -64,18 +65,63 @@ const rowsOf = (draft: SplitDraft, parties: readonly SplitParty[]): SplitRow[] =
     input: draft.mode === "EQUAL" ? null : inputOf(draft, party.key),
   }));
 
+export const PERCENT_SCALE = 100;
+export const WHOLE = PERCENT_SCALE * PERCENT_SCALE;
+
+// The server adds percentages as basis points; in floats three thirds of 100 do not make 100.
+export const basisPoints = (percent: number): number => Math.round(percent * PERCENT_SCALE);
+
+export function percentLeft(typed: Iterable<number | null | undefined>): number {
+  let assigned = 0;
+  for (const percent of typed) assigned += basisPoints(percent ?? 0);
+  return WHOLE - assigned;
+}
+
+// Added in minor units and divided once: in majors a currency with cents leaves -1.42e-14 behind.
 export function leftToAssign(
   draft: SplitDraft,
   parties: readonly SplitParty[],
   total: number,
+  currency: string,
 ): number {
+  const scale = 10 ** currencyFractionDigits(currency);
+  const minor = (amount: number) => Math.round(amount * scale);
+  const totalMinor = minor(total);
   if (draft.mode === "EQUAL") return 0;
-  const typed = parties.reduce((sum, party) => sum + (inputOf(draft, party.key) ?? 0), 0);
-  if (draft.mode === "PERCENT") return total - (total * typed) / 100;
-  if (draft.mode === "EXACT") return total - typed;
-  // Fixed plus rest: whoever is not pinned takes what is left, unless nobody is.
+  if (draft.mode === "PERCENT") {
+    return (
+      Math.round(
+        (totalMinor * percentLeft(parties.map((party) => inputOf(draft, party.key)))) / WHOLE,
+      ) / scale
+    );
+  }
+  const typed = parties.reduce((sum, party) => sum + minor(inputOf(draft, party.key) ?? 0), 0);
+  if (draft.mode === "EXACT") return (totalMinor - typed) / scale;
+  // Fixed plus rest: whoever is not pinned takes what is left, unless nobody is or it is already gone.
   const pinned = parties.filter((party) => inputOf(draft, party.key) !== null);
-  return pinned.length === parties.length ? total - typed : 0;
+  if (pinned.length === parties.length) return (totalMinor - typed) / scale;
+  return Math.min(0, totalMinor - typed) / scale;
+}
+
+export type SplitProblem = "SHORT" | "OVER" | "NOBODY_TAKES_THE_REST" | "NEGATIVE" | "MISSING";
+
+// Why the sheet cannot be saved, in the words of the thing that is actually wrong.
+export function splitProblem(
+  draft: SplitDraft,
+  parties: readonly SplitParty[],
+  left: number,
+): SplitProblem {
+  if (parties.some((party) => (inputOf(draft, party.key) ?? 0) < 0)) return "NEGATIVE";
+  if (draft.mode === "FIXED_REST") {
+    if (parties.every((party) => inputOf(draft, party.key) !== null)) {
+      return "NOBODY_TAKES_THE_REST";
+    }
+    return left < 0 ? "OVER" : "SHORT";
+  }
+  if (draft.mode !== "EQUAL" && parties.some((party) => inputOf(draft, party.key) === null)) {
+    return "MISSING";
+  }
+  return left < 0 ? "OVER" : "SHORT";
 }
 
 export function splitInputOf(

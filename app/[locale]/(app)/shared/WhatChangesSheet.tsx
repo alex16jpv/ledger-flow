@@ -71,7 +71,7 @@ export function WhatChangesSheet({
                   </Tile>
                   <RowBody>
                     <RowTitle>
-                      <span>{row.description ?? category?.name ?? ""}</span>
+                      <span>{row.description ?? category?.name ?? t("noDescription")}</span>
                     </RowTitle>
                     <RowMeta
                       items={[dates.formatDay(new Date(row.date)), category?.name].filter(Boolean)}

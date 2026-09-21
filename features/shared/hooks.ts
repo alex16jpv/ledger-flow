@@ -59,6 +59,7 @@ export function useContactsPage(enabled = true) {
     hasMore: query.hasNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
     isPending: query.isPending,
+    isError: query.isError,
     fetchNextPage: () => {
       void query.fetchNextPage();
     },

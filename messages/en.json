@@ -1362,7 +1362,8 @@
       "picked": "{count} selected · {amount}",
       "pickNone": "None yet",
       "nothingChanges": "Splitting changes nothing today: an expense keeps counting in full until someone pays you back.",
-      "limit": "Up to {contacts} people in all."
+      "limit": "Up to {contacts} people in all.",
+      "percentLeft": "{percent}%"
     },
     "group": {
       "title": "Shared group",
@@ -1439,7 +1440,9 @@
       "loadMore": "Load more",
       "newPerson": "New person",
       "add": "Add {count}",
-      "limits": "Up to {people} people in one shared group, and up to {contacts} contacts. This group would have {inGroup}."
+      "limits": "Up to {people} people in one shared group, and up to {contacts} contacts. This group would have {inGroup}.",
+      "failed": "The people could not be read. Try again in a moment.",
+      "none": "Nobody here by that name."
     },
     "pickExpenses": {
       "title": "Pick from my transactions",
@@ -1447,14 +1450,16 @@
       "add": "Add {count} · {amount}",
       "loadMore": "Load more",
       "none": "Nothing to add: every expense you have is already in a shared group, or none matches what you typed.",
-      "noDescription": "Expense"
+      "noDescription": "Expense",
+      "failed": "The list could not be read. Try again in a moment."
     },
     "whatChanges": {
-      "title": "Add {count} transactions to {name}?",
-      "confirm": "Add {count} expenses",
+      "title": "{count, plural, one {Add # transaction to {name}?} other {Add # transactions to {name}?}}",
+      "confirm": "{count, plural, one {Add # expense} other {Add # expenses}}",
       "nothingChanges": "Nothing changes in your budgets today. They all keep counting in full — {amount} across {categories} — because the money left your accounts and nobody has paid you back yet.",
       "yoursUntilPaid": "yours until paid",
-      "whenSomebodyPays": "When someone pays you back, the expense falls in the month it happened, so a month you had already closed can change. Every change is kept in the expense’s history."
+      "whenSomebodyPays": "When someone pays you back, the expense falls in the month it happened, so a month you had already closed can change. Every change is kept in the expense’s history.",
+      "noDescription": "Expense"
     },
     "split": {
       "mode": "How to split it",
@@ -1478,7 +1483,13 @@
       "shareOf": "What {name} pays",
       "leftToAssign": "Left to assign",
       "oddUnit": "The odd unit goes to whoever paid, so the shares always add up to the expense.",
-      "invalid": "The shares do not add up to the expense yet.",
+      "invalid": {
+        "SHORT": "The shares do not add up to the expense yet.",
+        "OVER": "The shares add up to more than the expense.",
+        "NOBODY_TAKES_THE_REST": "Somebody has to take the rest: unpin at least one.",
+        "NEGATIVE": "A share cannot be negative.",
+        "MISSING": "Every share needs its own figure in this split."
+      },
       "useGroupSplit": "Use the group’s split",
       "takesTheRest": "{name} takes a share of the rest",
       "fixedFor": "Fixed for {name}",

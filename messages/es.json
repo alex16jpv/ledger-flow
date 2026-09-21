@@ -1362,7 +1362,8 @@
       "picked": "{count} elegidos · {amount}",
       "pickNone": "Todavía ninguno",
       "nothingChanges": "Repartir no cambia nada hoy: un gasto sigue contando entero hasta que alguien te pague.",
-      "limit": "Hasta {contacts} personas en total."
+      "limit": "Hasta {contacts} personas en total.",
+      "percentLeft": "{percent}%"
     },
     "group": {
       "title": "Grupo compartido",
@@ -1439,7 +1440,9 @@
       "loadMore": "Ver más",
       "newPerson": "Nueva persona",
       "add": "Añadir {count}",
-      "limits": "Hasta {people} personas en un grupo compartido, y hasta {contacts} contactos. Este grupo quedaría con {inGroup}."
+      "limits": "Hasta {people} personas en un grupo compartido, y hasta {contacts} contactos. Este grupo quedaría con {inGroup}.",
+      "failed": "No se pudo leer la lista de personas. Inténtalo de nuevo en un momento.",
+      "none": "Nadie con ese nombre."
     },
     "pickExpenses": {
       "title": "Elegir de mis movimientos",
@@ -1447,14 +1450,16 @@
       "add": "Añadir {count} · {amount}",
       "loadMore": "Ver más",
       "none": "No hay nada que añadir: todos tus gastos ya están en un grupo compartido, o ninguno coincide con lo que escribiste.",
-      "noDescription": "Gasto"
+      "noDescription": "Gasto",
+      "failed": "No se pudo leer la lista. Inténtalo de nuevo en un momento."
     },
     "whatChanges": {
-      "title": "¿Añadir {count} movimientos a {name}?",
-      "confirm": "Añadir {count} gastos",
+      "title": "{count, plural, one {¿Añadir # movimiento a {name}?} other {¿Añadir # movimientos a {name}?}}",
+      "confirm": "{count, plural, one {Añadir # gasto} other {Añadir # gastos}}",
       "nothingChanges": "Hoy no cambia nada en tus presupuestos. Los tres siguen contando enteros —{amount} entre {categories}— porque el dinero salió de tus cuentas y todavía no te ha pagado nadie.",
       "yoursUntilPaid": "tuyo hasta que paguen",
-      "whenSomebodyPays": "Cuando alguien te pague, el gasto baja en el mes en que ocurrió, así que un mes que ya dabas por cerrado puede cambiar. Cada cambio queda guardado en el historial del gasto."
+      "whenSomebodyPays": "Cuando alguien te pague, el gasto baja en el mes en que ocurrió, así que un mes que ya dabas por cerrado puede cambiar. Cada cambio queda guardado en el historial del gasto.",
+      "noDescription": "Gasto"
     },
     "split": {
       "mode": "Cómo se reparte",
@@ -1478,7 +1483,13 @@
       "shareOf": "Lo que paga {name}",
       "leftToAssign": "Falta por repartir",
       "oddUnit": "El sobrante es de quien pagó, así que las partes siempre suman el gasto.",
-      "invalid": "Las partes todavía no suman el gasto.",
+      "invalid": {
+        "SHORT": "Las partes todavía no suman el gasto.",
+        "OVER": "Las partes suman más que el gasto.",
+        "NOBODY_TAKES_THE_REST": "Alguien tiene que llevarse el resto: suelta al menos a uno.",
+        "NEGATIVE": "Una parte no puede ser negativa.",
+        "MISSING": "Cada parte necesita su propia cifra en este reparto."
+      },
       "useGroupSplit": "Usar el reparto del grupo",
       "takesTheRest": "{name} se lleva una parte del resto",
       "fixedFor": "Fijo para {name}",

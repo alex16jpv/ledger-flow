@@ -17,6 +17,7 @@ import { iconProps } from "@/lib/icons/sizes";
 import { SplitInvalidError } from "@/lib/local/derive";
 import type { SharedShare, SharedSplit } from "@/types/api";
 
+import { MAX_GUESTS } from "../limits";
 import {
   GUESTS_KEY,
   leftToAssign,
@@ -26,6 +27,7 @@ import {
   type SplitDraft,
   splitInputOf,
   type SplitParty,
+  splitProblem,
   USER_KEY,
 } from "../split";
 import { ContactPickerSheet } from "./ContactPickerSheet";
@@ -62,6 +64,9 @@ export interface SplitSheetProps {
 
 const ROW_INPUT = "h-10 text-right tabular-nums";
 
+const keyOfShare = (share: SharedShare): string =>
+  share.party === "GUESTS" ? GUESTS_KEY : (share.contactId ?? USER_KEY);
+
 export function SplitSheet({
   open,
   onClose,
@@ -86,10 +91,12 @@ export function SplitSheet({
   const [chosen, setChosen] = useState<SplitPerson[]>(people);
   const [picking, setPicking] = useState(false);
   const [typed, setTyped] = useState<Record<string, string>>({});
+  // Kept as typed so the field can be emptied to write another number, not only added to.
+  const [guestText, setGuestText] = useState<string | null>(null);
 
   const parties = useMemo(() => partiesOf(chosen, draft.guests), [chosen, draft.guests]);
   const payerKey = payerContactId ?? USER_KEY;
-  const left = leftToAssign(draft, parties, total);
+  const left = leftToAssign(draft, parties, total, currency);
   const resolved = useMemo(() => {
     try {
       return { shares: resolveDraft(draft, parties, total, currency, payerKey), error: null };
@@ -112,16 +119,14 @@ export function SplitSheet({
     const raw = typed[party.key];
     if (raw !== undefined) return raw;
     if (draft.mode === "EQUAL") {
-      const share = resolved.shares?.find(
-        (one) => (one.contactId ?? (one.party === "GUESTS" ? GUESTS_KEY : USER_KEY)) === party.key,
-      );
+      const share = resolved.shares?.find((one) => keyOfShare(one) === party.key);
       return share ? money.format(share.amount) : "";
     }
     const value = draft.inputs[party.key];
     return value === null || value === undefined ? "" : String(value);
   };
 
-  const canSave = resolved.shares !== null && Math.abs(left) < 0.5 / 100;
+  const canSave = resolved.shares !== null && left === 0;
 
   return (
     <Sheet
@@ -194,6 +199,7 @@ export function SplitSheet({
             size="sm"
             className="self-start pl-0"
             onClick={() => {
+              setGuestText(null);
               setDraft((was) => ({ ...was, guests: { count: 1, name: null } }));
             }}
           >
@@ -208,14 +214,16 @@ export function SplitSheet({
                 <Input
                   inputMode="numeric"
                   className="h-11 text-center tabular-nums"
-                  value={String(draft.guests.count)}
+                  value={guestText ?? String(draft.guests.count)}
                   aria-label={t("guests.count")}
                   onChange={(event) => {
-                    const count = Number.parseInt(event.target.value, 10);
-                    setDraft((was) => ({
-                      ...was,
-                      guests: { count: Number.isNaN(count) ? 1 : Math.max(1, count), name: null },
-                    }));
+                    const raw = event.target.value;
+                    setGuestText(raw);
+                    const parsed = Number.parseInt(raw, 10);
+                    const count = Number.isNaN(parsed)
+                      ? 1
+                      : Math.min(MAX_GUESTS, Math.max(1, parsed));
+                    setDraft((was) => ({ ...was, guests: { count, name: null } }));
                   }}
                 />
               </span>
@@ -232,6 +240,7 @@ export function SplitSheet({
                 round
                 aria-label={t("guests.remove")}
                 onClick={() => {
+                  setGuestText(null);
                   setDraft((was) => ({ ...was, guests: null }));
                 }}
               >
@@ -285,6 +294,13 @@ export function SplitSheet({
                   )}
                 </Button>
               )}
+              {draft.mode === "PERCENT" && (
+                <span className="text-sm text-text-3 tabular-nums">
+                  {money.format(
+                    resolved.shares?.find((one) => keyOfShare(one) === party.key)?.amount ?? 0,
+                  )}
+                </span>
+              )}
               <span className="w-[132px] shrink-0">
                 <Input
                   inputMode="decimal"
@@ -306,7 +322,9 @@ export function SplitSheet({
         </div>
         {/* The odd minor unit goes to whoever paid, and the sheet says so in words. */}
         {draft.mode === "EQUAL" && <Alert tone="neutral">{t("oddUnit")}</Alert>}
-        {resolved.error !== null && <Alert tone="warning">{t("invalid")}</Alert>}
+        {resolved.error !== null && (
+          <Alert tone="warning">{t(`invalid.${splitProblem(draft, parties, left)}`)}</Alert>
+        )}
         {note && <Alert tone="neutral">{note}</Alert>}
         {onUseGroupSplit && (
           <Button variant="ghost" size="sm" className="self-start pl-0" onClick={onUseGroupSplit}>
@@ -315,24 +333,26 @@ export function SplitSheet({
           </Button>
         )}
       </div>
-      <ContactPickerSheet
-        open={picking}
-        onClose={() => {
-          setPicking(false);
-        }}
-        selected={chosen.flatMap((one) => (one.contactId === null ? [] : [one.contactId]))}
-        onDone={(added) => {
-          setChosen((was) => [
-            ...was.filter((one) => one.contactId === null),
-            ...added.map((one) => ({
-              contactId: one.id,
-              name: one.name,
-              color: one.color ?? null,
-            })),
-          ]);
-          setPicking(false);
-        }}
-      />
+      {picking && (
+        <ContactPickerSheet
+          open
+          onClose={() => {
+            setPicking(false);
+          }}
+          selected={chosen.flatMap((one) => (one.contactId === null ? [] : [one.contactId]))}
+          onDone={(added) => {
+            setChosen((was) => [
+              ...was.filter((one) => one.contactId === null),
+              ...added.map((one) => ({
+                contactId: one.id,
+                name: one.name,
+                color: one.color ?? null,
+              })),
+            ]);
+            setPicking(false);
+          }}
+        />
+      )}
     </Sheet>
   );
 }

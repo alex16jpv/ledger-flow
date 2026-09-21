@@ -5,8 +5,10 @@ import {
   GUESTS_KEY,
   leftToAssign,
   partiesOf,
+  percentLeft,
   resolveDraft,
   type SplitDraft,
+  splitProblem,
   USER_KEY,
 } from "./split";
 import { expenseFromTransaction, groupDefaultSplit, inheritedSplit } from "./write";
@@ -65,17 +67,70 @@ describe("the split a sheet is filling in", () => {
 
   it("says what is left to assign, which is what the sheet refuses to be saved with", () => {
     const parties = partiesOf(three, null);
-    expect(leftToAssign(draft(), parties, 100_000)).toBe(0);
+    expect(leftToAssign(draft(), parties, 100_000, "COP")).toBe(0);
     expect(
-      leftToAssign(draft({ mode: "PERCENT", inputs: { [USER_KEY]: 50 } }), parties, 100_000),
+      leftToAssign(draft({ mode: "PERCENT", inputs: { [USER_KEY]: 50 } }), parties, 100_000, "COP"),
     ).toBe(50_000);
     expect(
-      leftToAssign(draft({ mode: "EXACT", inputs: { [USER_KEY]: 60_000 } }), parties, 100_000),
+      leftToAssign(
+        draft({ mode: "EXACT", inputs: { [USER_KEY]: 60_000 } }),
+        parties,
+        100_000,
+        "COP",
+      ),
     ).toBe(40_000);
     // Under fixed plus rest whoever is not pinned takes what is left, so nothing is ever left over.
     expect(
-      leftToAssign(draft({ mode: "FIXED_REST", inputs: { [BETO]: 20_000 } }), parties, 100_000),
+      leftToAssign(
+        draft({ mode: "FIXED_REST", inputs: { [BETO]: 20_000 } }),
+        parties,
+        100_000,
+        "COP",
+      ),
     ).toBe(0);
+  });
+
+  // Three thirds of 100 are 33.33, 33.33 and 33.34, and in floats they do not make 100.
+  it("adds percentages the way the server does, in basis points", () => {
+    expect(percentLeft([33.33, 33.33, 33.34])).toBe(0);
+    expect(percentLeft([10.1, 10.1, 10.1, 10.1, 10.1, 10.1, 10.1, 10.1, 10.1, 9.1])).toBe(0);
+    expect(percentLeft([50, 30])).toBe(2000);
+    const parties = partiesOf(three, null);
+    expect(
+      leftToAssign(
+        draft({ mode: "PERCENT", inputs: { [USER_KEY]: 33.33, [ANA]: 33.33, [BETO]: 33.34 } }),
+        parties,
+        100_000,
+        "COP",
+      ),
+    ).toBe(0);
+  });
+
+  // In major units a currency with cents leaves -1.42e-14 behind, which reads as -$0.00.
+  it("adds the figures in minor units, so nothing is left over in a currency with cents", () => {
+    const parties = partiesOf(three, null);
+    expect(
+      leftToAssign(
+        draft({ mode: "EXACT", inputs: { [USER_KEY]: 33.33, [ANA]: 33.33, [BETO]: 33.34 } }),
+        parties,
+        100,
+        "EUR",
+      ),
+    ).toBe(0);
+  });
+
+  it("names what is wrong rather than always saying the shares do not add up", () => {
+    const parties = partiesOf(three, null);
+    const problem = (over: Partial<SplitDraft>, left: number) =>
+      splitProblem(draft(over), parties, left);
+
+    // Everybody pinned: nothing is left over, and the sheet still cannot be saved.
+    expect(
+      problem({ mode: "FIXED_REST", inputs: { [USER_KEY]: 40, [ANA]: 30, [BETO]: 30 } }, 0),
+    ).toBe("NOBODY_TAKES_THE_REST");
+    expect(problem({ mode: "FIXED_REST", inputs: { [BETO]: 200_000 } }, -100_000)).toBe("OVER");
+    expect(problem({ mode: "EXACT", inputs: { [USER_KEY]: -10 } }, 110)).toBe("NEGATIVE");
+    expect(problem({ mode: "PERCENT", inputs: { [USER_KEY]: 50 } }, 50_000)).toBe("MISSING");
   });
 
   it("refuses a split that does not add up to the expense", () => {

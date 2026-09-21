@@ -20,18 +20,20 @@ import { useToast } from "@/components/ui/Toast";
 import { ContactPickerSheet } from "@/features/shared/components/ContactPickerSheet";
 import { useCreateSharedExpense, useCreateSharedGroup } from "@/features/shared/hooks";
 import { groupFormSchema, type GroupFormValues } from "@/features/shared/schemas";
-import { USER_KEY } from "@/features/shared/split";
+import { PERCENT_SCALE, percentLeft, USER_KEY } from "@/features/shared/split";
 import { expenseFromTransaction, groupDefaultSplit } from "@/features/shared/write";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
 import { useRouter } from "@/lib/i18n/navigation";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
+import { newEntityId } from "@/lib/local/outbox/envelope";
 import { useBackNavigation } from "@/lib/navigation/history";
 import { randomColorToken } from "@/lib/theme/feature-color";
 import type { Contact, Transaction } from "@/types/api";
 
 import { TransactionPickerSheet } from "../TransactionPickerSheet";
+import { WhatChangesSheet } from "../WhatChangesSheet";
 
 export function GroupFormScreen() {
   const t = useTranslations();
@@ -46,6 +48,9 @@ export function GroupFormScreen() {
   const [percent, setPercent] = useState<Record<string, string>>({});
   const [picked, setPicked] = useState<Transaction[]>([]);
   const [sheet, setSheet] = useState<"people" | "transactions" | null>(null);
+  const [asked, setAsked] = useState(false);
+  // Minted once: a second try must finish the group it started, never open another one.
+  const [groupId] = useState(() => newEntityId());
 
   const form = useForm<GroupFormValues>({
     resolver: zodResolver(groupFormSchema),
@@ -57,31 +62,47 @@ export function GroupFormScreen() {
   const duplicate = createGroup.error instanceof ApiError && createGroup.error.code === "DUPLICATE";
 
   const shares = [null, ...people.map((one) => one.id)];
-  const assigned = shares.reduce(
-    (sum, id) => sum + (Number.parseFloat(percent[id ?? USER_KEY] ?? "") || 0),
-    0,
+  // The server adds these as basis points, and so does the sheet: in floats three thirds miss 100.
+  const left = percentLeft(
+    shares.map((id) => Number.parseFloat(percent[id ?? USER_KEY] ?? "") || 0),
   );
-  const left = 100 - assigned;
   const pickedTotal = picked.reduce((sum, row) => sum + row.amount, 0);
 
+  function fail(error: unknown) {
+    if (!(error instanceof ApiError) || error.code !== "DUPLICATE") {
+      toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
+    }
+  }
+
   const submit = form.handleSubmit(async (values) => {
+    // What it changes in the budgets is said before saving, and only where there is something to say.
+    if (picked.length > 0 && !asked) {
+      setAsked(true);
+      return;
+    }
+    let group;
     try {
-      const group = await createGroup.mutateAsync({
+      group = await createGroup.mutateAsync({
+        id: groupId,
         name: values.name,
         color: values.color,
         contactIds: people.map((one) => one.id),
         defaultSplit: groupDefaultSplit(values.mode, shares, percent),
       });
+    } catch (error) {
+      fail(error);
+      return;
+    }
+    // The group exists from here on: whatever an expense does, the form must not offer to make it twice.
+    try {
       for (const transaction of picked) {
         await createExpense.mutateAsync(expenseFromTransaction(group, transaction));
       }
       toast.show({ message: t("shared.form.groupCreated") });
-      router.replace(`/shared/groups/${group.id}`);
     } catch (error) {
-      if (!(error instanceof ApiError) || error.code !== "DUPLICATE") {
-        toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
-      }
+      fail(error);
     }
+    router.replace(`/shared/groups/${group.id}`);
   });
 
   const saving = createGroup.isPending || createExpense.isPending;
@@ -201,7 +222,9 @@ export function GroupFormScreen() {
             })}
             <div className="flex items-center justify-between border-t border-border pt-3">
               <span className="text-sm text-text-3">{t("shared.split.leftToAssign")}</span>
-              <span className="font-semibold tabular-nums">{left}%</span>
+              <span className="font-semibold tabular-nums">
+                {t("shared.form.percentLeft", { percent: left / PERCENT_SCALE })}
+              </span>
             </div>
           </div>
         )}
@@ -239,28 +262,47 @@ export function GroupFormScreen() {
           {t("shared.form.createGroup")}
         </Button>
       </form>
-      <ContactPickerSheet
-        open={sheet === "people"}
-        onClose={() => {
-          setSheet(null);
-        }}
-        selected={people.map((one) => one.id)}
-        inGroup={1 + people.length}
-        onDone={(contacts) => {
-          setPeople(contacts);
-          setSheet(null);
-        }}
-      />
-      <TransactionPickerSheet
-        open={sheet === "transactions"}
-        onClose={() => {
-          setSheet(null);
-        }}
-        onDone={(transactions) => {
-          setPicked(transactions);
-          setSheet(null);
-        }}
-      />
+      {sheet === "people" && (
+        <ContactPickerSheet
+          open
+          onClose={() => {
+            setSheet(null);
+          }}
+          selected={people.map((one) => one.id)}
+          inGroup={1 + people.length}
+          onDone={(contacts) => {
+            setPeople(contacts);
+            setSheet(null);
+          }}
+        />
+      )}
+      {sheet === "transactions" && (
+        <TransactionPickerSheet
+          open
+          selected={picked}
+          onClose={() => {
+            setSheet(null);
+          }}
+          onDone={(transactions) => {
+            setPicked(transactions);
+            setSheet(null);
+          }}
+        />
+      )}
+      {asked && (
+        <WhatChangesSheet
+          open
+          onClose={() => {
+            setAsked(false);
+          }}
+          groupName={form.getValues("name")}
+          transactions={picked}
+          pending={saving}
+          onConfirm={() => {
+            void submit();
+          }}
+        />
+      )}
     </div>
   );
 }

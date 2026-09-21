@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import { useToast } from "@/components/ui/Toast";
 import { presentError } from "@/lib/api/errors";
@@ -24,30 +25,37 @@ export function SplitThisSheet({ open, onClose, transaction, onDone }: SplitThis
   const createGroup = useCreateSharedGroup();
   const createExpense = useCreateSharedExpense();
   const name = transaction.description ?? t("shared.group.noDescription");
+  // Minted once: a second try must finish the group it started, never open another one.
+  const [ids] = useState(() => ({ group: newEntityId(), expense: newEntityId() }));
+  const [made, setMade] = useState(false);
 
   async function split({ split: resolved, shares, people }: SplitResult) {
-    // A default has no total to divide, so an exact or fixed split is the expense's alone.
+    // A default has no total to divide, and it cannot name guests: those live in the expense alone.
     const carriesOwn =
       resolved.mode === "EXACT" || resolved.mode === "FIXED_REST" || resolved.guests !== null;
     try {
-      const group = await createGroup.mutateAsync({
-        name,
-        color: randomColorToken(),
-        contactIds: people.flatMap((one) => (one.contactId === null ? [] : [one.contactId])),
-        defaultSplit:
-          resolved.mode === "PERCENT"
-            ? {
-                mode: "PERCENT",
-                shares: shares
-                  .filter((share) => share.party !== "GUESTS")
-                  .map((share) => ({ contactId: share.contactId, percent: share.percent ?? 0 })),
-              }
-            : { mode: "EQUAL", shares: [] },
-      });
+      if (!made) {
+        await createGroup.mutateAsync({
+          id: ids.group,
+          name,
+          color: randomColorToken(),
+          contactIds: people.flatMap((one) => (one.contactId === null ? [] : [one.contactId])),
+          defaultSplit:
+            resolved.mode === "PERCENT" && resolved.guests === null
+              ? {
+                  mode: "PERCENT",
+                  shares: shares
+                    .filter((share) => share.party !== "GUESTS")
+                    .map((share) => ({ contactId: share.contactId, percent: share.percent ?? 0 })),
+                }
+              : { mode: "EQUAL", shares: [] },
+        });
+        setMade(true);
+      }
       await createExpense.mutateAsync({
         row: {
-          id: newEntityId(),
-          groupId: group.id,
+          id: ids.expense,
+          groupId: ids.group,
           description: transaction.description,
           date: transaction.date,
           amount: transaction.amount,
@@ -59,7 +67,7 @@ export function SplitThisSheet({ open, onClose, transaction, onDone }: SplitThis
       });
       toast.show({ message: t("shared.split.done") });
       onClose();
-      onDone?.(group.id);
+      onDone?.(ids.group);
     } catch (error) {
       toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
     }

@@ -7,10 +7,16 @@ import type {
   UpdateSharedExpenseInput,
 } from "@/types/api";
 
-import { sharedExpenseRecord, sharedGroupRecord } from "../schema";
+import { sharedExpenseRecord, sharedGroupRecord, transactionRecord } from "../schema";
 import { newEntityId } from "./envelope";
 import { NotProjectableError, projectionContext } from "./projected";
-import { type LocalChange, unsent, type VaultDb, type WriteTransaction } from "./queue";
+import {
+  dependenciesOf,
+  type LocalChange,
+  unsent,
+  type VaultDb,
+  type WriteTransaction,
+} from "./queue";
 import { write } from "./write";
 
 // What the split resolved to is the device's arithmetic; the server works it out from what it is sent.
@@ -45,22 +51,54 @@ async function projectGroup(
   };
 }
 
+// The server stamps the movement when it takes the expense; with no network the copy must say it
+// too, or the same movement can be split twice and the second one is refused much later.
+async function stamp(
+  tx: WriteTransaction,
+  transactionId: string,
+  expense: SharedExpense | null,
+): Promise<(() => Promise<void>) | undefined> {
+  const store = tx.objectStore("transactions");
+  const previous = await store.get(transactionId);
+  if (!previous) return undefined;
+  await store.put(
+    transactionRecord(
+      {
+        ...previous.row,
+        sharedExpenseId: expense?.id ?? null,
+        sharedGroupId: expense?.groupId ?? null,
+      },
+      previous.server,
+    ),
+  );
+  return async () => {
+    await tx.objectStore("transactions").put(previous);
+  };
+}
+
 async function projectExpense(
   tx: WriteTransaction,
   id: string,
   next: SharedExpense,
+  transactionId?: string,
 ): Promise<LocalChange> {
   const store = tx.objectStore("sharedExpenses");
   const previous = await store.get(id);
   await store.put(sharedExpenseRecord(next, previous ? (previous.server ?? previous.row) : next));
   const guarded = previous !== undefined && !(await unsent(tx, "sharedExpense", id));
+  const unstamp = transactionId === undefined ? undefined : await stamp(tx, transactionId, next);
+  // The expense is posted under its group: a group the server has not seen yet has to go first.
+  const dependsOn = await dependenciesOf(tx, [
+    { entity: "sharedGroup" as const, id: next.groupId },
+  ]);
   return {
     ...(guarded ? { baseUpdatedAt: previous.updatedAt } : {}),
-    dependsOn: [],
+    dependsOn,
     undo: async (undoTx) => {
       const undone = undoTx.objectStore("sharedExpenses");
       if (previous) await undone.put(previous);
       else await undone.delete(id);
+      await unstamp?.();
     },
   };
 }
@@ -158,14 +196,19 @@ export function createSharedExpense({
       payload: { body, params: { groupId: row.groupId } },
       project: async (tx, occurredAt) => {
         const { userId, currency } = await projectionContext(tx, occurredAt);
-        return projectExpense(tx, row.id, {
-          ...row,
-          userId,
-          currency,
-          deletedAt: null,
-          createdAt: occurredAt,
-          updatedAt: occurredAt,
-        });
+        return projectExpense(
+          tx,
+          row.id,
+          {
+            ...row,
+            userId,
+            currency,
+            deletedAt: null,
+            createdAt: occurredAt,
+            updatedAt: occurredAt,
+          },
+          transactionId,
+        );
       },
     },
     optimistic: expenseBack(row.id),

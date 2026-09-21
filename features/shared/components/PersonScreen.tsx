@@ -267,13 +267,15 @@ export function PersonScreen({ id }: { id: string }) {
               </Button>
             </div>
           )}
-          <ContactFormSheet
-            open={sheet === "edit"}
-            contact={row}
-            onClose={() => {
-              setSheet(null);
-            }}
-          />
+          {sheet === "edit" && (
+            <ContactFormSheet
+              open
+              contact={row}
+              onClose={() => {
+                setSheet(null);
+              }}
+            />
+          )}
           <Sheet
             open={sheet === "archive"}
             onClose={() => {

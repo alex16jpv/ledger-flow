@@ -87,6 +87,13 @@ async function budgetBaseline(tx: WriteTransaction, view: Budget): Promise<SyncB
   };
 }
 
+// An expense with no group in its path would be sent to `/shared-groups/undefined/expenses`.
+function groupOf(payload: OperationPayload): string {
+  const groupId = payload.params?.groupId;
+  if (!groupId) throw new Error("a shared expense with no group in its path");
+  return groupId;
+}
+
 // D-24: the row becomes the baseline and what the queue holds is projected back on top.
 export async function serverBaseline(
   tx: WriteTransaction,
@@ -246,7 +253,7 @@ export const ROUTES: Record<RouteKey, Route> = {
 
   "sharedExpense:create": route<SharedExpense>({
     send: ({ payload }) =>
-      api<SharedExpense>(`/shared-groups/${payload.params?.groupId}/expenses`, {
+      api<SharedExpense>(`/shared-groups/${groupOf(payload)}/expenses`, {
         method: "POST",
         body: payload.body,
       }),
@@ -254,7 +261,7 @@ export const ROUTES: Record<RouteKey, Route> = {
   }),
   "sharedExpense:update": route<SharedExpense>({
     send: ({ entityId, payload }, guard) =>
-      api<SharedExpense>(`/shared-groups/${payload.params?.groupId}/expenses/${entityId}`, {
+      api<SharedExpense>(`/shared-groups/${groupOf(payload)}/expenses/${entityId}`, {
         method: "PUT",
         body: payload.body,
         ...ifMatch(guard),

@@ -1,6 +1,6 @@
 import type { SharedLimits } from "@/types/api";
 
-// The server's own bounds, as the contract states them: the sheets say them before a save can fail.
+// The numbers live in the generated contract's literal types, so a change there fails this file.
 const LIMITS: SharedLimits = {
   maxContactsPerUser: 200,
   maxParticipantsPerGroup: 20,

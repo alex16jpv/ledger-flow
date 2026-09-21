@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Field";
 import { List, RowBody, rowClasses, RowMeta, RowTitle } from "@/components/ui/Row";
 import { Sheet, SheetCancel } from "@/components/ui/Sheet";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { iconProps } from "@/lib/icons/sizes";
 import type { Contact } from "@/types/api";
 
@@ -40,16 +41,26 @@ export function ContactPickerSheet({
   inGroup = 1,
 }: ContactPickerSheetProps) {
   const t = useTranslations("shared.picker");
+  const loading = useTranslations("common")("loading");
   const page = useContactsPage(open);
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState<string[]>(selected);
+  const [made, setMade] = useState<Contact[]>([]);
   const [creating, setCreating] = useState(false);
 
   const rows = useMemo(
     () => page.contacts.filter((one) => matches(one, search.trim().toLowerCase())),
     [page.contacts, search],
   );
-  const chosen = page.contacts.filter((one) => picked.includes(one.id));
+  // Somebody added from here is chosen before the list has refetched; they must not be dropped.
+  const known = [
+    ...page.contacts,
+    ...made.filter((one) => !page.contacts.some((row) => row.id === one.id)),
+  ];
+  const chosen = picked.flatMap((id) => {
+    const contact = known.find((one) => one.id === id);
+    return contact ? [contact] : [];
+  });
 
   return (
     <Sheet
@@ -83,6 +94,18 @@ export function ContactPickerSheet({
           }}
         />
         <div className="-mx-4 max-h-[300px] overflow-auto">
+          {page.isPending && (
+            <div
+              className="flex flex-col gap-3 px-4 py-3"
+              role="status"
+              aria-busy="true"
+              aria-label={loading}
+            >
+              {Array.from({ length: 3 }, (_, index) => (
+                <Skeleton key={index} className="h-10 w-full" />
+              ))}
+            </div>
+          )}
           <List>
             {rows.map((contact) => {
               const on = picked.includes(contact.id);
@@ -111,6 +134,10 @@ export function ContactPickerSheet({
             })}
           </List>
         </div>
+        {page.isError && <p className="px-1 text-sm text-danger">{t("failed")}</p>}
+        {!page.isPending && !page.isError && rows.length === 0 && (
+          <p className="px-1 text-sm text-text-3">{t("none")}</p>
+        )}
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs text-text-3">
             {t("showing", { shown: rows.length, total: page.total })}
@@ -147,15 +174,18 @@ export function ContactPickerSheet({
           })}
         </Alert>
       </div>
-      <ContactFormSheet
-        open={creating}
-        onClose={() => {
-          setCreating(false);
-        }}
-        onSaved={(contact) => {
-          setPicked((was) => [...was, contact.id]);
-        }}
-      />
+      {creating && (
+        <ContactFormSheet
+          open
+          onClose={() => {
+            setCreating(false);
+          }}
+          onSaved={(contact) => {
+            setMade((was) => [...was, contact]);
+            setPicked((was) => [...was, contact.id]);
+          }}
+        />
+      )}
     </Sheet>
   );
 }

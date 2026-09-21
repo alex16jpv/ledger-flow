@@ -27,6 +27,7 @@ import {
   useSharedSection,
 } from "@/features/shared/hooks";
 import { type GroupView, groupView, type PartyView } from "@/features/shared/ledger";
+import { GUESTS_KEY, USER_KEY } from "@/features/shared/split";
 import { draftFromGroup, expenseFromTransaction, inheritedSplit } from "@/features/shared/write";
 import { presentError } from "@/lib/api/errors";
 import { useDates } from "@/lib/i18n/useDates";
@@ -247,14 +248,17 @@ function GroupBody({ view }: { view: GroupView }) {
   }
 
   async function addExpenses() {
+    const left = [...adding];
     try {
-      for (const transaction of adding) {
+      // Whatever lands stays landed: a second try sends only what is still missing.
+      for (const transaction of [...left]) {
         await createExpense.mutateAsync(expenseFromTransaction(view.group, transaction));
+        left.shift();
       }
       toast.show({ message: t("shared.group.expensesAdded", { count: adding.length }) });
       setAdding([]);
     } catch (error) {
-      setAdding([]);
+      setAdding(left);
       fail(error);
     }
   }
@@ -338,28 +342,33 @@ function GroupBody({ view }: { view: GroupView }) {
           </Card>
         )}
       </section>
-      <TransactionPickerSheet
-        open={picking}
-        onClose={() => {
-          setPicking(false);
-        }}
-        onDone={(transactions) => {
-          setPicking(false);
-          setAdding(transactions);
-        }}
-      />
-      <WhatChangesSheet
-        open={adding.length > 0}
-        onClose={() => {
-          setAdding([]);
-        }}
-        groupName={view.group.name}
-        transactions={adding}
-        pending={createExpense.isPending}
-        onConfirm={() => {
-          void addExpenses();
-        }}
-      />
+      {picking && (
+        <TransactionPickerSheet
+          open
+          selected={adding}
+          onClose={() => {
+            setPicking(false);
+          }}
+          onDone={(transactions) => {
+            setPicking(false);
+            setAdding(transactions);
+          }}
+        />
+      )}
+      {adding.length > 0 && (
+        <WhatChangesSheet
+          open
+          onClose={() => {
+            setAdding([]);
+          }}
+          groupName={view.group.name}
+          transactions={adding}
+          pending={createExpense.isPending}
+          onConfirm={() => {
+            void addExpenses();
+          }}
+        />
+      )}
       {splitting && (
         <SplitSheet
           key={splitting.id}
@@ -434,7 +443,7 @@ function draftOf(expense: SharedExpense, view: GroupView) {
     guests: expense.split.guests,
     inputs: Object.fromEntries(
       expense.split.shares.map((share) => [
-        share.party === "GUESTS" ? "guests" : (share.contactId ?? "user"),
+        share.party === "GUESTS" ? GUESTS_KEY : (share.contactId ?? USER_KEY),
         expense.split.mode === "PERCENT" ? share.percent : share.fixedAmount,
       ]),
     ),
