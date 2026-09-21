@@ -25,6 +25,7 @@ const STORE_OF: Record<
   | "contacts"
   | "sharedGroups"
   | "sharedExpenses"
+  | "settlements"
 > = {
   account: "accounts",
   category: "categories",
@@ -33,6 +34,7 @@ const STORE_OF: Record<
   contact: "contacts",
   sharedGroup: "sharedGroups",
   sharedExpense: "sharedExpenses",
+  settlement: "settlements",
 };
 
 // D-24: the baseline kept aside is at least as fresh as the 409's `current`, which only backs it.

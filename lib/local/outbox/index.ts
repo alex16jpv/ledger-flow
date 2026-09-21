@@ -81,12 +81,20 @@ export {
 } from "./resolve";
 export { ROUTES, serverBaseline } from "./routes";
 export {
+  type ArchivedGroup,
+  archiveSharedGroup,
   createSharedExpense,
   createSharedGroup,
+  type NewSettlement,
   type NewSharedExpense,
   type NewSharedGroup,
+  recordSettlement,
   type SavedSplit,
   saveSharedSplit,
+  type SettledLine,
+  undoWriteOff,
+  writeOffParty,
+  type WriteOffTarget,
 } from "./shared";
 export {
   EMPTY_OUTBOX,

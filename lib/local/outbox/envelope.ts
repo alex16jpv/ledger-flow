@@ -10,8 +10,9 @@ export const OUTBOX_ACTIONS = {
   transaction: ["create", "quickAdd", "update", "delete"],
   budget: ["create", "update", "archive", "restore", "setOverride", "clearOverride"],
   contact: ["create", "update", "archive", "restore"],
-  sharedGroup: ["create"],
+  sharedGroup: ["create", "writeOff", "undoWriteOff", "archive"],
   sharedExpense: ["create", "update"],
+  settlement: ["create"],
 } as const satisfies Record<OutboxEntity, readonly string[]>;
 
 export type OutboxAction<E extends OutboxEntity = OutboxEntity> =
@@ -35,6 +36,10 @@ export interface OperationPayload {
   // What the path carries besides the row's own id, which is what `POST /sync` calls `params`.
   params?: { groupId?: string; partyId?: string };
   effect?: MoneyEffect;
+  // Mirror rows this write minted that the server mints its own of: dropped when it answers.
+  minted?: string[];
+  // The ceiling a write-off gave up on. The wire does not carry it: the server works it out.
+  writtenOff?: number;
 }
 
 // uuid v7: valid for the server's `z.string().uuid()`, and the prefix keeps the queue readable.

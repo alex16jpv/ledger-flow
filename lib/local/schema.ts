@@ -92,7 +92,14 @@ export interface TransactionRecord extends MirrorRecord<SyncTransaction> {
 }
 
 export type OutboxEntity =
-  "account" | "category" | "transaction" | "budget" | "contact" | "sharedGroup" | "sharedExpense";
+  | "account"
+  | "category"
+  | "transaction"
+  | "budget"
+  | "contact"
+  | "sharedGroup"
+  | "sharedExpense"
+  | "settlement";
 export type OutboxStatus = "pending" | "sending" | "conflict" | "failed";
 
 export interface OutboxOperation {
@@ -230,8 +237,14 @@ export function sharedExpenseRecord(
   };
 }
 
-export function settlementRecord(row: Settlement): SettlementRecord {
-  return { id: row.id, row, updatedAt: row.updatedAt, deleted: row.deletedAt ? 1 : 0 };
+export function settlementRecord(row: Settlement, server?: Settlement): SettlementRecord {
+  return {
+    id: row.id,
+    row,
+    updatedAt: row.updatedAt,
+    deleted: row.deletedAt ? 1 : 0,
+    ...(server ? { server } : {}),
+  };
 }
 
 export function profileRecord(row: User): ProfileRecord {

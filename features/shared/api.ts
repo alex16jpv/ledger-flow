@@ -11,12 +11,16 @@ import type { Contact, ContactList } from "@/types/api";
 // O-F4: reads go through the repository (mirror fallback); writes go through the outbox.
 export {
   archiveContact,
+  archiveSharedGroup,
   createContact,
   createSharedExpense,
   createSharedGroup,
+  recordSettlement,
   restoreContact,
   saveSharedSplit,
+  undoWriteOff,
   updateContact,
+  writeOffParty,
 } from "@/lib/local/outbox";
 
 export function fetchContacts(params: ContactListParams = {}): Promise<Contact[]> {

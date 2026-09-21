@@ -2,6 +2,7 @@ import type {
   Account,
   Category,
   Contact,
+  Settlement,
   SharedExpense,
   SyncBudget,
   SyncSharedGroup,
@@ -16,6 +17,7 @@ import {
   type OutboxEntity,
   type OutboxOperation,
   PROFILE_KEY,
+  settlementRecord,
   sharedExpenseRecord,
   sharedGroupRecord,
   transactionRecord,
@@ -39,6 +41,7 @@ const STORE_OF = {
   contact: "contacts",
   sharedGroup: "sharedGroups",
   sharedExpense: "sharedExpenses",
+  settlement: "settlements",
 } as const satisfies Record<OutboxEntity, string>;
 
 const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
@@ -91,6 +94,10 @@ export async function reconcileRow(
     await tx
       .objectStore("sharedExpenses")
       .put(sharedExpenseRecord(row as SharedExpense, kept as SharedExpense));
+  } else if (entity === "settlement") {
+    await tx
+      .objectStore("settlements")
+      .put(settlementRecord(row as Settlement, kept as Settlement));
   } else {
     await tx
       .objectStore("transactions")

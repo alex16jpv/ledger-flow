@@ -3,6 +3,7 @@ import type { IDBPDatabase } from "idb";
 import type { SyncTransaction } from "@/types/api";
 
 import { widenedBound } from "../derive";
+import { countsAsYours, deriveShared } from "../derive/shared";
 import { PROFILE_KEY, type VaultSchema } from "../schema";
 
 // An array key [d, id] sorts after [d], so an open bound on [to] is the server's `$lt`.
@@ -40,7 +41,31 @@ export async function liveRowsInWindow(
     widenedBound(asStoredStamp(to), 1),
   );
   for await (const entry of index.iterate(range)) rows.push(entry.value.row);
-  return rows;
+  return withCountsAsYours(db, rows);
+}
+
+// What a movement counts as yours falls the moment a payment is recorded, and with no network that
+// payment is only in the mirror: the figure the budgets and Stats measure is worked out from it.
+async function withCountsAsYours(
+  db: IDBPDatabase<VaultSchema>,
+  rows: SyncTransaction[],
+): Promise<SyncTransaction[]> {
+  if (!rows.some((row) => row.sharedExpenseId !== null)) return rows;
+  const [groups, expenses, settlements] = await Promise.all([
+    db.getAll("sharedGroups"),
+    db.getAll("sharedExpenses"),
+    db.getAll("settlements"),
+  ]);
+  const ledger = deriveShared({
+    groups: groups.map((record) => record.row),
+    expenses: expenses.map((record) => record.row),
+    settlements: settlements.map((record) => record.row),
+  });
+  return rows.map((row) =>
+    row.sharedExpenseId !== null && ledger.cameBack.has(row.sharedExpenseId)
+      ? { ...row, countsAsYours: countsAsYours(row, ledger) }
+      : row,
+  );
 }
 
 // Absent means the mirror cannot answer — never fall back to the device's zone.

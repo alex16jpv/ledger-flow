@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Plus, Receipt, Users } from "lucide-react";
+import { Archive, Calendar, HandCoins, Plus, Receipt, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -14,6 +14,7 @@ import { Empty } from "@/components/ui/Empty";
 import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Progress } from "@/components/ui/Progress";
 import { List, Row, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
+import { Sheet } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
@@ -21,12 +22,21 @@ import { useGroupRange } from "@/features/shared/components/GroupRowLink";
 import { StateBadge } from "@/features/shared/components/parts";
 import { type SplitPerson, SplitSheet } from "@/features/shared/components/SplitSheet";
 import {
+  useArchiveSharedGroup,
   useContactsQuery,
   useCreateSharedExpense,
   useSaveSharedSplit,
   useSharedSection,
+  useUndoWriteOff,
+  useWriteOff,
 } from "@/features/shared/hooks";
-import { type GroupView, groupView, type PartyView } from "@/features/shared/ledger";
+import {
+  type GroupView,
+  groupView,
+  type PartyView,
+  type SharedSection,
+} from "@/features/shared/ledger";
+import { hasSomethingToSettle, type SettleParty, settleParty } from "@/features/shared/settle";
 import { GUESTS_KEY, USER_KEY } from "@/features/shared/split";
 import { draftFromGroup, expenseFromTransaction, inheritedSplit } from "@/features/shared/write";
 import { presentError } from "@/lib/api/errors";
@@ -37,8 +47,10 @@ import { useBackNavigation } from "@/lib/navigation/history";
 import { featureColorStyle } from "@/lib/theme/feature-color";
 import type { SharedExpense, SharedSplit, Transaction } from "@/types/api";
 
+import { SettleUpSheet } from "../../SettleUpSheet";
 import { TransactionPickerSheet } from "../../TransactionPickerSheet";
 import { WhatChangesSheet } from "../../WhatChangesSheet";
+import { ArchiveGroupSheet, UndoWriteOffSheet, WriteOffSheet } from "../../WriteOffSheet";
 
 function useNoteOf(view: GroupView): (person: PartyView) => string {
   const t = useTranslations("shared.group.notes");
@@ -81,10 +93,10 @@ function useNoteOf(view: GroupView): (person: PartyView) => string {
   };
 }
 
-function PartyRow({ person, note }: { person: PartyView; note: string }) {
+function PartyBody({ person, note }: { person: PartyView; note: string }) {
   const t = useTranslations("shared.group");
   return (
-    <Row>
+    <>
       {person.expenseId === null ? (
         <Avatar name={person.name} color={person.color} />
       ) : (
@@ -105,7 +117,31 @@ function PartyRow({ person, note }: { person: PartyView; note: string }) {
       <RowRight sub={t("share")}>
         <Amount value={person.share} signed={false} />
       </RowRight>
-    </Row>
+    </>
+  );
+}
+
+// Somebody with nothing open is a row that reads; the rest is a row that settles or takes back.
+function PartyRow({
+  person,
+  note,
+  onOpen,
+}: {
+  person: PartyView;
+  note: string;
+  onOpen: (() => void) | undefined;
+}) {
+  if (!onOpen) {
+    return (
+      <Row>
+        <PartyBody person={person} note={note} />
+      </Row>
+    );
+  }
+  return (
+    <RowButton onClick={onOpen}>
+      <PartyBody person={person} note={note} />
+    </RowButton>
   );
 }
 
@@ -217,7 +253,7 @@ function GroupHero({ view }: { view: GroupView }) {
   );
 }
 
-function GroupBody({ view }: { view: GroupView }) {
+function GroupBody({ view, section }: { view: GroupView; section: SharedSection }) {
   const t = useTranslations();
   const money = useMoney();
   const toast = useToast();
@@ -225,9 +261,37 @@ function GroupBody({ view }: { view: GroupView }) {
   const contacts = useContactsQuery(true);
   const createExpense = useCreateSharedExpense();
   const saveSplit = useSaveSharedSplit();
+  const writeOff = useWriteOff();
+  const undo = useUndoWriteOff();
+  const archive = useArchiveSharedGroup();
   const [picking, setPicking] = useState(false);
   const [adding, setAdding] = useState<Transaction[]>([]);
   const [splitting, setSplitting] = useState<SharedExpense | null>(null);
+  const [settling, setSettling] = useState<SettleParty | null>(null);
+  const [choosing, setChoosing] = useState(false);
+  const [writingOff, setWritingOff] = useState<PartyView | null>(null);
+  const [undoing, setUndoing] = useState<PartyView | null>(null);
+  const [archiving, setArchiving] = useState(false);
+  // The written-off ceiling is what the row gets back if you take the decision back.
+  const ceilingOf = (person: PartyView): number =>
+    view.group.writeOffs.find(
+      (one) => one.contactId === person.contactId && one.expenseId === person.expenseId,
+    )?.amount ?? 0;
+  const open = view.people.filter(
+    (person) => person.owesYou > 0 || person.youOwe > 0 || person.surplus > 0,
+  );
+  const actionFor = (person: PartyView): (() => void) | undefined => {
+    if (person.state === "WRITTEN_OFF") {
+      return () => {
+        setUndoing(person);
+      };
+    }
+    const party = settleParty(section, view, person);
+    if (!hasSomethingToSettle(party)) return undefined;
+    return () => {
+      setSettling(party);
+    };
+  };
   const payerOf = (expense: SharedExpense): string =>
     view.people.find((person) => person.contactId === expense.paidByContactId)?.name ?? "";
 
@@ -267,15 +331,38 @@ function GroupBody({ view }: { view: GroupView }) {
     <>
       <GroupHero view={view} />
       <Button
-        variant="secondary"
         size="lg"
+        block
+        disabled={open.length === 0}
         onClick={() => {
-          setPicking(true);
+          if (open.length === 1 && open[0]) setSettling(settleParty(section, view, open[0]));
+          else setChoosing(true);
         }}
       >
-        <Plus {...iconProps("sm")} />
-        {t("shared.group.addExpense")}
+        <HandCoins {...iconProps("sm")} />
+        {t("shared.group.settleUp")}
       </Button>
+      <div className="grid grid-cols-2 gap-2.5">
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setPicking(true);
+          }}
+        >
+          <Plus {...iconProps("sm")} />
+          {t("shared.group.addExpense")}
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={view.group.archivedAt !== null}
+          onClick={() => {
+            setArchiving(true);
+          }}
+        >
+          <Archive {...iconProps("sm")} />
+          {t("shared.group.archive")}
+        </Button>
+      </div>
       <section className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between px-1">
           <h2 className="text-md font-semibold">{t("shared.group.people")}</h2>
@@ -308,7 +395,12 @@ function GroupBody({ view }: { view: GroupView }) {
               </RowRight>
             </Row>
             {view.people.map((person) => (
-              <PartyRow key={person.key} person={person} note={noteOf(person)} />
+              <PartyRow
+                key={person.key}
+                person={person}
+                note={noteOf(person)}
+                onOpen={actionFor(person)}
+              />
             ))}
           </List>
         </Card>
@@ -369,6 +461,91 @@ function GroupBody({ view }: { view: GroupView }) {
           }}
         />
       )}
+      {choosing && (
+        <Sheet
+          open
+          onClose={() => {
+            setChoosing(false);
+          }}
+          title={t("shared.group.whoToSettle")}
+        >
+          <Card flush>
+            <List>
+              {open.map((person) => (
+                <RowButton
+                  key={person.key}
+                  onClick={() => {
+                    setChoosing(false);
+                    setSettling(settleParty(section, view, person));
+                  }}
+                >
+                  <PartyBody person={person} note={noteOf(person)} />
+                </RowButton>
+              ))}
+            </List>
+          </Card>
+        </Sheet>
+      )}
+      {settling && (
+        <SettleUpSheet
+          key={settling.key}
+          open
+          party={settling}
+          onClose={() => {
+            setSettling(null);
+          }}
+          onWriteOff={
+            settling.owedToYou > 0
+              ? () => {
+                  const person = view.people.find((one) => one.key === settling.key);
+                  setSettling(null);
+                  if (person) setWritingOff(person);
+                }
+              : undefined
+          }
+        />
+      )}
+      {writingOff && (
+        <WriteOffSheet
+          open
+          view={view}
+          person={writingOff}
+          pending={writeOff.isPending}
+          onClose={() => {
+            setWritingOff(null);
+          }}
+          onConfirm={() => {
+            void forgive(writingOff);
+          }}
+        />
+      )}
+      {undoing && (
+        <UndoWriteOffSheet
+          open
+          person={undoing}
+          amount={ceilingOf(undoing)}
+          pending={undo.isPending}
+          onClose={() => {
+            setUndoing(null);
+          }}
+          onConfirm={() => {
+            void takeBack(undoing);
+          }}
+        />
+      )}
+      {archiving && (
+        <ArchiveGroupSheet
+          open
+          view={view}
+          pending={archive.isPending}
+          onClose={() => {
+            setArchiving(false);
+          }}
+          onConfirm={() => {
+            void archiveIt();
+          }}
+        />
+      )}
       {splitting && (
         <SplitSheet
           key={splitting.id}
@@ -402,6 +579,58 @@ function GroupBody({ view }: { view: GroupView }) {
       )}
     </>
   );
+
+  async function forgive(person: PartyView) {
+    try {
+      await writeOff.mutateAsync({
+        groupId: view.group.id,
+        contactId: person.contactId,
+        expenseId: person.expenseId,
+        amount: person.owesYou,
+      });
+      setWritingOff(null);
+      toast.show({ message: t("shared.writeOff.done", { name: person.name }) });
+    } catch (error) {
+      setWritingOff(null);
+      fail(error);
+    }
+  }
+
+  async function takeBack(person: PartyView) {
+    try {
+      await undo.mutateAsync({
+        groupId: view.group.id,
+        contactId: person.contactId,
+        expenseId: person.expenseId,
+      });
+      setUndoing(null);
+      toast.show({ message: t("shared.writeOff.undone", { name: person.name }) });
+    } catch (error) {
+      setUndoing(null);
+      fail(error);
+    }
+  }
+
+  async function archiveIt() {
+    try {
+      await archive.mutateAsync({
+        id: view.group.id,
+        // Archiving writes off what is still owed, and the mirror has to say so as well.
+        owing: view.people
+          .filter((person) => person.owesYou > 0)
+          .map((person) => ({
+            contactId: person.contactId,
+            expenseId: person.expenseId,
+            amount: person.owesYou,
+          })),
+      });
+      setArchiving(false);
+      toast.show({ message: t("shared.archiveGroup.done", { name: view.group.name }) });
+    } catch (error) {
+      setArchiving(false);
+      fail(error);
+    }
+  }
 
   async function save(expense: SharedExpense, split: SharedSplit) {
     try {
@@ -482,7 +711,7 @@ export function SharedGroupScreen({ id }: { id: string }) {
           action={<Button onClick={refetch}>{t("common.retry")}</Button>}
         />
       ) : (
-        <GroupBody view={view} />
+        <GroupBody view={view} section={section} />
       )}
     </div>
   );

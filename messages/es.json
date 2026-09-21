@@ -579,7 +579,8 @@
         "budget": "presupuesto",
         "contact": "persona",
         "sharedGroup": "grupo compartido",
-        "sharedExpense": "gasto compartido"
+        "sharedExpense": "gasto compartido",
+        "settlement": "pago"
       },
       "actions": {
         "create": "Este dispositivo pidió crear este {what}.",
@@ -590,7 +591,9 @@
         "restore": "Este dispositivo pidió restaurar este {what}.",
         "setDefault": "Este dispositivo pidió hacer principal este {what}.",
         "setOverride": "Este dispositivo pidió cambiar el importe de este {what} para un período.",
-        "clearOverride": "Este dispositivo pidió quitar el importe de este {what} para un período."
+        "clearOverride": "Este dispositivo pidió quitar el importe de este {what} para un período.",
+        "writeOff": "Este dispositivo pidió dar por perdido lo que aún se debe en este {what}.",
+        "undoWriteOff": "Este dispositivo pidió deshacer un perdón en este {what}."
       },
       "fields": {
         "name": "Nombre",
@@ -1408,7 +1411,10 @@
         "notPaid": "Todavía no ha pagado nada · te debe {amount}"
       },
       "addExpense": "Añadir gasto",
-      "expensesAdded": "{count, plural, one {# gasto añadido} other {# gastos añadidos}}"
+      "expensesAdded": "{count, plural, one {# gasto añadido} other {# gastos añadidos}}",
+      "settleUp": "Saldar",
+      "archive": "Archivar",
+      "whoToSettle": "¿Con quién estás saldando?"
     },
     "person": {
       "title": "Persona",
@@ -1503,7 +1509,66 @@
       "done": "Gasto repartido"
     },
     "new": "Nuevo grupo compartido",
-    "offline": "La sección se cargará cuando vuelvas a tener conexión. Nada de lo que añadas aquí se pierde mientras tanto."
+    "offline": "La sección se cargará cuando vuelvas a tener conexión. Nada de lo que añadas aquí se pierde mientras tanto.",
+    "settle": {
+      "title": "Saldar con {name}",
+      "payTitle": "Pagar a {name}",
+      "owesYou": "{name} te debe",
+      "youOwe": "Le debes a {name}",
+      "theySend": "{name} te envía",
+      "youSend": "Envías",
+      "amount": "Importe",
+      "over": "Es más de los {amount} que hay abiertos entre ustedes.",
+      "date": "Fecha",
+      "arrives": "Dónde llega",
+      "leaves": "De dónde sale",
+      "outside": "En ninguna de aquí",
+      "outsideMeta": "Efectivo en mano",
+      "outsideTitle": "Sin movimiento y sin cambio de saldo.",
+      "outsideBody": "Nos dijiste que el efectivo nunca llegó a una cuenta que lleves aquí. Los gastos bajan igual {amount}, porque ese dinero sí volvió.",
+      "notIncomeTitle": "Esto no es un ingreso.",
+      "notIncomeBody": "Llega a una cuenta, no lleva categoría y baja cada gasto en el mes en que ocurrió ese gasto.",
+      "yourExpenseTitle": "Este es un gasto tuyo.",
+      "yourExpenseBody": "Registra {amount} con la fecha de cada línea que estás cubriendo, porque es cuando se gastó el dinero. La categoría la eliges tú: un grupo compartido no lleva ninguna.",
+      "bothTitle": "Esto registra dos cosas.",
+      "bothBody": "{collected} que llegan a tu cuenta, que no son un ingreso, y tu parte de {paid} de sus líneas como gastos con la fecha de cada una. Tu saldo se mueve {net}.",
+      "category": "Categoría de los gastos que esto registra",
+      "categoryFor": "Categoría de tus {amount} de {description}",
+      "categoryForLine": "{description} · {date} · {amount}",
+      "refunded": "{amount} de eso es dinero suyo que vuelve a ellos: nunca lo gastaste, así que no lleva categoría y queda fuera de Stats y Budgets.",
+      "covers": "Cubre, del gasto más viejo al más nuevo:",
+      "noDescription": "Gasto",
+      "partialFirst": "Menos del total cubre primero lo que te deben, del gasto más viejo al más nuevo; lo que tú debes se registra solo cuando eso queda saldado.",
+      "record": "Registrar pago",
+      "pay": "Pagar {amount}",
+      "writeOff": "Dar por perdidos {amount}",
+      "recorded": "Pago registrado"
+    },
+    "writeOff": {
+      "title": "¿Dar por perdidos los {amount} que {name} aún debe?",
+      "noFigureMoves": "No cambia ninguna cifra.",
+      "body": "Tú lo pagaste, y cuenta como tuyo desde el día de cada gasto. Darlo por perdido solo dice que dejaste de esperarlo.",
+      "keepsWhatWasPaid": "{name} conserva los {amount} que sí pagó; el resto de su fila dice Written off.",
+      "rowReadsWrittenOff": "La fila de {name} dirá Written off.",
+      "becomesSettled": "Sin nadie debiendo, {name} pasa a Settled.",
+      "stillOwed": "Aquí siguen debiéndote {amount}.",
+      "undoable": "Puedes deshacerlo mientras el grupo no esté archivado.",
+      "confirm": "Dar por perdidos {amount}",
+      "done": "Lo que debía {name} queda dado por perdido",
+      "undoTitle": "¿Deshacer el perdón de {name}?",
+      "undoBody": "{name} vuelve a deber los {amount}, y el historial lo dice. Ninguna cifra tuya se mueve.",
+      "undoConfirm": "Que vuelva a deber {amount}",
+      "undone": "{name} lo vuelve a deber"
+    },
+    "archiveGroup": {
+      "title": "¿Archivar {name}?",
+      "stillOwed": "Aún te deben {amount}.",
+      "writesItOff": "Archivar lo da por perdido: esas filas dirán Written off y el importe sigue contando como tuyo, igual que hoy.",
+      "body": "No se borra nada y ninguna cifra se mueve. Un grupo archivado se sigue leyendo, y puedes restaurarlo.",
+      "confirm": "Archivar",
+      "confirmWithWriteOff": "Archivar y dar por perdidos {amount}",
+      "done": "{name} queda archivado"
+    }
   },
   "transactions": {
     "readback": {

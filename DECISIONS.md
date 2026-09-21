@@ -4477,3 +4477,40 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   every group — so a person's `surplus` is the same figure on their row in each group and must never
   be added up. The mirror goes to schema version 2 and mirror version 3: the stores are created, and
   the copy is re-pulled once.
+
+## 2026-09-21 · A settle-up projects the shared layer, and mints the movements the server will mint again (T-123)
+
+- **Context:** `POST /settlements` writes the movements itself — one `SETTLEMENT` in, one ordinary
+  `EXPENSE` per line of theirs you cover, one `SETTLEMENT` out for what goes back — and **mints their
+  ids on the server**: `CreateSettlementInput` has no field for them. With no network the device still
+  has to be consistent: the balance moved, the list has a row for it, the day total agrees with both,
+  and Stats and the budgets fall.
+- **Decision:** `settlement` becomes the **eighth outbox entity**, and its projection does three
+  things. It puts the payment in the mirror with the id the client minted, which is the id the server
+  is given, so every figure in `Shared` moves at once. It carries a **net `effect`** — one synthetic
+  `SETTLEMENT` on the account, `collected − paid` — which is what `projectBalances` reads. And it
+  **mints the movements as mirror rows of its own**, marked with `sharedSettlementId`; the operation
+  remembers their ids in `payload.minted`, and `confirm` deletes them when the server answers, so the
+  pull that follows the round brings the real ones. Nothing is left behind and nothing is duplicated.
+- **Alternatives:** projecting no movement at all and waiting for the pull. Rejected: the balance
+  would move while the list said nothing had happened, which is exactly the kind of screen house
+  rule 6 forbids. Keeping the minted rows and reconciling them against the server's by shape.
+  Rejected: two rows that look alike are not the same row, and guessing is worse than replacing.
+- **What counts as yours is overlaid, not stored** (`repository/window.ts`): a payment lowers
+  `countsAsYours` on the movements it covers, and that figure is the one Stats and the budgets sum.
+  Writing it onto the mirror's rows would be undone by the next pull while the payment is still
+  queued, so `liveRowsInWindow` works it out from the shared stores with `countsAsYours()`
+  (`lib/local/derive/shared.ts`) — the arithmetic T-120 wrote for exactly this — and only for a row
+  whose expense the ledger knows. Rows with nothing shared in the window pay nothing for it.
+- **The ceiling of a write-off travels beside the body, not in it.** What is given up is _what was
+  open when you decided_, capped again by what is open now; the server works it out, so the wire does
+  not carry it, but the mirror has to hold it and the reproject rule has to restate it. It rides in
+  `payload.writtenOff`, next to `effect` and `minted`, rather than as a field the server would drop.
+- **The group's lead figure gained the other half.** It was _what you fronted less what came back_;
+  paying somebody back for their line is **an expense of yours and part of what the outing cost**, so
+  it adds what you have paid on lines others fronted. The server does not stamp a group on that
+  expense, so the figure is derived from the shared layer, never from the movement.
+- **Consequence:** `PersonScreen` moves to the **app layer**, beside its route, because `Settle up`
+  is its primary action and the sheet composes the account and category pickers — a feature never
+  imports another feature. `sharedGroup` gains `writeOff`, `undoWriteOff` and `archive`, so giving up
+  and archiving work with no network like every other write.

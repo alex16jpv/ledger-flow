@@ -67,8 +67,11 @@ ledger: no account, no category, no note and no link to a movement. Those live o
 transactions, which carry `countsAsYours`, `sharedExpenseId`, `sharedGroupId`, `sharedSettlementId`
 and `sharedHistory` and travel in `transactions` as they always did.
 
-Nothing here has an outbox route yet, so `applyPage` puts these four down rather than handing them to
-`reconcile.ts`: there is nothing queued to project back on top of them.
+All four have an outbox route, so `applyPage` hands them to `reconcile.ts` like everything else. A
+payment is the one write whose **movements the server mints**: the device mints its own so the list,
+the day totals and the balance move together with no network, marks them with `sharedSettlementId`,
+remembers their ids in the operation's `payload.minted`, and drops them when the server answers
+(`DECISIONS.md`, T-123).
 
 What the endpoints derive on every read — a group's `totals`, its `status`, and the state of each
 person in it, which no endpoint exposes at all — is derived here too, by `derive/shared.ts`, from the

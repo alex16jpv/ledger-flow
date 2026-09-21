@@ -38,9 +38,22 @@ default into what a new expense inherits. An expense that inherits **sends no sp
 resolves the default itself, and carrying one is exactly what sets `customSplit`. `Split this` on a
 loose movement creates a shared group of one, because there is one concept and not two.
 
-The screens that compose other features — the group detail, the transaction picker and the sheet that
-says what adding them changes — live in the **app layer**, like the account detail does, because a
-feature never imports another feature.
+**Settling up.** `settle.ts` is the sheet's model: what one counterparty owes you, what you owe them,
+the open lines in both directions, and what a given amount covers — imputed **oldest expense first**
+with `impute` (`lib/local/derive`), which is the server's own rule. The sheet asks for **what changes
+hands**, and both halves are recorded only once that squares it: a smaller amount covers what they owe
+you first, and what you owe them is recorded only when that is square. Paying somebody back is not a
+payment from your ledger's side — it is **one expense of yours per line**, dated that line and in a
+category the sheet asks for, because the shared layer carries none. A payment can be **outside the
+app**, and then no movement is written and no balance moves, while the expenses still fall.
+
+**Giving up moves no figure.** A write-off stores the decision and the ceiling that was open when it
+was taken; archiving a group writes off what is still owed on your behalf. Neither touches a figure of
+yours: that money was counted as yours from the day it left the account.
+
+The screens that compose other features — the group detail, the person, the settle-up sheet, the
+transaction picker and the sheet that says what adding them changes — live in the **app layer**, like
+the account detail does, because a feature never imports another feature.
 
 A person is **not an account** — no balance of their own, never in the account picker, in a transfer
 or in `Stats groupBy=account` — and their screen says so in one line, because that is the whole

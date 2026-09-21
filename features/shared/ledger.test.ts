@@ -242,7 +242,8 @@ describe("the section a screen reads", () => {
 
     expect(ana).toMatchObject({ owesYou: 60_000, youOwe: 0, paid: 0 });
     expect(view?.collected).toBe(0);
-    expect(view?.countsAsYours).toBe(180_000);
+    // Paying her back is an expense of yours and it is this outing's cost: 180,000 + 30,000.
+    expect(view?.countsAsYours).toBe(210_000);
     expect(section.people.find((one) => one.contactId === ANA)?.net).toBe(60_000);
   });
 

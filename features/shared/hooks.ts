@@ -3,6 +3,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import type { WriteOffTarget } from "@/lib/local/outbox";
 import type { SharedLedgerRows } from "@/lib/local/repository";
 import { REFERENCE_STALE_TIME_MS } from "@/lib/query/client";
 import { invalidateMoneyMovement, QUERY_DOMAINS } from "@/lib/query/domains";
@@ -10,6 +11,7 @@ import type { Contact, RestoreInput, UpdateContactInput } from "@/types/api";
 
 import {
   archiveContact,
+  archiveSharedGroup,
   createContact,
   createSharedExpense,
   createSharedGroup,
@@ -17,9 +19,12 @@ import {
   fetchContacts,
   fetchContactsPage,
   fetchSharedLedger,
+  recordSettlement,
   restoreContact,
   saveSharedSplit,
+  undoWriteOff,
   updateContact,
+  writeOffParty,
 } from "./api";
 import { contactKeys, sharedKeys } from "./keys";
 import { sectionOf, type SharedSection } from "./ledger";
@@ -137,6 +142,34 @@ export function useCreateSharedExpense() {
 export function useSaveSharedSplit() {
   const invalidate = useSharedInvalidation();
   return useMutation({ mutationFn: saveSharedSplit, onSuccess: invalidate });
+}
+
+export function useRecordSettlement() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({ mutationFn: recordSettlement, onSuccess: invalidate });
+}
+
+export interface WriteOffVariables extends WriteOffTarget {
+  // What is still open when you give up, which is the ceiling the decision stores.
+  amount: number;
+}
+
+export function useWriteOff() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({
+    mutationFn: ({ amount, ...target }: WriteOffVariables) => writeOffParty(target, amount),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUndoWriteOff() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({ mutationFn: undoWriteOff, onSuccess: invalidate });
+}
+
+export function useArchiveSharedGroup() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({ mutationFn: archiveSharedGroup, onSuccess: invalidate });
 }
 
 function useContactInvalidation() {

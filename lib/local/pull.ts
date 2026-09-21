@@ -5,7 +5,7 @@ import { rememberServerTime } from "./clock";
 import type { VaultHandle } from "./db";
 import { writeTransaction } from "./outbox/queue";
 import { reconcileContext, reconcileRow } from "./outbox/reconcile";
-import { PROFILE_KEY, profileRecord, settlementRecord } from "./schema";
+import { PROFILE_KEY, profileRecord } from "./schema";
 
 export const PULL_PAGE_LIMIT = 500;
 
@@ -91,10 +91,9 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
     news ||= await isNews(tx.objectStore("sharedExpenses"), row.id, row.updatedAt);
     await reconcileRow(tx, "sharedExpense", row.id, row, context);
   }
-  // A payment has no queue of its own yet: there is nothing to reproject over these rows.
   for (const row of changes.settlements) {
     news ||= await isNews(tx.objectStore("settlements"), row.id, row.updatedAt);
-    await tx.objectStore("settlements").put(settlementRecord(row));
+    await reconcileRow(tx, "settlement", row.id, row, context);
   }
 
   const meta = tx.objectStore("meta");

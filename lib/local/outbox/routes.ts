@@ -5,6 +5,7 @@ import type {
   BudgetAmountOverrideInput,
   Category,
   Contact,
+  SettlementResult,
   SharedExpense,
   SharedGroup,
   SyncBudget,
@@ -14,7 +15,7 @@ import type {
 } from "@/types/api";
 
 import type { OutboxEntity, OutboxOperation } from "../schema";
-import type { OperationPayload, OutboxAction } from "./envelope";
+import { type OperationPayload, operationPayload, type OutboxAction } from "./envelope";
 import type { WriteTransaction } from "./queue";
 import { reconcileRemoval, reconcileRow } from "./reconcile";
 import type { MirrorRow } from "./reproject";
@@ -92,6 +93,18 @@ function groupOf(payload: OperationPayload): string {
   const groupId = payload.params?.groupId;
   if (!groupId) throw new Error("a shared expense with no group in its path");
   return groupId;
+}
+
+function partyOf(payload: OperationPayload): string {
+  const partyId = payload.params?.partyId;
+  if (!partyId) throw new Error("a write-off with nobody in its path");
+  return partyId;
+}
+
+// The server minted its own movements for this payment, so the device's projections make way.
+async function dropMinted(tx: WriteTransaction, operation: OutboxOperation): Promise<void> {
+  const store = tx.objectStore("transactions");
+  for (const id of operationPayload(operation).minted ?? []) await store.delete(id);
 }
 
 // D-24: the row becomes the baseline and what the queue holds is projected back on top.
@@ -249,6 +262,37 @@ export const ROUTES: Record<RouteKey, Route> = {
     send: ({ payload }) =>
       api<SharedGroup>("/shared-groups", { method: "POST", body: payload.body }),
     confirm: (tx, row) => confirmRow(tx, "sharedGroup", row),
+  }),
+  "sharedGroup:writeOff": route<SharedGroup>({
+    send: ({ entityId, payload }, guard) =>
+      api<SharedGroup>(`/shared-groups/${entityId}/write-offs`, {
+        method: "POST",
+        body: payload.body,
+        ...ifMatch(guard),
+      }),
+    confirm: (tx, row) => confirmRow(tx, "sharedGroup", row),
+  }),
+  "sharedGroup:undoWriteOff": route<SharedGroup>({
+    send: ({ entityId, payload }, guard) =>
+      api<SharedGroup>(`/shared-groups/${entityId}/write-offs/${partyOf(payload)}`, {
+        method: "DELETE",
+        ...ifMatch(guard),
+      }),
+    confirm: (tx, row) => confirmRow(tx, "sharedGroup", row),
+  }),
+  "sharedGroup:archive": route<unknown>({
+    send: ({ entityId }, guard) =>
+      api<unknown>(`/shared-groups/${entityId}`, { method: "DELETE", ...ifMatch(guard) }),
+    confirm: confirmRemoval,
+  }),
+
+  "settlement:create": route<SettlementResult>({
+    send: ({ payload }) =>
+      api<SettlementResult>("/settlements", { method: "POST", body: payload.body }),
+    confirm: async (tx, result, operation) => {
+      await dropMinted(tx, operation);
+      await confirmRow(tx, "settlement", result.settlement);
+    },
   }),
 
   "sharedExpense:create": route<SharedExpense>({

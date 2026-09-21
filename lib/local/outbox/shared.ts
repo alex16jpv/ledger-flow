@@ -1,15 +1,26 @@
+import { dayKey } from "@/lib/format/dates";
 import type {
+  CreateSettlementInput,
   CreateSharedExpenseInput,
   CreateSharedGroupInput,
+  Settlement,
   SharedExpense,
   SharedSplit,
   SyncSharedGroup,
+  SyncTransaction,
   UpdateSharedExpenseInput,
+  WriteOffInput,
 } from "@/types/api";
 
-import { sharedExpenseRecord, sharedGroupRecord, transactionRecord } from "../schema";
-import { newEntityId } from "./envelope";
-import { NotProjectableError, projectionContext } from "./projected";
+import { fromCents, toCents } from "../derive/money";
+import {
+  settlementRecord,
+  sharedExpenseRecord,
+  sharedGroupRecord,
+  transactionRecord,
+} from "../schema";
+import { type MoneyEffect, newEntityId } from "./envelope";
+import { NotProjectableError, type ProjectionContext, projectionContext } from "./projected";
 import {
   dependenciesOf,
   type LocalChange,
@@ -253,5 +264,321 @@ export function saveSharedSplit({
         }),
     },
     optimistic: expenseBack(id),
+  });
+}
+
+export interface WriteOffTarget {
+  groupId: string;
+  contactId: string | null;
+  expenseId: string | null;
+}
+
+type StoredWriteOff = SyncSharedGroup["writeOffs"][number];
+
+const samePartyAs = (target: WriteOffTarget) => (one: StoredWriteOff) =>
+  one.contactId === target.contactId && one.expenseId === target.expenseId;
+
+async function currentGroup(tx: WriteTransaction, id: string): Promise<SyncSharedGroup> {
+  const record = await tx.objectStore("sharedGroups").get(id);
+  if (!record) throw new NotProjectableError(`shared group ${id}, which the mirror does not hold`);
+  return record.row;
+}
+
+const partyIdOf = (target: WriteOffTarget): string => {
+  const id = target.expenseId ?? target.contactId;
+  if (!id) throw new Error("a write-off naming neither a contact nor a block of guests");
+  return id;
+};
+
+const writeOffBody = (target: WriteOffTarget): WriteOffInput =>
+  target.expenseId === null
+    ? { contactId: target.contactId ?? undefined }
+    : { expenseId: target.expenseId };
+
+// The ceiling is what was open when you decided, which is what the server stores with it.
+export function writeOffParty(target: WriteOffTarget, amount: number): Promise<SyncSharedGroup> {
+  return write<SyncSharedGroup>({
+    local: {
+      entity: "sharedGroup",
+      entityId: target.groupId,
+      action: "writeOff",
+      payload: {
+        body: writeOffBody(target),
+        params: { partyId: partyIdOf(target) },
+        writtenOff: amount,
+      },
+      project: async (tx, occurredAt) => {
+        const group = await currentGroup(tx, target.groupId);
+        const entry: StoredWriteOff = {
+          kind: target.expenseId === null ? "CONTACT" : "GUESTS",
+          contactId: target.contactId,
+          expenseId: target.expenseId,
+          amount,
+          at: occurredAt,
+        };
+        return projectGroup(tx, target.groupId, {
+          ...group,
+          writeOffs: [...group.writeOffs.filter((one) => !samePartyAs(target)(one)), entry],
+        });
+      },
+    },
+    optimistic: groupBack(target.groupId),
+  });
+}
+
+export function undoWriteOff(target: WriteOffTarget): Promise<SyncSharedGroup> {
+  return write<SyncSharedGroup>({
+    local: {
+      entity: "sharedGroup",
+      entityId: target.groupId,
+      action: "undoWriteOff",
+      payload: { params: { partyId: partyIdOf(target) } },
+      project: async (tx) => {
+        const group = await currentGroup(tx, target.groupId);
+        return projectGroup(tx, target.groupId, {
+          ...group,
+          writeOffs: group.writeOffs.filter((one) => !samePartyAs(target)(one)),
+        });
+      },
+    },
+    optimistic: groupBack(target.groupId),
+  });
+}
+
+export interface ArchivedGroup {
+  id: string;
+  // What each party still owes when you archive: the server writes it off on your behalf.
+  owing: { contactId: string | null; expenseId: string | null; amount: number }[];
+}
+
+export function archiveSharedGroup({ id, owing }: ArchivedGroup): Promise<SyncSharedGroup> {
+  return write<SyncSharedGroup>({
+    local: {
+      entity: "sharedGroup",
+      entityId: id,
+      action: "archive",
+      payload: {},
+      project: async (tx, occurredAt) => {
+        const group = await currentGroup(tx, id);
+        const kept = group.writeOffs.filter(
+          (one) =>
+            !owing.some(
+              (party) => party.contactId === one.contactId && party.expenseId === one.expenseId,
+            ),
+        );
+        return projectGroup(tx, id, {
+          ...group,
+          archivedAt: occurredAt,
+          writeOffs: [
+            ...kept,
+            ...owing.map((party) => ({
+              kind: party.expenseId === null ? ("CONTACT" as const) : ("GUESTS" as const),
+              contactId: party.contactId,
+              expenseId: party.expenseId,
+              amount: party.amount,
+              at: occurredAt,
+            })),
+          ],
+        });
+      },
+    },
+    optimistic: groupBack(id),
+  });
+}
+
+export interface SettledLine {
+  expenseId: string;
+  date: string;
+  description: string | null;
+  amount: number;
+  categoryId: string;
+}
+
+export interface NewSettlement {
+  id?: string;
+  counterparty: { contactId: string | null; expenseId: string | null };
+  date: string;
+  collected: number;
+  paid: number;
+  // Cash the app never saw: no movement is written and no balance moves.
+  outsideApp: boolean;
+  accountId: string | null;
+  // One expense of yours per line you are covering, each dated and described by that line.
+  lines: SettledLine[];
+  // What you hand over beyond your own lines: their money going back to them.
+  refunded: number;
+}
+
+type MintedMovement = Pick<
+  SyncTransaction,
+  "id" | "type" | "amount" | "date" | "fromAccountId" | "toAccountId" | "categoryId" | "description"
+>;
+
+// The server mints these when it takes the payment; the device mints its own so the list, the day
+// totals and the balance move together with no network, and `confirm` drops them for the real ones.
+function mintMovements(input: NewSettlement): MintedMovement[] {
+  const { accountId } = input;
+  if (input.outsideApp || accountId === null) return [];
+  const rows: MintedMovement[] = [];
+  if (input.collected > 0) {
+    rows.push({
+      id: newEntityId(),
+      type: "SETTLEMENT",
+      amount: input.collected,
+      date: input.date,
+      fromAccountId: null,
+      toAccountId: accountId,
+      categoryId: null,
+      description: null,
+    });
+  }
+  for (const line of input.lines) {
+    rows.push({
+      id: newEntityId(),
+      type: "EXPENSE",
+      amount: line.amount,
+      date: line.date,
+      fromAccountId: accountId,
+      toAccountId: null,
+      categoryId: line.categoryId,
+      description: line.description,
+    });
+  }
+  if (input.refunded > 0) {
+    rows.push({
+      id: newEntityId(),
+      type: "SETTLEMENT",
+      amount: input.refunded,
+      date: input.date,
+      fromAccountId: accountId,
+      toAccountId: null,
+      categoryId: null,
+      description: null,
+    });
+  }
+  return rows;
+}
+
+const mintedRow = (
+  movement: MintedMovement,
+  settlementId: string,
+  owner: ProjectionContext,
+): SyncTransaction => ({
+  ...movement,
+  dayKey: dayKey(new Date(movement.date), owner.timeZone),
+  userId: owner.userId,
+  currency: owner.currency,
+  tags: [],
+  note: null,
+  pendingDetails: false,
+  source: "MANUAL",
+  countsAsYours: movement.amount,
+  sharedExpenseId: null,
+  sharedGroupId: null,
+  sharedSettlementId: settlementId,
+  sharedHistory: [],
+  deletedAt: null,
+  createdAt: owner.occurredAt,
+  updatedAt: owner.occurredAt,
+});
+
+// The net of both halves on one account: `projectBalances` reads the effect, never these rows.
+function netEffect(input: NewSettlement): MoneyEffect | undefined {
+  const { accountId } = input;
+  if (input.outsideApp || accountId === null) return undefined;
+  const cents = toCents(input.collected) - toCents(input.paid);
+  if (cents === 0) return undefined;
+  return {
+    before: null,
+    after: {
+      type: "SETTLEMENT",
+      amount: fromCents(Math.abs(cents)),
+      fromAccountId: cents < 0 ? accountId : null,
+      toAccountId: cents > 0 ? accountId : null,
+      deletedAt: null,
+    },
+  };
+}
+
+const settlementBody = (input: NewSettlement, id: string): CreateSettlementInput => ({
+  id,
+  ...(input.counterparty.contactId ? { contactId: input.counterparty.contactId } : {}),
+  ...(input.counterparty.expenseId ? { expenseId: input.counterparty.expenseId } : {}),
+  date: input.date,
+  ...(input.collected > 0 ? { collected: input.collected } : {}),
+  ...(input.paid > 0 ? { paid: input.paid } : {}),
+  ...(input.outsideApp ? { outsideApp: true } : {}),
+  ...(input.accountId && !input.outsideApp ? { accountId: input.accountId } : {}),
+  ...(input.lines.length > 0
+    ? {
+        categories: input.lines.map((line) => ({
+          expenseId: line.expenseId,
+          categoryId: line.categoryId,
+        })),
+      }
+    : {}),
+});
+
+export function recordSettlement(input: NewSettlement): Promise<Settlement> {
+  const id = input.id ?? newEntityId();
+  const minted = mintMovements(input);
+  const effect = netEffect(input);
+  return write<Settlement>({
+    local: {
+      entity: "settlement",
+      entityId: id,
+      action: "create",
+      payload: {
+        body: settlementBody(input, id),
+        ...(effect ? { effect } : {}),
+        ...(minted.length > 0 ? { minted: minted.map((movement) => movement.id) } : {}),
+      },
+      project: async (tx, occurredAt) => {
+        const owner = await projectionContext(tx, occurredAt);
+        const row: Settlement = {
+          id,
+          userId: owner.userId,
+          counterparty: {
+            kind: input.counterparty.expenseId === null ? "CONTACT" : "GUESTS",
+            contactId: input.counterparty.contactId,
+            expenseId: input.counterparty.expenseId,
+          },
+          date: input.date,
+          collected: input.collected,
+          paid: input.paid,
+          outsideApp: input.outsideApp,
+          currency: owner.currency,
+          deletedAt: null,
+          createdAt: occurredAt,
+          updatedAt: occurredAt,
+        };
+        await tx.objectStore("settlements").put(settlementRecord(row));
+        for (const movement of minted) {
+          await tx
+            .objectStore("transactions")
+            .put(transactionRecord(mintedRow(movement, id, owner)));
+        }
+        // The payment is posted against the counterparty and the lines it covers, so those go first.
+        const dependsOn = await dependenciesOf(tx, [
+          { entity: "contact" as const, id: input.counterparty.contactId },
+          { entity: "sharedExpense" as const, id: input.counterparty.expenseId },
+          ...input.lines.map((line) => ({ entity: "sharedExpense" as const, id: line.expenseId })),
+        ]);
+        return {
+          dependsOn,
+          undo: async (undoTx) => {
+            await undoTx.objectStore("settlements").delete(id);
+            for (const movement of minted) {
+              await undoTx.objectStore("transactions").delete(movement.id);
+            }
+          },
+        };
+      },
+    },
+    optimistic: async (db: VaultDb): Promise<Settlement> => {
+      const record = await db.get("settlements", id);
+      if (!record) throw new NotProjectableError(`payment ${id} after queueing it`);
+      return record.row;
+    },
   });
 }

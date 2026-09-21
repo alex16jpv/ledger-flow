@@ -18,6 +18,16 @@ import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
+import { ContactFormSheet } from "@/features/shared/components/ContactFormSheet";
+import { StateBadge } from "@/features/shared/components/parts";
+import {
+  useArchiveContact,
+  useContactQuery,
+  useRestoreContact,
+  useSharedSection,
+} from "@/features/shared/hooks";
+import { personView, type SharedSection } from "@/features/shared/ledger";
+import { hasSomethingToSettle, settlePerson } from "@/features/shared/settle";
 import { presentError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
@@ -26,10 +36,7 @@ import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
 import type { Contact } from "@/types/api";
 
-import { useArchiveContact, useContactQuery, useRestoreContact, useSharedSection } from "../hooks";
-import { personView, type SharedSection } from "../ledger";
-import { ContactFormSheet } from "./ContactFormSheet";
-import { StateBadge } from "./parts";
+import { SettleUpSheet } from "../../SettleUpSheet";
 
 function Payments({ section, contactId }: { section: SharedSection; contactId: string }) {
   const t = useTranslations("shared.person");
@@ -162,8 +169,9 @@ export function PersonScreen({ id }: { id: string }) {
   const shared = useSharedSection();
   const archive = useArchiveContact();
   const restore = useRestoreContact();
-  const [sheet, setSheet] = useState<"edit" | "archive" | null>(null);
+  const [sheet, setSheet] = useState<"edit" | "archive" | "settle" | null>(null);
   const row = contact.data;
+  const party = shared.section ? settlePerson(shared.section, id) : undefined;
   // The figure is the ledger's, not the contact's: neither half may draw without the other.
   const pending = contact.isPending || shared.isPending;
   const failed = contact.isError || shared.isError;
@@ -226,6 +234,18 @@ export function PersonScreen({ id }: { id: string }) {
       ) : (
         <>
           <PersonBody contact={row} section={shared.section} />
+          {party && hasSomethingToSettle(party) && (
+            <Button
+              size="lg"
+              block
+              onClick={() => {
+                setSheet("settle");
+              }}
+            >
+              <HandCoins {...iconProps("sm")} />
+              {t("shared.group.settleUp")}
+            </Button>
+          )}
           {row.archivedAt === null ? (
             <div className="flex gap-3">
               <Button
@@ -301,6 +321,15 @@ export function PersonScreen({ id }: { id: string }) {
           >
             <Alert tone="warning">{t("shared.person.archive.body")}</Alert>
           </Sheet>
+          {sheet === "settle" && party && (
+            <SettleUpSheet
+              open
+              party={party}
+              onClose={() => {
+                setSheet(null);
+              }}
+            />
+          )}
         </>
       )}
     </div>

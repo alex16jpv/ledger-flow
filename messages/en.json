@@ -579,7 +579,8 @@
         "budget": "budget",
         "contact": "person",
         "sharedGroup": "shared group",
-        "sharedExpense": "shared expense"
+        "sharedExpense": "shared expense",
+        "settlement": "payment"
       },
       "actions": {
         "create": "This device asked to create this {what}.",
@@ -590,7 +591,9 @@
         "restore": "This device asked to restore this {what}.",
         "setDefault": "This device asked to make this {what} the default.",
         "setOverride": "This device asked to change this {what}’s amount for one period.",
-        "clearOverride": "This device asked to remove this {what}’s amount for one period."
+        "clearOverride": "This device asked to remove this {what}’s amount for one period.",
+        "writeOff": "This device asked to write off what is still owed in this {what}.",
+        "undoWriteOff": "This device asked to take back a write-off in this {what}."
       },
       "fields": {
         "name": "Name",
@@ -1408,7 +1411,10 @@
         "notPaid": "Nothing paid yet · owes you {amount}"
       },
       "addExpense": "Add expense",
-      "expensesAdded": "{count, plural, one {# expense added} other {# expenses added}}"
+      "expensesAdded": "{count, plural, one {# expense added} other {# expenses added}}",
+      "settleUp": "Settle up",
+      "archive": "Archive",
+      "whoToSettle": "Who are you settling with?"
     },
     "person": {
       "title": "Person",
@@ -1503,7 +1509,66 @@
       "done": "Expense split"
     },
     "new": "New shared group",
-    "offline": "The section will load when you’re back online. Nothing you add here is lost meanwhile."
+    "offline": "The section will load when you’re back online. Nothing you add here is lost meanwhile.",
+    "settle": {
+      "title": "Settle up with {name}",
+      "payTitle": "Pay {name}",
+      "owesYou": "{name} owes you",
+      "youOwe": "You owe {name}",
+      "theySend": "{name} sends you",
+      "youSend": "You send",
+      "amount": "Amount",
+      "over": "That is more than the {amount} open between you.",
+      "date": "Date",
+      "arrives": "Where it arrives",
+      "leaves": "Where it comes from",
+      "outside": "Nowhere here",
+      "outsideMeta": "Cash in hand",
+      "outsideTitle": "No movement, and no balance changes.",
+      "outsideBody": "You told us the cash never reached an account you keep here. The expenses still fall by {amount}, because that money did come back.",
+      "notIncomeTitle": "This is not income.",
+      "notIncomeBody": "It arrives in an account, carries no category, and lowers each expense in the month that expense happened.",
+      "yourExpenseTitle": "This one is an expense of yours.",
+      "yourExpenseBody": "It records {amount} dated the day of each line you are covering, because that is when the money was spent. The category is yours to choose: a shared group carries none.",
+      "bothTitle": "This records two things.",
+      "bothBody": "{collected} arriving in your account, which is not income, and your {paid} share of their lines as expenses dated the day of each one. Your balance moves by {net}.",
+      "category": "Category for the expenses this records",
+      "categoryFor": "Category for your {amount} of {description}",
+      "categoryForLine": "{description} · {date} · {amount}",
+      "refunded": "{amount} of it is their money going back to them: you never spent it, so it carries no category and stays out of Stats and Budgets.",
+      "covers": "It covers, oldest expense first:",
+      "noDescription": "Expense",
+      "partialFirst": "Less than the whole covers what they owe you first, oldest expense first; what you owe them is recorded only once that is square.",
+      "record": "Record payment",
+      "pay": "Pay {amount}",
+      "writeOff": "Write off {amount}",
+      "recorded": "Payment recorded"
+    },
+    "writeOff": {
+      "title": "Write off the {amount} {name} still owes?",
+      "noFigureMoves": "No figure changes.",
+      "body": "You paid it, and it has counted as yours since the day of each expense. Writing off only says you have stopped expecting it back.",
+      "keepsWhatWasPaid": "{name} keeps the {amount} they did pay; the rest of their row reads Written off.",
+      "rowReadsWrittenOff": "{name}’s row will read Written off.",
+      "becomesSettled": "With nobody left owing, {name} becomes Settled.",
+      "stillOwed": "{amount} stays owed to you here.",
+      "undoable": "You can undo this until the group is archived.",
+      "confirm": "Write off {amount}",
+      "done": "What {name} owed is written off",
+      "undoTitle": "Take back the write-off for {name}?",
+      "undoBody": "{name} owes the {amount} again, and the history says so. No figure of yours moves either way.",
+      "undoConfirm": "Owe the {amount} again",
+      "undone": "{name} owes it again"
+    },
+    "archiveGroup": {
+      "title": "Archive {name}?",
+      "stillOwed": "{amount} is still owed to you.",
+      "writesItOff": "Archiving writes it off: those rows will read Written off and the amount stays counted as yours, exactly as it is today.",
+      "body": "Nothing is deleted and no figure moves. An archived group stays readable, and you can restore it.",
+      "confirm": "Archive",
+      "confirmWithWriteOff": "Archive and write off {amount}",
+      "done": "{name} is archived"
+    }
   },
   "transactions": {
     "readback": {

@@ -1,5 +1,5 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { answerBatch, operationsOf } from "@/lib/testing/sync";
+import { answerBatch, applied, operationsOf } from "@/lib/testing/sync";
 import {
   openTestVault,
   profile,
@@ -12,7 +12,15 @@ import type { SharedSplit } from "@/types/api";
 import { setCurrentVault } from "../repository/read";
 import { profileRecord, sharedExpenseRecord, sharedGroupRecord } from "../schema";
 import { pendingOperations } from "./queue";
-import { createSharedExpense, createSharedGroup, saveSharedSplit } from "./shared";
+import {
+  archiveSharedGroup,
+  createSharedExpense,
+  createSharedGroup,
+  recordSettlement,
+  saveSharedSplit,
+  undoWriteOff,
+  writeOffParty,
+} from "./shared";
 
 const ANA = "k1";
 
@@ -163,5 +171,172 @@ describe("writing a shared group with no network", () => {
     expect(saved.split.shares.map((one) => one.amount)).toEqual([50_000, 50_000]);
     const [operation] = await pendingOperations(vault.db);
     expect(operation?.payload).toMatchObject({ body: { useGroupSplit: true } });
+  });
+});
+
+describe("recording a payment with no network", () => {
+  it("projects the payment, the movement it writes and the balance it moves", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+
+    const payment = await recordSettlement({
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 60_000,
+      paid: 0,
+      outsideApp: false,
+      accountId: "a1",
+      lines: [],
+      refunded: 0,
+    });
+
+    expect(payment).toMatchObject({ collected: 60_000, paid: 0, outsideApp: false });
+    const movements = (await vault.db.getAll("transactions")).map((record) => record.row);
+    expect(movements).toEqual([
+      expect.objectContaining({
+        type: "SETTLEMENT",
+        amount: 60_000,
+        toAccountId: "a1",
+        categoryId: null,
+        sharedSettlementId: payment.id,
+      }),
+    ]);
+    const [operation] = await pendingOperations(vault.db);
+    expect(operation).toMatchObject({
+      entity: "settlement",
+      action: "create",
+      payload: {
+        effect: { after: { type: "SETTLEMENT", amount: 60_000, toAccountId: "a1" } },
+        minted: [movements[0]?.id],
+      },
+    });
+  });
+
+  it("writes one expense of yours per line you cover, dated that line", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+
+    await recordSettlement({
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 60_000,
+      paid: 30_000,
+      outsideApp: false,
+      accountId: "a1",
+      lines: [
+        {
+          expenseId: "e9",
+          date: "2026-08-14T20:00:00.000Z",
+          description: "Tickets",
+          amount: 30_000,
+          categoryId: "c1",
+        },
+      ],
+      refunded: 0,
+    });
+
+    const movements = (await vault.db.getAll("transactions")).map((record) => record.row);
+    expect(movements.map((row) => [row.type, row.amount, row.date, row.categoryId])).toEqual([
+      ["SETTLEMENT", 60_000, "2026-09-20T12:00:00.000Z", null],
+      ["EXPENSE", 30_000, "2026-08-14T20:00:00.000Z", "c1"],
+    ]);
+    // The balance moves by the net, which is what she actually sends.
+    const [operation] = await pendingOperations(vault.db);
+    expect(operation?.payload).toMatchObject({
+      effect: { after: { amount: 30_000, toAccountId: "a1", fromAccountId: null } },
+    });
+  });
+
+  it("writes no movement and moves no balance when the cash never reached an account", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+
+    await recordSettlement({
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 200_000,
+      paid: 0,
+      outsideApp: true,
+      accountId: null,
+      lines: [],
+      refunded: 0,
+    });
+
+    expect(await vault.db.getAll("transactions")).toEqual([]);
+    const [operation] = await pendingOperations(vault.db);
+    expect(operation?.payload).not.toHaveProperty("effect");
+    expect(operation?.payload).not.toHaveProperty("minted");
+  });
+
+  it("drops the movements it minted when the server answers with its own", async () => {
+    const vault = await vaultWith();
+    reportOnline(true);
+    answerBatch(fetchMock, () =>
+      applied({
+        settlement: {
+          id: "p1",
+          userId: "u1",
+          counterparty: { kind: "CONTACT", contactId: ANA, expenseId: null },
+          date: "2026-09-20T12:00:00.000Z",
+          collected: 60_000,
+          paid: 0,
+          outsideApp: false,
+          currency: "COP",
+          deletedAt: null,
+          createdAt: "2026-09-20T12:00:00.000Z",
+          updatedAt: "2026-09-20T12:00:00.000Z",
+        },
+        covered: [],
+        refunded: 0,
+      }),
+    );
+
+    await recordSettlement({
+      id: "p1",
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 60_000,
+      paid: 0,
+      outsideApp: false,
+      accountId: "a1",
+      lines: [],
+      refunded: 0,
+    });
+
+    expect(await vault.db.getAll("transactions")).toEqual([]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+});
+
+describe("giving up on what somebody owes", () => {
+  it("stores the ceiling that was open when you decided, and takes it back", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("sharedGroups", sharedGroupRecord(sharedGroup({ id: "g1" })));
+    reportOnline(false);
+
+    await writeOffParty({ groupId: "g1", contactId: ANA, expenseId: null }, 500_000);
+    expect((await vault.db.get("sharedGroups", "g1"))?.row.writeOffs).toEqual([
+      { kind: "CONTACT", contactId: ANA, expenseId: null, amount: 500_000, at: expect.any(String) },
+    ]);
+
+    await undoWriteOff({ groupId: "g1", contactId: ANA, expenseId: null });
+    expect((await vault.db.get("sharedGroups", "g1"))?.row.writeOffs).toEqual([]);
+  });
+
+  it("archives a group and writes off what is still owed on your behalf", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("sharedGroups", sharedGroupRecord(sharedGroup({ id: "g1" })));
+    reportOnline(false);
+
+    await archiveSharedGroup({
+      id: "g1",
+      owing: [{ contactId: ANA, expenseId: null, amount: 500_000 }],
+    });
+
+    const row = (await vault.db.get("sharedGroups", "g1"))?.row;
+    expect(row?.archivedAt).not.toBeNull();
+    expect(row?.writeOffs).toEqual([
+      { kind: "CONTACT", contactId: ANA, expenseId: null, amount: 500_000, at: expect.any(String) },
+    ]);
   });
 });

@@ -39,11 +39,15 @@ export interface PersonView {
   owesYou: number;
   youOwe: number;
   net: number;
+  // Their money in your account, and the same figure on their row in every group.
+  surplus: number;
   groups: { id: string; name: string }[];
 }
 
 export interface SharedSection {
   groups: GroupView[];
+  // What each share has been settled by, keyed `<expenseId>|<party key>`, and `|user` for yours.
+  collected: ReadonlyMap<string, number>;
   contacts: number;
   settlements: Settlement[];
   people: PersonView[];
@@ -125,6 +129,10 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     const fronted = expenses
       .filter((expense) => expense.paidByContactId === null)
       .reduce((sum, expense) => sum + expense.amount, 0);
+    // Paying somebody back for their line is an expense of yours, and it is this outing's cost.
+    const paidBack = expenses
+      .filter((expense) => expense.paidByContactId !== null)
+      .reduce((sum, expense) => sum + (ledger.collected.get(`${expense.id}|user`) ?? 0), 0);
     const people = view.people.map((person): PartyView => {
       const contact = person.contactId === null ? undefined : byId.get(person.contactId);
       const held = tally.get(person.key) ?? { share: 0, paid: 0 };
@@ -150,7 +158,7 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     groups.push({
       group,
       expenses: [...expenses].sort(newestFirst),
-      countsAsYours: fronted - view.collected,
+      countsAsYours: fronted - view.collected + paidBack,
       collected: view.collected,
       writtenOff: view.writtenOff,
       owed,
@@ -211,6 +219,7 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
       owesYou: held.owesYou,
       youOwe,
       net: held.owesYou - youOwe,
+      surplus: surplusOf.get(contactId) ?? 0,
       groups: [...held.groups].map((id) => ({ id, name: nameOf.get(id) ?? "" })),
     };
   });
@@ -218,6 +227,7 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
 
   return {
     groups,
+    collected: ledger.collected,
     contacts: contacts.filter((row) => row.archivedAt === null).length,
     settlements: [...rows.settlements].sort(newestFirst),
     people,
