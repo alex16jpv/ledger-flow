@@ -34,7 +34,7 @@ import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
 import { featureColorStyle } from "@/lib/theme/feature-color";
-import type { SharedExpense, SharedGroup, SharedSplit, Transaction } from "@/types/api";
+import type { SharedExpense, SharedSplit, Transaction } from "@/types/api";
 
 import { TransactionPickerSheet } from "../../TransactionPickerSheet";
 import { WhatChangesSheet } from "../../WhatChangesSheet";
@@ -446,12 +446,11 @@ export function SharedGroupScreen({ id }: { id: string }) {
   const back = useBackNavigation();
   const { section, isPending, isError, error, refetch } = useSharedSection();
   const view = section && groupView(section, id);
-  const title = (group: SharedGroup | undefined) => group?.name ?? t("shared.group.title");
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title={title(view?.group)}
+        title={t("shared.group.title")}
         onBack={() => {
           back({ pathname: "/shared", query: { face: "groups" } });
         }}

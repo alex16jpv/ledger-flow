@@ -74,7 +74,8 @@ test("a person, a group made from a movement already recorded, and what it count
   await page.getByRole("button", { name: "Create shared group" }).click();
 
   // The detail leads with what still counts as yours, which splitting does not lower.
-  await expect(page.getByRole("heading", { level: 1, name: "Night out" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Shared group" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Night out" })).toBeVisible();
   await expect(page.getByText(/counts as yours/)).toContainText("total $100,000");
   await expect(page.getByText(/counts as yours/)).toContainText("your share $50,000");
   await expect(page.getByRole("heading", { name: "Expenses · 1" })).toBeVisible();

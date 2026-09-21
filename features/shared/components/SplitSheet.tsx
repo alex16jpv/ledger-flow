@@ -60,7 +60,7 @@ export interface SplitSheetProps {
   onUseGroupSplit?: () => void;
 }
 
-const ROW_INPUT = "h-10 w-[132px] text-right tabular-nums";
+const ROW_INPUT = "h-10 text-right tabular-nums";
 
 export function SplitSheet({
   open,
@@ -204,19 +204,21 @@ export function SplitSheet({
           // The count sits above the rows because it governs every one of them.
           <Field label={t("guests.label")} help={t("guests.help")}>
             <div className="flex items-center gap-3">
-              <Input
-                inputMode="numeric"
-                className="h-11 w-[84px] text-center tabular-nums"
-                value={String(draft.guests.count)}
-                aria-label={t("guests.count")}
-                onChange={(event) => {
-                  const count = Number.parseInt(event.target.value, 10);
-                  setDraft((was) => ({
-                    ...was,
-                    guests: { count: Number.isNaN(count) ? 1 : Math.max(1, count), name: null },
-                  }));
-                }}
-              />
+              <span className="w-[84px] shrink-0">
+                <Input
+                  inputMode="numeric"
+                  className="h-11 text-center tabular-nums"
+                  value={String(draft.guests.count)}
+                  aria-label={t("guests.count")}
+                  onChange={(event) => {
+                    const count = Number.parseInt(event.target.value, 10);
+                    setDraft((was) => ({
+                      ...was,
+                      guests: { count: Number.isNaN(count) ? 1 : Math.max(1, count), name: null },
+                    }));
+                  }}
+                />
+              </span>
               <span className="flex-1 text-sm text-text-3">
                 {t("guests.shares", {
                   people: chosen.length,
@@ -283,16 +285,18 @@ export function SplitSheet({
                   )}
                 </Button>
               )}
-              <Input
-                inputMode="decimal"
-                className={ROW_INPUT}
-                disabled={draft.mode === "EQUAL"}
-                aria-label={t("shareOf", { name: party.name })}
-                value={shown(party)}
-                onChange={(event) => {
-                  setInput(party.key, event.target.value);
-                }}
-              />
+              <span className="w-[132px] shrink-0">
+                <Input
+                  inputMode="decimal"
+                  className={ROW_INPUT}
+                  disabled={draft.mode === "EQUAL"}
+                  aria-label={t("shareOf", { name: party.name })}
+                  value={shown(party)}
+                  onChange={(event) => {
+                    setInput(party.key, event.target.value);
+                  }}
+                />
+              </span>
             </div>
           ))}
         </div>

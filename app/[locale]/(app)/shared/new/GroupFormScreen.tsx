@@ -185,15 +185,17 @@ export function GroupFormScreen() {
                 <div key={key} className="flex items-center gap-3">
                   <Avatar name={name} color={person?.color ?? null} />
                   <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
-                  <Input
-                    inputMode="decimal"
-                    className="h-10 w-[112px] text-right tabular-nums"
-                    aria-label={t("shared.split.shareOf", { name })}
-                    value={percent[key] ?? ""}
-                    onChange={(event) => {
-                      setPercent((was) => ({ ...was, [key]: event.target.value }));
-                    }}
-                  />
+                  <span className="w-[112px] shrink-0">
+                    <Input
+                      inputMode="decimal"
+                      className="h-10 text-right tabular-nums"
+                      aria-label={t("shared.split.shareOf", { name })}
+                      value={percent[key] ?? ""}
+                      onChange={(event) => {
+                        setPercent((was) => ({ ...was, [key]: event.target.value }));
+                      }}
+                    />
+                  </span>
                 </div>
               );
             })}
