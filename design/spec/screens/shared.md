@@ -320,6 +320,11 @@ or by being written off — the group is `Settled`. It can be undone until the g
 confirmation says what it will do and what it will not: the amount stays counted as yours, nothing is
 deleted, and the group stays readable.
 
+**An archived group is read, not worked** (`#archived`): its detail keeps every figure and its
+history, says in one line what archiving did, and offers `Restore` in place of the actions — there is
+nothing to settle, add, edit or archive in a group that is closed. Restoring does **not** take the
+write-offs back: each one is a decision, and each is undone on its own once the group is open again.
+
 ## The four states
 
 - **Data** — the plates above.

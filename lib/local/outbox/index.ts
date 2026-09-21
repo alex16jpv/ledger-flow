@@ -81,18 +81,25 @@ export {
 } from "./resolve";
 export { ROUTES, serverBaseline } from "./routes";
 export {
+  type AddedParticipants,
+  addParticipants,
   type ArchivedGroup,
   archiveSharedGroup,
   createSharedExpense,
   createSharedGroup,
+  type EditedGroup,
   type NewSettlement,
   type NewSharedExpense,
   type NewSharedGroup,
   recordSettlement,
+  type RemovedParticipant,
+  removeParticipant,
+  restoreSharedGroup,
   type SavedSplit,
   saveSharedSplit,
   type SettledLine,
   undoWriteOff,
+  updateSharedGroup,
   writeOffParty,
   type WriteOffTarget,
 } from "./shared";

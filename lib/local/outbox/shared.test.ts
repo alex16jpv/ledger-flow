@@ -14,12 +14,16 @@ import { profileRecord, sharedExpenseRecord, sharedGroupRecord } from "../schema
 import { pendingOperations, writeTransaction } from "./queue";
 import { reconcileRow } from "./reconcile";
 import {
+  addParticipants,
   archiveSharedGroup,
   createSharedExpense,
   createSharedGroup,
   recordSettlement,
+  removeParticipant,
+  restoreSharedGroup,
   saveSharedSplit,
   undoWriteOff,
+  updateSharedGroup,
   writeOffParty,
 } from "./shared";
 
@@ -474,5 +478,85 @@ describe("what a pull sees while the group's write is still queued", () => {
     expect(row?.writeOffs).toEqual([
       { kind: "CONTACT", contactId: ANA, expenseId: null, amount: 500_000, at: expect.any(String) },
     ]);
+  });
+});
+
+describe("editing a group and its people with no network", () => {
+  it("saves the name, the colour and the default split", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("sharedGroups", sharedGroupRecord(sharedGroup({ id: "g1" })));
+    reportOnline(false);
+
+    await updateSharedGroup({
+      id: "g1",
+      name: "Cartagena trip",
+      color: "TEAL",
+      defaultSplit: { mode: "PERCENT", shares: [{ contactId: null, percent: 100 }] },
+    });
+
+    const row = (await vault.db.get("sharedGroups", "g1"))?.row;
+    expect(row).toMatchObject({ name: "Cartagena trip", color: "TEAL" });
+    expect(row?.defaultSplit.mode).toBe("PERCENT");
+  });
+
+  it("adds people without touching what is already recorded unless it is asked to", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("sharedGroups", sharedGroupRecord(sharedGroup({ id: "g1" })));
+    reportOnline(false);
+
+    await addParticipants({ id: "g1", contactIds: [ANA], applyToExistingExpenses: false });
+
+    const [queued] = await pendingOperations(vault.db);
+    expect(queued).toMatchObject({ entity: "sharedGroup", action: "addParticipants" });
+    expect(queued?.payload).toMatchObject({ body: { contactIds: [ANA] } });
+
+    expect(
+      (await vault.db.get("sharedGroups", "g1"))?.row.participants.map((one) => one.contactId),
+    ).toEqual([null, ANA]);
+  });
+
+  it("takes a write-off out with the person, so coming back does not come back forgiven", async () => {
+    const vault = await vaultWith();
+    await vault.db.put(
+      "sharedGroups",
+      sharedGroupRecord(
+        sharedGroup({
+          id: "g1",
+          participants: [
+            { contactId: null, addedAt: "2026-08-01T00:00:00.000Z" },
+            { contactId: ANA, addedAt: "2026-08-01T00:00:00.000Z" },
+          ],
+          writeOffs: [
+            {
+              kind: "CONTACT",
+              contactId: ANA,
+              expenseId: null,
+              amount: 10_000,
+              at: "2026-09-01T00:00:00.000Z",
+            },
+          ],
+        }),
+      ),
+    );
+    reportOnline(false);
+
+    await removeParticipant({ id: "g1", contactId: ANA });
+
+    const row = (await vault.db.get("sharedGroups", "g1"))?.row;
+    expect(row?.participants.map((one) => one.contactId)).toEqual([null]);
+    expect(row?.writeOffs).toEqual([]);
+  });
+
+  it("brings an archived group back", async () => {
+    const vault = await vaultWith();
+    await vault.db.put(
+      "sharedGroups",
+      sharedGroupRecord(sharedGroup({ id: "g1", archivedAt: "2026-09-10T00:00:00.000Z" })),
+    );
+    reportOnline(false);
+
+    await restoreSharedGroup("g1");
+
+    expect((await vault.db.get("sharedGroups", "g1"))?.row.archivedAt).toBeNull();
   });
 });

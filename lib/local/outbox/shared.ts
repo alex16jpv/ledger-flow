@@ -1,14 +1,17 @@
 import { dayKey } from "@/lib/format/dates";
 import type {
+  AddParticipantsInput,
   CreateSettlementInput,
   CreateSharedExpenseInput,
   CreateSharedGroupInput,
+  DefaultSplit,
   Settlement,
   SharedExpense,
   SharedSplit,
   SyncSharedGroup,
   SyncTransaction,
   UpdateSharedExpenseInput,
+  UpdateSharedGroupInput,
   WriteOffInput,
 } from "@/types/api";
 
@@ -584,5 +587,115 @@ export function recordSettlement(input: NewSettlement): Promise<Settlement> {
       if (!record) throw new NotProjectableError(`payment ${id} after queueing it`);
       return record.row;
     },
+  });
+}
+
+export interface EditedGroup {
+  id: string;
+  name: string;
+  color: SyncSharedGroup["color"];
+  defaultSplit: DefaultSplit;
+}
+
+export function updateSharedGroup({
+  id,
+  name,
+  color,
+  defaultSplit,
+}: EditedGroup): Promise<SyncSharedGroup> {
+  const body: UpdateSharedGroupInput = { name, color, defaultSplit };
+  return write<SyncSharedGroup>({
+    local: {
+      entity: "sharedGroup",
+      entityId: id,
+      action: "update",
+      payload: { body },
+      project: async (tx) =>
+        projectGroup(tx, id, { ...(await currentGroup(tx, id)), name, color, defaultSplit }),
+    },
+    optimistic: groupBack(id),
+  });
+}
+
+export interface AddedParticipants {
+  id: string;
+  contactIds: string[];
+  // On, the server re-splits every expense it can; the pull that follows brings those back.
+  applyToExistingExpenses: boolean;
+  defaultSplit?: DefaultSplit;
+}
+
+export function addParticipants({
+  id,
+  contactIds,
+  applyToExistingExpenses,
+  defaultSplit,
+}: AddedParticipants): Promise<SyncSharedGroup> {
+  const body: AddParticipantsInput = {
+    contactIds,
+    ...(applyToExistingExpenses ? { applyToExistingExpenses: true } : {}),
+    ...(defaultSplit ? { defaultSplit } : {}),
+  };
+  return write<SyncSharedGroup>({
+    local: {
+      entity: "sharedGroup",
+      entityId: id,
+      action: "addParticipants",
+      payload: { body },
+      project: async (tx, occurredAt) => {
+        const group = await currentGroup(tx, id);
+        return projectGroup(tx, id, {
+          ...group,
+          ...(defaultSplit ? { defaultSplit } : {}),
+          participants: [
+            ...group.participants,
+            ...contactIds
+              .filter((contactId) => !group.participants.some((one) => one.contactId === contactId))
+              .map((contactId) => ({ contactId, addedAt: occurredAt })),
+          ],
+        });
+      },
+    },
+    optimistic: groupBack(id),
+  });
+}
+
+export interface RemovedParticipant {
+  id: string;
+  contactId: string;
+}
+
+export function removeParticipant({ id, contactId }: RemovedParticipant): Promise<SyncSharedGroup> {
+  return write<SyncSharedGroup>({
+    local: {
+      entity: "sharedGroup",
+      entityId: id,
+      action: "removeParticipant",
+      payload: { params: { partyId: contactId } },
+      project: async (tx) => {
+        const group = await currentGroup(tx, id);
+        return projectGroup(tx, id, {
+          ...group,
+          participants: group.participants.filter((one) => one.contactId !== contactId),
+          // Taking them out takes their write-off with them: coming back does not come back forgiven.
+          writeOffs: group.writeOffs.filter((one) => one.contactId !== contactId),
+        });
+      },
+    },
+    optimistic: groupBack(id),
+  });
+}
+
+export function restoreSharedGroup(id: string): Promise<SyncSharedGroup> {
+  return write<SyncSharedGroup>({
+    local: {
+      entity: "sharedGroup",
+      entityId: id,
+      action: "restore",
+      payload: {},
+      project: async (tx) =>
+        projectGroup(tx, id, { ...(await currentGroup(tx, id)), archivedAt: null }),
+    },
+    optimistic: groupBack(id),
   });
 }

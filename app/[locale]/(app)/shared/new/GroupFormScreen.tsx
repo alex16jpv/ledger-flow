@@ -13,14 +13,17 @@ import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Field, Input } from "@/components/ui/Field";
 import { Picker } from "@/components/ui/Picker";
-import { Segment } from "@/components/ui/Segment";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { ContactPickerSheet } from "@/features/shared/components/ContactPickerSheet";
+import {
+  DefaultSplitFields,
+  type DefaultSplitPerson,
+  percentIsWhole,
+} from "@/features/shared/components/DefaultSplitFields";
 import { useCreateSharedExpense, useCreateSharedGroup } from "@/features/shared/hooks";
 import { groupFormSchema, type GroupFormValues } from "@/features/shared/schemas";
-import { PERCENT_SCALE, percentLeft, USER_KEY } from "@/features/shared/split";
 import { expenseFromTransaction, groupDefaultSplit } from "@/features/shared/write";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
 import { useRouter } from "@/lib/i18n/navigation";
@@ -62,10 +65,10 @@ export function GroupFormScreen() {
   const duplicate = createGroup.error instanceof ApiError && createGroup.error.code === "DUPLICATE";
 
   const shares = [null, ...people.map((one) => one.id)];
-  // The server adds these as basis points, and so does the sheet: in floats three thirds miss 100.
-  const left = percentLeft(
-    shares.map((id) => Number.parseFloat(percent[id ?? USER_KEY] ?? "") || 0),
-  );
+  const splitPeople: DefaultSplitPerson[] = [
+    { contactId: null, name: t("shared.group.you"), color: null },
+    ...people.map((one) => ({ contactId: one.id, name: one.name, color: one.color ?? null })),
+  ];
   const pickedTotal = picked.reduce((sum, row) => sum + row.amount, 0);
 
   function fail(error: unknown) {
@@ -183,51 +186,15 @@ export function GroupFormScreen() {
           control={form.control}
           name="mode"
           render={({ field }) => (
-            <Field label={t("shared.form.defaultSplit")} help={t("shared.form.defaultSplitHelp")}>
-              <Segment
-                label={t("shared.form.defaultSplit")}
-                value={field.value}
-                onChange={field.onChange}
-                options={[
-                  { value: "EQUAL", label: t("shared.split.modes.EQUAL") },
-                  { value: "PERCENT", label: t("shared.split.modes.PERCENT") },
-                ]}
-              />
-            </Field>
+            <DefaultSplitFields
+              mode={field.value}
+              onMode={field.onChange}
+              people={splitPeople}
+              percent={percent}
+              onPercent={setPercent}
+            />
           )}
         />
-        {mode === "PERCENT" && (
-          <div className="flex flex-col gap-2.5">
-            {shares.map((id) => {
-              const key = id ?? USER_KEY;
-              const person = people.find((one) => one.id === id);
-              const name = person?.name ?? t("shared.group.you");
-              return (
-                <div key={key} className="flex items-center gap-3">
-                  <Avatar name={name} color={person?.color ?? null} />
-                  <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
-                  <span className="w-[112px] shrink-0">
-                    <Input
-                      inputMode="decimal"
-                      className="h-10 text-right tabular-nums"
-                      aria-label={t("shared.split.shareOf", { name })}
-                      value={percent[key] ?? ""}
-                      onChange={(event) => {
-                        setPercent((was) => ({ ...was, [key]: event.target.value }));
-                      }}
-                    />
-                  </span>
-                </div>
-              );
-            })}
-            <div className="flex items-center justify-between border-t border-border pt-3">
-              <span className="text-sm text-text-3">{t("shared.split.leftToAssign")}</span>
-              <span className="font-semibold tabular-nums">
-                {t("shared.form.percentLeft", { percent: left / PERCENT_SCALE })}
-              </span>
-            </div>
-          </div>
-        )}
         <Field label={t("shared.form.expenses")}>
           <Picker
             label={t("shared.form.pickFromTransactions")}
@@ -257,7 +224,7 @@ export function GroupFormScreen() {
           size="lg"
           block
           loading={saving}
-          disabled={mode === "PERCENT" && left !== 0}
+          disabled={!percentIsWhole(mode, splitPeople, percent)}
         >
           {t("shared.form.createGroup")}
         </Button>

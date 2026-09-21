@@ -2,14 +2,15 @@
 
 import { Plus, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import { Avatar } from "@/components/shell/Avatar";
 import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Field";
-import { List, RowBody, rowClasses, RowMeta, RowTitle } from "@/components/ui/Row";
+import { List, Row, RowBody, rowClasses, RowMeta, RowTitle } from "@/components/ui/Row";
 import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { iconProps } from "@/lib/icons/sizes";
@@ -26,6 +27,18 @@ export interface ContactPickerSheetProps {
   onDone: (contacts: Contact[]) => void;
   // How many are already in the group, you included, so the limit can be said before a save fails.
   inGroup?: number;
+  title?: string;
+  confirmLabel?: string;
+  pending?: boolean;
+  disabled?: boolean;
+  // Contacts the group already holds: a row that reads rather than one that picks.
+  alreadyIn?: readonly string[];
+  // Taking somebody out is the same door, and it is offered only where it applies.
+  removable?: readonly string[];
+  onRemove?: (contact: Contact) => void;
+  // What the sheet asks after the list: the question that comes with adding people.
+  extra?: ReactNode;
+  onPicked?: (contacts: Contact[]) => void;
 }
 
 const matches = (contact: Contact, needle: string): boolean =>
@@ -39,6 +52,15 @@ export function ContactPickerSheet({
   selected,
   onDone,
   inGroup = 1,
+  title,
+  confirmLabel,
+  pending = false,
+  disabled = false,
+  alreadyIn = [],
+  removable = [],
+  onRemove,
+  extra,
+  onPicked,
 }: ContactPickerSheetProps) {
   const t = useTranslations("shared.picker");
   const loading = useTranslations("common")("loading");
@@ -66,17 +88,19 @@ export function ContactPickerSheet({
     <Sheet
       open={open}
       onClose={onClose}
-      title={t("title")}
+      title={title ?? t("title")}
       footer={
         <>
           <Button
             size="lg"
             block
+            loading={pending}
+            disabled={disabled || (picked.length === 0 && chosen.length === 0)}
             onClick={() => {
               onDone(chosen);
             }}
           >
-            {t("add", { count: picked.length })}
+            {confirmLabel ?? t("add", { count: picked.length })}
           </Button>
           <SheetCancel />
         </>
@@ -109,14 +133,47 @@ export function ContactPickerSheet({
           <List>
             {rows.map((contact) => {
               const on = picked.includes(contact.id);
+              if (alreadyIn.includes(contact.id)) {
+                return (
+                  <Row key={contact.id}>
+                    <Avatar name={contact.name} color={contact.color} />
+                    <RowBody>
+                      <RowTitle>
+                        <span>{contact.name}</span>
+                      </RowTitle>
+                      {contact.email && <RowMeta items={[contact.email]} />}
+                    </RowBody>
+                    {removable.includes(contact.id) && onRemove ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          onRemove(contact);
+                        }}
+                      >
+                        {t("takeOut")}
+                      </Button>
+                    ) : (
+                      <Badge>{t("alreadyIn")}</Badge>
+                    )}
+                  </Row>
+                );
+              }
               return (
                 <Checkbox
                   key={contact.id}
                   checked={on}
                   className={rowClasses({ interactive: true })}
                   onChange={() => {
-                    setPicked((was) =>
-                      on ? was.filter((id) => id !== contact.id) : [...was, contact.id],
+                    const next = on
+                      ? picked.filter((id) => id !== contact.id)
+                      : [...picked, contact.id];
+                    setPicked(next);
+                    onPicked?.(
+                      next.flatMap((id) => {
+                        const row = known.find((one) => one.id === id);
+                        return row ? [row] : [];
+                      }),
                     );
                   }}
                 >
@@ -173,6 +230,7 @@ export function ContactPickerSheet({
             inGroup: inGroup + picked.filter((id) => !selected.includes(id)).length,
           })}
         </Alert>
+        {extra}
       </div>
       {creating && (
         <ContactFormSheet
@@ -183,6 +241,7 @@ export function ContactPickerSheet({
           onSaved={(contact) => {
             setMade((was) => [...was, contact]);
             setPicked((was) => [...was, contact.id]);
+            onPicked?.([...chosen, contact]);
           }}
         />
       )}

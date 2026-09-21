@@ -1416,7 +1416,11 @@
       "expensesAdded": "{count, plural, one {# gasto añadido} other {# gastos añadidos}}",
       "settleUp": "Saldar",
       "archive": "Archivar",
-      "whoToSettle": "¿Con quién estás saldando?"
+      "whoToSettle": "¿Con quién estás saldando?",
+      "edit": "Editar",
+      "restore": "Restaurar",
+      "restored": "{name} vuelve a estar activo",
+      "isArchived": "Este grupo compartido está archivado. Lo que se debía aquí se dio por perdido, y no se ha borrado nada."
     },
     "person": {
       "title": "Persona",
@@ -1450,7 +1454,9 @@
       "add": "Añadir {count}",
       "limits": "Hasta {people} personas en un grupo compartido, y hasta {contacts} contactos. Este grupo quedaría con {inGroup}.",
       "failed": "No se pudo leer la lista de personas. Inténtalo de nuevo en un momento.",
-      "none": "Nadie con ese nombre."
+      "none": "Nadie con ese nombre.",
+      "alreadyIn": "Ya está",
+      "takeOut": "Sacar"
     },
     "pickExpenses": {
       "title": "Elegir de mis movimientos",
@@ -1570,6 +1576,31 @@
       "confirm": "Archivar",
       "confirmWithWriteOff": "Archivar y dar por perdidos {amount}",
       "done": "{name} queda archivado"
+    },
+    "edit": {
+      "title": "Editar este grupo compartido",
+      "saved": "Grupo compartido guardado",
+      "splitNotRetroactive": "Cambiar el reparto por defecto nunca va hacia atrás: se aplica a los gastos que añadas desde ahora, y a nada de lo ya registrado."
+    },
+    "addPeople": {
+      "title": "Añadir personas",
+      "you": "Tú",
+      "add": "Añadir {count}",
+      "added": "{count, plural, one {1 persona añadida} other {# personas añadidas}}",
+      "takenOut": "{name} ya no está en este grupo",
+      "applyToExisting": "{count, plural, one {Meterlas en el gasto que ya hay} other {Meterlas en los # gastos que ya hay}}",
+      "applyNeedsNetwork": "Meterlas en los gastos que ya hay necesita conexión: las partes las calcula el servidor.",
+      "howItWouldEndUp": "Cómo quedaría {name}",
+      "previewFailed": "No se ha podido calcular. Inténtalo en un momento.",
+      "shareSub": "parte",
+      "nothingMoves": "Lo que cuenta como tuyo no se mueve: {amount}, igual que ahora. Solo cambian las partes. No se deshace nada de lo que ya pagaron, y quien quede pagando de más es dinero que ahora le debes tú.",
+      "untouched": "{count, plural, one {1 gasto lleva su propio reparto por porcentaje o importe exacto y se deja como está: habría que inventar una cifra para quien no estuvo.} other {# gastos llevan su propio reparto por porcentaje o importe exacto y se dejan como están: habría que inventar una cifra para quien no estuvo.}}",
+      "wholeGroupOrNone": "{count, plural, one {Sin activarlo, entran en lo que añadas desde ahora y en nada del gasto que ya hay.} other {Sin activarlo, entran en lo que añadas desde ahora y en nada de los # gastos que ya hay.}} Es el grupo entero o nada; para dejarlas fuera de uno, ponle después su propio reparto a ese gasto.",
+      "yourShareOf": "Tu parte sería {amount}",
+      "writtenOffBecomes": "Dado por perdido · {before} pasa a {after}",
+      "nowAhead": "Pagó {paid} · ahora {ahead} de más",
+      "paidAndOwes": "Pagó {paid} · aún debe {owed}",
+      "nothingPaid": "Aún no ha pagado nada"
     }
   },
   "transactions": {

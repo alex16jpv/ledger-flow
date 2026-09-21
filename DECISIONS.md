@@ -4541,3 +4541,29 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   the filter offers the fifth kind and the form cannot create one. The mirror's transaction list gained
   its own `LIST_TYPES` so the filter answers with no network; `/stats/spending` keeps the four it had,
   because a payment is not spending.
+
+## 2026-09-21 · Adding people to a group that exists: the preview is the server's, the reading is the device's (T-136)
+
+- **Context:** the design asks the sheet to show **the whole result before it happens** — each new
+  share, what everybody has paid, who ends up ahead of what they owe, and what a written-off amount
+  becomes. `POST /shared-groups/{id}/participants/preview` answers only the first of the four:
+  `shareBefore`, `shareAfter` and how many expenses it would re-split or leave alone.
+- **Decision:** the two halves are put together in the sheet. The **server** answers what nobody else
+  can — the re-split, whose rule table is its own (a default re-splits, an own `EQUAL` re-divides, an
+  own `FIXED_REST` takes the newcomer into the rest, an own `PERCENT` or `EXACT` is left alone) — and
+  the **device** answers the rest from the section it already derives: what each person has paid, the
+  surplus that a falling share leaves them with, and the ceiling a write-off stored.
+- **Applying it to the expenses already recorded needs a connection**, and the switch says so when
+  there is none. Adding people **without** applying is an append to `participants` and works offline
+  like every other write, as do editing the group, taking somebody out and restoring it. Writing a
+  second copy of that re-split rule table here is the alternative, and it is the thing this feature
+  refuses to do anywhere: an arithmetic with no fixture holding it to the server's.
+- **Alternatives:** asking the backend to carry the other three figures in the preview. It is the
+  better end state and it is not this repository's to write; it would also mean the server reading a
+  user's payments to answer a question about shares, which is the boundary `shared-groups` keeps.
+- **Consequence:** `sharedGroup` gains four more outbox actions — `update`, `addParticipants`,
+  `removeParticipant` and `restore` — each with its reproject rule, and taking somebody out takes
+  **their write-off with them**, because coming back must not come back forgiven. The contact picker
+  gained the rows it could not draw before: somebody already in the group reads rather than picks, and
+  where taking them out applies, it is offered there. `DefaultSplitFields` came out of the new-group
+  form so the three places that set a default render one control.

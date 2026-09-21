@@ -1,6 +1,7 @@
 import { api } from "@/lib/api/client";
 import type {
   Account,
+  AddParticipantsResult,
   Budget,
   BudgetAmountOverrideInput,
   Category,
@@ -260,6 +261,38 @@ export const ROUTES: Record<RouteKey, Route> = {
   "sharedGroup:create": route<SharedGroup>({
     send: ({ payload }) =>
       api<SharedGroup>("/shared-groups", { method: "POST", body: payload.body }),
+    confirm: (tx, row) => confirmRow(tx, "sharedGroup", row),
+  }),
+  "sharedGroup:update": route<SharedGroup>({
+    send: ({ entityId, payload }, guard) =>
+      api<SharedGroup>(`/shared-groups/${entityId}`, {
+        method: "PUT",
+        body: payload.body,
+        ...ifMatch(guard),
+      }),
+    confirm: (tx, row) => confirmRow(tx, "sharedGroup", row),
+  }),
+  "sharedGroup:restore": route<SharedGroup>({
+    send: ({ entityId }, guard) =>
+      api<SharedGroup>(`/shared-groups/${entityId}/restore`, { method: "POST", ...ifMatch(guard) }),
+    confirm: (tx, row) => confirmRow(tx, "sharedGroup", row),
+  }),
+  "sharedGroup:addParticipants": route<AddParticipantsResult>({
+    send: ({ entityId, payload }, guard) =>
+      api<AddParticipantsResult>(`/shared-groups/${entityId}/participants`, {
+        method: "POST",
+        body: payload.body,
+        ...ifMatch(guard),
+      }),
+    confirm: (tx, result) =>
+      isRow(result.group) ? confirmRow(tx, "sharedGroup", result.group) : undefined,
+  }),
+  "sharedGroup:removeParticipant": route<SharedGroup>({
+    send: ({ entityId, payload }, guard) =>
+      api<SharedGroup>(`/shared-groups/${entityId}/participants/${partyOf(payload)}`, {
+        method: "DELETE",
+        ...ifMatch(guard),
+      }),
     confirm: (tx, row) => confirmRow(tx, "sharedGroup", row),
   }),
   "sharedGroup:writeOff": route<SharedGroup>({

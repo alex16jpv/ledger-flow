@@ -4080,20 +4080,25 @@ const GROUP_LINES = [
   ["Taxi to the airport", "car", "BLUE", "Sep 12", 80000, 20000],
 ];
 
-const groupDetail = ({ sheet = "" } = {}) => {
+const groupDetail = ({ sheet = "", archived = false } = {}) => {
   const lines = GROUP_LINES.map(
     ([name, icon, color, when, total, yours]) =>
       `<a class="row" href="#">${tile(icon, color)}<span class="body"><span class="title"><span class="truncate">${name}</span></span><span class="meta">${when} · you paid</span></span><span class="right">${amount(total, "expense")}<span class="sub">Your share ${moneyText(yours)}</span></span></a>`,
   ).join("");
   const body = `<section class="card color-TEAL stack-sm" style="gap:6px;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--f)"></span>
 <div class="hstack" style="justify-content:space-between">${tile("users", "TEAL")}<span class="badge outline">${iconSvg("calendar")}Aug 29 – Sep 12</span></div>
-<span class="eyebrow" style="margin-top:6px">4 people · open</span><span class="h2">Cartagena trip</span>
+<span class="eyebrow" style="margin-top:6px">4 people · ${archived ? "archived" : "open"}</span><span class="h2">Cartagena trip</span>
 <span class="amount-hero" style="font-size:32px">${money(2100000)}</span>
 <span class="small muted">counts as yours · total <b class="amount">${money(3200000)}</b> · your share <b class="amount">${money(800000)}</b></span>
 <div style="display:flex;flex-direction:column;gap:4px;padding-top:10px"><div class="progress thin"><span class="fill" style="width:46%"></span></div><span class="xs faint">$1,100,000 paid of $2,400,000</span></div>
 <span class="small muted" style="padding-top:2px">${moneyText(500000)} is still owed to you, and ${moneyText(800000)} was written off — that part stays counted as yours.</span></section>
-<button class="btn primary block">${iconSvg("hand-coins", "sm")}Settle up</button>
-<div class="grid-2" style="grid-template-columns:1fr 1fr;gap:10px"><button class="btn secondary">${iconSvg("plus", "sm")}Add expense</button><button class="btn secondary">${iconSvg("user", "sm")}Add people</button><button class="btn secondary">${iconSvg("pencil", "sm")}Edit</button><button class="btn secondary">${iconSvg("archive", "sm")}Archive</button></div>
+${
+  archived
+    ? `<div class="alert warning">${iconSvg("triangle-alert")}<span>This shared group is archived. What was owed here was written off, and nothing is deleted.</span></div>
+<button class="btn secondary lg block">${iconSvg("archive-restore", "sm")}Restore</button>`
+    : `<button class="btn primary block">${iconSvg("hand-coins", "sm")}Settle up</button>
+<div class="grid-2" style="grid-template-columns:1fr 1fr;gap:10px"><button class="btn secondary">${iconSvg("plus", "sm")}Add expense</button><button class="btn secondary">${iconSvg("user", "sm")}Add people</button><button class="btn secondary">${iconSvg("pencil", "sm")}Edit</button><button class="btn secondary">${iconSvg("archive", "sm")}Archive</button></div>`
+}
 <section class="stack-sm"><div class="section-head"><h3 class="h3">People</h3><a class="link" href="#">Equal split by default</a></div>
 <div class="list card flush">
 ${personRow("You", "Nothing to collect from yourself", 800000, "share")}
@@ -5107,6 +5112,13 @@ const PAGES = [
         "The answer to the owner’s worry, and it is that there is nothing to do: no figure changes, because the money was counted as his from the day he paid it. It is a decision and a line in the history, and it can be undone until the group is archived. Beto keeps the $300,000 he did pay; with Ana paid and Lucía written off, the group becomes Settled.",
         groupDetail({ sheet: writeOffSheet() }),
         { added: "2026-09-20" },
+      ),
+      plate(
+        "archived",
+        "An archived group",
+        "It stays readable, and the way back is here: what was owed was written off when it was archived, and the amount stays counted as yours. Restoring does not take the write-offs back — each one is undone on its own, once the group is open again.",
+        groupDetail({ archived: true }),
+        { added: "2026-09-21" },
       ),
       plate(
         "archive-with-people-owing",

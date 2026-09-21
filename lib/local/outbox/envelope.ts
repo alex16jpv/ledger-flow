@@ -10,7 +10,16 @@ export const OUTBOX_ACTIONS = {
   transaction: ["create", "quickAdd", "update", "delete"],
   budget: ["create", "update", "archive", "restore", "setOverride", "clearOverride"],
   contact: ["create", "update", "archive", "restore"],
-  sharedGroup: ["create", "writeOff", "undoWriteOff", "archive"],
+  sharedGroup: [
+    "create",
+    "update",
+    "addParticipants",
+    "removeParticipant",
+    "archive",
+    "restore",
+    "writeOff",
+    "undoWriteOff",
+  ],
   sharedExpense: ["create", "update"],
   settlement: ["create"],
 } as const satisfies Record<OutboxEntity, readonly string[]>;

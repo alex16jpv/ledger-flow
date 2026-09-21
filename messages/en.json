@@ -1416,7 +1416,11 @@
       "expensesAdded": "{count, plural, one {# expense added} other {# expenses added}}",
       "settleUp": "Settle up",
       "archive": "Archive",
-      "whoToSettle": "Who are you settling with?"
+      "whoToSettle": "Who are you settling with?",
+      "edit": "Edit",
+      "restore": "Restore",
+      "restored": "{name} is back",
+      "isArchived": "This shared group is archived. What was owed here was written off, and nothing is deleted."
     },
     "person": {
       "title": "Person",
@@ -1450,7 +1454,9 @@
       "add": "Add {count}",
       "limits": "Up to {people} people in one shared group, and up to {contacts} contacts. This group would have {inGroup}.",
       "failed": "The people could not be read. Try again in a moment.",
-      "none": "Nobody here by that name."
+      "none": "Nobody here by that name.",
+      "alreadyIn": "Already in",
+      "takeOut": "Take out"
     },
     "pickExpenses": {
       "title": "Pick from my transactions",
@@ -1570,6 +1576,31 @@
       "confirm": "Archive",
       "confirmWithWriteOff": "Archive and write off {amount}",
       "done": "{name} is archived"
+    },
+    "edit": {
+      "title": "Edit this shared group",
+      "saved": "Shared group saved",
+      "splitNotRetroactive": "Changing the default never goes back: it applies to the expenses you add from now on, and to nothing already recorded."
+    },
+    "addPeople": {
+      "title": "Add people",
+      "you": "You",
+      "add": "Add {count}",
+      "added": "{count, plural, one {1 person added} other {# people added}}",
+      "takenOut": "{name} is out of this group",
+      "applyToExisting": "{count, plural, one {Put them into the 1 expense already here} other {Put them into the # expenses already here}}",
+      "applyNeedsNetwork": "Putting them into the expenses already here needs a connection: the shares are worked out on the server.",
+      "howItWouldEndUp": "How {name} would end up",
+      "previewFailed": "That could not be worked out. Try again in a moment.",
+      "shareSub": "share",
+      "nothingMoves": "What counts as yours does not move: {amount}, exactly as it is now. Only the shares do. Nothing anybody paid is undone, and somebody left ahead is money you now owe them.",
+      "untouched": "{count, plural, one {1 expense carries its own percentage or exact split and is left alone: a figure for somebody who was not there would be invented.} other {# expenses carry their own percentage or exact split and are left alone: a figure for somebody who was not there would be invented.}}",
+      "wholeGroupOrNone": "{count, plural, one {Left off, they are in what you add from now on and in none of the 1 already here.} other {Left off, they are in what you add from now on and in none of the # already here.}} It is the whole group or none of it; to leave them out of one, set that expense’s own split afterwards.",
+      "yourShareOf": "Your share would be {amount}",
+      "writtenOffBecomes": "Written off · {before} becomes {after}",
+      "nowAhead": "Paid {paid} · now {ahead} ahead",
+      "paidAndOwes": "Paid {paid} · {owed} still owed",
+      "nothingPaid": "Nothing paid yet"
     }
   },
   "transactions": {

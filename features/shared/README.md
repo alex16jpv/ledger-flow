@@ -47,6 +47,20 @@ payment from your ledger's side — it is **one expense of yours per line**, dat
 category the sheet asks for, because the shared layer carries none. A payment can be **outside the
 app**, and then no movement is written and no balance moves, while the expenses still fall.
 
+**A group is not closed when it is created.** `AddPeopleSheet` is the contact picker with the question
+that comes with it — _are they in the expenses already recorded?_ — and, when the answer is yes, the
+whole result before it happens: the server answers each new share
+(`POST /shared-groups/{id}/participants/preview`) and the device puts beside it what each person has
+paid, who ends up **ahead of what they owe** and what a **written-off** amount becomes, which the
+preview does not carry. **Applying it needs a connection**: the re-split is the server's, and a second
+arithmetic for it here would be one more thing to keep in step. Adding people without applying, editing
+the group and taking somebody out all work with no network. **Taking somebody out is the same door**,
+and it is offered only while they have no share and nothing paid.
+
+**One control for a default split.** `DefaultSplitFields` is `Equal` and `Percent` and the percentages
+they imply — the two modes that mean something without a total — and the new-group form, the edit sheet
+and `Add people` in a percentage group all render that one, not three.
+
 **Giving up moves no figure.** A write-off stores the decision and the ceiling that was open when it
 was taken; archiving a group writes off what is still owed on your behalf. Neither touches a figure of
 yours: that money was counted as yours from the day it left the account.

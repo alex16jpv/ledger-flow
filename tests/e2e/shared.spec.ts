@@ -139,3 +139,57 @@ test("settling up lowers what counts as yours, in the month the expense happened
   await expect(page.getByText("Somebody paid you back")).toBeVisible();
   await expectNoAxeViolations(page);
 });
+
+test("adding somebody to a group that exists shows the whole result before it happens", async ({
+  page,
+  request,
+}) => {
+  await signUp(page, request);
+  await anExpense(request, 90_000, "Hotel");
+
+  await page.goto("/shared");
+  for (const name of ["Ana Ruiz", "Beto Cano"]) {
+    await page.getByRole("button", { name: "Add a person" }).click();
+    await page.getByPlaceholder("Beto Cano").fill(name);
+    await page.getByRole("button", { name: "Add person" }).click();
+    await expect(page.getByText("Person added")).toBeVisible();
+  }
+
+  await page.getByRole("link", { name: "New shared group" }).first().click();
+  await page.getByPlaceholder("Cartagena trip").fill("Cartagena trip");
+  await page.getByRole("button", { name: "Add a person" }).click();
+  await page.getByRole("checkbox", { name: /Ana Ruiz/ }).check({ force: true });
+  await page.getByRole("button", { name: "Add 1" }).click();
+  await page.getByRole("button", { name: "Pick from my transactions" }).click();
+  await page.getByRole("checkbox", { name: /Hotel/ }).check({ force: true });
+  await page.getByRole("button", { name: /^Add 1 · / }).click();
+  await page.getByRole("button", { name: "Create shared group" }).click();
+  await page.getByRole("button", { name: "Add 1 expense" }).click();
+  await expect(page.getByText("Nothing paid yet · owes you $45,000")).toBeVisible();
+
+  await page.getByRole("button", { name: "Add people" }).click();
+  const sheet = page.getByRole("dialog", { name: "Add people" });
+  await expect(sheet).toBeVisible();
+  // Somebody already in the group is a row that reads, not one that picks.
+  await expect(sheet.getByText("Already in")).toBeVisible();
+  await sheet.getByRole("checkbox", { name: /Beto Cano/ }).check({ force: true });
+
+  // Off is the default: they are in what you add from now on and in none of what is there.
+  await sheet.getByRole("switch").click();
+  await expect(sheet.getByText("How Cartagena trip would end up")).toBeVisible();
+  await expect(sheet.getByText("Your share would be $30,000")).toBeVisible();
+  await expect(sheet.getByText(/What counts as yours does not move/)).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  await sheet.getByRole("button", { name: "Add 1" }).click();
+  await expect(page.getByText("1 person added")).toBeVisible();
+  await expect(page.getByText("Nothing paid yet · owes you $30,000").first()).toBeVisible();
+
+  // And the group itself is editable: its name, its colour and the split it hands down.
+  await page.getByRole("button", { name: "Edit" }).click();
+  const edit = page.getByRole("dialog", { name: "Edit this shared group" });
+  await edit.getByRole("textbox").first().fill("Cartagena, the trip");
+  await edit.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Shared group saved")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Cartagena, the trip" })).toBeVisible();
+});

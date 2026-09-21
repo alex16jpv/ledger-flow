@@ -130,6 +130,34 @@ const RULES: Partial<Record<RouteKey, Rule>> = {
   // A split saved on an expense is the whole body, shares included, so the merge is the row.
   "sharedExpense:update": (row, operation) => merge(row as SharedExpense, operation),
 
+  "sharedGroup:update": (row, operation) => merge(row as SyncSharedGroup, operation),
+  "sharedGroup:restore": (row) => ({ ...(row as SyncSharedGroup), archivedAt: null }),
+  "sharedGroup:addParticipants": (row, operation) => {
+    const group = row as SyncSharedGroup;
+    const body = bodyOf(operation);
+    const contactIds = Array.isArray(body.contactIds) ? (body.contactIds as string[]) : [];
+    return {
+      ...group,
+      ...(body.defaultSplit
+        ? { defaultSplit: body.defaultSplit as SyncSharedGroup["defaultSplit"] }
+        : {}),
+      participants: [
+        ...group.participants,
+        ...contactIds
+          .filter((contactId) => !group.participants.some((one) => one.contactId === contactId))
+          .map((contactId) => ({ contactId, addedAt: operation.occurredAt })),
+      ],
+    };
+  },
+  "sharedGroup:removeParticipant": (row, operation) => {
+    const group = row as SyncSharedGroup;
+    const partyId = operationPayload(operation).params?.partyId;
+    return {
+      ...group,
+      participants: group.participants.filter((one) => one.contactId !== partyId),
+      writeOffs: group.writeOffs.filter((one) => one.contactId !== partyId),
+    };
+  },
   "sharedGroup:writeOff": (row, operation) => {
     const group = row as SyncSharedGroup;
     const { contactId, expenseId } = writeOffTarget(operation);

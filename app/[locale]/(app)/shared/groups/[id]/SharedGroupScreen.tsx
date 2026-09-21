@@ -1,11 +1,22 @@
 "use client";
 
-import { Archive, Calendar, HandCoins, Plus, Receipt, Users } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  Calendar,
+  HandCoins,
+  Pencil,
+  Plus,
+  Receipt,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import { Avatar } from "@/components/shell/Avatar";
 import { PageHeader } from "@/components/shell/PageHeader";
+import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -17,11 +28,15 @@ import { List, Row, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/co
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
+import { AddPeopleSheet } from "@/features/shared/components/AddPeopleSheet";
+import type { DefaultSplitPerson } from "@/features/shared/components/DefaultSplitFields";
+import { GroupEditSheet } from "@/features/shared/components/GroupEditSheet";
 import { useGroupRange } from "@/features/shared/components/GroupRowLink";
 import { StateBadge } from "@/features/shared/components/parts";
 import {
   useArchiveSharedGroup,
   useCreateSharedExpense,
+  useRestoreSharedGroup,
   useSharedSection,
   useUndoWriteOff,
   useWriteOff,
@@ -264,6 +279,19 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
   const [writingOff, setWritingOff] = useState<PartyView | null>(null);
   const [undoing, setUndoing] = useState<PartyView | null>(null);
   const [archiving, setArchiving] = useState(false);
+  const [adding2, setAdding2] = useState(false);
+  const [sheet, setSheet] = useState<"edit" | "split" | null>(null);
+  const restore = useRestoreSharedGroup();
+  const you = t("shared.group.you");
+  // Everybody the group holds, you first, which is the order its default split is typed in.
+  const splitPeople: DefaultSplitPerson[] = view.group.participants.map((participant) => {
+    const person = view.people.find((one) => one.contactId === participant.contactId);
+    return {
+      contactId: participant.contactId,
+      name: participant.contactId === null ? you : (person?.name ?? ""),
+      color: participant.contactId === null ? null : (person?.color ?? null),
+    };
+  });
   const ceilingOf = (person: PartyView): number =>
     view.group.writeOffs.find(
       (one) => one.contactId === person.contactId && one.expenseId === person.expenseId,
@@ -333,6 +361,26 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           variant="secondary"
           disabled={view.group.archivedAt !== null}
           onClick={() => {
+            setAdding2(true);
+          }}
+        >
+          <UserPlus {...iconProps("sm")} />
+          {t("shared.addPeople.title")}
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={view.group.archivedAt !== null}
+          onClick={() => {
+            setSheet("edit");
+          }}
+        >
+          <Pencil {...iconProps("sm")} />
+          {t("shared.group.edit")}
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={view.group.archivedAt !== null}
+          onClick={() => {
             setArchiving(true);
           }}
         >
@@ -340,12 +388,34 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           {t("shared.group.archive")}
         </Button>
       </div>
+      {view.group.archivedAt !== null && (
+        <div className="flex flex-col gap-3">
+          <Alert tone="warning">{t("shared.group.isArchived")}</Alert>
+          <Button
+            variant="secondary"
+            size="lg"
+            loading={restore.isPending}
+            onClick={() => {
+              void bringBack();
+            }}
+          >
+            <ArchiveRestore {...iconProps("sm")} />
+            {t("shared.group.restore")}
+          </Button>
+        </div>
+      )}
       <section className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between px-1">
           <h2 className="text-md font-semibold">{t("shared.group.people")}</h2>
-          <span className="text-sm text-text-3">
+          <button
+            type="button"
+            className="text-sm font-medium text-brand-text"
+            onClick={() => {
+              setSheet("split");
+            }}
+          >
             {t(`shared.group.defaultSplit.${view.group.defaultSplit.mode}`)}
-          </span>
+          </button>
         </div>
         <Card flush>
           <List>
@@ -478,6 +548,26 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           }}
         />
       )}
+      {adding2 && (
+        <AddPeopleSheet
+          open
+          view={view}
+          onClose={() => {
+            setAdding2(false);
+          }}
+        />
+      )}
+      {sheet !== null && (
+        <GroupEditSheet
+          open
+          group={view.group}
+          people={splitPeople}
+          focusSplit={sheet === "split"}
+          onClose={() => {
+            setSheet(null);
+          }}
+        />
+      )}
       {archiving && (
         <ArchiveGroupSheet
           open
@@ -503,6 +593,15 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
       )}
     </>
   );
+
+  async function bringBack() {
+    try {
+      await restore.mutateAsync(view.group.id);
+      toast.show({ message: t("shared.group.restored", { name: view.group.name }) });
+    } catch (error) {
+      fail(error);
+    }
+  }
 
   async function forgive(person: PartyView) {
     try {

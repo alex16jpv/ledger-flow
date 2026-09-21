@@ -7,9 +7,10 @@ import type { WriteOffTarget } from "@/lib/local/outbox";
 import type { SharedLedgerRows } from "@/lib/local/repository";
 import { REFERENCE_STALE_TIME_MS } from "@/lib/query/client";
 import { invalidateMoneyMovement, QUERY_DOMAINS } from "@/lib/query/domains";
-import type { Contact, RestoreInput, UpdateContactInput } from "@/types/api";
+import type { AddParticipantsInput, Contact, RestoreInput, UpdateContactInput } from "@/types/api";
 
 import {
+  addParticipants,
   archiveContact,
   archiveSharedGroup,
   createContact,
@@ -19,11 +20,15 @@ import {
   fetchContacts,
   fetchContactsPage,
   fetchSharedLedger,
+  previewParticipants,
   recordSettlement,
+  removeParticipant,
   restoreContact,
+  restoreSharedGroup,
   saveSharedSplit,
   undoWriteOff,
   updateContact,
+  updateSharedGroup,
   writeOffParty,
 } from "./api";
 import { contactKeys, sharedKeys } from "./keys";
@@ -170,6 +175,38 @@ export function useUndoWriteOff() {
 export function useArchiveSharedGroup() {
   const invalidate = useSharedInvalidation();
   return useMutation({ mutationFn: archiveSharedGroup, onSuccess: invalidate });
+}
+
+export function useRestoreSharedGroup() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({ mutationFn: restoreSharedGroup, onSuccess: invalidate });
+}
+
+export function useUpdateSharedGroup() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({ mutationFn: updateSharedGroup, onSuccess: invalidate });
+}
+
+export function useAddParticipants() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({ mutationFn: addParticipants, onSuccess: invalidate });
+}
+
+export function useRemoveParticipant() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({ mutationFn: removeParticipant, onSuccess: invalidate });
+}
+
+export interface PreviewVariables {
+  id: string;
+  body: AddParticipantsInput;
+}
+
+// It is a question, not a write: nothing is queued and nothing is stored.
+export function usePreviewParticipants() {
+  return useMutation({
+    mutationFn: ({ id, body }: PreviewVariables) => previewParticipants(id, body),
+  });
 }
 
 function useContactInvalidation() {
