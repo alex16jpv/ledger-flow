@@ -96,6 +96,15 @@ form uses — the same search, the same paging, the same two limits said out lou
 `New person`, because the commonest reason to add somebody afterwards is that they were not a contact
 yet — plus the question that comes with it: **are they in the expenses already recorded?**
 
+**In a group that splits by percentage the sheet asks for the new percentages**, because the old ones
+no longer cover everybody and the server refuses the write without them — the same small control the
+group's `Edit` uses, with what is left to assign under it.
+
+**Putting them into what is already recorded needs a connection**, and with none the switch is off and
+says so: the re-split is the server's, and the answer to what it would do is a question only it can
+answer. Adding somebody **without** that, editing the group, taking somebody out and restoring one all
+work with no network like every other write here.
+
 Off — the default — they are in what you add from now on and in none of what is there. **On, the sheet
 shows the whole result before it happens**, one row per person: the new share, who has paid what, who
 is now **ahead of what they owe**, and what a **written-off** amount becomes — because a share that
@@ -113,7 +122,7 @@ money that arrived or silently hand their share to everyone else, so the group o
 applies instead — settle with them, or write off what they owe.
 
 **People**, one row each, with the group's split named once above them **as its default** — it is a
-link, and it opens the same sheet a single expense opens. **You are a row like everybody else**, with a
+link, and it opens the group's own `Edit`, where that default lives beside the name and the colour. **You are a row like everybody else**, with a
 share of your own. Four states:
 
 | State            | Where it comes from                                 |

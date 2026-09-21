@@ -10,6 +10,7 @@ import type {
 } from "@/types/api";
 
 import { resolvePeriod } from "../derive";
+import { withoutParticipant } from "../derive/shared";
 import type { OutboxEntity, OutboxOperation } from "../schema";
 import { operationPayload } from "./envelope";
 import { patch } from "./projected";
@@ -152,10 +153,12 @@ const RULES: Partial<Record<RouteKey, Rule>> = {
   "sharedGroup:removeParticipant": (row, operation) => {
     const group = row as SyncSharedGroup;
     const partyId = operationPayload(operation).params?.partyId;
+    if (partyId === undefined) return group;
     return {
       ...group,
       participants: group.participants.filter((one) => one.contactId !== partyId),
       writeOffs: group.writeOffs.filter((one) => one.contactId !== partyId),
+      defaultSplit: withoutParticipant(group.defaultSplit, partyId),
     };
   },
   "sharedGroup:writeOff": (row, operation) => {

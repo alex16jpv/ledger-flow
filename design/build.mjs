@@ -4441,7 +4441,9 @@ const addPeopleSheet = () =>
 </div>
 <div class="hstack" style="justify-content:space-between;padding:0 2px"><span class="xs faint">Showing 2 of 23 contacts</span><span class="hstack" style="gap:4px"><button class="btn ghost sm">Load more</button><button class="btn ghost sm">${iconSvg("plus", "sm")}New person</button></span></div>
 <div class="alert neutral">${iconSvg("info")}<span>Up to <b>20 people</b> in one shared group, and up to <b>200 contacts</b>. This group would have 5.</span></div>
+<p class="xs faint" style="margin:0">A group that splits by percentage asks for the new percentages here, in the same small control its <b>Edit</b> uses: the old ones no longer cover everybody.</p>
 <div class="hstack" style="gap:10px"><button class="switch" role="switch" aria-checked="true" aria-label="Put Diego into the 5 expenses already here"></button><span class="small">Put Diego into the 5 expenses already here</span></div>
+<p class="xs faint" style="margin:-4px 0 0">With no connection this is off and says so: the re-split is the server’s, and only it can answer what it would do.</p>
 <div class="stack-sm" style="gap:6px"><span class="eyebrow">How Cartagena trip would end up</span>
 <div class="list card flush">
 ${previewRow("You", "Your share of the $3,200,000")}

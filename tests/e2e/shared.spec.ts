@@ -181,7 +181,7 @@ test("adding somebody to a group that exists shows the whole result before it ha
   await expect(sheet.getByText(/What counts as yours does not move/)).toBeVisible();
   await expectNoAxeViolations(page);
 
-  await sheet.getByRole("button", { name: "Add 1" }).click();
+  await sheet.getByRole("button", { name: "Add Beto Cano" }).click();
   await expect(page.getByText("1 person added")).toBeVisible();
   await expect(page.getByText("Nothing paid yet · owes you $30,000").first()).toBeVisible();
 

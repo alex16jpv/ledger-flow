@@ -35,6 +35,7 @@ import { useGroupRange } from "@/features/shared/components/GroupRowLink";
 import { StateBadge } from "@/features/shared/components/parts";
 import {
   useArchiveSharedGroup,
+  useContactsQuery,
   useCreateSharedExpense,
   useRestoreSharedGroup,
   useSharedSection,
@@ -220,7 +221,9 @@ function GroupHero({ view }: { view: GroupView }) {
       <span className="pt-1.5 text-xs font-medium tracking-caps text-text-3 uppercase">
         {t("shared.groups.people", { count: group.participants.length })}
         {" · "}
-        {t(`shared.group.status.${group.status}`)}
+        {group.archivedAt === null
+          ? t(`shared.group.status.${group.status}`)
+          : t("shared.group.status.ARCHIVED")}
       </span>
       <h2 className="text-xl font-semibold tracking-[-0.02em]">{group.name}</h2>
       {/* The lead figure is neither what it cost nor what is fairly yours: it is what is left. */}
@@ -279,17 +282,19 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
   const [writingOff, setWritingOff] = useState<PartyView | null>(null);
   const [undoing, setUndoing] = useState<PartyView | null>(null);
   const [archiving, setArchiving] = useState(false);
-  const [adding2, setAdding2] = useState(false);
-  const [sheet, setSheet] = useState<"edit" | "split" | null>(null);
+  const [addingPeople, setAddingPeople] = useState(false);
+  const [editing, setEditing] = useState(false);
   const restore = useRestoreSharedGroup();
   const you = t("shared.group.you");
-  // Everybody the group holds, you first, which is the order its default split is typed in.
+  // Somebody added and not yet in an expense holds no share, so their name comes from the contact.
+  const contacts = useContactsQuery(true);
+  const byId = new Map((contacts.data ?? []).map((row) => [row.id, row]));
   const splitPeople: DefaultSplitPerson[] = view.group.participants.map((participant) => {
-    const person = view.people.find((one) => one.contactId === participant.contactId);
+    const contact = participant.contactId === null ? undefined : byId.get(participant.contactId);
     return {
       contactId: participant.contactId,
-      name: participant.contactId === null ? you : (person?.name ?? ""),
-      color: participant.contactId === null ? null : (person?.color ?? null),
+      name: participant.contactId === null ? you : (contact?.name ?? ""),
+      color: contact?.color ?? null,
     };
   });
   const ceilingOf = (person: PartyView): number =>
@@ -336,59 +341,60 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
   return (
     <>
       <GroupHero view={view} />
-      <Button
-        size="lg"
-        block
-        disabled={open.length === 0}
-        onClick={() => {
-          setSettling(open);
-        }}
-      >
-        <HandCoins {...iconProps("sm")} />
-        {t("shared.group.settleUp")}
-      </Button>
-      <div className="grid grid-cols-2 gap-2.5">
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setPicking(true);
-          }}
-        >
-          <Plus {...iconProps("sm")} />
-          {t("shared.group.addExpense")}
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={view.group.archivedAt !== null}
-          onClick={() => {
-            setAdding2(true);
-          }}
-        >
-          <UserPlus {...iconProps("sm")} />
-          {t("shared.addPeople.title")}
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={view.group.archivedAt !== null}
-          onClick={() => {
-            setSheet("edit");
-          }}
-        >
-          <Pencil {...iconProps("sm")} />
-          {t("shared.group.edit")}
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={view.group.archivedAt !== null}
-          onClick={() => {
-            setArchiving(true);
-          }}
-        >
-          <Archive {...iconProps("sm")} />
-          {t("shared.group.archive")}
-        </Button>
-      </div>
-      {view.group.archivedAt !== null && (
+      {/* A group that is closed is read, not worked: the way back is the only action it has. */}
+      {view.group.archivedAt === null ? (
+        <>
+          <Button
+            size="lg"
+            block
+            disabled={open.length === 0}
+            onClick={() => {
+              setSettling(open);
+            }}
+          >
+            <HandCoins {...iconProps("sm")} />
+            {t("shared.group.settleUp")}
+          </Button>
+          <div className="grid grid-cols-2 gap-2.5">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setPicking(true);
+              }}
+            >
+              <Plus {...iconProps("sm")} />
+              {t("shared.group.addExpense")}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setAddingPeople(true);
+              }}
+            >
+              <UserPlus {...iconProps("sm")} />
+              {t("shared.addPeople.title")}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setEditing(true);
+              }}
+            >
+              <Pencil {...iconProps("sm")} />
+              {t("shared.group.edit")}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setArchiving(true);
+              }}
+            >
+              <Archive {...iconProps("sm")} />
+              {t("shared.group.archive")}
+            </Button>
+          </div>
+        </>
+      ) : (
         <div className="flex flex-col gap-3">
           <Alert tone="warning">{t("shared.group.isArchived")}</Alert>
           <Button
@@ -411,7 +417,7 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
             type="button"
             className="text-sm font-medium text-brand-text"
             onClick={() => {
-              setSheet("split");
+              setEditing(true);
             }}
           >
             {t(`shared.group.defaultSplit.${view.group.defaultSplit.mode}`)}
@@ -548,23 +554,22 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           }}
         />
       )}
-      {adding2 && (
+      {addingPeople && (
         <AddPeopleSheet
           open
           view={view}
           onClose={() => {
-            setAdding2(false);
+            setAddingPeople(false);
           }}
         />
       )}
-      {sheet !== null && (
+      {editing && (
         <GroupEditSheet
           open
           group={view.group}
           people={splitPeople}
-          focusSplit={sheet === "split"}
           onClose={() => {
-            setSheet(null);
+            setEditing(false);
           }}
         />
       )}

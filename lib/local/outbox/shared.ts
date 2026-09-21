@@ -16,6 +16,7 @@ import type {
 } from "@/types/api";
 
 import { fromCents, toCents } from "../derive/money";
+import { withoutParticipant } from "../derive/shared";
 import {
   settlementRecord,
   sharedExpenseRecord,
@@ -660,6 +661,14 @@ export function addParticipants({
   });
 }
 
+// Taking them out takes their write-off with them: coming back does not come back forgiven.
+const withoutParty = (group: SyncSharedGroup, contactId: string): SyncSharedGroup => ({
+  ...group,
+  participants: group.participants.filter((one) => one.contactId !== contactId),
+  writeOffs: group.writeOffs.filter((one) => one.contactId !== contactId),
+  defaultSplit: withoutParticipant(group.defaultSplit, contactId),
+});
+
 export interface RemovedParticipant {
   id: string;
   contactId: string;
@@ -674,12 +683,7 @@ export function removeParticipant({ id, contactId }: RemovedParticipant): Promis
       payload: { params: { partyId: contactId } },
       project: async (tx) => {
         const group = await currentGroup(tx, id);
-        return projectGroup(tx, id, {
-          ...group,
-          participants: group.participants.filter((one) => one.contactId !== contactId),
-          // Taking them out takes their write-off with them: coming back does not come back forgiven.
-          writeOffs: group.writeOffs.filter((one) => one.contactId !== contactId),
-        });
+        return projectGroup(tx, id, withoutParty(group, contactId));
       },
     },
     optimistic: groupBack(id),

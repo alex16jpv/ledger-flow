@@ -52,7 +52,8 @@ that comes with it — _are they in the expenses already recorded?_ — and, whe
 whole result before it happens: the server answers each new share
 (`POST /shared-groups/{id}/participants/preview`) and the device puts beside it what each person has
 paid, who ends up **ahead of what they owe** and what a **written-off** amount becomes, which the
-preview does not carry. **Applying it needs a connection**: the re-split is the server's, and a second
+preview does not carry — `participants.ts` is that arithmetic, pure and tested on its own. **Applying
+it needs a connection**: the re-split is the server's, and a second
 arithmetic for it here would be one more thing to keep in step. Adding people without applying, editing
 the group and taking somebody out all work with no network. **Taking somebody out is the same door**,
 and it is offered only while they have no share and nothing paid.

@@ -25,8 +25,6 @@ export interface GroupEditSheetProps {
   people: DefaultSplitPerson[];
   open: boolean;
   onClose: () => void;
-  // The link over the People list opens the same sheet on its split.
-  focusSplit?: boolean;
 }
 
 const percentOf = (split: DefaultSplit): Record<string, string> =>
@@ -34,13 +32,7 @@ const percentOf = (split: DefaultSplit): Record<string, string> =>
     split.shares.map((share) => [share.contactId ?? USER_KEY, String(share.percent)]),
   );
 
-export function GroupEditSheet({
-  group,
-  people,
-  open,
-  onClose,
-  focusSplit = false,
-}: GroupEditSheetProps) {
+export function GroupEditSheet({ group, people, open, onClose }: GroupEditSheetProps) {
   const t = useTranslations();
   const toast = useToast();
   const save = useUpdateSharedGroup();
@@ -106,37 +98,33 @@ export function GroupEditSheet({
       }
     >
       <div className="flex flex-col gap-4">
-        {!focusSplit && (
-          <>
-            <Field
-              label={t("shared.form.groupName")}
-              error={
-                duplicate
-                  ? t("shared.form.groupDuplicate")
-                  : validationMessage(t, serverFields.name ?? undefined)
-              }
-            >
-              <Input
-                value={name}
-                autoFocus
-                maxLength={GROUP_NAME_MAX}
-                placeholder={t("shared.form.groupNamePlaceholder")}
-                onChange={(event) => {
-                  setName(event.target.value);
-                }}
-              />
-            </Field>
-            <Field label={t("shared.form.color")}>
-              <SwatchGrid
-                value={color}
-                label={t("shared.form.color")}
-                onChange={(next) => {
-                  setColor(next);
-                }}
-              />
-            </Field>
-          </>
-        )}
+        <Field
+          label={t("shared.form.groupName")}
+          error={
+            duplicate
+              ? t("shared.form.groupDuplicate")
+              : validationMessage(t, serverFields.name ?? undefined)
+          }
+        >
+          <Input
+            value={name}
+            autoFocus
+            maxLength={GROUP_NAME_MAX}
+            placeholder={t("shared.form.groupNamePlaceholder")}
+            onChange={(event) => {
+              setName(event.target.value);
+            }}
+          />
+        </Field>
+        <Field label={t("shared.form.color")}>
+          <SwatchGrid
+            value={color}
+            label={t("shared.form.color")}
+            onChange={(next) => {
+              setColor(next);
+            }}
+          />
+        </Field>
         <DefaultSplitFields
           mode={mode}
           onMode={setMode}

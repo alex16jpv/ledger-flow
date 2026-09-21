@@ -595,7 +595,9 @@
         "setOverride": "This device asked to change this {what}’s amount for one period.",
         "clearOverride": "This device asked to remove this {what}’s amount for one period.",
         "writeOff": "This device asked to write off what is still owed in this {what}.",
-        "undoWriteOff": "This device asked to take back a write-off in this {what}."
+        "undoWriteOff": "This device asked to take back a write-off in this {what}.",
+        "addParticipants": "This device asked to add people to this {what}.",
+        "removeParticipant": "This device asked to take somebody out of this {what}."
       },
       "fields": {
         "name": "Name",
@@ -1381,7 +1383,8 @@
       "gapWithWriteOff": "{owed} is still owed to you, and {writtenOff} was written off — that part stays counted as yours.",
       "status": {
         "OPEN": "open",
-        "SETTLED": "settled"
+        "SETTLED": "settled",
+        "ARCHIVED": "archived"
       },
       "defaultSplit": {
         "EQUAL": "Equal split by default",
@@ -1454,9 +1457,7 @@
       "add": "Add {count}",
       "limits": "Up to {people} people in one shared group, and up to {contacts} contacts. This group would have {inGroup}.",
       "failed": "The people could not be read. Try again in a moment.",
-      "none": "Nobody here by that name.",
-      "alreadyIn": "Already in",
-      "takeOut": "Take out"
+      "none": "Nobody here by that name."
     },
     "pickExpenses": {
       "title": "Pick from my transactions",
@@ -1584,7 +1585,6 @@
     },
     "addPeople": {
       "title": "Add people",
-      "you": "You",
       "add": "Add {count}",
       "added": "{count, plural, one {1 person added} other {# people added}}",
       "takenOut": "{name} is out of this group",
@@ -1600,7 +1600,11 @@
       "writtenOffBecomes": "Written off · {before} becomes {after}",
       "nowAhead": "Paid {paid} · now {ahead} ahead",
       "paidAndOwes": "Paid {paid} · {owed} still owed",
-      "nothingPaid": "Nothing paid yet"
+      "nothingPaid": "Nothing paid yet",
+      "alreadyIn": "Already in",
+      "takeOut": "Take {name} out",
+      "applyToExistingOne": "{count, plural, one {Put {name} into the 1 expense already here} other {Put {name} into the # expenses already here}}",
+      "addOne": "Add {name}"
     }
   },
   "transactions": {

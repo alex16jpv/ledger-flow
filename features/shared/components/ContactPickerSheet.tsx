@@ -6,7 +6,6 @@ import { type ReactNode, useMemo, useState } from "react";
 
 import { Avatar } from "@/components/shell/Avatar";
 import { Alert } from "@/components/ui/Alert";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Field";
@@ -31,11 +30,8 @@ export interface ContactPickerSheetProps {
   confirmLabel?: string;
   pending?: boolean;
   disabled?: boolean;
-  // Contacts the group already holds: a row that reads rather than one that picks.
-  alreadyIn?: readonly string[];
-  // Taking somebody out is the same door, and it is offered only where it applies.
-  removable?: readonly string[];
-  onRemove?: (contact: Contact) => void;
+  // A contact this caller cannot pick: what it returns is drawn on the right of a row that reads.
+  readOnlyRow?: (contact: Contact) => ReactNode | null;
   // What the sheet asks after the list: the question that comes with adding people.
   extra?: ReactNode;
   onPicked?: (contacts: Contact[]) => void;
@@ -56,9 +52,7 @@ export function ContactPickerSheet({
   confirmLabel,
   pending = false,
   disabled = false,
-  alreadyIn = [],
-  removable = [],
-  onRemove,
+  readOnlyRow,
   extra,
   onPicked,
 }: ContactPickerSheetProps) {
@@ -95,7 +89,7 @@ export function ContactPickerSheet({
             size="lg"
             block
             loading={pending}
-            disabled={disabled || (picked.length === 0 && chosen.length === 0)}
+            disabled={disabled}
             onClick={() => {
               onDone(chosen);
             }}
@@ -133,7 +127,8 @@ export function ContactPickerSheet({
           <List>
             {rows.map((contact) => {
               const on = picked.includes(contact.id);
-              if (alreadyIn.includes(contact.id)) {
+              const reads = readOnlyRow?.(contact);
+              if (reads) {
                 return (
                   <Row key={contact.id}>
                     <Avatar name={contact.name} color={contact.color} />
@@ -143,19 +138,7 @@ export function ContactPickerSheet({
                       </RowTitle>
                       {contact.email && <RowMeta items={[contact.email]} />}
                     </RowBody>
-                    {removable.includes(contact.id) && onRemove ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          onRemove(contact);
-                        }}
-                      >
-                        {t("takeOut")}
-                      </Button>
-                    ) : (
-                      <Badge>{t("alreadyIn")}</Badge>
-                    )}
+                    {reads}
                   </Row>
                 );
               }

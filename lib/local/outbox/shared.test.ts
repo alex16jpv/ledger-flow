@@ -560,3 +560,100 @@ describe("editing a group and its people with no network", () => {
     expect((await vault.db.get("sharedGroups", "g1"))?.row.archivedAt).toBeNull();
   });
 });
+
+// D-23: every rule is the mirror image of what its write projects, or a pull undoes the work.
+describe("what a pull sees while a group's edit is still queued", () => {
+  const stored = () =>
+    sharedGroup({
+      id: "g1",
+      updatedAt: "2026-09-01T00:00:00.000Z",
+      participants: [
+        { contactId: null, addedAt: "2026-08-01T00:00:00.000Z" },
+        { contactId: ANA, addedAt: "2026-08-01T00:00:00.000Z" },
+      ],
+      defaultSplit: {
+        mode: "PERCENT",
+        shares: [
+          { contactId: null, percent: 50 },
+          { contactId: ANA, percent: 50 },
+        ],
+      },
+      writeOffs: [
+        {
+          kind: "CONTACT",
+          contactId: ANA,
+          expenseId: null,
+          amount: 10_000,
+          at: "2026-09-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+  async function afterPull(vault: Awaited<ReturnType<typeof vaultWith>>) {
+    const tx = writeTransaction(vault.db);
+    await reconcileRow(tx, "sharedGroup", "g1", stored());
+    await tx.done;
+    return (await vault.db.get("sharedGroups", "g1"))?.row;
+  }
+
+  it("keeps an edit", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("sharedGroups", sharedGroupRecord(stored()));
+    reportOnline(false);
+
+    await updateSharedGroup({
+      id: "g1",
+      name: "Cartagena trip",
+      color: "TEAL",
+      defaultSplit: { mode: "EQUAL", shares: [] },
+    });
+
+    expect(await afterPull(vault)).toMatchObject({ name: "Cartagena trip", color: "TEAL" });
+  });
+
+  it("keeps somebody just added", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("sharedGroups", sharedGroupRecord(stored()));
+    reportOnline(false);
+
+    await addParticipants({ id: "g1", contactIds: ["k9"], applyToExistingExpenses: false });
+
+    expect((await afterPull(vault))?.participants.map((one) => one.contactId)).toEqual([
+      null,
+      ANA,
+      "k9",
+    ]);
+  });
+
+  it("keeps somebody taken out, their write-off, and a default split that still adds to 100", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("sharedGroups", sharedGroupRecord(stored()));
+    reportOnline(false);
+
+    await removeParticipant({ id: "g1", contactId: ANA });
+
+    const row = await afterPull(vault);
+    expect(row?.participants.map((one) => one.contactId)).toEqual([null]);
+    expect(row?.writeOffs).toEqual([]);
+    expect(row?.defaultSplit.shares).toEqual([{ contactId: null, percent: 100 }]);
+  });
+
+  it("keeps a group brought back", async () => {
+    const vault = await vaultWith();
+    await vault.db.put(
+      "sharedGroups",
+      sharedGroupRecord({ ...stored(), archivedAt: "2026-09-10T00:00:00.000Z" }),
+    );
+    reportOnline(false);
+
+    await restoreSharedGroup("g1");
+
+    const tx = writeTransaction(vault.db);
+    await reconcileRow(tx, "sharedGroup", "g1", {
+      ...stored(),
+      archivedAt: "2026-09-10T00:00:00.000Z",
+    });
+    await tx.done;
+    expect((await vault.db.get("sharedGroups", "g1"))?.row.archivedAt).toBeNull();
+  });
+});

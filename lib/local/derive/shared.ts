@@ -1,6 +1,7 @@
 import type { ErrorCode } from "@/lib/api/errors";
 import { currencyFractionDigits } from "@/lib/format/currency";
 import type {
+  DefaultSplit,
   Settlement,
   SharedExpense,
   SharedShare,
@@ -58,6 +59,7 @@ export class SplitInvalidError extends Error {
 }
 
 const PERCENT_SCALE = 100;
+const PERCENT_WHOLE = PERCENT_SCALE * PERCENT_SCALE;
 
 const invalid = (message: string): SplitInvalidError => new SplitInvalidError(message);
 
@@ -466,6 +468,42 @@ export function deriveShared(input: SharedLedgerInput): SharedLedger {
     cameBack,
     collected,
     groups: input.groups.map((group) => viewOf(group, byGroup.get(group.id) ?? [], settled)),
+  };
+}
+
+// Taking somebody out of a percentage group spreads their share over the rest in proportion,
+// largest remainder so it adds to 100 exactly, which is what the server does with it.
+export function withoutParticipant(split: DefaultSplit, contactId: string): DefaultSplit {
+  if (split.mode !== "PERCENT") return split;
+  const kept = split.shares.filter((share) => share.contactId !== contactId);
+  if (kept.length === 0) return { mode: split.mode, shares: [] };
+  const points = kept.map((share) => Math.round(share.percent * PERCENT_SCALE));
+  const total = points.reduce((sum, one) => sum + one, 0);
+  if (total === 0) {
+    const even = Math.floor(PERCENT_WHOLE / kept.length);
+    const shares = kept.map((share, index) => ({
+      contactId: share.contactId,
+      percent: (even + (index === 0 ? PERCENT_WHOLE - even * kept.length : 0)) / PERCENT_SCALE,
+    }));
+    return { mode: split.mode, shares };
+  }
+  const exact = points.map((one) => (one * PERCENT_WHOLE) / total);
+  const floors = exact.map((one) => Math.floor(one));
+  let left = PERCENT_WHOLE - floors.reduce((sum, one) => sum + one, 0);
+  const order = exact
+    .map((one, index) => ({ index, rest: one - Math.floor(one) }))
+    .sort((a, b) => b.rest - a.rest || a.index - b.index);
+  for (const { index } of order) {
+    if (left <= 0) break;
+    floors[index] = (floors[index] ?? 0) + 1;
+    left -= 1;
+  }
+  return {
+    mode: split.mode,
+    shares: kept.map((share, index) => ({
+      contactId: share.contactId,
+      percent: (floors[index] ?? 0) / PERCENT_SCALE,
+    })),
   };
 }
 

@@ -595,7 +595,9 @@
         "setOverride": "Este dispositivo pidió cambiar el importe de este {what} para un período.",
         "clearOverride": "Este dispositivo pidió quitar el importe de este {what} para un período.",
         "writeOff": "Este dispositivo pidió dar por perdido lo que aún se debe en este {what}.",
-        "undoWriteOff": "Este dispositivo pidió deshacer un perdón en este {what}."
+        "undoWriteOff": "Este dispositivo pidió deshacer un perdón en este {what}.",
+        "addParticipants": "Este dispositivo pidió añadir personas a este {what}.",
+        "removeParticipant": "Este dispositivo pidió sacar a alguien de este {what}."
       },
       "fields": {
         "name": "Nombre",
@@ -1381,7 +1383,8 @@
       "gapWithWriteOff": "Todavía te deben {owed}, y {writtenOff} se dio por perdido: esa parte sigue contando como tuya.",
       "status": {
         "OPEN": "abierto",
-        "SETTLED": "saldado"
+        "SETTLED": "saldado",
+        "ARCHIVED": "archivado"
       },
       "defaultSplit": {
         "EQUAL": "Por defecto, a partes iguales",
@@ -1454,9 +1457,7 @@
       "add": "Añadir {count}",
       "limits": "Hasta {people} personas en un grupo compartido, y hasta {contacts} contactos. Este grupo quedaría con {inGroup}.",
       "failed": "No se pudo leer la lista de personas. Inténtalo de nuevo en un momento.",
-      "none": "Nadie con ese nombre.",
-      "alreadyIn": "Ya está",
-      "takeOut": "Sacar"
+      "none": "Nadie con ese nombre."
     },
     "pickExpenses": {
       "title": "Elegir de mis movimientos",
@@ -1584,7 +1585,6 @@
     },
     "addPeople": {
       "title": "Añadir personas",
-      "you": "Tú",
       "add": "Añadir {count}",
       "added": "{count, plural, one {1 persona añadida} other {# personas añadidas}}",
       "takenOut": "{name} ya no está en este grupo",
@@ -1600,7 +1600,11 @@
       "writtenOffBecomes": "Dado por perdido · {before} pasa a {after}",
       "nowAhead": "Pagó {paid} · ahora {ahead} de más",
       "paidAndOwes": "Pagó {paid} · aún debe {owed}",
-      "nothingPaid": "Aún no ha pagado nada"
+      "nothingPaid": "Aún no ha pagado nada",
+      "alreadyIn": "Ya está",
+      "takeOut": "Sacar a {name}",
+      "applyToExistingOne": "{count, plural, one {Meter a {name} en el gasto que ya hay} other {Meter a {name} en los # gastos que ya hay}}",
+      "addOne": "Añadir a {name}"
     }
   },
   "transactions": {

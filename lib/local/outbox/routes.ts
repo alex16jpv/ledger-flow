@@ -98,7 +98,7 @@ function groupOf(payload: OperationPayload): string {
 
 function partyOf(payload: OperationPayload): string {
   const partyId = payload.params?.partyId;
-  if (!partyId) throw new Error("a write-off with nobody in its path");
+  if (!partyId) throw new Error("a shared group write with nobody in its path");
   return partyId;
 }
 
