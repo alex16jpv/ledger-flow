@@ -89,12 +89,21 @@ context, then the bar of what has been collected, then the one sentence that exp
 still owed and what was written off. Then `Settle up` as the one primary action, and under it
 `Add expense`, `Add people`, `Edit` and `Archive`.
 
-**A group is not closed when it is created** (`#add-people`). `Add people` opens the same contact sheet
-the form uses, and asks the question that comes with it rather than deciding it: **are they in the
-expenses already recorded?** Off — the default — they are in what you add from now on and in none of
-what is there. On, every share is recalculated and the sheet says by how much, **including who ends up
-ahead of what they now owe**, because somebody who already paid the old share will be. Nothing
-collected is undone and what counts as yours does not move: only the shares do.
+**A group is not closed when it is created** (`#add-people`). `Add people` is the contact sheet the
+form uses — the same search, the same paging, the same two limits said out loud, and the same
+`New person`, because the commonest reason to add somebody afterwards is that they were not a contact
+yet — plus the question that comes with it: **are they in the expenses already recorded?**
+
+Off — the default — they are in what you add from now on and in none of what is there. **On, the sheet
+shows the whole result before it happens**, one row per person: the new share, who has paid what, who
+is now **ahead of what they owe**, and what a **written-off** amount becomes — because a share that
+falls takes the write-off down with it, and that is not a figure moving: nobody was ever owed the part
+that is no longer theirs, and what counts as yours is the same before and after. Nothing collected is
+undone.
+
+It is **the whole group or none of it**. A two-month trip has expenses somebody who joined halfway was
+not at, and the exact answer for those is the one the section already has: add them, then set that
+expense's own split. One switch that quietly did it per expense would be guessing.
 
 **Taking somebody out** is the same door and the narrow case: it is offered only while they have **no
 share in any expense and nothing paid**. Once either exists, removing them would have to either delete
@@ -111,6 +120,13 @@ share of your own. Four states:
 | `Partially paid` | Derived: something received, not all                |
 | `Paid`           | Derived: everything received                        |
 | `Written off`    | **Stored**, because it is a decision, not an amount |
+
+**And one reading that is not a state: somebody who has paid more than their share.** It happens the
+moment a share falls under them — a person added to the group, an expense deleted, a split edited. The
+row stays `Paid` and names the surplus, `Paid · $160,000 ahead`; on the **People** face that person
+moves to **`You owe`**, because that is what it is: their money, in your account. Settling it is the
+only movement in the section that leaves an account without being an expense — you never spent it, so
+it carries no category and stays out of Stats and Budgets, exactly like the collection it reverses.
 
 **Expenses**, one row each, with its date, who paid it and your share. **A line somebody else paid
 says so, is drawn neutral and reads "not in your ledger"** (`#group-with-another-payer`): no movement
@@ -151,9 +167,23 @@ lands in the same place.
 without asking, and **any expense can carry its own** in any of the four modes: a trip that splits
 equally can have one dinner by exact amounts. An expense that went its own way reads **`Custom split`**
 in the group's list, so the exceptions are visible without opening them, and the sheet says plainly
-what it touches — this expense, and nothing else. The same sheet, opened from the link above the
-group's People, edits the default; changing the default does not go back and rewrite an expense that
-was set by hand.
+what it touches — this expense, and nothing else, with its own figures named.
+
+**The group's default is only `Equal` or `Percent`.** A default has no total to divide, so `Exact` and
+`Fixed + rest` are things only an expense can have; offering them where they cannot mean anything is
+the contradiction T-86 had to undo elsewhere. The group's control is the two that work without a
+total, and it is not the expense's sheet with the rows removed — it is a smaller control, and the spec
+does not pretend otherwise.
+
+**Changing the default never goes back.** It applies to the expenses you add from now on, and to
+nothing already recorded. The alternative — re-splitting every untouched expense — would re-impute
+every payment and move what counts as yours between months, closed ones included, behind a segmented
+control. When that is what somebody wants, the deliberate version of it is `Add people`, which asks
+first and shows the whole result.
+
+**The `Custom split` flag is set** when you save a split on that expense and **cleared** by
+`Use the group's split`, which the same sheet offers; the expense then follows the default again, from
+that moment on.
 
 **`Split this`** on a single transaction is the same thing seen from the other end: it creates a group
 of one expense, named after it. There is one concept, not two — an expense is split because it belongs
@@ -184,19 +214,34 @@ v1.
 
 ### Guests, on one expense (`#split-with-guests`)
 
-An outing of four that, for one night, was twenty-four people. **The group stays a group of four**: the
-guests belong to **that expense alone**, and the split sheet has a row for them with a **head count**.
+A night out of three that, for one expense, was twenty-three people. **The group stays the size it
+is**: the guests belong to **that expense alone**.
 
-They count as **as many shares as there are of them** and as **one row to collect from**. $240,000
-between four friends and twenty guests is 24 shares of $10,000: $40,000 between the four, $200,000 for
-the block. You can record what the block pays, in full or in part, and you cannot say who inside it
-paid what — the control you give up for a trail you would otherwise not have at all.
+**The head count sits above the rows**, next to the mode, because it governs every one of them: it
+reads `3 people + 20 guests = 23 shares`. The block is then **one ordinary money row** like anybody
+else. Putting the count in the amount column would make it the only control in the sheet whose number
+is not money, and would leave `Percent` and `Exact` ambiguous; above the rows, all four modes fall out
+unchanged — by heads under `Equal`, by a figure you type under the others.
+
+They count as **as many shares as there are of them** and as **one party to collect from**. $230,000
+between three friends and twenty guests is 23 shares of $10,000: $30,000 between the three, $200,000
+for the block. You can record what the block pays, in full or in part, and you cannot say who inside
+it paid what — the control you give up for a trail you would otherwise not have at all. **The count
+starts at one**: one guest is the same control, and the block can carry a name if it deserves one.
+
+**The odd peso follows the same rule** it follows for people: it goes to whoever paid, never to the
+block, so the shares add up to the expense with guests exactly as without them. A block is written off
+and archived like anybody else.
 
 Once the expense is saved the block is **somebody to collect from**: it appears in that expense's
-shared card with its own state, and in the group's People section **under the expense's name**, so
-what it owes is inside the group's figures and not floating outside them. Its four states are
-everybody else's, `Written off` included. `Settle up` on it takes a full or a partial amount, like any
-other row.
+shared card with its own state, and in the group's People section **under the expense's name**. Its
+four states are everybody else's, `Written off` included.
+
+**It counts in every figure that is about what is owed to you**, because it is: the group's bar
+includes it, and so does `Owed to you` at the top of the section. What it is not is a row on the
+**People** face, which lists people; there, when blocks exist, one line closes the arithmetic —
+"$200,000 more from guests, in 1 shared group" — so the rows and the total never disagree. A block
+with nothing outstanding is not mentioned at all.
 
 Guests are **not contacts**: they never reach People — the section — they cannot be reused on another
 expense, and they go when the expense goes. Somebody you want real control over is added to the group
@@ -216,7 +261,12 @@ the parity fixtures in `lib/local/derive` exist to prevent.
 
 **One sheet**, `Settle up`, reached from a person's row, from a group, or from a shared expense.
 `Mark as paid` and `Record a payment` are the same sheet with the amount prefilled full or left to
-type. It always settles **everything open between the two people**, and it says what it covers.
+type. It settles **everything open between you and one counterparty**, and it says what it covers.
+
+A counterparty is **a person or a guest block**. For a person that means every group; for a block it
+means the one expense it lives in, which is all there is — a block has no other expense to net
+against, no email and no cross-group history, and the sheet simply shows less rather than pretending
+otherwise.
 
 - **Money coming back is not income.** It arrives in an account, carries no category, and is excluded
   from Stats and from Budgets — the shape `ADJUSTMENT` already has. It is drawn neutral, never green.

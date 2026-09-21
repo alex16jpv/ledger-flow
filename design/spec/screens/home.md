@@ -33,7 +33,7 @@
 - **Stats:** total balance (the sum of active accounts) and the month's income; a third card,
   "Estimated savings", only at 600px and up.
 - **What people owe you:** one line under the four figures, with a `users` icon, reading
-  "$562,600 owed to you · you owe $60,000" and opening [Shared](shared.md). It is **never added to
+  "$552,600 owed to you · you owe $60,000" and opening [Shared](shared.md). It is **never added to
   _What you have_**, and it is drawn neutral, never green: money somebody owes you is not money you
   have and not income. Where there is nothing shared, the line is simply absent — no zero, no empty
   state on the screen you open to record a coffee. Where only one direction exists, only that half is

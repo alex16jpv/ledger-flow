@@ -4123,8 +4123,8 @@ ${field("Name", "Cartagena trip", null, { icon: "users" })}
 <div class="chips" style="flex-wrap:wrap;overflow:visible">${contactChip("You")}${contactChip("Ana Ruiz")}${contactChip("Beto Cano")}${contactChip("Lucía Mesa")}<button class="chip">${iconSvg("plus", "sm")}Add a person</button></div>
 <span class="help">You are in the group like everyone else, with a share of your own.</span></div>
 <div class="field"><span class="label">Split by default</span>
-<div class="segment"><button aria-pressed="true">Equal</button><button aria-pressed="false">Percent</button><button aria-pressed="false">Exact</button><button aria-pressed="false">Fixed + rest</button></div>
-<span class="help">Every expense you add takes this split without asking. You can change it on any single expense.</span></div>
+<div class="segment"><button aria-pressed="true">Equal</button><button aria-pressed="false">Percent</button></div>
+<span class="help">Every expense you add takes this without asking, and any of them can then go its own way — by exact amounts too, which only an expense can have, because only an expense has a total. Changing this later never goes back over what is already recorded.</span></div>
 <div class="field"><span class="label">Expenses</span>
 <button class="picker">${tile("list", "GRAY", "sm")}<span class="body"><span class="lbl">Pick from my transactions</span><span class="val">3 selected · $2,960,000</span></span>${iconSvg("chevron-right", "sm")}</button>
 <button class="btn ghost sm" style="align-self:flex-start;padding-left:0">${iconSvg("plus", "sm")}Or record a new expense</button></div>
@@ -4194,8 +4194,9 @@ const splitSheet = (mode = "equal", loose = false) => {
   return sheetWrap(
     `${who}${seg}
 <div class="stack-sm" style="gap:10px;padding-top:4px">${rows}</div>
+${ADD_GUESTS}
 <div class="hstack" style="justify-content:space-between;border-top:1px solid var(--border);padding-top:12px"><span class="small muted">Left to assign</span><span class="amount" style="font-weight:600">$0</span></div>
-${ADD_GUESTS}${note}${creates}
+${note}${creates}
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.2">${loose ? "Split it" : "Save split"}</button></div>`,
     loose
       ? "Split this · Groceries for the trip"
@@ -4270,7 +4271,7 @@ const archiveGroupSheet = () =>
     "Archive Cartagena trip?",
   );
 
-const nightOut = () => {
+const nightOut = ({ sheet = "" } = {}) => {
   const mine = (name, icon, color, total, yours, custom = false) =>
     `<a class="row" href="#">${tile(icon, color)}<span class="body"><span class="title"><span class="truncate">${name}</span>${custom ? `<span class="badge">${iconSvg("split")}Custom split</span>` : ""}</span><span class="meta">Sep 20 · you paid</span></span><span class="right">${amount(total, "expense")}<span class="sub">Your share ${moneyText(yours)}</span></span></a>`;
   const body = `<section class="card color-PURPLE stack-sm" style="gap:6px;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--f)"></span>
@@ -4300,6 +4301,7 @@ ${mine("Fuel", "fuel", "AMBER", 60000, 30000, true)}
     side: "shared",
     back: true,
     title: "Shared group",
+    sheet,
     actions: `<button class="btn ghost icon-only round" aria-label="More">${iconSvg("ellipsis")}</button>`,
   });
 };
@@ -4322,11 +4324,16 @@ ${person("Ana Ruiz", "Owes you $26,300", true)}${person("Beto Cano", "Owes you $
   });
 };
 
-const guestRow = (count, value) =>
+const blockRow = (label, value) =>
   `<div class="hstack" style="gap:12px"><span class="avatar person color-GRAY" aria-hidden="true">${iconSvg("users", "sm")}</span>
-<span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-weight:500">Guests</span><span class="xs faint">${count} shares · tracked as one</span></span>
-<span class="input" style="width:56px;height:40px;justify-content:center"><span class="value amount">${count}</span></span>
-<span class="input" style="width:116px;height:40px;justify-content:flex-end"><span class="value amount">${value}</span></span></div>`;
+<span class="truncate" style="flex:1;min-width:0;font-weight:500">${label}</span>
+<span class="input" style="width:132px;height:40px;justify-content:flex-end"><span class="value amount">${value}</span></span></div>`;
+
+const guestCount = (count, people, shares) =>
+  `<div class="field"><span class="label">Guests on this expense</span>
+<div class="hstack" style="gap:10px"><span class="input" style="width:84px;height:44px;justify-content:center"><span class="value amount">${count}</span></span>
+<span class="small muted" style="flex:1">${people} people + ${count} guests = <b>${shares} shares</b></span></div>
+<span class="help">People you are not going to name. Each one weighs a share, and you collect from all of them as a single row.</span></div>`;
 
 const ADD_GUESTS = `<button class="btn ghost sm" style="align-self:flex-start;padding-left:0">${iconSvg("plus", "sm")}Add guests</button>`;
 
@@ -4334,40 +4341,54 @@ const splitOneExpense = () =>
   groupDetail({
     sheet: sheetWrap(
       `<div class="segment"><button aria-pressed="false">Equal</button><button aria-pressed="false">Percent</button><button aria-pressed="true">Exact</button><button aria-pressed="false">Fixed + rest</button></div>
-<div class="stack-sm" style="gap:10px;padding-top:4px">${splitRow("You", "$90,000")}${splitRow("Ana Ruiz", "$120,000")}${splitRow("Beto Cano", "$90,000")}${splitRow("Lucía Mesa", "$60,000")}</div>
+<div class="stack-sm" style="gap:10px;padding-top:4px">${splitRow("You", "$60,000")}${splitRow("Ana Ruiz", "$120,000")}${splitRow("Beto Cano", "$90,000")}${splitRow("Lucía Mesa", "$90,000")}</div>
 ${ADD_GUESTS}
 <div class="hstack" style="justify-content:space-between;border-top:1px solid var(--border);padding-top:12px"><span class="small muted">Left to assign</span><span class="amount" style="font-weight:600">$0</span></div>
-<div class="alert neutral">${iconSvg("info")}<span><b>This expense only.</b> Cartagena trip keeps its equal split and so does every other expense in it. This one will read <b>Custom split</b> in the list.</span></div>
+<div class="alert neutral">${iconSvg("info")}<span><b>This expense only.</b> Your share of the dinner goes from ${moneyText(90000)} to ${moneyText(60000)}, so your share of the trip goes from ${moneyText(800000)} to ${moneyText(770000)}. Cartagena trip keeps its equal split and so does every other expense in it; this one will read <b>Custom split</b> in the list.</span></div>
+<button class="btn ghost sm" style="align-self:flex-start;padding-left:0">${iconSvg("undo-2", "sm")}Use the group’s split</button>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.2">Save split</button></div>`,
       `Split ${moneyText(360000)} · Dinner at La Cevichería`,
     ),
   });
 
 const splitWithGuests = () =>
-  groupDetail({
+  nightOut({
     sheet: sheetWrap(
       `<div class="segment"><button aria-pressed="true">Equal</button><button aria-pressed="false">Percent</button><button aria-pressed="false">Exact</button><button aria-pressed="false">Fixed + rest</button></div>
-<div class="stack-sm" style="gap:10px;padding-top:4px">${splitRow("You", "$10,000")}${splitRow("Ana Ruiz", "$10,000")}${splitRow("Beto Cano", "$10,000")}${splitRow("Lucía Mesa", "$10,000")}${guestRow(20, "$200,000")}</div>
+${guestCount(20, 3, 23)}
+<div class="stack-sm" style="gap:10px;padding-top:4px">${splitRow("You", "$10,000")}${splitRow("Ana Ruiz", "$10,000")}${splitRow("Beto Cano", "$10,000")}${blockRow("Guests · 20", "$200,000")}</div>
 <div class="hstack" style="justify-content:space-between;border-top:1px solid var(--border);padding-top:12px"><span class="small muted">Left to assign</span><span class="amount" style="font-weight:600">$0</span></div>
-<div class="alert neutral">${iconSvg("info")}<span><b>24 shares, not 5.</b> The twenty guests count as twenty, so every share is ${moneyText(10000)}: ${moneyText(40000)} between the four of you and ${moneyText(200000)} for them. They are <b>one row</b> to collect from \u2014 you can record what they pay, not who paid what.</span></div>
-<p class="xs faint" style="margin:0">Guests live in this expense alone. Cartagena trip stays a group of four, and they are not contacts.</p>
-<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.2">Save split</button></div>`,
-      `Split ${moneyText(240000)} · Beach club`,
+<div class="alert neutral">${iconSvg("info")}<span><b>23 shares, not 4.</b> The twenty guests count as twenty, so every share is ${moneyText(10000)}: ${moneyText(30000)} between the three of you and ${moneyText(200000)} for them. They are <b>one row</b> to collect from \u2014 you can record what they pay, not who paid what.</span></div>
+<p class="xs faint" style="margin:0">This is the split step of <b>Add expense</b>, so the beach club is not in the list behind yet. Guests live in this expense alone: Night out stays a group of three, they never reach People, and they are not contacts.</p>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.2">Save expense</button></div>`,
+      `Split ${moneyText(230000)} · Beach club`,
     ),
   });
+
+const previewRow = (name, meta, badge = "") =>
+  `<div class="row" style="cursor:default">${face(name)}<span class="body"><span class="title"><span class="truncate">${name}</span>${badge}</span><span class="meta">${meta}</span></span><span class="right"><span class="amount">${money(640000)}</span><span class="sub">share</span></span></div>`;
 
 const addPeopleSheet = () =>
   groupDetail({
     sheet: sheetWrap(
       `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span class="placeholder" style="flex:1">Search a name or an email</span></div>
-<div class="list" style="margin:0 -16px;max-height:220px;overflow:auto">
+<div class="list" style="margin:0 -16px;max-height:160px;overflow:auto">
 <label class="row" style="cursor:pointer"><span class="box on">${iconSvg("check", "sm")}</span>${face("Diego Pardo")}<span class="body"><span class="title">Diego Pardo</span><span class="meta">You owe $60,000 · Diego’s birthday gift</span></span></label>
-<div class="row" aria-disabled="true" style="cursor:default;opacity:.5"><span class="box"></span>${face("Ana Ruiz")}<span class="body"><span class="title">Ana Ruiz</span><span class="meta">Already in this group</span></span></div>
+<div class="row" style="cursor:default">${face("Ana Ruiz")}<span class="body"><span class="title">Ana Ruiz</span><span class="meta">ana@example.com</span></span><span class="right"><span class="badge">Already in</span></span></div>
 </div>
-<div class="hstack" style="justify-content:space-between;padding:0 2px"><span class="xs faint">Showing 2 of 23 contacts</span><button class="btn ghost sm">Load more</button></div>
-<div class="hstack" style="gap:10px"><button class="switch" aria-checked="true" aria-label="Include them in the 5 expenses already here"></button><span class="small">Include them in the 5 expenses already here</span></div>
-<div class="alert warning">${iconSvg("triangle-alert")}<span><b>Every share falls from ${moneyText(800000)} to ${moneyText(640000)}.</b> Ana has already paid ${moneyText(800000)}, so she would be ${moneyText(160000)} ahead; Beto would owe ${moneyText(340000)} instead of ${moneyText(500000)}. Nothing you have collected is undone, and what counts as yours does not move.</span></div>
-<p class="xs faint" style="margin:0">Left off, Diego is in the expenses you add from now on and in none of the five already here.</p>
+<div class="hstack" style="justify-content:space-between;padding:0 2px"><span class="xs faint">Showing 2 of 23 contacts</span><span class="hstack" style="gap:4px"><button class="btn ghost sm">Load more</button><button class="btn ghost sm">${iconSvg("plus", "sm")}New person</button></span></div>
+<div class="alert neutral">${iconSvg("info")}<span>Up to <b>20 people</b> in one shared group, and up to <b>200 contacts</b>. This group would have 5.</span></div>
+<div class="hstack" style="gap:10px"><button class="switch" role="switch" aria-checked="true" aria-label="Put Diego into the 5 expenses already here"></button><span class="small">Put Diego into the 5 expenses already here</span></div>
+<div class="stack-sm" style="gap:6px"><span class="eyebrow">How Cartagena trip would end up</span>
+<div class="list card flush">
+${previewRow("You", "Your share of the $3,200,000")}
+${previewRow("Ana Ruiz", "Paid $800,000 · now $160,000 ahead", STATE_BADGE.paid)}
+${previewRow("Beto Cano", "Paid $300,000 · $340,000 still owed", STATE_BADGE.partial)}
+${previewRow("Lucía Mesa", "Written off · $800,000 becomes $640,000", STATE_BADGE.off)}
+${previewRow("Diego Pardo", "Nothing paid yet", STATE_BADGE.unpaid)}
+</div></div>
+<p class="small muted" style="margin:0"><b>What counts as yours does not move</b>: ${moneyText(2100000)}, exactly as it is now. Only the shares do — including what was written off, because Lucía never owed the part that is no longer hers. Nothing anybody paid is undone, and Ana being ahead is money you now owe <i>her</i>.</p>
+<p class="xs faint" style="margin:0">Left off, Diego is in the expenses you add from now on and in none of the five already here. It is the whole group or none of it; to leave him out of one, set that expense’s own split afterwards.</p>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Add Diego</button></div>`,
       "Add people",
     ),
@@ -4936,21 +4957,21 @@ const PAGES = [
         "One expense splitting its own way",
         "The group's split is a <b>default</b>, not a rule: any expense can carry its own, in any of the four modes. Here the dinner goes by exact amounts inside a trip that splits equally, and the sheet says what it does and does not touch. The expense then reads <b>Custom split</b> in the group's list, so the ones that went their own way are visible without opening them — <code>#group-with-another-payer</code> has one.",
         splitOneExpense(),
-        { added: "2026-09-21" },
+        { added: "2026-09-20" },
       ),
       plate(
         "split-with-guests",
         "One expense with guests",
-        "The owner's case, in his own arithmetic: four friends, and on this one night twenty other people. The group stays a group of four; <b>this expense alone</b> carries the guests. They count as <b>twenty shares</b> — $240,000 over 24 heads is $10,000 each, $40,000 between the four and $200,000 for them — and as <b>one row</b> to collect from. You lose who owes what inside the twenty and you keep the trail of the block, which is the trade he asked for.",
+        "The owner's case, in his own arithmetic: three friends, and on this one night twenty other people. The group stays a group of three; <b>this expense alone</b> carries the guests. The count sits <b>above</b> the rows because it governs every one of them — $230,000 over 23 heads is $10,000 each, $30,000 between the three and $200,000 for the block — and the block is one ordinary row, so percent and exact stay unambiguous. One guest is the same control with a count of one. You lose who owes what inside the twenty and you keep the trail of the block, which is the trade he asked for.",
         splitWithGuests(),
-        { added: "2026-09-21" },
+        { added: "2026-09-20" },
       ),
       plate(
         "add-people",
         "Adding people after the group exists",
-        "A group is not closed when it is created. The question that comes with it is what happens to the expenses already recorded, and the sheet asks it rather than deciding: <b>off</b>, the new person is in what you add from now on; <b>on</b>, every share is recalculated and the sheet says by how much, including who ends up ahead of what they owe. Nothing collected is undone and what counts as yours does not move.",
+        "A group is not closed when it is created. The question that comes with it is what happens to the expenses already recorded, and the sheet asks it rather than deciding. <b>Off</b> — the default — the new person is in what you add from now on. <b>On</b>, the sheet shows <b>the whole result before it happens</b>: every new share, who has paid what, who is now <b>ahead of what they owe</b>, and what the written-off amount becomes. Nothing collected is undone and what counts as yours does not move — $2,100,000 before and after — because nobody was ever owed the part that is no longer theirs.",
         addPeopleSheet(),
-        { added: "2026-09-21" },
+        { added: "2026-09-20" },
       ),
       plate(
         "settle-up",
