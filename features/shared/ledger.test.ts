@@ -193,6 +193,59 @@ describe("the section a screen reads", () => {
     });
   });
 
+  // The imputation is per counterparty, not per group: the surplus is the same figure in each.
+  it("counts what somebody paid ahead once, however many groups they are in", () => {
+    const rows = nightOut();
+    rows.groups = [...rows.groups, withTotals(sharedGroup({ id: "g2", name: "Office lunch" }))];
+    rows.expenses = [
+      ...rows.expenses,
+      sharedExpense({
+        id: "s4",
+        groupId: "g2",
+        description: "Lunch",
+        amount: 60_000,
+        split: equalSplit(60_000, [null, BETO]),
+      }),
+    ];
+    // Beto owes 60,000 of the night out and 30,000 of the lunch, and hands over 120,000.
+    rows.settlements = [
+      settlement({
+        id: "p1",
+        counterparty: { kind: "CONTACT", contactId: BETO, expenseId: null },
+        collected: 120_000,
+      }),
+    ];
+    const section = sectionOf(rows, contacts);
+    const beto = section.people.find((one) => one.contactId === BETO);
+
+    expect(beto).toMatchObject({ owesYou: 0, youOwe: 30_000, net: -30_000 });
+    expect(section.youOwe).toBe(30_000);
+    // The same surplus shows on their row in each group and must never be added up.
+    expect(
+      section.groups.map((view) => view.people.find((one) => one.contactId === BETO)?.surplus),
+    ).toEqual([30_000, 30_000]);
+  });
+
+  // The other direction: what you handed over on a line they fronted is not money that came back.
+  it("takes what you paid them off what you owe, and never off what they owe you", () => {
+    const rows = nightOut();
+    rows.settlements = [
+      settlement({
+        id: "p1",
+        counterparty: { kind: "CONTACT", contactId: ANA, expenseId: null },
+        paid: 30_000,
+      }),
+    ];
+    const section = sectionOf(rows, contacts);
+    const [view] = section.groups;
+    const ana = view?.people.find((one) => one.contactId === ANA);
+
+    expect(ana).toMatchObject({ owesYou: 60_000, youOwe: 0, paid: 0 });
+    expect(view?.collected).toBe(0);
+    expect(view?.countsAsYours).toBe(180_000);
+    expect(section.people.find((one) => one.contactId === ANA)?.net).toBe(60_000);
+  });
+
   // A share that falls under what they already paid is their money in your account, not a state.
   it("moves somebody who paid more than their share over to what you owe", () => {
     const rows = nightOut();

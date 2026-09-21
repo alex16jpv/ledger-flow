@@ -69,11 +69,13 @@ export function ownServerRow(operation: OutboxOperation): unknown {
   return row?.id === operation.entityId ? operation.serverRow : undefined;
 }
 
+const NAMED = new Set<string>(["account", "category", "contact"]);
+
 // F-60: the one refusal trying again cannot fix, and the one a restore's `name` can.
 export function isNameTaken(operation: OutboxOperation): boolean {
   return (
     operation.action === "restore" &&
-    (operation.entity === "account" || operation.entity === "category") &&
+    NAMED.has(operation.entity) &&
     operation.lastError === "DUPLICATE"
   );
 }

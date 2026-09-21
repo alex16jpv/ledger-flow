@@ -139,8 +139,7 @@ export function createSharedExpense({
 }: NewSharedExpense): Promise<SharedExpense> {
   const body: CreateSharedExpenseInput = {
     id: row.id,
-    // An expense that inherits sends no split: the server resolves the group's default itself,
-    // and that is what tells the two apart — `customSplit` is set by carrying one.
+    // Carrying a split is what sets `customSplit`: one that inherits sends none.
     ...(row.customSplit ? { split: sentSplit(row.split) } : {}),
     ...(transactionId === undefined
       ? {

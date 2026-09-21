@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, CircleCheck, Plus, User, Users } from "lucide-react";
+import { ChevronDown, CircleCheck, Plus, User, Users, WifiOff } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useId, useMemo, useState } from "react";
@@ -17,6 +17,7 @@ import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { List, RowBody, rowClasses, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Segment } from "@/components/ui/Segment";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { NetworkError } from "@/lib/api/errors";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
@@ -104,6 +105,8 @@ export function SharedView() {
   const params = useSearchParams();
   const face = parseFace(params.get("face"));
   const { section, isPending, isError, error, refetch } = useSharedSection();
+  // Offline with nothing on the device: there is no failure to report, only no copy to read.
+  const offline = error instanceof NetworkError && !error.timedOut && section === undefined;
   const [newPerson, setNewPerson] = useState(false);
 
   const people = useMemo(() => {
@@ -122,7 +125,7 @@ export function SharedView() {
     return { open: rows.filter((view) => !folded(view)), folded: rows.filter(folded) };
   }, [section]);
 
-  const nothingAtAll = section?.groups.length === 0;
+  const nothingAtAll = section?.groups.length === 0 && section.people.length === 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -174,6 +177,17 @@ export function SharedView() {
             ))}
           </Card>
         </div>
+      ) : offline ? (
+        <Empty
+          icon={<WifiOff {...iconProps("lg")} />}
+          title={t("transactions.list.offline.title")}
+          body={t("shared.offline")}
+          action={
+            <Button variant="secondary" onClick={refetch}>
+              {t("common.retry")}
+            </Button>
+          }
+        />
       ) : isError ? (
         <Empty
           tone="danger"

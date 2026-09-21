@@ -3,9 +3,10 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import type { SharedLedgerRows } from "@/lib/local/repository";
 import { REFERENCE_STALE_TIME_MS } from "@/lib/query/client";
 import { invalidateMoneyMovement, QUERY_DOMAINS } from "@/lib/query/domains";
-import type { RestoreInput, UpdateContactInput } from "@/types/api";
+import type { Contact, RestoreInput, UpdateContactInput } from "@/types/api";
 
 import {
   archiveContact,
@@ -40,7 +41,6 @@ export function useContactQuery(id: string, enabled = true) {
   });
 }
 
-// The sheet that picks people pages, and it says how many of how many it is showing.
 export const CONTACT_PICKER_PAGE = 20;
 
 export function useContactsPage(enabled = true) {
@@ -69,8 +69,20 @@ export function useSharedLedgerQuery(enabled = true) {
   return useQuery({
     queryKey: sharedKeys.ledger(),
     queryFn: fetchSharedLedger,
+    // It changes through our own writes and through a pull, and both invalidate it.
+    staleTime: REFERENCE_STALE_TIME_MS,
     enabled,
   });
+}
+
+// Four screens read the same section; this is the most expensive pure computation in the client.
+let memo: { rows: SharedLedgerRows; contacts: Contact[]; section: SharedSection } | null = null;
+
+function sectionFor(rows: SharedLedgerRows, contacts: Contact[]): SharedSection {
+  if (memo?.rows === rows && memo.contacts === contacts) return memo.section;
+  const section = sectionOf(rows, contacts);
+  memo = { rows, contacts, section };
+  return section;
 }
 
 export interface SharedSectionQuery {
@@ -81,13 +93,12 @@ export interface SharedSectionQuery {
   refetch: () => void;
 }
 
-// The section is the ledger read through the names: neither half says anything on its own.
 export function useSharedSection(enabled = true): SharedSectionQuery {
   const ledger = useSharedLedgerQuery(enabled);
   // Archived people keep their name on the rows that still owe or are owed.
   const contacts = useContactsQuery(true, enabled);
   const section = useMemo(
-    () => (ledger.data && contacts.data ? sectionOf(ledger.data, contacts.data) : undefined),
+    () => (ledger.data && contacts.data ? sectionFor(ledger.data, contacts.data) : undefined),
     [ledger.data, contacts.data],
   );
   return {
@@ -107,7 +118,6 @@ function useSharedInvalidation() {
   return async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: QUERY_DOMAINS.shared }),
-      // A movement that joins a group gains its share, and a group's figures read its movements.
       invalidateMoneyMovement(queryClient),
     ]);
   };

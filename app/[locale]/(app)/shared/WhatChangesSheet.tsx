@@ -24,7 +24,6 @@ export interface WhatChangesSheetProps {
   onConfirm: () => void;
 }
 
-// This has to be said before saving, and the surprising part is that nothing changes today.
 export function WhatChangesSheet({
   open,
   onClose,

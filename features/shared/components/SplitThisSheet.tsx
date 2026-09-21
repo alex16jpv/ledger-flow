@@ -18,7 +18,6 @@ export interface SplitThisSheetProps {
   onDone?: (groupId: string) => void;
 }
 
-// Decision 4: there is one concept, not two. Splitting a loose expense creates a group of one.
 export function SplitThisSheet({ open, onClose, transaction, onDone }: SplitThisSheetProps) {
   const t = useTranslations();
   const toast = useToast();

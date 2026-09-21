@@ -52,13 +52,11 @@ export interface SplitSheetProps {
   // Who fronted the money: their row takes the odd minor unit, and it is never the block of guests.
   payerContactId: string | null;
   initial?: SplitDraft;
-  // A loose expense asks who was in, because saving it creates a shared group of one.
   choosePeople?: boolean;
   note?: string;
   saveLabel: string;
   pending?: boolean;
   onSave: (result: SplitResult) => void;
-  // Offered on an expense that carries its own split, to hand it back to the group's default.
   onUseGroupSplit?: () => void;
 }
 

@@ -1310,7 +1310,7 @@
       "owesYouWord": "te debe",
       "youOweWord": "le debes",
       "settled": "Saldadas",
-      "showing": "Mostrando {shown} de {total} con algo abierto",
+      "showing": "{shown} con algo abierto · {total, plural, one {# persona} other {# personas}} en total",
       "guests": "{amount} más de invitados, en {count, plural, one {# grupo compartido} other {# grupos compartidos}}",
       "add": "Añadir una persona"
     },
@@ -1361,7 +1361,8 @@
       "pickFromTransactions": "Elegir de mis movimientos",
       "picked": "{count} elegidos · {amount}",
       "pickNone": "Todavía ninguno",
-      "nothingChanges": "Repartir no cambia nada hoy: un gasto sigue contando entero hasta que alguien te pague."
+      "nothingChanges": "Repartir no cambia nada hoy: un gasto sigue contando entero hasta que alguien te pague.",
+      "limit": "Hasta {contacts} personas en total."
     },
     "group": {
       "title": "Grupo compartido",
@@ -1490,7 +1491,8 @@
       "saved": "Reparto guardado",
       "done": "Gasto repartido"
     },
-    "new": "Nuevo grupo compartido"
+    "new": "Nuevo grupo compartido",
+    "offline": "La sección se cargará cuando vuelvas a tener conexión. Nada de lo que añadas aquí se pierde mientras tanto."
   },
   "transactions": {
     "readback": {

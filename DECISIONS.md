@@ -4457,7 +4457,8 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   works out from them exactly what the server works out: the split, the imputation of every payment,
   what each movement counts as yours, a group's totals and status, and the state of each person.
   `readSharedGroups` composes the endpoint's own answer out of the stored row plus that derivation, so
-  the figures come from one place whichever screen asks. `deriveSpending` and `deriveBudgetView` read
+  the figures come from one place whichever screen asks. **Reversed in part on 2026-09-21 (T-121):**
+  `readSharedGroups` and `readSharedGroup` gave way to one read of the whole ledger — see that entry. `deriveSpending` and `deriveBudgetView` read
   `countsAsYours ?? amount` and exclude `SETTLEMENT` beside `ADJUSTMENT` when no type is named.
 - **Alternatives:** storing `totals` and `status` as the feed's group sends them — it does not send
   them, on purpose (`docs/modules/sync.md`), because a rollup kept in step across expense writes,

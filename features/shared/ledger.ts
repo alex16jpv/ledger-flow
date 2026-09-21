@@ -21,16 +21,12 @@ export interface PartyView {
 
 export interface GroupView {
   group: SharedGroup;
-  // Its own expenses, newest first, which is the order the endpoint answers them in.
   expenses: SharedExpense[];
-  // What still counts as yours: what left your accounts here, less what has come back.
   countsAsYours: number;
   collected: number;
   writtenOff: number;
-  // What people owe you net of what you owe each of them, still open.
   owed: number;
   youOwe: number;
-  // The bar's whole: everything that was ever owed to you here.
   barTotal: number;
   people: PartyView[];
   you: { share: number };
@@ -42,16 +38,13 @@ export interface PersonView {
   color: ColorToken | null;
   owesYou: number;
   youOwe: number;
-  // Positive when they owe you, negative when you owe them. Drawn unsigned, with a word.
   net: number;
   groups: { id: string; name: string }[];
 }
 
 export interface SharedSection {
   groups: GroupView[];
-  // How many people you keep, which is not how many of them owe or are owed anything.
   contacts: number;
-  // Every payment made, newest first: a person's screen shows the ones that are theirs.
   settlements: Settlement[];
   people: PersonView[];
   // Guest blocks are not people: one line closes the arithmetic instead of a row each.
@@ -61,6 +54,10 @@ export interface SharedSection {
 }
 
 const GUESTS_COLOR: ColorToken = "GRAY";
+
+// Both lists read newest first, keyset over `(date, id)`, which is how the endpoints answer them.
+const newestFirst = (a: { date: string; id: string }, b: { date: string; id: string }): number =>
+  Date.parse(b.date) - Date.parse(a.date) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
 
 const isYours = (share: SharedShare): boolean => share.party === "USER";
 
@@ -73,6 +70,7 @@ const keyOf = (expense: SharedExpense, share: SharedShare): string | null =>
 
 interface Tally {
   share: number;
+  // What has come back from them, which is never what you handed over on a line they fronted.
   paid: number;
 }
 
@@ -90,11 +88,6 @@ function tallies(expenses: readonly SharedExpense[], collected: ReadonlyMap<stri
     for (const share of expense.split.shares) {
       if (isYours(share)) {
         yours += share.amount;
-        // What you have handed over on a line somebody else fronted counts as paid to them.
-        if (expense.paidByContactId !== null) {
-          of(partyKey({ contactId: expense.paidByContactId, expenseId: null })).paid +=
-            collected.get(`${expense.id}|user`) ?? 0;
-        }
         continue;
       }
       const key = keyOf(expense, share);
@@ -108,7 +101,6 @@ function tallies(expenses: readonly SharedExpense[], collected: ReadonlyMap<stri
   return { rows, yours };
 }
 
-// The description of the expense a block lives in, which is the only name it has.
 function guestName(expenses: readonly SharedExpense[], expenseId: string): string {
   const expense = expenses.find((row) => row.id === expenseId);
   return expense?.split.guests?.name ?? expense?.description ?? "";
@@ -157,9 +149,7 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     );
     groups.push({
       group,
-      expenses: [...expenses].sort(
-        (a, b) => Date.parse(b.date) - Date.parse(a.date) || (a.id < b.id ? 1 : -1),
-      ),
+      expenses: [...expenses].sort(newestFirst),
       countsAsYours: fronted - view.collected,
       collected: view.collected,
       writtenOff: view.writtenOff,
@@ -205,6 +195,12 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
   }
 
   const nameOf = new Map(groups.map((view) => [view.group.id, view.group.name]));
+  // Somebody you keep but have not split anything with yet is a row too: it is where they are read.
+  for (const contact of contacts) {
+    if (contact.archivedAt === null && !nets.has(contact.id)) {
+      nets.set(contact.id, { owesYou: 0, youOwe: 0, groups: new Set<string>() });
+    }
+  }
   const people: PersonView[] = [...nets].map(([contactId, held]) => {
     const contact = byId.get(contactId);
     const youOwe = held.youOwe + (surplusOf.get(contactId) ?? 0);
@@ -223,9 +219,7 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
   return {
     groups,
     contacts: contacts.filter((row) => row.archivedAt === null).length,
-    settlements: [...rows.settlements].sort(
-      (a, b) => Date.parse(b.date) - Date.parse(a.date) || (a.id < b.id ? 1 : -1),
-    ),
+    settlements: [...rows.settlements].sort(newestFirst),
     people,
     guests: { owed: guestsOwed, groupCount: guestGroups.size },
     owedToYou: people.reduce((sum, person) => sum + Math.max(0, person.net), 0) + guestsOwed,

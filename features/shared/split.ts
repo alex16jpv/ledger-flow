@@ -64,7 +64,6 @@ const rowsOf = (draft: SplitDraft, parties: readonly SplitParty[]): SplitRow[] =
     input: draft.mode === "EQUAL" ? null : inputOf(draft, party.key),
   }));
 
-// What the sheet shows under the rows, and what it refuses to be saved with.
 export function leftToAssign(
   draft: SplitDraft,
   parties: readonly SplitParty[],

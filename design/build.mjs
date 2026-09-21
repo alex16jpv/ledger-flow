@@ -4127,6 +4127,7 @@ const newContact = () =>
       `<div class="stack">${field("Name", "Beto Cano", null, { icon: "user" })}
 <div class="field"><span class="label">Colour</span>${swatches("TEAL")}</div>
 ${field("Email", null, "beto@example.com", { icon: "globe", opt: true, help: "Only so you can invite them to a shared group later. Nothing is sent today." })}
+<div class="alert neutral">${iconSvg("info")}<span>Up to <b>200 people</b> in all.</span></div>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.2">Add person</button></div></div>`,
       "New person",
     ),
@@ -4945,7 +4946,7 @@ const PAGES = [
       plate(
         "new-person",
         "New person",
-        "Name, colour and an optional email. The email is an identifier for inviting them later — nothing is sent, and the sheet says so rather than leaving the field to be guessed at.",
+        "Name, colour and an optional email. The email is an identifier for inviting them later — nothing is sent, and the sheet says so rather than leaving the field to be guessed at. The limit is said here too, never discovered by a save that fails.",
         newContact(),
         { added: "2026-09-20" },
       ),

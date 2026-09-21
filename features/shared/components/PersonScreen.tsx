@@ -27,18 +27,15 @@ import { useBackNavigation } from "@/lib/navigation/history";
 import type { Contact } from "@/types/api";
 
 import { useArchiveContact, useContactQuery, useRestoreContact, useSharedSection } from "../hooks";
-import { personView } from "../ledger";
+import { personView, type SharedSection } from "../ledger";
 import { ContactFormSheet } from "./ContactFormSheet";
 import { StateBadge } from "./parts";
 
-function Payments({ contactId }: { contactId: string }) {
+function Payments({ section, contactId }: { section: SharedSection; contactId: string }) {
   const t = useTranslations("shared.person");
   const money = useMoney();
   const dates = useDates();
-  const { section } = useSharedSection();
-  const rows = (section?.settlements ?? []).filter(
-    (one) => one.counterparty.contactId === contactId,
-  );
+  const rows = section.settlements.filter((one) => one.counterparty.contactId === contactId);
   if (rows.length === 0) return null;
   return (
     <section className="flex flex-col gap-2">
@@ -83,13 +80,12 @@ function Payments({ contactId }: { contactId: string }) {
   );
 }
 
-function PersonBody({ contact }: { contact: Contact }) {
+function PersonBody({ contact, section }: { contact: Contact; section: SharedSection }) {
   const t = useTranslations();
   const money = useMoney();
-  const { section } = useSharedSection();
-  const view = section && personView(section, contact.id);
+  const view = personView(section, contact.id);
   const net = view?.net ?? 0;
-  const groups = (section?.groups ?? []).flatMap((group) => {
+  const groups = section.groups.flatMap((group) => {
     const person = group.people.find((one) => one.contactId === contact.id);
     return person ? [{ group, person }] : [];
   });
@@ -151,7 +147,7 @@ function PersonBody({ contact }: { contact: Contact }) {
           </Card>
         </section>
       )}
-      <Payments contactId={contact.id} />
+      <Payments section={section} contactId={contact.id} />
       {/* A person is not an account, and this is where the section says so. */}
       <p className="px-1 text-center text-xs text-text-3">{t("shared.person.notAnAccount")}</p>
     </>
@@ -163,10 +159,14 @@ export function PersonScreen({ id }: { id: string }) {
   const back = useBackNavigation();
   const toast = useToast();
   const contact = useContactQuery(id);
+  const shared = useSharedSection();
   const archive = useArchiveContact();
   const restore = useRestoreContact();
   const [sheet, setSheet] = useState<"edit" | "archive" | null>(null);
   const row = contact.data;
+  // The figure is the ledger's, not the contact's: neither half may draw without the other.
+  const pending = contact.isPending || shared.isPending;
+  const failed = contact.isError || shared.isError;
 
   async function confirmArchive() {
     if (!row) return;
@@ -198,7 +198,7 @@ export function PersonScreen({ id }: { id: string }) {
           back("/shared");
         }}
       />
-      {contact.isPending ? (
+      {pending ? (
         <div role="status" aria-busy="true" aria-label={t("common.loading")}>
           <Card className="flex flex-col items-center gap-3 py-6">
             <Skeleton className="size-16 rounded-full" />
@@ -206,16 +206,17 @@ export function PersonScreen({ id }: { id: string }) {
             <Skeleton className="h-9 w-40" />
           </Card>
         </div>
-      ) : contact.isError || !row ? (
+      ) : failed || !row || !shared.section ? (
         <Empty
           tone="danger"
           icon={<User {...iconProps("lg")} />}
           title={t("states.error.title")}
-          body={<LoadErrorBody error={contact.error} />}
+          body={<LoadErrorBody error={contact.error ?? shared.error} />}
           action={
             <Button
               onClick={() => {
                 void contact.refetch();
+                shared.refetch();
               }}
             >
               {t("common.retry")}
@@ -224,7 +225,7 @@ export function PersonScreen({ id }: { id: string }) {
         />
       ) : (
         <>
-          <PersonBody contact={row} />
+          <PersonBody contact={row} section={shared.section} />
           {row.archivedAt === null ? (
             <div className="flex gap-3">
               <Button

@@ -68,10 +68,17 @@ const contacts = [contact({ id: ANA, name: "Ana Ruiz" }), contact({ id: BETO, na
 
 const fetchMock = vi.fn<typeof fetch>();
 
-function serve(rows: { groups?: unknown[]; expenses?: unknown[]; settlements?: unknown[] } = {}) {
+function serve(
+  rows: {
+    groups?: unknown[];
+    expenses?: unknown[];
+    settlements?: unknown[];
+    contacts?: unknown[];
+  } = {},
+) {
   fetchMock.mockImplementation((input) => {
     const url = urlOf(input);
-    if (url.startsWith("/api/contacts")) return Promise.resolve(page(contacts));
+    if (url.startsWith("/api/contacts")) return Promise.resolve(page(rows.contacts ?? contacts));
     if (url.includes("/expenses")) return Promise.resolve(page(rows.expenses ?? expenses));
     if (url.startsWith("/api/settlements")) return Promise.resolve(page(rows.settlements ?? []));
     return Promise.resolve(page(rows.groups ?? groups));
@@ -151,11 +158,20 @@ describe("SharedView", () => {
   });
 
   it("says there is nothing yet rather than drawing two empty faces", async () => {
-    serve({ groups: [] });
+    serve({ groups: [], contacts: [] });
     view();
 
     expect(await screen.findByText("Nothing shared yet")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Shared groups/ })).not.toBeInTheDocument();
+  });
+
+  // A person you add before any group is still a person: the face is where they are read.
+  it("lists somebody you keep even before you have split anything with them", async () => {
+    serve({ groups: [], expenses: [] });
+    view();
+
+    await screen.findByRole("button", { name: /Settled/ });
+    expect(screen.queryByText("Nothing shared yet")).not.toBeInTheDocument();
   });
 
   it("offers to try again when the section cannot be read", async () => {

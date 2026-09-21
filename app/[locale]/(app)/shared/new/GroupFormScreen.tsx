@@ -72,7 +72,6 @@ export function GroupFormScreen() {
         contactIds: people.map((one) => one.id),
         defaultSplit: groupDefaultSplit(values.mode, shares, percent),
       });
-      // Every expense inherits the group's split without asking, which is what a default means.
       for (const transaction of picked) {
         await createExpense.mutateAsync(expenseFromTransaction(group, transaction));
       }

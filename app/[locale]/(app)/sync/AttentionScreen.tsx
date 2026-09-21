@@ -61,6 +61,11 @@ async function nameOf(
   }
   if (entity === "account") return (await db.get("accounts", entityId))?.row.name ?? null;
   if (entity === "category") return (await db.get("categories", entityId))?.row.name ?? null;
+  if (entity === "contact") return (await db.get("contacts", entityId))?.row.name ?? null;
+  if (entity === "sharedGroup") return (await db.get("sharedGroups", entityId))?.row.name ?? null;
+  if (entity === "sharedExpense") {
+    return (await db.get("sharedExpenses", entityId))?.row.description ?? null;
+  }
   return (await db.get("budgets", entityId))?.row.name ?? null;
 }
 

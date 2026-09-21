@@ -33,7 +33,6 @@ export interface TwoFiguresProps {
   meta?: ReactNode;
 }
 
-// The same two-figure shape as Accounts and Home, and for the same reason: there is no net figure.
 export function TwoFigures({ owedToYou, youOwe, meta }: TwoFiguresProps) {
   const t = useTranslations("shared.summary");
   return (

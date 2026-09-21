@@ -1,4 +1,5 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
+import { urlOf } from "@/lib/testing/http";
 import {
   changes as feedChanges,
   openTestVault,
@@ -158,6 +159,55 @@ describe("the shared ledger through the repository", () => {
       "/api/shared-groups?includeArchived=true&limit=100",
       "/api/settlements?limit=100",
     ]);
+  });
+
+  it("follows the cursor of every list, and asks each group for its own expenses", async () => {
+    const page = (data: unknown[], nextCursor: string | null) =>
+      json({
+        data,
+        pagination: {
+          limit: 100,
+          offset: 0,
+          total: data.length,
+          hasMore: nextCursor !== null,
+          nextCursor,
+        },
+      });
+    fetchMock.mockImplementation((input) => {
+      const url = urlOf(input);
+      if (url.includes("cursor=g1")) return Promise.resolve(page([{ ...trip, id: "g2" }], null));
+      if (url.startsWith("/api/shared-groups?")) return Promise.resolve(page([trip], "g1"));
+      if (url.includes("/g1/expenses")) return Promise.resolve(page([dinner], null));
+      return Promise.resolve(page([], null));
+    });
+    setCurrentVault(await openTestVault("u1"));
+
+    const rows = await readSharedLedger();
+
+    expect(rows.groups.map((row) => row.id)).toEqual(["g1", "g2"]);
+    expect(rows.expenses.map((row) => row.id)).toEqual(["s1"]);
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "/api/shared-groups?includeArchived=true&limit=100",
+      "/api/shared-groups?includeArchived=true&limit=100&cursor=g1",
+      "/api/shared-groups/g1/expenses?limit=100",
+      "/api/shared-groups/g2/expenses?limit=100",
+      "/api/settlements?limit=100",
+    ]);
+  });
+
+  // §6: a cursor that does not move is a server that would page for ever.
+  it("stops rather than paging for ever on a cursor that does not move", async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        json({
+          data: [trip],
+          pagination: { limit: 100, offset: 0, total: 1, hasMore: true, nextCursor: "same" },
+        }),
+      ),
+    );
+    setCurrentVault(await openTestVault("u1"));
+
+    await expect(readSharedLedger()).rejects.toThrow(/kept paging/);
   });
 
   it("leaves an expense the feed deleted out of the group's totals", async () => {

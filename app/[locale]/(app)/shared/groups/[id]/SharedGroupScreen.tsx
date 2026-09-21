@@ -2,7 +2,7 @@
 
 import { Calendar, Plus, Receipt, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Avatar } from "@/components/shell/Avatar";
 import { PageHeader } from "@/components/shell/PageHeader";
@@ -39,16 +39,19 @@ import type { SharedExpense, SharedGroup, SharedSplit, Transaction } from "@/typ
 import { TransactionPickerSheet } from "../../TransactionPickerSheet";
 import { WhatChangesSheet } from "../../WhatChangesSheet";
 
-// What a row says about somebody, which is the same thing the figures beside it are saying.
 function useNoteOf(view: GroupView): (person: PartyView) => string {
   const t = useTranslations("shared.group.notes");
   const money = useMoney();
   const dates = useDates();
-  const writeOffs = new Map(
-    view.group.writeOffs.map((one) => [
-      one.expenseId ? `guests:${one.expenseId}` : `contact:${one.contactId}`,
-      one,
-    ]),
+  const writeOffs = useMemo(
+    () =>
+      new Map(
+        view.group.writeOffs.map((one) => [
+          one.expenseId ? `guests:${one.expenseId}` : `contact:${one.contactId}`,
+          one,
+        ]),
+      ),
+    [view.group.writeOffs],
   );
   return (person) => {
     const off = writeOffs.get(person.key);
@@ -91,7 +94,10 @@ function PartyRow({ person, note }: { person: PartyView; note: string }) {
       <RowBody>
         <RowTitle>
           <span>{person.name}</span>
-          <StateBadge state={person.state} />
+          {/* The four states are about money owed to you: somebody who owes you none has none. */}
+          {(person.owesYou > 0 || person.paid > 0 || person.state === "WRITTEN_OFF") && (
+            <StateBadge state={person.state} />
+          )}
         </RowTitle>
         <RowMeta items={[note]} />
       </RowBody>
@@ -421,7 +427,6 @@ function GroupBody({ view }: { view: GroupView }) {
   }
 }
 
-// What the sheet opens on: the split this expense carries today, read back as a draft.
 function draftOf(expense: SharedExpense, view: GroupView) {
   if (!expense.customSplit) return draftFromGroup(view.group);
   return {

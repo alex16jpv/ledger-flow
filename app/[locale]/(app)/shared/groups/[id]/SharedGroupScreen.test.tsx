@@ -131,6 +131,14 @@ describe("SharedGroupScreen", () => {
     expect(screen.getAllByText("Not paid").length).toBeGreaterThan(0);
   });
 
+  it("says it cannot be read rather than drawing an empty group", async () => {
+    fetchMock.mockImplementation(() => Promise.reject(new TypeError("offline")));
+    view();
+
+    expect(await screen.findByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "People" })).not.toBeInTheDocument();
+  });
+
   // A line somebody else paid is not an expense of yours until you settle with them.
   it("says a line somebody else paid is not in your ledger", async () => {
     view();

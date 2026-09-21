@@ -1310,7 +1310,7 @@
       "owesYouWord": "owes you",
       "youOweWord": "you owe",
       "settled": "Settled",
-      "showing": "Showing {shown} of {total} with something open",
+      "showing": "{shown} with something open · {total, plural, one {# person} other {# people}} in all",
       "guests": "{amount} more from guests, in {count, plural, one {# shared group} other {# shared groups}}",
       "add": "Add a person"
     },
@@ -1361,7 +1361,8 @@
       "pickFromTransactions": "Pick from my transactions",
       "picked": "{count} selected · {amount}",
       "pickNone": "None yet",
-      "nothingChanges": "Splitting changes nothing today: an expense keeps counting in full until someone pays you back."
+      "nothingChanges": "Splitting changes nothing today: an expense keeps counting in full until someone pays you back.",
+      "limit": "Up to {contacts} people in all."
     },
     "group": {
       "title": "Shared group",
@@ -1490,7 +1491,8 @@
       "saved": "Split saved",
       "done": "Expense split"
     },
-    "new": "New shared group"
+    "new": "New shared group",
+    "offline": "The section will load when you’re back online. Nothing you add here is lost meanwhile."
   },
   "transactions": {
     "readback": {

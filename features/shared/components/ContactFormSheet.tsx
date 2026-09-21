@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
 import { Sheet, SheetCancel, useUnsavedGuard } from "@/components/ui/Sheet";
@@ -19,6 +20,7 @@ import { randomColorToken } from "@/lib/theme/feature-color";
 import type { Contact } from "@/types/api";
 
 import { useCreateContact, useUpdateContact } from "../hooks";
+import { MAX_CONTACTS } from "../limits";
 import { contactFormSchema, type ContactFormValues } from "../schemas";
 
 export interface ContactFormSheetProps {
@@ -156,6 +158,10 @@ export function ContactFormSheet({ open, onClose, contact, onSaved }: ContactFor
             {...form.register("email")}
           />
         </Field>
+        {/* The limit is said here, never discovered by a save that fails. */}
+        {!contact && (
+          <Alert tone="neutral">{t("shared.form.limit", { contacts: MAX_CONTACTS })}</Alert>
+        )}
         {failure && <p className="text-sm text-danger">{t(failure.messageKey)}</p>}
       </form>
     </Sheet>

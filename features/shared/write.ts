@@ -20,7 +20,6 @@ export function groupDefaultSplit(
   };
 }
 
-// What a new expense inherits, without asking: the group's default over its participants.
 export function draftFromGroup(group: Pick<SyncSharedGroup, "defaultSplit">): SplitDraft {
   const { defaultSplit } = group;
   return {
@@ -37,7 +36,6 @@ export type SplittingGroup = Pick<
   "id" | "participants" | "defaultSplit" | "currency"
 >;
 
-// What the group's default resolves to over an amount, which is what a new expense inherits.
 export function inheritedSplit(
   group: SplittingGroup,
   amount: number,

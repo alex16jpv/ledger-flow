@@ -100,15 +100,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const view = () =>
+  renderWithProviders(
+    <QueryProvider>
+      <ToastProvider>
+        <PersonScreen id={ANA} />
+      </ToastProvider>
+    </QueryProvider>,
+  );
+
 describe("PersonScreen", () => {
   it("says what is open with them, what they have paid, and that they are not an account", async () => {
-    renderWithProviders(
-      <QueryProvider>
-        <ToastProvider>
-          <PersonScreen id={ANA} />
-        </ToastProvider>
-      </QueryProvider>,
-    );
+    view();
 
     expect(await screen.findByText("ana@example.com")).toBeInTheDocument();
     const group = await screen.findByRole("link", { name: /Night out/ });
@@ -116,5 +119,19 @@ describe("PersonScreen", () => {
     expect(group).toHaveTextContent("Paid $20,000 of");
     expect(screen.getByText("Paid you $20,000")).toBeInTheDocument();
     expect(screen.getByText(/A person is not an account/)).toBeInTheDocument();
+  });
+
+  // The figure is the ledger's: a screen that draws $0 while it is coming is a screen that lies.
+  it("never draws a figure before the ledger answers, and says so when it fails", async () => {
+    fetchMock.mockImplementation((input) =>
+      urlOf(input).startsWith("/api/contacts/")
+        ? Promise.resolve(json(ana))
+        : Promise.reject(new TypeError("offline")),
+    );
+    view();
+
+    expect(await screen.findByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByText(/owes you, across/)).not.toBeInTheDocument();
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
 });
