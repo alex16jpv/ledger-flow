@@ -18,7 +18,7 @@ import type {
 
 import { pullChanges } from "../pull";
 import { setCurrentVault } from "./read";
-import { readSharedGroup, readSharedGroups } from "./shared";
+import { readSharedLedger } from "./shared";
 
 const ANA = "01930005-0000-7000-8000-0000000k0001";
 
@@ -100,7 +100,7 @@ async function mirrorOf(seed: Seed): Promise<void> {
   reportOnline(false);
 }
 
-describe("shared groups through the repository", () => {
+describe("the shared ledger through the repository", () => {
   it("works the totals out on every read, the way the endpoint does", async () => {
     await mirrorOf({
       sharedGroups: [trip],
@@ -108,10 +108,10 @@ describe("shared groups through the repository", () => {
       settlements: [anaPays],
     });
 
-    const page = await readSharedGroups();
+    const rows = await readSharedLedger();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(page.data).toHaveLength(1);
-    expect(page.data[0]?.totals).toEqual({
+    expect(rows.groups).toHaveLength(1);
+    expect(rows.groups[0]?.totals).toEqual({
       amount: 100000,
       yourShare: 50000,
       owedToYou: 30000,
@@ -122,18 +122,14 @@ describe("shared groups through the repository", () => {
       dateFrom: dinner.date,
       dateTo: dinner.date,
     });
-    expect(page.data[0]?.status).toBe("OPEN");
+    expect(rows.groups[0]?.status).toBe("OPEN");
   });
 
-  it("leaves an archived group out unless it is asked for, and answers one by id either way", async () => {
+  // Archived groups fold away on the screen, so the section reads them and never asks twice.
+  it("brings the archived groups too", async () => {
     await mirrorOf({ sharedGroups: [trip, closed] });
 
-    expect((await readSharedGroups()).data.map((row) => row.id)).toEqual(["g1"]);
-    expect((await readSharedGroups({ includeArchived: true })).data.map((row) => row.id)).toEqual([
-      "g1",
-      "g2",
-    ]);
-    expect((await readSharedGroup("g2")).name).toBe("Bogota");
+    expect((await readSharedLedger()).groups.map((row) => row.id)).toEqual(["g1", "g2"]);
   });
 
   it("reads SETTLED once nobody is left owing", async () => {
@@ -143,22 +139,25 @@ describe("shared groups through the repository", () => {
       settlements: [settlement({ id: "p1", counterparty: anaPays.counterparty, collected: 50000 })],
     });
 
-    const page = await readSharedGroups();
-    expect(page.data[0]?.status).toBe("SETTLED");
-    expect(page.data[0]?.totals.owedToYou).toBe(0);
+    const rows = await readSharedLedger();
+    expect(rows.groups[0]?.status).toBe("SETTLED");
+    expect(rows.groups[0]?.totals.owedToYou).toBe(0);
   });
 
   // O-F2b: the server serves only until the first pull has drained.
-  it("asks the server while the mirror cannot answer", async () => {
+  it("asks the server while the mirror cannot answer, and takes every group with it", async () => {
     const served: SharedGroupList = {
       data: [],
-      pagination: { limit: 50, offset: 0, total: 0, hasMore: false, nextCursor: null },
+      pagination: { limit: 100, offset: 0, total: 0, hasMore: false, nextCursor: null },
     };
-    fetchMock.mockResolvedValue(json(served));
+    fetchMock.mockImplementation(() => Promise.resolve(json(served)));
     setCurrentVault(await openTestVault("u1"));
 
-    await readSharedGroups();
-    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/shared-groups?limit=50");
+    await readSharedLedger();
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "/api/shared-groups?includeArchived=true&limit=100",
+      "/api/settlements?limit=100",
+    ]);
   });
 
   it("leaves an expense the feed deleted out of the group's totals", async () => {
@@ -169,6 +168,8 @@ describe("shared groups through the repository", () => {
     });
 
     // A deleted expense counts in no total, exactly as it leaves every other figure.
-    expect((await readSharedGroups()).data[0]?.totals.amount).toBe(100000);
+    const rows = await readSharedLedger();
+    expect(rows.groups[0]?.totals.amount).toBe(100000);
+    expect(rows.expenses.map((row) => row.id)).toEqual(["s1"]);
   });
 });

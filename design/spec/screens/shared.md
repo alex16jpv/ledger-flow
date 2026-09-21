@@ -66,7 +66,9 @@ crosses all of them. What it carries is the net and the word for its direction.
 it cost, your share of it, and a bar of **what has come back to you, of what people owe you net of
 what you owe them** — the same quantity in every row. A group where nothing is owed to you has **no
 bar at all**, only a badge saying what you owe: a bar that silently reverses direction is worse than
-no bar. Settled groups fold away like archived accounts do.
+no bar. Settled groups fold away like archived accounts do, and **an archived group folds away with
+them**, saying so on its row: it is the only way back into one, and there is no second fold for a
+state that is already read as "nothing open here".
 
 The row leads with what the outing **cost**, with your share underneath — the same shape as a
 Transactions row, so the two lists read alike. The third figure, what still counts as yours, leads the
@@ -314,15 +316,14 @@ deleted, and the group stays readable.
 - **Empty** (`#empty`) — one sentence explaining what a shared group is, and the two ways in. With
   nothing at all the two faces are not drawn: there is nothing to switch between, and a segmented
   control over two empty lists is a control that does nothing.
-- **Loading** — the list skeleton of [states.md](states.md), with the two summary figures as
-  skeletons too: they are the part somebody came to read.
-- **Error** — the screen's error with its reference, and, offline with no local copy, the honest
-  empty state Transactions uses.
+- **Loading** (`#loading`) — the list skeleton of [states.md](states.md), with the two summary figures
+  as skeletons too: they are the part somebody came to read.
+- **Error** (`#error`) — the screen's error with its reference, and, offline with no local copy, the
+  honest empty state Transactions uses.
 
-**Loading and error are written here and not yet drawn**, and neither are the `Percent` and `Exact`
-modes of the split sheet, which are the same sheet with a different unit. Their plates are made by the
-session that builds the screen, before its code, which is how every other screen's states arrived
-(D-36).
+**The `Percent` and `Exact` modes of the split sheet are still not drawn**: they are the same sheet
+with a different unit, and their plates are made by the session that builds that sheet, before its
+code, which is how every other screen's states arrived (D-36).
 
 Offline, everything in this section is projected from the local mirror like every other figure, and
 whatever includes an unconfirmed write carries the projection mark (component 24). What is shared with

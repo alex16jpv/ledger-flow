@@ -4,6 +4,8 @@ import { ApiError, NetworkError } from "@/lib/api/errors";
 import { connectivityStore } from "@/lib/network/connectivity";
 
 export const DEFAULT_STALE_TIME_MS = 30_000;
+// Reference data changes only through our own mutations, which invalidate it: a long staleTime saves round trips.
+export const REFERENCE_STALE_TIME_MS = 5 * 60 * 1000;
 export const MAX_RETRY_DELAY_MS = 8_000;
 
 export function retryDelayWithJitter(attempt: number): number {

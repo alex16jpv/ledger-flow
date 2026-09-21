@@ -1,9 +1,10 @@
-import type { Account, Category, SyncBudget, SyncTransaction } from "@/types/api";
+import type { Account, Category, Contact, SyncBudget, SyncTransaction } from "@/types/api";
 
 import {
   accountRecord,
   budgetRecord,
   categoryRecord,
+  contactRecord,
   type OutboxEntity,
   type OutboxOperation,
   PROFILE_KEY,
@@ -25,6 +26,7 @@ const STORE_OF = {
   category: "categories",
   transaction: "transactions",
   budget: "budgets",
+  contact: "contacts",
 } as const satisfies Record<OutboxEntity, string>;
 
 const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
@@ -67,6 +69,8 @@ export async function reconcileRow(
     await tx.objectStore("categories").put(categoryRecord(row as Category, kept as Category));
   } else if (entity === "budget") {
     await tx.objectStore("budgets").put(budgetRecord(row as SyncBudget, kept as SyncBudget));
+  } else if (entity === "contact") {
+    await tx.objectStore("contacts").put(contactRecord(row as Contact, kept as Contact));
   } else {
     await tx
       .objectStore("transactions")

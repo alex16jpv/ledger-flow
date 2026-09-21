@@ -91,7 +91,7 @@ export interface TransactionRecord extends MirrorRecord<SyncTransaction> {
   pendingReview?: 1;
 }
 
-export type OutboxEntity = "account" | "category" | "transaction" | "budget";
+export type OutboxEntity = "account" | "category" | "transaction" | "budget" | "contact";
 export type OutboxStatus = "pending" | "sending" | "conflict" | "failed";
 
 export interface OutboxOperation {
@@ -193,8 +193,14 @@ export function budgetRecord(row: SyncBudget, server?: SyncBudget): BudgetRecord
   };
 }
 
-export function contactRecord(row: Contact): ContactRecord {
-  return { id: row.id, row, updatedAt: row.updatedAt, archived: row.archivedAt ? 1 : 0 };
+export function contactRecord(row: Contact, server?: Contact): ContactRecord {
+  return {
+    id: row.id,
+    row,
+    updatedAt: row.updatedAt,
+    archived: row.archivedAt ? 1 : 0,
+    ...(server ? { server } : {}),
+  };
 }
 
 export function sharedGroupRecord(row: SyncSharedGroup): SharedGroupRecord {

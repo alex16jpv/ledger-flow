@@ -4,6 +4,7 @@ import type {
   Budget,
   BudgetAmountOverrideInput,
   Category,
+  Contact,
   SyncBudget,
   SyncTransaction,
   Transaction,
@@ -91,7 +92,7 @@ export async function serverBaseline(
 ): Promise<MirrorRow | undefined> {
   if (entity === "budget") return budgetBaseline(tx, raw as Budget);
   if (entity === "transaction") return toSyncRow(raw as Transaction);
-  return raw as Account | Category;
+  return raw as Account | Category | Contact;
 }
 
 async function confirmRow(tx: WriteTransaction, entity: OutboxEntity, raw: unknown): Promise<void> {
@@ -171,6 +172,34 @@ export const ROUTES: Record<RouteKey, Route> = {
         ...ifMatch(guard),
       }),
     confirm: (tx, row) => confirmRow(tx, "category", row),
+  }),
+
+  "contact:create": route<Contact>({
+    send: ({ payload }) => api<Contact>("/contacts", { method: "POST", body: payload.body }),
+    confirm: (tx, row) => confirmRow(tx, "contact", row),
+  }),
+  "contact:update": route<Contact>({
+    send: ({ entityId, payload }, guard) =>
+      api<Contact>(`/contacts/${entityId}`, {
+        method: "PUT",
+        body: payload.body,
+        ...ifMatch(guard),
+      }),
+    confirm: (tx, row) => confirmRow(tx, "contact", row),
+  }),
+  "contact:archive": route<unknown>({
+    send: ({ entityId }, guard) =>
+      api<unknown>(`/contacts/${entityId}`, { method: "DELETE", ...ifMatch(guard) }),
+    confirm: confirmRemoval,
+  }),
+  "contact:restore": route<Contact>({
+    send: ({ entityId, payload }, guard) =>
+      api<Contact>(`/contacts/${entityId}/restore`, {
+        method: "POST",
+        body: payload.body,
+        ...ifMatch(guard),
+      }),
+    confirm: (tx, row) => confirmRow(tx, "contact", row),
   }),
 
   "transaction:create": route<Transaction>({

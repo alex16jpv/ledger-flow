@@ -4391,6 +4391,35 @@ cover` is set once in the root layout for the standalone display.
   arithmetic and reads identically with no network. **Reversed in part on 2026-09-18 (T-96):** it no
   longer ends in "Your total balance does not change" — see that entry.
 
+## 2026-09-21 · The Shared section reads one ledger, not one list per screen (T-121)
+
+- **Context:** a payment is imputed **per counterparty across every group** (T-120), and the API
+  publishes no per-person figure anywhere: `GET /shared-groups` answers a group's `totals` and
+  `status`, and nothing answers what one person owes you in all. Three screens — the two faces of the
+  section, a group and a person — need the same arithmetic over the same rows.
+- **Decision:** one read, `readSharedLedger()`, brings **every group, every live expense and every
+  live payment**, and `features/shared/ledger.ts` turns them into what each screen draws with the
+  parity-tested `deriveShared`. From the copy that is four `getAll`s in one pass; with no copy yet it
+  is the groups drained, then each group's expenses and the payments. The lists then page **on the
+  screen** — the settled ones fold away, and the row count is said out loud — rather than against the
+  server, which could not answer the question anyway.
+- **Alternatives:** a paged `GET /shared-groups` per face plus `GET /shared-groups/{id}/expenses` per
+  group, reading the server's own `share.collected`. It is cheaper with no copy and it is what
+  `readSharedGroups` was written for in T-120, but it cannot answer the People face at all, and it
+  would leave **two** arithmetics — the server's rollup and the device's — in a section whose whole
+  point is that a queued payment moves the figures before the server has seen it (T-123).
+  `readSharedGroups` and `readSharedGroup` are replaced by the ledger read for that reason.
+- **Consequence:** the section is one query key. A device with no local copy pays one request per
+  group on the first read of the section, which is the case the mirror exists to make rare; if that
+  ever becomes the common path, the answer is a figure the server publishes, not a second
+  arithmetic here. `contact` becomes the **fifth outbox entity**, so a person can be added with no
+  network like an account or a category, and the change feed now reconciles contacts through the
+  outbox instead of writing them straight to the store.
+- **The two detail routes are nested** — `/shared/groups/[id]` and `/shared/people/[id]` — so
+  `templatePath`, `detailRouteId` and `namesUnknownRow` find the id wherever the template puts it
+  instead of assuming the second segment. An archived group folds away with the settled ones and says
+  so on its row: it is the only way back into one.
+
 ## 2026-09-21 · The shared layer is stored as the fact and derived on every read (T-120)
 
 - **Context:** the backend answers a shared group's `totals` and `status` by working them out on every

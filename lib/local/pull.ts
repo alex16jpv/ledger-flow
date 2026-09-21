@@ -6,7 +6,6 @@ import type { VaultHandle } from "./db";
 import { writeTransaction } from "./outbox/queue";
 import { reconcileContext, reconcileRow } from "./outbox/reconcile";
 import {
-  contactRecord,
   PROFILE_KEY,
   profileRecord,
   settlementRecord,
@@ -86,11 +85,11 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
     news ||= await isNews(tx.objectStore("budgets"), row.id, row.updatedAt);
     await reconcileRow(tx, "budget", row.id, row, context);
   }
-  // The shared layer has no queue of its own yet, so there is nothing to reproject over these rows.
   for (const row of changes.contacts) {
     news ||= await isNews(tx.objectStore("contacts"), row.id, row.updatedAt);
-    await tx.objectStore("contacts").put(contactRecord(row));
+    await reconcileRow(tx, "contact", row.id, row, context);
   }
+  // A group, an expense and a payment have no queue of their own yet: nothing to reproject on them.
   for (const row of changes.sharedGroups) {
     news ||= await isNews(tx.objectStore("sharedGroups"), row.id, row.updatedAt);
     await tx.objectStore("sharedGroups").put(sharedGroupRecord(row));

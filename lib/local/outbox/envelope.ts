@@ -9,6 +9,7 @@ export const OUTBOX_ACTIONS = {
   category: ["create", "update", "archive", "restore"],
   transaction: ["create", "quickAdd", "update", "delete"],
   budget: ["create", "update", "archive", "restore", "setOverride", "clearOverride"],
+  contact: ["create", "update", "archive", "restore"],
 } as const satisfies Record<OutboxEntity, readonly string[]>;
 
 export type OutboxAction<E extends OutboxEntity = OutboxEntity> =

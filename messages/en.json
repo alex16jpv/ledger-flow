@@ -60,11 +60,13 @@
     "add": "Add",
     "budgets": "Budgets",
     "accounts": "Accounts",
+    "shared": "Shared",
     "stats": "Stats",
     "categories": "Categories",
     "settings": "Settings",
     "more": "More",
     "moreStats": "Where the money went",
+    "moreShared": "{amount} owed to you",
     "moreSettings": "Profile, currency, appearance",
     "search": "Search",
     "pendingCount": "{count, plural, one {# to review} other {# to review}}"
@@ -574,7 +576,8 @@
         "account": "account",
         "category": "category",
         "transaction": "movement",
-        "budget": "budget"
+        "budget": "budget",
+        "contact": "person"
       },
       "actions": {
         "create": "This device asked to create this {what}.",
@@ -1285,6 +1288,129 @@
       "name": "New name",
       "confirm": "Restore as “{name}”",
       "confirmEmpty": "Restore"
+    }
+  },
+  "shared": {
+    "title": "Shared",
+    "faces": {
+      "label": "What to show",
+      "people": "People",
+      "groups": "Shared groups"
+    },
+    "summary": {
+      "owedToYou": "Owed to you",
+      "youOwe": "You owe",
+      "counts": "{open, plural, one {# person} other {# people}} with something open · {contacts, plural, one {# contact} other {# contacts}}"
+    },
+    "people": {
+      "owesYou": "Owes you",
+      "youOwe": "You owe",
+      "owesYouWord": "owes you",
+      "youOweWord": "you owe",
+      "settled": "Settled",
+      "showing": "Showing {shown} of {total} with something open",
+      "guests": "{amount} more from guests, in {count, plural, one {# shared group} other {# shared groups}}",
+      "add": "Add a person"
+    },
+    "groups": {
+      "people": "{count, plural, one {# person} other {# people}}",
+      "yourShare": "Your share {amount}",
+      "bar": "{paid} paid of {total}",
+      "barLabel": "Paid back of {name}",
+      "youOwe": "You owe {amount}",
+      "settled": "Settled",
+      "settledBadge": "Settled",
+      "archived": "Archived"
+    },
+    "empty": {
+      "title": "Nothing shared yet",
+      "body": "A shared group is one outing or one trip: you add the expenses, say who was in, and Ledger Flow keeps track of who has paid you back."
+    },
+    "states": {
+      "NOT_PAID": "Not paid",
+      "PARTIALLY_PAID": "Partially paid",
+      "PAID": "Paid",
+      "WRITTEN_OFF": "Written off"
+    },
+    "form": {
+      "title": "New person",
+      "editTitle": "Edit person",
+      "create": "Add person",
+      "created": "Person added",
+      "saved": "Changes saved",
+      "name": "Name",
+      "namePlaceholder": "Beto Cano",
+      "color": "Color",
+      "email": "Email",
+      "emailPlaceholder": "beto@example.com",
+      "emailHelp": "Only so you can invite them to a shared group later. Nothing is sent today.",
+      "duplicate": "You already have an active person named “{name}”. Names are case-insensitive."
+    },
+    "group": {
+      "title": "Shared group",
+      "you": "You",
+      "share": "share",
+      "people": "People",
+      "expenses": "Expenses · {count}",
+      "lead": "counts as yours · total {total} · your share {share}",
+      "gap": "{owed} is still owed to you.",
+      "gapWithWriteOff": "{owed} is still owed to you, and {writtenOff} was written off — that part stays counted as yours.",
+      "status": {
+        "OPEN": "open",
+        "SETTLED": "settled"
+      },
+      "defaultSplit": {
+        "EQUAL": "Equal split by default",
+        "PERCENT": "Percentage split by default"
+      },
+      "yourShare": "Your share {amount}",
+      "paidBy": "{name} paid",
+      "customSplit": "Custom split",
+      "youPaid": "you paid",
+      "notInYourLedger": "not in your ledger",
+      "noDescription": "Expense",
+      "missing": {
+        "title": "This shared group doesn’t exist.",
+        "body": "It may have been deleted, or this device has not seen it yet."
+      },
+      "noExpenses": {
+        "title": "No expenses yet",
+        "body": "A shared group holds the expenses of one outing: the ones you already recorded, or new ones."
+      },
+      "notes": {
+        "yourPart": "You put in {amount} of the {total}",
+        "nothingFromYou": "Nothing to collect from yourself",
+        "writtenOff": "Written off {date} · the {amount} stays yours",
+        "ahead": "{amount} ahead of what they owe",
+        "bothWays": "Owes you {owed} · you owe them {owe}",
+        "youOwe": "You owe them {amount}",
+        "paid": "Paid in full",
+        "partly": "Paid {paid} · {open} still owed",
+        "notPaid": "Nothing paid yet · owes you {amount}"
+      }
+    },
+    "person": {
+      "title": "Person",
+      "owesYou": "owes you, across {count, plural, one {# shared group} other {# shared groups}}",
+      "youOwe": "you owe, across {count, plural, one {# shared group} other {# shared groups}}",
+      "groups": "Shared groups",
+      "paidOf": "Paid {paid} of {share}",
+      "payments": "Payments",
+      "paidYou": "Paid you {amount}",
+      "youPaid": "You paid {amount}",
+      "outsideApp": "cash outside the app",
+      "notAnAccount": "A person is not an account: they have no balance of their own and never appear among your accounts, in a transfer, or in Stats by account. The money moves in your accounts, as it always has.",
+      "edit": "Edit",
+      "restore": "Restore",
+      "restored": "Person restored",
+      "archived": "Person archived",
+      "isArchived": "This person is archived: they are out of the pickers and their name is free again. The groups and the payments that name them stay readable.",
+      "archive": {
+        "label": "Archive",
+        "title": "Archive {name}?",
+        "body": "The groups and the payments that name them stay readable and no figure moves. You can restore them anytime.",
+        "confirm": "Archive"
+      }
     }
   },
   "transactions": {

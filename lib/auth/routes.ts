@@ -17,6 +17,7 @@ const APP_PREFIXES = [
   "/onboarding",
   "/transactions",
   "/accounts",
+  "/shared",
   "/categories",
   "/budgets",
   "/stats",

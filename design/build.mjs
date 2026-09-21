@@ -4038,6 +4038,27 @@ const sharedEmpty = () =>
 <p class="small muted" style="max-width:34ch;margin:0">A shared group is one outing or one trip: you add the expenses, say who was in, and Ledger Flow keeps track of who has paid you back.</p>
 <div class="hstack" style="gap:8px;padding-top:8px"><button class="btn primary">${iconSvg("plus", "sm")}New shared group</button><button class="btn secondary">Add a person</button></div></div>`);
 
+const sharedLoading = () => {
+  const rows = range(0, 4)
+    .map(
+      () =>
+        '<div class="row" style="cursor:default"><span class="skeleton" style="width:36px;height:36px;border-radius:999px"></span><span class="body" style="gap:6px"><span class="skeleton" style="height:12px;width:40%"></span><span class="skeleton" style="height:10px;width:60%"></span></span><span class="skeleton" style="height:12px;width:72px"></span></div>',
+    )
+    .join("");
+  return sharedScreen(
+    `<div class="skeleton" style="height:40px;border-radius:10px"></div>
+<div class="skeleton" style="height:96px;border-radius:14px"></div>
+<div class="list card flush">${rows}</div>`,
+  );
+};
+
+const sharedError = () =>
+  sharedScreen(`<div class="empty" style="padding-top:64px">${tile("circle-alert", "RED", "lg")}
+<span class="h3">We couldn\u2019t load Shared</span>
+<p class="small muted" style="margin:0;max-width:280px">The server didn\u2019t respond (503). Nothing is lost; try again in a few seconds.</p>
+<button class="btn secondary" style="margin-top:8px">${iconSvg("refresh-cw", "sm")}Retry</button>
+<span class="xs faint mono">Reference: 8c1f4e2a-\u2026-3b7d</span></div>`);
+
 const GROUP_LINES = [
   ["Flights", "plane", "CYAN", "Aug 29", 1200000, 300000],
   ["Hotel", "bed", "BROWN", "Aug 30", 1400000, 350000],
@@ -4902,6 +4923,20 @@ const PAGES = [
         "The first thing anyone sees. It explains what a shared group is in one sentence and offers the two ways in.",
         sharedEmpty(),
         { added: "2026-09-20" },
+      ),
+      plate(
+        "loading",
+        "Loading",
+        "The silhouette of the section: the control, the two figures and the rows. The two figures are skeletons too \u2014 they are the part somebody came to read.",
+        sharedLoading(),
+        { added: "2026-09-21" },
+      ),
+      plate(
+        "error",
+        "The section cannot be read",
+        "The screen\u2019s error with its reference. Offline with no copy on the device it is the honest empty state instead, the one Transactions uses.",
+        sharedError(),
+        { added: "2026-09-21" },
       ),
       plate(
         "new-person",

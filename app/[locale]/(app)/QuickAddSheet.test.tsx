@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { urlOf } from "@/lib/testing/http";
 import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
 
@@ -23,11 +24,6 @@ const category = (id: string, name: string) => ({
   createdAt: "",
   updatedAt: "",
 });
-
-function urlOf(input: string | URL | Request): string {
-  if (typeof input === "string") return input;
-  return input instanceof URL ? input.href : input.url;
-}
 
 const CARD_MAIN = [
   {

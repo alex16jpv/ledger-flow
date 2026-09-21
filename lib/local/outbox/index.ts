@@ -31,6 +31,7 @@ export {
   serverStamp,
   TEXT_FIELDS,
 } from "./conflict";
+export { archiveContact, createContact, restoreContact, updateContact } from "./contacts";
 export {
   AUTO_MERGE_ATTEMPTS,
   BACKOFF_MAX_MS,

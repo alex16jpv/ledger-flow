@@ -60,11 +60,13 @@
     "add": "Registrar",
     "budgets": "Presupuestos",
     "accounts": "Cuentas",
+    "shared": "Compartidos",
     "stats": "Estadísticas",
     "categories": "Categorías",
     "settings": "Ajustes",
     "more": "Más",
     "moreStats": "En qué se fue el dinero",
+    "moreShared": "{amount} que te deben",
     "moreSettings": "Perfil, moneda, apariencia",
     "search": "Buscar",
     "pendingCount": "{count, plural, one {# por revisar} other {# por revisar}}"
@@ -574,7 +576,8 @@
         "account": "cuenta",
         "category": "categoría",
         "transaction": "movimiento",
-        "budget": "presupuesto"
+        "budget": "presupuesto",
+        "contact": "persona"
       },
       "actions": {
         "create": "Este dispositivo pidió crear este {what}.",
@@ -1285,6 +1288,129 @@
       "name": "Nuevo nombre",
       "confirm": "Restaurar como «{name}»",
       "confirmEmpty": "Restaurar"
+    }
+  },
+  "shared": {
+    "title": "Compartidos",
+    "faces": {
+      "label": "Qué mostrar",
+      "people": "Personas",
+      "groups": "Grupos compartidos"
+    },
+    "summary": {
+      "owedToYou": "Te deben",
+      "youOwe": "Debes",
+      "counts": "{open, plural, one {# persona} other {# personas}} con algo abierto · {contacts, plural, one {# contacto} other {# contactos}}"
+    },
+    "people": {
+      "owesYou": "Te deben",
+      "youOwe": "Debes",
+      "owesYouWord": "te debe",
+      "youOweWord": "le debes",
+      "settled": "Saldadas",
+      "showing": "Mostrando {shown} de {total} con algo abierto",
+      "guests": "{amount} más de invitados, en {count, plural, one {# grupo compartido} other {# grupos compartidos}}",
+      "add": "Añadir una persona"
+    },
+    "groups": {
+      "people": "{count, plural, one {# persona} other {# personas}}",
+      "yourShare": "Tu parte {amount}",
+      "bar": "{paid} pagado de {total}",
+      "barLabel": "Devuelto de {name}",
+      "youOwe": "Debes {amount}",
+      "settled": "Saldados",
+      "settledBadge": "Saldado",
+      "archived": "Archivado"
+    },
+    "empty": {
+      "title": "Todavía no compartes nada",
+      "body": "Un grupo compartido es una salida o un viaje: añades los gastos, dices quién estaba y Ledger Flow lleva la cuenta de quién te ha pagado."
+    },
+    "states": {
+      "NOT_PAID": "Sin pagar",
+      "PARTIALLY_PAID": "Pagado en parte",
+      "PAID": "Pagado",
+      "WRITTEN_OFF": "Dado por perdido"
+    },
+    "form": {
+      "title": "Nueva persona",
+      "editTitle": "Editar persona",
+      "create": "Añadir persona",
+      "created": "Persona añadida",
+      "saved": "Cambios guardados",
+      "name": "Nombre",
+      "namePlaceholder": "Beto Cano",
+      "color": "Color",
+      "email": "Correo",
+      "emailPlaceholder": "beto@example.com",
+      "emailHelp": "Solo para poder invitarle a un grupo compartido más adelante. Hoy no se envía nada.",
+      "duplicate": "Ya tienes una persona activa llamada «{name}». Los nombres no distinguen mayúsculas."
+    },
+    "group": {
+      "title": "Grupo compartido",
+      "you": "Tú",
+      "share": "parte",
+      "people": "Personas",
+      "expenses": "Gastos · {count}",
+      "lead": "cuenta como tuyo · total {total} · tu parte {share}",
+      "gap": "Todavía te deben {owed}.",
+      "gapWithWriteOff": "Todavía te deben {owed}, y {writtenOff} se dio por perdido: esa parte sigue contando como tuya.",
+      "status": {
+        "OPEN": "abierto",
+        "SETTLED": "saldado"
+      },
+      "defaultSplit": {
+        "EQUAL": "Por defecto, a partes iguales",
+        "PERCENT": "Por defecto, por porcentaje"
+      },
+      "yourShare": "Tu parte {amount}",
+      "paidBy": "Pagó {name}",
+      "customSplit": "Reparto propio",
+      "youPaid": "lo pagaste tú",
+      "notInYourLedger": "no está en tus movimientos",
+      "noDescription": "Gasto",
+      "missing": {
+        "title": "Este grupo compartido no existe.",
+        "body": "Puede que se haya borrado, o que este dispositivo todavía no lo haya visto."
+      },
+      "noExpenses": {
+        "title": "Todavía no hay gastos",
+        "body": "Un grupo compartido guarda los gastos de una salida: los que ya registraste o gastos nuevos."
+      },
+      "notes": {
+        "yourPart": "Pusiste {amount} de los {total}",
+        "nothingFromYou": "No hay nada que cobrarte a ti",
+        "writtenOff": "Dado por perdido el {date} · los {amount} siguen siendo tuyos",
+        "ahead": "{amount} de más sobre lo que debe",
+        "bothWays": "Te debe {owed} · le debes {owe}",
+        "youOwe": "Le debes {amount}",
+        "paid": "Pagado del todo",
+        "partly": "Pagó {paid} · faltan {open}",
+        "notPaid": "Todavía no ha pagado nada · te debe {amount}"
+      }
+    },
+    "person": {
+      "title": "Persona",
+      "owesYou": "te debe, en {count, plural, one {# grupo compartido} other {# grupos compartidos}}",
+      "youOwe": "le debes, en {count, plural, one {# grupo compartido} other {# grupos compartidos}}",
+      "groups": "Grupos compartidos",
+      "paidOf": "Pagó {paid} de {share}",
+      "payments": "Pagos",
+      "paidYou": "Te pagó {amount}",
+      "youPaid": "Le pagaste {amount}",
+      "outsideApp": "efectivo fuera de la app",
+      "notAnAccount": "Una persona no es una cuenta: no tiene saldo propio y nunca aparece entre tus cuentas, en una transferencia ni en las estadísticas por cuenta. El dinero se mueve en tus cuentas, como siempre.",
+      "edit": "Editar",
+      "restore": "Restaurar",
+      "restored": "Persona restaurada",
+      "archived": "Persona archivada",
+      "isArchived": "Esta persona está archivada: sale de los selectores y su nombre vuelve a estar libre. Los grupos y los pagos que la nombran se siguen leyendo.",
+      "archive": {
+        "label": "Archivar",
+        "title": "¿Archivar a {name}?",
+        "body": "Los grupos y los pagos que la nombran se siguen leyendo y ninguna cifra se mueve. Puedes restaurarla cuando quieras.",
+        "confirm": "Archivar"
+      }
     }
   },
   "transactions": {

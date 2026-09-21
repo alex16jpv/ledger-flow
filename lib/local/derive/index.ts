@@ -19,6 +19,7 @@ export {
   type LedgerExpense,
   type LedgerGroup,
   type LedgerSettlement,
+  partyKey,
   type PersonState,
   type SharedGroupView,
   type SharedLedger,

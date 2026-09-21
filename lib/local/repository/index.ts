@@ -13,6 +13,13 @@ export {
   readCategoriesPage,
   readCategory,
 } from "./categories";
+export {
+  CONTACT_PAGE_LIMIT,
+  type ContactListParams,
+  readContact,
+  readContacts,
+  readContactsPage,
+} from "./contacts";
 export { readMirrorProfile } from "./profile";
 export {
   currentVault,
@@ -25,12 +32,7 @@ export {
   vaultCanAnswer,
   vaultReady,
 } from "./read";
-export {
-  readSharedGroup,
-  readSharedGroups,
-  SHARED_GROUP_PAGE_LIMIT,
-  type SharedGroupListParams,
-} from "./shared";
+export { readSharedLedger, type SharedLedgerRows } from "./shared";
 export { readSpending, type SpendingQuery } from "./stats";
 export {
   readTransaction,
