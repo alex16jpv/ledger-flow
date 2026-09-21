@@ -193,3 +193,53 @@ test("adding somebody to a group that exists shows the whole result before it ha
   await expect(page.getByText("Shared group saved")).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Cartagena, the trip" })).toBeVisible();
 });
+
+test("recording a new expense from inside the group writes the movement and the line at once", async ({
+  page,
+  request,
+}) => {
+  await signUp(page, request);
+  // An account to spend from, and nothing recorded yet: the group is made before the expense exists.
+  await anExpense(request, 10_000, "Coffee");
+
+  await page.goto("/shared");
+  await page.getByRole("button", { name: "Add a person" }).click();
+  await page.getByPlaceholder("Beto Cano").fill("Ana Ruiz");
+  await page.getByRole("button", { name: "Add person" }).click();
+  await expect(page.getByText("Person added")).toBeVisible();
+
+  await page.getByRole("link", { name: "New shared group" }).first().click();
+  await page.getByPlaceholder("Cartagena trip").fill("Night out");
+  await page.getByRole("button", { name: "Add a person" }).click();
+  await page.getByRole("checkbox", { name: /Ana Ruiz/ }).check({ force: true });
+  await page.getByRole("button", { name: "Add 1" }).click();
+  await page.getByRole("button", { name: "Create shared group" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Night out" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Add expense" }).click();
+  await page.getByRole("button", { name: "Record a new expense" }).click();
+
+  // The form knows the group, says the split it will inherit, and offers no type to choose.
+  await expect(page.getByText(/This goes into Night out/)).toContainText(
+    "split equally between 2 people",
+  );
+  await expect(page.getByRole("group", { name: "Type" })).toHaveCount(0);
+  await page.getByRole("textbox", { name: "Amount" }).fill("120000");
+  await page.getByRole("button", { name: /^Account/ }).click();
+  await page.getByRole("option", { name: /Bancolombia Coffee/ }).click();
+  await page.getByRole("textbox", { name: /^Description/ }).fill("Beach club");
+  await expectNoAxeViolations(page);
+  await page.getByRole("button", { name: "Save and add to the group" }).click();
+
+  // Back in the group, with the line split by the group's default and nothing else asked.
+  await expect(page.getByRole("heading", { level: 2, name: "Night out" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Expenses · 1" })).toBeVisible();
+  await expect(page.getByText("Beach club")).toBeVisible();
+  await expect(page.getByText(/counts as yours/)).toContainText("total $120,000");
+  await expect(page.getByText(/counts as yours/)).toContainText("your share $60,000");
+  await expect(page.getByText("Nothing paid yet · owes you $60,000")).toBeVisible();
+
+  // And it is a movement of yours like any other, with its shared card on it.
+  await page.goto("/transactions");
+  await expect(page.getByText("Your share $60,000")).toBeVisible();
+});

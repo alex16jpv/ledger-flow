@@ -102,9 +102,10 @@ async function projectExpense(
   await store.put(sharedExpenseRecord(next, previous ? (previous.server ?? previous.row) : next));
   const guarded = previous !== undefined && !(await unsent(tx, "sharedExpense", id));
   const unstamp = transactionId === undefined ? undefined : await stamp(tx, transactionId, next);
-  // The expense is posted under its group: a group the server has not seen yet has to go first.
+  // The expense is posted under its group and names the movement: both go before it.
   const dependsOn = await dependenciesOf(tx, [
     { entity: "sharedGroup" as const, id: next.groupId },
+    { entity: "transaction" as const, id: transactionId },
   ]);
   return {
     ...(guarded ? { baseUpdatedAt: previous.updatedAt } : {}),

@@ -1461,12 +1461,14 @@
     },
     "pickExpenses": {
       "title": "Pick from my transactions",
+      "titleInGroup": "Add expense",
       "search": "Search description, note or tag",
       "add": "Add {count} · {amount}",
       "loadMore": "Load more",
       "none": "Nothing to add: every expense you have is already in a shared group, or none matches what you typed.",
       "noDescription": "Expense",
-      "failed": "The list could not be read. Try again in a moment."
+      "failed": "The list could not be read. Try again in a moment.",
+      "recordNew": "Record a new expense"
     },
     "whatChanges": {
       "title": "{count, plural, one {Add # transaction to {name}?} other {Add # transactions to {name}?}}",
@@ -1678,7 +1680,27 @@
         "hours": "{count, plural, one {This device’s clock is # hour ahead of the server.} other {This device’s clock is # hours ahead of the server.}}",
         "refused": "Dates more than 24 hours in the future will be refused."
       },
-      "dateLimit": "Days after tomorrow are not available: the server refuses dates more than 24 hours ahead."
+      "dateLimit": "Days after tomorrow are not available: the server refuses dates more than 24 hours ahead.",
+      "inGroup": {
+        "notice": {
+          "EQUAL": "This goes into {name}, split equally between {count} people.",
+          "PERCENT": "This goes into {name}, split between {count} people by the percentages it sets."
+        },
+        "back": "Back to Shared",
+        "save": "Save and add to the group",
+        "saved": "Added to {name}",
+        "archived": {
+          "title": "{name} is archived",
+          "body": "An archived shared group is read, not worked: nothing is added to it until it is restored. What you record here would have nowhere to go.",
+          "open": "Open the group"
+        },
+        "halfSaved": {
+          "title": "The movement is saved. The group did not take it.",
+          "retry": "Add it to the group again",
+          "open": "Open {name}",
+          "note": "Nothing is lost either way: a movement that stays out of the group is listed again by its own Add expense, like any other."
+        }
+      }
     },
     "list": {
       "title": "Transactions",

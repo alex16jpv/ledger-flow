@@ -91,6 +91,25 @@ context, then the bar of what has been collected, then the one sentence that exp
 still owed and what was written off. Then `Settle up` as the one primary action, and under it
 `Add expense`, `Add people`, `Edit` and `Archive`.
 
+**`Add expense` has two ways in and they are one sheet** (`#record-a-new-expense`). It opens the list of
+your expenses that are not in a group yet, and under that list, `Record a new expense` — the same place
+the contact sheet puts `New person`, and for the same reason: a picker whose answer is not there yet
+offers to create it instead of sending you off to find it. **The sheet is then called `Add expense`,
+not `Pick from my transactions`**, for the reason the quick sheet stopped being called `Add expense`
+when it grew the other two types: a title narrower than what the sheet does teaches the wrong thing.
+Opened from the form that creates a group, where there is nothing to record into, it only picks and
+says so. It leaves for the transaction form **knowing the group**, and what it records comes back
+here. **An archived group offers neither**: it is
+read, not worked. Leaving by that door leaves the sheet, so anything ticked in the list is left with
+it — the two ways in are alternatives, and the one that goes somewhere else says so on its face.
+
+**Recording it from here writes both halves in one gesture**: the movement in your ledger — your
+account, your category, your budget — and the group's expense on top of it, with the group's split
+inherited without asking, exactly as picking one already does. What the form does while it belongs to a
+group is in [add.md](add.md), and the one thing it cannot do is make the expense somebody else's: a
+movement recorded here is money that left **your** account, and a line another participant paid is not
+a movement of yours at all.
+
 **A group is not closed when it is created** (`#add-people`). `Add people` is the contact sheet the
 form uses — the same search, the same paging, the same two limits said out loud, and the same
 `New person`, because the commonest reason to add somebody afterwards is that they were not a contact
@@ -171,8 +190,13 @@ The flow is built around the habit it serves: **the expenses already exist**. Th
 the Quick add during the night, and the group is assembled the next morning. So the form takes a name,
 a colour, who was in, **a default split chosen once**, and then picks the expenses from the
 transactions that are already there — over the group's own range, any account, with a checkbox on the
-same row the list already draws. Recording a new expense from inside the group is the other way in and
-lands in the same place.
+same row the list already draws.
+
+**This form does not record a new one**, and that is the habit above rather than an omission: it
+assembles a group out of expenses that are already in your ledger. Recording one that is not there yet
+is offered **from the group**, one screen later, where there is already something for it to belong to —
+a way in here would either lose the half-typed form on the way to the transaction form or create the
+group behind your back, from a button under a field. (Owner's decision, 2026-09-21.)
 
 **The group's split is a default, not a rule** (`#split-one-expense`). A new expense inherits it
 without asking, and **any expense can carry its own** in any of the four modes: a trip that splits

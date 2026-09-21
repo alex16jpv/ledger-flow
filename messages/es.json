@@ -1461,12 +1461,14 @@
     },
     "pickExpenses": {
       "title": "Elegir de mis movimientos",
+      "titleInGroup": "Añadir gasto",
       "search": "Busca en la descripción, la nota o las etiquetas",
       "add": "Añadir {count} · {amount}",
       "loadMore": "Ver más",
       "none": "No hay nada que añadir: todos tus gastos ya están en un grupo compartido, o ninguno coincide con lo que escribiste.",
       "noDescription": "Gasto",
-      "failed": "No se pudo leer la lista. Inténtalo de nuevo en un momento."
+      "failed": "No se pudo leer la lista. Inténtalo de nuevo en un momento.",
+      "recordNew": "Registrar un gasto nuevo"
     },
     "whatChanges": {
       "title": "{count, plural, one {¿Añadir # movimiento a {name}?} other {¿Añadir # movimientos a {name}?}}",
@@ -1678,7 +1680,27 @@
         "hours": "{count, plural, one {El reloj de este dispositivo va # hora adelantado respecto al servidor.} other {El reloj de este dispositivo va # horas adelantado respecto al servidor.}}",
         "refused": "Las fechas con más de 24 horas en el futuro se rechazan."
       },
-      "dateLimit": "Los días posteriores a mañana no están disponibles: el servidor rechaza fechas con más de 24 horas de adelanto."
+      "dateLimit": "Los días posteriores a mañana no están disponibles: el servidor rechaza fechas con más de 24 horas de adelanto.",
+      "inGroup": {
+        "notice": {
+          "EQUAL": "Esto entra en {name}, repartido por igual entre {count} personas.",
+          "PERCENT": "Esto entra en {name}, repartido entre {count} personas con los porcentajes del grupo."
+        },
+        "back": "Volver a Compartidos",
+        "save": "Guardar y añadirlo al grupo",
+        "saved": "Añadido a {name}",
+        "archived": {
+          "title": "{name} está archivado",
+          "body": "Un grupo compartido archivado se lee, no se trabaja: no se le añade nada hasta que lo restaures. Lo que registres aquí no tendría dónde ir.",
+          "open": "Abrir el grupo"
+        },
+        "halfSaved": {
+          "title": "El movimiento está guardado. El grupo no lo aceptó.",
+          "retry": "Añadirlo otra vez al grupo",
+          "open": "Abrir {name}",
+          "note": "No se pierde nada: un movimiento que se queda fuera del grupo vuelve a salir en su propio «Añadir gasto», como cualquier otro."
+        }
+      }
     },
     "list": {
       "title": "Movimientos",

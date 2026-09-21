@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { QueryProvider } from "@/lib/query/QueryProvider";
@@ -76,8 +77,9 @@ const contacts = [contact({ id: ANA, name: "Ana Ruiz" }), contact({ id: BETO, na
 
 const fetchMock = vi.fn<typeof fetch>();
 
+const push = vi.fn();
 vi.mock("@/lib/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), back: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push, back: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/shared/groups/g1",
   Link: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
@@ -86,6 +88,7 @@ vi.mock("@/lib/i18n/navigation", () => ({
 
 beforeEach(() => {
   fetchMock.mockReset();
+  push.mockReset();
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockImplementation((input) => {
     const url = urlOf(input);
@@ -137,6 +140,19 @@ describe("SharedGroupScreen", () => {
 
     expect(await screen.findByRole("button", { name: "Retry" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "People" })).not.toBeInTheDocument();
+  });
+
+  // The other way in: a movement that does not exist yet is recorded knowing the group (T-137).
+  it("leaves for the form with the group when the expense is not recorded yet", async () => {
+    view();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Record a new expense" }));
+
+    expect(push).toHaveBeenCalledWith({
+      pathname: "/transactions/new",
+      query: { group: "g1" },
+    });
   });
 
   // A line somebody else paid is not an expense of yours until you settle with them.

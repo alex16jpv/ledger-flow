@@ -398,3 +398,56 @@ keep the same act out of Stats and out of every budget depending only on which f
 the form — so `/transactions/<id>/edit` sends it on to the detail, where it can be read and deleted.
 That is already true of the Pay sheet's outside payment: it is the cost of the shape, not of this
 screen.
+
+## An expense that belongs to a shared group (T-137)
+
+The form is reached with a group already chosen — from that group's `Add expense`, under the list of
+expenses it could pick from ([shared.md](shared.md)) — and it says so from the top
+(`#expense-for-a-shared-group`). Everything below the notice is the form anybody else gets: **the
+split, the people and the shares are the group's business and none of them is asked here.**
+
+**What the notice says** is the group it will join and the split it will take —
+_This goes into **Cartagena trip**, split equally between 4 people_ — and, under it, the sentence the
+section never lets anyone miss: splitting changes nothing today, the expense counts in full until
+somebody pays you back. It is the same sentence `#what-changes-in-budgets` says before a group is
+created, said here **before saving** rather than in a sheet of its own: there is one expense, its
+category is on the screen above, and a sheet to confirm one line would be a step for nothing.
+
+**The type segment is not drawn.** Sharing an income or a transfer is out of v1
+([shared.md](shared.md)), so the three-way control has one answer, and a control nobody can use is not
+drawn — the rule the intent chips already follow. The type line stays, because what an expense is is
+still worth saying. Saving returns to the group, not to Transactions, and so does `Back` when there is
+nothing behind it: you came from there and what you recorded belongs there.
+
+**The button says what it does — _Save and add to the group_ — because it writes two things**: the
+movement in your ledger and the group's expense on top of it, carrying the group's split **inherited
+without asking**, exactly as picking an existing movement does. The expense is not marked
+`Custom split`: it follows the group's default until somebody opens its own split sheet.
+
+**The group is read before the form is drawn**, and the three things that make it unusable are said
+rather than worked around (`#shared-group-cannot-take-it` draws the third): a group that **cannot be
+read** shows the screen's error with its reference and a retry; one that **does not exist** says so and
+offers the way back to `Shared`; one that is **archived** says it is read, not worked, and offers the
+group itself beside that same way back.
+None of them falls back to recording a loose movement — that would be a form that quietly does
+something other than what it announced.
+
+### When only the movement lands (`#shared-expense-only-half-saved`)
+
+The two writes are not atomic, for the reason the loan instalment already has above: `POST /sync`
+applies its operations one at a time and online they are two requests. The **movement is written
+first** — it is the money, and it is true whatever the group does — so when the group refuses the
+expense, the movement is saved and the form has nothing left to ask.
+
+So the form is **replaced** by what actually happened: the movement as it was saved, one line saying it
+is in your ledger and not in the group, and `Add it to the group again`, which retries **only** the
+half that is missing — **under the id it was minted with**, so a second try finishes the expense it
+started rather than opening a second one. There is nothing to freeze because there is nothing left to type, and the
+alternative — leaving the fields on screen — would offer to change an amount that is already recorded.
+The second way out is the group itself: a movement that stays out of it is not lost, it is an ordinary
+expense, and the group's own `Add expense` lists it again like any other.
+
+**With no network this state does not appear.** Both writes are queued, the mirror holds the expense
+with its shares, and a refusal surfaces where every refused change does, in the attention tray of
+[attention-tray.md](attention-tray.md). The queue sends them **in order**: the expense names the
+movement, so it waits for it the way an expense already waits for the group it is posted under.

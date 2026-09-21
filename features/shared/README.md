@@ -47,6 +47,15 @@ payment from your ledger's side — it is **one expense of yours per line**, dat
 category the sheet asks for, because the shared layer carries none. A payment can be **outside the
 app**, and then no movement is written and no balance moves, while the expenses still fall.
 
+**Two ways into a group's expenses, and one of them is the transaction form.** The picker lists the
+movements that are not in a group yet; under it, `Record a new expense` leaves for
+`/transactions/new?group=<id>`, where the form knows the group, drops the type control — only an
+expense is shared in v1 — and on save writes **two** things: the movement, and the group's expense on
+top of it with the split inherited. The movement goes **first**, because it is the money and it is
+true whatever the group answers; when the group refuses, the screen says which half landed and retries
+only the other. With no network both are queued and the expense **waits for the movement it names**,
+the way it already waits for the group it is posted under.
+
 **A group is not closed when it is created.** `AddPeopleSheet` is the contact picker with the question
 that comes with it — _are they in the expenses already recorded?_ — and, when the answer is yes, the
 whole result before it happens: the server answers each new share
