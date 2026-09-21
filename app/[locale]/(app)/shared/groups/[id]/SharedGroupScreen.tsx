@@ -51,6 +51,7 @@ import {
 import { hasSomethingToSettle, settleParty } from "@/features/shared/settle";
 import { expenseFromTransaction } from "@/features/shared/write";
 import { presentError } from "@/lib/api/errors";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
@@ -269,6 +270,7 @@ function GroupHero({ view }: { view: GroupView }) {
 function GroupBody({ view, section }: { view: GroupView; section: SharedSection }) {
   const t = useTranslations();
   const money = useMoney();
+  const router = useRouter();
   const toast = useToast();
   const noteOf = useNoteOf(view);
   const createExpense = useCreateSharedExpense();
@@ -497,6 +499,9 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           onDone={(transactions) => {
             setPicking(false);
             setAdding(transactions);
+          }}
+          onRecordNew={() => {
+            router.push({ pathname: "/transactions/new", query: { group: view.group.id } });
           }}
         />
       )}

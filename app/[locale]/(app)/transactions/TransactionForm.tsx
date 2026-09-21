@@ -60,6 +60,10 @@ export interface TransactionFormProps {
     changes: UpdateTransactionInput,
   ) => Promise<unknown>;
   secondaryAction?: React.ReactNode;
+  // What the movement belongs to, said before anything is typed.
+  notice?: React.ReactNode;
+  // Only an expense can be shared in v1, so the control with one answer is not drawn.
+  fixedType?: boolean;
 }
 
 export function TransactionForm({
@@ -69,6 +73,8 @@ export function TransactionForm({
   error,
   onSubmit,
   secondaryAction,
+  notice,
+  fixedType = false,
 }: TransactionFormProps) {
   const t = useTranslations();
   const money = useMoney();
@@ -181,13 +187,16 @@ export function TransactionForm({
       className="flex flex-col gap-5"
     >
       {formError && <Alert tone="danger">{t(formError.messageKey)}</Alert>}
+      {notice}
       <div className="flex flex-col gap-2">
-        <Segment
-          options={typeOptions}
-          value={type}
-          onChange={changeType}
-          label={t("transactions.form.type")}
-        />
+        {!fixedType && (
+          <Segment
+            options={typeOptions}
+            value={type}
+            onChange={changeType}
+            label={t("transactions.form.type")}
+          />
+        )}
         <TypeLine type={type} />
       </div>
       <Controller

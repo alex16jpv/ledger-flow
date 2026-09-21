@@ -578,6 +578,9 @@ const transactionForm = (
     cat: catSlot = null,
     sheet = "",
     swap = true,
+    notice = "",
+    segment = true,
+    save = "Save transaction",
   } = {},
 ) => {
   const seg = [
@@ -614,7 +617,7 @@ const transactionForm = (
   }
   return `<div class="shell">${sidebar("")}<main class="main"><div class="page" style="max-width:640px">
 <header class="page-header"><button class="btn ghost icon-only round" aria-label="Back">${iconSvg("arrow-left")}</button><h1 class="h2" style="flex:1;text-align:center">New transaction</h1><span style="width:40px"></span></header>
-<div class="segment">${seg}</div>${hint}
+${notice}${segment ? `<div class="segment">${seg}</div>` : ""}${hint}
 <div class="amount-input" style="padding-top:8px"><span class="cur">$</span><span class="num">${amount}</span></div>
 ${catSlot ?? cat}
 ${accounts}${readback}
@@ -625,7 +628,7 @@ ${accounts}${readback}
 <div class="field"><span class="label">Tags <span class="opt">optional</span></span><div class="input" style="height:auto;min-height:48px;padding:8px 12px;flex-wrap:wrap"><span class="tag">work</span><span class="placeholder">Add…</span></div>
 <div class="chips" style="margin-top:2px"><button class="chip" style="height:28px">#travel</button><button class="chip" style="height:28px">#monthly</button><button class="chip" style="height:28px">#latte</button></div></div>
 <div class="field"><span class="label">Note <span class="opt">optional</span></span><div class="input textarea"><span class="placeholder">Anything you want to remember about this one</span></div></div>
-<div class="hstack" style="gap:10px;padding:8px 0 12px"><button class="btn primary lg block">Save transaction</button></div>
+<div class="hstack" style="gap:10px;padding:8px 0 12px"><button class="btn primary lg block">${save}</button></div>
 </div></main></div>${sheet}`;
 };
 
@@ -4166,8 +4169,7 @@ ${field("Name", "Cartagena trip", null, { icon: "users" })}
 <div class="segment"><button aria-pressed="true">Equal</button><button aria-pressed="false">Percent</button></div>
 <span class="help">Every expense you add takes this without asking, and any of them can then go its own way — by exact amounts too, which only an expense can have, because only an expense has a total. Changing this later never goes back over what is already recorded.</span></div>
 <div class="field"><span class="label">Expenses</span>
-<button class="picker">${tile("list", "GRAY", "sm")}<span class="body"><span class="lbl">Pick from my transactions</span><span class="val">3 selected · $2,960,000</span></span>${iconSvg("chevron-right", "sm")}</button>
-<button class="btn ghost sm" style="align-self:flex-start;padding-left:0">${iconSvg("plus", "sm")}Or record a new expense</button></div>
+<button class="picker">${tile("list", "GRAY", "sm")}<span class="body"><span class="lbl">Pick from my transactions</span><span class="val">3 selected · $2,960,000</span></span>${iconSvg("chevron-right", "sm")}</button></div>
 <div class="alert neutral">${iconSvg("info")}<span>Splitting changes nothing today: an expense keeps counting in full until someone pays you back.</span></div>
 <button class="btn primary lg block">Create shared group</button></div>`,
     { tab: "mas", side: "shared", back: true, title: "New shared group", narrow: true, sheet },
@@ -4193,6 +4195,52 @@ ${pickRow("coffee", "BROWN", "Pergamino Coffee", "Sep 3 · Cash", 9800, false)}
       "Pick from my transactions",
     ),
   });
+
+const recordNewExpense = () =>
+  groupDetail({
+    sheet: sheetWrap(
+      `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span class="placeholder" style="flex:1">Search description, note or tag</span></div>
+<div class="list" style="margin:0 -16px;max-height:260px;overflow:auto">
+${pickRow("coffee", "BROWN", "Pergamino Coffee", "Sep 3 \u00b7 Cash", 9800, true)}
+${pickRow("bus", "BLUE", "Bus to the old town", "Sep 4 \u00b7 Cash", 12000, false)}
+</div>
+<button class="btn ghost sm" style="align-self:flex-start;padding-left:0">${iconSvg("plus", "sm")}Record a new expense</button>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Add 1 \u00b7 ${moneyText(9800)}</button></div>`,
+      "Add expense",
+    ),
+  });
+
+const GROUP_NOTICE = `<div class="alert neutral">${iconSvg("users")}<span><b>This goes into Cartagena trip</b>, split equally between 4 people. Splitting changes nothing today: it keeps counting in full until somebody pays you back.</span></div>`;
+
+const expenseForGroup = () =>
+  transactionForm("EXPENSE", {
+    notice: GROUP_NOTICE,
+    segment: false,
+    hint: typeLine("EXPENSE"),
+    amount: "360,000",
+    description: "Dinner at La Cevicher\u00eda",
+    save: "Save and add to the group",
+  });
+
+const halfSaved = () =>
+  screen(
+    `<div class="alert danger">${iconSvg("triangle-alert")}<span><b>The movement is saved. The group did not take it.</b> Cartagena trip answered that it could not be read, so this is an ordinary expense of yours for now.</span></div>
+<div class="list card flush">
+<div class="row" style="cursor:default">${tile("utensils", "ORANGE")}<span class="body"><span class="title"><span class="truncate">Dinner at La Cevicher\u00eda</span></span><span class="meta">Today \u00b7 Visa Gold \u00b7 Food</span></span><span class="right">${amount(360000, "expense")}</span></div>
+</div>
+<div class="stack-sm" style="padding-top:4px"><button class="btn primary lg block">Add it to the group again</button><button class="btn secondary lg block">Open Cartagena trip</button></div>
+<p class="xs faint" style="margin:0">Nothing is lost either way: a movement that stays out of the group is listed again by its own <b>Add expense</b>, like any other.</p>`,
+    { tab: "mas", side: "shared", back: true, title: "New transaction", narrow: true },
+  );
+
+const groupCannotTakeIt = () =>
+  screen(
+    `<div class="empty" style="padding-top:56px">${tile("archive", "GRAY", "lg")}
+<span class="h3">Cartagena trip is archived</span>
+<p class="small muted" style="margin:0;max-width:320px">An archived group is read, not worked: nothing is added to it until it is restored. What you record here would have nowhere to go.</p>
+<div class="hstack" style="gap:8px;padding-top:8px"><button class="btn secondary">Open the group</button><button class="btn ghost">Back to Shared</button></div></div>`,
+    { tab: "mas", side: "shared", back: true, title: "New transaction", narrow: true },
+  );
 
 const budgetsNotice = () =>
   newGroup({
@@ -4643,6 +4691,27 @@ const PAGES = [
         { added: "2026-09-18" },
       ),
       plate(
+        "expense-for-a-shared-group",
+        "Full form \u00b7 an expense that belongs to a shared group",
+        "T-137. Reached from a group's <code>Add expense</code> (<code>shared.html#record-a-new-expense</code>), so the form knows the group before it is drawn and says so at the top, with the split it will inherit and the sentence the section never lets anyone miss \u2014 splitting changes nothing today. <b>The type segment is not drawn</b>: sharing an income or a transfer is out of v1, so the control has one answer, and a control nobody can use is not drawn. The button says what it does, because it writes <b>two</b> things: the movement in your ledger and the group's expense on top of it. Back and save both return to the group.",
+        expenseForGroup(),
+        { added: "2026-09-21" },
+      ),
+      plate(
+        "shared-expense-only-half-saved",
+        "When only the movement lands",
+        "The two writes are not atomic \u2014 <code>POST /sync</code> applies one operation at a time and online they are two requests \u2014 so the movement is written <b>first</b>: it is the money, and it is true whatever the group does. When the group refuses, the form is <b>replaced</b> by what actually happened, because there is nothing left to type; leaving the fields would offer to change an amount already recorded. <code>Add it to the group again</code> retries only the half that is missing. With no network this state does not appear: both writes queue, the expense waits for its movement, and a refusal surfaces in the attention tray.",
+        halfSaved(),
+        { added: "2026-09-21" },
+      ),
+      plate(
+        "shared-group-cannot-take-it",
+        "A group that cannot take it \u00b7 archived",
+        "The group is read before the form is drawn, and the three cases that make it unusable are said rather than worked around. Drawn here is the archived one \u2014 read, not worked; the other two are the screen's own error with its reference (<code>states.html</code>) and the <i>doesn't exist</i> empty the group detail already draws, each with the way out that applies. None of them quietly falls back to recording a loose movement, which would be a form doing something other than what it announced.",
+        groupCannotTakeIt(),
+        { added: "2026-09-21" },
+      ),
+      plate(
         "date-sheet",
         "Date",
         "The app's own calendar, not the browser's: it follows the tokens and the language, and disables what the server would refuse (more than 24 hours ahead).",
@@ -5013,9 +5082,16 @@ const PAGES = [
       plate(
         "pick-transactions",
         "Picking expenses that already exist",
-        "The same list as Transactions with a checkbox, over any range and any account, reached from the group being created. Recording a new expense from inside the group is the other way in, and it lands in the same place.",
+        "The same list as Transactions with a checkbox, over any range and any account, reached from the group being created. This form does not record a new one: it assembles a group out of what is already in your ledger, and recording one that is not there yet is offered from the group itself \u2014 <code>#record-a-new-expense</code>.",
         pickTransactions(),
-        { added: "2026-09-20" },
+        { added: "2026-09-20", updated: "2026-09-21" },
+      ),
+      plate(
+        "record-a-new-expense",
+        "Add expense, from inside the group",
+        "The other way in, and it is the same sheet: the movements not in a group yet, and under them <code>Record a new expense</code> \u2014 where the contact sheet puts <code>New person</code>, because a picker whose answer is not there yet offers to create it rather than sending you off to find it. It leaves for the transaction form <b>knowing the group</b> (<code>add.html#expense-for-a-shared-group</code>) and what it records comes back here, split by the group's default without asking.",
+        recordNewExpense(),
+        { added: "2026-09-21" },
       ),
       plate(
         "what-changes-in-budgets",

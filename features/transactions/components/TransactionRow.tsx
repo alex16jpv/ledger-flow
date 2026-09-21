@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
-import { RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
+import { Row, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Tile } from "@/components/ui/Tile";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
@@ -28,7 +28,8 @@ export interface TransactionRowProps {
   transaction: Transaction;
   lookups: TransactionLookups;
   dated?: boolean;
-  onOpen: (transaction: Transaction) => void;
+  // Left out where the row is read and not a way anywhere: it is then no longer a control.
+  onOpen?: (transaction: Transaction) => void;
 }
 
 type Translate = ReturnType<typeof useTranslations<never>>;
@@ -78,13 +79,8 @@ export function TransactionRow({ transaction, lookups, dated, onOpen }: Transact
     queued ? t("states.savedHere") : undefined,
   ];
 
-  return (
-    <RowButton
-      pending={transaction.pendingDetails}
-      onClick={() => {
-        onOpen(transaction);
-      }}
-    >
+  const body = (
+    <>
       {category ? (
         <Tile color={category.color}>
           <CategoryIcon icon={category.icon} />
@@ -148,6 +144,19 @@ export function TransactionRow({ transaction, lookups, dated, onOpen }: Transact
       >
         <Amount value={transaction.amount} kind={amountKind(transaction)} />
       </RowRight>
+    </>
+  );
+
+  return onOpen ? (
+    <RowButton
+      pending={transaction.pendingDetails}
+      onClick={() => {
+        onOpen(transaction);
+      }}
+    >
+      {body}
     </RowButton>
+  ) : (
+    <Row pending={transaction.pendingDetails}>{body}</Row>
   );
 }

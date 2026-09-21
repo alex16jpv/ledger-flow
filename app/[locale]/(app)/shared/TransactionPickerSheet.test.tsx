@@ -82,6 +82,27 @@ describe("TransactionPickerSheet", () => {
     expect(chosen.map((row) => row.id)).toEqual(["t1", "t2"]);
   });
 
+  // The other way in, and only where there is a group to record it into (T-137).
+  it("offers to record a new one where a group exists, and nowhere else", async () => {
+    const onRecordNew = vi.fn();
+    const { unmount } = renderWithProviders(
+      <QueryProvider>
+        <TransactionPickerSheet open onClose={vi.fn()} onDone={vi.fn()} />
+      </QueryProvider>,
+    );
+    expect(await screen.findByRole("checkbox", { name: /Food/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Record a new expense" })).not.toBeInTheDocument();
+    unmount();
+
+    renderWithProviders(
+      <QueryProvider>
+        <TransactionPickerSheet open onClose={vi.fn()} onDone={vi.fn()} onRecordNew={onRecordNew} />
+      </QueryProvider>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Record a new expense" }));
+    expect(onRecordNew).toHaveBeenCalledOnce();
+  });
+
   it("says the list could not be read rather than that there is nothing to add", async () => {
     fetchMock.mockImplementation(() => Promise.reject(new TypeError("offline")));
     renderWithProviders(

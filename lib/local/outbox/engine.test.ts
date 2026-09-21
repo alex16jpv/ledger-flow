@@ -833,6 +833,48 @@ describe("a client id another user already owns (F-21)", () => {
     expect(await pendingOperations(vault.db)).toEqual([]);
   });
 
+  // T-137 records a movement and the group's expense in one gesture, so the expense names a movement
+  // that can still be queued; a re-minted movement has to take its name inside that expense with it.
+  it("moves the transaction a queued shared expense names when the movement is re-minted", async () => {
+    const vault = await vaultWith();
+    await seed(vault.db, [
+      {
+        seq: 1,
+        entity: "transaction",
+        entityId: "t7",
+        action: "create",
+        payload: { body: { id: "t7", type: "EXPENSE", amount: 4500 } },
+      },
+      {
+        seq: 2,
+        entity: "sharedExpense",
+        entityId: "e7",
+        action: "create",
+        payload: { body: { id: "e7", transactionId: "t7" }, params: { groupId: "g1" } },
+        dependsOn: ["t7"],
+      },
+    ]);
+    answers((op) => {
+      if (op.entity === "transaction") {
+        return op.id === "t7" ? conflictWith("ID_TAKEN") : {};
+      }
+      // The expense names the movement, so the server holds it while that movement is not there.
+      return op.payload.body &&
+        (op.payload.body as { transactionId?: string }).transactionId === "t7"
+        ? blockedBy(opsOf(fetchMock.mock.calls[0]?.[1])[0]?.opId ?? "")
+        : {};
+    });
+
+    await requestSync();
+
+    const second = opsOf(fetchMock.mock.calls[1]?.[1]);
+    const minted = second.find((op) => op.entity === "transaction")?.id ?? "";
+    expect(minted).not.toBe("t7");
+    const expense = second.find((op) => op.entity === "sharedExpense");
+    expect(expense?.payload.body).toMatchObject({ id: "e7", transactionId: minted });
+    expect(expense?.dependsOn).toEqual([minted]);
+  });
+
   it("does not mint a second time: a fresh UUID that collides twice is a bug, not luck", async () => {
     const vault = await vaultWith();
     await seed(vault.db, [

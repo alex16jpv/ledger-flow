@@ -4567,3 +4567,29 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   gained the rows it could not draw before: somebody already in the group reads rather than picks, and
   where taking them out applies, it is offered there. `DefaultSplitFields` came out of the new-group
   form so the three places that set a default render one control.
+
+## 2026-09-21 · Recording a new expense from inside a group: two writes, and the money goes first (T-137)
+
+- **Context:** a group could only take movements that already existed. The other way in — recording
+  one that does not — has to create the movement **and** the group's expense on top of it in one
+  gesture, and the two are different entities in two requests.
+- **Decision:** the group travels in the query string (`/transactions/new?group=<id>`) and the screen
+  resolves it from the shared section before drawing anything, so the form is never a form that
+  quietly does something else. It drops the type control rather than disabling it — only an expense is
+  shared in v1, and a control with one answer is not drawn — and its button says it writes two things.
+  The split is the group's, **inherited**: the body carries none, which is exactly what tells an
+  inherited split from the expense's own.
+- **The movement is written first**, because it is the money and it is true whatever the group answers.
+  When the group refuses, the form is **replaced** by what happened — the movement as saved, and
+  `Add it to the group again`, which retries only the missing half **under the id the expense was
+  minted with**, so a second try finishes the one it started rather than opening another. Leaving the fields on screen would
+  offer to change an amount already recorded; freezing them would be machinery for a form with nothing
+  left to ask. It is the grammar the loan instalment already uses for a pair that cannot be atomic.
+- **Alternatives:** one request that creates both, which is the backend's to offer and does not exist;
+  and navigating away with a toast, which leaves a movement out of its group with no way back but the
+  picker.
+- **Consequence:** a queued expense now depends on **the movement it names** as well as the group it is
+  posted under. Without it the queue could send an expense naming a movement the server has not seen —
+  reachable before this task from the picker, which lists movements recorded offline, and the ordinary
+  case from now on. `/transactions/new` gained a route component that dispatches on the query string,
+  so the plain form keeps its own screen.

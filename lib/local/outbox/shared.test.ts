@@ -26,6 +26,7 @@ import {
   updateSharedGroup,
   writeOffParty,
 } from "./shared";
+import { createTransaction } from "./transactions";
 
 const ANA = "k1";
 
@@ -92,6 +93,44 @@ describe("writing a shared group with no network", () => {
     expect((await vault.db.get("sharedGroups", group.id))?.row.name).toBe("Night out");
     const [operation] = await pendingOperations(vault.db);
     expect(operation).toMatchObject({ entity: "sharedGroup", action: "create" });
+  });
+
+  // T-137 records both halves in one gesture, so the movement it names can still be queued.
+  it("makes the expense wait for the movement it names", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+
+    const movement = await createTransaction(
+      {
+        id: "t7",
+        type: "EXPENSE",
+        amount: 4500,
+        date: "2026-09-21T17:00:00.000Z",
+        categoryId: null,
+        fromAccountId: "a1",
+        toAccountId: null,
+        description: "Beach club",
+        tags: [],
+        note: null,
+      },
+      "idem-1",
+    );
+    await createSharedExpense({
+      row: {
+        id: "e7",
+        groupId: "g1",
+        description: "Beach club",
+        date: "2026-09-21T17:00:00.000Z",
+        amount: 4500,
+        paidByContactId: null,
+        split: equal(4500),
+        customSplit: false,
+      },
+      transactionId: movement.id,
+    });
+
+    const queued = await pendingOperations(vault.db);
+    expect(queued.find((one) => one.entity === "sharedExpense")?.dependsOn).toContain("t7");
   });
 
   it("sends no split when the expense inherits the group's, which is what tells the two apart", async () => {

@@ -61,10 +61,11 @@ export function inheritedSplit(
 export function expenseFromTransaction(
   group: SplittingGroup,
   transaction: Transaction,
+  id: string = newEntityId(),
 ): NewSharedExpense {
   return {
     row: {
-      id: newEntityId(),
+      id,
       groupId: group.id,
       description: transaction.description,
       date: transaction.date,

@@ -11,7 +11,13 @@ import {
 import { type VaultDb, type WriteTransaction, writeTransaction } from "./queue";
 
 // The id lives in the row, the rows naming it and the queue; all of them move together.
-const REFERENCE_KEYS = ["fromAccountId", "toAccountId", "categoryId", "id"] as const;
+const REFERENCE_KEYS = [
+  "fromAccountId",
+  "toAccountId",
+  "categoryId",
+  "transactionId",
+  "id",
+] as const;
 
 // Returns the same object when nothing in it named the old id, so a caller can tell a rewrite apart.
 function rewriteBody(body: unknown, oldId: string, newId: string): unknown {

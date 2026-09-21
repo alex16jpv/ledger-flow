@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -28,6 +28,8 @@ export interface TransactionPickerSheetProps {
   // What the form already holds, so reopening the sheet does not silently drop it.
   selected?: Transaction[];
   onDone: (transactions: Transaction[]) => void;
+  // Offered only where there is a group to record it into: the form before one exists has none.
+  onRecordNew?: () => void;
 }
 
 export function TransactionPickerSheet({
@@ -35,6 +37,7 @@ export function TransactionPickerSheet({
   onClose,
   selected = [],
   onDone,
+  onRecordNew,
 }: TransactionPickerSheetProps) {
   const t = useTranslations("shared.pickExpenses");
   const loading = useTranslations("common")("loading");
@@ -69,7 +72,7 @@ export function TransactionPickerSheet({
     <Sheet
       open={open}
       onClose={onClose}
-      title={t("title")}
+      title={t(onRecordNew ? "titleInGroup" : "title")}
       footer={
         <>
           <Button
@@ -161,6 +164,12 @@ export function TransactionPickerSheet({
         {list.isError && <p className="px-1 text-sm text-danger">{t("failed")}</p>}
         {rows.length === 0 && !list.isPending && !list.isError && (
           <p className="px-1 text-sm text-text-3">{t("none")}</p>
+        )}
+        {onRecordNew && (
+          <Button variant="ghost" size="sm" className="self-start" onClick={onRecordNew}>
+            <Plus {...iconProps("sm")} />
+            {t("recordNew")}
+          </Button>
         )}
       </div>
     </Sheet>

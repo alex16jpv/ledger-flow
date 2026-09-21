@@ -188,7 +188,7 @@ Accounts, Stats, Categories, Settings and the user (T-72). From 900px up the sid
 | `/settings/sync`                                               | Sync status: cursor, queue size, last error, storage use and grant, display mode, link to the tray, force full resync                         |
 | `/sync`                                                        | "Needs your attention": the queued changes the server refused, one card each, and the conflict sheet                                          |
 | `/transactions`                                                | Transactions list: filters in the URL, day groups, infinite scroll                                                                            |
-| `/transactions/new`, `/transactions/[id]/edit`                 | Transaction form: create (optional quick-add draft in the query string) and edit with delete                                                  |
+| `/transactions/new`, `/transactions/[id]/edit`                 | Transaction form: create (optional quick-add draft in the query string, and `?group=` to record it into a shared group) and edit with delete  |
 | `/transactions/[id]`                                           | Transaction detail with edit and delete                                                                                                       |
 | `/transactions/review`                                         | Inbox of quick expenses to complete (`?focus=<id>` scrolls to one)                                                                            |
 | `/accounts`                                                    | Accounts list: summary, active grid, folded archived section                                                                                  |
