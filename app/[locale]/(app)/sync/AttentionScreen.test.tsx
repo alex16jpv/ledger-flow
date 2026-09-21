@@ -294,7 +294,8 @@ describe("the Needs your attention tray", () => {
     ]);
 
     await userEvent.click(screen.getByRole("button", { name: "Fix the date" }));
-    expect(await screen.findByRole("dialog")).toHaveTextContent("The server refused this date.");
+    // The sheet reads the copy before it can say anything: waiting for the dialog is not enough.
+    expect(await screen.findByText("The server refused this date.")).toBeInTheDocument();
     resetClockOffset();
   });
 
