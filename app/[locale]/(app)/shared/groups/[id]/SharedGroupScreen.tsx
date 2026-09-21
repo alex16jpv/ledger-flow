@@ -14,18 +14,14 @@ import { Empty } from "@/components/ui/Empty";
 import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Progress } from "@/components/ui/Progress";
 import { List, Row, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
-import { Sheet } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { useGroupRange } from "@/features/shared/components/GroupRowLink";
 import { StateBadge } from "@/features/shared/components/parts";
-import { type SplitPerson, SplitSheet } from "@/features/shared/components/SplitSheet";
 import {
   useArchiveSharedGroup,
-  useContactsQuery,
   useCreateSharedExpense,
-  useSaveSharedSplit,
   useSharedSection,
   useUndoWriteOff,
   useWriteOff,
@@ -36,18 +32,18 @@ import {
   type PartyView,
   type SharedSection,
 } from "@/features/shared/ledger";
-import { hasSomethingToSettle, type SettleParty, settleParty } from "@/features/shared/settle";
-import { GUESTS_KEY, USER_KEY } from "@/features/shared/split";
-import { draftFromGroup, expenseFromTransaction, inheritedSplit } from "@/features/shared/write";
+import { hasSomethingToSettle, settleParty } from "@/features/shared/settle";
+import { expenseFromTransaction } from "@/features/shared/write";
 import { presentError } from "@/lib/api/errors";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
 import { featureColorStyle } from "@/lib/theme/feature-color";
-import type { SharedExpense, SharedSplit, Transaction } from "@/types/api";
+import type { SharedExpense, Transaction } from "@/types/api";
 
-import { SettleUpSheet } from "../../SettleUpSheet";
+import { EditSplitSheet } from "../../EditSplitSheet";
+import { SettleUpFlow } from "../../SettleUpFlow";
 import { TransactionPickerSheet } from "../../TransactionPickerSheet";
 import { WhatChangesSheet } from "../../WhatChangesSheet";
 import { ArchiveGroupSheet, UndoWriteOffSheet, WriteOffSheet } from "../../WriteOffSheet";
@@ -258,17 +254,14 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
   const money = useMoney();
   const toast = useToast();
   const noteOf = useNoteOf(view);
-  const contacts = useContactsQuery(true);
   const createExpense = useCreateSharedExpense();
-  const saveSplit = useSaveSharedSplit();
   const writeOff = useWriteOff();
   const undo = useUndoWriteOff();
   const archive = useArchiveSharedGroup();
   const [picking, setPicking] = useState(false);
   const [adding, setAdding] = useState<Transaction[]>([]);
   const [splitting, setSplitting] = useState<SharedExpense | null>(null);
-  const [settling, setSettling] = useState<SettleParty | null>(null);
-  const [choosing, setChoosing] = useState(false);
+  const [settling, setSettling] = useState<PartyView[] | null>(null);
   const [writingOff, setWritingOff] = useState<PartyView | null>(null);
   const [undoing, setUndoing] = useState<PartyView | null>(null);
   const [archiving, setArchiving] = useState(false);
@@ -286,26 +279,13 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
         setUndoing(person);
       };
     }
-    const party = settleParty(section, view, person);
-    if (!hasSomethingToSettle(party)) return undefined;
+    if (!hasSomethingToSettle(settleParty(section, view, person))) return undefined;
     return () => {
-      setSettling(party);
+      setSettling([person]);
     };
   };
   const payerOf = (expense: SharedExpense): string =>
     view.people.find((person) => person.contactId === expense.paidByContactId)?.name ?? "";
-
-  const you = t("shared.group.you");
-  const byId = new Map((contacts.data ?? []).map((row) => [row.id, row]));
-  // Everybody the group holds, you included, whether or not they are in an expense yet.
-  const people: SplitPerson[] = view.group.participants.map((participant) => {
-    const contact = participant.contactId === null ? undefined : byId.get(participant.contactId);
-    return {
-      contactId: participant.contactId,
-      name: participant.contactId === null ? you : (contact?.name ?? ""),
-      color: contact?.color ?? null,
-    };
-  });
 
   function fail(error: unknown) {
     toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
@@ -335,8 +315,7 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
         block
         disabled={open.length === 0}
         onClick={() => {
-          if (open.length === 1 && open[0]) setSettling(settleParty(section, view, open[0]));
-          else setChoosing(true);
+          setSettling(open);
         }}
       >
         <HandCoins {...iconProps("sm")} />
@@ -461,48 +440,16 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           }}
         />
       )}
-      {choosing && (
-        <Sheet
-          open
-          onClose={() => {
-            setChoosing(false);
-          }}
-          title={t("shared.group.whoToSettle")}
-        >
-          <Card flush>
-            <List>
-              {open.map((person) => (
-                <RowButton
-                  key={person.key}
-                  onClick={() => {
-                    setChoosing(false);
-                    setSettling(settleParty(section, view, person));
-                  }}
-                >
-                  <PartyBody person={person} note={noteOf(person)} />
-                </RowButton>
-              ))}
-            </List>
-          </Card>
-        </Sheet>
-      )}
       {settling && (
-        <SettleUpSheet
-          key={settling.key}
+        <SettleUpFlow
           open
-          party={settling}
+          section={section}
+          view={view}
+          parties={settling}
           onClose={() => {
             setSettling(null);
           }}
-          onWriteOff={
-            settling.owedToYou > 0
-              ? () => {
-                  const person = view.people.find((one) => one.key === settling.key);
-                  setSettling(null);
-                  if (person) setWritingOff(person);
-                }
-              : undefined
-          }
+          onWriteOff={setWritingOff}
         />
       )}
       {writingOff && (
@@ -547,33 +494,12 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
         />
       )}
       {splitting && (
-        <SplitSheet
-          key={splitting.id}
+        <EditSplitSheet
+          group={view.group}
+          expense={splitting}
           open
           onClose={() => {
             setSplitting(null);
-          }}
-          title={t("shared.split.title", {
-            amount: money.format(splitting.amount),
-            description: splitting.description ?? t("shared.group.noDescription"),
-          })}
-          total={splitting.amount}
-          currency={splitting.currency}
-          people={people}
-          payerContactId={splitting.paidByContactId}
-          initial={draftOf(splitting, view)}
-          note={t("shared.split.thisExpenseOnly", { name: view.group.name })}
-          saveLabel={t("shared.split.save")}
-          pending={saveSplit.isPending}
-          onUseGroupSplit={
-            splitting.customSplit
-              ? () => {
-                  void backToTheGroups(splitting);
-                }
-              : undefined
-          }
-          onSave={({ split }) => {
-            void save(splitting, split);
           }}
         />
       )}
@@ -631,52 +557,6 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
       fail(error);
     }
   }
-
-  async function save(expense: SharedExpense, split: SharedSplit) {
-    try {
-      await saveSplit.mutateAsync({
-        id: expense.id,
-        groupId: expense.groupId,
-        split,
-        projected: split,
-      });
-      setSplitting(null);
-      toast.show({ message: t("shared.split.saved") });
-    } catch (error) {
-      setSplitting(null);
-      fail(error);
-    }
-  }
-
-  async function backToTheGroups(expense: SharedExpense) {
-    try {
-      await saveSplit.mutateAsync({
-        id: expense.id,
-        groupId: expense.groupId,
-        split: null,
-        projected: inheritedSplit(view.group, expense.amount, expense.paidByContactId),
-      });
-      setSplitting(null);
-      toast.show({ message: t("shared.split.saved") });
-    } catch (error) {
-      setSplitting(null);
-      fail(error);
-    }
-  }
-}
-
-function draftOf(expense: SharedExpense, view: GroupView) {
-  if (!expense.customSplit) return draftFromGroup(view.group);
-  return {
-    mode: expense.split.mode,
-    guests: expense.split.guests,
-    inputs: Object.fromEntries(
-      expense.split.shares.map((share) => [
-        share.party === "GUESTS" ? GUESTS_KEY : (share.contactId ?? USER_KEY),
-        expense.split.mode === "PERCENT" ? share.percent : share.fixedAmount,
-      ]),
-    ),
-  };
 }
 
 export function SharedGroupScreen({ id }: { id: string }) {

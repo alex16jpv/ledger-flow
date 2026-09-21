@@ -48,6 +48,8 @@ export interface SharedSection {
   groups: GroupView[];
   // What each share has been settled by, keyed `<expenseId>|<party key>`, and `|user` for yours.
   collected: ReadonlyMap<string, number>;
+  // What has come back for each expense you fronted: the figure its movement loses.
+  cameBack: ReadonlyMap<string, number>;
   contacts: number;
   settlements: Settlement[];
   people: PersonView[];
@@ -228,6 +230,7 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
   return {
     groups,
     collected: ledger.collected,
+    cameBack: ledger.cameBack,
     contacts: contacts.filter((row) => row.archivedAt === null).length,
     settlements: [...rows.settlements].sort(newestFirst),
     people,
@@ -242,3 +245,45 @@ export const groupView = (section: SharedSection, id: string): GroupView | undef
 
 export const personView = (section: SharedSection, contactId: string): PersonView | undefined =>
   section.people.find((view) => view.contactId === contactId);
+
+export interface SharedExpenseLookup {
+  yourShare: number;
+  groupId: string;
+  groupName: string;
+}
+
+export interface SharedPaymentLookup {
+  name: string;
+  groups: string[];
+}
+
+export interface SharedLookup {
+  expenses: ReadonlyMap<string, SharedExpenseLookup>;
+  payments: ReadonlyMap<string, SharedPaymentLookup>;
+}
+
+// What a movement's own row needs of the shared layer, with no feature reading another.
+export function sharedLookup(section: SharedSection): SharedLookup {
+  const expenses = new Map<string, SharedExpenseLookup>();
+  const names = new Map<string, { name: string; groups: Set<string> }>();
+  for (const view of section.groups) {
+    for (const expense of view.expenses) {
+      expenses.set(expense.id, {
+        yourShare: expense.split.shares.find(isYours)?.amount ?? 0,
+        groupId: view.group.id,
+        groupName: view.group.name,
+      });
+    }
+    for (const person of view.people) {
+      const held = names.get(person.key) ?? { name: person.name, groups: new Set<string>() };
+      held.groups.add(view.group.name);
+      names.set(person.key, held);
+    }
+  }
+  const payments = new Map<string, SharedPaymentLookup>();
+  for (const one of section.settlements) {
+    const held = names.get(partyKey(one.counterparty));
+    payments.set(one.id, { name: held?.name ?? "", groups: [...(held?.groups ?? [])] });
+  }
+  return { expenses, payments };
+}

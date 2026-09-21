@@ -60,7 +60,7 @@
 .amount.income { color: var(--income); }
 .amount.transfer { color: var(--transfer); }
 .amount.adjustment { color: var(--adjustment); }
-.amount.settlement { color: var(--text); }
+.amount.settlement, .amount.settlementOut { color: var(--text); }
 .amount-hero { font-size: var(--fs-4xl); font-weight: var(--fw-semibold); letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: var(--num); }
 .amount-hero .cur { font-size: 0.5em; color: var(--text-3); font-weight: var(--fw-medium); vertical-align: 0.55em; margin-right: 0.15em; letter-spacing: 0; }
 .amount-lg { font-size: var(--fs-2xl); font-weight: var(--fw-semibold); letter-spacing: -0.02em; font-variant-numeric: var(--num); }

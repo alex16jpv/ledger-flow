@@ -18,7 +18,7 @@ import {
   toListQuery,
   type TransactionFilters,
 } from "@/features/transactions/filters";
-import { TRANSACTION_TYPES } from "@/features/transactions/form";
+import { FILTER_TYPES } from "@/features/transactions/form";
 import { useTransactionsCount } from "@/features/transactions/hooks";
 import { dayKey } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
@@ -141,7 +141,7 @@ export function FiltersSheet({ open, filters, onClose, onApply }: FiltersSheetPr
               >
                 {t("list.types.ALL")}
               </Chip>
-              {TRANSACTION_TYPES.map((type) => (
+              {FILTER_TYPES.map((type) => (
                 <Chip
                   key={type}
                   selected={draft.type === type}

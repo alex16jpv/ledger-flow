@@ -216,7 +216,9 @@
       "install": "Install",
       "how": "How",
       "dismiss": "Not now"
-    }
+    },
+    "owedBothWays": "{owed} owed to you · you owe {owe}",
+    "owedToYou": "{owed} owed to you"
   },
   "settings": {
     "title": "Settings",
@@ -1690,9 +1692,13 @@
         "EXPENSE": "Expenses",
         "INCOME": "Income",
         "TRANSFER": "Transfers",
-        "ADJUSTMENT": "Adjustments"
+        "ADJUSTMENT": "Adjustments",
+        "SETTLEMENT": "Payments between people"
       },
-      "tagChip": "#{tag}"
+      "tagChip": "#{tag}",
+      "payment": "Payment",
+      "shared": "Shared",
+      "yourShare": "Your share {amount}"
     },
     "filters": {
       "title": "Filters",
@@ -1730,7 +1736,32 @@
       "created": "Created {created}",
       "createdEdited": "Created {created} · edited {edited}",
       "dateTime": "{date} · {time}",
-      "split": "Split this"
+      "split": "Split this",
+      "shared": {
+        "countsAsYours": "Counts as yours",
+        "lead": "Your share is {share}, and {owed} is still owed to you.",
+        "leadWithWriteOff": "Your share is {share}, {owed} is still owed to you and {writtenOff} was written off — that part stays counted as yours.",
+        "leadSettled": "Your share is {share}, and everybody has settled.",
+        "share": "share",
+        "editSplit": "Edit split",
+        "settleUp": "Settle up",
+        "group": "Shared group",
+        "history": "History",
+        "reasons": {
+          "SPLIT": "Split with other people",
+          "SPLIT_EDITED": "Split edited",
+          "AMOUNT_CHANGED": "Amount changed",
+          "UNSPLIT": "Taken out of its shared group",
+          "PAYMENT": "Somebody paid you back",
+          "REIMPUTED": "Payments imputed again",
+          "WRITE_OFF": "Written off",
+          "WRITE_OFF_UNDONE": "Write-off taken back"
+        },
+        "deleteWarning": "Nothing anybody paid is deleted: it re-imputes over the expenses that are left, and each one says so in its history. What changes is what everybody owes, because the group now costs less.",
+        "deleteWriteOff": "If nobody is going to pay you, write it off instead: that keeps the expense and its history.",
+        "writeOffInstead": "Write it off instead"
+      },
+      "settlementLocked": "This movement belongs to a payment between people, so it is not edited or deleted on its own."
     },
     "review": {
       "title": "To review",

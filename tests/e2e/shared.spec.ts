@@ -86,3 +86,56 @@ test("a person, a group made from a movement already recorded, and what it count
   await expect(page.getByText("Nothing paid yet · owes you $50,000")).toBeVisible();
   await expectNoAxeViolations(page);
 });
+
+test("settling up lowers what counts as yours, in the month the expense happened", async ({
+  page,
+  request,
+}) => {
+  await signUp(page, request);
+  await anExpense(request, 100_000, "Dinner");
+
+  await page.goto("/shared");
+  await page.getByRole("button", { name: "Add a person" }).click();
+  await page.getByPlaceholder("Beto Cano").fill("Beto Cano");
+  await page.getByRole("button", { name: "Add person" }).click();
+  await expect(page.getByText("Person added")).toBeVisible();
+
+  await page.getByRole("link", { name: "New shared group" }).first().click();
+  await page.getByPlaceholder("Cartagena trip").fill("Night out");
+  await page.getByRole("button", { name: "Add a person" }).click();
+  await page.getByRole("checkbox", { name: /Beto Cano/ }).check({ force: true });
+  await page.getByRole("button", { name: "Add 1" }).click();
+  await page.getByRole("button", { name: "Pick from my transactions" }).click();
+  await page.getByRole("checkbox", { name: /Dinner/ }).check({ force: true });
+  await page.getByRole("button", { name: /^Add 1 · / }).click();
+  await page.getByRole("button", { name: "Create shared group" }).click();
+  await page.getByRole("button", { name: "Add 1 expense" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Night out" })).toBeVisible();
+
+  // One person with something open, so the group's primary action opens her sheet straight away.
+  await page.getByRole("button", { name: "Settle up" }).click();
+  const sheet = page.getByRole("dialog", { name: "Settle up with Beto Cano" });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText("This is not income.")).toBeVisible();
+  await sheet.getByRole("button", { name: /Where it arrives/ }).click();
+  await page.getByRole("option", { name: /Bancolombia Dinner/ }).click();
+  await sheet.getByRole("button", { name: "Record payment" }).click();
+  await expect(page.getByText("Payment recorded")).toBeVisible();
+
+  // The money came back, so the group's lead figure falls by it; nobody is left owing.
+  await expect(page.getByText(/counts as yours/)).toContainText("total $100,000");
+  await expect(page.getByRole("heading", { level: 2, name: "Night out" })).toBeVisible();
+  await expect(page.getByText("Paid in full")).toBeVisible();
+
+  // And the movement says the same thing, with the history that explains it.
+  await page.goto("/transactions");
+  await expect(page.getByText("Your share $50,000")).toBeVisible();
+  await page
+    .getByRole("button", { name: /^Dinner/ })
+    .first()
+    .click();
+  await expect(page.getByText("Counts as yours")).toBeVisible();
+  await expect(page.getByText("History", { exact: true })).toBeVisible();
+  await expect(page.getByText("Somebody paid you back")).toBeVisible();
+  await expectNoAxeViolations(page);
+});

@@ -216,7 +216,9 @@
       "install": "Instalar",
       "how": "Cómo",
       "dismiss": "Ahora no"
-    }
+    },
+    "owedBothWays": "{owed} que te deben · debes {owe}",
+    "owedToYou": "{owed} que te deben"
   },
   "settings": {
     "title": "Ajustes",
@@ -1690,9 +1692,13 @@
         "EXPENSE": "Gastos",
         "INCOME": "Ingresos",
         "TRANSFER": "Transferencias",
-        "ADJUSTMENT": "Ajustes"
+        "ADJUSTMENT": "Ajustes",
+        "SETTLEMENT": "Pagos entre personas"
       },
-      "tagChip": "#{tag}"
+      "tagChip": "#{tag}",
+      "payment": "Pago",
+      "shared": "Compartido",
+      "yourShare": "Tu parte {amount}"
     },
     "filters": {
       "title": "Filtros",
@@ -1730,7 +1736,32 @@
       "created": "Creado {created}",
       "createdEdited": "Creado {created} · editado {edited}",
       "dateTime": "{date} · {time}",
-      "split": "Repartir esto"
+      "split": "Repartir esto",
+      "shared": {
+        "countsAsYours": "Cuenta como tuyo",
+        "lead": "Tu parte es {share} y aún te deben {owed}.",
+        "leadWithWriteOff": "Tu parte es {share}, aún te deben {owed} y {writtenOff} se dio por perdido — esa parte sigue contando como tuya.",
+        "leadSettled": "Tu parte es {share} y todos han saldado.",
+        "share": "parte",
+        "editSplit": "Editar reparto",
+        "settleUp": "Saldar",
+        "group": "Grupo compartido",
+        "history": "Historial",
+        "reasons": {
+          "SPLIT": "Repartido con otras personas",
+          "SPLIT_EDITED": "Reparto editado",
+          "AMOUNT_CHANGED": "Importe cambiado",
+          "UNSPLIT": "Sacado de su grupo compartido",
+          "PAYMENT": "Alguien te pagó",
+          "REIMPUTED": "Pagos imputados de nuevo",
+          "WRITE_OFF": "Dado por perdido",
+          "WRITE_OFF_UNDONE": "Perdón deshecho"
+        },
+        "deleteWarning": "No se borra nada de lo que te pagaron: se vuelve a imputar sobre los gastos que quedan, y cada uno lo dice en su historial. Lo que cambia es lo que debe cada quien, porque el grupo ahora cuesta menos.",
+        "deleteWriteOff": "Si nadie te va a pagar, mejor dalo por perdido: así conservas el gasto y su historial.",
+        "writeOffInstead": "Mejor darlo por perdido"
+      },
+      "settlementLocked": "Este movimiento pertenece a un pago entre personas, así que no se edita ni se borra por su cuenta."
     },
     "review": {
       "title": "Por revisar",

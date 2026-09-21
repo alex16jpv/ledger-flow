@@ -18,6 +18,8 @@ import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery } from "@/features/categories/hooks";
+import { useSharedSection } from "@/features/shared/hooks";
+import { sharedLookup } from "@/features/shared/ledger";
 import { PeriodSummary } from "@/features/transactions/components/PeriodSummary";
 import { TransactionDayList } from "@/features/transactions/components/TransactionDayList";
 import type { TransactionLookups } from "@/features/transactions/components/TransactionRow";
@@ -71,12 +73,18 @@ export function TransactionsScreen() {
   const adjustment = useAdjustmentSheet();
   const sentinel = useRef<HTMLDivElement>(null);
 
+  // Only a list that holds something shared pays for the section: most never do.
+  const loaded = useMemo(() => list.data?.pages.flatMap((page) => page.data) ?? [], [list.data]);
+  const shared = useSharedSection(
+    loaded.some((row) => row.sharedExpenseId !== null || row.sharedSettlementId !== null),
+  );
   const lookups = useMemo<TransactionLookups>(
     () => ({
       accounts: new Map((accounts.data ?? []).map((account) => [account.id, account])),
       categories: new Map((categories.data ?? []).map((category) => [category.id, category])),
+      ...(shared.section ? { shared: sharedLookup(shared.section) } : {}),
     }),
-    [accounts.data, categories.data],
+    [accounts.data, categories.data, shared.section],
   );
 
   function apply(next: TransactionFilters) {
@@ -119,11 +127,8 @@ export function TransactionsScreen() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const rows = useMemo(
-    () =>
-      (list.data?.pages.flatMap((page) => page.data) ?? []).filter((row) =>
-        matchesSearch(row, filters.q),
-      ),
-    [list.data, filters.q],
+    () => loaded.filter((row) => matchesSearch(row, filters.q)),
+    [loaded, filters.q],
   );
   const total = list.data?.pages[0]?.pagination.total ?? null;
   const activeCount = countActiveFilters(filters);

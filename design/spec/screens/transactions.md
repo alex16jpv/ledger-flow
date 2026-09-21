@@ -62,6 +62,11 @@ a **Payment** badge, the shared group underneath, and the amount **neutral with 
 is not income: no category, out of Stats and out of Budgets, exactly like an adjustment, and never
 green ([shared.md](shared.md)).
 
+**It goes both ways.** Giving somebody back what they paid ahead of their share leaves an account, so
+the same row carries a `−`, still neutral and still with no category: you never spent it. The plate
+draws the pair, because a kind of movement that is only ever drawn in one direction is a kind half the
+product has never seen — and the day's total is the two of them together.
+
 The day's total moves with it, because the day's total is what the day did to your money. **The type
 filter gains it**; the Add form does not, because a payment is recorded from `Settle up` and nowhere
 else, and a type in the form that the form cannot correctly create is the contradiction T-86 had to

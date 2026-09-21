@@ -20,6 +20,8 @@ import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery } from "@/features/categories/hooks";
 import { SplitThisSheet } from "@/features/shared/components/SplitThisSheet";
+import { useSharedSection, useWriteOff } from "@/features/shared/hooks";
+import { type PartyView, sharedLookup } from "@/features/shared/ledger";
 import { DeleteTransactionSheet } from "@/features/transactions/components/DeleteTransactionSheet";
 import {
   type TransactionLookups,
@@ -38,6 +40,7 @@ import { useBackNavigation } from "@/lib/navigation/history";
 import type { Account } from "@/types/api";
 
 import { useAdjustmentSheet } from "../../useAdjustmentSheet";
+import { owingParties, SharedExpenseCard } from "./SharedExpenseCard";
 
 function Attribute({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -70,6 +73,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
   const accounts = useAccountsQuery(true);
   const categories = useCategoriesQuery(undefined);
   const remove = useDeleteTransaction();
+  const writeOff = useWriteOff();
   const outbox = useOutbox();
   const [confirming, setConfirming] = useState(false);
   const [splitting, setSplitting] = useState(false);
@@ -78,13 +82,40 @@ export function TransactionDetailScreen({ id }: { id: string }) {
   // F-29: DESIGN §8.12 asks for the conflict sheet from Movements; the way in is here, not a row.
   const stuck = outbox.attentionRows.get(id) ?? null;
   const notFound = transaction.error instanceof ApiError && transaction.error.status === 404;
+  const row = transaction.data;
+  // Only a movement that is in a group or is a payment pays for the section.
+  const shared = useSharedSection(
+    row !== undefined && (row.sharedExpenseId !== null || row.sharedSettlementId !== null),
+  );
   const lookups = useMemo<TransactionLookups>(
     () => ({
       accounts: new Map((accounts.data ?? []).map((account) => [account.id, account])),
       categories: new Map((categories.data ?? []).map((category) => [category.id, category])),
+      ...(shared.section ? { shared: sharedLookup(shared.section) } : {}),
     }),
-    [accounts.data, categories.data],
+    [accounts.data, categories.data, shared.section],
   );
+  const group = shared.section?.groups.find((one) => one.group.id === row?.sharedGroupId);
+  const expense = group?.expenses.find((one) => one.id === row?.sharedExpenseId);
+  const debtors =
+    shared.section && group && expense
+      ? owingParties(shared.section, group, expense).filter((one) => one.owesYou > 0)
+      : [];
+  const onlyDebtor = debtors.length === 1 ? debtors[0] : undefined;
+
+  async function forgive(groupId: string, person: PartyView) {
+    try {
+      await writeOff.mutateAsync({
+        groupId,
+        contactId: person.contactId,
+        expenseId: person.expenseId,
+        amount: person.owesYou,
+      });
+      toast.show({ message: t("shared.writeOff.done", { name: person.name }) });
+    } catch (error) {
+      toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
+    }
+  }
 
   async function confirmDelete() {
     try {
@@ -97,7 +128,6 @@ export function TransactionDetailScreen({ id }: { id: string }) {
     }
   }
 
-  const row = transaction.data;
   const category = row ? lookups.categories.get(row.categoryId ?? "") : undefined;
   const from = row ? lookups.accounts.get(row.fromAccountId ?? "") : undefined;
   const to = row ? lookups.accounts.get(row.toAccountId ?? "") : undefined;
@@ -259,8 +289,21 @@ export function TransactionDetailScreen({ id }: { id: string }) {
                 {t(`transactions.detail.sources.${row.source}`)}
               </Badge>
             </Attribute>
+            {group && (
+              <Attribute label={t("transactions.detail.shared.group")}>
+                <Link
+                  href={`/shared/groups/${group.group.id}`}
+                  className="text-brand-text underline-offset-2 hover:underline"
+                >
+                  {group.group.name}
+                </Link>
+              </Attribute>
+            )}
             <Attribute label={t("transactions.detail.currency")}>{row.currency}</Attribute>
           </Card>
+          {shared.section && group && expense && (
+            <SharedExpenseCard row={row} section={shared.section} view={group} expense={expense} />
+          )}
           {/* Decision 4: splitting a loose expense creates a shared group of one. */}
           {row.type === "EXPENSE" && row.sharedExpenseId === null && (
             <Button
@@ -274,38 +317,43 @@ export function TransactionDetailScreen({ id }: { id: string }) {
               {t("transactions.detail.split")}
             </Button>
           )}
-          <div className="grid grid-cols-2 gap-3">
-            {row.type === "ADJUSTMENT" ? (
+          {/* Its money belongs to the payment, and the payment is the only door to it. */}
+          {row.type === "SETTLEMENT" ? (
+            <Alert tone="neutral">{t("transactions.detail.settlementLocked")}</Alert>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {row.type === "ADJUSTMENT" ? (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => {
+                    adjustment.opened(row);
+                  }}
+                >
+                  <Pencil {...iconProps("sm")} />
+                  {t("transactions.detail.edit")}
+                </Button>
+              ) : (
+                <Link
+                  href={`/transactions/${row.id}/edit`}
+                  className={buttonClasses({ variant: "secondary", size: "lg" })}
+                >
+                  <Pencil {...iconProps("sm")} />
+                  {t("transactions.detail.edit")}
+                </Link>
+              )}
               <Button
-                variant="secondary"
+                variant="danger"
                 size="lg"
                 onClick={() => {
-                  adjustment.opened(row);
+                  setConfirming(true);
                 }}
               >
-                <Pencil {...iconProps("sm")} />
-                {t("transactions.detail.edit")}
+                <Trash2 {...iconProps("sm")} />
+                {t("common.delete")}
               </Button>
-            ) : (
-              <Link
-                href={`/transactions/${row.id}/edit`}
-                className={buttonClasses({ variant: "secondary", size: "lg" })}
-              >
-                <Pencil {...iconProps("sm")} />
-                {t("transactions.detail.edit")}
-              </Link>
-            )}
-            <Button
-              variant="danger"
-              size="lg"
-              onClick={() => {
-                setConfirming(true);
-              }}
-            >
-              <Trash2 {...iconProps("sm")} />
-              {t("common.delete")}
-            </Button>
-          </div>
+            </div>
+          )}
           <p className="text-center text-xs text-text-3">
             {row.updatedAt !== row.createdAt
               ? t("transactions.detail.createdEdited", {
@@ -334,6 +382,16 @@ export function TransactionDetailScreen({ id }: { id: string }) {
       <DeleteTransactionSheet
         open={confirming}
         pending={remove.isPending}
+        shared={expense !== undefined}
+        onWriteOff={
+          // Only when one person is left owing is "write it off" a single, unambiguous act.
+          onlyDebtor && group
+            ? () => {
+                setConfirming(false);
+                void forgive(group.group.id, onlyDebtor);
+              }
+            : undefined
+        }
         onConfirm={() => {
           void confirmDelete();
         }}

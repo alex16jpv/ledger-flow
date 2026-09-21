@@ -31,6 +31,8 @@ interface HomeViewProps {
   onCreateAccount: () => void;
   onCreateBudget: () => void;
   recent?: ReactNode;
+  // One line under the four figures: what people owe you, never added to what you have.
+  owed?: ReactNode;
 }
 
 export function HomeView({
@@ -38,6 +40,7 @@ export function HomeView({
   onCreateAccount,
   onCreateBudget,
   recent,
+  owed,
 }: HomeViewProps) {
   const t = useTranslations();
   const user = useAppUser();
@@ -165,6 +168,7 @@ export function HomeView({
               income={data.income.data ?? 0}
               spent={spent}
             />
+            {owed}
             <div className="order-5 md:order-none">{recent}</div>
           </div>
           <div className="contents md:flex md:flex-col md:gap-5">

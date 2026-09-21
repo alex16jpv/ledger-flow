@@ -11,6 +11,9 @@ export interface DeleteTransactionSheetProps {
   pending: boolean;
   onConfirm: () => void;
   onClose: () => void;
+  // A movement in a shared group drags what everybody owes, and never a payment already made.
+  shared?: boolean;
+  onWriteOff?: () => void;
 }
 
 export function DeleteTransactionSheet({
@@ -18,6 +21,8 @@ export function DeleteTransactionSheet({
   pending,
   onConfirm,
   onClose,
+  shared = false,
+  onWriteOff,
 }: DeleteTransactionSheetProps) {
   const t = useTranslations();
   return (
@@ -34,7 +39,20 @@ export function DeleteTransactionSheet({
         </>
       }
     >
-      <Alert tone="danger">{t("transactions.form.deleteBody")}</Alert>
+      <div className="flex flex-col gap-3">
+        <Alert tone="danger">{t("transactions.form.deleteBody")}</Alert>
+        {shared && (
+          <>
+            <Alert tone="warning">{t("transactions.detail.shared.deleteWarning")}</Alert>
+            <p className="text-sm text-text-3">{t("transactions.detail.shared.deleteWriteOff")}</p>
+            {onWriteOff && (
+              <Button variant="secondary" onClick={onWriteOff}>
+                {t("transactions.detail.shared.writeOffInstead")}
+              </Button>
+            )}
+          </>
+        )}
+      </div>
     </Sheet>
   );
 }

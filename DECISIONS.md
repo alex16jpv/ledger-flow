@@ -4514,3 +4514,30 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   is its primary action and the sheet composes the account and category pickers — a feature never
   imports another feature. `sharedGroup` gains `writeOff`, `undoWriteOff` and `archive`, so giving up
   and archiving work with no network like every other write.
+
+## 2026-09-21 · The shared layer reaches the ordinary screens through plain maps (T-124)
+
+- **Context:** a movement's row has to say **your share**, a payment has to read as the person it was
+  with, and the detail has to lead with **what counts as yours** and show the history that explains
+  it. All three are facts of `features/shared`, and `features/transactions` may never import it (§3).
+- **Decision:** `TransactionLookups` gains an optional `shared` of **plain maps** — expense id → your
+  share, payment id → who and which groups — and the **app layer** fills it from the section with
+  `sharedLookup()`. The row and the title read maps, not a feature. The detail's card, which needs the
+  section itself and composes the split sheet and the settle-up flow, is an app-layer component beside
+  its route, like the group detail.
+- **The section is only read when the screen holds something shared.** The list asks for it when a
+  loaded row carries `sharedExpenseId` or `sharedSettlementId`; the detail, when that one movement
+  does; Home, only once there is at least one contact, which is one cheap request instead of the
+  ledger. A device with no copy would otherwise pay one request per group to draw a list of coffees.
+- **`Edit split` and `Settle up` are one component each, not two copies.** `EditSplitSheet` and
+  `SettleUpFlow` came out of the group detail so the movement's card opens exactly the same sheets;
+  `SettleUpFlow` asks who first when a door can reach more than one counterparty, and goes straight
+  to the sheet when it can reach one.
+- **The design gained the case it was missing.** `#a-payment-between-people` only ever drew the
+  payment that **arrives**; giving somebody back what they paid ahead leaves the account. The plate now
+  draws the pair and the day's total is the two of them together, because a kind of movement drawn in
+  one direction only is a kind half the product has never seen.
+- **Consequence:** `FILTER_TYPES` is a list of its own, next to `FORM_TYPES` and `TRANSACTION_TYPES`:
+  the filter offers the fifth kind and the form cannot create one. The mirror's transaction list gained
+  its own `LIST_TYPES` so the filter answers with no network; `/stats/spending` keeps the four it had,
+  because a payment is not spending.
