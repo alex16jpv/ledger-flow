@@ -18,11 +18,13 @@ export type SpendingTransaction = Pick<
   | "toAccountId"
   | "tags"
   | "deletedAt"
->;
+> &
+  // Absent on a row written before splitting existed, and then the whole amount is yours.
+  Partial<Pick<SyncTransaction, "countsAsYours">>;
 
 export interface SpendingWindow {
   groupBy: SpendingGroupBy;
-  // null is everything but ADJUSTMENT; the HTTP layer never sends it, EXPENSE is applied before.
+  // null is everything but ADJUSTMENT and SETTLEMENT; the HTTP layer never sends it.
   type: SyncTransaction["type"] | null;
   categoryIds?: string[];
   splitBy?: SpendingSplitBy;
@@ -30,6 +32,12 @@ export interface SpendingWindow {
   to?: string;
   timeZone: string;
 }
+
+// What a figure of spending measures is what is left as yours, never what moved through the account.
+const yoursCents = (transaction: SpendingTransaction): number =>
+  toCents(transaction.countsAsYours ?? transaction.amount);
+
+const NOT_SPENDING: ReadonlySet<SyncTransaction["type"]> = new Set(["ADJUSTMENT", "SETTLEMENT"]);
 
 const UNCATEGORIZED = "uncategorized";
 const UNTAGGED = "untagged";
@@ -103,8 +111,8 @@ export function deriveSpending(
 
   const matched = transactions.filter((transaction) => {
     if (transaction.deletedAt) return false;
-    // ADJUSTMENT is reconciliation, not cash flow: it is hidden unless the query names it.
-    if (window.type ? transaction.type !== window.type : transaction.type === "ADJUSTMENT") {
+    // Neither reconciliation nor a payment between people is cash flow: hidden unless named.
+    if (window.type ? transaction.type !== window.type : NOT_SPENDING.has(transaction.type)) {
       return false;
     }
     if (only && (transaction.categoryId === null || !only.has(transaction.categoryId)))
@@ -115,7 +123,7 @@ export function deriveSpending(
 
   const totals = new Map<string, Total>();
   for (const transaction of matched) {
-    const cents = toCents(transaction.amount);
+    const cents = yoursCents(transaction);
     const day = transaction.dayKey ?? dayKey(new Date(transaction.date), window.timeZone);
     for (const key of bucketKeys(transaction, window.groupBy, day)) {
       const bucket = addTo(totals, key, cents);
@@ -134,7 +142,7 @@ export function deriveSpending(
   });
 
   return {
-    total: fromCents(matched.reduce((cents, row) => cents + toCents(row.amount), 0)),
+    total: fromCents(matched.reduce((cents, row) => cents + yoursCents(row), 0)),
     buckets,
   };
 }

@@ -782,6 +782,18 @@
     "CATEGORY_ARCHIVED": "Esa categoría está archivada. Restáurala o elige otra.",
     "CATEGORY_TYPE_MISMATCH": "Esa categoría no corresponde a este tipo de movimiento.",
     "CATEGORY_TYPE_LOCKED": "Esta categoría ya tiene movimientos, así que su tipo no puede cambiar. Crea una categoría nueva.",
+    "CONTACT_LIMIT_REACHED": "Llegaste al límite de contactos. Archiva alguno con quien ya no compartes gastos.",
+    "PARTICIPANT_LIMIT_REACHED": "Este grupo compartido está lleno. Saca a alguien antes de añadir a otra persona.",
+    "PARTICIPANT_ALREADY_IN_GROUP": "Alguien de esta lista ya está en el grupo.",
+    "PARTICIPANT_NOT_IN_GROUP": "Esa persona no está en este grupo compartido.",
+    "PARTICIPANT_IN_USE": "Esa persona tiene parte en un gasto de aquí. Sáldalo o dalo por perdido.",
+    "SPLIT_INVALID": "Las partes no suman el gasto.",
+    "SHARED_EXPENSE_LINKED": "Este gasto es un movimiento tuyo: cambia su importe, su fecha o su descripción en el movimiento.",
+    "TRANSACTION_ALREADY_SHARED": "Ese movimiento ya está en un grupo compartido.",
+    "TRANSACTION_NOT_SPLITTABLE": "Solo un gasto se puede repartir con otras personas.",
+    "SETTLEMENT_OVER_PAID": "Eso es más de lo que le debes y más de lo que te ha adelantado.",
+    "SETTLEMENT_MOVEMENT_LOCKED": "Este movimiento lo registró un cobro. Deshaz el pago y se va con él.",
+    "GUEST_BLOCK_HAS_PAYMENTS": "Su bloque de invitados ya pagó. Deshaz esos pagos primero.",
     "RESOURCE_ARCHIVED": "Este elemento está archivado. Restáuralo primero.",
     "BUDGET_PERIOD_OVERLAP": "Ya existe un presupuesto para este período y categoría.",
     "CURRENCY_LOCKED": "Tu moneda está bloqueada porque ya tienes cuentas.",
@@ -1465,7 +1477,8 @@
     "EXPENSE": "Gasto",
     "INCOME": "Ingreso",
     "TRANSFER": "Transferencia",
-    "ADJUSTMENT": "Ajuste"
+    "ADJUSTMENT": "Ajuste",
+    "SETTLEMENT": "Pago"
   },
   "stats": {
     "title": "Estadísticas",

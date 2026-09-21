@@ -2020,6 +2020,1911 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all contacts
+         * @description The people you split expenses with. Archived contacts are hidden unless includeArchived=true. A contact is not an account: it has no balance, never appears among the accounts, and no money ever moves in it.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Maximum number of items to return */
+                    limit?: number;
+                    /** @description Number of items to skip (offset-based pagination) */
+                    offset?: number;
+                    /** @description ID of the last item of the previous page; must name a row of the caller's (cursor-based pagination; overrides offset) */
+                    cursor?: string;
+                    /** @description Comma-separated list of contact UUIDs to filter by ID (1-100) */
+                    ids?: string;
+                    /** @description Include archived contacts in the listing */
+                    includeArchived?: true | false;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated list of contacts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ContactList"];
+                    };
+                };
+                /** @description Invalid query parameters (code VALIDATION), or a cursor that names no contact of the caller's (code INVALID_CURSOR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create a contact
+         * @description Requires `name`. Active contact names are unique per user, case-insensitively ("Ana" = "ana"; accents still distinct) and trimmed; archiving a contact frees its name.
+         *     `email` is optional and is only an **identifier for inviting them later**: nothing is sent from here, and two contacts may carry the same address. `linkedUserId` is server-owned and always null until an invitation is accepted; a client that sends it has it dropped.
+         *     A user is capped at `SharedLimits.maxContactsPerUser` active contacts (400 CONTACT_LIMIT_REACHED). Read that schema instead of copying the number: the sheet that adds a contact is meant to say the limit before a save can fail on it.
+         *     Accepts an optional client-minted `id` (UUID). An id the user already owns replays with 200 and the stored resource, whatever the payload says now; an id that belongs to another user is rejected with 409 ID_TAKEN.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateContactInput"];
+                };
+            };
+            responses: {
+                /** @description Replay of a create already made with this client-minted id */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Contact"];
+                    };
+                };
+                /** @description Contact created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Contact"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION) or contact limit reached (code CONTACT_LIMIT_REACHED) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description An active contact with this name already exists (code DUPLICATE, case-insensitive), or the client-minted id is already in use (code ID_TAKEN) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a contact by ID
+         * @description Also resolves archived contacts (archivedAt tells them apart); only the listing hides them by default.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Contact ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Contact found (may be archived) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Contact"];
+                    };
+                };
+                /** @description Invalid ID format (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Contact not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        /**
+         * Update a contact
+         * @description Partial update. `color` and `email` accept null to clear them.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Contact ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateContactInput"];
+                };
+            };
+            responses: {
+                /** @description Contact updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Contact"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION) or contact is archived (code RESOURCE_ARCHIVED, restore it first) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Contact not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Another active contact already uses this name (code DUPLICATE, case-insensitive), or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ContactConflict"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Archive a contact (soft delete)
+         * @description A contact is archived, never deleted: the groups and the payments that name it stay readable. Idempotent — archiving an already-archived contact is a no-op success.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Contact ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The archived contact (also when it was already archived), with its new `updatedAt` */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Contact"];
+                    };
+                };
+                /** @description Invalid ID format (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Contact not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ContactConflict"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore an archived contact, optionally under a new name
+         * @description Idempotent — restoring an already-active contact returns it unchanged.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Contact ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["RestoreInput"];
+                };
+            };
+            responses: {
+                /** @description Contact restored (or already active) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Contact"];
+                    };
+                };
+                /** @description Invalid ID format (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Contact not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description An active contact took this name while it was archived (code DUPLICATE) — rename that one first, or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ContactConflict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The money that has changed hands with the people you split with
+         * @description Newest first, keyset over `(date, id)`. Narrow it to one counterparty with `contactId`, or with `expenseId` for the block of guests that lives in that expense.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Maximum number of items to return */
+                    limit?: number;
+                    /** @description Number of items to skip (offset-based pagination) */
+                    offset?: number;
+                    /** @description ID of the last item of the previous page (overrides offset) */
+                    cursor?: string;
+                    /** @description Only what has changed hands with this person */
+                    contactId?: string;
+                    /** @description Only what has changed hands with that expense's block of guests */
+                    expenseId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated list of payments */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettlementList"];
+                    };
+                };
+                /** @description Invalid query parameters (code VALIDATION), or a cursor that names no payment of the caller's (code INVALID_CURSOR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Settle up with one person, or with one block of guests
+         * @description One payment, with both halves: `collected` is what came back to you and `paid` is what you handed over. **What it covers is imputed to the oldest line first**, across every group you share with them, and the answer says line by line what it covered.
+         *     **Money coming back is not income.** It arrives in `accountId` as a `SETTLEMENT`, carries no category and is out of Stats and of the budgets — the shape an `ADJUSTMENT` already has. What it covers comes off what counts as yours on each line it lands on, **in the month that line happened**, and every movement it touches says so in its history.
+         *     **Paying somebody back is not that movement: it is your expense**, one for each line you cover, with that line's description, dated that line, and with the category you give — one in `categoryId` for all of them, or one per line in `categories`. The shared layer carries no categories, so there is none to take. Whatever is left of `paid` once every line you owe is covered is a **refund** of what they paid ahead, and that is a `SETTLEMENT` leaving the account: you never spent it, so it carries no category either.
+         *     **`outsideApp` is cash the app never saw**: no movement is written and no balance moves, and what is owed falls all the same, because that money did change hands.
+         *     Accepts a client-minted `id`, with the usual replay.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateSettlementInput"];
+                };
+            };
+            responses: {
+                /** @description Replay of a payment already recorded with this client-minted id */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettlementResult"];
+                    };
+                };
+                /** @description The payment, and what it covered */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettlementResult"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), more than you owe them and more than they paid ahead (code SETTLEMENT_OVER_PAID), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), a date more than 24h ahead (code FUTURE_DATE), an archived category (code CATEGORY_ARCHIVED) or one of another type (code CATEGORY_TYPE_MISMATCH) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The contact, the expense or the account is not the caller's (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The client-minted id is already in use (code ID_TAKEN) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settlements/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one payment */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Payment ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The payment */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Settlement"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Payment not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Undo a payment (soft delete)
+         * @description Reverses every movement it recorded — the collection, your expenses and any refund — and imputes what is left over the lines that are still open. Idempotent. The movements themselves cannot be deleted on their own: this is the door.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Payment ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The undone payment (also when it was already undone) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Settlement"];
+                    };
+                };
+                /** @description Invalid ID format (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Payment not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all shared groups
+         * @description An outing, a dinner or a two-month trip: a shared group has **no period**. Its expenses carry the dates, and `totals.dateFrom` and `totals.dateTo` are derived from them, never stored. Archived groups are hidden unless includeArchived=true.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Maximum number of items to return */
+                    limit?: number;
+                    /** @description Number of items to skip (offset-based pagination) */
+                    offset?: number;
+                    /** @description ID of the last item of the previous page; must name a row of the caller's (overrides offset) */
+                    cursor?: string;
+                    /** @description Comma-separated list of group UUIDs to filter by ID (1-100) */
+                    ids?: string;
+                    /** @description Only the groups this contact takes part in */
+                    contactId?: string;
+                    /** @description Include archived groups in the listing */
+                    includeArchived?: true | false;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated list of shared groups with their totals */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroupList"];
+                    };
+                };
+                /** @description Invalid query parameters (code VALIDATION), or a cursor that names no group of the caller's (code INVALID_CURSOR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create a shared group
+         * @description Requires `name`; active group names are unique per user, case-insensitively. `contactIds` names the other people in it — you are always a participant and are never listed there. A group holds at most `SharedLimits.maxParticipantsPerGroup` people, you included (400 PARTICIPANT_LIMIT_REACHED).
+         *     `defaultSplit` is the split a new expense **inherits**, not a rule. It is `EQUAL` or `PERCENT` only: a default has no total to divide, so `EXACT` and `FIXED_REST` are things only an expense can carry. Under `PERCENT` it needs one `shares` entry per participant — `contactId: null` is you — adding up to 100, or 400 SPLIT_INVALID.
+         *     Accepts a client-minted `id`, with the usual replay.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateSharedGroupInput"];
+                };
+            };
+            responses: {
+                /** @description Replay of a create already made with this client-minted id */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroup"];
+                    };
+                };
+                /** @description Shared group created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroup"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), too many people (code PARTICIPANT_LIMIT_REACHED), the same person twice (code PARTICIPANT_ALREADY_IN_GROUP) or a default split that does not add up (code SPLIT_INVALID) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description One of the `contactIds` is not an active contact of the caller's */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description An active group with this name already exists (code DUPLICATE), or the client-minted id is already in use (code ID_TAKEN) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a shared group by ID
+         * @description Also resolves archived groups; only the listing hides them by default.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Shared group found (may be archived) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroup"];
+                    };
+                };
+                /** @description Invalid ID format (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        /**
+         * Update a shared group
+         * @description Partial update of `name`, `color` and `defaultSplit`. **Changing the default split is never retroactive**: it applies to the expenses added from then on and to nothing already recorded. Re-splitting what is already there would re-impute every payment and move what counts as yours between months, closed ones included; the deliberate version of that is `POST /shared-groups/{id}/participants`, which shows the whole result first.
+         *     Participants are not changed here: they have their own endpoints.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateSharedGroupInput"];
+                };
+            };
+            responses: {
+                /** @description Shared group updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroup"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), group is archived (code RESOURCE_ARCHIVED) or a default split that does not add up (code SPLIT_INVALID) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Another active group already uses this name (code DUPLICATE), or the resource changed since the `If-Match` version (code STALE_UPDATE) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroupConflict"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Archive a shared group (soft delete)
+         * @description Idempotent — archiving an already-archived group answers it unchanged. Its expenses are not touched and stay readable.
+         *     **What people still owe here is written off on your behalf**, which moves no figure: it was counted as yours the day it left. The answer carries it in `totals.writtenOff`, and every movement it touches says so in its history. A write-off can be taken back while the group is open, so archiving is where that stops.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The archived group (also when it was already archived) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroup"];
+                    };
+                };
+                /** @description Invalid ID format (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroupConflict"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The expenses of a shared group
+         * @description Newest first, keyset over `(date, id)`: ids are minted when the expense is recorded, not on the day it was spent, so they cannot order this list on their own. Deleted expenses are not listed.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Maximum number of items to return */
+                    limit?: number;
+                    /** @description Number of items to skip (offset-based pagination) */
+                    offset?: number;
+                    /** @description ID of the last item of the previous page; must name a row of the caller's (overrides offset) */
+                    cursor?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated list of the group's expenses */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedExpenseList"];
+                    };
+                };
+                /** @description Invalid query parameters (code VALIDATION), or a cursor that names no expense of the caller's (code INVALID_CURSOR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Record an expense in a shared group
+         * @description `paidByContactId` names who fronted the money; absent or null is you. Somebody else's line is **not your expense**: no movement of yours exists for it, and it becomes one the day you settle with them.
+         *     Leave `split` out and the expense **inherits the group's default split**, without asking. Send one and the expense carries its own, and reads as a custom split from then on. A split states a `mode` and one share per party: `USER` is you, `CONTACT` names a participant, and `GUESTS` is the block whose head count sits in `guests` — it weighs that many parts and is one party to collect from. Shares need not cover every participant: leaving somebody out of one expense is what an expense's own split is for.
+         *     **The odd minor unit goes to whoever paid**, in every mode, so the shares add up to the expense exactly. The split is resolved the same way whatever order the shares arrive in, because the offline projection has to reach the same figures to the peso.
+         *     **`transactionId` makes the expense a movement of yours.** The amount, the date and the description are then that transaction's, so sending any of the three alongside it is 400 VALIDATION — two places stating the same thing is how they end up disagreeing — and so is a `paidByContactId` other than null: a movement of yours is a line you paid. The transaction keeps the link, along with what counts as yours and the history that explains it; from then on those three are changed on the transaction, not here. Leave `transactionId` out and the expense is a fact with no money of yours behind it, which is what a line somebody else paid is.
+         *     Accepts a client-minted `id`, with the usual replay.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateSharedExpenseInput"];
+                };
+            };
+            responses: {
+                /** @description Replay of a create already made with this client-minted id */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedExpense"];
+                    };
+                };
+                /** @description Expense recorded */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedExpense"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), a split that cannot describe one (code SPLIT_INVALID), somebody in the split who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a date more than 24h ahead (code FUTURE_DATE), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), an archived group (code RESOURCE_ARCHIVED), a movement that is already in a group (code TRANSACTION_ALREADY_SHARED), one that is not an expense (code TRANSACTION_NOT_SPLITTABLE) or one in another currency (code CURRENCY_MISMATCH) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group not found, or a `transactionId` that names no movement of the caller's (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The client-minted id is already in use (code ID_TAKEN) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/expenses/{expenseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get one expense of a shared group
+         * @description Also resolves a deleted expense; only the listing hides it.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                    /** @description Shared expense ID */
+                    expenseId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The expense (may be deleted) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedExpense"];
+                    };
+                };
+                /** @description Invalid ID format (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared expense not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        /**
+         * Edit an expense of a shared group
+         * @description Partial update. `split` saves a split on this expense and nothing else, and marks it custom; `useGroupSplit: true` clears that and the expense follows the group's default again, from that moment on. The two cannot come together.
+         *     Changing the amount or who paid resolves the shares again on the split the expense already had, rather than leaving figures that no longer add up to it. The one case that cannot be resolved that way is an expense carrying its own `EXACT` split: it states amounts, so a new `amount` alone makes them stop adding up and the answer is 400 SPLIT_INVALID — send the split again with the new figures. Rescaling what somebody typed would be the server deciding what they meant.
+         *     **An expense that is a movement of yours takes only the split here.** Its amount, date, description and payer come from that transaction, so restating one of them is 400 SHARED_EXPENSE_LINKED: two places stating the same figure is how they end up disagreeing. Saving a split on it leaves a line in the transaction's history saying the split changed and what counts as yours did not.
+         *     The expense has to belong to the group in the path: reaching one of your own expenses through another of your groups answers 404.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                    /** @description Shared expense ID */
+                    expenseId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateSharedExpenseInput"];
+                };
+            };
+            responses: {
+                /** @description Expense updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedExpense"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), a split that cannot describe one (code SPLIT_INVALID), somebody in the split who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a date more than 24h ahead (code FUTURE_DATE), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), restating what the linked movement states (code SHARED_EXPENSE_LINKED), or the expense is deleted or its group archived (code RESOURCE_ARCHIVED) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared expense not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedExpenseConflict"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Delete an expense of a shared group (soft delete)
+         * @description Idempotent — deleting an already-deleted expense answers it unchanged. The row stays, marked, because a group has to keep reading as what happened.
+         *     When the expense was a movement of yours, **the movement is not deleted**: it leaves the group, the whole of it counts as yours again and its history says so. Deleting the movement instead is what takes both away.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                    /** @description Shared expense ID */
+                    expenseId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The deleted expense (also when it was already deleted) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedExpense"];
+                    };
+                };
+                /** @description Invalid ID format (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared expense not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedExpenseConflict"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/participants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add people to a shared group
+         * @description `applyToExistingExpenses` off — the default — puts them in what you add from now on and in none of what is there. On, it is **the whole group or none of it**, and the answer carries the same summary the preview gave, so the caller can show what actually happened.
+         *     A group that splits by percentage needs `defaultSplit` with the new percentages: the old ones no longer cover everybody. The group and every expense it splits again move together, in one transaction.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AddParticipantsInput"];
+                };
+            };
+            responses: {
+                /** @description The group as it now is, and what the change did */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AddParticipantsResult"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), too many people (code PARTICIPANT_LIMIT_REACHED), somebody already in the group (code PARTICIPANT_ALREADY_IN_GROUP), the group is archived (code RESOURCE_ARCHIVED), or a percentage group whose new percentages are missing or do not add up (code SPLIT_INVALID) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group not found, or one of the `contactIds` is not an active contact of the caller's */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroupConflict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/participants/{contactId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Take somebody out of a shared group
+         * @description Only offered while they have **no share in any expense of the group**. Once one exists, taking them out would have to either delete money or hand their share to everybody else in silence, so the answer is 400 PARTICIPANT_IN_USE and the screen offers to settle or to write off instead.
+         *     In a group that splits by percentage, their percentage is spread over the rest in proportion so the default still adds up to 100.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                    /** @description The contact to take out */
+                    contactId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The group without that person */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroup"];
+                    };
+                };
+                /** @description Invalid ID format (code VALIDATION), they are not in the group (code PARTICIPANT_NOT_IN_GROUP), they hold a share of an expense (code PARTICIPANT_IN_USE) or the group is archived (code RESOURCE_ARCHIVED) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroupConflict"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/participants/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Work out what adding people would do, without doing it
+         * @description The same body as the write below, answered without touching anything: what each person is down for now and what they would be down for after, and how many expenses would be split again. The screen shows this before it asks for a confirmation, because **it is the whole group or none of it**.
+         *     `expenses.untouched` counts the expenses this leaves alone: the ones carrying their own `PERCENT` or `EXACT` split, where a percentage or an amount for somebody who was not there would be invented rather than derived. Everything else is split again, including the expenses that follow the group's default.
+         *     What each person has already paid, who ends up ahead of what they owe, and what a written-off amount becomes are not in this answer yet: none of it exists on the server until payments and write-offs do.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AddParticipantsInput"];
+                };
+            };
+            responses: {
+                /** @description What the change would do */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AddParticipantsPreview"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), too many people (code PARTICIPANT_LIMIT_REACHED), somebody already in the group (code PARTICIPANT_ALREADY_IN_GROUP), the group is archived (code RESOURCE_ARCHIVED), or a percentage group whose new percentages are missing or do not add up (code SPLIT_INVALID) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group not found, or one of the `contactIds` is not an active contact of the caller's */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore an archived shared group, optionally under a new name
+         * @description Idempotent — restoring an already-active group answers it unchanged.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["RestoreInput"];
+                };
+            };
+            responses: {
+                /** @description Shared group restored (or already active) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroup"];
+                    };
+                };
+                /** @description Invalid ID format (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description An active group took this name while it was archived (code DUPLICATE), or the resource changed since the `If-Match` version (code STALE_UPDATE) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroupConflict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/write-offs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Give up on what somebody still owes you here
+         * @description **It moves no figure.** That money was counted as yours the day it left your account, which is the whole answer to "and if nobody ever pays me?" — nothing has to happen. What it writes is the decision and a line in the history of every movement it touches, and what is still open stops being owed: `totals.owedToYou` drops by it, `totals.writtenOff` carries it, and the group reads `SETTLED` once nobody is left owing.
+         *     It names **one person** (`contactId`) or **one block of guests** (`expenseId`, the expense it lives in). Somebody who had paid part of it keeps that part. It follows the share down if a re-split ever lowers it, because what is written off is what is open, not a figure.
+         *     Idempotent, and undone with `DELETE` while the group is open.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["WriteOffInput"];
+                };
+            };
+            responses: {
+                /** @description The group, with what it now counts as owed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroup"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), somebody who is not in the group (code PARTICIPANT_NOT_IN_GROUP) or an archived group (code RESOURCE_ARCHIVED) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group or expense not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroupConflict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/write-offs/{partyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Take back a write-off
+         * @description What they owe is owed again, and the history says so. Idempotent, and only while the group is open: archiving one writes off what is left on your behalf, and that is where it stops being undoable.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Optimistic concurrency: the `updatedAt` this client last read, verbatim (ISO 8601 with a time and an offset). The write only lands if the server still has that version; otherwise 409 STALE_UPDATE, with the server's copy in `current`. Omit the header to write unconditionally, as before. */
+                    "If-Match"?: components["parameters"]["IfMatch"];
+                };
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                    /** @description The contact, or the expense whose block of guests it was */
+                    partyId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The group, with what it now counts as owed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroup"];
+                    };
+                };
+                /** @description Invalid ID format (code VALIDATION) or an archived group (code RESOURCE_ARCHIVED) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The resource changed since the `If-Match` version (code STALE_UPDATE) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SharedGroupConflict"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/stats/spending": {
         parameters: {
             query?: never;
@@ -2033,8 +3938,8 @@ export type paths = {
          *     frozen when it was written, so a later change of the account's time
          *     zone cannot move past spending between buckets or months; the zone
          *     (from the token claim) resolves the days the range covers. Deleted
-         *     transactions are excluded, and ADJUSTMENT ones only appear when asked
-         *     for explicitly with `type=ADJUSTMENT` (they are balance
+         *     transactions are excluded, and ADJUSTMENT and SETTLEMENT ones only
+         *     appear when asked for explicitly with `type=` (they are balance
          *     reconciliations, not spending).
          *
          *     Bucket semantics: `groupBy=day` and `groupBy=month` come back ascending
@@ -2064,7 +3969,7 @@ export type paths = {
                     /** @description Comma-separated category ids (at most 20): aggregates only those. A budget of several categories is one request, not one per category. Rows with no category never match it, quick-adds included. */
                     categoryIds?: string;
                     /** @description Transaction type to aggregate */
-                    type?: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
+                    type?: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT" | "SETTLEMENT";
                     /** @description Start of the range, inclusive (ISO 8601, offsets accepted) */
                     from?: string;
                     /** @description End of the range, EXCLUSIVE — the range is half-open [from, to) and is matched as the whole calendar days it covers. */
@@ -2159,10 +4064,17 @@ export type paths = {
          *     **Actions per entity:** account: create, update, archive, restore,
          *     setDefault · category: create, update, archive, restore · transaction:
          *     create, quickAdd, update, delete · budget: create, update, archive,
-         *     restore, setOverride, clearOverride. `payload.body` is the body the
+         *     restore, setOverride, clearOverride · contact: create, update,
+         *     archive, restore · sharedGroup: create, update, archive, restore,
+         *     addParticipants, removeParticipant, writeOff, undoWriteOff ·
+         *     sharedExpense: create, update, delete · settlement: create, delete.
+         *     `payload.body` is the body the
          *     matching route takes, validated with the same rules (a bad body
          *     rejects that operation only); `payload.query.reference` is the budget
-         *     routes' `reference`; `baseUpdatedAt` is the route's `If-Match`. A
+         *     routes' `reference`; **`payload.params`** is what a route reads from
+         *     its path besides the row's own id — `groupId` for an expense of a
+         *     group, `partyId` for taking somebody out or undoing a write-off;
+         *     `baseUpdatedAt` is the route's `If-Match`. A
          *     create's `payload.body.id`, if sent, must equal `id`.
          *
          *     **Idempotency:** every landed `opId` is remembered for 30 days; sending
@@ -2241,12 +4153,18 @@ export type paths = {
         };
         /**
          * Everything that changed for the user, for the offline mirror
-         * @description One feed for the four entities and the user, ordered by
-         *     `(updatedAt, _id)` and paginated with an opaque cursor. **Archived and
-         *     deleted rows are included** — they are the only way a client that is
-         *     holding a local copy learns that something disappeared. Deleted
-         *     transactions arrive with `deletedAt` set; archived accounts,
-         *     categories and budgets with `archivedAt`.
+         * @description One feed for every entity and the user, ordered by `(updatedAt, _id)`
+         *     and paginated with an opaque cursor. **Archived and deleted rows are
+         *     included** — they are the only way a client that is holding a local
+         *     copy learns that something disappeared. Deleted transactions, shared
+         *     expenses and payments arrive with `deletedAt` set; archived accounts,
+         *     categories, budgets, contacts and shared groups with `archivedAt`.
+         *
+         *     **The shared layer travels whole and carries nothing private**: the
+         *     group, its people, its expenses, the split, who fronted each line and
+         *     what has been settled. Your account, your categories and what counts
+         *     as yours are on your own movements, which is what makes it possible to
+         *     show a group to somebody else later without showing them your ledger.
          *
          *     **No `since` and no `cursor` is a full snapshot**, down the same code
          *     path: there is no separate snapshot endpoint to drift from this one.
@@ -2383,7 +4301,7 @@ export type paths = {
                     /** @description Only transactions carrying this tag (tags are stored trimmed and lowercased) */
                     tag?: string;
                     /** @description Filter transactions by type */
-                    type?: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
+                    type?: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT" | "SETTLEMENT";
                 };
                 header?: never;
                 path?: never;
@@ -2426,6 +4344,7 @@ export type paths = {
          *     - **EXPENSE**: Subtracts amount from `fromAccountId` (required; `toAccountId` not allowed).
          *     - **TRANSFER**: Subtracts from `fromAccountId` and adds to `toAccountId` (both required, must differ).
          *     - **ADJUSTMENT**: Balance reconciliation; exactly one of `fromAccountId` (decrease) or `toAccountId` (increase), no `categoryId`. Excluded from spending stats and budgets.
+         *     - **SETTLEMENT**: Money between you and a person you split with. The same shape, and **not writable here**: a settle-up records it (`POST /settlements`).
          *
          *     Two rules bind the movement to the **type** of account it touches: money arriving
          *     at a CARD or a LOAN is never an INCOME — it is a TRANSFER from wherever it came
@@ -2587,6 +4506,16 @@ export type paths = {
          * @description Partial update; the merged result must still be a valid transaction of its type.
          *     When the money movement changes (type, amount, or accounts), the original balance
          *     changes are reversed and the new ones applied atomically.
+         *
+         *     **A movement in a shared group carries its expense with it**, whether
+         *     or not that group is archived: an archived group is a read-only view
+         *     of what happened, and refusing to fix your own movement because of it
+         *     would be the wrong half to block. A new amount, date or description is
+         *     written on both in one transaction, and a new amount resolves the
+         *     split again — except on a split carrying its
+         *     own `EXACT` figures, which stop adding up and answer 400 SPLIT_INVALID:
+         *     restate the split on the expense first. Changing its type is refused
+         *     (code TRANSACTION_NOT_SPLITTABLE): only an expense can be split.
          */
         put: {
             parameters: {
@@ -2616,7 +4545,7 @@ export type paths = {
                         "application/json": components["schemas"]["Transaction"];
                     };
                 };
-                /** @description Validation error. Codes include FUTURE_DATE, CURRENCY_MISMATCH, INCOME_ON_CARD_OR_LOAN (an income moved onto an account type listed in `IncomeRefusedAccountType`), AMOUNT_PRECISION (only when the edit carries an amount) and LOAN_OVERPAID (a movement that would leave a LOAN above zero), the first and the last checked again whenever the edit moves money, CATEGORY_ARCHIVED (assigning an archived category; keeping the one it already had is allowed), CATEGORY_TYPE_MISMATCH. */
+                /** @description Validation error. Codes include SPLIT_INVALID and TRANSACTION_NOT_SPLITTABLE (a movement in a shared group), FUTURE_DATE, CURRENCY_MISMATCH, INCOME_ON_CARD_OR_LOAN (an income moved onto an account type listed in `IncomeRefusedAccountType`), AMOUNT_PRECISION (only when the edit carries an amount) and LOAN_OVERPAID (a movement that would leave a LOAN above zero), the first and the last checked again whenever the edit moves money, CATEGORY_ARCHIVED (assigning an archived category; keeping the one it already had is allowed), CATEGORY_TYPE_MISMATCH. */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2653,7 +4582,7 @@ export type paths = {
         post?: never;
         /**
          * Delete a transaction
-         * @description Deletes the transaction (soft delete) and reverses any balance changes on associated accounts.
+         * @description Deletes the transaction (soft delete) and reverses any balance changes on associated accounts. **A movement in a shared group takes its expense with it**, in the same database transaction: the group now costs that much less and every share falls with it. Taking the expense out of the group without deleting the movement is the other door, `DELETE /shared-groups/{id}/expenses/{expenseId}`.
          */
         delete: {
             parameters: {
@@ -3167,6 +5096,38 @@ export type components = {
             data: components["schemas"]["Account"][];
             pagination: components["schemas"]["Pagination"];
         };
+        AddParticipantsInput: {
+            contactIds: string[];
+            applyToExistingExpenses?: boolean;
+            defaultSplit?: {
+                /** @enum {string} */
+                mode: "EQUAL" | "PERCENT";
+                shares?: {
+                    /** Format: uuid */
+                    contactId: string | null;
+                    percent: number;
+                }[];
+            };
+        };
+        /** @description What adding people would do, worked out and thrown away. What each person has already paid, who ends up ahead of what they owe and what a written-off amount becomes are not here yet: none of it exists on the server until payments and write-offs do. */
+        AddParticipantsPreview: {
+            participants: {
+                /** Format: uuid */
+                contactId: string | null;
+                shareBefore: number;
+                shareAfter: number;
+            }[];
+            expenses: {
+                total: number;
+                resplit: number;
+                /** @description Expenses carrying their own PERCENT or EXACT split: a figure for somebody who was not there would be invented, so they are left alone. */
+                untouched: number;
+            };
+        };
+        AddParticipantsResult: {
+            group: components["schemas"]["SharedGroup"];
+            applied: components["schemas"]["AddParticipantsPreview"];
+        };
         AuthTokens: {
             accessToken: string;
             refreshToken: string;
@@ -3176,7 +5137,7 @@ export type components = {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message: string;
         };
         /** @description Per-item outcome. The status is 200 even when some items failed: read `failed`. */
@@ -3274,6 +5235,39 @@ export type components = {
             data: components["schemas"]["Category"][];
             pagination: components["schemas"]["Pagination"];
         };
+        /** @description A person you split expenses with. Not an account: no balance, no type, no limit, and never part of what you have or what you owe. */
+        Contact: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string|null} */
+            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
+            /**
+             * Format: email
+             * @description Identifier for inviting them later; nothing is sent from this API, and two contacts may carry the same address.
+             */
+            email?: string;
+            /**
+             * Format: uuid
+             * @description The user this contact turned out to be, once an invitation is accepted. Always null today.
+             */
+            linkedUserId: string | null;
+            /** Format: uuid */
+            userId: string;
+            /** Format: date-time */
+            archivedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ContactConflict: components["schemas"]["ErrorResponse"] & {
+            current?: components["schemas"]["Contact"];
+        };
+        ContactList: {
+            data: components["schemas"]["Contact"][];
+            pagination: components["schemas"]["Pagination"];
+        };
         CreateAccountInput: {
             /** Format: uuid */
             id?: string;
@@ -3318,6 +5312,83 @@ export type components = {
             /** @enum {string} */
             type?: "INCOME" | "EXPENSE" | "TRANSFER";
         };
+        CreateContactInput: {
+            /** Format: uuid */
+            id?: string;
+            name: string;
+            /** @enum {string} */
+            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
+            /** Format: email */
+            email?: string;
+        };
+        CreateSettlementInput: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            contactId?: string;
+            /** Format: uuid */
+            expenseId?: string;
+            /** Format: date-time */
+            date: string;
+            collected?: number;
+            paid?: number;
+            outsideApp?: boolean;
+            /** Format: uuid */
+            accountId?: string;
+            /** Format: uuid */
+            categoryId?: string;
+            categories?: {
+                /** Format: uuid */
+                expenseId: string;
+                /** Format: uuid */
+                categoryId: string;
+            }[];
+        };
+        CreateSharedExpenseInput: {
+            /** Format: uuid */
+            id?: string;
+            description?: string | null;
+            /** Format: date-time */
+            date?: string;
+            amount?: number;
+            /** Format: uuid */
+            transactionId?: string;
+            /** Format: uuid */
+            paidByContactId?: string | null;
+            split?: {
+                /** @enum {string} */
+                mode: "EQUAL" | "PERCENT" | "EXACT" | "FIXED_REST";
+                guests?: {
+                    count: number;
+                    name?: string | null;
+                } | null;
+                shares: {
+                    /** @enum {string} */
+                    party: "USER" | "CONTACT" | "GUESTS";
+                    /** Format: uuid */
+                    contactId?: string | null;
+                    percent?: number | null;
+                    fixedAmount?: number | null;
+                }[];
+            };
+        };
+        CreateSharedGroupInput: {
+            /** Format: uuid */
+            id?: string;
+            name: string;
+            /** @enum {string} */
+            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
+            contactIds?: string[];
+            defaultSplit?: {
+                /** @enum {string} */
+                mode: "EQUAL" | "PERCENT";
+                shares?: {
+                    /** Format: uuid */
+                    contactId: string | null;
+                    percent: number;
+                }[];
+            };
+        };
         CreateTransactionInput: {
             /** Format: uuid */
             id?: string;
@@ -3336,6 +5407,17 @@ export type components = {
             tags?: string[];
             note?: string | null;
         };
+        /** @description The split a new expense inherits, not a rule. EQUAL or PERCENT only: a default has no total to divide. Changing it is never retroactive. */
+        DefaultSplit: {
+            /** @enum {string} */
+            mode: "EQUAL" | "PERCENT";
+            /** @description PERCENT only, one entry per participant adding up to 100; empty under EQUAL. */
+            shares: {
+                /** Format: uuid */
+                contactId: string | null;
+                percent: number;
+            }[];
+        };
         ErrorResponse: {
             /** @example NotFoundError */
             error: string;
@@ -3344,7 +5426,7 @@ export type components = {
              * @description Stable machine-readable code. Branch on this, never on message.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             details?: {
                 field?: string;
                 message?: string;
@@ -3423,6 +5505,231 @@ export type components = {
         SessionList: {
             data: components["schemas"]["Session"][];
         };
+        /** @description Money that changed hands with one person, or with the block of guests of one expense. It carries no account and no category: those are yours, and what everybody in a group can see is that it was paid. */
+        Settlement: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            counterparty: {
+                /** @enum {string} */
+                kind: "CONTACT" | "GUESTS";
+                /** Format: uuid */
+                contactId: string | null;
+                /**
+                 * Format: uuid
+                 * @description GUESTS only: the expense the block lives in.
+                 */
+                expenseId: string | null;
+            };
+            /** Format: date-time */
+            date: string;
+            /** @description What came back to you. */
+            collected: number;
+            /** @description What you handed over. */
+            paid: number;
+            /** @description Cash the app never saw: no movement was written and no balance moved. */
+            outsideApp: boolean;
+            /** @example COP */
+            currency: string;
+            /**
+             * Format: date-time
+             * @description Set when the payment was undone. A read never answers one, but the change feed does: it is how a device learns the payment is gone.
+             */
+            deletedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SettlementCoverage: {
+            /** Format: uuid */
+            expenseId: string;
+            description: string | null;
+            /** Format: date-time */
+            date: string;
+            amount: number;
+            /**
+             * @description COLLECTED came off what that line still counts as yours; PAID is a line of theirs you covered.
+             * @enum {string}
+             */
+            direction: "COLLECTED" | "PAID";
+        };
+        SettlementList: {
+            data: components["schemas"]["Settlement"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        SettlementResult: {
+            settlement: components["schemas"]["Settlement"];
+            /** @description Oldest line first, which is the order it was imputed in. */
+            covered: components["schemas"]["SettlementCoverage"][];
+            /** @description What you handed over that covered no line: their money going back to them. */
+            refunded: number;
+        };
+        SharedExpense: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            groupId: string;
+            description: string | null;
+            /** Format: date-time */
+            date: string;
+            /** @description What the expense cost, in full. */
+            amount: number;
+            /**
+             * Format: uuid
+             * @description Who fronted the money; null is you. Somebody else's line is not your expense until you settle with them.
+             */
+            paidByContactId: string | null;
+            split: components["schemas"]["SharedSplit"];
+            /** @description True once a split is saved on this expense; cleared by going back to the group's default. */
+            customSplit: boolean;
+            /** Format: uuid */
+            userId: string;
+            /** @example COP */
+            currency: string;
+            /** Format: date-time */
+            deletedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SharedExpenseConflict: components["schemas"]["ErrorResponse"] & {
+            current?: components["schemas"]["SharedExpense"];
+        };
+        SharedExpenseList: {
+            data: components["schemas"]["SharedExpense"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        /** @description An outing, a dinner or a two-month trip. It has no month of its own. */
+        SharedGroup: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string|null} */
+            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
+            participants: components["schemas"]["SharedGroupParticipant"][];
+            defaultSplit: components["schemas"]["DefaultSplit"];
+            /** @description Who you have given up on here, and when. It moves no figure: that money was counted as yours the day it left. */
+            writeOffs: {
+                /** @enum {string} */
+                kind: "CONTACT" | "GUESTS";
+                /** Format: uuid */
+                contactId: string | null;
+                /**
+                 * Format: uuid
+                 * @description GUESTS only: the expense the block lives in.
+                 */
+                expenseId: string | null;
+                /** @description What was open when it was decided: the ceiling of what is given up, never a figure that moves. */
+                amount: number;
+                /** Format: date-time */
+                at: string;
+            }[];
+            /** Format: uuid */
+            userId: string;
+            /** @example COP */
+            currency: string;
+            totals: components["schemas"]["SharedGroupTotals"];
+            /**
+             * @description Derived: SETTLED once nobody owes anything here, by paying or by being written off.
+             * @enum {string}
+             */
+            status: "OPEN" | "SETTLED";
+            /** Format: date-time */
+            archivedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SharedGroupConflict: components["schemas"]["ErrorResponse"] & {
+            current?: components["schemas"]["SharedGroup"];
+        };
+        SharedGroupList: {
+            data: components["schemas"]["SharedGroup"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        SharedGroupParticipant: {
+            /**
+             * Format: uuid
+             * @description null is you: the owner is a row of the group like anybody else.
+             */
+            contactId: string | null;
+            /** Format: date-time */
+            addedAt: string;
+        };
+        /** @description Derived from the group's live expenses on every read, never stored. A group has no period: the range is its expenses'. */
+        SharedGroupTotals: {
+            amount: number;
+            yourShare: number;
+            /** @description What people still owe you for the lines you fronted, written-off amounts aside. */
+            owedToYou: number;
+            /** @description What you have given up on here. It stopped being owed and was always counted as yours. */
+            writtenOff: number;
+            /** @description Your share of the lines somebody else fronted, still unpaid. */
+            youOwe: number;
+            /** @description What has already come back to you here. */
+            collected: number;
+            expenseCount: number;
+            /** Format: date-time */
+            dateFrom: string | null;
+            /** Format: date-time */
+            dateTo: string | null;
+        };
+        /** @description One thing that happened to what counts as yours. Splitting an expense and editing its split move no money — it left the account when it was spent — so those entries repeat the figure rather than change it. */
+        SharedHistoryEntry: {
+            /** Format: date-time */
+            at: string;
+            /** @enum {string} */
+            reason: "SPLIT" | "SPLIT_EDITED" | "AMOUNT_CHANGED" | "UNSPLIT" | "PAYMENT" | "REIMPUTED" | "WRITE_OFF" | "WRITE_OFF_UNDONE";
+            /** @description The figure it left behind. */
+            countsAsYours: number;
+        };
+        /** @description The explicit ceilings of the shared-expenses section. Read them instead of copying the numbers: the sheet that adds a contact is meant to name the limit before a save can fail on it, and a client that keeps its own copy will eventually say a different one from the server. */
+        SharedLimits: {
+            /**
+             * @description Active contacts one user may have. Creating or restoring past it is 400 CONTACT_LIMIT_REACHED.
+             * @enum {integer}
+             */
+            maxContactsPerUser: 200;
+            /**
+             * @description People in one shared group, the owner included. Adding past it is 400 PARTICIPANT_LIMIT_REACHED.
+             * @enum {integer}
+             */
+            maxParticipantsPerGroup: 20;
+            /**
+             * @description Heads one guest block may carry. A sanity bound on an integer field, not a product rule: the block is one row whatever it counts.
+             * @enum {integer}
+             */
+            maxGuestsPerExpense: 999;
+        };
+        /** @description One party of a split. GUESTS is the block whose head count sits in `guests`; it weighs that many parts and is one party to collect from. */
+        SharedShare: {
+            /** @enum {string} */
+            party: "USER" | "CONTACT" | "GUESTS";
+            /** Format: uuid */
+            contactId: string | null;
+            /** @description PERCENT only. */
+            percent: number | null;
+            /** @description EXACT always; FIXED_REST only on a pinned share. */
+            fixedAmount: number | null;
+            /** @description What the split resolved to. The shares always add up to the expense: the odd minor unit goes to whoever paid. */
+            amount: number;
+            /** @description How much of this share has been settled. Never typed: it is the imputation of the live payments, rewritten by every write that touches a split or a payment. */
+            collected: number;
+        };
+        SharedSplit: {
+            /** @enum {string} */
+            mode: "EQUAL" | "PERCENT" | "EXACT" | "FIXED_REST";
+            /** @description Guests belong to this expense alone: they are not contacts, they are not in the group, and they go when the expense goes. */
+            guests: {
+                count: number;
+                name: string | null;
+            } | null;
+            shares: components["schemas"]["SharedShare"][];
+        };
         StatsBucket: {
             /** @description Category id, day (YYYY-MM-DD), month (YYYY-MM), account id or tag; 'uncategorized' and 'untagged' for the catch-all buckets, and 'unassigned' for a row with no account at all, which validation no longer allows. */
             key: string;
@@ -3460,8 +5767,8 @@ export type components = {
                 /** Format: date-time */
                 occurredAt: string;
                 /** @enum {string} */
-                entity: "account" | "category" | "transaction" | "budget";
-                /** @description Per entity — account: create, update, archive, restore, setDefault; category: create, update, archive, restore; transaction: create, quickAdd, update, delete; budget: create, update, archive, restore, setOverride, clearOverride */
+                entity: "account" | "category" | "transaction" | "budget" | "contact" | "sharedGroup" | "sharedExpense" | "settlement";
+                /** @description Per entity — account: create, update, archive, restore, setDefault; category: create, update, archive, restore; transaction: create, quickAdd, update, delete; budget: create, update, archive, restore, setOverride, clearOverride; contact: create, update, archive, restore; sharedGroup: create, update, archive, restore, addParticipants, removeParticipant, writeOff, undoWriteOff; sharedExpense: create, update, delete; settlement: create, delete */
                 action: string;
                 /** Format: uuid */
                 id: string;
@@ -3473,6 +5780,12 @@ export type components = {
                     query?: {
                         /** Format: date-time */
                         reference?: string;
+                    };
+                    params?: {
+                        /** Format: uuid */
+                        groupId?: string;
+                        /** Format: uuid */
+                        partyId?: string;
                     };
                 };
                 /** Format: date-time */
@@ -3541,6 +5854,10 @@ export type components = {
                 categories: components["schemas"]["Category"][];
                 transactions: components["schemas"]["SyncTransaction"][];
                 budgets: components["schemas"]["SyncBudget"][];
+                contacts: components["schemas"]["Contact"][];
+                sharedGroups: components["schemas"]["SyncSharedGroup"][];
+                sharedExpenses: components["schemas"]["SharedExpense"][];
+                settlements: components["schemas"]["Settlement"][];
             };
             pagination: {
                 limit: number;
@@ -3556,7 +5873,7 @@ export type components = {
             opId: string;
             seq: number;
             /** @enum {string} */
-            entity: "account" | "category" | "transaction" | "budget";
+            entity: "account" | "category" | "transaction" | "budget" | "contact" | "sharedGroup" | "sharedExpense" | "settlement";
             /**
              * Format: uuid
              * @description The entity the operation was about.
@@ -3568,7 +5885,7 @@ export type components = {
              * @description conflict / rejected: the code the matching route would have answered.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message?: string;
             details?: {
                 field?: string;
@@ -3591,12 +5908,48 @@ export type components = {
             /** @description The write landed, but not as it was sent: CATEGORY_ARCHIVED_DROPPED — the category was archived online, so the movement was saved without it and flagged pendingDetails. */
             warnings?: "CATEGORY_ARCHIVED_DROPPED"[];
         };
+        /** @description A group as STORED, not the view GET /shared-groups returns: no totals and no status. Both are worked out from the group's expenses on every read, and the client already holds the expenses. */
+        SyncSharedGroup: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string|null} */
+            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
+            participants: components["schemas"]["SharedGroupParticipant"][];
+            defaultSplit: components["schemas"]["DefaultSplit"];
+            /** @description Who you have given up on here, and when. It moves no figure: that money was counted as yours the day it left. */
+            writeOffs: {
+                /** @enum {string} */
+                kind: "CONTACT" | "GUESTS";
+                /** Format: uuid */
+                contactId: string | null;
+                /**
+                 * Format: uuid
+                 * @description GUESTS only: the expense the block lives in.
+                 */
+                expenseId: string | null;
+                /** @description What was open when it was decided: the ceiling of what is given up, never a figure that moves. */
+                amount: number;
+                /** Format: date-time */
+                at: string;
+            }[];
+            /** Format: uuid */
+            userId: string;
+            /** @example COP */
+            currency: string;
+            /** Format: date-time */
+            archivedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         /** @description A transaction in the change feed: the usual shape plus the tombstone. */
         SyncTransaction: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
+            type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT" | "SETTLEMENT";
             amount: number;
             /** Format: date-time */
             date: string;
@@ -3624,6 +5977,22 @@ export type components = {
             source: "MANUAL" | "QUICK" | "IMPORT";
             /** @example COP */
             currency: string;
+            /** @description What the movement counts as yours: what left the account minus what has come back. **This is the figure Stats and the budgets measure**, and it is the amount itself unless the movement is an expense of a shared group. The list, its day totals and `summary.totalAmount` stay gross: they are what moved through the accounts. */
+            countsAsYours: number;
+            /**
+             * Format: uuid
+             * @description The expense of a shared group this movement is, or null. The link lives here and not on the expense: a shared group is seen by everybody in it, and which movement of yours it is nobody else's.
+             */
+            sharedExpenseId: string | null;
+            /** Format: uuid */
+            sharedGroupId: string | null;
+            /**
+             * Format: uuid
+             * @description The settle-up that recorded this movement, or null. Its money belongs to that payment: editing the amount, the date, the type or the accounts is 400 SETTLEMENT_MOVEMENT_LOCKED, and so is deleting it — undo the payment instead.
+             */
+            sharedSettlementId: string | null;
+            /** @description Why `countsAsYours` is what it is, oldest first. Empty on a movement that was never split. */
+            sharedHistory: components["schemas"]["SharedHistoryEntry"][];
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -3641,7 +6010,7 @@ export type components = {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
+            type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT" | "SETTLEMENT";
             amount: number;
             /** Format: date-time */
             date: string;
@@ -3669,6 +6038,22 @@ export type components = {
             source: "MANUAL" | "QUICK" | "IMPORT";
             /** @example COP */
             currency: string;
+            /** @description What the movement counts as yours: what left the account minus what has come back. **This is the figure Stats and the budgets measure**, and it is the amount itself unless the movement is an expense of a shared group. The list, its day totals and `summary.totalAmount` stay gross: they are what moved through the accounts. */
+            countsAsYours: number;
+            /**
+             * Format: uuid
+             * @description The expense of a shared group this movement is, or null. The link lives here and not on the expense: a shared group is seen by everybody in it, and which movement of yours it is nobody else's.
+             */
+            sharedExpenseId: string | null;
+            /** Format: uuid */
+            sharedGroupId: string | null;
+            /**
+             * Format: uuid
+             * @description The settle-up that recorded this movement, or null. Its money belongs to that payment: editing the amount, the date, the type or the accounts is 400 SETTLEMENT_MOVEMENT_LOCKED, and so is deleting it — undo the payment instead.
+             */
+            sharedSettlementId: string | null;
+            /** @description Why `countsAsYours` is what it is, oldest first. Empty on a movement that was never split. */
+            sharedHistory: components["schemas"]["SharedHistoryEntry"][];
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -3720,6 +6105,53 @@ export type components = {
             color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
             /** @enum {string|null} */
             type?: "INCOME" | "EXPENSE" | "TRANSFER" | null;
+        };
+        UpdateContactInput: {
+            name?: string;
+            /** @enum {string|null} */
+            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
+            /** Format: email */
+            email?: string | null;
+        };
+        UpdateSharedExpenseInput: {
+            description?: string | null;
+            /** Format: date-time */
+            date?: string;
+            amount?: number;
+            /** Format: uuid */
+            paidByContactId?: string | null;
+            split?: {
+                /** @enum {string} */
+                mode: "EQUAL" | "PERCENT" | "EXACT" | "FIXED_REST";
+                guests?: {
+                    count: number;
+                    name?: string | null;
+                } | null;
+                shares: {
+                    /** @enum {string} */
+                    party: "USER" | "CONTACT" | "GUESTS";
+                    /** Format: uuid */
+                    contactId?: string | null;
+                    percent?: number | null;
+                    fixedAmount?: number | null;
+                }[];
+            };
+            /** @enum {boolean} */
+            useGroupSplit?: true;
+        };
+        UpdateSharedGroupInput: {
+            name?: string;
+            /** @enum {string|null} */
+            color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
+            defaultSplit?: {
+                /** @enum {string} */
+                mode: "EQUAL" | "PERCENT";
+                shares?: {
+                    /** Format: uuid */
+                    contactId: string | null;
+                    percent: number;
+                }[];
+            };
         };
         UpdateTransactionInput: {
             /** @enum {string} */
@@ -3773,6 +6205,12 @@ export type components = {
             /** @description Present (true) only when register revived a soft-deleted account. */
             reactivated?: boolean;
         };
+        WriteOffInput: {
+            /** Format: uuid */
+            contactId?: string;
+            /** Format: uuid */
+            expenseId?: string;
+        };
         /**
          * @description The currencies this API stores with no minor unit. An amount carrying decimals in one of them is rejected with 400 AMOUNT_PRECISION wherever one is written: a transaction, an account balance, a credit limit or a borrowed amount, a budget amount and a budget period override, through the /sync batch as well as through these routes. It is judged on the amount a request carries, never on one already stored, so a row written before a currency joined this list stays editable in everything but its amount. Read this list instead of copying it; a client that keeps its own can refuse what the server takes, or offer what the server refuses. The ISO three-decimal currencies are absent on purpose: storage is integer cents, so they are capped at two.
          * @enum {string}
@@ -3791,6 +6229,9 @@ export type components = {
 export type Account = components['schemas']['Account'];
 export type AccountConflict = components['schemas']['AccountConflict'];
 export type AccountList = components['schemas']['AccountList'];
+export type AddParticipantsInput = components['schemas']['AddParticipantsInput'];
+export type AddParticipantsPreview = components['schemas']['AddParticipantsPreview'];
+export type AddParticipantsResult = components['schemas']['AddParticipantsResult'];
 export type AuthTokens = components['schemas']['AuthTokens'];
 export type BatchUpdateFailure = components['schemas']['BatchUpdateFailure'];
 export type BatchUpdateResult = components['schemas']['BatchUpdateResult'];
@@ -3802,10 +6243,18 @@ export type BudgetList = components['schemas']['BudgetList'];
 export type Category = components['schemas']['Category'];
 export type CategoryConflict = components['schemas']['CategoryConflict'];
 export type CategoryList = components['schemas']['CategoryList'];
+export type Contact = components['schemas']['Contact'];
+export type ContactConflict = components['schemas']['ContactConflict'];
+export type ContactList = components['schemas']['ContactList'];
 export type CreateAccountInput = components['schemas']['CreateAccountInput'];
 export type CreateBudgetInput = components['schemas']['CreateBudgetInput'];
 export type CreateCategoryInput = components['schemas']['CreateCategoryInput'];
+export type CreateContactInput = components['schemas']['CreateContactInput'];
+export type CreateSettlementInput = components['schemas']['CreateSettlementInput'];
+export type CreateSharedExpenseInput = components['schemas']['CreateSharedExpenseInput'];
+export type CreateSharedGroupInput = components['schemas']['CreateSharedGroupInput'];
 export type CreateTransactionInput = components['schemas']['CreateTransactionInput'];
+export type DefaultSplit = components['schemas']['DefaultSplit'];
 export type ErrorResponse = components['schemas']['ErrorResponse'];
 export type IncomeRefusedAccountType = components['schemas']['IncomeRefusedAccountType'];
 export type LoginInput = components['schemas']['LoginInput'];
@@ -3818,6 +6267,22 @@ export type RestoreDefaultsResponse = components['schemas']['RestoreDefaultsResp
 export type RestoreInput = components['schemas']['RestoreInput'];
 export type Session = components['schemas']['Session'];
 export type SessionList = components['schemas']['SessionList'];
+export type Settlement = components['schemas']['Settlement'];
+export type SettlementCoverage = components['schemas']['SettlementCoverage'];
+export type SettlementList = components['schemas']['SettlementList'];
+export type SettlementResult = components['schemas']['SettlementResult'];
+export type SharedExpense = components['schemas']['SharedExpense'];
+export type SharedExpenseConflict = components['schemas']['SharedExpenseConflict'];
+export type SharedExpenseList = components['schemas']['SharedExpenseList'];
+export type SharedGroup = components['schemas']['SharedGroup'];
+export type SharedGroupConflict = components['schemas']['SharedGroupConflict'];
+export type SharedGroupList = components['schemas']['SharedGroupList'];
+export type SharedGroupParticipant = components['schemas']['SharedGroupParticipant'];
+export type SharedGroupTotals = components['schemas']['SharedGroupTotals'];
+export type SharedHistoryEntry = components['schemas']['SharedHistoryEntry'];
+export type SharedLimits = components['schemas']['SharedLimits'];
+export type SharedShare = components['schemas']['SharedShare'];
+export type SharedSplit = components['schemas']['SharedSplit'];
 export type StatsBucket = components['schemas']['StatsBucket'];
 export type StatsResponse = components['schemas']['StatsResponse'];
 export type StatsSplit = components['schemas']['StatsSplit'];
@@ -3826,6 +6291,7 @@ export type SyncBatchResponse = components['schemas']['SyncBatchResponse'];
 export type SyncBudget = components['schemas']['SyncBudget'];
 export type SyncChangesResponse = components['schemas']['SyncChangesResponse'];
 export type SyncOpResult = components['schemas']['SyncOpResult'];
+export type SyncSharedGroup = components['schemas']['SyncSharedGroup'];
 export type SyncTransaction = components['schemas']['SyncTransaction'];
 export type TagList = components['schemas']['TagList'];
 export type Transaction = components['schemas']['Transaction'];
@@ -3834,9 +6300,13 @@ export type TransactionList = components['schemas']['TransactionList'];
 export type UpdateAccountInput = components['schemas']['UpdateAccountInput'];
 export type UpdateBudgetInput = components['schemas']['UpdateBudgetInput'];
 export type UpdateCategoryInput = components['schemas']['UpdateCategoryInput'];
+export type UpdateContactInput = components['schemas']['UpdateContactInput'];
+export type UpdateSharedExpenseInput = components['schemas']['UpdateSharedExpenseInput'];
+export type UpdateSharedGroupInput = components['schemas']['UpdateSharedGroupInput'];
 export type UpdateTransactionInput = components['schemas']['UpdateTransactionInput'];
 export type UpdateUserInput = components['schemas']['UpdateUserInput'];
 export type User = components['schemas']['User'];
+export type WriteOffInput = components['schemas']['WriteOffInput'];
 export type ZeroDecimalCurrency = components['schemas']['ZeroDecimalCurrency'];
 export type ParameterIfMatch = components['parameters']['IfMatch'];
 export type $defs = Record<string, never>;

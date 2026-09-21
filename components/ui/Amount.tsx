@@ -4,7 +4,7 @@ import { useMoney } from "@/lib/i18n/useMoney";
 
 import { cn } from "./cn";
 
-export type AmountKind = "expense" | "income" | "transfer" | "adjustment";
+export type AmountKind = "expense" | "income" | "transfer" | "adjustment" | "settlement";
 export type AmountSize = "sm" | "base" | "lg" | "hero";
 
 export interface AmountProps {
@@ -20,6 +20,7 @@ const SIGN: Record<AmountKind, string> = {
   income: "+",
   transfer: "",
   adjustment: "±",
+  settlement: "+",
 };
 
 const KIND: Record<AmountKind, string> = {
@@ -27,6 +28,8 @@ const KIND: Record<AmountKind, string> = {
   income: "text-income",
   transfer: "text-transfer",
   adjustment: "text-adjustment",
+  // Money arrived, but it is not income: neutral, never green.
+  settlement: "text-text",
 };
 
 const SIZE: Record<AmountSize, string> = {

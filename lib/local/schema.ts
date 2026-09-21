@@ -1,6 +1,16 @@
 import type { DBSchema } from "idb";
 
-import type { Account, Category, SyncBudget, SyncTransaction, User } from "@/types/api";
+import type {
+  Account,
+  Category,
+  Contact,
+  Settlement,
+  SharedExpense,
+  SyncBudget,
+  SyncSharedGroup,
+  SyncTransaction,
+  User,
+} from "@/types/api";
 
 export const VAULT_DB_PREFIX = "lf-vault-";
 
@@ -14,6 +24,10 @@ export const MIRROR_STORES = [
   "categories",
   "transactions",
   "budgets",
+  "contacts",
+  "sharedGroups",
+  "sharedExpenses",
+  "settlements",
 ] as const;
 export type MirrorStore = (typeof MIRROR_STORES)[number];
 
@@ -56,6 +70,15 @@ export interface ArchivableRecord<T> extends MirrorRecord<T> {
 export type AccountRecord = ArchivableRecord<Account>;
 export type CategoryRecord = ArchivableRecord<Category>;
 export type BudgetRecord = ArchivableRecord<SyncBudget>;
+export type ContactRecord = ArchivableRecord<Contact>;
+export type SharedGroupRecord = ArchivableRecord<SyncSharedGroup>;
+
+export interface DeletableRecord<T> extends MirrorRecord<T> {
+  deleted: 0 | 1;
+}
+
+export type SharedExpenseRecord = DeletableRecord<SharedExpense> & { groupId: string };
+export type SettlementRecord = DeletableRecord<Settlement>;
 
 export interface TransactionRecord extends MirrorRecord<SyncTransaction> {
   deleted: 0 | 1;
@@ -94,6 +117,22 @@ export interface OutboxOperation {
 }
 
 export interface VaultSchema extends DBSchema {
+  contacts: { key: string; value: ContactRecord; indexes: { updatedAt: string; archived: number } };
+  sharedGroups: {
+    key: string;
+    value: SharedGroupRecord;
+    indexes: { updatedAt: string; archived: number };
+  };
+  sharedExpenses: {
+    key: string;
+    value: SharedExpenseRecord;
+    indexes: { updatedAt: string; deleted: number; groupId: string };
+  };
+  settlements: {
+    key: string;
+    value: SettlementRecord;
+    indexes: { updatedAt: string; deleted: number };
+  };
   profile: { key: string; value: ProfileRecord };
   accounts: { key: string; value: AccountRecord; indexes: { updatedAt: string; archived: number } };
   categories: {
@@ -152,6 +191,28 @@ export function budgetRecord(row: SyncBudget, server?: SyncBudget): BudgetRecord
     archived: row.archivedAt ? 1 : 0,
     ...(server ? { server } : {}),
   };
+}
+
+export function contactRecord(row: Contact): ContactRecord {
+  return { id: row.id, row, updatedAt: row.updatedAt, archived: row.archivedAt ? 1 : 0 };
+}
+
+export function sharedGroupRecord(row: SyncSharedGroup): SharedGroupRecord {
+  return { id: row.id, row, updatedAt: row.updatedAt, archived: row.archivedAt ? 1 : 0 };
+}
+
+export function sharedExpenseRecord(row: SharedExpense): SharedExpenseRecord {
+  return {
+    id: row.id,
+    row,
+    updatedAt: row.updatedAt,
+    deleted: row.deletedAt ? 1 : 0,
+    groupId: row.groupId,
+  };
+}
+
+export function settlementRecord(row: Settlement): SettlementRecord {
+  return { id: row.id, row, updatedAt: row.updatedAt, deleted: row.deletedAt ? 1 : 0 };
 }
 
 export function profileRecord(row: User): ProfileRecord {

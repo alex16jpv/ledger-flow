@@ -102,6 +102,12 @@ function newRow(
     pendingDetails,
     source,
     currency: owner.currency,
+    // A movement created here is in no group yet, so the whole amount is what counts as yours.
+    countsAsYours: input.amount,
+    sharedExpenseId: null,
+    sharedGroupId: null,
+    sharedSettlementId: null,
+    sharedHistory: [],
     deletedAt: null,
     createdAt,
     updatedAt: createdAt,

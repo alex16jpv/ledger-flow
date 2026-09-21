@@ -1,5 +1,12 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { category, openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
+import {
+  category,
+  changes as feedChanges,
+  openTestVault,
+  profile,
+  transaction,
+  wipeVaults,
+} from "@/lib/testing/vault";
 import type { SyncChangesResponse, SyncTransaction, User } from "@/types/api";
 
 import { pullChanges } from "../pull";
@@ -29,13 +36,11 @@ async function mirrorOf(transactions: SyncTransaction[], user: User | null = pro
     fetchPage: () =>
       Promise.resolve<SyncChangesResponse>({
         serverTime: "2026-09-03T12:00:00.000Z",
-        changes: {
+        changes: feedChanges({
           user,
-          accounts: [],
           categories: [category({ id: "c1" }), category({ id: "c2" })],
           transactions,
-          budgets: [],
-        },
+        }),
         pagination: {
           limit: 500,
           count: transactions.length,

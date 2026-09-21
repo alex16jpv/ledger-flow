@@ -7,7 +7,14 @@ import {
   rejectedWith,
   SERVER_TIME,
 } from "@/lib/testing/sync";
-import { account, openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
+import {
+  account,
+  changes as feedChanges,
+  openTestVault,
+  profile,
+  transaction,
+  wipeVaults,
+} from "@/lib/testing/vault";
 import type { SyncChangesResponse } from "@/types/api";
 
 import { pullChanges } from "../pull";
@@ -67,7 +74,7 @@ const kept = async (db: VaultDb) => (await db.get("transactions", "t1"))?.server
 
 const feedOf = (rows: Partial<SyncChangesResponse["changes"]>): SyncChangesResponse => ({
   serverTime: T1,
-  changes: { user: null, accounts: [], categories: [], transactions: [], budgets: [], ...rows },
+  changes: feedChanges(rows),
   pagination: { limit: 500, count: 1, hasMore: false, nextCursor: "c1" },
 });
 

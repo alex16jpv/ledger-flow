@@ -5,8 +5,7 @@ import { forgetOfflineReadyAnnouncement } from "@/lib/pwa/readiness";
 import { isVaultSupported, vaultExists } from "./db";
 import { MIRROR_STORES, vaultDatabaseName, type VaultSchema } from "./schema";
 
-type VaultStore =
-  "profile" | "accounts" | "categories" | "transactions" | "budgets" | "meta" | "outbox";
+type VaultStore = (typeof MIRROR_STORES)[number] | "meta" | "outbox";
 
 const PURGEABLE_STORES: readonly VaultStore[] = [...MIRROR_STORES, "meta", "outbox"];
 

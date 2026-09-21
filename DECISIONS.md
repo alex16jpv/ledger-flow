@@ -4390,3 +4390,30 @@ cover` is set once in the root layout for the standalone display.
 - **Consequence:** the sentence repeats what was just typed and picked, so it costs no request and no
   arithmetic and reads identically with no network. **Reversed in part on 2026-09-18 (T-96):** it no
   longer ends in "Your total balance does not change" — see that entry.
+
+## 2026-09-21 · The shared layer is stored as the fact and derived on every read (T-120)
+
+- **Context:** the backend answers a shared group's `totals` and `status` by working them out on every
+  read, and it exposes **no** per-person endpoint at all — where each person stands is the device's to
+  produce. Meanwhile Stats and the budgets stopped measuring a movement's `amount` and now measure
+  `countsAsYours`, which the change feed sends on every row. The mirror had to learn both halves or
+  the section could not exist with no network while the rest of the product does.
+- **Decision:** the four collections ride the feed into four mirror stores of their own
+  (`contacts`, `sharedGroups`, `sharedExpenses`, `settlements`), and `lib/local/derive/shared.ts`
+  works out from them exactly what the server works out: the split, the imputation of every payment,
+  what each movement counts as yours, a group's totals and status, and the state of each person.
+  `readSharedGroups` composes the endpoint's own answer out of the stored row plus that derivation, so
+  the figures come from one place whichever screen asks. `deriveSpending` and `deriveBudgetView` read
+  `countsAsYours ?? amount` and exclude `SETTLEMENT` beside `ADJUSTMENT` when no type is named.
+- **Alternatives:** storing `totals` and `status` as the feed's group sends them — it does not send
+  them, on purpose (`docs/modules/sync.md`), because a rollup kept in step across expense writes,
+  re-splits, payments and write-offs is the thing this feature refuses to keep anywhere; or deriving
+  `countsAsYours` here instead of reading the stored field — the same figure worked out twice, and
+  wrong on a row whose group this device has not pulled yet.
+- **Consequence:** house rule 4 gains a fifth figure the client computes, so it is held by the
+  `cop-shared` parity fixture like the others, and the split arithmetic is a second reading of
+  `src/shared/splitShares.ts` rather than a port that imports it. The imputation is **per
+  counterparty, not per group** — it reads every live expense where that person holds a share, across
+  every group — so a person's `surplus` is the same figure on their row in each group and must never
+  be added up. The mirror goes to schema version 2 and mirror version 3: the stores are created, and
+  the copy is re-pulled once.

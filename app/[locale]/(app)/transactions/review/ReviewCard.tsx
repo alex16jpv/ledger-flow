@@ -27,9 +27,9 @@ import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
 import type { Transaction } from "@/types/api";
 
-// An ADJUSTMENT is the one movement the server refuses a category on, so it has no list to offer.
+// The two the server refuses a category on carry no list to offer.
 export function reviewCategoryType(type: Transaction["type"]): CategoryType | null {
-  return type === "ADJUSTMENT" ? null : type;
+  return type === "ADJUSTMENT" || type === "SETTLEMENT" ? null : type;
 }
 
 export interface ReviewDraft {

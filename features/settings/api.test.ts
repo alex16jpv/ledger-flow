@@ -1,7 +1,13 @@
 import { pullChanges } from "@/lib/local/pull";
 import { setCurrentVault } from "@/lib/local/repository";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { account, category, openTestVault, wipeVaults } from "@/lib/testing/vault";
+import {
+  account,
+  category,
+  changes as feedChanges,
+  openTestVault,
+  wipeVaults,
+} from "@/lib/testing/vault";
 import type { Account, Category, SyncChangesResponse } from "@/types/api";
 
 import { fetchAccountCount, fetchCategorySummary } from "./api";
@@ -23,7 +29,7 @@ afterEach(async () => {
 function feed(accounts: Account[], categories: Category[]): SyncChangesResponse {
   return {
     serverTime: "2026-09-06T12:00:00.000Z",
-    changes: { user: null, accounts, categories, transactions: [], budgets: [] },
+    changes: feedChanges({ accounts, categories }),
     pagination: { limit: 500, count: 0, hasMore: false, nextCursor: "v1|done|" },
   };
 }

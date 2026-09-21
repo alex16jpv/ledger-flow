@@ -2,6 +2,7 @@ import {
   account,
   budget,
   category,
+  changes as feedChanges,
   openTestVault,
   profile,
   transaction,
@@ -16,19 +17,12 @@ import type { OutboxOperation } from "./schema";
 type Changes = Partial<SyncChangesResponse["changes"]>;
 
 function page(
-  changes: Changes,
+  rows: Changes,
   pagination: { count: number; hasMore: boolean; nextCursor: string },
 ): SyncChangesResponse {
   return {
     serverTime: "2026-09-03T12:00:00.000Z",
-    changes: {
-      user: null,
-      accounts: [],
-      categories: [],
-      transactions: [],
-      budgets: [],
-      ...changes,
-    },
+    changes: feedChanges(rows),
     pagination: { limit: 500, ...pagination },
   };
 }

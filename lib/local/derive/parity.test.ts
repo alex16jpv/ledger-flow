@@ -19,12 +19,16 @@ import { deriveBudgetView } from "./budgets";
 import {
   type FixtureBudget,
   type FixtureCategory,
+  type FixtureSettlement,
+  type FixtureSharedExpense,
   type FixtureTransaction,
+  mirrorRows,
   PARITY_FIXTURES,
   type ParityFixture,
   parityFixture,
 } from "./fixtures";
 import { sumAmounts } from "./money";
+import { countsAsYours, deriveShared, resolveShares } from "./shared";
 import { deriveSpending } from "./spending";
 
 const VENDORED = resolve(process.cwd(), "lib/local/derive/fixtures");
@@ -60,6 +64,8 @@ function feedRow(userId: string, row: FixtureTransaction): SyncTransaction {
     currency: row.currency,
     source: row.source,
     pendingDetails: row.pendingDetails,
+    // What the row is left counting as; absent on a movement that was never split.
+    countsAsYours: row.countsAsYours ?? row.amount,
     deletedAt: row.deletedAt,
     userId,
     createdAt: date,
@@ -107,6 +113,10 @@ function feedPage(
       categories: extra.categories ?? [],
       transactions,
       budgets: extra.budgets ?? [],
+      contacts: [],
+      sharedGroups: [],
+      sharedExpenses: [],
+      settlements: [],
     },
     pagination: { limit: 500, count: transactions.length, hasMore: false, nextCursor: "v1|done|" },
   };
@@ -120,7 +130,7 @@ async function vaultOf(fixture: ParityFixture) {
     fetchPage: () =>
       Promise.resolve(
         feedPage(
-          fixture.transactions.map((row) => feedRow(userId, row)),
+          mirrorRows(fixture).map((row) => feedRow(userId, row)),
           {
             user: profile({
               id: userId,
@@ -149,15 +159,15 @@ afterEach(async () => {
 
 describe.each(PARITY_FIXTURES)("$id", (fixture) => {
   it("derives every account balance", () => {
-    expect(deriveBalances(fixture.accounts, fixture.transactions)).toEqual(
+    expect(deriveBalances(fixture.accounts, mirrorRows(fixture))).toEqual(
       fixture.expected.balances.map(({ accountId, balance }) => ({ accountId, balance })),
     );
   });
 
   it.each(fixture.expected.spending)("derives the $name buckets", (expected) => {
-    // `type: null` is the service's everything-but-ADJUSTMENT, which no URL can ask for.
+    // `type: null` is the service's everything but ADJUSTMENT and SETTLEMENT, which no URL asks for.
     expect(
-      deriveSpending(fixture.transactions, {
+      deriveSpending(mirrorRows(fixture), {
         groupBy: expected.query.groupBy,
         type: expected.query.type,
         categoryIds: expected.query.categoryIds ?? undefined,
@@ -180,7 +190,7 @@ describe.each(PARITY_FIXTURES)("$id", (fixture) => {
       .map((row) => {
         const view = deriveBudgetView(
           row,
-          fixture.transactions,
+          mirrorRows(fixture),
           archived,
           reference,
           fixture.user.timezone,
@@ -274,7 +284,7 @@ describe.each(PARITY_FIXTURES)("$id", (fixture) => {
   // The tray is the repository's own answer, so the fixture checks that path, not a second sum.
   it("answers the pending tray from the mirror exactly as the fixture says", async () => {
     const vault = await openTestVault(fixture.user.id);
-    const rows = fixture.transactions.map((row) => feedRow(fixture.user.id, row));
+    const rows = mirrorRows(fixture).map((row) => feedRow(fixture.user.id, row));
     await pullChanges(vault, { fetchPage: () => Promise.resolve(feedPage(rows)) });
     setCurrentVault(vault);
     reportOnline(false);
@@ -339,9 +349,10 @@ describe("the rules the fixtures fix", () => {
 });
 
 describe("the vendored copy", () => {
-  it("holds the four scenarios", () => {
+  it("holds the five scenarios", () => {
     expect(PARITY_FIXTURES.map((fixture) => fixture.id)).toEqual([
       "cop-bogota",
+      "cop-shared",
       "eur-madrid",
       "jpy-tokyo",
       "usd-new-york",
@@ -360,4 +371,112 @@ describe("the vendored copy", () => {
       }
     },
   );
+});
+
+const SHARED_FIXTURES = PARITY_FIXTURES.filter((fixture) => fixture.expected.shared !== undefined);
+
+// The payer's share is the one that absorbs the odd minor unit, in every mode.
+const payerIndexOf = (expense: FixtureSharedExpense): number =>
+  expense.split.shares.findIndex((share) =>
+    expense.paidByContactId === null
+      ? share.party === "USER"
+      : share.party === "CONTACT" && share.contactId === expense.paidByContactId,
+  );
+
+const statedInput = (
+  mode: FixtureSharedExpense["split"]["mode"],
+  share: FixtureSharedExpense["split"]["shares"][number],
+): number | null => {
+  if (mode === "EQUAL") return null;
+  if (mode === "PERCENT") return share.percent;
+  return share.fixedAmount;
+};
+
+describe.each(SHARED_FIXTURES)("$id · the shared layer", (fixture) => {
+  const groups = fixture.sharedGroups ?? [];
+  const expenses = fixture.sharedExpenses ?? [];
+  const settlements: FixtureSettlement[] = fixture.settlements ?? [];
+  const ledger = deriveShared({ groups, expenses, settlements });
+
+  it("resolves every split to the figures the server stored", () => {
+    for (const expense of expenses) {
+      const shares = resolveShares({
+        total: expense.amount,
+        currency: fixture.user.currency,
+        mode: expense.split.mode,
+        rows: expense.split.shares.map((share) => ({
+          // A block of guests weighs as many parts as it counts, and never takes the remainder.
+          units: share.party === "GUESTS" ? (expense.split.guests?.count ?? 1) : 1,
+          input: statedInput(expense.split.mode, share),
+        })),
+        payerIndex: payerIndexOf(expense),
+      });
+      expect({ key: expense.key, shares }).toEqual({
+        key: expense.key,
+        shares: expense.split.shares.map((share) => share.amount),
+      });
+    }
+  });
+
+  it("imputes every payment onto the shares exactly as the server did", () => {
+    for (const expense of expenses.filter((row) => row.deletedAt === null)) {
+      for (const share of expense.split.shares) {
+        const key =
+          share.party === "USER"
+            ? "user"
+            : share.party === "GUESTS"
+              ? `guests:${expense.id}`
+              : `contact:${share.contactId}`;
+        expect({
+          expense: expense.key,
+          key,
+          collected: ledger.collected.get(`${expense.id}|${key}`),
+        }).toEqual({ expense: expense.key, key, collected: share.collected });
+      }
+    }
+  });
+
+  it("derives what every movement counts as yours", () => {
+    const linked = new Map(
+      expenses.filter((row) => row.deletedAt === null).map((row) => [row.id, row.transactionId]),
+    );
+    const expenseOf = (transactionId: string): string | null =>
+      [...linked].find(([, id]) => id === transactionId)?.[0] ?? null;
+    expect(
+      fixture.transactions
+        .filter((row) => row.deletedAt === null)
+        .map((row) => ({
+          key: row.key,
+          amount: countsAsYours({ amount: row.amount, sharedExpenseId: expenseOf(row.id) }, ledger),
+        })),
+    ).toEqual((fixture.expected.countsAsYours ?? []).map(({ key, amount }) => ({ key, amount })));
+  });
+
+  it("derives where every group and every person stands", () => {
+    // The fixture pins the money and the people; the range and the count are the endpoint's own.
+    const pinned = ledger.groups.map((group) => ({
+      id: group.id,
+      amount: group.amount,
+      yourShare: group.yourShare,
+      owedToYou: group.owedToYou,
+      youOwe: group.youOwe,
+      collected: group.collected,
+      writtenOff: group.writtenOff,
+      status: group.status,
+      people: group.people,
+    }));
+    expect(pinned).toEqual(
+      (fixture.expected.shared ?? []).map((group) => ({
+        id: group.id,
+        amount: group.amount,
+        yourShare: group.yourShare,
+        owedToYou: group.owedToYou,
+        youOwe: group.youOwe,
+        collected: group.collected,
+        writtenOff: group.writtenOff,
+        status: group.status,
+        people: group.people,
+      })),
+    );
+  });
 });

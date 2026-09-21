@@ -25,6 +25,12 @@ export {
   vaultCanAnswer,
   vaultReady,
 } from "./read";
+export {
+  readSharedGroup,
+  readSharedGroups,
+  SHARED_GROUP_PAGE_LIMIT,
+  type SharedGroupListParams,
+} from "./shared";
 export { readSpending, type SpendingQuery } from "./stats";
 export {
   readTransaction,

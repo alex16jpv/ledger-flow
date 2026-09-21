@@ -1,3 +1,4 @@
+import type { AmountKind } from "@/components/ui/Amount";
 import { dayKey } from "@/lib/format/dates";
 import type { Transaction } from "@/types/api";
 
@@ -20,9 +21,7 @@ export function groupByDay(transactions: readonly Transaction[], timeZone: strin
   return groups;
 }
 
-export function amountKind(
-  type: Transaction["type"],
-): "expense" | "income" | "transfer" | "adjustment" {
+export function amountKind(type: Transaction["type"]): AmountKind {
   switch (type) {
     case "EXPENSE":
       return "expense";
@@ -32,5 +31,7 @@ export function amountKind(
       return "transfer";
     case "ADJUSTMENT":
       return "adjustment";
+    case "SETTLEMENT":
+      return "settlement";
   }
 }

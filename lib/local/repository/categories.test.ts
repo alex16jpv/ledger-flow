@@ -1,5 +1,5 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { category, openTestVault, wipeVaults } from "@/lib/testing/vault";
+import { category, changes as feedChanges, openTestVault, wipeVaults } from "@/lib/testing/vault";
 import type { Category, CategoryList, SyncChangesResponse } from "@/types/api";
 
 import { pullChanges } from "../pull";
@@ -35,7 +35,7 @@ afterEach(async () => {
 function feedPage(categories: Category[]): SyncChangesResponse {
   return {
     serverTime: "2026-09-03T12:00:00.000Z",
-    changes: { user: null, accounts: [], categories, transactions: [], budgets: [] },
+    changes: feedChanges({ categories }),
     pagination: { limit: 500, count: categories.length, hasMore: false, nextCursor: "v1|done|" },
   };
 }

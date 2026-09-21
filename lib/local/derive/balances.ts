@@ -39,7 +39,7 @@ export function deriveBalances(
     if (transaction.type === "EXPENSE") move(transaction.fromAccountId, -amount);
     else if (transaction.type === "INCOME") move(transaction.toAccountId, amount);
     else {
-      // ADJUSTMENT moves balances exactly like a TRANSFER; what it never does is count as spending.
+      // ADJUSTMENT and SETTLEMENT move balances exactly like a TRANSFER; neither is ever spending.
       move(transaction.fromAccountId, -amount);
       move(transaction.toAccountId, amount);
     }

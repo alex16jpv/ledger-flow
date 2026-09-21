@@ -2,22 +2,25 @@
 
 # lag-money-manager API endpoints
 
-Version 1.0.0 · 43 operations · 50 schemas.
+Version 1.0.0 · 69 operations · 82 schemas.
 
 Regenerate with `npm run gen:api-types` against a running backend. The client never calls these
 URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), which adds the
 `bearer` JWT token from the session cookies.
 
-| Group                         | Operations |
-| ----------------------------- | ---------- |
-| [Accounts](#accounts)         | 7          |
-| [Auth](#auth)                 | 7          |
-| [Budgets](#budgets)           | 8          |
-| [Categories](#categories)     | 7          |
-| [Stats](#stats)               | 1          |
-| [Sync](#sync)                 | 2          |
-| [Transactions](#transactions) | 8          |
-| [Users](#users)               | 3          |
+| Group                           | Operations |
+| ------------------------------- | ---------- |
+| [Accounts](#accounts)           | 7          |
+| [Auth](#auth)                   | 7          |
+| [Budgets](#budgets)             | 8          |
+| [Categories](#categories)       | 7          |
+| [Contacts](#contacts)           | 6          |
+| [Settlements](#settlements)     | 4          |
+| [Shared groups](#shared-groups) | 16         |
+| [Stats](#stats)                 | 1          |
+| [Sync](#sync)                   | 2          |
+| [Transactions](#transactions)   | 8          |
+| [Users](#users)                 | 3          |
 
 ## Accounts
 
@@ -696,6 +699,612 @@ Creates only the missing defaults. Archived seed categories count as present and
 | `200`  | `RestoreDefaultsResponse` | Newly created defaults (empty array when none were missing) |
 | `401`  | `ErrorResponse`           | Unauthorized                                                |
 
+## Contacts
+
+| Endpoint                      | Auth   | Summary                                                  |
+| ----------------------------- | ------ | -------------------------------------------------------- |
+| `GET /contacts`               | bearer | Get all contacts                                         |
+| `POST /contacts`              | bearer | Create a contact                                         |
+| `GET /contacts/{id}`          | bearer | Get a contact by ID                                      |
+| `PUT /contacts/{id}`          | bearer | Update a contact                                         |
+| `DELETE /contacts/{id}`       | bearer | Archive a contact (soft delete)                          |
+| `POST /contacts/{id}/restore` | bearer | Restore an archived contact, optionally under a new name |
+
+### `GET /contacts`
+
+The people you split expenses with. Archived contacts are hidden unless includeArchived=true. A contact is not an account: it has no balance, never appears among the accounts, and no money ever moves in it.
+
+**Query**
+
+| Name              | Type                         | Required | Description                                                                                                           |
+| ----------------- | ---------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| `limit`           | integer, 1–100, default `20` | no       | Maximum number of items to return                                                                                     |
+| `offset`          | integer, 0–, default `0`     | no       | Number of items to skip (offset-based pagination)                                                                     |
+| `cursor`          | string (uuid)                | no       | ID of the last item of the previous page; must name a row of the caller's (cursor-based pagination; overrides offset) |
+| `ids`             | string                       | no       | Comma-separated list of contact UUIDs to filter by ID (1-100)                                                         |
+| `includeArchived` | `true` \| `false`            | no       | Include archived contacts in the listing                                                                              |
+
+**Responses**
+
+| Status | Schema          | Description                                                                                                         |
+| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `ContactList`   | Paginated list of contacts                                                                                          |
+| `400`  | `ErrorResponse` | Invalid query parameters (code VALIDATION), or a cursor that names no contact of the caller's (code INVALID_CURSOR) |
+| `401`  | `ErrorResponse` | Unauthorized                                                                                                        |
+
+### `POST /contacts`
+
+Requires `name`. Active contact names are unique per user, case-insensitively ("Ana" = "ana"; accents still distinct) and trimmed; archiving a contact frees its name.
+`email` is optional and is only an **identifier for inviting them later**: nothing is sent from here, and two contacts may carry the same address. `linkedUserId` is server-owned and always null until an invitation is accepted; a client that sends it has it dropped.
+A user is capped at `SharedLimits.maxContactsPerUser` active contacts (400 CONTACT_LIMIT_REACHED). Read that schema instead of copying the number: the sheet that adds a contact is meant to say the limit before a save can fail on it.
+Accepts an optional client-minted `id` (UUID). An id the user already owns replays with 200 and the stored resource, whatever the payload says now; an id that belongs to another user is rejected with 409 ID_TAKEN.
+
+**Body** `CreateContactInput` (required)
+
+**Responses**
+
+| Status | Schema          | Description                                                                                                                                   |
+| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `Contact`       | Replay of a create already made with this client-minted id                                                                                    |
+| `201`  | `Contact`       | Contact created                                                                                                                               |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION) or contact limit reached (code CONTACT_LIMIT_REACHED)                                                      |
+| `401`  | `ErrorResponse` | Unauthorized                                                                                                                                  |
+| `409`  | `ErrorResponse` | An active contact with this name already exists (code DUPLICATE, case-insensitive), or the client-minted id is already in use (code ID_TAKEN) |
+
+### `GET /contacts/{id}`
+
+Also resolves archived contacts (archivedAt tells them apart); only the listing hides them by default.
+
+**Path**
+
+| Name | Type          | Required | Description |
+| ---- | ------------- | -------- | ----------- |
+| `id` | string (uuid) | yes      | Contact ID  |
+
+**Responses**
+
+| Status | Schema          | Description                                           |
+| ------ | --------------- | ----------------------------------------------------- |
+| `200`  | `Contact`       | Contact found (may be archived)                       |
+| `400`  | `ErrorResponse` | Invalid ID format (code VALIDATION)                   |
+| `401`  | `ErrorResponse` | Unauthorized                                          |
+| `404`  | `ErrorResponse` | Contact not found (uniform for missing and not owned) |
+
+### `PUT /contacts/{id}`
+
+Partial update. `color` and `email` accept null to clear them.
+
+**Path**
+
+| Name | Type          | Required | Description |
+| ---- | ------------- | -------- | ----------- |
+| `id` | string (uuid) | yes      | Contact ID  |
+
+**Body** `UpdateContactInput` (required)
+
+**Responses**
+
+| Status | Schema            | Description                                                                                                                                                                                     |
+| ------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `Contact`         | Contact updated                                                                                                                                                                                 |
+| `400`  | `ErrorResponse`   | Validation error (code VALIDATION) or contact is archived (code RESOURCE_ARCHIVED, restore it first)                                                                                            |
+| `401`  | `ErrorResponse`   | Unauthorized                                                                                                                                                                                    |
+| `404`  | `ErrorResponse`   | Contact not found (uniform for missing and not owned)                                                                                                                                           |
+| `409`  | `ContactConflict` | Another active contact already uses this name (code DUPLICATE, case-insensitive), or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) |
+
+### `DELETE /contacts/{id}`
+
+A contact is archived, never deleted: the groups and the payments that name it stay readable. Idempotent — archiving an already-archived contact is a no-op success.
+
+**Path**
+
+| Name | Type          | Required | Description |
+| ---- | ------------- | -------- | ----------- |
+| `id` | string (uuid) | yes      | Contact ID  |
+
+**Responses**
+
+| Status | Schema            | Description                                                                                                |
+| ------ | ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| `200`  | `Contact`         | The archived contact (also when it was already archived), with its new `updatedAt`                         |
+| `400`  | `ErrorResponse`   | Invalid ID format (code VALIDATION)                                                                        |
+| `401`  | `ErrorResponse`   | Unauthorized                                                                                               |
+| `404`  | `ErrorResponse`   | Contact not found (uniform for missing and not owned)                                                      |
+| `409`  | `ContactConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) |
+
+### `POST /contacts/{id}/restore`
+
+Idempotent — restoring an already-active contact returns it unchanged.
+
+**Path**
+
+| Name | Type          | Required | Description |
+| ---- | ------------- | -------- | ----------- |
+| `id` | string (uuid) | yes      | Contact ID  |
+
+**Body** `RestoreInput`
+
+**Responses**
+
+| Status | Schema            | Description                                                                                                                                                                                                    |
+| ------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `Contact`         | Contact restored (or already active)                                                                                                                                                                           |
+| `400`  | `ErrorResponse`   | Invalid ID format (code VALIDATION)                                                                                                                                                                            |
+| `401`  | `ErrorResponse`   | Unauthorized                                                                                                                                                                                                   |
+| `404`  | `ErrorResponse`   | Contact not found (uniform for missing and not owned)                                                                                                                                                          |
+| `409`  | `ContactConflict` | An active contact took this name while it was archived (code DUPLICATE) — rename that one first, or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) |
+
+## Settlements
+
+| Endpoint                   | Auth   | Summary                                                         |
+| -------------------------- | ------ | --------------------------------------------------------------- |
+| `GET /settlements`         | bearer | The money that has changed hands with the people you split with |
+| `POST /settlements`        | bearer | Settle up with one person, or with one block of guests          |
+| `GET /settlements/{id}`    | bearer | Get one payment                                                 |
+| `DELETE /settlements/{id}` | bearer | Undo a payment (soft delete)                                    |
+
+### `GET /settlements`
+
+Newest first, keyset over `(date, id)`. Narrow it to one counterparty with `contactId`, or with `expenseId` for the block of guests that lives in that expense.
+
+**Query**
+
+| Name        | Type                         | Required | Description                                                     |
+| ----------- | ---------------------------- | -------- | --------------------------------------------------------------- |
+| `limit`     | integer, 1–100, default `20` | no       | Maximum number of items to return                               |
+| `offset`    | integer, 0–, default `0`     | no       | Number of items to skip (offset-based pagination)               |
+| `cursor`    | string (uuid)                | no       | ID of the last item of the previous page (overrides offset)     |
+| `contactId` | string (uuid)                | no       | Only what has changed hands with this person                    |
+| `expenseId` | string (uuid)                | no       | Only what has changed hands with that expense's block of guests |
+
+**Responses**
+
+| Status | Schema           | Description                                                                                                         |
+| ------ | ---------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SettlementList` | Paginated list of payments                                                                                          |
+| `400`  | `ErrorResponse`  | Invalid query parameters (code VALIDATION), or a cursor that names no payment of the caller's (code INVALID_CURSOR) |
+| `401`  | `ErrorResponse`  | Unauthorized                                                                                                        |
+
+### `POST /settlements`
+
+One payment, with both halves: `collected` is what came back to you and `paid` is what you handed over. **What it covers is imputed to the oldest line first**, across every group you share with them, and the answer says line by line what it covered.
+**Money coming back is not income.** It arrives in `accountId` as a `SETTLEMENT`, carries no category and is out of Stats and of the budgets — the shape an `ADJUSTMENT` already has. What it covers comes off what counts as yours on each line it lands on, **in the month that line happened**, and every movement it touches says so in its history.
+**Paying somebody back is not that movement: it is your expense**, one for each line you cover, with that line's description, dated that line, and with the category you give — one in `categoryId` for all of them, or one per line in `categories`. The shared layer carries no categories, so there is none to take. Whatever is left of `paid` once every line you owe is covered is a **refund** of what they paid ahead, and that is a `SETTLEMENT` leaving the account: you never spent it, so it carries no category either.
+**`outsideApp` is cash the app never saw**: no movement is written and no balance moves, and what is owed falls all the same, because that money did change hands.
+Accepts a client-minted `id`, with the usual replay.
+
+**Body** `CreateSettlementInput` (required)
+
+**Responses**
+
+| Status | Schema             | Description                                                                                                                                                                                                                                                                                                                          |
+| ------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `200`  | `SettlementResult` | Replay of a payment already recorded with this client-minted id                                                                                                                                                                                                                                                                      |
+| `201`  | `SettlementResult` | The payment, and what it covered                                                                                                                                                                                                                                                                                                     |
+| `400`  | `ErrorResponse`    | Validation error (code VALIDATION), more than you owe them and more than they paid ahead (code SETTLEMENT_OVER_PAID), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), a date more than 24h ahead (code FUTURE_DATE), an archived category (code CATEGORY_ARCHIVED) or one of another type (code CATEGORY_TYPE_MISMATCH) |
+| `401`  | `ErrorResponse`    | Unauthorized                                                                                                                                                                                                                                                                                                                         |
+| `404`  | `ErrorResponse`    | The contact, the expense or the account is not the caller's (uniform for missing and not owned)                                                                                                                                                                                                                                      |
+| `409`  | `ErrorResponse`    | The client-minted id is already in use (code ID_TAKEN)                                                                                                                                                                                                                                                                               |
+
+### `GET /settlements/{id}`
+
+**Path**
+
+| Name | Type          | Required | Description |
+| ---- | ------------- | -------- | ----------- |
+| `id` | string (uuid) | yes      | Payment ID  |
+
+**Responses**
+
+| Status | Schema          | Description                                           |
+| ------ | --------------- | ----------------------------------------------------- |
+| `200`  | `Settlement`    | The payment                                           |
+| `401`  | `ErrorResponse` | Unauthorized                                          |
+| `404`  | `ErrorResponse` | Payment not found (uniform for missing and not owned) |
+
+### `DELETE /settlements/{id}`
+
+Reverses every movement it recorded — the collection, your expenses and any refund — and imputes what is left over the lines that are still open. Idempotent. The movements themselves cannot be deleted on their own: this is the door.
+
+**Path**
+
+| Name | Type          | Required | Description |
+| ---- | ------------- | -------- | ----------- |
+| `id` | string (uuid) | yes      | Payment ID  |
+
+**Responses**
+
+| Status | Schema          | Description                                                           |
+| ------ | --------------- | --------------------------------------------------------------------- |
+| `200`  | `Settlement`    | The undone payment (also when it was already undone)                  |
+| `400`  | `ErrorResponse` | Invalid ID format (code VALIDATION)                                   |
+| `401`  | `ErrorResponse` | Unauthorized                                                          |
+| `404`  | `ErrorResponse` | Payment not found (uniform for missing and not owned)                 |
+| `409`  | `ErrorResponse` | The resource changed since the `If-Match` version (code STALE_UPDATE) |
+
+## Shared groups
+
+| Endpoint                                              | Auth   | Summary                                                       |
+| ----------------------------------------------------- | ------ | ------------------------------------------------------------- |
+| `GET /shared-groups`                                  | bearer | Get all shared groups                                         |
+| `POST /shared-groups`                                 | bearer | Create a shared group                                         |
+| `GET /shared-groups/{id}`                             | bearer | Get a shared group by ID                                      |
+| `PUT /shared-groups/{id}`                             | bearer | Update a shared group                                         |
+| `DELETE /shared-groups/{id}`                          | bearer | Archive a shared group (soft delete)                          |
+| `GET /shared-groups/{id}/expenses`                    | bearer | The expenses of a shared group                                |
+| `POST /shared-groups/{id}/expenses`                   | bearer | Record an expense in a shared group                           |
+| `GET /shared-groups/{id}/expenses/{expenseId}`        | bearer | Get one expense of a shared group                             |
+| `PUT /shared-groups/{id}/expenses/{expenseId}`        | bearer | Edit an expense of a shared group                             |
+| `DELETE /shared-groups/{id}/expenses/{expenseId}`     | bearer | Delete an expense of a shared group (soft delete)             |
+| `POST /shared-groups/{id}/participants`               | bearer | Add people to a shared group                                  |
+| `DELETE /shared-groups/{id}/participants/{contactId}` | bearer | Take somebody out of a shared group                           |
+| `POST /shared-groups/{id}/participants/preview`       | bearer | Work out what adding people would do, without doing it        |
+| `POST /shared-groups/{id}/restore`                    | bearer | Restore an archived shared group, optionally under a new name |
+| `POST /shared-groups/{id}/write-offs`                 | bearer | Give up on what somebody still owes you here                  |
+| `DELETE /shared-groups/{id}/write-offs/{partyId}`     | bearer | Take back a write-off                                         |
+
+### `GET /shared-groups`
+
+An outing, a dinner or a two-month trip: a shared group has **no period**. Its expenses carry the dates, and `totals.dateFrom` and `totals.dateTo` are derived from them, never stored. Archived groups are hidden unless includeArchived=true.
+
+**Query**
+
+| Name              | Type                         | Required | Description                                                                                  |
+| ----------------- | ---------------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `limit`           | integer, 1–100, default `20` | no       | Maximum number of items to return                                                            |
+| `offset`          | integer, 0–, default `0`     | no       | Number of items to skip (offset-based pagination)                                            |
+| `cursor`          | string (uuid)                | no       | ID of the last item of the previous page; must name a row of the caller's (overrides offset) |
+| `ids`             | string                       | no       | Comma-separated list of group UUIDs to filter by ID (1-100)                                  |
+| `contactId`       | string (uuid)                | no       | Only the groups this contact takes part in                                                   |
+| `includeArchived` | `true` \| `false`            | no       | Include archived groups in the listing                                                       |
+
+**Responses**
+
+| Status | Schema            | Description                                                                                                       |
+| ------ | ----------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SharedGroupList` | Paginated list of shared groups with their totals                                                                 |
+| `400`  | `ErrorResponse`   | Invalid query parameters (code VALIDATION), or a cursor that names no group of the caller's (code INVALID_CURSOR) |
+| `401`  | `ErrorResponse`   | Unauthorized                                                                                                      |
+
+### `POST /shared-groups`
+
+Requires `name`; active group names are unique per user, case-insensitively. `contactIds` names the other people in it — you are always a participant and are never listed there. A group holds at most `SharedLimits.maxParticipantsPerGroup` people, you included (400 PARTICIPANT_LIMIT_REACHED).
+`defaultSplit` is the split a new expense **inherits**, not a rule. It is `EQUAL` or `PERCENT` only: a default has no total to divide, so `EXACT` and `FIXED_REST` are things only an expense can carry. Under `PERCENT` it needs one `shares` entry per participant — `contactId: null` is you — adding up to 100, or 400 SPLIT_INVALID.
+Accepts a client-minted `id`, with the usual replay.
+
+**Body** `CreateSharedGroupInput` (required)
+
+**Responses**
+
+| Status | Schema          | Description                                                                                                                                                                                                  |
+| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `200`  | `SharedGroup`   | Replay of a create already made with this client-minted id                                                                                                                                                   |
+| `201`  | `SharedGroup`   | Shared group created                                                                                                                                                                                         |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION), too many people (code PARTICIPANT_LIMIT_REACHED), the same person twice (code PARTICIPANT_ALREADY_IN_GROUP) or a default split that does not add up (code SPLIT_INVALID) |
+| `401`  | `ErrorResponse` | Unauthorized                                                                                                                                                                                                 |
+| `404`  | `ErrorResponse` | One of the `contactIds` is not an active contact of the caller's                                                                                                                                             |
+| `409`  | `ErrorResponse` | An active group with this name already exists (code DUPLICATE), or the client-minted id is already in use (code ID_TAKEN)                                                                                    |
+
+### `GET /shared-groups/{id}`
+
+Also resolves archived groups; only the listing hides them by default.
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Responses**
+
+| Status | Schema          | Description                                                |
+| ------ | --------------- | ---------------------------------------------------------- |
+| `200`  | `SharedGroup`   | Shared group found (may be archived)                       |
+| `400`  | `ErrorResponse` | Invalid ID format (code VALIDATION)                        |
+| `401`  | `ErrorResponse` | Unauthorized                                               |
+| `404`  | `ErrorResponse` | Shared group not found (uniform for missing and not owned) |
+
+### `PUT /shared-groups/{id}`
+
+Partial update of `name`, `color` and `defaultSplit`. **Changing the default split is never retroactive**: it applies to the expenses added from then on and to nothing already recorded. Re-splitting what is already there would re-impute every payment and move what counts as yours between months, closed ones included; the deliberate version of that is `POST /shared-groups/{id}/participants`, which shows the whole result first.
+Participants are not changed here: they have their own endpoints.
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Body** `UpdateSharedGroupInput` (required)
+
+**Responses**
+
+| Status | Schema                | Description                                                                                                                                 |
+| ------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SharedGroup`         | Shared group updated                                                                                                                        |
+| `400`  | `ErrorResponse`       | Validation error (code VALIDATION), group is archived (code RESOURCE_ARCHIVED) or a default split that does not add up (code SPLIT_INVALID) |
+| `401`  | `ErrorResponse`       | Unauthorized                                                                                                                                |
+| `404`  | `ErrorResponse`       | Shared group not found (uniform for missing and not owned)                                                                                  |
+| `409`  | `SharedGroupConflict` | Another active group already uses this name (code DUPLICATE), or the resource changed since the `If-Match` version (code STALE_UPDATE)      |
+
+### `DELETE /shared-groups/{id}`
+
+Idempotent — archiving an already-archived group answers it unchanged. Its expenses are not touched and stay readable.
+**What people still owe here is written off on your behalf**, which moves no figure: it was counted as yours the day it left. The answer carries it in `totals.writtenOff`, and every movement it touches says so in its history. A write-off can be taken back while the group is open, so archiving is where that stops.
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Responses**
+
+| Status | Schema                | Description                                                           |
+| ------ | --------------------- | --------------------------------------------------------------------- |
+| `200`  | `SharedGroup`         | The archived group (also when it was already archived)                |
+| `400`  | `ErrorResponse`       | Invalid ID format (code VALIDATION)                                   |
+| `401`  | `ErrorResponse`       | Unauthorized                                                          |
+| `404`  | `ErrorResponse`       | Shared group not found (uniform for missing and not owned)            |
+| `409`  | `SharedGroupConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE) |
+
+### `GET /shared-groups/{id}/expenses`
+
+Newest first, keyset over `(date, id)`: ids are minted when the expense is recorded, not on the day it was spent, so they cannot order this list on their own. Deleted expenses are not listed.
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Query**
+
+| Name     | Type                         | Required | Description                                                                                  |
+| -------- | ---------------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `limit`  | integer, 1–100, default `20` | no       | Maximum number of items to return                                                            |
+| `offset` | integer, 0–, default `0`     | no       | Number of items to skip (offset-based pagination)                                            |
+| `cursor` | string (uuid)                | no       | ID of the last item of the previous page; must name a row of the caller's (overrides offset) |
+
+**Responses**
+
+| Status | Schema              | Description                                                                                                         |
+| ------ | ------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SharedExpenseList` | Paginated list of the group's expenses                                                                              |
+| `400`  | `ErrorResponse`     | Invalid query parameters (code VALIDATION), or a cursor that names no expense of the caller's (code INVALID_CURSOR) |
+| `401`  | `ErrorResponse`     | Unauthorized                                                                                                        |
+| `404`  | `ErrorResponse`     | Shared group not found (uniform for missing and not owned)                                                          |
+
+### `POST /shared-groups/{id}/expenses`
+
+`paidByContactId` names who fronted the money; absent or null is you. Somebody else's line is **not your expense**: no movement of yours exists for it, and it becomes one the day you settle with them.
+Leave `split` out and the expense **inherits the group's default split**, without asking. Send one and the expense carries its own, and reads as a custom split from then on. A split states a `mode` and one share per party: `USER` is you, `CONTACT` names a participant, and `GUESTS` is the block whose head count sits in `guests` — it weighs that many parts and is one party to collect from. Shares need not cover every participant: leaving somebody out of one expense is what an expense's own split is for.
+**The odd minor unit goes to whoever paid**, in every mode, so the shares add up to the expense exactly. The split is resolved the same way whatever order the shares arrive in, because the offline projection has to reach the same figures to the peso.
+**`transactionId` makes the expense a movement of yours.** The amount, the date and the description are then that transaction's, so sending any of the three alongside it is 400 VALIDATION — two places stating the same thing is how they end up disagreeing — and so is a `paidByContactId` other than null: a movement of yours is a line you paid. The transaction keeps the link, along with what counts as yours and the history that explains it; from then on those three are changed on the transaction, not here. Leave `transactionId` out and the expense is a fact with no money of yours behind it, which is what a line somebody else paid is.
+Accepts a client-minted `id`, with the usual replay.
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Body** `CreateSharedExpenseInput` (required)
+
+**Responses**
+
+| Status | Schema          | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SharedExpense` | Replay of a create already made with this client-minted id                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `201`  | `SharedExpense` | Expense recorded                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION), a split that cannot describe one (code SPLIT_INVALID), somebody in the split who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a date more than 24h ahead (code FUTURE_DATE), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), an archived group (code RESOURCE_ARCHIVED), a movement that is already in a group (code TRANSACTION_ALREADY_SHARED), one that is not an expense (code TRANSACTION_NOT_SPLITTABLE) or one in another currency (code CURRENCY_MISMATCH) |
+| `401`  | `ErrorResponse` | Unauthorized                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `404`  | `ErrorResponse` | Shared group not found, or a `transactionId` that names no movement of the caller's (uniform for missing and not owned)                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `409`  | `ErrorResponse` | The client-minted id is already in use (code ID_TAKEN)                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+
+### `GET /shared-groups/{id}/expenses/{expenseId}`
+
+Also resolves a deleted expense; only the listing hides it.
+
+**Path**
+
+| Name        | Type          | Required | Description       |
+| ----------- | ------------- | -------- | ----------------- |
+| `id`        | string (uuid) | yes      | Shared group ID   |
+| `expenseId` | string (uuid) | yes      | Shared expense ID |
+
+**Responses**
+
+| Status | Schema          | Description                                                  |
+| ------ | --------------- | ------------------------------------------------------------ |
+| `200`  | `SharedExpense` | The expense (may be deleted)                                 |
+| `400`  | `ErrorResponse` | Invalid ID format (code VALIDATION)                          |
+| `401`  | `ErrorResponse` | Unauthorized                                                 |
+| `404`  | `ErrorResponse` | Shared expense not found (uniform for missing and not owned) |
+
+### `PUT /shared-groups/{id}/expenses/{expenseId}`
+
+Partial update. `split` saves a split on this expense and nothing else, and marks it custom; `useGroupSplit: true` clears that and the expense follows the group's default again, from that moment on. The two cannot come together.
+Changing the amount or who paid resolves the shares again on the split the expense already had, rather than leaving figures that no longer add up to it. The one case that cannot be resolved that way is an expense carrying its own `EXACT` split: it states amounts, so a new `amount` alone makes them stop adding up and the answer is 400 SPLIT_INVALID — send the split again with the new figures. Rescaling what somebody typed would be the server deciding what they meant.
+**An expense that is a movement of yours takes only the split here.** Its amount, date, description and payer come from that transaction, so restating one of them is 400 SHARED_EXPENSE_LINKED: two places stating the same figure is how they end up disagreeing. Saving a split on it leaves a line in the transaction's history saying the split changed and what counts as yours did not.
+The expense has to belong to the group in the path: reaching one of your own expenses through another of your groups answers 404.
+
+**Path**
+
+| Name        | Type          | Required | Description       |
+| ----------- | ------------- | -------- | ----------------- |
+| `id`        | string (uuid) | yes      | Shared group ID   |
+| `expenseId` | string (uuid) | yes      | Shared expense ID |
+
+**Body** `UpdateSharedExpenseInput` (required)
+
+**Responses**
+
+| Status | Schema                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SharedExpense`         | Expense updated                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `400`  | `ErrorResponse`         | Validation error (code VALIDATION), a split that cannot describe one (code SPLIT_INVALID), somebody in the split who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a date more than 24h ahead (code FUTURE_DATE), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), restating what the linked movement states (code SHARED_EXPENSE_LINKED), or the expense is deleted or its group archived (code RESOURCE_ARCHIVED) |
+| `401`  | `ErrorResponse`         | Unauthorized                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `404`  | `ErrorResponse`         | Shared expense not found (uniform for missing and not owned)                                                                                                                                                                                                                                                                                                                                                                           |
+| `409`  | `SharedExpenseConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE)                                                                                                                                                                                                                                                                                                                                                                  |
+
+### `DELETE /shared-groups/{id}/expenses/{expenseId}`
+
+Idempotent — deleting an already-deleted expense answers it unchanged. The row stays, marked, because a group has to keep reading as what happened.
+When the expense was a movement of yours, **the movement is not deleted**: it leaves the group, the whole of it counts as yours again and its history says so. Deleting the movement instead is what takes both away.
+
+**Path**
+
+| Name        | Type          | Required | Description       |
+| ----------- | ------------- | -------- | ----------------- |
+| `id`        | string (uuid) | yes      | Shared group ID   |
+| `expenseId` | string (uuid) | yes      | Shared expense ID |
+
+**Responses**
+
+| Status | Schema                  | Description                                                           |
+| ------ | ----------------------- | --------------------------------------------------------------------- |
+| `200`  | `SharedExpense`         | The deleted expense (also when it was already deleted)                |
+| `400`  | `ErrorResponse`         | Invalid ID format (code VALIDATION)                                   |
+| `401`  | `ErrorResponse`         | Unauthorized                                                          |
+| `404`  | `ErrorResponse`         | Shared expense not found (uniform for missing and not owned)          |
+| `409`  | `SharedExpenseConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE) |
+
+### `POST /shared-groups/{id}/participants`
+
+`applyToExistingExpenses` off — the default — puts them in what you add from now on and in none of what is there. On, it is **the whole group or none of it**, and the answer carries the same summary the preview gave, so the caller can show what actually happened.
+A group that splits by percentage needs `defaultSplit` with the new percentages: the old ones no longer cover everybody. The group and every expense it splits again move together, in one transaction.
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Body** `AddParticipantsInput` (required)
+
+**Responses**
+
+| Status | Schema                  | Description                                                                                                                                                                                                                                                                                            |
+| ------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `200`  | `AddParticipantsResult` | The group as it now is, and what the change did                                                                                                                                                                                                                                                        |
+| `400`  | `ErrorResponse`         | Validation error (code VALIDATION), too many people (code PARTICIPANT_LIMIT_REACHED), somebody already in the group (code PARTICIPANT_ALREADY_IN_GROUP), the group is archived (code RESOURCE_ARCHIVED), or a percentage group whose new percentages are missing or do not add up (code SPLIT_INVALID) |
+| `401`  | `ErrorResponse`         | Unauthorized                                                                                                                                                                                                                                                                                           |
+| `404`  | `ErrorResponse`         | Shared group not found, or one of the `contactIds` is not an active contact of the caller's                                                                                                                                                                                                            |
+| `409`  | `SharedGroupConflict`   | The resource changed since the `If-Match` version (code STALE_UPDATE)                                                                                                                                                                                                                                  |
+
+### `DELETE /shared-groups/{id}/participants/{contactId}`
+
+Only offered while they have **no share in any expense of the group**. Once one exists, taking them out would have to either delete money or hand their share to everybody else in silence, so the answer is 400 PARTICIPANT_IN_USE and the screen offers to settle or to write off instead.
+In a group that splits by percentage, their percentage is spread over the rest in proportion so the default still adds up to 100.
+
+**Path**
+
+| Name        | Type          | Required | Description             |
+| ----------- | ------------- | -------- | ----------------------- |
+| `id`        | string (uuid) | yes      | Shared group ID         |
+| `contactId` | string (uuid) | yes      | The contact to take out |
+
+**Responses**
+
+| Status | Schema                | Description                                                                                                                                                                                                 |
+| ------ | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SharedGroup`         | The group without that person                                                                                                                                                                               |
+| `400`  | `ErrorResponse`       | Invalid ID format (code VALIDATION), they are not in the group (code PARTICIPANT_NOT_IN_GROUP), they hold a share of an expense (code PARTICIPANT_IN_USE) or the group is archived (code RESOURCE_ARCHIVED) |
+| `401`  | `ErrorResponse`       | Unauthorized                                                                                                                                                                                                |
+| `404`  | `ErrorResponse`       | Shared group not found (uniform for missing and not owned)                                                                                                                                                  |
+| `409`  | `SharedGroupConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE)                                                                                                                                       |
+
+### `POST /shared-groups/{id}/participants/preview`
+
+The same body as the write below, answered without touching anything: what each person is down for now and what they would be down for after, and how many expenses would be split again. The screen shows this before it asks for a confirmation, because **it is the whole group or none of it**.
+`expenses.untouched` counts the expenses this leaves alone: the ones carrying their own `PERCENT` or `EXACT` split, where a percentage or an amount for somebody who was not there would be invented rather than derived. Everything else is split again, including the expenses that follow the group's default.
+What each person has already paid, who ends up ahead of what they owe, and what a written-off amount becomes are not in this answer yet: none of it exists on the server until payments and write-offs do.
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Body** `AddParticipantsInput` (required)
+
+**Responses**
+
+| Status | Schema                   | Description                                                                                                                                                                                                                                                                                            |
+| ------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `200`  | `AddParticipantsPreview` | What the change would do                                                                                                                                                                                                                                                                               |
+| `400`  | `ErrorResponse`          | Validation error (code VALIDATION), too many people (code PARTICIPANT_LIMIT_REACHED), somebody already in the group (code PARTICIPANT_ALREADY_IN_GROUP), the group is archived (code RESOURCE_ARCHIVED), or a percentage group whose new percentages are missing or do not add up (code SPLIT_INVALID) |
+| `401`  | `ErrorResponse`          | Unauthorized                                                                                                                                                                                                                                                                                           |
+| `404`  | `ErrorResponse`          | Shared group not found, or one of the `contactIds` is not an active contact of the caller's                                                                                                                                                                                                            |
+
+### `POST /shared-groups/{id}/restore`
+
+Idempotent — restoring an already-active group answers it unchanged.
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Body** `RestoreInput`
+
+**Responses**
+
+| Status | Schema                | Description                                                                                                                                     |
+| ------ | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SharedGroup`         | Shared group restored (or already active)                                                                                                       |
+| `400`  | `ErrorResponse`       | Invalid ID format (code VALIDATION)                                                                                                             |
+| `401`  | `ErrorResponse`       | Unauthorized                                                                                                                                    |
+| `404`  | `ErrorResponse`       | Shared group not found (uniform for missing and not owned)                                                                                      |
+| `409`  | `SharedGroupConflict` | An active group took this name while it was archived (code DUPLICATE), or the resource changed since the `If-Match` version (code STALE_UPDATE) |
+
+### `POST /shared-groups/{id}/write-offs`
+
+**It moves no figure.** That money was counted as yours the day it left your account, which is the whole answer to "and if nobody ever pays me?" — nothing has to happen. What it writes is the decision and a line in the history of every movement it touches, and what is still open stops being owed: `totals.owedToYou` drops by it, `totals.writtenOff` carries it, and the group reads `SETTLED` once nobody is left owing.
+It names **one person** (`contactId`) or **one block of guests** (`expenseId`, the expense it lives in). Somebody who had paid part of it keeps that part. It follows the share down if a re-split ever lowers it, because what is written off is what is open, not a figure.
+Idempotent, and undone with `DELETE` while the group is open.
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Body** `WriteOffInput` (required)
+
+**Responses**
+
+| Status | Schema                | Description                                                                                                                                        |
+| ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SharedGroup`         | The group, with what it now counts as owed                                                                                                         |
+| `400`  | `ErrorResponse`       | Validation error (code VALIDATION), somebody who is not in the group (code PARTICIPANT_NOT_IN_GROUP) or an archived group (code RESOURCE_ARCHIVED) |
+| `401`  | `ErrorResponse`       | Unauthorized                                                                                                                                       |
+| `404`  | `ErrorResponse`       | Shared group or expense not found (uniform for missing and not owned)                                                                              |
+| `409`  | `SharedGroupConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE)                                                                              |
+
+### `DELETE /shared-groups/{id}/write-offs/{partyId}`
+
+What they owe is owed again, and the history says so. Idempotent, and only while the group is open: archiving one writes off what is left on your behalf, and that is where it stops being undoable.
+
+**Path**
+
+| Name      | Type          | Required | Description                                              |
+| --------- | ------------- | -------- | -------------------------------------------------------- |
+| `id`      | string (uuid) | yes      | Shared group ID                                          |
+| `partyId` | string (uuid) | yes      | The contact, or the expense whose block of guests it was |
+
+**Responses**
+
+| Status | Schema                | Description                                                                       |
+| ------ | --------------------- | --------------------------------------------------------------------------------- |
+| `200`  | `SharedGroup`         | The group, with what it now counts as owed                                        |
+| `400`  | `ErrorResponse`       | Invalid ID format (code VALIDATION) or an archived group (code RESOURCE_ARCHIVED) |
+| `401`  | `ErrorResponse`       | Unauthorized                                                                      |
+| `404`  | `ErrorResponse`       | Shared group not found (uniform for missing and not owned)                        |
+| `409`  | `SharedGroupConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE)             |
+
 ## Stats
 
 | Endpoint              | Auth   | Summary                                                    |
@@ -708,8 +1317,8 @@ A `day` bucket is the transaction's own accounting day (`dayKey`),
 frozen when it was written, so a later change of the account's time
 zone cannot move past spending between buckets or months; the zone
 (from the token claim) resolves the days the range covers. Deleted
-transactions are excluded, and ADJUSTMENT ones only appear when asked
-for explicitly with `type=ADJUSTMENT` (they are balance
+transactions are excluded, and ADJUSTMENT and SETTLEMENT ones only
+appear when asked for explicitly with `type=` (they are balance
 reconciliations, not spending).
 
 Bucket semantics: `groupBy=day` and `groupBy=month` come back ascending
@@ -731,14 +1340,14 @@ holds a row written before that was enforced.
 
 **Query**
 
-| Name          | Type                                                 | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ------------- | ---------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `groupBy`     | `category` \| `day` \| `month` \| `account` \| `tag` | no       | Bucket dimension                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `splitBy`     | `category`                                           | no       | Adds a second dimension INSIDE each bucket (`splits`), so one request answers "per category and month" instead of twelve. Only with `groupBy=month` or `account`, and only with `from` and `to`: `category` is that dimension already, `tag` unwinds each row into several buckets, and `day` would grow a split per category per day of the window. Those two are bounded — months fit in a window, and a user has a handful of accounts. |
-| `categoryIds` | string                                               | no       | Comma-separated category ids (at most 20): aggregates only those. A budget of several categories is one request, not one per category. Rows with no category never match it, quick-adds included.                                                                                                                                                                                                                                          |
-| `type`        | `INCOME` \| `EXPENSE` \| `TRANSFER` \| `ADJUSTMENT`  | no       | Transaction type to aggregate                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `from`        | string (date-time)                                   | no       | Start of the range, inclusive (ISO 8601, offsets accepted)                                                                                                                                                                                                                                                                                                                                                                                 |
-| `to`          | string (date-time)                                   | no       | End of the range, EXCLUSIVE — the range is half-open [from, to) and is matched as the whole calendar days it covers.                                                                                                                                                                                                                                                                                                                       |
+| Name          | Type                                                                | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------- | ------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `groupBy`     | `category` \| `day` \| `month` \| `account` \| `tag`                | no       | Bucket dimension                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `splitBy`     | `category`                                                          | no       | Adds a second dimension INSIDE each bucket (`splits`), so one request answers "per category and month" instead of twelve. Only with `groupBy=month` or `account`, and only with `from` and `to`: `category` is that dimension already, `tag` unwinds each row into several buckets, and `day` would grow a split per category per day of the window. Those two are bounded — months fit in a window, and a user has a handful of accounts. |
+| `categoryIds` | string                                                              | no       | Comma-separated category ids (at most 20): aggregates only those. A budget of several categories is one request, not one per category. Rows with no category never match it, quick-adds included.                                                                                                                                                                                                                                          |
+| `type`        | `INCOME` \| `EXPENSE` \| `TRANSFER` \| `ADJUSTMENT` \| `SETTLEMENT` | no       | Transaction type to aggregate                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `from`        | string (date-time)                                                  | no       | Start of the range, inclusive (ISO 8601, offsets accepted)                                                                                                                                                                                                                                                                                                                                                                                 |
+| `to`          | string (date-time)                                                  | no       | End of the range, EXCLUSIVE — the range is half-open [from, to) and is matched as the whole calendar days it covers.                                                                                                                                                                                                                                                                                                                       |
 
 **Responses**
 
@@ -792,10 +1401,17 @@ so it answers `duplicate`.
 **Actions per entity:** account: create, update, archive, restore,
 setDefault · category: create, update, archive, restore · transaction:
 create, quickAdd, update, delete · budget: create, update, archive,
-restore, setOverride, clearOverride. `payload.body` is the body the
+restore, setOverride, clearOverride · contact: create, update,
+archive, restore · sharedGroup: create, update, archive, restore,
+addParticipants, removeParticipant, writeOff, undoWriteOff ·
+sharedExpense: create, update, delete · settlement: create, delete.
+`payload.body` is the body the
 matching route takes, validated with the same rules (a bad body
 rejects that operation only); `payload.query.reference` is the budget
-routes' `reference`; `baseUpdatedAt` is the route's `If-Match`. A
+routes' `reference`; **`payload.params`** is what a route reads from
+its path besides the row's own id — `groupId` for an expense of a
+group, `partyId` for taking somebody out or undoing a write-off;
+`baseUpdatedAt` is the route's `If-Match`. A
 create's `payload.body.id`, if sent, must equal `id`.
 
 **Idempotency:** every landed `opId` is remembered for 30 days; sending
@@ -818,12 +1434,18 @@ device, which may resend it once fixed.
 
 ### `GET /sync/changes`
 
-One feed for the four entities and the user, ordered by
-`(updatedAt, _id)` and paginated with an opaque cursor. **Archived and
-deleted rows are included** — they are the only way a client that is
-holding a local copy learns that something disappeared. Deleted
-transactions arrive with `deletedAt` set; archived accounts,
-categories and budgets with `archivedAt`.
+One feed for every entity and the user, ordered by `(updatedAt, _id)`
+and paginated with an opaque cursor. **Archived and deleted rows are
+included** — they are the only way a client that is holding a local
+copy learns that something disappeared. Deleted transactions, shared
+expenses and payments arrive with `deletedAt` set; archived accounts,
+categories, budgets, contacts and shared groups with `archivedAt`.
+
+**The shared layer travels whole and carries nothing private**: the
+group, its people, its expenses, the split, who fronted each line and
+what has been settled. Your account, your categories and what counts
+as yours are on your own movements, which is what makes it possible to
+show a group to somebody else later without showing them your ledger.
 
 **No `since` and no `cursor` is a full snapshot**, down the same code
 path: there is no separate snapshot endpoint to drift from this one.
@@ -885,25 +1507,25 @@ the client.
 
 **Query**
 
-| Name             | Type                                                | Required | Description                                                                                                                                                                                                                          |
-| ---------------- | --------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `limit`          | integer, 1–100, default `20`                        | no       | Maximum number of items to return                                                                                                                                                                                                    |
-| `offset`         | integer, 0–, default `0`                            | no       | Number of items to skip (offset-based pagination)                                                                                                                                                                                    |
-| `cursor`         | string (uuid)                                       | no       | ID of the last item of the previous page; must name a row of the caller's (cursor-based pagination; overrides offset)                                                                                                                |
-| `ids`            | string                                              | no       | Comma-separated list of UUIDs to filter by ID (max 100)                                                                                                                                                                              |
-| `accountId`      | string (uuid)                                       | no       | Filter transactions by account ID (matches fromAccountId or toAccountId)                                                                                                                                                             |
-| `categoryId`     | string (uuid)                                       | no       | Filter transactions by category ID                                                                                                                                                                                                   |
-| `categoryIds`    | string                                              | no       | Comma-separated category ids (at most 20), for a budget that covers several. Cannot be combined with categoryId or with uncategorized=true.                                                                                          |
-| `sort`           | `date` \| `amount`                                  | no       | Field the page is ordered by.                                                                                                                                                                                                        |
-| `order`          | `asc` \| `desc`                                     | no       | Direction of `sort`. Ties are broken by id, in the same direction.                                                                                                                                                                   |
-| `uncategorized`  | `true` \| `false`                                   | no       | Only transactions without a category. Cannot be combined with categoryId or categoryIds.                                                                                                                                             |
-| `pendingDetails` | `true` \| `false`                                   | no       | Filter by the pendingDetails flag (true = quick-adds awaiting detailing)                                                                                                                                                             |
-| `source`         | `MANUAL` \| `QUICK` \| `IMPORT`                     | no       | Only transactions created through this channel (QUICK = quick-add)                                                                                                                                                                   |
-| `from`           | string (date-time)                                  | no       | Start of the range, inclusive. The range is matched as the run of calendar days it covers in the account's time zone, against each transaction's frozen `dayKey`, so a bound that is not local midnight is widened to the whole day. |
-| `to`             | string (date-time)                                  | no       | End of the range, exclusive (the day it falls on is included).                                                                                                                                                                       |
-| `includeSummary` | `true` \| `false`                                   | no       | Adds summary.totalAmount, the sum over the whole filtered set (one extra aggregation, so opt-in)                                                                                                                                     |
-| `tag`            | string                                              | no       | Only transactions carrying this tag (tags are stored trimmed and lowercased)                                                                                                                                                         |
-| `type`           | `INCOME` \| `EXPENSE` \| `TRANSFER` \| `ADJUSTMENT` | no       | Filter transactions by type                                                                                                                                                                                                          |
+| Name             | Type                                                                | Required | Description                                                                                                                                                                                                                          |
+| ---------------- | ------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `limit`          | integer, 1–100, default `20`                                        | no       | Maximum number of items to return                                                                                                                                                                                                    |
+| `offset`         | integer, 0–, default `0`                                            | no       | Number of items to skip (offset-based pagination)                                                                                                                                                                                    |
+| `cursor`         | string (uuid)                                                       | no       | ID of the last item of the previous page; must name a row of the caller's (cursor-based pagination; overrides offset)                                                                                                                |
+| `ids`            | string                                                              | no       | Comma-separated list of UUIDs to filter by ID (max 100)                                                                                                                                                                              |
+| `accountId`      | string (uuid)                                                       | no       | Filter transactions by account ID (matches fromAccountId or toAccountId)                                                                                                                                                             |
+| `categoryId`     | string (uuid)                                                       | no       | Filter transactions by category ID                                                                                                                                                                                                   |
+| `categoryIds`    | string                                                              | no       | Comma-separated category ids (at most 20), for a budget that covers several. Cannot be combined with categoryId or with uncategorized=true.                                                                                          |
+| `sort`           | `date` \| `amount`                                                  | no       | Field the page is ordered by.                                                                                                                                                                                                        |
+| `order`          | `asc` \| `desc`                                                     | no       | Direction of `sort`. Ties are broken by id, in the same direction.                                                                                                                                                                   |
+| `uncategorized`  | `true` \| `false`                                                   | no       | Only transactions without a category. Cannot be combined with categoryId or categoryIds.                                                                                                                                             |
+| `pendingDetails` | `true` \| `false`                                                   | no       | Filter by the pendingDetails flag (true = quick-adds awaiting detailing)                                                                                                                                                             |
+| `source`         | `MANUAL` \| `QUICK` \| `IMPORT`                                     | no       | Only transactions created through this channel (QUICK = quick-add)                                                                                                                                                                   |
+| `from`           | string (date-time)                                                  | no       | Start of the range, inclusive. The range is matched as the run of calendar days it covers in the account's time zone, against each transaction's frozen `dayKey`, so a bound that is not local midnight is widened to the whole day. |
+| `to`             | string (date-time)                                                  | no       | End of the range, exclusive (the day it falls on is included).                                                                                                                                                                       |
+| `includeSummary` | `true` \| `false`                                                   | no       | Adds summary.totalAmount, the sum over the whole filtered set (one extra aggregation, so opt-in)                                                                                                                                     |
+| `tag`            | string                                                              | no       | Only transactions carrying this tag (tags are stored trimmed and lowercased)                                                                                                                                                         |
+| `type`           | `INCOME` \| `EXPENSE` \| `TRANSFER` \| `ADJUSTMENT` \| `SETTLEMENT` | no       | Filter transactions by type                                                                                                                                                                                                          |
 
 **Responses**
 
@@ -921,6 +1543,7 @@ Creates a transaction and updates account balances atomically.
 - **EXPENSE**: Subtracts amount from `fromAccountId` (required; `toAccountId` not allowed).
 - **TRANSFER**: Subtracts from `fromAccountId` and adds to `toAccountId` (both required, must differ).
 - **ADJUSTMENT**: Balance reconciliation; exactly one of `fromAccountId` (decrease) or `toAccountId` (increase), no `categoryId`. Excluded from spending stats and budgets.
+- **SETTLEMENT**: Money between you and a person you split with. The same shape, and **not writable here**: a settle-up records it (`POST /settlements`).
 
 Two rules bind the movement to the **type** of account it touches: money arriving
 at a CARD or a LOAN is never an INCOME — it is a TRANSFER from wherever it came
@@ -979,6 +1602,16 @@ Partial update; the merged result must still be a valid transaction of its type.
 When the money movement changes (type, amount, or accounts), the original balance
 changes are reversed and the new ones applied atomically.
 
+**A movement in a shared group carries its expense with it**, whether
+or not that group is archived: an archived group is a read-only view
+of what happened, and refusing to fix your own movement because of it
+would be the wrong half to block. A new amount, date or description is
+written on both in one transaction, and a new amount resolves the
+split again — except on a split carrying its
+own `EXACT` figures, which stop adding up and answer 400 SPLIT_INVALID:
+restate the split on the expense first. Changing its type is refused
+(code TRANSACTION_NOT_SPLITTABLE): only an expense can be split.
+
 **Path**
 
 | Name | Type          | Required | Description    |
@@ -989,17 +1622,17 @@ changes are reversed and the new ones applied atomically.
 
 **Responses**
 
-| Status | Schema                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| ------ | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `Transaction`         | Transaction updated                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `400`  | `ErrorResponse`       | Validation error. Codes include FUTURE_DATE, CURRENCY_MISMATCH, INCOME_ON_CARD_OR_LOAN (an income moved onto an account type listed in `IncomeRefusedAccountType`), AMOUNT_PRECISION (only when the edit carries an amount) and LOAN_OVERPAID (a movement that would leave a LOAN above zero), the first and the last checked again whenever the edit moves money, CATEGORY_ARCHIVED (assigning an archived category; keeping the one it already had is allowed), CATEGORY_TYPE_MISMATCH. |
-| `401`  | —                     | Unauthorized                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `404`  | —                     | Transaction, category, or account not found (or not owned by the user)                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `409`  | `TransactionConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy)                                                                                                                                                                                                                                                                                                                                                                                |
+| Status | Schema                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `Transaction`         | Transaction updated                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `400`  | `ErrorResponse`       | Validation error. Codes include SPLIT_INVALID and TRANSACTION_NOT_SPLITTABLE (a movement in a shared group), FUTURE_DATE, CURRENCY_MISMATCH, INCOME_ON_CARD_OR_LOAN (an income moved onto an account type listed in `IncomeRefusedAccountType`), AMOUNT_PRECISION (only when the edit carries an amount) and LOAN_OVERPAID (a movement that would leave a LOAN above zero), the first and the last checked again whenever the edit moves money, CATEGORY_ARCHIVED (assigning an archived category; keeping the one it already had is allowed), CATEGORY_TYPE_MISMATCH. |
+| `401`  | —                     | Unauthorized                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `404`  | —                     | Transaction, category, or account not found (or not owned by the user)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `409`  | `TransactionConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy)                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 ### `DELETE /transactions/{id}`
 
-Deletes the transaction (soft delete) and reverses any balance changes on associated accounts.
+Deletes the transaction (soft delete) and reverses any balance changes on associated accounts. **A movement in a shared group takes its expense with it**, in the same database transaction: the group now costs that much less and every share falls with it. Taking the expense out of the group without deleting the movement is the other door, `DELETE /shared-groups/{id}/expenses/{expenseId}`.
 
 **Path**
 

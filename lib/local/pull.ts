@@ -5,7 +5,14 @@ import { rememberServerTime } from "./clock";
 import type { VaultHandle } from "./db";
 import { writeTransaction } from "./outbox/queue";
 import { reconcileContext, reconcileRow } from "./outbox/reconcile";
-import { PROFILE_KEY, profileRecord } from "./schema";
+import {
+  contactRecord,
+  PROFILE_KEY,
+  profileRecord,
+  settlementRecord,
+  sharedExpenseRecord,
+  sharedGroupRecord,
+} from "./schema";
 
 export const PULL_PAGE_LIMIT = 500;
 
@@ -78,6 +85,23 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
   for (const row of changes.budgets) {
     news ||= await isNews(tx.objectStore("budgets"), row.id, row.updatedAt);
     await reconcileRow(tx, "budget", row.id, row, context);
+  }
+  // The shared layer has no queue of its own yet, so there is nothing to reproject over these rows.
+  for (const row of changes.contacts) {
+    news ||= await isNews(tx.objectStore("contacts"), row.id, row.updatedAt);
+    await tx.objectStore("contacts").put(contactRecord(row));
+  }
+  for (const row of changes.sharedGroups) {
+    news ||= await isNews(tx.objectStore("sharedGroups"), row.id, row.updatedAt);
+    await tx.objectStore("sharedGroups").put(sharedGroupRecord(row));
+  }
+  for (const row of changes.sharedExpenses) {
+    news ||= await isNews(tx.objectStore("sharedExpenses"), row.id, row.updatedAt);
+    await tx.objectStore("sharedExpenses").put(sharedExpenseRecord(row));
+  }
+  for (const row of changes.settlements) {
+    news ||= await isNews(tx.objectStore("settlements"), row.id, row.updatedAt);
+    await tx.objectStore("settlements").put(settlementRecord(row));
   }
 
   const meta = tx.objectStore("meta");

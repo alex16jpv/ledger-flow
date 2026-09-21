@@ -43,7 +43,8 @@ export function transactionTitle(
   if (transaction.type === "ADJUSTMENT") return t("transactions.list.balanceAdjustment");
   const category = lookups.categories.get(transaction.categoryId ?? "");
   if (category) return category.name;
-  return transaction.source === "QUICK"
+  // A payment is recorded from `Settle up` and never quick-added, so it has no quick label.
+  return transaction.source === "QUICK" && transaction.type !== "SETTLEMENT"
     ? t(`transactions.list.quick.${transaction.type}`)
     : t(`transactionTypes.${transaction.type}`);
 }

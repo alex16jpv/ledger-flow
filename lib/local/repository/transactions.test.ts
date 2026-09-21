@@ -1,5 +1,11 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
+import {
+  changes as feedChanges,
+  openTestVault,
+  profile,
+  transaction,
+  wipeVaults,
+} from "@/lib/testing/vault";
 import type {
   SyncChangesResponse,
   SyncTransaction,
@@ -84,13 +90,7 @@ function feedPage(
   return {
     serverTime: "2026-09-03T12:00:00.000Z",
     // Without the profile's zone the mirror declines a filtered read instead of cutting days.
-    changes: {
-      user: profile({ id: "u1", timezone }),
-      accounts: [],
-      categories: [],
-      transactions,
-      budgets: [],
-    },
+    changes: feedChanges({ user: profile({ id: "u1", timezone }), transactions }),
     pagination: { limit: 500, count: transactions.length, hasMore: false, nextCursor: "v1|done|" },
   };
 }

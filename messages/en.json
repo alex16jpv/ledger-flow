@@ -782,6 +782,18 @@
     "CATEGORY_ARCHIVED": "That category is archived. Restore it or pick another.",
     "CATEGORY_TYPE_MISMATCH": "That category doesn’t match this type of transaction.",
     "CATEGORY_TYPE_LOCKED": "This category already has transactions, so its type can’t change. Create a new category instead.",
+    "CONTACT_LIMIT_REACHED": "You’ve reached the limit of contacts. Archive one you no longer split with.",
+    "PARTICIPANT_LIMIT_REACHED": "This shared group is full. Remove somebody before adding another.",
+    "PARTICIPANT_ALREADY_IN_GROUP": "Somebody on this list is already in the group.",
+    "PARTICIPANT_NOT_IN_GROUP": "That person isn’t in this shared group.",
+    "PARTICIPANT_IN_USE": "That person has a share of an expense here. Settle it or write it off instead.",
+    "SPLIT_INVALID": "The shares don’t add up to the expense.",
+    "SHARED_EXPENSE_LINKED": "This expense is a movement of yours: change its amount, date or description on the transaction.",
+    "TRANSACTION_ALREADY_SHARED": "That movement is already in a shared group.",
+    "TRANSACTION_NOT_SPLITTABLE": "Only an expense can be split with other people.",
+    "SETTLEMENT_OVER_PAID": "That’s more than you owe them and more than they’ve paid ahead.",
+    "SETTLEMENT_MOVEMENT_LOCKED": "A settle-up recorded this movement. Undo the payment and it goes with it.",
+    "GUEST_BLOCK_HAS_PAYMENTS": "Its block of guests has paid. Undo those payments first.",
     "RESOURCE_ARCHIVED": "This item is archived. Restore it first.",
     "BUDGET_PERIOD_OVERLAP": "A budget for this period and category already exists.",
     "CURRENCY_LOCKED": "Your currency is locked because you already have accounts.",
@@ -1465,7 +1477,8 @@
     "EXPENSE": "Expense",
     "INCOME": "Income",
     "TRANSFER": "Transfer",
-    "ADJUSTMENT": "Adjustment"
+    "ADJUSTMENT": "Adjustment",
+    "SETTLEMENT": "Payment"
   },
   "stats": {
     "title": "Stats",
