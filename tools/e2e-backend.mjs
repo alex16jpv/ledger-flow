@@ -6,9 +6,17 @@ import { resolve } from "node:path";
 const backendDir = resolve(process.env.E2E_BACKEND_DIR ?? "../lag-money-manager");
 const port = process.env.E2E_BACKEND_PORT ?? "3200";
 const appUrl = process.env.E2E_APP_URL ?? "http://localhost:3002";
+// The seed describes the month in progress from the 22nd on, and the specs read it as lastMonth.
+const seedToday = (() => {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-01`;
+})();
+
 const env = {
   ...process.env,
   NODE_ENV: "development",
+  SEED_TODAY: process.env.SEED_TODAY ?? seedToday,
   PORT: port,
   CORS_ORIGIN: appUrl,
   MONGO_URI:
