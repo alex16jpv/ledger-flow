@@ -155,6 +155,37 @@ describe("SharedGroupScreen", () => {
     });
   });
 
+  // The third way in (T-139): a line another participant paid is not the transaction form.
+  it("opens the sheet for a line somebody else paid, from the same Add expense", async () => {
+    view();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Somebody else paid" }));
+
+    expect(await screen.findByRole("dialog", { name: "Somebody else paid" })).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("does not offer it in a group whose only participant is you", async () => {
+    fetchMock.mockImplementation((input) => {
+      const url = urlOf(input);
+      if (url.startsWith("/api/contacts")) return Promise.resolve(page(contacts));
+      if (url.includes("/expenses")) return Promise.resolve(page([]));
+      if (url.startsWith("/api/settlements")) return Promise.resolve(page([]));
+      return Promise.resolve(
+        page([
+          { ...group, participants: [{ contactId: null, addedAt: "2026-08-01T00:00:00.000Z" }] },
+        ]),
+      );
+    });
+    view();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
+
+    expect(await screen.findByRole("button", { name: "Record a new expense" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Somebody else paid" })).not.toBeInTheDocument();
+  });
+
   // A line somebody else paid is not an expense of yours until you settle with them.
   it("says a line somebody else paid is not in your ledger", async () => {
     view();

@@ -1468,7 +1468,8 @@
       "none": "Nothing to add: every expense you have is already in a shared group, or none matches what you typed.",
       "noDescription": "Expense",
       "failed": "The list could not be read. Try again in a moment.",
-      "recordNew": "Record a new expense"
+      "recordNew": "Record a new expense",
+      "somebodyElsePaid": "Somebody else paid"
     },
     "whatChanges": {
       "title": "{count, plural, one {Add # transaction to {name}?} other {Add # transactions to {name}?}}",
@@ -1622,6 +1623,24 @@
       "confirm": "Undo the payment",
       "done": "Payment undone",
       "action": "Undo the payment"
+    },
+    "paidByOther": {
+      "title": "Somebody else paid",
+      "add": "Add expense",
+      "added": "Expense added",
+      "description": "What was it",
+      "descriptionPlaceholder": "Concert tickets",
+      "dateNote": "The day it was spent. It is what dates your expense the day you pay them back.",
+      "whoPaid": "Who paid",
+      "whoPaidPlaceholder": "Pick a person",
+      "whoPaidHelp": "One of the other people in this shared group. An expense you paid is the two other ways in.",
+      "whoPaidTitle": "Who paid it, in {name}?",
+      "inherits": {
+        "EQUAL": "Split equally between {people} people, the group’s default — your share is {share}.",
+        "PERCENT": "Split by the group’s percentages, its default — your share is {share}."
+      },
+      "nothingOfYours": "Nothing of yours is recorded. No money of yours moved, so there is no account, no category and no budget to ask about. It becomes your expense the day you settle with them, dated that day and in a category you choose then.",
+      "nothingOfYoursNamed": "Nothing of yours is recorded. No money of yours moved, so there is no account, no category and no budget to ask about. It becomes your expense the day you settle with {name}, dated that day and in a category you choose then."
     }
   },
   "transactions": {

@@ -47,7 +47,7 @@ payment from your ledger's side — it is **one expense of yours per line**, dat
 category the sheet asks for, because the shared layer carries none. A payment can be **outside the
 app**, and then no movement is written and no balance moves, while the expenses still fall.
 
-**Two ways into a group's expenses, and one of them is the transaction form.** The picker lists the
+**Three ways into a group's expenses, and one of them is the transaction form.** The picker lists the
 movements that are not in a group yet; under it, `Record a new expense` leaves for
 `/transactions/new?group=<id>`, where the form knows the group, drops the type control — only an
 expense is shared in v1 — and on save writes **two** things: the movement, and the group's expense on
@@ -55,6 +55,14 @@ top of it with the split inherited. The movement goes **first**, because it is t
 true whatever the group answers; when the group refuses, the screen says which half landed and retries
 only the other. With no network both are queued and the expense **waits for the movement it names**,
 the way it already waits for the group it is posted under.
+
+**The third way in writes nothing of yours.** `PaidByOtherSheet` records a line another participant
+paid: description, date, amount and who paid it, with the group's split inherited and no body carrying
+one. It is not the transaction form and must not become it — no money of yours moved, so there is no
+account, no category and no budget to ask about — and `expensePaidByOther` (`write.ts`) mints the row
+with no `transactionId`, so the queued expense waits only for the group it is posted under. The payer
+is one of the **other** participants, never you, and a group whose only participant is you does not
+offer the door at all. The odd unit goes to whoever paid, which here is not you.
 
 **A group is not closed when it is created.** `AddPeopleSheet` is the contact picker with the question
 that comes with it — _are they in the expenses already recorded?_ — and, when the answer is yes, the

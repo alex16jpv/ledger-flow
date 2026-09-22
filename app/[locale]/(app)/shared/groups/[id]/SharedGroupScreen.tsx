@@ -11,6 +11,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -64,6 +65,11 @@ import { SettleUpFlow } from "../../SettleUpFlow";
 import { TransactionPickerSheet } from "../../TransactionPickerSheet";
 import { WhatChangesSheet } from "../../WhatChangesSheet";
 import { ArchiveGroupSheet, UndoWriteOffSheet, WriteOffSheet } from "../../WriteOffSheet";
+
+// A door inside a door: it is not on screen until two taps say so, so it is not in the bundle either.
+const PaidByOtherSheet = dynamic(() =>
+  import("@/features/shared/components/PaidByOtherSheet").then((module) => module.PaidByOtherSheet),
+);
 
 function useNoteOf(view: GroupView): (person: PartyView) => string {
   const t = useTranslations("shared.group.notes");
@@ -278,6 +284,7 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
   const undo = useUndoWriteOff();
   const archive = useArchiveSharedGroup();
   const [picking, setPicking] = useState(false);
+  const [paidByOther, setPaidByOther] = useState(false);
   const [adding, setAdding] = useState<Transaction[]>([]);
   const [splitting, setSplitting] = useState<SharedExpense | null>(null);
   const [settling, setSettling] = useState<PartyView[] | null>(null);
@@ -299,6 +306,10 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
       color: contact?.color ?? null,
     };
   });
+  // Who could have paid a line that is not yours: everybody in the group except you.
+  const otherPayers = splitPeople.flatMap((person) =>
+    person.contactId === null ? [] : [{ ...person, contactId: person.contactId }],
+  );
   const ceilingOf = (person: PartyView): number =>
     view.group.writeOffs.find(
       (one) => one.contactId === person.contactId && one.expenseId === person.expenseId,
@@ -502,6 +513,25 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           }}
           onRecordNew={() => {
             router.push({ pathname: "/transactions/new", query: { group: view.group.id } });
+          }}
+          onSomebodyElsePaid={
+            otherPayers.length === 0
+              ? undefined
+              : () => {
+                  setPicking(false);
+                  setPaidByOther(true);
+                }
+          }
+        />
+      )}
+      {paidByOther && (
+        <PaidByOtherSheet
+          open
+          group={view.group}
+          groupName={view.group.name}
+          people={otherPayers}
+          onClose={() => {
+            setPaidByOther(false);
           }}
         />
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -30,6 +30,8 @@ export interface TransactionPickerSheetProps {
   onDone: (transactions: Transaction[]) => void;
   // Offered only where there is a group to record it into: the form before one exists has none.
   onRecordNew?: () => void;
+  // Offered only where somebody else could have paid: a group whose only participant is you cannot.
+  onSomebodyElsePaid?: () => void;
 }
 
 export function TransactionPickerSheet({
@@ -38,6 +40,7 @@ export function TransactionPickerSheet({
   selected = [],
   onDone,
   onRecordNew,
+  onSomebodyElsePaid,
 }: TransactionPickerSheetProps) {
   const t = useTranslations("shared.pickExpenses");
   const loading = useTranslations("common")("loading");
@@ -165,11 +168,21 @@ export function TransactionPickerSheet({
         {rows.length === 0 && !list.isPending && !list.isError && (
           <p className="px-1 text-sm text-text-3">{t("none")}</p>
         )}
-        {onRecordNew && (
-          <Button variant="ghost" size="sm" className="self-start" onClick={onRecordNew}>
-            <Plus {...iconProps("sm")} />
-            {t("recordNew")}
-          </Button>
+        {(onRecordNew ?? onSomebodyElsePaid) && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            {onRecordNew && (
+              <Button variant="ghost" size="sm" onClick={onRecordNew}>
+                <Plus {...iconProps("sm")} />
+                {t("recordNew")}
+              </Button>
+            )}
+            {onSomebodyElsePaid && (
+              <Button variant="ghost" size="sm" onClick={onSomebodyElsePaid}>
+                <Users {...iconProps("sm")} />
+                {t("somebodyElsePaid")}
+              </Button>
+            )}
+          </div>
         )}
       </div>
     </Sheet>

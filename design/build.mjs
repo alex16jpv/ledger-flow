@@ -4227,9 +4227,26 @@ const recordNewExpense = () =>
 ${pickRow("coffee", "BROWN", "Pergamino Coffee", "Sep 3 \u00b7 Cash", 9800, true)}
 ${pickRow("bus", "BLUE", "Bus to the old town", "Sep 4 \u00b7 Cash", 12000, false)}
 </div>
-<button class="btn ghost sm" style="align-self:flex-start;padding-left:0">${iconSvg("plus", "sm")}Record a new expense</button>
+<div class="hstack" style="gap:14px;padding-top:2px"><button class="btn ghost sm" style="padding-left:0">${iconSvg("plus", "sm")}Record a new expense</button><button class="btn ghost sm" style="padding-left:0">${iconSvg("users", "sm")}Somebody else paid</button></div>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Add 1 \u00b7 ${moneyText(9800)}</button></div>`,
       "Add expense",
+    ),
+  });
+
+const expenseSomebodyElsePaid = () =>
+  nightOut({
+    sheet: sheetWrap(
+      `<div class="stack">
+${field("What was it", "Concert tickets", null, { icon: "receipt" })}
+${field("Date", "September 20, 2026", null, { icon: "calendar" })}
+<div class="field"><span class="label">Amount</span>
+<div class="card" style="padding:26px 16px;display:flex;justify-content:center;align-items:baseline;gap:4px"><span class="muted">$</span><span class="amount" style="font-size:28px">90,000</span></div></div>
+<div class="field"><button class="picker">${face("Ana Ruiz")}<span class="body"><span class="lbl">Who paid</span><span class="val">Ana Ruiz</span></span>${iconSvg("chevron-right", "sm")}</button>
+<span class="help">One of the other people in the group. An expense you paid is the other two ways in.</span></div>
+<div class="alert neutral">${iconSvg("users")}<span>Split <b>equally between 3 people</b>, the group's default, like every other expense here \u2014 your share is <b>${moneyText(30000)}</b>.</span></div>
+<div class="alert info">${iconSvg("info")}<span><b>Nothing of yours is recorded.</b> No money of yours moved, so there is no account, no category and no budget to ask about. It becomes your expense the day you settle with Ana \u2014 dated September 20, in a category you choose then.</span></div>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Add expense</button></div></div>`,
+      "Somebody else paid",
     ),
   });
 
@@ -5126,9 +5143,16 @@ const PAGES = [
       plate(
         "record-a-new-expense",
         "Add expense, from inside the group",
-        "The other way in, and it is the same sheet: the movements not in a group yet, and under them <code>Record a new expense</code> \u2014 where the contact sheet puts <code>New person</code>, because a picker whose answer is not there yet offers to create it rather than sending you off to find it. It leaves for the transaction form <b>knowing the group</b> (<code>add.html#expense-for-a-shared-group</code>) and what it records comes back here, split by the group's default without asking.",
+        "The other ways in, and they are the same sheet: the movements not in a group yet, and under them <code>Record a new expense</code> and <code>Somebody else paid</code> \u2014 where the contact sheet puts <code>New person</code>, because a picker whose answer is not there yet offers to create it rather than sending you off to find it. The first leaves for the transaction form <b>knowing the group</b> (<code>add.html#expense-for-a-shared-group</code>) and what it records comes back here, split by the group's default without asking; the second is <code>#expense-somebody-else-paid</code>.",
         recordNewExpense(),
-        { added: "2026-09-21" },
+        { added: "2026-09-21", updated: "2026-09-22" },
+      ),
+      plate(
+        "expense-somebody-else-paid",
+        "A line somebody else paid",
+        "T-139, and the third way into <code>Add expense</code>. A line another participant paid is <b>not a movement of yours</b>, so this is deliberately not the transaction form: there is no account, no category and no budget to ask about, and a form that asked for them would be asking about a movement that does not exist. It asks for the four things such a line <i>is</i> \u2014 what it was, when, how much, and <b>who paid it</b> \u2014 and inherits the group's split without asking, exactly like the other two doors. It writes <b>one</b> thing and not two, and the sheet says so, and says when that stops being true: the day you settle with Ana it becomes your expense, dated that line and in a category you choose then. <b>Who paid is never you</b> \u2014 that is what the other two doors are \u2014 so a group of one does not draw the door at all. A description is <b>required</b> here, where the transaction form lets it go: this line has no category to borrow a name from, and neither will the expense it turns into.",
+        expenseSomebodyElsePaid(),
+        { added: "2026-09-22" },
       ),
       plate(
         "what-changes-in-budgets",

@@ -4648,3 +4648,52 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
 - **Consequence:** `settlement` gains its second outbox action, and the movement's detail gains the
   guard it was missing — while the section cannot be read the button is not drawn and the screen says
   why, rather than offering a door that fails.
+
+## 2026-09-22 · A line somebody else paid: a third door, and a form that writes nothing of yours (T-139)
+
+- **Context:** `paidByContactId` has been in the contract, in the offline projection and in the group's
+  detail since T-114 and T-120 — the section could **read** a line another participant paid and had no
+  way to **create** one. Everything the app wrote sent `null`.
+- **Decision:** it is a sheet of the group, reached from `Add expense` beside `Record a new expense`,
+  and it is deliberately **not** the transaction form. A line somebody else paid is not a movement of
+  yours: no money of yours moved, so there is no account, no category and no budget to ask about, and a
+  form that asked for them would be asking about a movement that does not exist. The sheet asks for the
+  four things such a line **is** — description, date, amount, who paid — and inherits the group's split
+  without asking, carrying none in the body, which is what keeps `customSplit` false exactly as picking
+  a movement already does.
+- **Alternatives:** teaching `/transactions/new?group=<id>` a "somebody else paid" mode, which is the
+  one screen in the app whose whole job is to ask for the account and the category it would then have
+  to hide; and a payer control on the existing picker, which would have made a picker of movements into
+  a form. Neither is cheaper than a sheet of four fields, and both blur what a movement of yours is.
+- **The payer is never you**, because picking yourself is what the other two doors already are, and a
+  group whose only participant is you does not draw the door at all rather than opening a sheet with
+  nobody to pick. The server agrees from the other side: it refuses `paidByContactId` together with
+  `transactionId`.
+- **The date stops at today**, where the transaction form allows tomorrow. The form asks for a time and
+  can prove it is inside the server's 24-hour window; a day alone is written at **local noon**, and
+  noon tomorrow is more than 24 hours ahead when it is typed at night — a `FUTURE_DATE` the user could
+  not have predicted. A line another participant paid is a fact you are told about afterwards anyway.
+- **A description is required here**, where the transaction form lets it go: a movement with no
+  description is named by its category on every list that draws it, and this line has no category to
+  borrow a name from — nor will the expense it turns into the day you settle, which carries this
+  description and this date.
+- **Consequence:** the outbox needed nothing. `createSharedExpense` already sends the four fields when
+  no `transactionId` is given, and the expense depends only on the group it is posted under, because
+  there is no movement of yours for it to wait for.
+
+## 2026-09-22 · Two things T-139 tripped over, fixed in the same branch
+
+- **The e2e suite failed for three days of every month.** `seed-test` describes the month in progress
+  once the reference day is the 22nd or later, and falls back to the last complete month before that;
+  every spec that reads the seed asks for `?period=lastMonth`. Run on 2026-09-22, ten specs across
+  `stats` and `transactions-list` failed on data that was there but in the other month. `tools/e2e-backend.mjs` now
+  anchors `SEED_TODAY` to the **1st of the current month**, so the dataset is the last complete month
+  whatever day the suite runs — which is what it was every day the suite was green. The alternative,
+  teaching each spec which month the seed chose, spreads a date rule over nine files to keep one
+  environment variable out of one.
+- **A `Picker` inside a `Field` was described by nothing.** `Field` hands its help and its error down
+  through its context, and `Picker` was the one control that did not read them, in the new-group form
+  (`Expenses`) as much as here. It does now, and an explicit prop still wins. What it deliberately does
+  **not** take is the field's `id`: a `<button>` is a labelable element, so the field's label would
+  become its whole accessible name and the value it is showing would stop being announced — a picker
+  that reads `Currency` instead of `Currency, COP · Colombian Peso`. The label stays where it is.

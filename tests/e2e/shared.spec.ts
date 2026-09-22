@@ -244,6 +244,54 @@ test("recording a new expense from inside the group writes the movement and the 
   await expect(page.getByText("Your share $60,000")).toBeVisible();
 });
 
+test("a line somebody else paid is recorded without a movement of yours", async ({
+  page,
+  request,
+}) => {
+  await signUp(page, request);
+  await anExpense(request, 10_000, "Coffee");
+
+  await page.goto("/shared");
+  await page.getByRole("button", { name: "Add a person" }).click();
+  await page.getByPlaceholder("Beto Cano").fill("Ana Ruiz");
+  await page.getByRole("button", { name: "Add person" }).click();
+  await expect(page.getByText("Person added")).toBeVisible();
+
+  await page.getByRole("link", { name: "New shared group" }).first().click();
+  await page.getByPlaceholder("Cartagena trip").fill("Night out");
+  await page.getByRole("button", { name: "Add a person" }).click();
+  await page.getByRole("checkbox", { name: /Ana Ruiz/ }).check({ force: true });
+  await page.getByRole("button", { name: "Add 1" }).click();
+  await page.getByRole("button", { name: "Create shared group" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Night out" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Add expense" }).click();
+  await page.getByRole("button", { name: "Somebody else paid" }).click();
+
+  const sheet = page.getByRole("dialog", { name: "Somebody else paid" });
+  await sheet.getByRole("textbox", { name: "What was it" }).fill("Concert tickets");
+  await sheet.getByRole("textbox", { name: "Amount" }).fill("90000");
+  // Ana is the only other person in the group, so she is the payer it opened with.
+  await expect(sheet.getByText(/your share is \$45,000/)).toBeVisible();
+  await expect(sheet.getByText(/the day you settle with Ana Ruiz/)).toBeVisible();
+  await expectNoAxeViolations(page);
+  await sheet.getByRole("button", { name: "Add expense" }).click();
+  await expect(page.getByText("Expense added")).toBeVisible();
+
+  // The line is the group's and it is not yours: nothing left your accounts, so you owe her.
+  await expect(page.getByRole("heading", { name: "Expenses · 1" })).toBeVisible();
+  await expect(page.getByText("Concert tickets")).toBeVisible();
+  await expect(page.getByText("Ana Ruiz paid")).toBeVisible();
+  await expect(page.getByText("not in your ledger")).toBeVisible();
+  await expect(page.getByText(/counts as yours/).first()).toContainText("total $90,000");
+  await expect(page.getByText("You owe them $45,000")).toBeVisible();
+
+  // And no movement of yours was written for it: the ledger still holds the one expense it had.
+  await page.goto("/transactions");
+  await expect(page.getByRole("button", { name: /Coffee/ })).toHaveCount(1);
+  await expect(page.getByText("Concert tickets")).toHaveCount(0);
+});
+
 test("a payment recorded by mistake is undone, and the movement goes with it", async ({
   page,
   request,

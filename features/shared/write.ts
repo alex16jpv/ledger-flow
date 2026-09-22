@@ -77,3 +77,30 @@ export function expenseFromTransaction(
     transactionId: transaction.id,
   };
 }
+
+export interface LineSomebodyElsePaid {
+  description: string;
+  date: string;
+  amount: number;
+  paidByContactId: string;
+}
+
+// A line another participant paid: no movement of yours exists for it, so there is none to name.
+export function expensePaidByOther(
+  group: SplittingGroup,
+  line: LineSomebodyElsePaid,
+  id: string = newEntityId(),
+): NewSharedExpense {
+  return {
+    row: {
+      id,
+      groupId: group.id,
+      description: line.description,
+      date: line.date,
+      amount: line.amount,
+      paidByContactId: line.paidByContactId,
+      split: inheritedSplit(group, line.amount, line.paidByContactId),
+      customSplit: false,
+    },
+  };
+}

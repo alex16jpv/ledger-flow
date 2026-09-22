@@ -1,3 +1,4 @@
+import { MAX_AMOUNT } from "@/lib/format/money";
 import { COLOR_TOKENS } from "@/lib/theme/feature-color";
 import { type Infer, z } from "@/lib/validation/zod";
 
@@ -30,3 +31,22 @@ export const groupFormSchema = z.object({
 });
 
 export type GroupFormValues = Infer<typeof groupFormSchema>;
+
+export const EXPENSE_DESCRIPTION_MAX = 255;
+
+export const paidByOtherSchema = z.object({
+  // Required where the transaction form lets it go: this line has no category to borrow a name from.
+  description: z
+    .string()
+    .trim()
+    .min(1, { error: "validation.required" })
+    .max(EXPENSE_DESCRIPTION_MAX, { error: "validation.nameMax" }),
+  date: z.string().min(1, { error: "validation.required" }),
+  amount: z
+    .number({ error: "validation.amountInvalid" })
+    .positive({ error: "validation.amountPositive" })
+    .max(MAX_AMOUNT, { error: "validation.amountMax" }),
+  paidByContactId: z.string().min(1, { error: "validation.required" }),
+});
+
+export type PaidByOtherValues = Infer<typeof paidByOtherSchema>;
