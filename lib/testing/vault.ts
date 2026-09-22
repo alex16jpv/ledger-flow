@@ -4,6 +4,8 @@ import type {
   Account,
   Category,
   Contact,
+  ReceivedInvitation,
+  SentInvitation,
   Settlement,
   SharedExpense,
   SyncBudget,
@@ -194,6 +196,42 @@ export function settlement(overrides: Partial<Settlement> = {}): Settlement {
   };
 }
 
+export function sentInvitation(overrides: Partial<SentInvitation> = {}): SentInvitation {
+  return {
+    id: "i1",
+    groupId: "g1",
+    contactId: "k1",
+    email: "beto@example.com",
+    status: "PENDING",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    answeredAt: null,
+    withdrawnAt: null,
+    createdAt: "2026-09-21T10:00:00.000Z",
+    updatedAt: "2026-09-21T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function receivedInvitation(
+  overrides: Partial<ReceivedInvitation> = {},
+): ReceivedInvitation {
+  return {
+    id: "r1",
+    groupId: "g9",
+    groupName: "Villa de Leyva weekend",
+    groupColor: "TEAL",
+    groupCurrency: "COP",
+    inviterName: "Ana Ruiz",
+    inviterEmail: "ana@example.com",
+    status: "PENDING",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    answeredAt: null,
+    createdAt: "2026-09-21T10:00:00.000Z",
+    updatedAt: "2026-09-21T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
 // Every entity the feed carries, so a test names only the rows its case is about.
 export function changes(
   overrides: Partial<SyncChangesResponse["changes"]> = {},
@@ -208,6 +246,8 @@ export function changes(
     sharedGroups: [],
     sharedExpenses: [],
     settlements: [],
+    invitationsSent: [],
+    invitationsReceived: [],
     ...overrides,
   };
 }

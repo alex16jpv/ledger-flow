@@ -16,7 +16,7 @@ import {
 } from "@/components/shell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { useAccountCount, useCategorySummary } from "@/features/settings/hooks";
-import { useSharedSection } from "@/features/shared/hooks";
+import { useSharedSection, useWaitingInvitationCount } from "@/features/shared/hooks";
 import { usePendingCount } from "@/features/transactions/hooks";
 import { readSessionMarker, vaultUserFor } from "@/lib/auth/marker";
 import { LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
@@ -76,6 +76,7 @@ function Frame({ children }: { children: ReactNode }) {
   const accountCount = useAccountCount(moreOpen);
   const categorySummary = useCategorySummary(moreOpen);
   const shared = useSharedSection(moreOpen);
+  const invitations = useWaitingInvitationCount();
   // F-38: what the pull writes into the mirror only reaches the screens through an invalidation.
   const onMirrorChanged = useCallback(() => {
     void invalidateMirrorBacked(queryClient);
@@ -110,6 +111,7 @@ function Frame({ children }: { children: ReactNode }) {
       <AppShell
         userName={user?.name ?? ""}
         pendingCount={pendingCount}
+        invitations={invitations}
         moreOpen={moreOpen}
         onAdd={({ chain }) => {
           setQuickAdd({ open: true, chain });
@@ -131,6 +133,7 @@ function Frame({ children }: { children: ReactNode }) {
         accountCount={accountCount.data}
         categoryCounts={categorySummary.data}
         owedToYou={shared.section?.owedToYou}
+        invitations={invitations}
       />
       <QuickAddSheet
         open={quickAdd.open}

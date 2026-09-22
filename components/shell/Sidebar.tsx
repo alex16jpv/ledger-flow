@@ -14,10 +14,21 @@ import { type AddOptions, isActive, NAV_ITEMS, type NavItem, SETTINGS_ITEM } fro
 interface SidebarProps {
   userName: string;
   pendingCount: number;
+  invitations?: number;
   onAdd: (options: AddOptions) => void;
 }
 
-function SidebarLink({ item, active, count }: { item: NavItem; active: boolean; count?: number }) {
+function SidebarLink({
+  item,
+  active,
+  count,
+  waiting,
+}: {
+  item: NavItem;
+  active: boolean;
+  count?: number;
+  waiting?: number;
+}) {
   const t = useTranslations("nav");
   const Icon = item.icon;
   return (
@@ -37,11 +48,17 @@ function SidebarLink({ item, active, count }: { item: NavItem; active: boolean; 
           <span aria-hidden="true">{count}</span>
         </span>
       )}
+      {waiting !== undefined && waiting > 0 && (
+        <span className="ml-auto rounded-full bg-brand-soft px-[7px] py-px text-xs font-semibold text-brand-text">
+          <span className="sr-only">{t("waitingCount", { count: waiting })}</span>
+          <span aria-hidden="true">{waiting}</span>
+        </span>
+      )}
     </Link>
   );
 }
 
-export function Sidebar({ userName, pendingCount, onAdd }: SidebarProps) {
+export function Sidebar({ userName, pendingCount, invitations = 0, onAdd }: SidebarProps) {
   const t = useTranslations("nav");
   const tc = useTranslations("common");
   const pathname = usePathname();
@@ -74,6 +91,7 @@ export function Sidebar({ userName, pendingCount, onAdd }: SidebarProps) {
             item={item}
             active={isActive(pathname, item.href)}
             count={item.key === "transactions" ? pendingCount : undefined}
+            waiting={item.key === "shared" ? invitations : undefined}
           />
         ))}
       </nav>

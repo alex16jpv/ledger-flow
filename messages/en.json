@@ -69,7 +69,10 @@
     "moreShared": "{amount} owed to you",
     "moreSettings": "Profile, currency, appearance",
     "search": "Search",
-    "pendingCount": "{count, plural, one {# to review} other {# to review}}"
+    "pendingCount": "{count, plural, one {# to review} other {# to review}}",
+    "moreInvitations": "{count, plural, one {# invitation waiting for you} other {# invitations waiting for you}}",
+    "moreWithInvitations": "More, {count, plural, one {# invitation waiting} other {# invitations waiting}}",
+    "waitingCount": "{count} waiting"
   },
   "colors": {
     "RED": "Red",
@@ -833,7 +836,11 @@
     "MALFORMED_JSON": "The request was corrupted on the way. Try again.",
     "PAYLOAD_TOO_LARGE": "That’s too much data for one request.",
     "REQUEST_ABORTED": "The request was interrupted. Try again.",
-    "UNSUPPORTED_ENCODING": "The request used an unsupported format."
+    "UNSUPPORTED_ENCODING": "The request used an unsupported format.",
+    "CONTACT_HAS_NO_EMAIL": "Add an email to this person to invite them.",
+    "INVITATION_TO_SELF": "That is your own email.",
+    "INVITATION_LIMIT_REACHED": "You already have 50 invitations waiting. Withdraw one before sending another.",
+    "INVITATION_UNAVAILABLE": "This invitation is no longer available."
   },
   "validation": {
     "required": "This field is required.",
@@ -1352,7 +1359,7 @@
       "color": "Color",
       "email": "Email",
       "emailPlaceholder": "beto@example.com",
-      "emailHelp": "Only so you can invite them to a shared group later. Nothing is sent today.",
+      "emailHelp": "So you can invite them to a shared group. Nothing is emailed: the invitation waits in their Shared.",
       "duplicate": "You already have an active person named “{name}”. Names are case-insensitive.",
       "groupTitle": "New shared group",
       "groupName": "Name",
@@ -1642,6 +1649,52 @@
       },
       "nothingOfYours": "Nothing of yours is recorded. No money of yours moved, so there is no account, no category and no budget to ask about. It becomes your expense the day you settle up — dated {date}, in a category you choose then.",
       "nothingOfYoursNamed": "Nothing of yours is recorded. No money of yours moved, so there is no account, no category and no budget to ask about. It becomes your expense the day you settle with {name} — dated {date}, in a category you choose then."
+    },
+    "invitations": {
+      "title": "Invitations",
+      "sentence": "<b>{inviter}</b> invited you to <b>{group}</b>",
+      "sent": "{email} · {date} · open until {until}",
+      "otherCurrency": "{email} · {date} · this group is in {group} and your Ledger Flow is in {mine}, so it can’t be joined",
+      "accept": "Accept",
+      "decline": "Decline",
+      "joined": "Joined",
+      "declined": "Declined",
+      "unavailable": "No longer available",
+      "joinedNow": "{email} · Joined just now",
+      "declinedNow": "{email} · Declined just now",
+      "gone": "{email} · It stopped waiting before your answer arrived",
+      "foot": "Joining lets you see the group — its expenses, who paid and how each one is split. Nothing of your own ledger reaches anybody: your accounts, categories and budgets stay yours.",
+      "answeredFoot": "Answered here or on any other device. They leave the next time Shared opens.",
+      "offline": "Answering needs a connection: the person who invited you is told your answer, and only the server can check the invitation still stands."
+    },
+    "invite": {
+      "door": "Invite them to see this group",
+      "joinedCount": "{count} joined",
+      "waitingCount": "{count} waiting",
+      "notInvitedCount": "{count} not invited",
+      "title": "Invite to {group}",
+      "intro": "Somebody who joins sees <b>{group}</b> — its expenses, who paid and how each one is split — and never your accounts, categories or notes. Nothing is emailed: the invitation waits in their Shared.",
+      "noEmail": "No email yet",
+      "addEmail": "Add email",
+      "notInvited": "{email} · not invited",
+      "invite": "Invite",
+      "waiting": "{email} · invited {date} · open until {until}",
+      "withdraw": "Withdraw",
+      "joined": "Joined",
+      "joinedMeta": "{email} · joined {date}",
+      "stopSharing": "Stop sharing",
+      "declined": "{email} · declined {date}",
+      "expired": "{email} · not answered in {days} days",
+      "inviteAgain": "Invite again",
+      "sentNote": "<b>{name} sees it in Shared</b> the next time they open Ledger Flow with {email}. If that address has no account yet, the invitation waits for it all the same — and you are not told which: it reads <i>waiting</i> either way until they answer.",
+      "limits": "An invitation waits <b>{days} days</b>, and up to <b>{max}</b> of yours can be waiting at once.",
+      "offline": "Inviting needs a connection: only the server can say whether an invitation still stands.",
+      "stopTitle": "Stop sharing with {name}?",
+      "stopAlert": "<b>{name} stops seeing {group}.</b> They stay in it as a person you split with.",
+      "stopBody": "Nothing about the money changes: their share, what they have paid and what they still owe stay exactly as they are, and so does what counts as yours. What they already put into their own ledger is theirs and stays there.",
+      "stopAgain": "To let them see it again, invite them again.",
+      "stopped": "{name} no longer sees this group",
+      "withdrawn": "The invitation to {name} was withdrawn"
     }
   },
   "transactions": {

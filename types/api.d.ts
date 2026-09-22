@@ -2442,6 +2442,208 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The invitations waiting for you
+         * @description Invitations to somebody else's shared group, addressed to your email, still waiting and still in time, oldest first. Each one shows only the group's name, its colour and currency, and who sent it. The offline client reads them from the change feed (`invitationsReceived`), which also brings the ones already answered; this listing is its fallback.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Maximum number of items to return */
+                    limit?: number;
+                    /** @description Number of items to skip (offset-based pagination) */
+                    offset?: number;
+                    /** @description ID of the last item of the previous page; must name an invitation of this listing (overrides offset) */
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated list of the invitations waiting for you */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReceivedInvitationList"];
+                    };
+                };
+                /** @description Invalid query parameters (code VALIDATION), or a cursor that names no invitation of this listing (code INVALID_CURSOR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join the shared group you were invited to
+         * @description Joining touches nothing in your ledger. A group in another currency cannot be joined (only declined), and an invitation that was withdrawn, whose group was archived, or whose 30 days passed answers INVITATION_UNAVAILABLE. Accepting twice answers the invitation as it is.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Invitation ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The invitation, accepted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReceivedInvitation"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), an invitation that can no longer be answered (code INVITATION_UNAVAILABLE), a group in another currency (code CURRENCY_MISMATCH), your own invitation (code INVITATION_TO_SELF), or a group you already joined through another invitation (code PARTICIPANT_ALREADY_IN_GROUP) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Invitation not found (uniform for missing and addressed to somebody else) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline an invitation to a shared group
+         * @description The person who invited learns it was declined, never why. Declining twice answers the invitation as it is.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Invitation ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The invitation, declined */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReceivedInvitation"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), an invitation that can no longer be answered (code INVITATION_UNAVAILABLE), or your own invitation (code INVITATION_TO_SELF) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Invitation not found (uniform for missing and addressed to somebody else) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/settlements": {
         parameters: {
             query?: never;
@@ -3416,6 +3618,220 @@ export type paths = {
                     };
                     content: {
                         "application/json": components["schemas"]["SharedExpenseConflict"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The invitations sent for this group
+         * @description Every invitation ever sent for this group, oldest first, in the inviter's view: who it was addressed to and how it stands. It never says whether an address has an account, nor who answered.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Maximum number of items to return */
+                    limit?: number;
+                    /** @description Number of items to skip (offset-based pagination) */
+                    offset?: number;
+                    /** @description ID of the last item of the previous page; must name an invitation of this group's (overrides offset) */
+                    cursor?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated list of the group's invitations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SentInvitationList"];
+                    };
+                };
+                /** @description Invalid query parameters (code VALIDATION), or a cursor that names no invitation of this group's (code INVALID_CURSOR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Invite somebody in the group to see it
+         * @description Addressed to the email of a contact who is in the group. **Nothing is emailed**: the invitation waits in that person's Shared, found by the address, for 30 days. The answer is the same whether or not the address has an account — the route never looks — so an invitation cannot be used to find out who uses the app.
+         *     One live invitation per person per group: inviting somebody who is already waiting or already joined answers that invitation with 200. One that ran out of time steps aside and a new one is sent (201).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateInvitationInput"];
+                };
+            };
+            responses: {
+                /** @description That person already has a live invitation to this group; it is answered as it is */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SentInvitation"];
+                    };
+                };
+                /** @description Invitation sent */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SentInvitation"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), somebody who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a contact with no email (code CONTACT_HAS_NO_EMAIL), your own email (code INVITATION_TO_SELF), too many invitations waiting (code INVITATION_LIMIT_REACHED) or an archived group (code RESOURCE_ARCHIVED) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Shared group or contact not found (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-groups/{id}/invitations/{invitationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Withdraw an invitation, or stop sharing with somebody who joined
+         * @description A waiting invitation stops being answerable; a joined one ends, and that person stops seeing the group. **Nothing about the money changes**: they stay in the group as a person you split with. Idempotent — an invitation that already ended is answered as it is.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                    /** @description Invitation ID */
+                    invitationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The invitation, withdrawn */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SentInvitation"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Invitation not found in this group (uniform for missing and not owned) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
@@ -5137,7 +5553,7 @@ export type components = {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message: string;
         };
         /** @description Per-item outcome. The status is 200 even when some items failed: read `failed`. */
@@ -5244,12 +5660,12 @@ export type components = {
             color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
             /**
              * Format: email
-             * @description Identifier for inviting them later; nothing is sent from this API, and two contacts may carry the same address.
+             * @description What an invitation to a shared group is addressed to; nothing is emailed from this API, and two contacts may carry the same address. Changing it withdraws the contact's waiting invitations.
              */
             email?: string;
             /**
              * Format: uuid
-             * @description The user this contact turned out to be, once an invitation is accepted. Always null today.
+             * @description The user this contact turned out to be: set when they accept an invitation, and never settable by a client.
              */
             linkedUserId: string | null;
             /** Format: uuid */
@@ -5320,6 +5736,10 @@ export type components = {
             color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
             /** Format: email */
             email?: string;
+        };
+        CreateInvitationInput: {
+            /** Format: uuid */
+            contactId: string;
         };
         CreateSettlementInput: {
             /** Format: uuid */
@@ -5426,7 +5846,7 @@ export type components = {
              * @description Stable machine-readable code. Branch on this, never on message.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             details?: {
                 field?: string;
                 message?: string;
@@ -5468,6 +5888,39 @@ export type components = {
             /** Format: uuid */
             toAccountId?: string;
         };
+        /** @description An invitation to somebody else's group, as the invited person reads it: the group's name, colour and currency as they are now, and who sent it — nothing else of the group before joining. A PENDING one past `expiresAt` can no longer be answered. */
+        ReceivedInvitation: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            groupId: string;
+            groupName: string;
+            /** @enum {string|null} */
+            groupColor: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
+            /**
+             * @description A group in a currency other than yours can only be declined (CURRENCY_MISMATCH).
+             * @example COP
+             */
+            groupCurrency: string;
+            /** @description The sender's profile name when it was sent. */
+            inviterName: string;
+            /** Format: email */
+            inviterEmail: string;
+            /** @enum {string} */
+            status: "PENDING" | "ACCEPTED" | "DECLINED" | "WITHDRAWN";
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            answeredAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ReceivedInvitationList: {
+            data: components["schemas"]["ReceivedInvitation"][];
+            pagination: components["schemas"]["Pagination"];
+        };
         RefreshInput: {
             refreshToken: string;
         };
@@ -5487,6 +5940,36 @@ export type components = {
         /** @default {} */
         RestoreInput: {
             name?: string;
+        };
+        /** @description An invitation to one of your groups, as the inviter reads it: who it was addressed to and how it stands. It never says whether the address has an account, nor who answered. A PENDING one past `expiresAt` can no longer be answered — nothing on the server marks that moment, so it is read from the date. */
+        SentInvitation: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            groupId: string;
+            /** Format: uuid */
+            contactId: string;
+            /** Format: email */
+            email: string;
+            /** @enum {string} */
+            status: "PENDING" | "ACCEPTED" | "DECLINED" | "WITHDRAWN";
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            answeredAt: string | null;
+            /**
+             * Format: date-time
+             * @description Set when it was withdrawn, or when a joined person stopped being shared with: by you, by taking them out of the group, by archiving their contact or the group, or by changing their email.
+             */
+            withdrawnAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SentInvitationList: {
+            data: components["schemas"]["SentInvitation"][];
+            pagination: components["schemas"]["Pagination"];
         };
         /** @description One logged-in device (refresh-token rotation family). */
         Session: {
@@ -5700,6 +6183,16 @@ export type components = {
              */
             maxParticipantsPerGroup: 20;
             /**
+             * @description Invitations one user may have waiting at once. Inviting past it is 400 INVITATION_LIMIT_REACHED.
+             * @enum {integer}
+             */
+            maxPendingInvitationsPerUser: 50;
+            /**
+             * @description How long an invitation waits to be answered.
+             * @enum {integer}
+             */
+            invitationLifetimeDays: 30;
+            /**
              * @description Heads one guest block may carry. A sanity bound on an integer field, not a product rule: the block is one row whatever it counts.
              * @enum {integer}
              */
@@ -5858,6 +6351,9 @@ export type components = {
                 sharedGroups: components["schemas"]["SyncSharedGroup"][];
                 sharedExpenses: components["schemas"]["SharedExpense"][];
                 settlements: components["schemas"]["Settlement"][];
+                invitationsSent: components["schemas"]["SentInvitation"][];
+                /** @description Addressed to your email, or answered by you: they keep arriving after they are answered, withdrawn or out of time, which is how a device learns they stopped waiting. */
+                invitationsReceived: components["schemas"]["ReceivedInvitation"][];
             };
             pagination: {
                 limit: number;
@@ -5885,7 +6381,7 @@ export type components = {
              * @description conflict / rejected: the code the matching route would have answered.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message?: string;
             details?: {
                 field?: string;
@@ -6250,6 +6746,7 @@ export type CreateAccountInput = components['schemas']['CreateAccountInput'];
 export type CreateBudgetInput = components['schemas']['CreateBudgetInput'];
 export type CreateCategoryInput = components['schemas']['CreateCategoryInput'];
 export type CreateContactInput = components['schemas']['CreateContactInput'];
+export type CreateInvitationInput = components['schemas']['CreateInvitationInput'];
 export type CreateSettlementInput = components['schemas']['CreateSettlementInput'];
 export type CreateSharedExpenseInput = components['schemas']['CreateSharedExpenseInput'];
 export type CreateSharedGroupInput = components['schemas']['CreateSharedGroupInput'];
@@ -6261,10 +6758,14 @@ export type LoginInput = components['schemas']['LoginInput'];
 export type Message = components['schemas']['Message'];
 export type Pagination = components['schemas']['Pagination'];
 export type QuickAddTransactionInput = components['schemas']['QuickAddTransactionInput'];
+export type ReceivedInvitation = components['schemas']['ReceivedInvitation'];
+export type ReceivedInvitationList = components['schemas']['ReceivedInvitationList'];
 export type RefreshInput = components['schemas']['RefreshInput'];
 export type RegisterInput = components['schemas']['RegisterInput'];
 export type RestoreDefaultsResponse = components['schemas']['RestoreDefaultsResponse'];
 export type RestoreInput = components['schemas']['RestoreInput'];
+export type SentInvitation = components['schemas']['SentInvitation'];
+export type SentInvitationList = components['schemas']['SentInvitationList'];
 export type Session = components['schemas']['Session'];
 export type SessionList = components['schemas']['SessionList'];
 export type Settlement = components['schemas']['Settlement'];

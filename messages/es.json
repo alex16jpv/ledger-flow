@@ -69,7 +69,10 @@
     "moreShared": "{amount} que te deben",
     "moreSettings": "Perfil, moneda, apariencia",
     "search": "Buscar",
-    "pendingCount": "{count, plural, one {# por revisar} other {# por revisar}}"
+    "pendingCount": "{count, plural, one {# por revisar} other {# por revisar}}",
+    "moreInvitations": "{count, plural, one {# invitación esperándote} other {# invitaciones esperándote}}",
+    "moreWithInvitations": "Más, {count, plural, one {# invitación esperando} other {# invitaciones esperando}}",
+    "waitingCount": "{count} esperando"
   },
   "colors": {
     "RED": "Rojo",
@@ -833,7 +836,11 @@
     "MALFORMED_JSON": "La solicitud llegó dañada. Inténtalo de nuevo.",
     "PAYLOAD_TOO_LARGE": "Son demasiados datos para una sola solicitud.",
     "REQUEST_ABORTED": "La solicitud se interrumpió. Inténtalo de nuevo.",
-    "UNSUPPORTED_ENCODING": "La solicitud usó un formato no admitido."
+    "UNSUPPORTED_ENCODING": "La solicitud usó un formato no admitido.",
+    "CONTACT_HAS_NO_EMAIL": "Añade un correo a esta persona para invitarla.",
+    "INVITATION_TO_SELF": "Ese es tu propio correo.",
+    "INVITATION_LIMIT_REACHED": "Ya tienes 50 invitaciones esperando. Retira una antes de enviar otra.",
+    "INVITATION_UNAVAILABLE": "Esta invitación ya no está disponible."
   },
   "validation": {
     "required": "Este campo es obligatorio.",
@@ -1352,7 +1359,7 @@
       "color": "Color",
       "email": "Correo",
       "emailPlaceholder": "beto@example.com",
-      "emailHelp": "Solo para poder invitarle a un grupo compartido más adelante. Hoy no se envía nada.",
+      "emailHelp": "Para poder invitarle a un grupo compartido. No se envía ningún correo: la invitación espera en su Shared.",
       "duplicate": "Ya tienes una persona activa llamada «{name}». Los nombres no distinguen mayúsculas.",
       "groupTitle": "Nuevo grupo compartido",
       "groupName": "Nombre",
@@ -1642,6 +1649,52 @@
       },
       "nothingOfYours": "No se registra nada tuyo. No se movió plata tuya, así que no hay cuenta, ni categoría, ni presupuesto que preguntar. Será tu gasto el día que saldes con esa persona, con fecha del {date} y con la categoría que elijas entonces.",
       "nothingOfYoursNamed": "No se registra nada tuyo. No se movió plata tuya, así que no hay cuenta, ni categoría, ni presupuesto que preguntar. Será tu gasto el día que le pagues a {name}, con fecha del {date} y con la categoría que elijas entonces."
+    },
+    "invitations": {
+      "title": "Invitaciones",
+      "sentence": "<b>{inviter}</b> te invitó a <b>{group}</b>",
+      "sent": "{email} · {date} · abierta hasta el {until}",
+      "otherCurrency": "{email} · {date} · este grupo está en {group} y tu Ledger Flow en {mine}, así que no se puede unir",
+      "accept": "Aceptar",
+      "decline": "Rechazar",
+      "joined": "Dentro",
+      "declined": "Rechazada",
+      "unavailable": "Ya no disponible",
+      "joinedNow": "{email} · Te uniste ahora mismo",
+      "declinedNow": "{email} · La rechazaste ahora mismo",
+      "gone": "{email} · Dejó de esperar antes de que llegara tu respuesta",
+      "foot": "Unirte te deja ver el grupo: sus gastos, quién pagó y cómo se reparte cada uno. Nada de tu propio libro le llega a nadie: tus cuentas, categorías y presupuestos siguen siendo tuyos.",
+      "answeredFoot": "Contestadas aquí o en otro dispositivo. Se van la próxima vez que abras Shared.",
+      "offline": "Contestar necesita conexión: quien te invitó recibe tu respuesta, y solo el servidor puede comprobar que la invitación sigue en pie."
+    },
+    "invite": {
+      "door": "Invítalos a ver este grupo",
+      "joinedCount": "{count} dentro",
+      "waitingCount": "{count} esperando",
+      "notInvitedCount": "{count} sin invitar",
+      "title": "Invitar a {group}",
+      "intro": "Quien se une ve <b>{group}</b> —sus gastos, quién pagó y cómo se reparte cada uno— y nunca tus cuentas, categorías ni notas. No se envía ningún correo: la invitación espera en su Shared.",
+      "noEmail": "Aún sin correo",
+      "addEmail": "Añadir correo",
+      "notInvited": "{email} · sin invitar",
+      "invite": "Invitar",
+      "waiting": "{email} · invitado el {date} · abierta hasta el {until}",
+      "withdraw": "Retirar",
+      "joined": "Dentro",
+      "joinedMeta": "{email} · se unió el {date}",
+      "stopSharing": "Dejar de compartir",
+      "declined": "{email} · rechazó el {date}",
+      "expired": "{email} · sin respuesta en {days} días",
+      "inviteAgain": "Invitar otra vez",
+      "sentNote": "<b>{name} la ve en Shared</b> la próxima vez que abra Ledger Flow con {email}. Si esa dirección aún no tiene cuenta, la invitación la espera igual, y no se te dice cuál de las dos: se lee <i>esperando</i> en ambos casos hasta que conteste.",
+      "limits": "Una invitación espera <b>{days} días</b>, y puedes tener hasta <b>{max}</b> esperando a la vez.",
+      "offline": "Invitar necesita conexión: solo el servidor puede decir si una invitación sigue en pie.",
+      "stopTitle": "¿Dejar de compartir con {name}?",
+      "stopAlert": "<b>{name} deja de ver {group}.</b> Sigue en él como una persona con la que repartes.",
+      "stopBody": "Nada del dinero cambia: su parte, lo que ha pagado y lo que aún debe quedan exactamente igual, y también lo que cuenta como tuyo. Lo que ya metió en su propio libro es suyo y se queda ahí.",
+      "stopAgain": "Para que lo vuelva a ver, invítalo otra vez.",
+      "stopped": "{name} ya no ve este grupo",
+      "withdrawn": "Se retiró la invitación a {name}"
     }
   },
   "transactions": {

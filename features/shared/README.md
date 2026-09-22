@@ -94,6 +94,21 @@ in, which is the only place a block is read at all.
 was taken; archiving a group writes off what is still owed on your behalf. Neither touches a figure of
 yours: that money was counted as yours from the day it left the account.
 
+**Letting somebody in is an invitation, and every write of one needs a connection.** An invitation is
+addressed to the email of a contact who is in the group; nothing is emailed, and it waits in the other
+person's Shared for 30 days. The feed brings both sides — `invitationsSent` and `invitationsReceived`,
+two stores of the mirror with no outbox route — so they are **seen** offline; inviting, withdrawing,
+stopping sharing and answering go straight to the server (`api.ts`) and keep its answer in the mirror
+(`keepSentInvitation`, `keepReceivedInvitation`) so the screen does not wait for the next pull. Each is
+about somebody else, and only the server can say whether the invitation still stands.
+`InvitationsBlock` sits above both faces and above the empty state; an answer given during the visit
+keeps its row, saying how it ended, until Shared opens again. `InviteSheet` is the group's door:
+`invitations.ts` reads where each person stands from the newest invitation they have — no email, not
+invited, waiting, out of time, joined or declined — and **never** tells a waiting invitation to an
+address with an account from one without, because the server never says. An invitation past its date
+is still `PENDING` on the server and is read against the server's clock (`isAnswerable`). The count on
+More, on the bar and in the sidebar is the invitations that can still be answered.
+
 The screens that compose other features — the group detail, the person, the settle-up sheet, the
 transaction picker and the sheet that says what adding them changes — live in the **app layer**, like
 the account detail does, because a feature never imports another feature.

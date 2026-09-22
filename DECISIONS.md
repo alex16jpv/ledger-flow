@@ -5,6 +5,27 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-22 · Invitations are online writes, and the mirror keeps both sides (T-129)
+
+- **Context:** an invitation is the first thing one user writes for another to read. The owner decided
+  on 2026-09-22 that each group is its own invitation, addressed to a contact's email, waiting 30 days,
+  never joinable across currencies, and that unverified addresses are a known risk the inviter undoes
+  with _Stop sharing_. The design (`design/spec/screens/shared.md`, _Invitations_) says it is found from
+  More and the sidebar, without the notifications inbox, which is not scheduled.
+- **Decision:** the feed's two new arrays go into **two mirror stores with no outbox route**, and
+  inviting, withdrawing, stopping sharing and answering call the server directly and keep its answer in
+  the mirror. The invitations are therefore read offline — from the copy, like everything else — and
+  answered only online, with the buttons disabled and one line saying why.
+- **Alternatives:** queueing the answers like any other write. Rejected: the answer goes to somebody
+  else and can be refused for reasons the device cannot know — withdrawn, archived, out of time, or a
+  group in another currency — so a queued _Accept_ would sit in the device as a promise, and come back
+  as a conflict the person has to resolve about somebody else's group. The one queued write that fits
+  the shape, marking an inbox row read, belongs to the notifications that are not built.
+- **Consequence:** the count on More, on the bar and in the sidebar is derived from the copy
+  (`useWaitingInvitationCount`), costs no request of its own once the mirror is filled, and is right
+  offline. `MIRROR_VERSION` went to 4 and `VAULT_SCHEMA_VERSION` to 3, so every device re-pulls once and
+  gets its invitations.
+
 ## 2026-09-18 · A loan instalment is two movements, not one (T-94)
 
 - **Context:** the instalment was written as a single TRANSFER, so a $420,000 payment of which $126,000

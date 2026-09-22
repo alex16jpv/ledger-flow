@@ -99,4 +99,12 @@ describe("TabBar destinations", () => {
     expect(screen.getByRole("button", { name: "More" })).not.toHaveAttribute("aria-current");
     expect(screen.getByRole("link", { name: "Budgets" })).toHaveAttribute("aria-current", "page");
   });
+
+  it("puts a dot on More, named in words, while an invitation waits", () => {
+    renderWithProviders(
+      <TabBar pendingCount={0} invitations={1} moreOpen={false} onAdd={vi.fn()} onMore={vi.fn()} />,
+    );
+
+    expect(screen.getByRole("button", { name: "More, 1 invitation waiting" })).toBeInTheDocument();
+  });
 });

@@ -37,6 +37,8 @@ describe("vault schema", () => {
       "budgets",
       "categories",
       "contacts",
+      "invitationsReceived",
+      "invitationsSent",
       "meta",
       "outbox",
       "profile",
@@ -64,6 +66,10 @@ describe("vault schema", () => {
       "updatedAt",
     ]);
     await tx.done;
+    const invitations = db.transaction(["invitationsSent", "invitationsReceived"]);
+    expect([...invitations.objectStore("invitationsSent").indexNames]).toEqual(["updatedAt"]);
+    expect([...invitations.objectStore("invitationsReceived").indexNames]).toEqual(["updatedAt"]);
+    await invitations.done;
   });
 
   it("stamps the user id and the two logical versions on a fresh vault", async () => {

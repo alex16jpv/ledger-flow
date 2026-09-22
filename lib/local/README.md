@@ -11,13 +11,13 @@ mirror says it cannot.
 
 ## The hard line: disposable mirror, sacred outbox
 
-|                                                | mirror (`profile`, `accounts`, `categories`, `transactions`, `budgets`, `contacts`, `sharedGroups`, `sharedExpenses`, `settlements`) | outbox                                                  |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
-| What it is                                     | a copy of the server, re-downloadable                                                                                                | writes that have not reached the server                 |
-| Losing it costs                                | one pull                                                                                                                             | the user's data                                         |
-| On a version bump                              | cleared and re-pulled                                                                                                                | migrated one operation at a time, or the upgrade blocks |
-| On logout                                      | always cleared                                                                                                                       | kept unless the caller confirms discarding it           |
-| On session expiry / app update / cache cleanup | untouched                                                                                                                            | untouched (invariant 7)                                 |
+|                                                | mirror (`profile`, `accounts`, `categories`, `transactions`, `budgets`, `contacts`, `sharedGroups`, `sharedExpenses`, `settlements`, `invitationsSent`, `invitationsReceived`) | outbox                                                  |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| What it is                                     | a copy of the server, re-downloadable                                                                                                                                          | writes that have not reached the server                 |
+| Losing it costs                                | one pull                                                                                                                                                                       | the user's data                                         |
+| On a version bump                              | cleared and re-pulled                                                                                                                                                          | migrated one operation at a time, or the upgrade blocks |
+| On logout                                      | always cleared                                                                                                                                                                 | kept unless the caller confirms discarding it           |
+| On session expiry / app update / cache cleanup | untouched                                                                                                                                                                      | untouched (invariant 7)                                 |
 
 They share one database because **IndexedDB transactions cannot span two databases** and O-F4 has to
 write the entity and its operation atomically (plan §4.1). Nothing here ever calls `deleteDatabase`
@@ -91,6 +91,16 @@ stored rows. The rules it reproduces to the minor unit are the backend's own
   excluded from spending **by their type**, never by that figure;
 - a write-off gives up on what was open when it was decided — the ceiling is stored on the group —
   capped again by what is open now, and it moves no figure of yours.
+
+## Invitations
+
+`invitationsSent` and `invitationsReceived` are the two sides of the invitations to shared groups
+(T-129), exactly as the feed sends them: the inviter's rows, and the rows addressed to this person.
+They are the only stores with **no outbox route** — every invitation write is about somebody else and
+needs a connection — so `applyPage` puts them down as they come, and the online writes keep the
+server's answer with `keepSentInvitation` / `keepReceivedInvitation` rather than waiting for the next
+pull. Nothing is ever deleted from them: an invitation that stops waiting says how in its `status`, and
+one that ran out of time is still `PENDING` and is judged by its `expiresAt` against `serverNow()`.
 
 ## Filling it: `pull.ts`
 

@@ -4,7 +4,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
-import { contact, sharedExpense, sharedGroup } from "@/lib/testing/vault";
+import { contact, receivedInvitation, sharedExpense, sharedGroup } from "@/lib/testing/vault";
 import type { SharedGroup, SharedShare, SyncSharedGroup } from "@/types/api";
 
 import { SharedView } from "./SharedView";
@@ -75,6 +75,7 @@ function serve(
     expenses?: unknown[];
     settlements?: unknown[];
     contacts?: unknown[];
+    invitations?: unknown[];
   } = {},
 ) {
   fetchMock.mockImplementation((input) => {
@@ -82,6 +83,7 @@ function serve(
     if (url.startsWith("/api/contacts")) return Promise.resolve(page(rows.contacts ?? contacts));
     if (url.includes("/expenses")) return Promise.resolve(page(rows.expenses ?? expenses));
     if (url.startsWith("/api/settlements")) return Promise.resolve(page(rows.settlements ?? []));
+    if (url.startsWith("/api/invitations")) return Promise.resolve(page(rows.invitations ?? []));
     return Promise.resolve(page(rows.groups ?? groups));
   });
 }
@@ -198,5 +200,14 @@ describe("SharedView", () => {
     view();
 
     expect(await screen.findByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("puts an invitation above everything, the empty state included", async () => {
+    serve({ groups: [], contacts: [], invitations: [receivedInvitation()] });
+    view();
+
+    const invitations = await screen.findByRole("region", { name: "Invitations" });
+    const empty = await screen.findByText("Nothing shared yet");
+    expect(invitations.compareDocumentPosition(empty)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 });

@@ -4,6 +4,8 @@ import type {
   Account,
   Category,
   Contact,
+  ReceivedInvitation,
+  SentInvitation,
   Settlement,
   SharedExpense,
   SyncBudget,
@@ -28,6 +30,8 @@ export const MIRROR_STORES = [
   "sharedGroups",
   "sharedExpenses",
   "settlements",
+  "invitationsSent",
+  "invitationsReceived",
 ] as const;
 export type MirrorStore = (typeof MIRROR_STORES)[number];
 
@@ -78,6 +82,9 @@ export interface DeletableRecord<T> extends MirrorRecord<T> {
 }
 
 export type SharedExpenseRecord = DeletableRecord<SharedExpense>;
+// Nothing on either side is ever deleted: an invitation that stops waiting says how in its status.
+export type SentInvitationRecord = MirrorRecord<SentInvitation>;
+export type ReceivedInvitationRecord = MirrorRecord<ReceivedInvitation>;
 export type SettlementRecord = DeletableRecord<Settlement>;
 
 export interface TransactionRecord extends MirrorRecord<SyncTransaction> {
@@ -140,6 +147,12 @@ export interface VaultSchema extends DBSchema {
     key: string;
     value: SettlementRecord;
     indexes: { updatedAt: string; deleted: number };
+  };
+  invitationsSent: { key: string; value: SentInvitationRecord; indexes: { updatedAt: string } };
+  invitationsReceived: {
+    key: string;
+    value: ReceivedInvitationRecord;
+    indexes: { updatedAt: string };
   };
   profile: { key: string; value: ProfileRecord };
   accounts: { key: string; value: AccountRecord; indexes: { updatedAt: string; archived: number } };
@@ -245,6 +258,14 @@ export function settlementRecord(row: Settlement, server?: Settlement): Settleme
     deleted: row.deletedAt ? 1 : 0,
     ...(server ? { server } : {}),
   };
+}
+
+export function sentInvitationRecord(row: SentInvitation): SentInvitationRecord {
+  return { id: row.id, row, updatedAt: row.updatedAt };
+}
+
+export function receivedInvitationRecord(row: ReceivedInvitation): ReceivedInvitationRecord {
+  return { id: row.id, row, updatedAt: row.updatedAt };
 }
 
 export function profileRecord(row: User): ProfileRecord {

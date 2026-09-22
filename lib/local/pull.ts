@@ -5,7 +5,12 @@ import { rememberServerTime } from "./clock";
 import type { VaultHandle } from "./db";
 import { writeTransaction } from "./outbox/queue";
 import { reconcileContext, reconcileRow } from "./outbox/reconcile";
-import { PROFILE_KEY, profileRecord } from "./schema";
+import {
+  PROFILE_KEY,
+  profileRecord,
+  receivedInvitationRecord,
+  sentInvitationRecord,
+} from "./schema";
 
 export const PULL_PAGE_LIMIT = 500;
 
@@ -94,6 +99,15 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
   for (const row of changes.settlements) {
     news ||= await isNews(tx.objectStore("settlements"), row.id, row.updatedAt);
     await reconcileRow(tx, "settlement", row.id, row, context);
+  }
+  // No queue ever holds an invitation: every write of one needs a connection, so the row is the server's.
+  for (const row of changes.invitationsSent) {
+    news ||= await isNews(tx.objectStore("invitationsSent"), row.id, row.updatedAt);
+    await tx.objectStore("invitationsSent").put(sentInvitationRecord(row));
+  }
+  for (const row of changes.invitationsReceived) {
+    news ||= await isNews(tx.objectStore("invitationsReceived"), row.id, row.updatedAt);
+    await tx.objectStore("invitationsReceived").put(receivedInvitationRecord(row));
   }
 
   const meta = tx.objectStore("meta");

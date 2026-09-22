@@ -63,6 +63,15 @@ describe("MoreSheet", () => {
     expect(screen.getByText("13 active · 1 archived")).toBeInTheDocument();
   });
 
+  it("says an invitation is waiting on the Shared row, before what people owe", () => {
+    view({ owedToYou: 552_600, invitations: 2 });
+
+    const shared = screen.getByRole("link", { name: /Shared/ });
+    expect(shared).toHaveTextContent("2 invitations waiting for you");
+    expect(shared).toHaveTextContent("2 waiting");
+    expect(shared).not.toHaveTextContent("owed to you");
+  });
+
   it("says nothing about a count it does not have yet", () => {
     view({ accountCount: undefined, categoryCounts: undefined });
 

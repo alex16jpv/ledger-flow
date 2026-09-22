@@ -231,14 +231,14 @@ describe("outbox migrations", () => {
     const upgraded = await openTestVault(
       "u1",
       definition({
-        schemaVersion: 2,
+        schemaVersion: VAULT_SCHEMA_VERSION + 1,
         mirrorVersion: MIRROR_VERSION + 1,
         outboxVersion: 2,
         outboxMigrations,
       }),
     );
 
-    expect(upgraded.db.version).toBe(2);
+    expect(upgraded.db.version).toBe(VAULT_SCHEMA_VERSION + 1);
     expect(upgraded.mirrorReset).toBe(true);
     expect(upgraded.outbox).toBe("migrated");
     expect(await upgraded.db.count("outbox")).toBe(20);

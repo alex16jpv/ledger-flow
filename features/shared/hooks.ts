@@ -4,13 +4,14 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { useMemo } from "react";
 
 import type { WriteOffTarget } from "@/lib/local/outbox";
-import type { SharedLedgerRows } from "@/lib/local/repository";
+import { isAnswerable, type SharedLedgerRows } from "@/lib/local/repository";
 import { REFERENCE_STALE_TIME_MS } from "@/lib/query/client";
 import { invalidateMoneyMovement, QUERY_DOMAINS } from "@/lib/query/domains";
 import type { AddParticipantsInput, Contact, RestoreInput, UpdateContactInput } from "@/types/api";
 
 import {
   addParticipants,
+  answerInvitation,
   archiveContact,
   archiveSharedGroup,
   createContact,
@@ -20,7 +21,10 @@ import {
   fetchContact,
   fetchContacts,
   fetchContactsPage,
+  fetchGroupInvitations,
+  fetchReceivedInvitations,
   fetchSharedLedger,
+  inviteToGroup,
   previewParticipants,
   recordSettlement,
   removeParticipant,
@@ -30,6 +34,7 @@ import {
   undoWriteOff,
   updateContact,
   updateSharedGroup,
+  withdrawInvitation,
   writeOffParty,
 } from "./api";
 import { contactKeys, sharedKeys } from "./keys";
@@ -251,6 +256,75 @@ export function useRestoreContact() {
   const invalidate = useContactInvalidation();
   return useMutation({
     mutationFn: ({ id, name }: RestoreContactVariables) => restoreContact(id, name ? { name } : {}),
+    onSuccess: invalidate,
+  });
+}
+
+export function useReceivedInvitations(enabled = true) {
+  return useQuery({
+    queryKey: sharedKeys.received(),
+    queryFn: fetchReceivedInvitations,
+    staleTime: REFERENCE_STALE_TIME_MS,
+    enabled,
+  });
+}
+
+// What More and the sidebar count: the invitations that can still be answered, nothing else.
+export function useWaitingInvitationCount(enabled = true): number {
+  const { data } = useReceivedInvitations(enabled);
+  return data?.filter((invitation) => isAnswerable(invitation)).length ?? 0;
+}
+
+export function useGroupInvitations(groupId: string, enabled = true) {
+  return useQuery({
+    queryKey: sharedKeys.sent(groupId),
+    queryFn: () => fetchGroupInvitations(groupId),
+    staleTime: REFERENCE_STALE_TIME_MS,
+    enabled,
+  });
+}
+
+function useInvitationInvalidation() {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: QUERY_DOMAINS.shared });
+}
+
+export interface InviteVariables {
+  groupId: string;
+  contactId: string;
+}
+
+export function useInvite() {
+  const invalidate = useInvitationInvalidation();
+  return useMutation({
+    mutationFn: ({ groupId, contactId }: InviteVariables) => inviteToGroup(groupId, contactId),
+    onSuccess: invalidate,
+  });
+}
+
+export interface WithdrawVariables {
+  groupId: string;
+  invitationId: string;
+}
+
+export function useWithdrawInvitation() {
+  const invalidate = useInvitationInvalidation();
+  return useMutation({
+    mutationFn: ({ groupId, invitationId }: WithdrawVariables) =>
+      withdrawInvitation(groupId, invitationId),
+    onSuccess: invalidate,
+  });
+}
+
+export interface AnswerVariables {
+  id: string;
+  answer: "accept" | "decline";
+}
+
+export function useAnswerInvitation() {
+  const invalidate = useInvitationInvalidation();
+  return useMutation({
+    mutationFn: ({ id, answer }: AnswerVariables) => answerInvitation(id, answer),
     onSuccess: invalidate,
   });
 }

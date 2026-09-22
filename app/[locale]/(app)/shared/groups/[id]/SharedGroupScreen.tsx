@@ -4,10 +4,12 @@ import {
   Archive,
   ArchiveRestore,
   Calendar,
+  ChevronRight,
   HandCoins,
   Pencil,
   Plus,
   Receipt,
+  User,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -38,11 +40,13 @@ import {
   useArchiveSharedGroup,
   useContactsQuery,
   useCreateSharedExpense,
+  useGroupInvitations,
   useRestoreSharedGroup,
   useSharedSection,
   useUndoWriteOff,
   useWriteOff,
 } from "@/features/shared/hooks";
+import { inviteStateOf, latestByContact } from "@/features/shared/invitations";
 import {
   type GroupView,
   groupView,
@@ -69,6 +73,9 @@ import { ArchiveGroupSheet, UndoWriteOffSheet, WriteOffSheet } from "../../Write
 // Two taps behind the screen it belongs to, and 220 kB gz is the screen's budget (T-139).
 const PaidByOtherSheet = dynamic(() =>
   import("@/features/shared/components/PaidByOtherSheet").then((module) => module.PaidByOtherSheet),
+);
+const InviteSheet = dynamic(() =>
+  import("@/features/shared/components/InviteSheet").then((module) => module.InviteSheet),
 );
 
 function useNoteOf(view: GroupView): (person: PartyView) => string {
@@ -293,7 +300,9 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
   const [archiving, setArchiving] = useState(false);
   const [addingPeople, setAddingPeople] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const restore = useRestoreSharedGroup();
+  const invitations = useGroupInvitations(view.group.id);
   const you = t("shared.group.you");
   // Somebody added and not yet in an expense holds no share, so their name comes from the contact.
   const contacts = useContactsQuery(true);
@@ -307,6 +316,23 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
     };
   });
   const named = splitPeople.filter((person) => person.contactId !== null && person.name !== "");
+  const latestInvites = latestByContact(invitations.data ?? []);
+  const tally = { joined: 0, waiting: 0, notInvited: 0 };
+  for (const participant of view.group.participants) {
+    if (participant.contactId === null) continue;
+    const { state } = inviteStateOf(
+      byId.get(participant.contactId)?.email,
+      latestInvites.get(participant.contactId),
+    );
+    if (state === "joined") tally.joined += 1;
+    else if (state === "waiting") tally.waiting += 1;
+    else tally.notInvited += 1;
+  }
+  const inviteCounts = [
+    tally.joined > 0 && t("shared.invite.joinedCount", { count: tally.joined }),
+    tally.waiting > 0 && t("shared.invite.waitingCount", { count: tally.waiting }),
+    tally.notInvited > 0 && t("shared.invite.notInvitedCount", { count: tally.notInvited }),
+  ].filter((item): item is string => typeof item === "string");
   // A list of payers missing somebody would move money to the wrong person, so it is all or none.
   const otherPayers =
     named.length === view.group.participants.length - 1
@@ -470,6 +496,24 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
                 onOpen={actionFor(person)}
               />
             ))}
+            {view.group.archivedAt === null && view.group.participants.length > 1 && (
+              <RowButton
+                onClick={() => {
+                  setInviting(true);
+                }}
+              >
+                <Tile size="sm" color="GRAY">
+                  <User {...iconProps("sm")} />
+                </Tile>
+                <RowBody>
+                  <RowTitle>
+                    <span>{t("shared.invite.door")}</span>
+                  </RowTitle>
+                  <RowMeta items={inviteCounts} />
+                </RowBody>
+                <ChevronRight {...iconProps("sm")} className="text-text-3" />
+              </RowButton>
+            )}
           </List>
         </Card>
       </section>
@@ -596,6 +640,16 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           view={view}
           onClose={() => {
             setAddingPeople(false);
+          }}
+        />
+      )}
+      {inviting && (
+        <InviteSheet
+          open
+          group={view.group}
+          contacts={byId}
+          onClose={() => {
+            setInviting(false);
           }}
         />
       )}

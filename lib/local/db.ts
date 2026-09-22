@@ -10,8 +10,8 @@ import {
   type VaultSchema,
 } from "./schema";
 
-export const VAULT_SCHEMA_VERSION = 2;
-export const MIRROR_VERSION = 3;
+export const VAULT_SCHEMA_VERSION = 3;
+export const MIRROR_VERSION = 4;
 export const OUTBOX_VERSION = 1;
 
 // Invariant 7: null means the operation cannot be carried forward, so the upgrade blocks.
@@ -78,6 +78,11 @@ function createStores(db: IDBPDatabase<VaultSchema>): void {
     const store = db.createObjectStore("settlements", { keyPath: "id" });
     store.createIndex("updatedAt", "updatedAt");
     store.createIndex("deleted", "deleted");
+  }
+
+  for (const name of ["invitationsSent", "invitationsReceived"] as const) {
+    if (db.objectStoreNames.contains(name)) continue;
+    db.createObjectStore(name, { keyPath: "id" }).createIndex("updatedAt", "updatedAt");
   }
 
   if (!db.objectStoreNames.contains("transactions")) {

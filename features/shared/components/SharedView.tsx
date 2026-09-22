@@ -26,6 +26,7 @@ import { useSharedSection } from "../hooks";
 import type { GroupView, PersonView } from "../ledger";
 import { ContactFormSheet } from "./ContactFormSheet";
 import { GroupRowLink } from "./GroupRowLink";
+import { InvitationsBlock } from "./InvitationsBlock";
 import { TwoFigures } from "./parts";
 
 type Face = "people" | "groups";
@@ -153,6 +154,7 @@ export function SharedView() {
           </>
         }
       />
+      <InvitationsBlock />
       {isPending ? (
         <div
           className="flex flex-col gap-4"

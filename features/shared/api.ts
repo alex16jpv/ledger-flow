@@ -1,9 +1,13 @@
 import { api } from "@/lib/api/client";
 import {
   type ContactListParams,
+  keepReceivedInvitation,
+  keepSentInvitation,
   readContact,
   readContacts,
   readContactsPage,
+  readGroupInvitations,
+  readReceivedInvitations,
   readSharedLedger,
   type SharedLedgerRows,
 } from "@/lib/local/repository";
@@ -12,6 +16,8 @@ import type {
   AddParticipantsPreview,
   Contact,
   ContactList,
+  ReceivedInvitation,
+  SentInvitation,
 } from "@/types/api";
 
 // O-F4: reads go through the repository (mirror fallback); writes go through the outbox.
@@ -59,4 +65,42 @@ export function previewParticipants(
     method: "POST",
     body,
   });
+}
+
+export function fetchReceivedInvitations(): Promise<ReceivedInvitation[]> {
+  return readReceivedInvitations();
+}
+
+export function fetchGroupInvitations(groupId: string): Promise<SentInvitation[]> {
+  return readGroupInvitations(groupId);
+}
+
+// Every invitation write is about somebody else, so none of them waits in the queue.
+export async function inviteToGroup(groupId: string, contactId: string): Promise<SentInvitation> {
+  const row = await api<SentInvitation>(`/shared-groups/${groupId}/invitations`, {
+    method: "POST",
+    body: { contactId },
+  });
+  await keepSentInvitation(row);
+  return row;
+}
+
+export async function withdrawInvitation(
+  groupId: string,
+  invitationId: string,
+): Promise<SentInvitation> {
+  const row = await api<SentInvitation>(`/shared-groups/${groupId}/invitations/${invitationId}`, {
+    method: "DELETE",
+  });
+  await keepSentInvitation(row);
+  return row;
+}
+
+export async function answerInvitation(
+  id: string,
+  answer: "accept" | "decline",
+): Promise<ReceivedInvitation> {
+  const row = await api<ReceivedInvitation>(`/invitations/${id}/${answer}`, { method: "POST" });
+  await keepReceivedInvitation(row);
+  return row;
 }
