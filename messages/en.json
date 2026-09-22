@@ -1665,7 +1665,9 @@
       "gone": "{email} · It stopped waiting before your answer arrived",
       "foot": "Joining lets you see the group — its expenses, who paid and how each one is split. Nothing of your own ledger reaches anybody: your accounts, categories and budgets stay yours.",
       "answeredFoot": "Answered here or on any other device. They leave the next time Shared opens.",
-      "offline": "Answering needs a connection: the person who invited you is told your answer, and only the server can check the invitation still stands."
+      "offline": "Answering needs a connection: the person who invited you is told your answer, and only the server can check the invitation still stands.",
+      "alreadyIn": "You are already in this group through another invitation.",
+      "otherCurrencyRefused": "This group is in another currency than yours, so it can only be declined."
     },
     "invite": {
       "door": "Invite them to see this group",

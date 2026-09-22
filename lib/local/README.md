@@ -100,7 +100,9 @@ They are the only stores with **no outbox route** — every invitation write is 
 needs a connection — so `applyPage` puts them down as they come, and the online writes keep the
 server's answer with `keepSentInvitation` / `keepReceivedInvitation` rather than waiting for the next
 pull. Nothing is ever deleted from them: an invitation that stops waiting says how in its `status`, and
-one that ran out of time is still `PENDING` and is judged by its `expiresAt` against `serverNow()`.
+one that ran out of time is still `PENDING` and is judged by its `expiresAt` against `serverNow()`. **A new email on the profile empties `invitationsReceived` and starts the pull over as a
+snapshot**: the invitations to the new address are older than the cursor, and the ones to the old one
+no longer belong to this person.
 
 ## Filling it: `pull.ts`
 

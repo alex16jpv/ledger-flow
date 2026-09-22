@@ -500,8 +500,9 @@ nothing in your ledger.
 
 **An invitation stops being answerable** when it is withdrawn, when the group is archived, or when its
 30 days pass. The row then goes from the block; answering one that stopped a moment ago on the server
-answers `No longer available` on the row, and nothing else happens. The date is judged by the
-device's clock for showing and by the server's for answering.
+answers `No longer available` on the row, and nothing else happens. The date is read against the
+server's clock on both sides — the device corrects its own by what the server last told it — so a
+phone set a day ahead does not hide an invitation that can still be answered.
 
 ### In another currency (`#invitation-other-currency`)
 

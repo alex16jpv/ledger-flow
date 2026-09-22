@@ -2,7 +2,7 @@
 
 import { Users } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -45,6 +45,7 @@ function InvitationRow({
   const otherCurrency = invitation.groupCurrency !== currency;
   const open = !gone && isAnswerable(invitation);
   const sent = dates.formatDay(new Date(invitation.createdAt));
+  const sentenceId = useId();
 
   let meta: string;
   let badge: React.ReactNode = null;
@@ -78,7 +79,7 @@ function InvitationRow({
         <Users {...iconProps("md")} />
       </Tile>
       <RowBody className="gap-1">
-        <span className="text-base">
+        <span id={sentenceId} className="text-base">
           {t.rich("sentence", {
             inviter: invitation.inviterName,
             group: invitation.groupName,
@@ -91,6 +92,7 @@ function InvitationRow({
             <Button
               variant="ghost"
               size="sm"
+              aria-describedby={sentenceId}
               disabled={offline || busy !== null}
               loading={busy === "decline"}
               onClick={() => {
@@ -102,6 +104,7 @@ function InvitationRow({
             {!otherCurrency && (
               <Button
                 size="sm"
+                aria-describedby={sentenceId}
                 disabled={offline || busy !== null}
                 loading={busy === "accept"}
                 onClick={() => {
@@ -152,8 +155,13 @@ export function InvitationsBlock() {
       const row = await answer.mutateAsync({ id: invitation.id, answer: choice });
       setAnswered((was) => new Map(was).set(row.id, row));
     } catch (error) {
-      if (error instanceof ApiError && error.code === "INVITATION_UNAVAILABLE") {
+      const code = error instanceof ApiError ? error.code : null;
+      if (code === "INVITATION_UNAVAILABLE" || code === "NOT_FOUND") {
         setGone((was) => new Set(was).add(invitation.id));
+      } else if (code === "CURRENCY_MISMATCH") {
+        toast.show({ message: t("shared.invitations.otherCurrencyRefused"), tone: "danger" });
+      } else if (code === "PARTICIPANT_ALREADY_IN_GROUP") {
+        toast.show({ message: t("shared.invitations.alreadyIn"), tone: "danger" });
       } else {
         toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
       }

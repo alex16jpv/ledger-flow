@@ -136,4 +136,25 @@ describe("InvitationsBlock", () => {
     expect(screen.getByRole("button", { name: "Decline" })).toBeDisabled();
     expect(screen.getByRole("status")).toHaveTextContent("Answering needs a connection");
   });
+
+  it("reads an invitation the server no longer finds as gone, not as an error", async () => {
+    const user = userEvent.setup();
+    serve([receivedInvitation()], () =>
+      json({ error: "NotFoundError", message: "x", code: "NOT_FOUND" }, { status: 404 }),
+    );
+    view();
+
+    await user.click(await screen.findByRole("button", { name: "Accept" }));
+
+    expect(await screen.findByText("No longer available")).toBeInTheDocument();
+  });
+
+  it("names the invitation each answer is about", async () => {
+    serve([receivedInvitation()]);
+    view();
+
+    expect(await screen.findByRole("button", { name: "Accept" })).toHaveAccessibleDescription(
+      "Ana Ruiz invited you to Villa de Leyva weekend",
+    );
+  });
 });

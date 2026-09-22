@@ -235,8 +235,11 @@ export function InviteSheet({ open, group, contacts, onClose }: InviteSheetProps
                   }}
                   onInvite={() => {
                     void run(contact, async () => {
-                      await invite.mutateAsync({ groupId: group.id, contactId: contact.id });
-                      setJustInvited(contact);
+                      const row = await invite.mutateAsync({
+                        groupId: group.id,
+                        contactId: contact.id,
+                      });
+                      if (row.id !== person.invitation?.id) setJustInvited(contact);
                     });
                   }}
                   onWithdraw={() => {

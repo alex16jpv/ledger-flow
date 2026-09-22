@@ -5665,7 +5665,7 @@ export type components = {
             email?: string;
             /**
              * Format: uuid
-             * @description The user this contact turned out to be: set when they accept an invitation, and never settable by a client.
+             * @description Reserved and always null: accepting an invitation does not fill it, because the inviter is never told who answered. Never settable by a client.
              */
             linkedUserId: string | null;
             /** Format: uuid */
@@ -6352,7 +6352,7 @@ export type components = {
                 sharedExpenses: components["schemas"]["SharedExpense"][];
                 settlements: components["schemas"]["Settlement"][];
                 invitationsSent: components["schemas"]["SentInvitation"][];
-                /** @description Addressed to your email, or answered by you: they keep arriving after they are answered, withdrawn or out of time, which is how a device learns they stopped waiting. */
+                /** @description Addressed to your email and answered by nobody yet, or answered by you: they keep arriving after they are answered, withdrawn or out of time, which is how a device learns they stopped waiting. */
                 invitationsReceived: components["schemas"]["ReceivedInvitation"][];
             };
             pagination: {

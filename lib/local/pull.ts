@@ -58,11 +58,23 @@ async function isNews(store: StampedStore, id: string, updatedAt: string): Promi
   return (await store.get(id))?.updatedAt !== updatedAt;
 }
 
-async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promise<boolean> {
+interface Applied {
+  news: boolean;
+  // The invitations to the new address are older than the cursor, so only a snapshot brings them.
+  readdressed: boolean;
+}
+
+async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promise<Applied> {
   const { changes, pagination } = page;
   const tx = writeTransaction(handle.db);
   let news = false;
+  let readdressed = false;
   if (changes.user) {
+    const before = await tx.objectStore("profile").get(PROFILE_KEY);
+    if (before && before.row.email !== changes.user.email) {
+      readdressed = true;
+      await tx.objectStore("invitationsReceived").clear();
+    }
     news ||= await isNews(tx.objectStore("profile"), PROFILE_KEY, changes.user.updatedAt);
     await tx.objectStore("profile").put(profileRecord(changes.user));
   }
@@ -112,11 +124,12 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
 
   const meta = tx.objectStore("meta");
   // Stored verbatim: the cursor is opaque, and the next run resumes from it whatever it encodes.
-  await meta.put({ key: "syncCursor", value: pagination.nextCursor });
+  if (readdressed) await meta.delete("syncCursor");
+  else await meta.put({ key: "syncCursor", value: pagination.nextCursor });
   // Only a drained feed marks the mirror readable; a half-applied snapshot must not answer reads.
   if (!pagination.hasMore) await meta.put({ key: "syncedAt", value: page.serverTime });
   await tx.done;
-  return news;
+  return { news: news || readdressed, readdressed };
 }
 
 export async function pullChanges(
@@ -135,9 +148,14 @@ export async function pullChanges(
     // F-66: every answer carries the server's clock, needed before there is a refusal to explain.
     await rememberServerTime(handle.db, page.serverTime);
     // Rows are applied by id with put, so the deliberate 60-second overlap of D-14 costs nothing.
-    changed = (await applyPage(handle, page)) || changed;
+    const applied = await applyPage(handle, page);
+    changed = applied.news || changed;
     pages += 1;
     rows += page.pagination.count;
+    if (applied.readdressed) {
+      cursor = undefined;
+      continue;
+    }
 
     const next = page.pagination.nextCursor;
     if (!page.pagination.hasMore) {

@@ -2,6 +2,7 @@ import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import {
   changes as feedChanges,
   openTestVault,
+  profile,
   receivedInvitation,
   sentInvitation,
   wipeVaults,
@@ -94,6 +95,54 @@ describe("invitations through the mirror", () => {
 
     expect((await readReceivedInvitations())[0]?.status).toBe("ACCEPTED");
     expect((await readGroupInvitations("g1")).map((row) => row.id)).toEqual(["s9"]);
+  });
+});
+
+describe("a new email on the profile", () => {
+  it("throws away what was received and pulls everything again", async () => {
+    const vault = await openTestVault("u1");
+    const first: SyncChangesResponse = {
+      serverTime: "2026-09-22T12:00:00.000Z",
+      changes: feedChanges({
+        user: profile({ email: "old@example.com" }),
+        invitationsReceived: [receivedInvitation({ id: "for-old" })],
+      }),
+      pagination: { limit: 500, count: 2, hasMore: false, nextCursor: "v1|first|" },
+    };
+    await pullChanges(vault, { fetchPage: () => Promise.resolve(first) });
+
+    const queries: (string | undefined)[] = [];
+    const answers: SyncChangesResponse[] = [
+      {
+        serverTime: "2026-09-22T13:00:00.000Z",
+        changes: feedChanges({
+          user: profile({ email: "new@example.com", updatedAt: "2026-09-22T13:00:00.000Z" }),
+        }),
+        pagination: { limit: 500, count: 1, hasMore: false, nextCursor: "v1|second|" },
+      },
+      {
+        serverTime: "2026-09-22T13:00:01.000Z",
+        changes: feedChanges({
+          user: profile({ email: "new@example.com", updatedAt: "2026-09-22T13:00:00.000Z" }),
+          invitationsReceived: [receivedInvitation({ id: "for-new" })],
+        }),
+        pagination: { limit: 500, count: 2, hasMore: false, nextCursor: "v1|snapshot|" },
+      },
+    ];
+    await pullChanges(vault, {
+      fetchPage: (query) => {
+        queries.push(query.cursor);
+        const next = answers.shift();
+        if (!next) throw new Error("one page too many");
+        return Promise.resolve(next);
+      },
+    });
+
+    expect(queries).toEqual(["v1|first|", undefined]);
+    expect((await vault.db.getAll("invitationsReceived")).map((record) => record.id)).toEqual([
+      "for-new",
+    ]);
+    expect((await vault.db.get("meta", "syncCursor"))?.value).toBe("v1|snapshot|");
   });
 });
 

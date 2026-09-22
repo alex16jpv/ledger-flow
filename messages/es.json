@@ -1665,7 +1665,9 @@
       "gone": "{email} · Dejó de esperar antes de que llegara tu respuesta",
       "foot": "Unirte te deja ver el grupo: sus gastos, quién pagó y cómo se reparte cada uno. Nada de tu propio libro le llega a nadie: tus cuentas, categorías y presupuestos siguen siendo tuyos.",
       "answeredFoot": "Contestadas aquí o en otro dispositivo. Se van la próxima vez que abras Shared.",
-      "offline": "Contestar necesita conexión: quien te invitó recibe tu respuesta, y solo el servidor puede comprobar que la invitación sigue en pie."
+      "offline": "Contestar necesita conexión: quien te invitó recibe tu respuesta, y solo el servidor puede comprobar que la invitación sigue en pie.",
+      "alreadyIn": "Ya estás en este grupo por otra invitación.",
+      "otherCurrencyRefused": "Este grupo está en otra moneda que la tuya, así que solo se puede rechazar."
     },
     "invite": {
       "door": "Invítalos a ver este grupo",
