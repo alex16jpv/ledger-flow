@@ -28,6 +28,7 @@ without being here first (D-36).
 | [screens/transactions.md](screens/transactions.md)     | `transactions.html`   |
 | [screens/accounts.md](screens/accounts.md)             | `accounts.html`       |
 | [screens/shared.md](screens/shared.md)                 | `shared.html`         |
+| [screens/notifications.md](screens/notifications.md)   | `notifications.html`  |
 | [screens/categories.md](screens/categories.md)         | `categories.html`     |
 | [screens/budgets.md](screens/budgets.md)               | `budgets.html`        |
 | [screens/budget-detail.md](screens/budget-detail.md)   | `budget-detail.html`  |

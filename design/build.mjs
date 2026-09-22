@@ -56,6 +56,9 @@ const amount = (v, kind = "expense", cls = "") => {
 const tile = (icon, color, size = "") =>
   `<span class="tile ${size} color-${color}">${iconSvg(icon)}</span>`;
 
+const bell = (news = 0) =>
+  `<a class="btn ghost icon-only round bell" href="#" aria-label="${news ? `Notifications, ${news} new` : "Notifications"}">${iconSvg("bell")}${news ? `<span class="news-count" aria-hidden="true">${news > 9 ? "9+" : news}</span>` : ""}</a>`;
+
 const TAB_FOR = {
   inicio: ["house", "Home"],
   mov: ["list", "Transactions"],
@@ -64,35 +67,41 @@ const TAB_FOR = {
   mas: ["ellipsis", "More"],
 };
 
-const tab = (key, active = false) => {
+const tab = (key, active = false, news = false) => {
   const [icon, label] = TAB_FOR[key];
-  const dot = key == "mov" ? "<i class=dot></i>" : "";
-  return `<a class="tab${active ? " active" : ""}" href="#">${iconSvg(icon)}<span>${label}</span>${dot}</a>`;
+  const dot =
+    key == "mov" ? "<i class=dot></i>" : key == "mas" && news ? '<i class="dot news"></i>' : "";
+  const name = key == "mas" && news ? ` aria-label="More, new notifications"` : "";
+  return `<a class="tab${active ? " active" : ""}" href="#"${name}>${iconSvg(icon)}<span>${label}</span>${dot}</a>`;
 };
 
-const navBar = (keys, active) =>
+const navBar = (keys, active, news = false) =>
   `<nav class="tabbar" aria-label="Navegación"${keys.length === 5 ? "" : ` style="grid-template-columns:repeat(${keys.length},1fr)"`}>
 ${keys
   .map((k) =>
     k === null
       ? `<div class="fab-slot"><button class="fab" aria-label="Add">${iconSvg("plus")}</button></div>`
-      : tab(k, k === active),
+      : tab(k, k === active, news),
   )
   .join("")}</nav>`;
 
 // T-72 · the phone's bar ends in More; Accounts moved into the sheet it opens.
-const tabbar = (active) => navBar(["inicio", "mov", null, "pres", "mas"], active);
+const tabbar = (active, news = false) =>
+  navBar(["inicio", "mov", null, "pres", "mas"], active, news);
 const barBeforeMore = (active) => navBar(["inicio", "mov", null, "pres", "cuentas"], active);
 
-const navlink = (icon, label, active = false, count = null) => {
-  const c = count ? `<span class="count">${count}</span>` : "";
+const navlink = (icon, label, active = false, count = null, kind = "") => {
+  const c = count
+    ? `<span class="count${kind ? ` ${kind}` : ""}">${count}${kind == "news" ? '<span class="sr-only"> new</span>' : ""}</span>`
+    : "";
   return `<a class="navlink${active ? " active" : ""}" href="#">${iconSvg(icon)}<span>${label}</span>${c}</a>`;
 };
 
-const sidebar = (active) => `<aside class="sidebar">
+const sidebar = (active, news = 0) => `<aside class="sidebar">
 <div class="brand"><span class="logo">${iconSvg("layers", "sm")}</span>Ledger Flow</div>
 <button class="btn primary block cta">${iconSvg("plus", "sm")} Add</button>
 ${navlink("house", "Home", active == "inicio")}${navlink("list", "Transactions", active == "mov", 3)}
+${navlink("bell", "Notifications", active == "notif", news, "news")}
 ${navlink("chart-pie", "Budgets", active == "pres")}${navlink("wallet", "Accounts", active == "cuentas")}
 ${navlink("users", "Shared", active == "shared")}
 ${navlink("chart-column", "Stats", active == "stats")}${navlink("tags", "Categories", active == "cat")}
@@ -368,6 +377,7 @@ const home = ({
   sheet = "",
   statsLink = false,
   debt = "two-cards",
+  news = 0,
 } = {}) => {
   const bars = [
     [30, ""],
@@ -490,12 +500,12 @@ ${row("car", "BLUE", "Uber to work", "Yesterday 18:10 · Visa Gold", 18400)}
     ? `<a class="avatar" href="#" aria-label="Settings">${iconSvg("user", "sm")}</a>`
     : '<a class="avatar" href="#" aria-label="Settings">JD</a>';
   const header = `<header class="page-header"><div class="title"><span class="eyebrow">Tuesday, September 22</span><h1 class="h1">${greet}</h1></div>
-<div class="actions"><button class="btn ghost icon-only round desktop-only" aria-label="Search">${iconSvg("search")}</button>${av}</div></header>`;
+<div class="actions"><button class="btn ghost icon-only round desktop-only" aria-label="Search">${iconSvg("search")}</button>${bell(news)}${av}</div></header>`;
   const mobile = `${header}${pend}${installCard}${hero}${stats}${budgetsSection}${accountsSection}${recent}`;
   const desk = `${header}${pend}${installCard}<div class="grid-main"><div class="stack" style="gap:20px">${hero}${stats}${recent}</div><div class="stack" style="gap:20px">${budgetsSection}${accountsSection}</div></div>`;
-  return `<div class="shell">${sidebar("inicio")}<main class="main">
+  return `<div class="shell">${sidebar("inicio", news)}<main class="main">
 <div class="page mobile-only">${mobile}</div><div class="page desktop-only">${desk}</div>
-</main>${nav ?? tabbar("inicio")}</div>${sheet}`;
+</main>${nav ?? tabbar("inicio", news > 0)}</div>${sheet}`;
 };
 
 const quickPicker = (label, value, icon, color) =>
@@ -896,6 +906,7 @@ const screen = (body, o = {}) => {
     sheet = "",
     banner = "",
     nav = null,
+    news = 0,
   } = o;
   let header;
   if (back !== null) {
@@ -906,7 +917,7 @@ const screen = (body, o = {}) => {
     header = "";
   }
   const mw = narrow ? ' style="max-width:640px"' : "";
-  return `<div class="shell">${sidebar(side)}<main class="main">${banner}<div class="page"${mw}>${header}${body}</div></main>${nav ?? tabbar(tabName)}</div>${sheet}`;
+  return `<div class="shell">${sidebar(side, news)}<main class="main">${banner}<div class="page"${mw}>${header}${body}</div></main>${nav ?? tabbar(tabName, news > 0)}</div>${sheet}`;
 };
 
 const field = (label, value = null, placeholder = null, o = {}) => {
@@ -2596,7 +2607,7 @@ const settings = ({ offline = false } = {}) => {
     : "";
   const body = `<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px;font-size:17px">JD</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">John Doe</span><span class="small muted">john@example.com</span><span class="xs faint">Last sign-in today 8:40</span></span>${iconSvg("chevron-right", "sm")}</div>
 <span class="eyebrow">Preferences</span>
-<div class="list card flush">${settingsRow("globe", "Language", "App language", '<span class="small muted">English</span>', "TEAL")}${settingsRow("coins", "Currency", "Locked: you already have accounts", '<span class="badge">COP</span>', "GREEN")}${settingsRow("clock", "Time zone", "Defines your days and periods", '<span class="small muted">Bogotá</span>', "BLUE")}${settingsRow("palette", "Appearance", "Palette and mode", '<span class="small muted">Tinta · System</span>', "PURPLE")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}</div>
+<div class="list card flush">${settingsRow("globe", "Language", "App language", '<span class="small muted">English</span>', "TEAL")}${settingsRow("coins", "Currency", "Locked: you already have accounts", '<span class="badge">COP</span>', "GREEN")}${settingsRow("clock", "Time zone", "Defines your days and periods", '<span class="small muted">Bogotá</span>', "BLUE")}${settingsRow("palette", "Appearance", "Palette and mode", '<span class="small muted">Tinta · System</span>', "PURPLE")}${settingsRow("bell", "Notifications", "What reaches you, and where", "", "INDIGO")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}</div>
 <span class="eyebrow">Security</span>
 <div class="list card flush">${settingsRow("lock", "Password & email", "Requires your current password", "", "GRAY")}${settingsRow("smartphone", "Active sessions", "Sign out devices you don’t recognize", '<span class="badge">3</span>', "GRAY")}</div>
 <span class="eyebrow">Data</span>
@@ -3920,10 +3931,17 @@ const addMovement = (kind) =>
 // Everything below is the preview itself — navigation, search, dates — not the app's design.
 
 // T-72 · what the More tab opens; `withAccounts` false is the discarded avatar variant.
-const navMenuSheet = (withAccounts) => {
+const navMenuSheet = (withAccounts, news = 0) => {
   const acc = withAccounts ? settingsRow("wallet", "Accounts", "4 accounts", "", "BLUE") : "";
+  const notif = settingsRow(
+    "bell",
+    "Notifications",
+    news ? `${news} new` : "Nothing new",
+    "",
+    "INDIGO",
+  );
   return sheetWrap(
-    `<div class="list card flush">${acc}${settingsRow("users", "Shared", `${moneyText(OWED_TO_YOU)} owed to you`, "", "PURPLE")}${settingsRow("chart-column", "Stats", "Where the money went", "", "TEAL")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}${settingsRow("settings", "Settings", "Profile, currency, appearance", "", "GRAY")}</div>
+    `<div class="list card flush">${acc}${settingsRow("users", "Shared", `${moneyText(OWED_TO_YOU)} owed to you`, "", "PURPLE")}${notif}${settingsRow("chart-column", "Stats", "Where the money went", "", "TEAL")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}${settingsRow("settings", "Settings", "Profile, currency, appearance", "", "GRAY")}</div>
 <div class="list card flush"><a class="row" href="#"><span class="avatar" style="width:32px;height:32px;font-size:12px">JD</span><span class="body"><span class="title">John Doe</span><span class="meta">john@example.com</span></span>${iconSvg("chevron-right", "sm")}</a></div>`,
     "More",
   );
@@ -4559,6 +4577,135 @@ ${previewRow("Diego Pardo", "Nothing paid yet", STATE_BADGE.unpaid)}
     ),
   });
 
+const NEWS = 2;
+
+const notifRow = (icon, color, text, when, o = {}) => {
+  const acts = o.actions ? `<span class="acts">${o.actions}</span>` : "";
+  const badge = o.badge ? `<span class="acts">${o.badge}</span>` : "";
+  const mark = o.unread ? '<span class="unread-dot" aria-hidden="true"></span>' : "";
+  const hidden = o.unread ? '<span class="sr-only">Unread: </span>' : "";
+  const sentence =
+    o.link === false
+      ? `<span class="text">${text}</span>`
+      : `<a class="text" href="#">${hidden}${text}</a>`;
+  return `<article class="row notif${o.unread ? " unread" : ""}">${tile(icon, color)}<span class="body">${sentence}<span class="meta">${when}</span>${acts}${badge}</span>${mark}</article>`;
+};
+
+const ANSWER = `<button class="btn ghost sm">Decline</button><button class="btn primary sm">Accept</button>`;
+
+const notificationsScreen = (body, o = {}) =>
+  screen(body, {
+    tab: "mas",
+    side: "notif",
+    title: "Notifications",
+    narrow: true,
+    ...o,
+  });
+
+const MARK_ALL = `<button class="btn ghost sm">Mark all as read</button>`;
+
+const notifSettingsLink = `<a class="row card" href="#" style="min-height:52px">${tile("settings", "GRAY", "sm")}<span class="body"><span class="title">Notification settings</span></span>${iconSvg("chevron-right", "sm")}</a>`;
+
+const inboxRows =
+  () => `<section class="stack-sm"><div class="section-head"><h3 class="h3">New</h3></div>
+<div class="list card flush">
+${notifRow("users", "TEAL", "<b>Ana Ruiz</b> invited you to <b>Villa de Leyva weekend</b>", "2 hours ago · Shared group", { unread: true, actions: ANSWER })}
+${notifRow("users", "PURPLE", "3 changes in <b>Night out</b>", `Latest: Beto Cano recorded a payment · Yesterday 21:40`, { unread: true })}
+</div></section>
+<section class="stack-sm"><div class="section-head"><h3 class="h3">Earlier</h3></div>
+<div class="list card flush">
+${notifRow("circle-check", "GREEN", "<b>Diego Pardo</b> accepted your invitation to <b>Diego’s birthday gift</b>", "Sep 19")}
+${notifRow("users", "AMBER", "<b>Carla Gómez</b> invited you to <b>Office lunch</b>", "Aug 27", { badge: '<span class="badge success">Accepted</span>' })}
+${notifRow("x", "GRAY", "<b>Julián Mora</b> declined your invitation to <b>Cartagena trip</b>", "Aug 26", { link: false })}
+${notifRow("users", "PINK", "<b>Marta Ríos</b> invited you to <b>Book club dinner</b>", "Aug 21", { link: false, badge: '<span class="badge">Declined</span>' })}
+${notifRow("users", "BLUE", "<b>Pablo Díaz</b> invited you to <b>Ski weekend</b>", "Aug 12", { link: false, badge: '<span class="badge">No longer available</span>' })}
+</div></section>
+${notifSettingsLink}`;
+
+const notificationsInbox = () => notificationsScreen(inboxRows(), { actions: MARK_ALL, news: 0 });
+
+const notificationsArriving = () => home({ news: NEWS });
+
+const notificationsMoreSheet = () =>
+  home({ news: NEWS, nav: tabbar("mas", true), sheet: navMenuSheet(true, NEWS) });
+
+const notificationsFolded = () =>
+  notificationsScreen(
+    `<div class="list card flush">
+${notifRow("users", "PURPLE", "<b>Beto Cano</b> added an expense to <b>Night out</b>", "Yesterday 19:05", { unread: true })}
+</div>
+<div class="list card flush">
+${notifRow("users", "PURPLE", "3 changes in <b>Night out</b>", "Latest: Beto Cano recorded a payment · Yesterday 21:40", { unread: true })}
+</div>`,
+    { actions: MARK_ALL },
+  );
+
+const notificationsEmpty = () =>
+  notificationsScreen(`<div class="empty" style="padding-top:64px"><span class="tile lg outline">${iconSvg("bell")}</span>
+<span class="h3">You’re all caught up</span>
+<p class="small muted" style="max-width:34ch;margin:0">When someone invites you to a shared group, or changes one you’re in, it shows up here.</p>
+<button class="btn secondary" style="margin-top:8px">${iconSvg("settings", "sm")}Notification settings</button></div>`);
+
+const notificationsLoading = () => {
+  const rows = range(0, 4)
+    .map(
+      () =>
+        '<div class="row" style="cursor:default"><span class="skeleton" style="width:36px;height:36px;border-radius:999px"></span><span class="body" style="gap:6px"><span class="skeleton" style="height:12px;width:70%"></span><span class="skeleton" style="height:10px;width:40%"></span></span></div>',
+    )
+    .join("");
+  return notificationsScreen(`<div class="list card flush">${rows}</div>`, {
+    actions: `<span class="skeleton" style="height:32px;width:120px;border-radius:999px"></span>`,
+  });
+};
+
+const notificationsError = () =>
+  notificationsScreen(`<div class="empty" style="padding-top:64px">${tile("circle-alert", "RED", "lg")}
+<span class="h3">We couldn’t load your notifications</span>
+<p class="small muted" style="margin:0;max-width:280px">The server didn’t respond (503). Nothing is lost; try again in a few seconds.</p>
+<button class="btn secondary" style="margin-top:8px">${iconSvg("refresh-cw", "sm")}Retry</button>
+<span class="xs faint mono">Reference: 8c1f4e2a-…-3b7d</span></div>`);
+
+const notificationsOffline = () =>
+  notificationsScreen(inboxRows(), {
+    actions: MARK_ALL,
+    banner: `<div class="banner offline" role="status">${iconSvg("wifi-off")}<span class="txt"><b>You’re offline.</b> These are the notifications this device already has. New ones arrive when you’re back online.</span></div>`,
+  });
+
+const notificationsLocalOnly = () =>
+  notificationsScreen(`<div class="empty" style="padding-top:64px"><span class="tile lg outline">${iconSvg("cloud-off")}</span>
+<span class="h3">Notifications need your account</span>
+<p class="small muted" style="max-width:36ch;margin:0">You’re working on this device only, so nothing from other people can reach you here.</p>
+<button class="btn primary" style="margin-top:8px">Sign in to sync</button></div>`);
+
+const notifSwitchRow = (title, help, on, o = {}) => {
+  const lock = o.locked
+    ? `<span class="help hstack" style="gap:4px;padding-top:4px">${iconSvg("lock", "sm")}${o.locked}</span>`
+    : "";
+  const control = o.locked
+    ? '<span class="small muted">Always on</span>'
+    : `<button class="switch" role="switch" aria-checked="${String(on)}" aria-label="${title} in the app"${o.disabled ? " disabled" : ""}></button>`;
+  return `<div class="row" style="cursor:default;align-items:flex-start"><span class="body"><span class="title">${title}</span><span class="meta">${help}</span>${lock}</span>${control}</div>`;
+};
+
+const notificationSettings = ({ offline = false } = {}) => {
+  const alert = offline
+    ? `<div class="alert warning">${iconSvg("wifi-off")}<span>Changing this needs a connection: it is saved on the server.</span></div>`
+    : "";
+  const body = `${alert}<p class="small muted" style="margin:0">Choose what reaches you. Switching something off stops what comes next; what already arrived stays.</p>
+<section class="stack-sm"><div class="section-head"><span class="eyebrow">Shared groups</span><span class="xs faint">In the app</span></div>
+<div class="list card flush">
+${notifSwitchRow("Invitations", "When someone invites you to a shared group.", true, { locked: "An invitation you never see can’t be answered." })}
+${notifSwitchRow("Activity", "Answers to your invitations, and expenses and payments other people record in groups you’re in.", true, { disabled: offline })}
+</div></section>`;
+  return screen(body, {
+    tab: "",
+    side: "ajustes",
+    back: true,
+    title: "Notifications",
+    narrow: true,
+  });
+};
+
 const plate = (id, title, note, html, o = {}) => ({ id, title, note, html, ...o });
 const plateDay = (p) => p.updated ?? p.added;
 
@@ -4603,7 +4750,7 @@ const PAGES = [
         "Home",
         "Spending, review inbox, budgets, accounts and recent transactions. Under the four figures, one line for what people owe you and what you owe them \u2014 never added to <i>What you have</i>, because it is not money you have.",
         home(),
-        { added: "2026-09-01", updated: "2026-09-20" },
+        { added: "2026-09-01", updated: "2026-09-22" },
       ),
       plate(
         "install-card",
@@ -4629,9 +4776,9 @@ const PAGES = [
       plate(
         "more-sheet",
         "More",
-        "What the last slot of the phone's bar opens: Accounts, Stats, Categories, Settings and the user, each with what it holds. It is the sidebar's list minus what the bar already has, so below 900px nothing is out of reach. Trends is deliberately absent — it is reached from a Stats view and its back arrow points at Stats.",
+        "What the last slot of the phone's bar opens: Accounts, Shared, Notifications, Stats, Categories, Settings and the user, each with what it holds. It is the sidebar's list minus what the bar already has, so below 900px nothing is out of reach. Trends is deliberately absent — it is reached from a Stats view and its back arrow points at Stats.",
         home({ nav: tabbar("mas"), sheet: navMenuSheet(true) }),
-        { added: "2026-09-15" },
+        { added: "2026-09-15", updated: "2026-09-22" },
       ),
       plate(
         "home-without-a-name",
@@ -5288,6 +5435,71 @@ const PAGES = [
     ],
   },
   {
+    file: "notifications.html",
+    title: "Notifications",
+    group: "Screens",
+    note: "What you would otherwise not see: an invitation to a shared group, an answer to yours, changes in a group you are in. Nothing interrupts — arriving is a count on the bell and a dot on More, and the inbox is where you read it. Budget alerts will be new rows of the same inbox, not a second one.",
+    plates: [
+      plate(
+        "arriving",
+        "How it arrives",
+        "The only sign: a count on the bell in Home's header, a brand dot on More below 900px, and the count beside Notifications in the sidebar. The amber dot on Transactions stays what it was — your own entries waiting for review — so the two never share a colour.",
+        notificationsArriving(),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "more-sheet-with-news",
+        "More, with news",
+        "The dot on More is answered inside the sheet: Notifications carries the same count as the bell.",
+        notificationsMoreSheet(),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "inbox",
+        "The inbox",
+        "Newest first. What was new when you opened it keeps its heading for this visit; opening the page is what clears the bell. An unread row is bold and carries a dot; an invitation keeps its two answers until it is answered, from here or any other device, and then says how it ended.",
+        notificationsInbox(),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "folded",
+        "Folded",
+        "Before and after: changes to the same group fold into one row while it is unread — the row counts them, names the latest, and rises to the top. Once read, the next change starts a new row.",
+        notificationsFolded(),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "inbox-empty",
+        "All caught up",
+        "No row, and no invented one: the sentence says what would show up here.",
+        notificationsEmpty(),
+        { added: "2026-09-22" },
+      ),
+      plate("inbox-loading", "Loading", "", notificationsLoading(), { added: "2026-09-22" }),
+      plate(
+        "inbox-error",
+        "Could not load",
+        "Only a device that holds no copy yet asks the server for this list; once the copy is there, the inbox reads from it.",
+        notificationsError(),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "inbox-offline",
+        "Offline",
+        "The inbox reads what the device already has, and marking as read still works: it waits in the queue like any other change.",
+        notificationsOffline(),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "inbox-this-device-only",
+        "This device only",
+        "Working without the account, nothing from other people can arrive — the screen says so instead of looking empty.",
+        notificationsLocalOnly(),
+        { added: "2026-09-22" },
+      ),
+    ],
+  },
+  {
     file: "categories.html",
     title: "Categories",
     group: "Screens",
@@ -5573,7 +5785,24 @@ const PAGES = [
     group: "Screens",
     note: "A hub with profile, preferences, security and data. Anything written on the server says so when there is no connection. Sync status is the page that answers what this device has and what it still owes the server.",
     plates: [
-      plate("settings-hub", "Settings", "", settings(), { added: "2026-09-01" }),
+      plate("settings-hub", "Settings", "", settings(), {
+        added: "2026-09-01",
+        updated: "2026-09-22",
+      }),
+      plate(
+        "notification-settings",
+        "Notifications",
+        "One switch per topic and per channel that exists — only In the app until email and push are built. Invitations have no switch in the app: one you never see can never be answered, and a control with one answer is not drawn.",
+        notificationSettings(),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "notification-settings-offline",
+        "Notifications, offline",
+        "Saved on the server, like the rest of the profile: readable offline, not changeable.",
+        notificationSettings({ offline: true }),
+        { added: "2026-09-22" },
+      ),
       plate("appearance", "Appearance", "Mode and palette, with a live preview.", appearance(), {
         added: "2026-09-01",
       }),
