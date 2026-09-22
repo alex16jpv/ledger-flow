@@ -9,6 +9,7 @@ import { profileRecord } from "@/lib/local/schema";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
+import { answerBatch, rejectedWith } from "@/lib/testing/sync";
 import { openTestVault, profile, sharedGroup, wipeVaults } from "@/lib/testing/vault";
 
 import { PaidByOtherSheet } from "./PaidByOtherSheet";
@@ -32,8 +33,11 @@ const people = [
 
 let vault: VaultHandle;
 
+const fetchMock = vi.fn<typeof fetch>();
+
 beforeEach(async () => {
-  vi.stubGlobal("fetch", vi.fn<typeof fetch>());
+  fetchMock.mockReset();
+  vi.stubGlobal("fetch", fetchMock);
   vault = await openTestVault("u1");
   await vault.db.put("profile", profileRecord(profile()));
   setCurrentVault(vault);
@@ -55,14 +59,7 @@ function open(over: Partial<React.ComponentProps<typeof PaidByOtherSheet>> = {})
   renderWithProviders(
     <QueryProvider>
       <ToastProvider>
-        <PaidByOtherSheet
-          open
-          group={group}
-          groupName="Night out"
-          people={people}
-          onClose={onClose}
-          {...over}
-        />
+        <PaidByOtherSheet open group={group} people={people} onClose={onClose} {...over} />
       </ToastProvider>
     </QueryProvider>,
   );
@@ -125,9 +122,58 @@ describe("recording a line somebody else paid", () => {
     await user.type(screen.getByRole("textbox", { name: "Amount" }), "90000");
     await user.click(screen.getByRole("button", { name: "Add expense" }));
 
-    expect(await screen.findAllByText("This field is required.")).not.toHaveLength(0);
+    expect(await screen.findAllByText("This field is required.")).toHaveLength(2);
     expect(await pendingOperations(vault.db)).toHaveLength(0);
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // A refusal has to leave the sheet where it was, and a second try must not open a second line.
+  it("keeps the sheet open when the server refuses, and retries under the same id", async () => {
+    reportOnline(true);
+    const sent: string[] = [];
+    answerBatch(fetchMock, (operation) => {
+      if (operation.entity !== "sharedExpense") return {};
+      sent.push(operation.id);
+      return rejectedWith("SPLIT_INVALID");
+    });
+    const user = userEvent.setup();
+    open();
+
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+
+    expect(await screen.findByRole("dialog", { name: "Somebody else paid" })).toBeInTheDocument();
+    expect(screen.queryByText("Expense added")).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/shares/);
+
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+    await vi.waitFor(() => {
+      expect(sent).toHaveLength(2);
+    });
+    // The id was minted once, so the second try finishes the line it started.
+    expect(sent[0]).toBe(sent[1]);
+    // And a refusal leaves no trace: the engine put the mirror back both times.
+    expect(await vault.db.getAll("sharedExpenses")).toHaveLength(0);
+  });
+
+  // A day alone is written at local noon, so the line lands on the day that was picked.
+  it("writes the day it was spent at noon in the user's zone", async () => {
+    const user = userEvent.setup();
+    open();
+
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+
+    await vi.waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+    const [queued] = await pendingOperations(vault.db);
+    const { date } = (queued?.payload as { body: { date: string } }).body;
+    // Bogotá is UTC-5, so noon there is 17:00Z on the same day.
+    expect(date).toMatch(/T17:00:00\.000Z$/);
+    expect(date.slice(0, 10)).toBe(new Date().toISOString().slice(0, 10));
   });
 
   // Picking yourself is what the two other ways into the group already are.

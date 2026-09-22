@@ -15,11 +15,12 @@ import { DateField } from "@/components/ui/DateTimeField";
 import { Field, Input } from "@/components/ui/Field";
 import { Picker } from "@/components/ui/Picker";
 import { PickerSheet } from "@/components/ui/PickerSheet";
-import { Sheet, SheetCancel, useUnsavedGuard } from "@/components/ui/Sheet";
+import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { fieldErrors, presentError } from "@/lib/api/errors";
 import { dayKey, localNoon } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
+import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
@@ -27,7 +28,7 @@ import { newEntityId } from "@/lib/local/outbox/envelope";
 import type { ColorToken } from "@/lib/theme/feature-color";
 
 import { useCreateSharedExpense } from "../hooks";
-import { paidByOtherSchema, type PaidByOtherValues } from "../schemas";
+import { EXPENSE_DESCRIPTION_MAX, paidByOtherSchema, type PaidByOtherValues } from "../schemas";
 import { expensePaidByOther, inheritedSplit, type SplittingGroup } from "../write";
 
 export interface PaidByOtherPerson {
@@ -39,19 +40,12 @@ export interface PaidByOtherPerson {
 export interface PaidByOtherSheetProps {
   open: boolean;
   onClose: () => void;
-  group: SplittingGroup;
-  groupName: string;
+  group: SplittingGroup & { name: string };
   // The other participants: picking yourself is what the two other ways into the group already are.
   people: readonly PaidByOtherPerson[];
 }
 
-export function PaidByOtherSheet({
-  open,
-  onClose,
-  group,
-  groupName,
-  people,
-}: PaidByOtherSheetProps) {
+export function PaidByOtherSheet({ open, onClose, group, people }: PaidByOtherSheetProps) {
   const t = useTranslations();
   const toast = useToast();
   const money = useMoney();
@@ -71,21 +65,23 @@ export function PaidByOtherSheet({
     },
   });
   const { errors, isDirty } = form.formState;
-  useUnsavedGuard(isDirty);
   const serverFields = fieldErrors(create.error);
   const failure =
     create.error && Object.keys(serverFields).length === 0 ? presentError(create.error) : null;
-  const [amount, payerId] = useWatch({
+  const [amount, payerId, day] = useWatch({
     control: form.control,
-    name: ["amount", "paidByContactId"],
+    name: ["amount", "paidByContactId", "date"],
   });
   const payer = people.find((person) => person.contactId === payerId);
   const payerError = validationMessage(
     t,
     errors.paidByContactId?.message ?? serverFields.paidByContactId,
   );
-  const payerHelpId = `${useId()}-who-paid`;
-  const payerErrorId = `${payerHelpId}-error`;
+  const payerFieldId = useId();
+  const payerHelpId = `${payerFieldId}-help`;
+  const payerErrorId = `${payerFieldId}-error`;
+  const dates = useDates();
+  const spentOn = dates.formatDay(localNoon(day || today, timeZone));
   const share =
     Number.isFinite(amount) && amount > 0
       ? (inheritedSplit(group, amount, payerId || null).shares.find((one) => one.party === "USER")
@@ -122,6 +118,7 @@ export function PaidByOtherSheet({
       title={t("shared.paidByOther.title")}
       footer={
         <>
+          {failure && <Alert tone="danger">{t(failure.messageKey)}</Alert>}
           <Button
             size="lg"
             block
@@ -149,6 +146,7 @@ export function PaidByOtherSheet({
         >
           <Input
             placeholder={t("shared.paidByOther.descriptionPlaceholder")}
+            maxLength={EXPENSE_DESCRIPTION_MAX}
             autoComplete="off"
             leading={<Receipt {...iconProps("sm")} />}
             {...form.register("description")}
@@ -173,13 +171,13 @@ export function PaidByOtherSheet({
           name="amount"
           render={({ field }) => (
             <Field
-              label={t("transactions.form.amount")}
+              label={t("shared.paidByOther.amount")}
               error={validationMessage(t, errors.amount?.message ?? serverFields.amount)}
             >
               <Card className="p-0">
                 <AmountInput
                   size="sm"
-                  label={t("transactions.form.amount")}
+                  label={t("shared.paidByOther.amount")}
                   defaultValue={Number.isFinite(field.value) ? field.value : null}
                   onChange={(value) => {
                     field.onChange(value ?? Number.NaN);
@@ -224,10 +222,9 @@ export function PaidByOtherSheet({
         </Alert>
         <Alert tone="info">
           {payer
-            ? t("shared.paidByOther.nothingOfYoursNamed", { name: payer.name })
-            : t("shared.paidByOther.nothingOfYours")}
+            ? t("shared.paidByOther.nothingOfYoursNamed", { name: payer.name, date: spentOn })
+            : t("shared.paidByOther.nothingOfYours", { date: spentOn })}
         </Alert>
-        {failure && <p className="text-sm text-danger">{t(failure.messageKey)}</p>}
       </form>
       {pickingPayer && (
         <PickerSheet
@@ -235,7 +232,7 @@ export function PaidByOtherSheet({
           onClose={() => {
             setPickingPayer(false);
           }}
-          title={t("shared.paidByOther.whoPaidTitle", { name: groupName })}
+          title={t("shared.paidByOther.whoPaidTitle", { name: group.name })}
           options={people.map((person) => ({
             value: person.contactId,
             label: person.name,

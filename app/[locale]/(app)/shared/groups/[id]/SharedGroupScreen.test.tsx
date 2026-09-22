@@ -166,6 +166,23 @@ describe("SharedGroupScreen", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it("does not offer it while the people in the group have no name yet", async () => {
+    fetchMock.mockImplementation((input) => {
+      const url = urlOf(input);
+      // The contacts have not landed on this device: a participant with no name cannot be picked.
+      if (url.startsWith("/api/contacts")) return Promise.resolve(page([]));
+      if (url.includes("/expenses")) return Promise.resolve(page([]));
+      if (url.startsWith("/api/settlements")) return Promise.resolve(page([]));
+      return Promise.resolve(page([group]));
+    });
+    view();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
+
+    expect(await screen.findByRole("button", { name: "Record a new expense" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Somebody else paid" })).not.toBeInTheDocument();
+  });
+
   it("does not offer it in a group whose only participant is you", async () => {
     fetchMock.mockImplementation((input) => {
       const url = urlOf(input);

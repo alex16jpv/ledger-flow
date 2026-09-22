@@ -4683,17 +4683,25 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
 
 ## 2026-09-22 · Two things T-139 tripped over, fixed in the same branch
 
-- **The e2e suite failed for three days of every month.** `seed-test` describes the month in progress
-  once the reference day is the 22nd or later, and falls back to the last complete month before that;
-  every spec that reads the seed asks for `?period=lastMonth`. Run on 2026-09-22, ten specs across
-  `stats` and `transactions-list` failed on data that was there but in the other month. `tools/e2e-backend.mjs` now
-  anchors `SEED_TODAY` to the **1st of the current month**, so the dataset is the last complete month
-  whatever day the suite runs — which is what it was every day the suite was green. The alternative,
-  teaching each spec which month the seed chose, spreads a date rule over nine files to keep one
-  environment variable out of one.
+- **The e2e suite failed from the 22nd of each month to its end.** `seed-test` describes the month in
+  progress once the reference day is the 22nd or later, and falls back to the last complete month
+  before that; every spec that reads the seed asks for `?period=lastMonth`. Run on 2026-09-22, ten
+  specs across `stats` and `transactions-list` failed on data that was there but in the other month.
+  `tools/e2e-backend.mjs` now anchors `SEED_TODAY` to the **1st of the current month**, so the dataset
+  is the last complete month whatever day the suite runs — which is what it was every day the suite
+  was green. The alternative, teaching each spec which month the seed chose, spreads a date rule over
+  nine files to keep one environment variable out of one. Two things it has to respect: the seed reads
+  that day **in its own user's zone** and refuses one that is future there, so the 1st is worked out in
+  that zone and not the runner's; and it is passed to the seed alone, never to the server process,
+  which is the one that judges `FUTURE_DATE` against the real clock. What the suite gives up is the
+  shape the seed produces from the 22nd on — the month in progress — which no spec asks for today.
 - **A `Picker` inside a `Field` was described by nothing.** `Field` hands its help and its error down
-  through its context, and `Picker` was the one control that did not read them, in the new-group form
-  (`Expenses`) as much as here. It does now, and an explicit prop still wins. What it deliberately does
-  **not** take is the field's `id`: a `<button>` is a labelable element, so the field's label would
-  become its whole accessible name and the value it is showing would stop being announced — a picker
-  that reads `Currency` instead of `Currency, COP · Colombian Peso`. The label stays where it is.
+  through its context and `Picker` was the one control that did not read them, so the currency and the
+  language of the register form announced neither their help nor their error. It does now, and an
+  explicit prop still wins — resolved **after** the spread, or a prop passed as `undefined` would erase
+  the field's. What it deliberately does **not** take is the field's `id`: a `<button>` is a labelable
+  element, so the field's label would become its whole accessible name and the value it is showing
+  would stop being announced — a picker that reads `Currency` instead of
+  `Currency, COP · Colombian Peso`. It does not take `aria-invalid` either, which ARIA does not define
+  for `button` and the lint rule refuses. The sheet this task adds does not use `Field` around its
+  picker at all, because the field's label and the picker's own would say the same word twice.

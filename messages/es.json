@@ -1626,6 +1626,7 @@
     },
     "paidByOther": {
       "title": "Lo pagó otra persona",
+      "amount": "Importe",
       "add": "Añadir gasto",
       "added": "Gasto añadido",
       "description": "Qué fue",
@@ -1633,14 +1634,14 @@
       "dateNote": "El día en que se gastó. Es la fecha que llevará tu gasto el día que le pagues.",
       "whoPaid": "Quién pagó",
       "whoPaidPlaceholder": "Elige una persona",
-      "whoPaidHelp": "Una de las otras personas de este grupo. Un gasto que pagaste tú son las otras dos formas de añadirlo.",
+      "whoPaidHelp": "Una de las otras personas de este grupo. Un gasto que pagaste tú entra por las otras dos vías.",
       "whoPaidTitle": "¿Quién lo pagó, en {name}?",
       "inherits": {
-        "EQUAL": "Se reparte a partes iguales entre {people} personas, como manda el grupo: tu parte es {share}.",
-        "PERCENT": "Se reparte con los porcentajes del grupo, como manda el grupo: tu parte es {share}."
+        "EQUAL": "Se reparte a partes iguales entre {people} personas, como manda el grupo y como todos los gastos de aquí: tu parte es {share}.",
+        "PERCENT": "Se reparte con los porcentajes del grupo, como manda el grupo y como todos los gastos de aquí: tu parte es {share}."
       },
-      "nothingOfYours": "No se registra nada tuyo. No se movió plata tuya, así que no hay cuenta, ni categoría, ni presupuesto que preguntar. Será tu gasto el día que le pagues, con la fecha de ese día y con la categoría que elijas entonces.",
-      "nothingOfYoursNamed": "No se registra nada tuyo. No se movió plata tuya, así que no hay cuenta, ni categoría, ni presupuesto que preguntar. Será tu gasto el día que le pagues a {name}, con la fecha de ese día y con la categoría que elijas entonces."
+      "nothingOfYours": "No se registra nada tuyo. No se movió plata tuya, así que no hay cuenta, ni categoría, ni presupuesto que preguntar. Será tu gasto el día que saldes con esa persona, con fecha del {date} y con la categoría que elijas entonces.",
+      "nothingOfYoursNamed": "No se registra nada tuyo. No se movió plata tuya, así que no hay cuenta, ni categoría, ni presupuesto que preguntar. Será tu gasto el día que le pagues a {name}, con fecha del {date} y con la categoría que elijas entonces."
     }
   },
   "transactions": {

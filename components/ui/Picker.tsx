@@ -17,7 +17,16 @@ export interface PickerProps extends Omit<
 }
 
 export const Picker = forwardRef<HTMLButtonElement, PickerProps>(function Picker(
-  { label, value, placeholder, leading, className, type = "button", ...rest },
+  {
+    label,
+    value,
+    placeholder,
+    leading,
+    className,
+    type = "button",
+    "aria-describedby": describedBy,
+    ...rest
+  },
   ref,
 ) {
   const empty = value === undefined || value === null || value === "";
@@ -27,13 +36,13 @@ export const Picker = forwardRef<HTMLButtonElement, PickerProps>(function Picker
     <button
       ref={ref}
       type={type}
-      aria-describedby={rest["aria-describedby"] ?? field?.describedBy}
       aria-haspopup="dialog"
       className={cn(
         "flex min-h-(--control-lg) w-full items-center gap-3 rounded-md border border-border-strong bg-surface py-1.5 pr-3 pl-1.5 text-left transition-[border-color,box-shadow] duration-(--dur-1) ease-(--ease) focus-visible:border-brand focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] focus-visible:outline-none disabled:bg-surface-2 disabled:text-text-disabled",
         className,
       )}
       {...rest}
+      aria-describedby={describedBy ?? field?.describedBy}
     >
       {leading}
       <span className="flex min-w-0 flex-1 flex-col">

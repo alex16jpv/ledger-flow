@@ -40,6 +40,47 @@ describe("a line another participant paid", () => {
     expect(line.row.split.shares.map((share) => share.amount)).toEqual([30_000, 30_000, 30_000]);
   });
 
+  // A group that splits by percentage hands those percentages down, payer included.
+  it("inherits a percentage default", () => {
+    const byPercent = sharedGroup({
+      participants: group.participants,
+      defaultSplit: {
+        mode: "PERCENT",
+        shares: [
+          { contactId: null, percent: 50 },
+          { contactId: ANA, percent: 30 },
+          { contactId: BETO, percent: 20 },
+        ],
+      },
+    });
+
+    const line = expensePaidByOther(byPercent, {
+      description: "Hotel",
+      date: "2026-09-20T17:00:00.000Z",
+      amount: 200_000,
+      paidByContactId: ANA,
+    });
+
+    expect(line.row.split.mode).toBe("PERCENT");
+    expect(line.row.customSplit).toBe(false);
+    expect(line.row.split.shares.map((share) => share.amount)).toEqual([100_000, 60_000, 40_000]);
+  });
+
+  it("keeps the id it is given, so a second try finishes the line it started", () => {
+    const line = expensePaidByOther(
+      group,
+      {
+        description: "Fuel",
+        date: "2026-09-20T17:00:00.000Z",
+        amount: 90_000,
+        paidByContactId: ANA,
+      },
+      "e7",
+    );
+
+    expect(line.row.id).toBe("e7");
+  });
+
   // The odd peso goes to whoever paid, and here that is not you (T-67).
   it("leaves the remainder with the person who paid", () => {
     const line = expensePaidByOther(group, {

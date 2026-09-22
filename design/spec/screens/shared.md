@@ -121,9 +121,11 @@ thing and not two: the group's expense, and nothing at all in your ledger. The s
 and says when that stops being true: the day you settle with that person it becomes your expense,
 dated that line and in a category you choose then (consequence 4).
 
-**Who paid is one of the other participants, never you** — picking yourself is what the other two
-doors already are — so a group whose only participant is you has nobody to offer and does not draw
-the door at all; `Add people` comes first. And **a description is required here**, where the
+**Who paid is one of the other participants, never you** (`#who-paid`) — picking yourself is what the
+other two doors already are — so a group whose only participant is you has nobody to offer and does
+not draw the door at all; `Add people` comes first. And the list is **all of them or none**: a device
+that has not got every participant's name yet does not open a picker missing somebody, because the
+name that is missing is the one you would have chosen, and choosing the wrong one moves money. And **a description is required here**, where the
 transaction form lets it go: a movement with no description is named by its category on every list
 that draws it, and this line has no category to borrow a name from — nor will the expense it turns
 into the day you pay, which carries this description and nothing else.

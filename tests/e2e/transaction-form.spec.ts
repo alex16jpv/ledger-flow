@@ -441,6 +441,8 @@ test("a loan instalment is saved as a payment and an interest expense", async ({
   const paying = page.getByRole("dialog", { name: "Pay Car loan" });
   await paying.getByRole("textbox", { name: "Amount to pay" }).fill("420000");
   await paying.getByRole("textbox", { name: "Of which interest" }).fill("126000");
+  // The readback waits for the account the sheet picks for you, and that is a request.
+  await expect(paying.getByRole("button", { name: /^From/ })).toContainText("Bank");
   await expect(paying.getByText(/Car loan \$294,000 less owed/)).toBeVisible();
   await paying.getByRole("button", { name: "Pay", exact: true }).click();
   await expect(page.getByText("Payment recorded")).toBeVisible();

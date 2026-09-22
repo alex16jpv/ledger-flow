@@ -4242,13 +4242,25 @@ ${field("Date", "September 20, 2026", null, { icon: "calendar" })}
 <div class="field"><span class="label">Amount</span>
 <div class="card" style="padding:26px 16px;display:flex;justify-content:center;align-items:baseline;gap:4px"><span class="muted">$</span><span class="amount" style="font-size:28px">90,000</span></div></div>
 <div class="field"><button class="picker">${face("Ana Ruiz")}<span class="body"><span class="lbl">Who paid</span><span class="val">Ana Ruiz</span></span>${iconSvg("chevron-right", "sm")}</button>
-<span class="help">One of the other people in the group. An expense you paid is the other two ways in.</span></div>
+<span class="help">One of the other people in this shared group. An expense you paid goes in by the other two ways.</span></div>
 <div class="alert neutral">${iconSvg("users")}<span>Split <b>equally between 3 people</b>, the group's default, like every other expense here \u2014 your share is <b>${moneyText(30000)}</b>.</span></div>
 <div class="alert info">${iconSvg("info")}<span><b>Nothing of yours is recorded.</b> No money of yours moved, so there is no account, no category and no budget to ask about. It becomes your expense the day you settle with Ana \u2014 dated September 20, in a category you choose then.</span></div>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Add expense</button></div></div>`,
       "Somebody else paid",
     ),
   });
+
+const whoPaidPicker = () => {
+  const row = (name, on) =>
+    `<button class="row" style="width:100%">${face(name)}<span class="body"><span class="title"><span class="truncate">${name}</span></span></span>${on ? iconSvg("check", "sm") : ""}</button>`;
+  return nightOut({
+    sheet: sheetWrap(
+      `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span class="placeholder" style="flex:1">Search</span></div>
+<div class="list" style="margin:0 -16px">${row("Ana Ruiz", true)}${row("Beto Cano", false)}</div>`,
+      "Who paid it, in Night out?",
+    ),
+  });
+};
 
 const GROUP_NOTICE = `<div class="alert neutral">${iconSvg("users")}<span><b>This goes into Cartagena trip</b>, split equally between 4 people. Splitting changes nothing today: it keeps counting in full until somebody pays you back.</span></div>`;
 
@@ -5152,6 +5164,13 @@ const PAGES = [
         "A line somebody else paid",
         "T-139, and the third way into <code>Add expense</code>. A line another participant paid is <b>not a movement of yours</b>, so this is deliberately not the transaction form: there is no account, no category and no budget to ask about, and a form that asked for them would be asking about a movement that does not exist. It asks for the four things such a line <i>is</i> \u2014 what it was, when, how much, and <b>who paid it</b> \u2014 and inherits the group's split without asking, exactly like the other two doors. It writes <b>one</b> thing and not two, and the sheet says so, and says when that stops being true: the day you settle with Ana it becomes your expense, dated that line and in a category you choose then. <b>Who paid is never you</b> \u2014 that is what the other two doors are \u2014 so a group of one does not draw the door at all. A description is <b>required</b> here, where the transaction form lets it go: this line has no category to borrow a name from, and neither will the expense it turns into.",
         expenseSomebodyElsePaid(),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "who-paid",
+        "Who paid it",
+        "The one question the sheet above cannot answer by itself, and the section's ordinary picker answering it: the <b>other</b> people in the group, never you. It is <b>all of them or none</b> \u2014 a device that has not got every participant's name yet does not open a list missing somebody, because the name that is missing is the one you would have chosen.",
+        whoPaidPicker(),
         { added: "2026-09-22" },
       ),
       plate(

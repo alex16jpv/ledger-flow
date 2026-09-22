@@ -1626,6 +1626,7 @@
     },
     "paidByOther": {
       "title": "Somebody else paid",
+      "amount": "Amount",
       "add": "Add expense",
       "added": "Expense added",
       "description": "What was it",
@@ -1633,14 +1634,14 @@
       "dateNote": "The day it was spent. It is what dates your expense the day you pay them back.",
       "whoPaid": "Who paid",
       "whoPaidPlaceholder": "Pick a person",
-      "whoPaidHelp": "One of the other people in this shared group. An expense you paid is the two other ways in.",
+      "whoPaidHelp": "One of the other people in this shared group. An expense you paid goes in by the other two ways.",
       "whoPaidTitle": "Who paid it, in {name}?",
       "inherits": {
-        "EQUAL": "Split equally between {people} people, the group’s default — your share is {share}.",
-        "PERCENT": "Split by the group’s percentages, its default — your share is {share}."
+        "EQUAL": "Split equally between {people} people, the group’s default, like every other expense here — your share is {share}.",
+        "PERCENT": "Split by the group’s percentages, its default, like every other expense here — your share is {share}."
       },
-      "nothingOfYours": "Nothing of yours is recorded. No money of yours moved, so there is no account, no category and no budget to ask about. It becomes your expense the day you settle with them, dated that day and in a category you choose then.",
-      "nothingOfYoursNamed": "Nothing of yours is recorded. No money of yours moved, so there is no account, no category and no budget to ask about. It becomes your expense the day you settle with {name}, dated that day and in a category you choose then."
+      "nothingOfYours": "Nothing of yours is recorded. No money of yours moved, so there is no account, no category and no budget to ask about. It becomes your expense the day you settle up — dated {date}, in a category you choose then.",
+      "nothingOfYoursNamed": "Nothing of yours is recorded. No money of yours moved, so there is no account, no category and no budget to ask about. It becomes your expense the day you settle with {name} — dated {date}, in a category you choose then."
     }
   },
   "transactions": {

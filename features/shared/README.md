@@ -61,8 +61,10 @@ paid: description, date, amount and who paid it, with the group's split inherite
 one. It is not the transaction form and must not become it — no money of yours moved, so there is no
 account, no category and no budget to ask about — and `expensePaidByOther` (`write.ts`) mints the row
 with no `transactionId`, so the queued expense waits only for the group it is posted under. The payer
-is one of the **other** participants, never you, and a group whose only participant is you does not
-offer the door at all. The odd unit goes to whoever paid, which here is not you.
+is one of the **other** participants, never you, and the list is **all of them or none**: a group whose
+only participant is you, or one whose contacts have not all landed on this device, does not offer the
+door at all rather than opening a picker missing somebody. The odd unit goes to whoever paid, which
+here is not you.
 
 **A group is not closed when it is created.** `AddPeopleSheet` is the contact picker with the question
 that comes with it — _are they in the expenses already recorded?_ — and, when the answer is yes, the

@@ -66,7 +66,7 @@ import { TransactionPickerSheet } from "../../TransactionPickerSheet";
 import { WhatChangesSheet } from "../../WhatChangesSheet";
 import { ArchiveGroupSheet, UndoWriteOffSheet, WriteOffSheet } from "../../WriteOffSheet";
 
-// A door inside a door: it is not on screen until two taps say so, so it is not in the bundle either.
+// Two taps behind the screen it belongs to, and 220 kB gz is the screen's budget (T-139).
 const PaidByOtherSheet = dynamic(() =>
   import("@/features/shared/components/PaidByOtherSheet").then((module) => module.PaidByOtherSheet),
 );
@@ -306,10 +306,12 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
       color: contact?.color ?? null,
     };
   });
-  // Who could have paid a line that is not yours: everybody in the group except you.
-  const otherPayers = splitPeople.flatMap((person) =>
-    person.contactId === null ? [] : [{ ...person, contactId: person.contactId }],
-  );
+  const named = splitPeople.filter((person) => person.contactId !== null && person.name !== "");
+  // A list of payers missing somebody would move money to the wrong person, so it is all or none.
+  const otherPayers =
+    named.length === view.group.participants.length - 1
+      ? named.map((person) => ({ ...person, contactId: person.contactId ?? "" }))
+      : [];
   const ceilingOf = (person: PartyView): number =>
     view.group.writeOffs.find(
       (one) => one.contactId === person.contactId && one.expenseId === person.expenseId,
@@ -528,7 +530,6 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
         <PaidByOtherSheet
           open
           group={view.group}
-          groupName={view.group.name}
           people={otherPayers}
           onClose={() => {
             setPaidByOther(false);
