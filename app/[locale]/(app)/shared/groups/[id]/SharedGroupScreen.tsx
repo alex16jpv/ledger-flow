@@ -11,6 +11,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -64,6 +65,11 @@ import { SettleUpFlow } from "../../SettleUpFlow";
 import { TransactionPickerSheet } from "../../TransactionPickerSheet";
 import { WhatChangesSheet } from "../../WhatChangesSheet";
 import { ArchiveGroupSheet, UndoWriteOffSheet, WriteOffSheet } from "../../WriteOffSheet";
+
+// Two taps behind the screen it belongs to, and 220 kB gz is the screen's budget (T-139).
+const PaidByOtherSheet = dynamic(() =>
+  import("@/features/shared/components/PaidByOtherSheet").then((module) => module.PaidByOtherSheet),
+);
 
 function useNoteOf(view: GroupView): (person: PartyView) => string {
   const t = useTranslations("shared.group.notes");
@@ -278,6 +284,7 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
   const undo = useUndoWriteOff();
   const archive = useArchiveSharedGroup();
   const [picking, setPicking] = useState(false);
+  const [paidByOther, setPaidByOther] = useState(false);
   const [adding, setAdding] = useState<Transaction[]>([]);
   const [splitting, setSplitting] = useState<SharedExpense | null>(null);
   const [settling, setSettling] = useState<PartyView[] | null>(null);
@@ -299,6 +306,12 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
       color: contact?.color ?? null,
     };
   });
+  const named = splitPeople.filter((person) => person.contactId !== null && person.name !== "");
+  // A list of payers missing somebody would move money to the wrong person, so it is all or none.
+  const otherPayers =
+    named.length === view.group.participants.length - 1
+      ? named.map((person) => ({ ...person, contactId: person.contactId ?? "" }))
+      : [];
   const ceilingOf = (person: PartyView): number =>
     view.group.writeOffs.find(
       (one) => one.contactId === person.contactId && one.expenseId === person.expenseId,
@@ -502,6 +515,24 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           }}
           onRecordNew={() => {
             router.push({ pathname: "/transactions/new", query: { group: view.group.id } });
+          }}
+          onSomebodyElsePaid={
+            otherPayers.length === 0
+              ? undefined
+              : () => {
+                  setPicking(false);
+                  setPaidByOther(true);
+                }
+          }
+        />
+      )}
+      {paidByOther && (
+        <PaidByOtherSheet
+          open
+          group={view.group}
+          people={otherPayers}
+          onClose={() => {
+            setPaidByOther(false);
           }}
         />
       )}

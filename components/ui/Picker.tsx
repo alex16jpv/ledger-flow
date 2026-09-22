@@ -4,6 +4,7 @@ import { type ButtonHTMLAttributes, forwardRef, type ReactNode } from "react";
 import { iconProps } from "@/lib/icons/sizes";
 
 import { cn } from "./cn";
+import { useFieldContext } from "./Field";
 
 export interface PickerProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
@@ -16,10 +17,21 @@ export interface PickerProps extends Omit<
 }
 
 export const Picker = forwardRef<HTMLButtonElement, PickerProps>(function Picker(
-  { label, value, placeholder, leading, className, type = "button", ...rest },
+  {
+    label,
+    value,
+    placeholder,
+    leading,
+    className,
+    type = "button",
+    "aria-describedby": describedBy,
+    ...rest
+  },
   ref,
 ) {
   const empty = value === undefined || value === null || value === "";
+  // Inside a Field, its help and its error describe this button; its id would rename the button.
+  const field = useFieldContext();
   return (
     <button
       ref={ref}
@@ -30,6 +42,7 @@ export const Picker = forwardRef<HTMLButtonElement, PickerProps>(function Picker
         className,
       )}
       {...rest}
+      aria-describedby={describedBy ?? field?.describedBy}
     >
       {leading}
       <span className="flex min-w-0 flex-1 flex-col">

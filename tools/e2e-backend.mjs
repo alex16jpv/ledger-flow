@@ -6,6 +6,11 @@ import { resolve } from "node:path";
 const backendDir = resolve(process.env.E2E_BACKEND_DIR ?? "../lag-money-manager");
 const port = process.env.E2E_BACKEND_PORT ?? "3200";
 const appUrl = process.env.E2E_APP_URL ?? "http://localhost:3002";
+// The seed reads SEED_TODAY in its own user's zone and refuses a day that is future there.
+const SEED_ZONE = "America/Bogota";
+// It describes the month in progress from the 22nd on, and the specs read the seed as lastMonth.
+const firstOfThisMonth = `${new Intl.DateTimeFormat("en-CA", { timeZone: SEED_ZONE, year: "numeric", month: "2-digit" }).format(new Date())}-01`;
+
 const env = {
   ...process.env,
   NODE_ENV: "development",
@@ -27,7 +32,11 @@ if (!existsSync(backendDir)) {
   process.exit(1);
 }
 
-const seed = spawnSync("npm", ["run", "seed:test"], { cwd: backendDir, env, stdio: "inherit" });
+const seed = spawnSync("npm", ["run", "seed:test"], {
+  cwd: backendDir,
+  env: { ...env, SEED_TODAY: process.env.SEED_TODAY ?? firstOfThisMonth },
+  stdio: "inherit",
+});
 if (seed.status !== 0) process.exit(seed.status ?? 1);
 
 const server = spawn("npx", ["tsx", "src/server.ts"], { cwd: backendDir, env, stdio: "inherit" });

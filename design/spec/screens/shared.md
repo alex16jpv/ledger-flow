@@ -91,24 +91,44 @@ context, then the bar of what has been collected, then the one sentence that exp
 still owed and what was written off. Then `Settle up` as the one primary action, and under it
 `Add expense`, `Add people`, `Edit` and `Archive`.
 
-**`Add expense` has two ways in and they are one sheet** (`#record-a-new-expense`). It opens the list of
-your expenses that are not in a group yet, and under that list, `Record a new expense` — the same place
-the contact sheet puts `New person`, and for the same reason: a picker whose answer is not there yet
-offers to create it instead of sending you off to find it. **The sheet is then called `Add expense`,
+**`Add expense` has three ways in and they are one sheet** (`#record-a-new-expense`). It opens the
+list of your expenses that are not in a group yet, and under that list, `Record a new expense` and
+`Somebody else paid` — the same place the contact sheet puts `New person`, and for the same reason: a
+picker whose answer is not there yet offers to create it instead of sending you off to find it.
+**The sheet is then called `Add expense`,
 not `Pick from my transactions`**, for the reason the quick sheet stopped being called `Add expense`
 when it grew the other two types: a title narrower than what the sheet does teaches the wrong thing.
 Opened from the form that creates a group, where there is nothing to record into, it only picks and
 says so. It leaves for the transaction form **knowing the group**, and what it records comes back
-here. **An archived group offers neither**: it is
-read, not worked. Leaving by that door leaves the sheet, so anything ticked in the list is left with
-it — the two ways in are alternatives, and the one that goes somewhere else says so on its face.
+here. **An archived group offers none of the three**: it is
+read, not worked. Leaving by a door that goes somewhere else leaves the sheet, so anything ticked in
+the list is left with it — the three ways in are alternatives, and the one that navigates says so on
+its face.
 
 **Recording it from here writes both halves in one gesture**: the movement in your ledger — your
 account, your category, your budget — and the group's expense on top of it, with the group's split
 inherited without asking, exactly as picking one already does. What the form does while it belongs to a
-group is in [add.md](add.md), and the one thing it cannot do is make the expense somebody else's: a
-movement recorded here is money that left **your** account, and a line another participant paid is not
-a movement of yours at all.
+group is in [add.md](add.md), and what it cannot do is make the expense somebody else's: a movement
+recorded here is money that left **your** account, and a line another participant paid is not a
+movement of yours at all. That one is the third door.
+
+**`Somebody else paid` is that third door** (`#expense-somebody-else-paid`), and it is deliberately
+not the transaction form: no money of yours moved, so there is no account, no category and no budget
+to ask about, and a form that asked for them would be asking about a movement that does not exist.
+The sheet asks for the four things such a line is — what it was, when, how much, and **who paid it** —
+and inherits the group's split without asking, exactly as the other two doors do. It writes **one**
+thing and not two: the group's expense, and nothing at all in your ledger. The sheet says so plainly,
+and says when that stops being true: the day you settle with that person it becomes your expense,
+dated that line and in a category you choose then (consequence 4).
+
+**Who paid is one of the other participants, never you** (`#who-paid`) — picking yourself is what the
+other two doors already are — so a group whose only participant is you has nobody to offer and does
+not draw the door at all; `Add people` comes first. And the list is **all of them or none**: a device
+that has not got every participant's name yet does not open a picker missing somebody, because the
+name that is missing is the one you would have chosen, and choosing the wrong one moves money. And **a description is required here**, where the
+transaction form lets it go: a movement with no description is named by its category on every list
+that draws it, and this line has no category to borrow a name from — nor will the expense it turns
+into the day you pay, which carries this description and nothing else.
 
 **A group is not closed when it is created** (`#add-people`). `Add people` is the contact sheet the
 form uses — the same search, the same paging, the same two limits said out loud, and the same
