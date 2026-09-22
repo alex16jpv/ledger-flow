@@ -61,8 +61,8 @@ read"** (ghost). Below 900px the More tab carries the selected look while it is 
   and **"Accept"** (primary). Once it is answered — here or on any other device — or it stops being
   available, the buttons go and a badge says how it ended: `Accepted` (`success`), `Declined`
   (neutral), `No longer available` (neutral). What answering does, and what it shows while it waits
-  for the server, is the invitation's own design (T-129); this screen only fixes where the answers
-  live.
+  for the server, is the invitation's own design in Shared (T-129), where invitations are answered
+  until this inbox exists; this row offers the same two answers.
 - **At the foot**, a row to **Notification settings**.
 - **What arrives while the inbox is open** comes in at the top, under New, and counts as seen at once:
   it is on screen, and the bell is not.

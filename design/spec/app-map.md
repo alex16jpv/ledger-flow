@@ -75,7 +75,7 @@ payments, cash outside the app, and the case where the two of you owe each other
 picker, where the paging and the two limits are said. ✅ Loading and error, and ✅ the `Percent` and
 `Exact` modes of the split sheet. Everything is written in [screens/shared.md](screens/shared.md) and
 built. 🔮 Inviting somebody by email and letting them see the group in their own app is the second
-delivery, with the notification system it needs.
+delivery; the invitation shows up and is answered inside Shared, without waiting for notifications.
 
 ## Notifications ✅
 
@@ -84,7 +84,7 @@ inbox at `/notifications`, newest first, with what is new, what is unread, the t
 invitation and how it ended, ✅ changes to one group folded into one row, ✅ its empty, loading, error,
 offline and this-device-only states, and ✅ Settings › Notifications, one switch per topic and per
 channel that exists. Written in [screens/notifications.md](screens/notifications.md); **nothing of it
-is built yet**: the backend arrives with T-127 and the inbox with T-128. 🔮 Email and push add a column
+is built yet**, and it is not scheduled: the backend is T-127 and the inbox T-128. 🔮 Email and push add a column
 each to the settings page.
 
 ## Categories ✅
