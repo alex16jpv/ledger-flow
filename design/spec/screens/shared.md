@@ -209,8 +209,8 @@ person as if they were a bank or add their debt to your net worth. A person has 
 available balance and no `Pay this card`.
 
 A contact is **archived, never deleted**, its name is unique per user like an account's, and its
-**email is an identifier for inviting them later** — nothing is sent today, and the sheet that asks for
-it says exactly that rather than leaving the field to be guessed at (`#new-person`).
+**email is what an invitation is addressed to** (`#invite`) — nothing is emailed, and the sheet that
+asks for it says exactly that rather than leaving the field to be guessed at (`#new-person`).
 
 ## Creating a group (`#new-group`, `#pick-transactions`)
 
@@ -425,6 +425,112 @@ history, says in one line what archiving did, and offers `Restore` in place of t
 nothing to settle, add, edit or archive in a group that is closed. Restoring does **not** take the
 write-offs back: each one is a decision, and each is undone on its own once the group is open again.
 
+## Invitations (`#invitations`, `#invite`)
+
+**Letting somebody see a group is an invitation, addressed to the email of the person in it.** Nothing
+is emailed — there is no mail system — and the sheets say so: the invitation waits in **their** Shared,
+and they find it the next time they open Ledger Flow with that address. Each group is its own
+invitation: somebody who joined one of your groups is asked again for the next one, and never appears
+in a group they did not accept.
+
+### Inviting (`#invite`, `#invite-waiting`, `#stop-sharing`)
+
+The last row of a group's **People** is `Invite them to see this group`, with a line saying who already
+does and who has not been invited. It opens one sheet with a row per person in the group — you are not
+one of them — and where each stands:
+
+| Where they stand     | The row says                                 | And offers     |
+| -------------------- | -------------------------------------------- | -------------- |
+| No email             | `No email yet`                               | `Add email`    |
+| Not invited          | their email · `not invited`                  | `Invite`       |
+| Waiting              | their email · invited when · open until when | `Withdraw`     |
+| Joined               | `Joined` · since when                        | `Stop sharing` |
+| Declined             | their email · `declined` · when              | `Invite again` |
+| Not answered in time | their email · `not answered in 30 days`      | `Invite again` |
+
+The sheet says, before anything is sent, **what joining shows and what it never shows**: the group —
+its expenses, who paid and how each one is split — and never your accounts, categories or notes (the
+frontier every shared screen keeps). It also says the two limits: an invitation **waits 30 days**, and
+up to **50** of yours can be waiting at once.
+
+**You are never told whether an address has an account.** Right after `Invite` the sheet says it in so
+many words: if that address has no account yet the invitation waits for it all the same, and the row
+reads _waiting_ either way until they answer. Nothing on this screen — not an error, not a delay, not a
+different word — may tell the two apart; that is what keeps the invitation from being a way to find out
+who uses Ledger Flow.
+
+**`Stop sharing`** is the way back from `Joined`, and it is a destructive confirmation that says what
+it does not do: they stop seeing the group and **stay in it as a person you split with** — their
+share, what they paid and what they owe do not move, nor does what counts as yours, and what they
+already put into their own ledger stays theirs. Inviting them again is how they come back.
+
+What ends a waiting invitation **without anybody answering**, all of them on the server:
+
+- **Withdrawing it**, from the row.
+- **Taking the person out of the group**, or archiving the contact — there is nobody left to invite.
+- **Changing the contact's email** — it was addressed to the old one.
+- **Archiving the group** — an archived group is read, not worked. Restoring it does not send them
+  again.
+
+Taking out a person who **joined**, or archiving their contact, ends their sharing the same way
+`Stop sharing` does.
+
+A rename or a new colour reaches a waiting invitation as it is: the person sees the group's name as it
+is now.
+
+### Being invited (`#invitations`, `#invitation-first`, `#invitation-answered`)
+
+**Invitations sit above both faces of Shared**, headed `Invitations` with their count, so they are the
+first thing the section says — and above the empty state too, because the commonest way anybody meets
+Shared is that a friend invited them and they have nothing of their own yet (`#invitation-first`).
+
+A row shows **the only two things an invitation may reveal: the name of the group and who sent it** —
+the sender's name and email as they gave them to Ledger Flow, so the person can tell who it is — with
+when it was sent and until when it is open. Nothing else about the group is shown before joining: not
+its people, not its figures. The two answers are on the row, `Decline` (ghost) and `Accept`
+(primary). The line under the block says what joining lets you see and that nothing of your own ledger
+reaches anybody.
+
+**Answered, the row says how it ended** — `Joined` (`success`) or `Declined` (neutral) — instead of
+vanishing under the finger, and it leaves the next time Shared opens. The same happens when it was
+answered on another device. **The person who invited learns the answer**: `Joined` or `declined` on
+their row. Accepting puts the group among your **Shared groups**; what you see there and what you can
+do with it is [the next section's](#what-this-section-is-not-in-v1) business, and joining touches
+nothing in your ledger.
+
+**An invitation stops being answerable** when it is withdrawn, when the group is archived, or when its
+30 days pass. The row then goes from the block; answering one that stopped a moment ago on the server
+answers `No longer available` on the row, and nothing else happens. The date is judged by the
+device's clock for showing and by the server's for answering.
+
+### In another currency (`#invitation-other-currency`)
+
+Each person keeps one currency, so **a group in another currency cannot be joined**: the row says so —
+"this group is in EUR and your Ledger Flow is in COP, so it can't be joined" — and offers only
+`Decline`. The person who invited is never told why: to them it reads _waiting_ until it is declined or
+runs out, exactly as any other.
+
+### How it is found (`#invitations-in-more`)
+
+Not by chance, and without the notifications inbox, which does not exist yet: while an invitation can be
+answered, **More carries the brand dot** (named "More, 1 invitation waiting"), the **Shared row inside
+the sheet** says "1 invitation waiting for you" with the count beside it, and **from 900px the count
+sits beside Shared in the sidebar**, read as "1 waiting". It is brand, like every sign of something
+from somebody else, and never amber. The count is the invitations that can still be answered, and it
+goes the moment the last one is. The day notifications exist, an invitation is also a notification,
+and these three signs are theirs.
+
+### Offline (`#invitations-offline`)
+
+Invitations come down with everything else, so they are **seen** offline. **Answering needs a
+connection**: the answer goes to somebody else, and only the server can say whether the invitation
+still stands — withdrawn, archived or out of time — so the two buttons are disabled and one line says
+why. **Inviting, withdrawing and `Stop sharing` need one too**, for the same reason seen from the other
+side, and the sheet says so the same way.
+
+**The person who invited sees the answer the next time their app catches up**, like everything else
+that arrives from the server.
+
 ## The four states
 
 - **Data** — the plates above.
@@ -440,12 +546,11 @@ write-offs back: each one is a decision, and each is undone on its own once the 
 unit, and what is left to assign is what says the figures do not add up yet.
 
 Offline, everything in this section is projected from the local mirror like every other figure, and
-whatever includes an unconfirmed write carries the projection mark (component 24). What is shared with
-other people is a second delivery (T-125 onwards); until then a group is yours alone, and nothing here
-says otherwise.
+whatever includes an unconfirmed write carries the projection mark (component 24). A group is yours
+alone until somebody accepts an invitation to it (`#invitations`).
 
 ## What this section is not, in v1
 
 Sharing an income or a transfer, more than one currency inside a group, and weights expressed as shares
-are all out. Inviting someone and letting them see the group in their own app is the second delivery,
-and it changes nothing that is written here.
+are all out. **What somebody who joined sees of the group, and putting their part into their own
+ledger (`Add to my ledger`), is still being designed**; it changes nothing that is written here.

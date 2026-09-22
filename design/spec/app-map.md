@@ -74,8 +74,10 @@ payments, cash outside the app, and the case where the two of you owe each other
 ✅ archiving a group with people still owing, ✅ a group two people paid for, and ✅ the contact
 picker, where the paging and the two limits are said. ✅ Loading and error, and ✅ the `Percent` and
 `Exact` modes of the split sheet. Everything is written in [screens/shared.md](screens/shared.md) and
-built. 🔮 Inviting somebody by email and letting them see the group in their own app is the second
-delivery; the invitation shows up and is answered inside Shared, without waiting for notifications.
+built. ✅ Inviting the people in a group by their email, withdrawing and stopping sharing, and ✅ the
+invitations waiting for you above both faces — with how they are found from More and the sidebar, a
+group in another currency, answered and offline. 🔮 What somebody who joined sees of the group, and
+`Add to my ledger`, are next.
 
 ## Notifications ✅
 
