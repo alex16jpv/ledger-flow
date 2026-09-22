@@ -348,3 +348,61 @@ test("a payment recorded by mistake is undone, and the movement goes with it", a
   await expect(page.getByRole("button", { name: /Beto Cano/ })).toHaveCount(0);
   await expect(page.getByText("Your share $50,000")).toBeVisible();
 });
+
+test("an invitation reaches the other person's Shared, and their answer comes back", async ({
+  page,
+  request,
+  browser,
+}) => {
+  await signUp(page, request);
+  const inviteeEmail = uniqueEmail("invitee");
+  const contact = await request.post("/api/contacts", {
+    headers: { origin: APP },
+    data: { name: "Beto Cano", email: inviteeEmail },
+  });
+  expect(contact.ok()).toBe(true);
+  const contactId = ((await contact.json()) as { id: string }).id;
+  const group = await request.post("/api/shared-groups", {
+    headers: { origin: APP },
+    data: { name: "Villa de Leyva weekend", contactIds: [contactId] },
+  });
+  expect(group.ok()).toBe(true);
+  const groupId = ((await group.json()) as { id: string }).id;
+
+  await page.goto(`/shared/groups/${groupId}`);
+  await page.getByRole("button", { name: /Invite them to see this group/ }).click();
+  const sheet = page.getByRole("dialog", { name: "Invite to Villa de Leyva weekend" });
+  await sheet.getByRole("button", { name: "Invite" }).click();
+  // The inviter reads "waiting" whether or not that address has an account yet.
+  await expect(sheet.getByText(/you are not told which/)).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Withdraw" })).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  const other = await browser.newContext({ baseURL: APP });
+  const registered = await other.request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: { name: "Beto", email: inviteeEmail, password: "LedgerFlow!2026" },
+  });
+  expect(registered.ok()).toBe(true);
+  const invitee = await other.newPage();
+  await invitee.goto("/shared");
+  const invitations = invitee.getByRole("region", { name: "Invitations" });
+  await expect(invitations).toContainText("Shared E2E invited you to Villa de Leyva weekend");
+  if (test.info().project.name === "mobile") {
+    await expect(invitee.getByRole("button", { name: "More, 1 invitation waiting" })).toBeVisible();
+  } else {
+    await expect(invitee.getByRole("link", { name: /^Shared.*1 waiting/ })).toBeVisible();
+  }
+  await expectNoAxeViolations(invitee);
+  await invitations.getByRole("button", { name: "Accept" }).click();
+  await expect(invitations.getByText("Joined", { exact: true })).toBeVisible();
+  await other.close();
+
+  await page.reload();
+  await page.getByRole("button", { name: /Invite them to see this group/ }).click();
+  await expect(
+    page
+      .getByRole("dialog", { name: "Invite to Villa de Leyva weekend" })
+      .getByRole("button", { name: "Stop sharing" }),
+  ).toBeVisible();
+});
