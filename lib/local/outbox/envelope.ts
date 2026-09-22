@@ -21,7 +21,7 @@ export const OUTBOX_ACTIONS = {
     "undoWriteOff",
   ],
   sharedExpense: ["create", "update"],
-  settlement: ["create"],
+  settlement: ["create", "delete"],
 } as const satisfies Record<OutboxEntity, readonly string[]>;
 
 export type OutboxAction<E extends OutboxEntity = OutboxEntity> =
@@ -47,6 +47,8 @@ export interface OperationPayload {
   effect?: MoneyEffect;
   // Mirror rows this write minted that the server mints its own of: dropped when it answers.
   minted?: string[];
+  // Mirror rows it tombstoned that carry no operation of their own: a payment's movements.
+  removed?: string[];
   // What a write-off gave up on, and what archiving gives up on for everybody still owing. The
   // wire carries neither: the server works them out, and the mirror has to say the same thing.
   writtenOff?: number;

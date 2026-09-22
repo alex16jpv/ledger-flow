@@ -167,7 +167,15 @@ a sentence rather than leaving it to be worked out.
 ## A person (`#person`)
 
 One contact across every group: what they owe you or you owe them, the groups they appear in with their
-state in each, and the payments already made. `Settle up` is the primary action.
+state in each, and the payments already made. `Settle up` is the primary action, and **each payment in
+that list opens the one thing that can be done to it: undoing it** (`#undo-a-payment`).
+
+**A payment row says what a payment knows**: which way it went, **the net that changed hands** — one
+payment can settle both directions at once, and a row has one figure — the day, and whether it was
+cash the app never saw. It does not name an account or a group, and that is not an omission — a
+payment carries neither. It **belongs to the person**, covering the oldest line first across every
+group shared with them, and the account it touched belongs to the movement it wrote. That movement's
+own row is where both are read ([transactions.md](transactions.md)).
 
 **A person is not an account**, and this screen says so at the bottom in one line: a person has no
 balance of their own and never appears among your accounts, in the account picker, in a transfer, in
@@ -335,6 +343,45 @@ otherwise.
   leave your share of the tickets counted nowhere. **A smaller amount than the net covers what she
   owes you first**, oldest expense first, and what you owe her is recorded only once that is square —
   so a partial payment never leaves you with an expense you have not paid for.
+
+### Undoing a payment (`#undo-a-payment`)
+
+**A payment recorded by mistake is undone, never balanced with a second one.** A payment in the other
+direction is a real event — money moving — and using it to correct a typo would leave two movements
+that never happened and a trail nobody can read. So the payment goes, and with it everything it wrote.
+
+**The doors are the places a payment is looked at from.** The `Payments` list on a person
+(`#person`); **the movement's own detail**, because that movement says it belongs to a payment and
+cannot be edited or deleted on its own ([transactions.md](transactions.md)), so that is exactly where
+somebody who found it in Transactions will ask; and, for **a block of guests**, the shared card of the
+expense it lives in — a block is not a person and has no page, so its expense is the only place it is
+read. One sheet, reached from any of them. While the payment is
+still being read the door **says so** rather than going missing and coming back.
+
+**The sheet says what goes and what stays**, because undoing reaches further than the row it is opened
+from:
+
+- **What it gives back:** the amount goes back to being owed, in the direction it was paid, and **a
+  full settle-up carries both directions**, so the sheet names both and its button names neither. A
+  destructive confirmation that named one half of what it is about to put back would be a message that
+  lies. It is not a refund and no new movement is written — what was recorded stops having happened.
+- **What goes with it:** the movement it wrote, whichever shape it had — the collection that arrived,
+  the expense per line of paying somebody back, the refund that left. They are its money and they go
+  when it goes. **A payment made in cash outside the app wrote none**, so nothing moves in any account
+  and the sheet says that instead.
+- **What moves:** what counts as yours goes **back up** on the expenses it had lowered, each in the
+  month that expense happened — the mirror of a payment, and for the same reason a closed month can
+  change — and each one keeps the change in its history.
+- **What does not move:** no expense leaves a group, nobody leaves a group, and **a write-off stays a
+  write-off**. Undoing a payment is about one payment.
+- **What is worked out again:** everything else that person has paid is imputed again over the lines
+  still open, oldest first. That is the same rule as ever — a payment belongs to the person, not to
+  the expense it landed on — and it is why this is safe to offer rather than something to be afraid
+  of.
+
+The confirmation is the destructive one the section already uses for `Write off` and `Archive`, and it
+names the amount. **Undoing is not itself undoable**: what comes back is the debt, and recording the
+payment again is the way back — the sheet does not pretend otherwise.
 
 ## Writing off, and archiving (`#write-off`, `#archive-with-people-owing`)
 

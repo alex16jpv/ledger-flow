@@ -326,6 +326,10 @@ export const ROUTES: Record<RouteKey, Route> = {
       await confirmRow(tx, "settlement", result.settlement);
     },
   }),
+  "settlement:delete": route<unknown>({
+    send: ({ entityId }) => api<unknown>(`/settlements/${entityId}`, { method: "DELETE" }),
+    confirm: confirmRemoval,
+  }),
 
   "sharedExpense:create": route<SharedExpense>({
     send: ({ payload }) =>

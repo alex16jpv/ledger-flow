@@ -1607,6 +1607,21 @@
       "takeOut": "Sacar a {name}",
       "applyToExistingOne": "{count, plural, one {Meter a {name} en el gasto que ya hay} other {Meter a {name} en los # gastos que ya hay}}",
       "addOne": "Añadir a {name}"
+    },
+    "undoPayment": {
+      "title": "¿Deshacer este pago?",
+      "goesBackIn": "Los {amount} que te pagaron vuelven a estar pendientes.",
+      "goesBackOut": "Los {amount} que entregaste vuelven a estar pendientes.",
+      "goesBackBoth": "Los {collected} que te pagaron y los {paid} que entregaste vuelven los dos a estar pendientes.",
+      "notARefund": "Deshacer un pago no es una devolución: lo que se registró deja de haber pasado, y no se escribe ningún movimiento nuevo.",
+      "movementGoesWithIt": "El movimiento que escribió se va con él, porque ese dinero es del pago.",
+      "wroteNoMovement": "Fue efectivo que la app nunca vio, así que no escribió ningún movimiento y no se mueve ningún saldo.",
+      "countsAsYours": "Lo que cuenta como tuyo vuelve a subir en los gastos que había bajado, cada uno en el mes en que pasó, y cada uno lo guarda en su historial.",
+      "nothingElse": "No se deshace nada más: ningún gasto sale de su grupo, y lo que diste por perdido sigue perdido. Todo lo demás que ha pagado {name} se vuelve a imputar sobre lo que siga abierto, del más viejo al más nuevo.",
+      "nothingElseUnnamed": "No se deshace nada más: ningún gasto sale de su grupo, y lo que diste por perdido sigue perdido. Todo lo demás que se haya pagado se vuelve a imputar sobre lo que siga abierto, del más viejo al más nuevo.",
+      "confirm": "Deshacer el pago",
+      "done": "Pago deshecho",
+      "action": "Deshacer el pago"
     }
   },
   "transactions": {
@@ -1833,7 +1848,9 @@
         "aheadSub": "de más",
         "stillOwedSub": "aún debe",
         "deleteGoesBack": "{account} sube {amount}, y nada más se mueve.",
-        "unreadable": "Este está repartido con otras personas, y eso no se ha podido leer."
+        "unreadable": "Este está repartido con otras personas, y eso no se ha podido leer.",
+        "paymentUnreadable": "No se pudo leer el pago al que pertenece, así que desde aquí todavía no hay forma de deshacerlo.",
+        "guestPayments": "Pagado por los invitados"
       },
       "settlementLocked": "Este movimiento pertenece a un pago entre personas, así que no se edita ni se borra por su cuenta."
     },

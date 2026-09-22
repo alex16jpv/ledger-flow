@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { sectionOf } from "@/features/shared/ledger";
@@ -117,6 +118,56 @@ function render(collected: number) {
   );
 }
 
+// A block of guests lives in this expense alone, so this is the only place its payments are read (T-138).
+function renderWithGuests() {
+  const withGuests = sharedExpense({
+    id: "s1",
+    description: "Beach club",
+    amount: 230_000,
+    split: {
+      mode: "EQUAL",
+      guests: { count: 20, name: null },
+      shares: [
+        share({ party: "USER", contactId: null, amount: 10_000 }),
+        share({ contactId: ANA, amount: 20_000 }),
+        share({ party: "GUESTS", contactId: null, amount: 200_000 }),
+      ],
+    },
+  });
+  const section = sectionOf(
+    {
+      groups: [withTotals(sharedGroup({ id: "g1", name: "Night out" }))],
+      expenses: [withGuests],
+      settlements: [
+        settlement({
+          id: "p9",
+          counterparty: { kind: "GUESTS", contactId: null, expenseId: "s1" },
+          collected: 120_000,
+        }),
+      ],
+    },
+    [contact({ id: ANA, name: "Ana Ruiz" })],
+  );
+  const [view] = section.groups;
+  if (!view) throw new Error("no group");
+  renderWithProviders(
+    <QueryProvider>
+      <ToastProvider>
+        <SharedExpenseCard
+          row={{
+            ...transaction({ id: "t1", amount: 230_000 }),
+            sharedExpenseId: "s1",
+            sharedGroupId: "g1",
+          }}
+          section={section}
+          view={view}
+          expense={withGuests}
+        />
+      </ToastProvider>
+    </QueryProvider>,
+  );
+}
+
 describe("the shared card of a movement", () => {
   it("leads with what counts as yours and says how it got there", () => {
     render(50_000);
@@ -136,5 +187,32 @@ describe("the shared card of a movement", () => {
     expect(screen.getByText("Somebody paid you back")).toBeInTheDocument();
     // An event that changed nothing says so: splitting never moves the figure.
     expect(screen.getByText("no change")).toBeInTheDocument();
+  });
+
+  it("lists what a block of guests has paid, and undoes it from here", async () => {
+    fetchMock.mockImplementation((input, init) =>
+      Promise.resolve(
+        (init?.method ?? "GET") === "DELETE"
+          ? json({ message: "ok" })
+          : json({
+              data: [],
+              pagination: { limit: 20, offset: 0, total: 0, hasMore: false, nextCursor: null },
+            }),
+      ),
+    );
+    renderWithGuests();
+
+    expect(screen.getByRole("heading", { name: "Paid by the guests" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Paid you \$120,000/ }));
+    const sheet = screen.getByRole("dialog", { name: "Undo this payment?" });
+    expect(sheet).toHaveTextContent("The $120,000 they paid you goes back to being owed");
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo the payment" }));
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([, init]) => (init?.method ?? "GET") === "DELETE")).toBe(
+        true,
+      );
+    });
   });
 });

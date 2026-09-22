@@ -4593,3 +4593,58 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   reachable before this task from the picker, which lists movements recorded offline, and the ordinary
   case from now on. `/transactions/new` gained a route component that dispatches on the query string,
   so the plain form keeps its own screen.
+
+## 2026-09-21 · Undoing a payment: one sheet, two doors, and the movements go with it (T-138)
+
+- **Context:** `DELETE /settlements/{id}` has existed since T-116 and nothing offered it. A payment
+  recorded by mistake could not be taken back, and the movement it wrote could not be edited or
+  deleted on its own either (`SETTLEMENT_MOVEMENT_LOCKED`) — the detail said so and named a door that
+  was not built.
+- **Decision:** the doors are the places a payment is looked at from — the `Payments` list on a person,
+  the movement's own detail, and the shared card of the expense a block of guests lives in — and they
+  open **one** sheet, over one list of rows. Correcting a payment with a
+  second payment in the other direction was the alternative and it is wrong: a payment is a real
+  event, so using one to fix a typo leaves two movements that never happened.
+- **The queue does it in one operation.** `settlement:delete` tombstones the payment **and the
+  movements carrying its `sharedSettlementId`**, found by walking the mirror rather than by reading
+  the create's `payload.minted`: by then the server has minted its own ids and `dropMinted` has
+  replaced the device's. The operation carries **one** effect, the net of what those movements did to
+  the one account they share — the same shape `netEffect` writes on the way in, reversed — because
+  `projectBalances` reads effects and never the rows.
+- **Nothing else is _computed_.** What counts as yours, what each person still owes and every group's
+  totals are derived on read (`derive/shared.ts`), so taking the payment and its movements out of the
+  mirror is the whole of it. Re-imputing by hand here would be a second copy of the server's rule with
+  no fixture holding it.
+- **But it is projected twice, and both were needed.** `reproject.ts` gains a `settlement:delete` rule,
+  or the mirror puts the payment back alive the moment the server confirms the undo (`confirmRemoval`
+  re-lands the baseline through `applyOperation`). And the movements it tombstoned carry **no operation
+  of their own**, so a pull landing while the undo is still queued would raise them: the operation
+  names them in `payload.removed`, and `queuedMirror` files it under each of their row keys, where the
+  existing `transaction:delete` rule tombstones them again. Both are pinned by tests that fail without
+  the fix.
+- **What the undo cannot always move is the balance.** `undoEffect` reads the movements from the
+  mirror, so when they are not there — the moment after an online create, where `dropMinted` has
+  dropped the device's rows and the server's have not arrived, or a payment recorded on another device
+  — the operation carries no effect and the account keeps showing the payment's money until the server
+  answers. Online that is the same round trip; offline it is a real, short-lived gap, and the
+  alternative (reading the create's effect back out of the queue) buys a case that only exists while a
+  pull is owed.
+- **Two costs taken deliberately.** The movements are found by **walking** the transactions store:
+  there is no `sharedSettlementId` index and adding one is a schema version for an action somebody
+  takes by hand, once, on a screen they had to open first — `readTransactionTags` already walks the
+  same store on every form. And a create and an undo queued back to back are **not folded**
+  (`coalesce.ts` cancels only transactions): the server imputes a payment and then un-imputes it, one
+  round trip for nothing, and folding a create whose projection minted rows is more machinery than
+  the trip is worth.
+- **The one figure a sheet names has to be the true one.** A full settle-up between two people carries
+  **both** halves in one payment, so the sheet names both and its button names none — a destructive
+  confirmation that said "Undo the $60,000" while also putting back the $30,000 you owe them would be
+  a message that lies. The row that opens it names the **net**, which is what actually changed hands.
+- **A block of guests needed a door of its own.** It is not a person, it never reaches `People` and it
+  has no page, so its payments were listed nowhere — and a payment to one could not be undone while
+  the expense could not be deleted either (`GUEST_BLOCK_HAS_PAYMENTS`). They are listed in the shared
+  card of the expense the block lives in, which is where a block is read at all, through the same
+  `PaymentRows` the person's list uses.
+- **Consequence:** `settlement` gains its second outbox action, and the movement's detail gains the
+  guard it was missing — while the section cannot be read the button is not drawn and the screen says
+  why, rather than offering a door that fails.

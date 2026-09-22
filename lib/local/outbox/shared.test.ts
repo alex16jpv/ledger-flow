@@ -18,6 +18,7 @@ import {
   archiveSharedGroup,
   createSharedExpense,
   createSharedGroup,
+  deleteSettlement,
   recordSettlement,
   removeParticipant,
   restoreSharedGroup,
@@ -291,6 +292,95 @@ describe("recording a payment with no network", () => {
     });
   });
 
+  // T-138: its money belongs to the payment, so undoing it takes what it wrote and puts the balance back.
+  it("takes the movements a payment wrote when the payment is undone", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    const payment = await recordSettlement({
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 60_000,
+      paid: 30_000,
+      outsideApp: false,
+      accountId: "a1",
+      lines: [
+        {
+          expenseId: "e9",
+          date: "2026-08-14T20:00:00.000Z",
+          description: "Tickets",
+          amount: 30_000,
+          categoryId: "c1",
+        },
+      ],
+      refunded: 0,
+    });
+
+    await deleteSettlement(payment.id);
+
+    expect((await vault.db.get("settlements", payment.id))?.deleted).toBe(1);
+    const movements = await vault.db.getAll("transactions");
+    expect(movements.every((record) => record.deleted === 1)).toBe(true);
+    const operation = (await pendingOperations(vault.db)).at(-1);
+    // The net the create added to the account is what the undo takes off it again.
+    expect(operation).toMatchObject({
+      entity: "settlement",
+      action: "delete",
+      payload: {
+        effect: { before: { type: "SETTLEMENT", amount: 30_000, toAccountId: "a1" }, after: null },
+      },
+    });
+  });
+
+  it("leaves the payment undone once the server has taken it", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    const payment = await recordSettlement({
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 60_000,
+      paid: 0,
+      outsideApp: false,
+      accountId: "a1",
+      lines: [],
+      refunded: 0,
+    });
+    // The server has it now, movement included, the way a pull would have left it.
+    const movement = (await vault.db.getAll("transactions"))[0]?.row;
+    const tx = writeTransaction(vault.db);
+    await reconcileRow(tx, "settlement", payment.id, payment);
+    if (movement) await reconcileRow(tx, "transaction", movement.id, movement);
+    await tx.done;
+    reportOnline(true);
+    answerBatch(fetchMock);
+
+    await deleteSettlement(payment.id);
+
+    expect((await vault.db.get("settlements", payment.id))?.deleted).toBe(1);
+    expect((await vault.db.get("transactions", movement?.id ?? ""))?.deleted).toBe(1);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+
+  it("undoes a payment that wrote nothing, and moves no balance doing it", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    const payment = await recordSettlement({
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 60_000,
+      paid: 0,
+      outsideApp: true,
+      accountId: null,
+      lines: [],
+      refunded: 0,
+    });
+
+    await deleteSettlement(payment.id);
+
+    expect((await vault.db.get("settlements", payment.id))?.deleted).toBe(1);
+    expect(await vault.db.getAll("transactions")).toEqual([]);
+    expect((await pendingOperations(vault.db)).at(-1)?.payload).toEqual({ removed: [] });
+  });
+
   it("writes no movement and moves no balance when the cash never reached an account", async () => {
     const vault = await vaultWith();
     reportOnline(false);
@@ -497,6 +587,34 @@ describe("what a payment puts on the wire", () => {
 
 // D-23: a pull landing while the write is still queued must not lose what it projected.
 describe("what a pull sees while the group's write is still queued", () => {
+  // T-138: the payment and the movements it wrote carry the undo, or a pull raises them again.
+  it("keeps a payment undone, and the movements that went with it", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    const payment = await recordSettlement({
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 60_000,
+      paid: 0,
+      outsideApp: false,
+      accountId: "a1",
+      lines: [],
+      refunded: 0,
+    });
+    const movement = (await vault.db.getAll("transactions"))[0]?.row;
+    const stored = { ...payment, updatedAt: "2026-09-20T12:00:00.000Z" };
+
+    await deleteSettlement(payment.id);
+
+    const tx = writeTransaction(vault.db);
+    await reconcileRow(tx, "settlement", payment.id, stored);
+    if (movement) await reconcileRow(tx, "transaction", movement.id, movement);
+    await tx.done;
+
+    expect((await vault.db.get("settlements", payment.id))?.deleted).toBe(1);
+    expect((await vault.db.get("transactions", movement?.id ?? ""))?.deleted).toBe(1);
+  });
+
   it("keeps the write-off the archive gave up on your behalf", async () => {
     const vault = await vaultWith();
     const stored = sharedGroup({ id: "g1", updatedAt: "2026-09-01T00:00:00.000Z" });

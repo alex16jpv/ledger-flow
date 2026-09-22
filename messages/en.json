@@ -1607,6 +1607,21 @@
       "takeOut": "Take {name} out",
       "applyToExistingOne": "{count, plural, one {Put {name} into the 1 expense already here} other {Put {name} into the # expenses already here}}",
       "addOne": "Add {name}"
+    },
+    "undoPayment": {
+      "title": "Undo this payment?",
+      "goesBackIn": "The {amount} they paid you goes back to being owed.",
+      "goesBackOut": "The {amount} you handed over goes back to being owed.",
+      "goesBackBoth": "The {collected} they paid you and the {paid} you handed over both go back to being owed.",
+      "notARefund": "Undoing a payment is not a refund: what was recorded stops having happened, and no new movement is written.",
+      "movementGoesWithIt": "The movement it wrote goes with it, because that money is the payment’s.",
+      "wroteNoMovement": "It was cash the app never saw, so it wrote no movement and no balance moves.",
+      "countsAsYours": "What counts as yours goes back up on the expenses it had lowered, each in the month that expense happened, and each one keeps the change in its history.",
+      "nothingElse": "Nothing else is undone: no expense leaves its group, and what was written off stays written off. Everything else {name} has paid is imputed again over what is still open, oldest first.",
+      "nothingElseUnnamed": "Nothing else is undone: no expense leaves its group, and what was written off stays written off. Everything else that has been paid is imputed again over what is still open, oldest first.",
+      "confirm": "Undo the payment",
+      "done": "Payment undone",
+      "action": "Undo the payment"
     }
   },
   "transactions": {
@@ -1833,7 +1848,9 @@
         "aheadSub": "ahead",
         "stillOwedSub": "still owed",
         "deleteGoesBack": "{account} goes back up by {amount}, and nothing else moves.",
-        "unreadable": "This one is split with other people, and that could not be read."
+        "unreadable": "This one is split with other people, and that could not be read.",
+        "paymentUnreadable": "The payment it belongs to could not be read, so there is no way to undo it from here yet.",
+        "guestPayments": "Paid by the guests"
       },
       "settlementLocked": "This movement belongs to a payment between people, so it is not edited or deleted on its own."
     },

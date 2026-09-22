@@ -50,13 +50,22 @@ export function queuedMirror(
   const rows = new Map<string, OutboxOperation[]>();
   const touched = new Set<string>();
   let defaultAccountId: string | null = null;
+  const under = (key: string, operation: OutboxOperation): void => {
+    const queued = rows.get(key);
+    if (queued) queued.push(operation);
+    else rows.set(key, [operation]);
+  };
   for (const operation of [...operations].sort((left, right) => left.seq - right.seq)) {
     const key = rowKey(operation.entity, operation.entityId);
     touched.add(key);
     if (!willBeSent(operation)) continue;
-    const queued = rows.get(key);
-    if (queued) queued.push(operation);
-    else rows.set(key, [operation]);
+    under(key, operation);
+    // D-24 for a row with no operation of its own: a payment's movements go when the payment does.
+    for (const id of operationPayload(operation).removed ?? []) {
+      const movement = rowKey("transaction", id);
+      touched.add(movement);
+      under(movement, operation);
+    }
     if (operation.entity === "account" && operation.action === "setDefault") {
       defaultAccountId = operation.entityId;
     }
@@ -209,6 +218,12 @@ const RULES: Partial<Record<RouteKey, Rule>> = {
       ],
     };
   },
+
+  // A payment's movements reproject through it too: they are queued under their own row key.
+  "settlement:delete": (row, operation) => ({
+    ...(row as Settlement),
+    deletedAt: operation.occurredAt,
+  }),
 
   "transaction:update": (row, operation) => merge(row as SyncTransaction, operation),
   "transaction:delete": (row, operation) => ({

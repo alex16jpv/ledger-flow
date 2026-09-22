@@ -72,9 +72,15 @@ filter gains it**; the Add form does not, because a payment is recorded from `Se
 else, and a type in the form that the form cannot correctly create is the contradiction T-86 had to
 undo for Transfer categories.
 
-**Its detail offers no Edit and no Delete** (`#payment-detail`): the money belongs to the payment, and
+**Its detail reads as a payment** — the `hand-coins` tile of its row, the counterparty's name, and the
+shared groups it settled on a badge — and **offers no Edit and no Delete** (`#payment-detail`): the money belongs to the payment, and
 the server refuses to move it on its own. The screen says that in one line rather than offering two
-buttons that always fail — and it does not promise a door that does not exist yet either.
+buttons that always fail — and under that line it offers **the door that does exist**, `Undo the
+payment`, which is the same sheet the person's `Payments` list opens and takes this movement with it
+([shared.md](shared.md)). A line that named a door and left the reader to find it was the cost of
+saying it before the door was built. **While the payment cannot be read** the button is not drawn and
+the screen says why, the way it already does for an expense it cannot read: a door that fails is worse
+than a door that is honestly missing for a moment.
 
 ## A shared expense (`#shared-expense`)
 
@@ -83,6 +89,13 @@ the figure Stats and the budgets use — and one sentence saying how it got ther
 whatever is still owed or was written off. Then a row per participant with their share and their
 state, and two actions, `Edit split` and `Settle up`. The attribute table gains a **Shared group** row
 that opens the group.
+
+**When a block of guests has paid, its payments are listed here** (`#shared-expense-guest-payments`),
+under `Paid by the guests`, and each one undoes itself like any other ([shared.md](shared.md)). This is
+the only place they can be: a block lives in **this expense alone** — it is not a person, it never
+reaches the `People` face, and it has no page of its own — so without this list a payment to a block
+could not be taken back, while the expense could not be deleted either, because the server refuses to
+lose a block that has paid (`GUEST_BLOCK_HAS_PAYMENTS`).
 
 **Then the history, and it is not an extra.** One line per event that could have changed the figure,
 with its date, what happened and the figure it left behind — and an event that changed nothing says

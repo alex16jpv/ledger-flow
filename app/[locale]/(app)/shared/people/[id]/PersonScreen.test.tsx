@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { QueryProvider } from "@/lib/query/QueryProvider";
@@ -119,6 +120,84 @@ describe("PersonScreen", () => {
     expect(group).toHaveTextContent("Paid $20,000 of");
     expect(screen.getByText("Paid you $20,000")).toBeInTheDocument();
     expect(screen.getByText(/A person is not an account/)).toBeInTheDocument();
+  });
+
+  // The one thing that can be done to a payment, and the only door to the movement it wrote (T-138).
+  it("undoes a payment from its row, saying what goes with it", async () => {
+    view();
+
+    await userEvent.click(await screen.findByRole("button", { name: /Paid you \$20,000/ }));
+    const sheet = screen.getByRole("dialog", { name: "Undo this payment?" });
+    expect(sheet).toHaveTextContent("The $20,000 they paid you goes back to being owed");
+    expect(sheet).toHaveTextContent("The movement it wrote goes with it");
+    expect(sheet).toHaveTextContent("what was written off stays written off");
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo the payment" }));
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.filter(
+          ([input, init]) =>
+            (init?.method ?? "GET") === "DELETE" && urlOf(input).endsWith("/api/settlements/p1"),
+        ),
+      ).toHaveLength(1);
+    });
+    expect(await screen.findByText("Payment undone")).toBeInTheDocument();
+  });
+
+  // One payment settles both directions, so the row names the net and the sheet names both halves.
+  it("names the net on the row and both halves in the sheet when it went both ways", async () => {
+    fetchMock.mockImplementation((input) => {
+      const url = urlOf(input);
+      if (url.startsWith("/api/contacts/")) return Promise.resolve(json(ana));
+      if (url.startsWith("/api/contacts")) return Promise.resolve(page([ana]));
+      if (url.includes("/expenses")) return Promise.resolve(page(expenses));
+      if (url.startsWith("/api/settlements"))
+        return Promise.resolve(page([{ ...paid, collected: 60_000, paid: 30_000 }]));
+      return Promise.resolve(page([group]));
+    });
+    view();
+
+    await userEvent.click(await screen.findByRole("button", { name: /Paid you \$30,000/ }));
+    const sheet = screen.getByRole("dialog", { name: "Undo this payment?" });
+    expect(sheet).toHaveTextContent(
+      "The $60,000 they paid you and the $30,000 you handed over both go back to being owed",
+    );
+    expect(sheet).not.toHaveTextContent("Undo the $60,000");
+  });
+
+  it("says what went wrong and keeps the payment when the server refuses the undo", async () => {
+    const base = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) =>
+      (init?.method ?? "GET") === "DELETE"
+        ? Promise.resolve(json({ code: "INTERNAL", message: "no" }, { status: 500 }))
+        : (base?.(input, init) ?? Promise.reject(new Error("no route"))),
+    );
+    view();
+
+    await userEvent.click(await screen.findByRole("button", { name: /Paid you \$20,000/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Undo the payment" }));
+
+    expect(await screen.findByText(/went wrong|try again|Something/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Paid you \$20,000/ })).toBeInTheDocument();
+  });
+
+  it("says a payment made in cash moved no balance, because it wrote no movement", async () => {
+    fetchMock.mockImplementation((input) => {
+      const url = urlOf(input);
+      if (url.startsWith("/api/contacts/")) return Promise.resolve(json(ana));
+      if (url.startsWith("/api/contacts")) return Promise.resolve(page([ana]));
+      if (url.includes("/expenses")) return Promise.resolve(page(expenses));
+      if (url.startsWith("/api/settlements"))
+        return Promise.resolve(page([{ ...paid, outsideApp: true }]));
+      return Promise.resolve(page([group]));
+    });
+    view();
+
+    await userEvent.click(await screen.findByRole("button", { name: /Paid you \$20,000/ }));
+    const sheet = screen.getByRole("dialog", { name: "Undo this payment?" });
+    expect(sheet).toHaveTextContent("it wrote no movement and no balance moves");
+    expect(sheet).not.toHaveTextContent("The movement it wrote goes with it");
   });
 
   // The figure is the ledger's: a screen that draws $0 while it is coming is a screen that lies.

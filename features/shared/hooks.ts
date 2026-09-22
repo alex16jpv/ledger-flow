@@ -16,6 +16,7 @@ import {
   createContact,
   createSharedExpense,
   createSharedGroup,
+  deleteSettlement,
   fetchContact,
   fetchContacts,
   fetchContactsPage,
@@ -152,6 +153,11 @@ export function useSaveSharedSplit() {
 export function useRecordSettlement() {
   const invalidate = useSharedInvalidation();
   return useMutation({ mutationFn: recordSettlement, onSuccess: invalidate });
+}
+
+export function useDeleteSettlement() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({ mutationFn: deleteSettlement, onSuccess: invalidate });
 }
 
 export interface WriteOffVariables extends WriteOffTarget {
