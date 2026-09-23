@@ -42,7 +42,6 @@ describe("writing a contact through the outbox", () => {
     expect(created).toMatchObject({
       name: "Beto Cano",
       color: "TEAL",
-      linkedUserId: null,
       archivedAt: null,
       userId: profile().id,
     });

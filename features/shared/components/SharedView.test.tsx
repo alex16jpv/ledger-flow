@@ -4,7 +4,14 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
-import { contact, receivedInvitation, sharedExpense, sharedGroup } from "@/lib/testing/vault";
+import {
+  contact,
+  joinedExpense,
+  joinedGroup,
+  receivedInvitation,
+  sharedExpense,
+  sharedGroup,
+} from "@/lib/testing/vault";
 import type { SharedGroup, SharedShare, SyncSharedGroup } from "@/types/api";
 
 import { SharedView } from "./SharedView";
@@ -76,11 +83,17 @@ function serve(
     settlements?: unknown[];
     contacts?: unknown[];
     invitations?: unknown[];
+    joined?: unknown[];
+    joinedExpenses?: unknown[];
   } = {},
 ) {
   fetchMock.mockImplementation((input) => {
     const url = urlOf(input);
     if (url.startsWith("/api/contacts")) return Promise.resolve(page(rows.contacts ?? contacts));
+    if (url.startsWith("/api/joined-groups/")) {
+      return Promise.resolve(page(rows.joinedExpenses ?? []));
+    }
+    if (url.startsWith("/api/joined-groups")) return Promise.resolve(page(rows.joined ?? []));
     if (url.includes("/expenses")) return Promise.resolve(page(rows.expenses ?? expenses));
     if (url.startsWith("/api/settlements")) return Promise.resolve(page(rows.settlements ?? []));
     if (url.startsWith("/api/invitations")) return Promise.resolve(page(rows.invitations ?? []));
@@ -176,6 +189,47 @@ describe("SharedView", () => {
     view();
 
     expect(await screen.findByRole("link", { name: /Night out/ })).toBeInTheDocument();
+  });
+
+  it("lists a group shared with you under your own, with where you stand with who shared it", async () => {
+    serve({ joined: [joinedGroup()], joinedExpenses: [joinedExpense()] });
+    search = "face=groups";
+    view();
+
+    const row = await screen.findByRole("link", { name: /Villa de Leyva weekend/ });
+    expect(row).toHaveAttribute("href", "/shared/joined/g9");
+    expect(row).toHaveTextContent("Shared by Ana Ruiz");
+    expect(row).toHaveTextContent("Paid");
+    expect(screen.getByRole("heading", { name: "Shared with you" })).toBeInTheDocument();
+  });
+
+  it("counts what you owe in a group shared with you, and closes the People arithmetic", async () => {
+    const unpaid = joinedExpense({
+      split: {
+        mode: "EQUAL",
+        guests: null,
+        shares: [
+          share({ party: "USER", contactId: null, amount: 80_000 }),
+          share({ contactId: "k2", amount: 80_000 }),
+        ],
+      },
+    });
+    serve({ joined: [joinedGroup()], joinedExpenses: [unpaid] });
+    view();
+
+    expect(
+      await screen.findByText("$80,000 more to Ana Ruiz, in 1 group shared with you."),
+    ).toBeInTheDocument();
+    const summary = screen.getByText("You owe").parentElement;
+    expect(summary).toHaveTextContent("80,000");
+  });
+
+  it("opens on the groups when everything here was shared with you", async () => {
+    serve({ groups: [], contacts: [], joined: [joinedGroup()], joinedExpenses: [] });
+    view();
+
+    expect(await screen.findByRole("link", { name: /Villa de Leyva weekend/ })).toBeInTheDocument();
+    expect(screen.queryByText("Nothing shared yet")).not.toBeInTheDocument();
   });
 
   it("says there is nothing yet rather than drawing two empty faces", async () => {

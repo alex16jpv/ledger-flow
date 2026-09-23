@@ -37,6 +37,8 @@ export const ERROR_CODES = [
   "INVITATION_TO_SELF",
   "INVITATION_LIMIT_REACHED",
   "INVITATION_UNAVAILABLE",
+  "SHARED_LINE_NOT_PAID",
+  "SHARED_LINE_IN_LEDGER",
   "ID_TAKEN",
   "STALE_UPDATE",
   "CURRENCY_LOCKED",
@@ -105,6 +107,8 @@ const SHOWN: Readonly<Record<ErrorCode, readonly [ErrorScope, string?]>> = {
   INVITATION_TO_SELF: ["form"],
   INVITATION_LIMIT_REACHED: ["form"],
   INVITATION_UNAVAILABLE: ["form"],
+  SHARED_LINE_NOT_PAID: ["form"],
+  SHARED_LINE_IN_LEDGER: ["form"],
   // The outbox answers ID_TAKEN by minting a new id and retrying (O-F4); this is the fallback for the online path.
   ID_TAKEN: ["toast"],
   STALE_UPDATE: ["form"],

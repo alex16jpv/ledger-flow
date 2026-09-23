@@ -30,7 +30,12 @@ import { useToast } from "@/components/ui/Toast";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { useCategoriesQuery } from "@/features/categories/hooks";
 import { SplitThisSheet } from "@/features/shared/components/SplitThisSheet";
-import { useDeleteSettlement, useSharedSection, useWriteOff } from "@/features/shared/hooks";
+import {
+  useDeleteSettlement,
+  useJoinedGroups,
+  useSharedSection,
+  useWriteOff,
+} from "@/features/shared/hooks";
 import { type PartyView, sharedLookup } from "@/features/shared/ledger";
 import { DeleteTransactionSheet } from "@/features/transactions/components/DeleteTransactionSheet";
 import {
@@ -108,6 +113,8 @@ export function TransactionDetailScreen({ id }: { id: string }) {
     }),
     [accounts.data, categories.data, shared.section],
   );
+  const joined = useJoinedGroups(row !== undefined && row.importedFromGroupId !== null);
+  const addedFrom = joined.view?.rows.groups.find((one) => one.id === row?.importedFromGroupId);
   const group = shared.section?.groups.find((one) => one.group.id === row?.sharedGroupId);
   const expense = group?.expenses.find((one) => one.id === row?.sharedExpenseId);
   const debtors =
@@ -335,6 +342,23 @@ export function TransactionDetailScreen({ id }: { id: string }) {
                 </Link>
               </Attribute>
             )}
+            {row.importedFromGroupId !== null && (
+              <Attribute label={t("transactions.detail.shared.addedFrom")}>
+                {addedFrom ? (
+                  <Link
+                    href={`/shared/joined/${addedFrom.id}`}
+                    className="text-brand-text underline-offset-2 hover:underline"
+                  >
+                    {t("transactions.detail.shared.addedFromValue", {
+                      group: addedFrom.name,
+                      owner: addedFrom.ownerName,
+                    })}
+                  </Link>
+                ) : (
+                  t("transactions.detail.shared.addedFromUnknown")
+                )}
+              </Attribute>
+            )}
             <Attribute label={t("transactions.detail.currency")}>{row.currency}</Attribute>
           </Card>
           {shared.isError && (row.sharedExpenseId !== null || row.sharedSettlementId !== null) && (
@@ -359,18 +383,21 @@ export function TransactionDetailScreen({ id }: { id: string }) {
             />
           )}
           {/* Decision 4: splitting a loose expense creates a shared group of one. */}
-          {row.type === "EXPENSE" && row.sharedExpenseId === null && (
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={() => {
-                setSplitting(true);
-              }}
-            >
-              <Split {...iconProps("sm")} />
-              {t("transactions.detail.split")}
-            </Button>
-          )}
+          {/* One added from a group shared with you already is your part of one. */}
+          {row.type === "EXPENSE" &&
+            row.sharedExpenseId === null &&
+            row.importedFromExpenseId === null && (
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => {
+                  setSplitting(true);
+                }}
+              >
+                <Split {...iconProps("sm")} />
+                {t("transactions.detail.split")}
+              </Button>
+            )}
           {/* Its money belongs to the payment, and the payment is the only door to it. */}
           {row.type === "SETTLEMENT" ? (
             <div className="flex flex-col gap-3">

@@ -840,7 +840,9 @@
     "CONTACT_HAS_NO_EMAIL": "Añade un correo a esta persona para invitarla.",
     "INVITATION_TO_SELF": "Ese es tu propio correo.",
     "INVITATION_LIMIT_REACHED": "Ya tienes 50 invitaciones esperando. Retira una antes de enviar otra.",
-    "INVITATION_UNAVAILABLE": "Esta invitación ya no está disponible."
+    "INVITATION_UNAVAILABLE": "Esta invitación ya no está disponible.",
+    "SHARED_LINE_NOT_PAID": "Esa parte no está marcada como pagada, así que todavía no puede ir a tu libro.",
+    "SHARED_LINE_IN_LEDGER": "Esa parte ya está en tu libro."
   },
   "validation": {
     "required": "Este campo es obligatorio.",
@@ -1696,7 +1698,74 @@
       "stopBody": "Nada del dinero cambia: su parte, lo que ha pagado y lo que aún debe quedan exactamente igual, y también lo que cuenta como tuyo. Lo que ya metió en su propio libro es suyo y se queda ahí.",
       "stopAgain": "Para que lo vuelva a ver, invítalo otra vez.",
       "stopped": "{name} ya no ve este grupo",
-      "withdrawn": "Se retiró la invitación a {name}"
+      "withdrawn": "Se retiró la invitación a {name}",
+      "left": "{email} · salió {date}"
+    },
+    "joined": {
+      "section": "Compartidos contigo",
+      "sharedBy": "Compartido por {name}",
+      "sectionNote": "Solo quien compartió un grupo puede cambiarlo. Su insignia dice cómo estás con esa persona.",
+      "title": "Compartido contigo",
+      "youOwe": "Le debes a {name}",
+      "owesYou": "{name} te debe",
+      "square": "A paz con {name}",
+      "lead": "total {total} · tu parte {share}",
+      "bar": "{paid} pagados de {total} · lo que le debes a {name}",
+      "barLabel": "Lo que le has pagado a {name}",
+      "readOnly": "Compartido por {name} · solo {name} puede cambiarlo. Lo ves tal como lo lleva.",
+      "archivedGap": "{name} archivó este grupo y dio por perdido lo que seguía abierto. No se movió dinero tuyo.",
+      "archivedTitle": "{name} archivó este grupo.",
+      "archivedBody": "Se queda aquí para leerlo, y lo que ya metiste en tu libro sigue siendo tuyo.",
+      "ready": "Añadir a mi libro · {count} listas",
+      "people": "Personas",
+      "owner": "Compartió este grupo",
+      "notJoined": "No ha entrado · el nombre que le puso {owner}",
+      "personPaid": "Le pagó todo a {owner}",
+      "personPartly": "Pagó {paid} · le debe {open} a {owner}",
+      "personNotPaid": "Todavía no le ha pagado nada a {owner}",
+      "personOff": "{owner} lo dio por perdido",
+      "you": "Tú",
+      "share": "parte",
+      "expenses": "Gastos · {count}",
+      "frontier": "Nada del libro de {owner} te llega —sus cuentas, categorías y notas son suyas— y nada del tuyo le llega.",
+      "noDescription": "Sin descripción",
+      "yourShare": "Tu parte {amount}",
+      "line": {
+        "inLedger": "En tu libro",
+        "ready": "Pagó {owner} · lista para tu libro",
+        "notPaid": "Pagó {owner} · podrás añadirla cuando {owner} la marque pagada",
+        "writtenOff": "Pagó {owner} · no se movió dinero tuyo",
+        "otherPaid": "Pagó {name} · entre {name} y tú",
+        "youPaid": "pagaste tú",
+        "noPart": "Pagó {owner} · no te toca",
+        "added": "Pagó {owner} · en tu libro",
+        "amountChanged": "En tu libro por {added} · ahora tu parte es {share}",
+        "noLongerPaid": "{owner} ya no la tiene marcada como pagada"
+      },
+      "leave": "Salir del grupo",
+      "more": "Más",
+      "leaveTitle": "¿Salir de {group}?",
+      "leaveAlert": "<b>Dejas de ver {group}.</b> Sigues en él como alguien con quien {owner} reparte.",
+      "leaveBody": "Nada del dinero cambia: tu parte, lo que has pagado y lo que todavía debes se quedan igual. Lo que metiste en tu libro es tuyo y se queda ahí.",
+      "leaveFoot": "{owner} verá que saliste. Para volver a verlo, tendrá que invitarte otra vez.",
+      "leaveConfirm": "Salir",
+      "left": "Saliste de {group}.",
+      "offline": "Añadir a tu libro y salir necesitan conexión: solo el servidor puede decir si una línea sigue pagada y sigue compartida contigo.",
+      "gone": "Este grupo ya no está compartido contigo.",
+      "peopleLine": "{amount} más a {name}, en {count, plural, one {# grupo compartido} other {# grupos compartidos}} contigo.",
+      "peopleLineFrom": "{amount} más de {name}, en {count, plural, one {# grupo compartido} other {# grupos compartidos}} contigo.",
+      "add": {
+        "title": "Añadir a mi libro",
+        "line": "Tu parte de {description} · {date}",
+        "account": "De dónde salió",
+        "category": "Categoría",
+        "categoryFor": "Categoría para {description}",
+        "infoTitle": "Esto es un gasto tuyo.",
+        "infoBody": "Cada uno lleva la fecha de su línea, así que cuenta en Stats y en el presupuesto de ese mes, aunque ese mes ya esté cerrado. La categoría la eliges tú: el grupo no lleva ninguna, y las categorías de {owner} son suyas.",
+        "foot": "{owner} marcó tu parte como pagada, así que el dinero ya salió de ti: esto es ese pago visto desde tu libro. Una línea se añade una sola vez, en cualquiera de tus dispositivos, y borrar el gasto después la deja lista otra vez.",
+        "confirm": "Añadir {amount}",
+        "done": "Añadido a tu libro."
+      }
     }
   },
   "transactions": {
@@ -1925,7 +1994,10 @@
         "deleteGoesBack": "{account} sube {amount}, y nada más se mueve.",
         "unreadable": "Este está repartido con otras personas, y eso no se ha podido leer.",
         "paymentUnreadable": "No se pudo leer el pago al que pertenece, así que desde aquí todavía no hay forma de deshacerlo.",
-        "guestPayments": "Pagado por los invitados"
+        "guestPayments": "Pagado por los invitados",
+        "addedFrom": "Añadido desde",
+        "addedFromValue": "{group}, compartido por {owner}",
+        "addedFromUnknown": "Un grupo compartido contigo"
       },
       "settlementLocked": "Este movimiento pertenece a un pago entre personas, así que no se edita ni se borra por su cuenta."
     },

@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { dayKey } from "@/lib/format/dates";
 import type { VaultHandle } from "@/lib/local/db";
 import { pendingOperations } from "@/lib/local/outbox/queue";
 import { setCurrentVault } from "@/lib/local/repository/read";
@@ -173,7 +174,7 @@ describe("recording a line somebody else paid", () => {
     const { date } = (queued?.payload as { body: { date: string } }).body;
     // Bogotá is UTC-5, so noon there is 17:00Z on the same day.
     expect(date).toMatch(/T17:00:00\.000Z$/);
-    expect(date.slice(0, 10)).toBe(new Date().toISOString().slice(0, 10));
+    expect(date.slice(0, 10)).toBe(dayKey(new Date(), profile().timezone));
   });
 
   // Picking yourself is what the two other ways into the group already are.

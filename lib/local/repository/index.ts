@@ -27,6 +27,7 @@ export {
   readGroupInvitations,
   readReceivedInvitations,
 } from "./invitations";
+export { forgetJoinedGroup, type JoinedRows, keepAddedExpense, readJoined } from "./joined";
 export { readMirrorProfile } from "./profile";
 export {
   currentVault,

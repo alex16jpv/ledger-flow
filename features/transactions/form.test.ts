@@ -161,6 +161,8 @@ describe("transaction form model", () => {
       sharedExpenseId: null,
       sharedGroupId: null,
       sharedSettlementId: null,
+      importedFromGroupId: null,
+      importedFromExpenseId: null,
       sharedHistory: [],
       createdAt: "",
       updatedAt: "",

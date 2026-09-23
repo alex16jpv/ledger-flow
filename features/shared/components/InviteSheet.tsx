@@ -86,6 +86,7 @@ function PersonRow({
     expired: t("expired", { email, days: INVITATION_DAYS }),
     joined: t("joinedMeta", { email, date: day(invitation?.answeredAt) }),
     declined: t("declined", { email, date: day(invitation?.answeredAt) }),
+    left: t("left", { email, date: day(invitation?.leftAt) }),
   }[state];
 
   const actions: Record<InviteState, PersonAction> = {
@@ -95,6 +96,7 @@ function PersonRow({
     expired: { label: t("inviteAgain"), variant: "secondary", run: onInvite, online: true },
     joined: { label: t("stopSharing"), variant: "ghost", run: onStop, online: true },
     declined: { label: t("inviteAgain"), variant: "secondary", run: onInvite, online: true },
+    left: { label: t("inviteAgain"), variant: "secondary", run: onInvite, online: true },
   };
   const action = actions[state];
 

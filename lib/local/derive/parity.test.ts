@@ -119,6 +119,8 @@ function feedPage(
       settlements: [],
       invitationsSent: [],
       invitationsReceived: [],
+      joinedGroups: [],
+      joinedExpenses: [],
     },
     pagination: { limit: 500, count: transactions.length, hasMore: false, nextCursor: "v1|done|" },
   };

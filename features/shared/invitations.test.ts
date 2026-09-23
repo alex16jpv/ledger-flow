@@ -13,6 +13,7 @@ const invitation = (overrides: Partial<SentInvitation> = {}): SentInvitation => 
   expiresAt: "2026-10-22T12:00:00.000Z",
   answeredAt: null,
   withdrawnAt: null,
+  leftAt: null,
   createdAt: "2026-09-22T11:00:00.000Z",
   updatedAt: "2026-09-22T11:00:00.000Z",
   ...overrides,
@@ -58,5 +59,15 @@ describe("latestByContact", () => {
 
     expect(latest.get("c1")?.id).toBe("new");
     expect(latest.get("c2")?.id).toBe("other");
+  });
+
+  it("reads somebody who left as a person you can invite again, while they have an email", () => {
+    const left = invitation({ status: "LEFT", leftAt: "2026-09-23T10:00:00.000Z" });
+
+    expect(inviteStateOf("beto@example.com", left, NOW)).toEqual({
+      state: "left",
+      invitation: left,
+    });
+    expect(inviteStateOf(undefined, left, NOW).state).toBe("noEmail");
   });
 });

@@ -3,14 +3,21 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import {
+  deriveJoined,
+  type JoinedGroupStanding,
+  type JoinedTotals,
+  joinedTotals,
+} from "@/lib/local/derive";
 import type { WriteOffTarget } from "@/lib/local/outbox";
-import { isAnswerable, type SharedLedgerRows } from "@/lib/local/repository";
+import { isAnswerable, type JoinedRows, type SharedLedgerRows } from "@/lib/local/repository";
 import { REFERENCE_STALE_TIME_MS } from "@/lib/query/client";
 import { invalidateMoneyMovement, QUERY_DOMAINS } from "@/lib/query/domains";
 import type { AddParticipantsInput, Contact, RestoreInput, UpdateContactInput } from "@/types/api";
 
 import {
   addParticipants,
+  addToLedger,
   answerInvitation,
   archiveContact,
   archiveSharedGroup,
@@ -22,9 +29,11 @@ import {
   fetchContacts,
   fetchContactsPage,
   fetchGroupInvitations,
+  fetchJoined,
   fetchReceivedInvitations,
   fetchSharedLedger,
   inviteToGroup,
+  leaveJoinedGroup,
   previewParticipants,
   recordSettlement,
   removeParticipant,
@@ -325,6 +334,61 @@ export function useAnswerInvitation() {
   const invalidate = useInvitationInvalidation();
   return useMutation({
     mutationFn: ({ id, answer }: AnswerVariables) => answerInvitation(id, answer),
+    onSuccess: invalidate,
+  });
+}
+
+export interface JoinedView {
+  rows: JoinedRows;
+  standings: Map<string, JoinedGroupStanding>;
+  totals: JoinedTotals;
+}
+
+// Groups other people shared with you: read here, written only by their owner.
+export function useJoinedGroups(enabled = true) {
+  const query = useQuery({
+    queryKey: sharedKeys.joined(),
+    queryFn: fetchJoined,
+    staleTime: REFERENCE_STALE_TIME_MS,
+    enabled,
+  });
+  const view = useMemo<JoinedView | undefined>(() => {
+    if (!query.data) return undefined;
+    const { groups, expenses, added } = query.data;
+    const standings = new Map(
+      groups.map((group) => [group.id, deriveJoined(group, expenses, added)]),
+    );
+    return { rows: query.data, standings, totals: joinedTotals(groups, standings) };
+  }, [query.data]);
+  return { ...query, view };
+}
+
+export interface AddToLedgerVariables {
+  groupId: string;
+  expenseId: string;
+  accountId: string;
+  categoryId: string | null;
+}
+
+export function useAddToLedger() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({
+    mutationFn: ({ groupId, expenseId, accountId, categoryId }: AddToLedgerVariables) =>
+      addToLedger(groupId, expenseId, { accountId, categoryId }),
+    onSuccess: invalidate,
+  });
+}
+
+export interface LeaveVariables {
+  invitationId: string;
+  groupId: string;
+}
+
+export function useLeaveGroup() {
+  const invalidate = useInvitationInvalidation();
+  return useMutation({
+    mutationFn: ({ invitationId, groupId }: LeaveVariables) =>
+      leaveJoinedGroup(invitationId, groupId),
     onSuccess: invalidate,
   });
 }

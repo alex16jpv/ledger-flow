@@ -39,6 +39,8 @@ describe("vault schema", () => {
       "contacts",
       "invitationsReceived",
       "invitationsSent",
+      "joinedExpenses",
+      "joinedGroups",
       "meta",
       "outbox",
       "profile",
@@ -50,6 +52,7 @@ describe("vault schema", () => {
 
     const tx = db.transaction(["transactions", "outbox", "accounts", "sharedExpenses"]);
     expect([...tx.objectStore("transactions").indexNames].sort()).toEqual([
+      "addedFrom",
       "categoryId",
       "date",
       "dateCursor",
@@ -70,6 +73,13 @@ describe("vault schema", () => {
     expect([...invitations.objectStore("invitationsSent").indexNames]).toEqual(["updatedAt"]);
     expect([...invitations.objectStore("invitationsReceived").indexNames]).toEqual(["updatedAt"]);
     await invitations.done;
+    const joined = db.transaction(["joinedGroups", "joinedExpenses"]);
+    expect([...joined.objectStore("joinedGroups").indexNames]).toEqual(["updatedAt"]);
+    expect([...joined.objectStore("joinedExpenses").indexNames].sort()).toEqual([
+      "groupId",
+      "updatedAt",
+    ]);
+    await joined.done;
   });
 
   it("stamps the user id and the two logical versions on a fresh vault", async () => {

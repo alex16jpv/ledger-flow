@@ -2084,7 +2084,7 @@ export type paths = {
         /**
          * Create a contact
          * @description Requires `name`. Active contact names are unique per user, case-insensitively ("Ana" = "ana"; accents still distinct) and trimmed; archiving a contact frees its name.
-         *     `email` is optional and is only an **identifier for inviting them later**: nothing is sent from here, and two contacts may carry the same address. `linkedUserId` is server-owned and always null until an invitation is accepted; a client that sends it has it dropped.
+         *     `email` is optional and is only an **identifier for inviting them later**: nothing is sent from here, and two contacts may carry the same address. A contact is never linked to a user: who joined a group is the accepted invitation, which never tells the inviter who answered.
          *     A user is capped at `SharedLimits.maxContactsPerUser` active contacts (400 CONTACT_LIMIT_REACHED). Read that schema instead of copying the number: the sheet that adds a contact is meant to say the limit before a save can fail on it.
          *     Accepts an optional client-minted `id` (UUID). An id the user already owns replays with 200 and the stored resource, whatever the payload says now; an id that belongs to another user is rejected with 409 ID_TAKEN.
          */
@@ -2629,6 +2629,374 @@ export type paths = {
                 };
                 /** @description Invitation not found (uniform for missing and addressed to somebody else) */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations/{id}/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave a shared group you joined
+         * @description Stop seeing the group, from your side. You stay in it as somebody the owner splits with: your share, what you paid and what you owe do not move, and nothing in your ledger is touched. The owner's row reads LEFT. Leaving twice answers the invitation as it is; one that is no longer joined (the owner stopped sharing) answers INVITATION_UNAVAILABLE.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Invitation ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The invitation, left */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReceivedInvitation"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), or an invitation that is no longer joined (code INVITATION_UNAVAILABLE) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Invitation not found (uniform for missing and not yours) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/joined-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The groups somebody else shared with you
+         * @description The groups whose invitation you accepted and that are still shared with you, archived ones included, read-only. Nothing of anybody's ledger travels: no account, category or note. The offline client reads them from the change feed (`joinedGroups`); this listing is its fallback.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Maximum number of items to return */
+                    limit?: number;
+                    /** @description Number of items to skip (offset-based pagination) */
+                    offset?: number;
+                    /** @description ID of the invitation last read (the group's `invitationId`); overrides offset */
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated list of the groups shared with you */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["JoinedGroupList"];
+                    };
+                };
+                /** @description Invalid query parameters (code VALIDATION), or a cursor that names none of your groups (code INVALID_CURSOR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/joined-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One group shared with you */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The group */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["JoinedGroup"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not a group shared with you (uniform for missing, not joined and no longer shared) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/joined-groups/{id}/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The lines of a group shared with you
+         * @description Newest expense first, keyset over (date, id), exactly as the owner keeps them. Your part of each is the CONTACT share your participant row names.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Maximum number of items to return */
+                    limit?: number;
+                    /** @description Number of items to skip (offset-based pagination) */
+                    offset?: number;
+                    /** @description ID of the last expense of the previous page (overrides offset) */
+                    cursor?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated list of the group's lines */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["JoinedExpenseList"];
+                    };
+                };
+                /** @description Invalid parameters (code VALIDATION), or a cursor that names no line of this group (code INVALID_CURSOR) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not a group shared with you */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/joined-groups/{id}/expenses/{expenseId}/add-to-ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add your part of a paid line to your own ledger
+         * @description Offered only on a line the person who shared the group paid, and only once they have marked your part of it paid: they recorded the money arriving in their account, and this records it leaving yours. It writes one ordinary expense of yours — your share, dated the line, with its description, from `accountId` and in `categoryId` — and nothing in the group. One line reaches your ledger once; deleting that expense makes it ready again. Needs a connection: there is no batch operation for it.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Shared group ID */
+                    id: string;
+                    /** @description The line */
+                    expenseId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AddToLedgerInput"];
+                };
+            };
+            responses: {
+                /** @description The expense already created under that client-minted id (replay) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Transaction"];
+                    };
+                };
+                /** @description Your expense */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Transaction"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), a line somebody else paid, one you have no part in or whose part is not marked paid (code SHARED_LINE_NOT_PAID), a line already in your ledger (code SHARED_LINE_IN_LEDGER), or an archived category (code CATEGORY_ARCHIVED) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not a group shared with you, a line not in it, or an account or category not yours */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The client-minted id belongs to somebody else (code ID_TAKEN) */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -5544,6 +5912,14 @@ export type components = {
             group: components["schemas"]["SharedGroup"];
             applied: components["schemas"]["AddParticipantsPreview"];
         };
+        AddToLedgerInput: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            accountId: string;
+            /** Format: uuid */
+            categoryId?: string | null;
+        };
         AuthTokens: {
             accessToken: string;
             refreshToken: string;
@@ -5553,7 +5929,7 @@ export type components = {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message: string;
         };
         /** @description Per-item outcome. The status is 200 even when some items failed: read `failed`. */
@@ -5663,11 +6039,6 @@ export type components = {
              * @description What an invitation to a shared group is addressed to; nothing is emailed from this API, and two contacts may carry the same address. Changing it withdraws the contact's waiting invitations.
              */
             email?: string;
-            /**
-             * Format: uuid
-             * @description Reserved and always null: accepting an invitation does not fill it, because the inviter is never told who answered. Never settable by a client.
-             */
-            linkedUserId: string | null;
             /** Format: uuid */
             userId: string;
             /** Format: date-time */
@@ -5846,7 +6217,7 @@ export type components = {
              * @description Stable machine-readable code. Branch on this, never on message.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             details?: {
                 field?: string;
                 message?: string;
@@ -5857,6 +6228,88 @@ export type components = {
          * @enum {string}
          */
         IncomeRefusedAccountType: "CARD" | "LOAN";
+        /** @description A line of a group shared with you, exactly as its owner keeps it, minus who owns it. Your part is the CONTACT share named by your participant row; it reads paid once its `collected` reaches its `amount`. */
+        JoinedExpense: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            groupId: string;
+            description: string | null;
+            /** Format: date-time */
+            date: string;
+            amount: number;
+            /**
+             * Format: uuid
+             * @description null is the person who shared the group.
+             */
+            paidByContactId: string | null;
+            split: components["schemas"]["SharedSplit"];
+            customSplit: boolean;
+            /** @example COP */
+            currency: string;
+            /** Format: date-time */
+            deletedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        JoinedExpenseList: {
+            data: components["schemas"]["JoinedExpense"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        /** @description A group somebody else shared with you, read-only: its people, its default split and who was written off. Nothing of anybody's ledger — no account, category, note or what counts as the owner's. `updatedAt` is when anything here last changed for you, or when you joined, whichever is later. */
+        JoinedGroup: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The invitation you joined with: leaving goes through it.
+             */
+            invitationId: string;
+            name: string;
+            /** @enum {string|null} */
+            color: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
+            /** @example COP */
+            currency: string;
+            ownerName: string;
+            participants: components["schemas"]["JoinedParticipant"][];
+            defaultSplit: components["schemas"]["DefaultSplit"];
+            writeOffs: {
+                /** @enum {string} */
+                kind: "CONTACT" | "GUESTS";
+                /** Format: uuid */
+                contactId: string | null;
+                /** Format: uuid */
+                expenseId: string | null;
+                amount: number;
+                /** Format: date-time */
+                at: string;
+            }[];
+            /** Format: date-time */
+            archivedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        JoinedGroupList: {
+            data: components["schemas"]["JoinedGroup"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        JoinedParticipant: {
+            /**
+             * Format: uuid
+             * @description null is the person who shared the group, as in their own rows: `paidByContactId: null` and a USER share are theirs.
+             */
+            contactId: string | null;
+            /** @description The name on their own profile for the person who shared the group and for anybody who joined it; the name the owner gave them otherwise. */
+            name: string;
+            /** @enum {string|null} */
+            color: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
+            you: boolean;
+            joined: boolean;
+        };
         LoginInput: {
             /** Format: email */
             email: string;
@@ -5907,11 +6360,16 @@ export type components = {
             /** Format: email */
             inviterEmail: string;
             /** @enum {string} */
-            status: "PENDING" | "ACCEPTED" | "DECLINED" | "WITHDRAWN";
+            status: "PENDING" | "ACCEPTED" | "DECLINED" | "WITHDRAWN" | "LEFT";
             /** Format: date-time */
             expiresAt: string;
             /** Format: date-time */
             answeredAt: string | null;
+            /**
+             * Format: date-time
+             * @description Set when you left the group (status LEFT).
+             */
+            leftAt: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -5952,16 +6410,21 @@ export type components = {
             /** Format: email */
             email: string;
             /** @enum {string} */
-            status: "PENDING" | "ACCEPTED" | "DECLINED" | "WITHDRAWN";
+            status: "PENDING" | "ACCEPTED" | "DECLINED" | "WITHDRAWN" | "LEFT";
             /** Format: date-time */
             expiresAt: string;
             /** Format: date-time */
             answeredAt: string | null;
             /**
              * Format: date-time
-             * @description Set when it was withdrawn, or when a joined person stopped being shared with: by you, by taking them out of the group, by archiving their contact or the group, or by changing their email.
+             * @description Set when it was withdrawn, or when a joined person stopped being shared with: by you, by taking them out of the group or archiving their contact, or by deleting your account. Archiving the group or changing their email ends only one still waiting.
              */
             withdrawnAt: string | null;
+            /**
+             * Format: date-time
+             * @description Set when the person who joined left the group themselves (status LEFT), or deleted their account.
+             */
+            leftAt: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -6354,6 +6817,9 @@ export type components = {
                 invitationsSent: components["schemas"]["SentInvitation"][];
                 /** @description Addressed to your email and answered by nobody yet, or answered by you: they keep arriving after they are answered, withdrawn or out of time, which is how a device learns they stopped waiting. */
                 invitationsReceived: components["schemas"]["ReceivedInvitation"][];
+                /** @description Groups somebody else shared with you. A group you joined after the cursor arrives whole, because its rows are placed at the moment you joined. When your invitation stops being ACCEPTED, drop the group and its lines. */
+                joinedGroups: components["schemas"]["JoinedGroup"][];
+                joinedExpenses: components["schemas"]["JoinedExpense"][];
             };
             pagination: {
                 limit: number;
@@ -6381,7 +6847,7 @@ export type components = {
              * @description conflict / rejected: the code the matching route would have answered.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message?: string;
             details?: {
                 field?: string;
@@ -6489,6 +6955,16 @@ export type components = {
             sharedSettlementId: string | null;
             /** @description Why `countsAsYours` is what it is, oldest first. Empty on a movement that was never split. */
             sharedHistory: components["schemas"]["SharedHistoryEntry"][];
+            /**
+             * Format: uuid
+             * @description The group shared with you this expense was added from with Add to my ledger, or null. It is an ordinary expense of yours: its whole amount counts as yours, and deleting it makes that line ready to add again.
+             */
+            importedFromGroupId: string | null;
+            /**
+             * Format: uuid
+             * @description The line of that group whose share of yours this is. One line reaches your ledger once (SHARED_LINE_IN_LEDGER).
+             */
+            importedFromExpenseId: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -6550,6 +7026,16 @@ export type components = {
             sharedSettlementId: string | null;
             /** @description Why `countsAsYours` is what it is, oldest first. Empty on a movement that was never split. */
             sharedHistory: components["schemas"]["SharedHistoryEntry"][];
+            /**
+             * Format: uuid
+             * @description The group shared with you this expense was added from with Add to my ledger, or null. It is an ordinary expense of yours: its whole amount counts as yours, and deleting it makes that line ready to add again.
+             */
+            importedFromGroupId: string | null;
+            /**
+             * Format: uuid
+             * @description The line of that group whose share of yours this is. One line reaches your ledger once (SHARED_LINE_IN_LEDGER).
+             */
+            importedFromExpenseId: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -6728,6 +7214,7 @@ export type AccountList = components['schemas']['AccountList'];
 export type AddParticipantsInput = components['schemas']['AddParticipantsInput'];
 export type AddParticipantsPreview = components['schemas']['AddParticipantsPreview'];
 export type AddParticipantsResult = components['schemas']['AddParticipantsResult'];
+export type AddToLedgerInput = components['schemas']['AddToLedgerInput'];
 export type AuthTokens = components['schemas']['AuthTokens'];
 export type BatchUpdateFailure = components['schemas']['BatchUpdateFailure'];
 export type BatchUpdateResult = components['schemas']['BatchUpdateResult'];
@@ -6754,6 +7241,11 @@ export type CreateTransactionInput = components['schemas']['CreateTransactionInp
 export type DefaultSplit = components['schemas']['DefaultSplit'];
 export type ErrorResponse = components['schemas']['ErrorResponse'];
 export type IncomeRefusedAccountType = components['schemas']['IncomeRefusedAccountType'];
+export type JoinedExpense = components['schemas']['JoinedExpense'];
+export type JoinedExpenseList = components['schemas']['JoinedExpenseList'];
+export type JoinedGroup = components['schemas']['JoinedGroup'];
+export type JoinedGroupList = components['schemas']['JoinedGroupList'];
+export type JoinedParticipant = components['schemas']['JoinedParticipant'];
 export type LoginInput = components['schemas']['LoginInput'];
 export type Message = components['schemas']['Message'];
 export type Pagination = components['schemas']['Pagination'];

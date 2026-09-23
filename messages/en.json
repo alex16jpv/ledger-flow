@@ -840,7 +840,9 @@
     "CONTACT_HAS_NO_EMAIL": "Add an email to this person to invite them.",
     "INVITATION_TO_SELF": "That is your own email.",
     "INVITATION_LIMIT_REACHED": "You already have 50 invitations waiting. Withdraw one before sending another.",
-    "INVITATION_UNAVAILABLE": "This invitation is no longer available."
+    "INVITATION_UNAVAILABLE": "This invitation is no longer available.",
+    "SHARED_LINE_NOT_PAID": "That part isn’t marked paid, so it can’t go into your ledger yet.",
+    "SHARED_LINE_IN_LEDGER": "That part is already in your ledger."
   },
   "validation": {
     "required": "This field is required.",
@@ -1696,7 +1698,74 @@
       "stopBody": "Nothing about the money changes: their share, what they have paid and what they still owe stay exactly as they are, and so does what counts as yours. What they already put into their own ledger is theirs and stays there.",
       "stopAgain": "To let them see it again, invite them again.",
       "stopped": "{name} no longer sees this group",
-      "withdrawn": "The invitation to {name} was withdrawn"
+      "withdrawn": "The invitation to {name} was withdrawn",
+      "left": "{email} · left {date}"
+    },
+    "joined": {
+      "section": "Shared with you",
+      "sharedBy": "Shared by {name}",
+      "sectionNote": "Only the person who shared a group can change it. Its badge says where you stand with them.",
+      "title": "Shared with you",
+      "youOwe": "You owe {name}",
+      "owesYou": "{name} owes you",
+      "square": "Square with {name}",
+      "lead": "total {total} · your share {share}",
+      "bar": "{paid} paid of {total} · what you owe {name}",
+      "barLabel": "What you have paid {name}",
+      "readOnly": "Shared by {name} · only {name} can change it. You see it as they keep it.",
+      "archivedGap": "{name} archived this group and wrote off what was still open. No money of yours moved.",
+      "archivedTitle": "{name} archived this group.",
+      "archivedBody": "It stays here to read, and what you already added to your ledger stays yours.",
+      "ready": "Add to my ledger · {count} ready",
+      "people": "People",
+      "owner": "Shared this group",
+      "notJoined": "Has not joined · the name {owner} gave them",
+      "personPaid": "Paid {owner} in full",
+      "personPartly": "Paid {paid} · {open} still owed to {owner}",
+      "personNotPaid": "Nothing paid to {owner} yet",
+      "personOff": "Written off by {owner}",
+      "you": "You",
+      "share": "share",
+      "expenses": "Expenses · {count}",
+      "frontier": "Nothing of {owner}'s ledger reaches you — their accounts, categories and notes stay theirs — and nothing of yours reaches them.",
+      "noDescription": "No description",
+      "yourShare": "Your share {amount}",
+      "line": {
+        "inLedger": "In your ledger",
+        "ready": "{owner} paid · ready for your ledger",
+        "notPaid": "{owner} paid · yours to add once {owner} marks it paid",
+        "writtenOff": "{owner} paid · no money of yours moved",
+        "otherPaid": "{name} paid · between you and {name}",
+        "youPaid": "you paid",
+        "noPart": "{owner} paid · not yours",
+        "added": "{owner} paid · in your ledger",
+        "amountChanged": "In your ledger for {added} · your part is now {share}",
+        "noLongerPaid": "{owner} no longer has it marked paid"
+      },
+      "leave": "Leave this group",
+      "more": "More",
+      "leaveTitle": "Leave {group}?",
+      "leaveAlert": "<b>You stop seeing {group}.</b> You stay in it as somebody {owner} splits with.",
+      "leaveBody": "Nothing about the money changes: your share, what you have paid and what you still owe stay exactly as they are. What you added to your ledger is yours and stays there.",
+      "leaveFoot": "{owner} sees that you left. To see it again, they invite you again.",
+      "leaveConfirm": "Leave",
+      "left": "You left {group}.",
+      "offline": "Adding to your ledger and leaving need a connection: only the server can say whether a line is still paid and still shared with you.",
+      "gone": "This group is no longer shared with you.",
+      "peopleLine": "{amount} more to {name}, in {count, plural, one {# group} other {# groups}} shared with you.",
+      "peopleLineFrom": "{amount} more from {name}, in {count, plural, one {# group} other {# groups}} shared with you.",
+      "add": {
+        "title": "Add to my ledger",
+        "line": "Your share of {description} · {date}",
+        "account": "Where it came from",
+        "category": "Category",
+        "categoryFor": "Category for {description}",
+        "infoTitle": "This is an expense of yours.",
+        "infoBody": "Each one is dated the day of its line, so it counts in Stats and in that month’s budget, even if that month is already closed. The category is yours to choose: the group carries none, and {owner}’s categories are theirs.",
+        "foot": "{owner} marked your part paid, so the money has already left you: this is that payment seen from your ledger. A line can be added once, on any of your devices, and deleting the expense later makes it ready again.",
+        "confirm": "Add {amount}",
+        "done": "Added to your ledger."
+      }
     }
   },
   "transactions": {
@@ -1925,7 +1994,10 @@
         "deleteGoesBack": "{account} goes back up by {amount}, and nothing else moves.",
         "unreadable": "This one is split with other people, and that could not be read.",
         "paymentUnreadable": "The payment it belongs to could not be read, so there is no way to undo it from here yet.",
-        "guestPayments": "Paid by the guests"
+        "guestPayments": "Paid by the guests",
+        "addedFrom": "Added from",
+        "addedFromValue": "{group}, shared by {owner}",
+        "addedFromUnknown": "A group shared with you"
       },
       "settlementLocked": "This movement belongs to a payment between people, so it is not edited or deleted on its own."
     },

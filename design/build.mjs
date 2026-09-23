@@ -4824,7 +4824,7 @@ const joinedGroup = ({ sheet = "", archived = false } = {}) => {
 <span class="h2">Villa de Leyva weekend</span>
 ${stand}
 <span class="small muted">total <b class="amount">${money(1660000)}</b> · your share <b class="amount">${money(415000)}</b></span>
-<div style="display:flex;flex-direction:column;gap:4px;padding-top:10px"><div class="progress thin"><span class="fill" style="width:78%"></span></div><span class="xs faint">$285,000 paid of the $365,000 you owe Ana</span></div>
+<div style="display:flex;flex-direction:column;gap:4px;padding-top:10px"><div class="progress thin"><span class="fill" style="width:78%"></span></div><span class="xs faint">$285,000 paid of $365,000 · what you owe Ana</span></div>
 <span class="small muted" style="padding-top:2px">${gap}</span></section>
 ${archived ? `<div class="alert neutral">${iconSvg("archive")}<span><b>Ana archived this group.</b> It stays here to read, and what you already added to your ledger stays yours.</span></div>` : ""}
 <button class="btn primary block">${iconSvg("circle-plus", "sm")}Add to my ledger · 1 ready</button>
@@ -4837,14 +4837,14 @@ ${personRow("Carlitos", "Has not joined · the name Ana gave him", 415000, "shar
 </div></section>
 <section class="stack-sm"><div class="section-head"><h3 class="h3">Expenses · 4</h3></div>
 <div class="list card flush">${lines}</div></section>
-<p class="xs faint" style="text-align:center;margin:0">Nothing of Ana’s ledger reaches you — her accounts, categories and notes stay hers — and nothing of yours reaches her.</p>`;
+<p class="xs faint" style="text-align:center;margin:0">Nothing of Ana’s ledger reaches you — her accounts, categories and notes stay hers — and nothing of yours reaches her.</p>
+<button class="btn ghost" style="align-self:center">${iconSvg("log-out", "sm")}Leave this group</button>`;
   return screen(body, {
     tab: "mas",
     side: "shared",
     back: true,
     title: "Shared with you",
     sheet,
-    actions: `<button class="btn ghost icon-only round" aria-label="More">${iconSvg("ellipsis")}</button>`,
   });
 };
 
@@ -5649,7 +5649,7 @@ const PAGES = [
       plate(
         "leave-group",
         "Leaving",
-        "From the <code>⋯</code> menu: <code>Stop sharing</code> seen from your side. You stop seeing the group and stay in it as somebody Ana splits with. Your share, what you paid and what you owe do not move, and what you added to your ledger stays yours. It needs a connection, like every invitation write.",
+        "From the foot of the group, under the expenses: <code>Stop sharing</code> seen from your side. You stop seeing the group and stay in it as somebody Ana splits with. Your share, what you paid and what you owe do not move, and what you added to your ledger stays yours. It needs a connection, like every invitation write.",
         joinedGroup({ sheet: leaveGroupSheet() }),
         { added: "2026-09-22" },
       ),

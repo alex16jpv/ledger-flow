@@ -406,3 +406,90 @@ test("an invitation reaches the other person's Shared, and their answer comes ba
       .getByRole("button", { name: "Stop sharing" }),
   ).toBeVisible();
 });
+
+test("somebody who joined reads the group, adds their paid part to their own ledger, and leaves", async ({
+  page,
+  request,
+  browser,
+}) => {
+  await signUp(page, request);
+  const post = async (path: string, data: unknown) => {
+    const response = await request.post(path, { headers: { origin: APP }, data });
+    expect(response.ok()).toBe(true);
+    return (await response.json()) as { id: string };
+  };
+  const inviteeEmail = uniqueEmail("joined");
+  const contact = await post("/api/contacts", { name: "Betico", email: inviteeEmail });
+  const group = await post("/api/shared-groups", {
+    name: "Villa de Leyva weekend",
+    contactIds: [contact.id],
+  });
+  await post(`/api/shared-groups/${group.id}/expenses`, {
+    description: "Groceries",
+    date: "2026-09-19T15:00:00.000Z",
+    amount: 120_000,
+  });
+  await post(`/api/shared-groups/${group.id}/invitations`, { contactId: contact.id });
+
+  const other = await browser.newContext({ baseURL: APP });
+  const registered = await other.request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: { name: "Beto Cano", email: inviteeEmail, password: "LedgerFlow!2026" },
+  });
+  expect(registered.ok()).toBe(true);
+  const waiting = await other.request.get("/api/invitations", { headers: { origin: APP } });
+  const [invitation] = ((await waiting.json()) as { data: { id: string }[] }).data;
+  const accepted = await other.request.post(`/api/invitations/${invitation?.id ?? ""}/accept`, {
+    headers: { origin: APP },
+  });
+  expect(accepted.ok()).toBe(true);
+  const nequi = await other.request.post("/api/accounts", {
+    headers: { origin: APP },
+    data: { name: "Nequi Joined", type: "ACCOUNT", balance: 500_000 },
+  });
+  expect(nequi.ok()).toBe(true);
+
+  // The owner marks Beto's part paid: that is what lets it into Beto's ledger.
+  const bank = await post("/api/accounts", {
+    name: "Bancolombia Joined",
+    type: "ACCOUNT",
+    balance: 0,
+  });
+  await post("/api/settlements", {
+    contactId: contact.id,
+    date: "2026-09-21T12:00:00.000Z",
+    collected: 60_000,
+    accountId: bank.id,
+  });
+
+  const invitee = await other.newPage();
+  await invitee.goto("/shared?face=groups");
+  await invitee.getByRole("link", { name: /Villa de Leyva weekend/ }).click();
+  await expect(invitee.getByText("Square with Shared E2E")).toBeVisible();
+  await expect(invitee.getByText(/only Shared E2E can change it/)).toBeVisible();
+  await expectNoAxeViolations(invitee);
+
+  await invitee.getByRole("button", { name: "Add to my ledger · 1 ready" }).click();
+  const sheet = invitee.getByRole("dialog", { name: "Add to my ledger" });
+  await sheet.getByRole("button", { name: /Where it came from/ }).click();
+  await invitee.getByRole("option", { name: /Nequi Joined/ }).click();
+  await sheet.getByRole("button", { name: /Category for Groceries/ }).click();
+  await invitee.getByRole("dialog", { name: "Category" }).getByRole("option").first().click();
+  await sheet.getByRole("button", { name: "Add $60,000" }).click();
+  await expect(invitee.getByText("In your ledger", { exact: true })).toBeVisible();
+  await expect(invitee.getByRole("button", { name: /Add to my ledger/ })).toHaveCount(0);
+
+  await invitee.getByRole("button", { name: "Leave this group" }).click();
+  await invitee
+    .getByRole("dialog", { name: "Leave Villa de Leyva weekend?" })
+    .getByRole("button", { name: "Leave" })
+    .click();
+  await expect(invitee.getByRole("link", { name: /Villa de Leyva weekend/ })).toHaveCount(0);
+  await other.close();
+
+  await page.goto(`/shared/groups/${group.id}`);
+  await page.getByRole("button", { name: /Invite them to see this group/ }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Invite to Villa de Leyva weekend" }).getByText(/· left /),
+  ).toBeVisible();
+});

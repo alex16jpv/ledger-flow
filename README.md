@@ -198,6 +198,7 @@ Accounts, Stats, Categories, Settings and the user (T-72). From 900px up the sid
 | `/shared/new`                                                  | New shared group: who was in, the default split, and the expenses you already recorded                                                        |
 | `/shared/groups/[id]`                                          | A shared group: what still counts as yours, its people with their state, its expenses                                                         |
 | `/shared/people/[id]`                                          | A person: the net with them, the groups they are in, the payments made, edit and archive                                                      |
+| `/shared/joined/[id]`                                          | A group somebody shared with you: read-only, where you stand with them, and Add to my ledger                                                  |
 | `/categories`                                                  | Categories grid by type (`?type=`), usage counts, archived list, restore defaults                                                             |
 | `/categories/new`, `/categories/[id]/edit`                     | Category form: create (`?type=`) and edit with locked type and archive                                                                        |
 | `/budgets`                                                     | Budgets list for a month (`?reference=YYYY-MM&period=`), global card featured                                                                 |

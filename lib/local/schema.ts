@@ -4,6 +4,8 @@ import type {
   Account,
   Category,
   Contact,
+  JoinedExpense,
+  JoinedGroup,
   ReceivedInvitation,
   SentInvitation,
   Settlement,
@@ -32,6 +34,8 @@ export const MIRROR_STORES = [
   "settlements",
   "invitationsSent",
   "invitationsReceived",
+  "joinedGroups",
+  "joinedExpenses",
 ] as const;
 export type MirrorStore = (typeof MIRROR_STORES)[number];
 
@@ -87,6 +91,12 @@ export type SentInvitationRecord = MirrorRecord<SentInvitation>;
 export type ReceivedInvitationRecord = MirrorRecord<ReceivedInvitation>;
 export type SettlementRecord = DeletableRecord<Settlement>;
 
+// Somebody else's group: dropped whole when the invitation that let you in stops being ACCEPTED.
+export type JoinedGroupRecord = MirrorRecord<JoinedGroup>;
+export interface JoinedExpenseRecord extends DeletableRecord<JoinedExpense> {
+  groupId: string;
+}
+
 export interface TransactionRecord extends MirrorRecord<SyncTransaction> {
   deleted: 0 | 1;
   date: string;
@@ -96,6 +106,8 @@ export interface TransactionRecord extends MirrorRecord<SyncTransaction> {
   fromAccountId?: string;
   toAccountId?: string;
   pendingReview?: 1;
+  // Live rows only: which lines of a group shared with you are already in your ledger.
+  addedFrom?: string;
 }
 
 export type OutboxEntity =
@@ -154,6 +166,12 @@ export interface VaultSchema extends DBSchema {
     value: ReceivedInvitationRecord;
     indexes: { updatedAt: string };
   };
+  joinedGroups: { key: string; value: JoinedGroupRecord; indexes: { updatedAt: string } };
+  joinedExpenses: {
+    key: string;
+    value: JoinedExpenseRecord;
+    indexes: { updatedAt: string; groupId: string };
+  };
   profile: { key: string; value: ProfileRecord };
   accounts: { key: string; value: AccountRecord; indexes: { updatedAt: string; archived: number } };
   categories: {
@@ -173,6 +191,7 @@ export interface VaultSchema extends DBSchema {
       fromAccountId: string;
       toAccountId: string;
       pendingReview: number;
+      addedFrom: string;
       deleted: number;
     };
   };
@@ -268,6 +287,20 @@ export function receivedInvitationRecord(row: ReceivedInvitation): ReceivedInvit
   return { id: row.id, row, updatedAt: row.updatedAt };
 }
 
+export function joinedGroupRecord(row: JoinedGroup): JoinedGroupRecord {
+  return { id: row.id, row, updatedAt: row.updatedAt };
+}
+
+export function joinedExpenseRecord(row: JoinedExpense): JoinedExpenseRecord {
+  return {
+    id: row.id,
+    row,
+    updatedAt: row.updatedAt,
+    deleted: row.deletedAt ? 1 : 0,
+    groupId: row.groupId,
+  };
+}
+
 export function profileRecord(row: User): ProfileRecord {
   return { id: PROFILE_KEY, row, updatedAt: row.updatedAt };
 }
@@ -290,5 +323,6 @@ export function transactionRecord(
   if (row.fromAccountId) record.fromAccountId = row.fromAccountId;
   if (row.toAccountId) record.toAccountId = row.toAccountId;
   if (!deleted && row.pendingDetails) record.pendingReview = 1;
+  if (!deleted && row.importedFromExpenseId) record.addedFrom = row.importedFromExpenseId;
   return record;
 }

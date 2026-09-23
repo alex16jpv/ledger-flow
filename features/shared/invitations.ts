@@ -1,7 +1,8 @@
 import { isAnswerable } from "@/lib/local/repository";
 import type { SentInvitation } from "@/types/api";
 
-export type InviteState = "noEmail" | "notInvited" | "waiting" | "expired" | "joined" | "declined";
+export type InviteState =
+  "noEmail" | "notInvited" | "waiting" | "expired" | "joined" | "declined" | "left";
 
 export interface PersonInvite {
   state: InviteState;
@@ -32,6 +33,7 @@ export function inviteStateOf(
     return { state: "notInvited", invitation: null };
   }
   if (invitation.status === "DECLINED") return { state: "declined", invitation };
+  if (invitation.status === "LEFT") return { state: "left", invitation };
   return isAnswerable(invitation, now)
     ? { state: "waiting", invitation }
     : { state: "expired", invitation };

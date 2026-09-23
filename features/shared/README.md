@@ -109,6 +109,16 @@ address with an account from one without, because the server never says. An invi
 is still `PENDING` on the server and is read against the server's clock (`isAnswerable`). The count on
 More, on the bar and in the sidebar is the invitations that can still be answered.
 
+**A group somebody shared with you is read, not worked.** Only its owner writes in it (v1), so it has
+no outbox route: the feed brings it as `joinedGroups` and `joinedExpenses`, the mirror keeps it, and
+`useJoinedGroups` derives each one's standing with `deriveJoined` (`lib/local/derive`) from the owner's
+own `collected` figures. It sits under `Shared with you` in the groups face, archived ones fold with
+the settled, what you owe there counts in `You owe`, and the People face closes the arithmetic with one
+line per person who shared something. `/shared/joined/[id]` leads with where you stand with the owner.
+**`Add to my ledger`** is offered only on a line the owner marked paid for you: it writes one ordinary
+expense of yours per line, dated that line, in your account and category, and needs a connection.
+**`Leave this group`** ends your invitation, drops the group from the device, and moves no money.
+
 The screens that compose other features — the group detail, the person, the settle-up sheet, the
 transaction picker and the sheet that says what adding them changes — live in the **app layer**, like
 the account detail does, because a feature never imports another feature.

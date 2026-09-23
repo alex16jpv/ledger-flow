@@ -67,8 +67,6 @@ export function createContact(input: CreateContactInput): Promise<Contact> {
           name: body.name,
           color: body.color ?? null,
           ...emailField(body.email),
-          // Server-owned: an invitation is the second delivery, and nothing accepts one yet.
-          linkedUserId: null,
           userId,
           archivedAt: null,
           createdAt: occurredAt,

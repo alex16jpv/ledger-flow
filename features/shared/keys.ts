@@ -10,6 +10,7 @@ export const contactKeys = {
 export const sharedKeys = {
   all: QUERY_DOMAINS.shared,
   ledger: () => [...sharedKeys.all, "ledger"] as const,
+  joined: () => [...sharedKeys.all, "joined"] as const,
   received: () => [...sharedKeys.all, "invitations", "received"] as const,
   sent: (groupId: string) => [...sharedKeys.all, "invitations", "sent", groupId] as const,
 };

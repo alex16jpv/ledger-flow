@@ -21,12 +21,15 @@ import { NetworkError } from "@/lib/api/errors";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
+import { sumAmounts } from "@/lib/local/derive";
+import type { JoinedGroup } from "@/types/api";
 
-import { useSharedSection } from "../hooks";
+import { useJoinedGroups, useSharedSection } from "../hooks";
 import type { GroupView, PersonView } from "../ledger";
 import { ContactFormSheet } from "./ContactFormSheet";
 import { GroupRowLink } from "./GroupRowLink";
 import { InvitationsBlock } from "./InvitationsBlock";
+import { JoinedGroupRowLink } from "./JoinedGroupRowLink";
 import { TwoFigures } from "./parts";
 
 type Face = "people" | "groups";
@@ -35,8 +38,8 @@ const FACES: readonly Face[] = ["people", "groups"];
 
 const NEW_HREF = "/shared/new";
 
-const parseFace = (value: string | null): Face =>
-  (FACES as readonly string[]).includes(value ?? "") ? (value as Face) : "people";
+const parseFace = (value: string | null, fallback: Face): Face =>
+  (FACES as readonly string[]).includes(value ?? "") ? (value as Face) : fallback;
 
 function PersonRowLink({ person }: { person: PersonView }) {
   const t = useTranslations("shared.people");
@@ -104,8 +107,17 @@ export function SharedView() {
   const money = useMoney();
   const router = useRouter();
   const params = useSearchParams();
-  const face = parseFace(params.get("face"));
-  const { section, isPending, isError, error, refetch } = useSharedSection();
+  const shared = useSharedSection();
+  const joined = useJoinedGroups();
+  const isPending = shared.isPending || joined.isPending;
+  const isError = shared.isError || joined.isError;
+  const error = shared.error ?? joined.error;
+  const refetch = () => {
+    shared.refetch();
+    void joined.refetch();
+  };
+  const { section } = shared;
+  const joinedView = joined.view;
   // Offline with nothing on the device: there is no failure to report, only no copy to read.
   const offline = error instanceof NetworkError && !error.timedOut && section === undefined;
   const [newPerson, setNewPerson] = useState(false);
@@ -128,7 +140,22 @@ export function SharedView() {
     return { open: rows.filter((view) => !folded(view)), folded: rows.filter(folded) };
   }, [section]);
 
-  const nothingAtAll = section?.groups.length === 0 && section.people.length === 0;
+  const joinedGroups = useMemo(() => {
+    const rows = joinedView?.rows.groups ?? [];
+    const folded = (group: JoinedGroup) => group.archivedAt !== null;
+    return { open: rows.filter((group) => !folded(group)), folded: rows.filter(folded) };
+  }, [joinedView]);
+  const hasJoined = (joinedView?.rows.groups.length ?? 0) > 0;
+  const ownNothing = section?.groups.length === 0 && section.people.length === 0;
+  const nothingAtAll = ownNothing && !hasJoined;
+  // When everything here was shared with you, the People face has nothing of yours to list.
+  const face = parseFace(params.get("face"), ownNothing && hasJoined ? "groups" : "people");
+  const joinedRow = (group: JoinedGroup) => {
+    const standing = joinedView?.standings.get(group.id);
+    return standing ? (
+      <JoinedGroupRowLink key={group.id} group={group} standing={standing} />
+    ) : null;
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -245,8 +272,8 @@ export function SharedView() {
             ]}
           />
           <TwoFigures
-            owedToYou={section?.owedToYou ?? 0}
-            youOwe={section?.youOwe ?? 0}
+            owedToYou={sumAmounts([section?.owedToYou ?? 0, joinedView?.totals.ownerOwes ?? 0])}
+            youOwe={sumAmounts([section?.youOwe ?? 0, joinedView?.totals.youOwe ?? 0])}
             meta={t("shared.summary.counts", {
               open: people.owesYou.length + people.youOwe.length,
               contacts: section?.contacts ?? 0,
@@ -297,6 +324,28 @@ export function SharedView() {
                   })}
                 </p>
               )}
+              {joinedView?.totals.owners.map((owner) => (
+                <div key={owner.name} className="flex flex-col gap-1 px-1 text-sm text-text-3">
+                  {owner.youOwe > 0 && (
+                    <p>
+                      {t("shared.joined.peopleLine", {
+                        amount: money.format(owner.youOwe),
+                        name: owner.name,
+                        count: owner.groups,
+                      })}
+                    </p>
+                  )}
+                  {owner.ownerOwes > 0 && (
+                    <p>
+                      {t("shared.joined.peopleLineFrom", {
+                        amount: money.format(owner.ownerOwes),
+                        name: owner.name,
+                        count: owner.groups,
+                      })}
+                    </p>
+                  )}
+                </div>
+              ))}
               {people.settled.length > 0 && (
                 <Fold label={t("shared.people.settled")} count={people.settled.length}>
                   <Card flush>
@@ -338,18 +387,31 @@ export function SharedView() {
                   </List>
                 </Card>
               )}
-              {groups.folded.length > 0 && (
-                <Fold label={t("shared.groups.settled")} count={groups.folded.length}>
+              {joinedGroups.open.length > 0 && (
+                <section className="flex flex-col gap-2">
+                  <h2 className="px-1 text-md font-semibold">{t("shared.joined.section")}</h2>
+                  <Card flush>
+                    <List>{joinedGroups.open.map(joinedRow)}</List>
+                  </Card>
+                  <p className="px-1 text-xs text-text-3">{t("shared.joined.sectionNote")}</p>
+                </section>
+              )}
+              {groups.folded.length + joinedGroups.folded.length > 0 && (
+                <Fold
+                  label={t("shared.groups.settled")}
+                  count={groups.folded.length + joinedGroups.folded.length}
+                >
                   <Card flush>
                     <List>
                       {groups.folded.map((view) => (
                         <GroupRowLink key={view.group.id} view={view} />
                       ))}
+                      {joinedGroups.folded.map(joinedRow)}
                     </List>
                   </Card>
                 </Fold>
               )}
-              {groups.open.length === 0 && groups.folded.length === 0 && (
+              {groups.open.length === 0 && groups.folded.length === 0 && !hasJoined && (
                 <Empty
                   icon={<Users {...iconProps("lg")} />}
                   title={t("shared.empty.title")}

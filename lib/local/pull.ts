@@ -3,9 +3,11 @@ import type { SyncChangesResponse } from "@/types/api";
 
 import { rememberServerTime } from "./clock";
 import type { VaultHandle } from "./db";
-import { writeTransaction } from "./outbox/queue";
+import { type WriteTransaction, writeTransaction } from "./outbox/queue";
 import { reconcileContext, reconcileRow } from "./outbox/reconcile";
 import {
+  joinedExpenseRecord,
+  joinedGroupRecord,
   PROFILE_KEY,
   profileRecord,
   receivedInvitationRecord,
@@ -64,6 +66,20 @@ interface Applied {
   readdressed: boolean;
 }
 
+// A group can be left and joined again with a new invitation, so one that ended proves nothing alone.
+async function dropJoinedGroup(tx: WriteTransaction, groupId: string): Promise<boolean> {
+  const invitations = await tx.objectStore("invitationsReceived").getAll();
+  if (invitations.some((r) => r.row.groupId === groupId && r.row.status === "ACCEPTED")) {
+    return false;
+  }
+  const expenses = tx.objectStore("joinedExpenses");
+  const lines = await expenses.index("groupId").getAllKeys(groupId);
+  const had = (await tx.objectStore("joinedGroups").get(groupId)) !== undefined;
+  await tx.objectStore("joinedGroups").delete(groupId);
+  for (const id of lines) await expenses.delete(id);
+  return had || lines.length > 0;
+}
+
 async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promise<Applied> {
   const { changes, pagination } = page;
   const tx = writeTransaction(handle.db);
@@ -120,6 +136,20 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
   for (const row of changes.invitationsReceived) {
     news ||= await isNews(tx.objectStore("invitationsReceived"), row.id, row.updatedAt);
     await tx.objectStore("invitationsReceived").put(receivedInvitationRecord(row));
+  }
+  // Read-only: only the owner writes in a group, so nothing is ever queued against these rows.
+  for (const row of changes.joinedGroups) {
+    news ||= await isNews(tx.objectStore("joinedGroups"), row.id, row.updatedAt);
+    await tx.objectStore("joinedGroups").put(joinedGroupRecord(row));
+  }
+  for (const row of changes.joinedExpenses) {
+    news ||= await isNews(tx.objectStore("joinedExpenses"), row.id, row.updatedAt);
+    await tx.objectStore("joinedExpenses").put(joinedExpenseRecord(row));
+  }
+  const ended = changes.invitationsReceived.filter((row) => row.status !== "ACCEPTED");
+  for (const groupId of new Set(ended.map((row) => row.groupId))) {
+    const dropped = await dropJoinedGroup(tx, groupId);
+    news ||= dropped;
   }
 
   const meta = tx.objectStore("meta");

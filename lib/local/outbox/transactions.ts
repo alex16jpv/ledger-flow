@@ -107,6 +107,8 @@ function newRow(
     sharedExpenseId: null,
     sharedGroupId: null,
     sharedSettlementId: null,
+    importedFromGroupId: null,
+    importedFromExpenseId: null,
     sharedHistory: [],
     deletedAt: null,
     createdAt,

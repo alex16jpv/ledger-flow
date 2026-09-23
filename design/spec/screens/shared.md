@@ -623,7 +623,7 @@ What you already added stays yours.
 
 ### Leaving (`#leave-group`)
 
-**`Leave this group`** is in the group's `⋯` menu (decision 27). It is `Stop sharing` seen from your
+**`Leave this group`** is at the foot of the group, under the expenses (decision 27). It is `Stop sharing` seen from your
 side, and its confirmation says what it does not do. You stop seeing the group, and you **stay in it
 as somebody Ana splits with**: your share, what you paid and what you owe do not move, and what you
 added to your ledger stays yours. Ana's row for you reads `left`, and inviting you again is how you

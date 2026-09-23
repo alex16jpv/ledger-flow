@@ -5,6 +5,27 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-23 · A group shared with you is a read-only copy, and Add to my ledger is online (T-130)
+
+- **Context:** the owner decided on 2026-09-22 that somebody who joined a group reads it, and takes
+  their part of a line into their own ledger only once the owner marked it paid; that an archived
+  group stays with them; that they can leave; and whose names they see. The backend sends those groups
+  and their lines as `joinedGroups` and `joinedExpenses`, placed at the moment you joined.
+- **Decision:** two more mirror stores, again with **no outbox route**: only the owner writes in the
+  group, and _Add to my ledger_ and _Leave_ go to the server and keep its answer. When a received
+  invitation stops being `ACCEPTED`, the pull drops the group and its lines, unless another accepted
+  invitation to the same group is on the device (left, then invited back). Which lines are already in
+  your ledger is read from an `addedFrom` index on `transactions`, not by walking every movement.
+  What you owe there is derived in `lib/local/derive/joined.ts` from the owner's own `collected`
+  figures, which is the server's imputation, so the client adds nothing it has to agree with.
+- **Alternatives:** queueing _Add to my ledger_ offline. Rejected: whether the line is still paid and
+  still shared is the server's to say, and a queued one would come back as a conflict about somebody
+  else's group. Fetching the joined groups on demand instead of mirroring them. Rejected: every other
+  screen of the section reads offline, and this one would have been the exception.
+- **Consequence:** `MIRROR_VERSION` 5 and `VAULT_SCHEMA_VERSION` 4, so every device pulls once more.
+  A device with no mirror falls back to `/joined-groups`, which cannot say what is already in your
+  ledger; the server refuses a second one with `SHARED_LINE_IN_LEDGER`, and the screen says so.
+
 ## 2026-09-22 · Invitations are online writes, and the mirror keeps both sides (T-129)
 
 - **Context:** an invitation is the first thing one user writes for another to read. The owner decided

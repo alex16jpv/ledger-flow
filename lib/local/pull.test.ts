@@ -3,8 +3,11 @@ import {
   budget,
   category,
   changes as feedChanges,
+  joinedExpense,
+  joinedGroup,
   openTestVault,
   profile,
+  receivedInvitation,
   transaction,
   wipeVaults,
 } from "@/lib/testing/vault";
@@ -216,6 +219,69 @@ async function queue(vault: VaultHandle, overrides: Partial<OutboxOperation>): P
 }
 
 // D-23 (F-25): the feed is authoritative, and the unsent queue is projected back on top.
+describe("a group shared with you", () => {
+  afterEach(wipeVaults);
+
+  const joined = receivedInvitation({ groupId: "g9", status: "ACCEPTED" });
+  const end = { count: 1, hasMore: false, nextCursor: "v1|final|" };
+
+  it("keeps the group and its lines, and drops both when the invitation stops being ACCEPTED", async () => {
+    const vault = await openTestVault("u1");
+    await pullChanges(vault, {
+      fetchPage: feed([
+        page(
+          {
+            invitationsReceived: [joined],
+            joinedGroups: [joinedGroup()],
+            joinedExpenses: [joinedExpense()],
+          },
+          end,
+        ),
+      ]).fetchPage,
+    });
+    expect(await vault.db.getAllKeys("joinedExpenses")).toEqual(["je1"]);
+
+    const result = await pullChanges(vault, {
+      fetchPage: feed([
+        page(
+          {
+            invitationsReceived: [
+              { ...joined, status: "LEFT", updatedAt: "2026-09-23T10:00:00.000Z" },
+            ],
+          },
+          end,
+        ),
+      ]).fetchPage,
+    });
+
+    expect(await vault.db.getAllKeys("joinedGroups")).toEqual([]);
+    expect(await vault.db.getAllKeys("joinedExpenses")).toEqual([]);
+    expect(result.changed).toBe(true);
+  });
+
+  it("keeps a group left once and joined again with a new invitation", async () => {
+    const vault = await openTestVault("u1");
+    await pullChanges(vault, {
+      fetchPage: feed([
+        page(
+          {
+            invitationsReceived: [
+              { ...joined, id: "r0", status: "LEFT" },
+              { ...joined, id: "r1" },
+            ],
+            joinedGroups: [joinedGroup()],
+            joinedExpenses: [joinedExpense()],
+          },
+          end,
+        ),
+      ]).fetchPage,
+    });
+
+    expect(await vault.db.getAllKeys("joinedGroups")).toEqual(["g9"]);
+    expect(await vault.db.getAllKeys("joinedExpenses")).toEqual(["je1"]);
+  });
+});
+
 describe("a pull with operations still queued", () => {
   afterEach(wipeVaults);
 

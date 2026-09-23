@@ -11,13 +11,13 @@ mirror says it cannot.
 
 ## The hard line: disposable mirror, sacred outbox
 
-|                                                | mirror (`profile`, `accounts`, `categories`, `transactions`, `budgets`, `contacts`, `sharedGroups`, `sharedExpenses`, `settlements`, `invitationsSent`, `invitationsReceived`) | outbox                                                  |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
-| What it is                                     | a copy of the server, re-downloadable                                                                                                                                          | writes that have not reached the server                 |
-| Losing it costs                                | one pull                                                                                                                                                                       | the user's data                                         |
-| On a version bump                              | cleared and re-pulled                                                                                                                                                          | migrated one operation at a time, or the upgrade blocks |
-| On logout                                      | always cleared                                                                                                                                                                 | kept unless the caller confirms discarding it           |
-| On session expiry / app update / cache cleanup | untouched                                                                                                                                                                      | untouched (invariant 7)                                 |
+|                                                | mirror (`profile`, `accounts`, `categories`, `transactions`, `budgets`, `contacts`, `sharedGroups`, `sharedExpenses`, `settlements`, `invitationsSent`, `invitationsReceived`, `joinedGroups`, `joinedExpenses`) | outbox                                                  |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| What it is                                     | a copy of the server, re-downloadable                                                                                                                                                                            | writes that have not reached the server                 |
+| Losing it costs                                | one pull                                                                                                                                                                                                         | the user's data                                         |
+| On a version bump                              | cleared and re-pulled                                                                                                                                                                                            | migrated one operation at a time, or the upgrade blocks |
+| On logout                                      | always cleared                                                                                                                                                                                                   | kept unless the caller confirms discarding it           |
+| On session expiry / app update / cache cleanup | untouched                                                                                                                                                                                                        | untouched (invariant 7)                                 |
 
 They share one database because **IndexedDB transactions cannot span two databases** and O-F4 has to
 write the entity and its operation atomically (plan §4.1). Nothing here ever calls `deleteDatabase`
@@ -103,6 +103,17 @@ pull. Nothing is ever deleted from them: an invitation that stops waiting says h
 one that ran out of time is still `PENDING` and is judged by its `expiresAt` against `serverNow()`. **A new email on the profile empties `invitationsReceived` and starts the pull over as a
 snapshot**: the invitations to the new address are older than the cursor, and the ones to the old one
 no longer belong to this person.
+
+## Groups shared with you
+
+`joinedGroups` and `joinedExpenses` are the groups other people shared with you and their lines, as
+the feed sends them (T-130): read-only, with **no outbox route**, because only the owner writes in a
+group. A row's `updatedAt` is its position for you — when it changed or when you joined, whichever is
+later — so a group joined after the cursor arrives whole. When a received invitation stops being
+`ACCEPTED`, `applyPage` drops its group and lines, unless another accepted invitation to that group is
+on the device. `transactions` carries an `addedFrom` index (the line a movement was added from with
+_Add to my ledger_), which is how the screen knows what is already in your ledger without reading
+every movement.
 
 ## Filling it: `pull.ts`
 

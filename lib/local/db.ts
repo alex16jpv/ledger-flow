@@ -1,4 +1,4 @@
-import { type IDBPDatabase, openDB } from "idb";
+import { type IDBPDatabase, type IDBPTransaction, openDB, type StoreNames } from "idb";
 
 import type { User } from "@/types/api";
 
@@ -10,8 +10,8 @@ import {
   type VaultSchema,
 } from "./schema";
 
-export const VAULT_SCHEMA_VERSION = 3;
-export const MIRROR_VERSION = 4;
+export const VAULT_SCHEMA_VERSION = 4;
+export const MIRROR_VERSION = 5;
 export const OUTBOX_VERSION = 1;
 
 // Invariant 7: null means the operation cannot be carried forward, so the upgrade blocks.
@@ -58,7 +58,13 @@ export function isVaultSupported(): boolean {
   return typeof indexedDB !== "undefined";
 }
 
-function createStores(db: IDBPDatabase<VaultSchema>): void {
+type UpgradeTransaction = IDBPTransaction<
+  VaultSchema,
+  ArrayLike<StoreNames<VaultSchema>>,
+  "versionchange"
+>;
+
+function createStores(db: IDBPDatabase<VaultSchema>, upgrade: UpgradeTransaction): void {
   if (!db.objectStoreNames.contains("profile")) db.createObjectStore("profile", { keyPath: "id" });
 
   for (const name of ["accounts", "categories", "budgets", "contacts", "sharedGroups"] as const) {
@@ -85,6 +91,16 @@ function createStores(db: IDBPDatabase<VaultSchema>): void {
     db.createObjectStore(name, { keyPath: "id" }).createIndex("updatedAt", "updatedAt");
   }
 
+  if (!db.objectStoreNames.contains("joinedGroups")) {
+    db.createObjectStore("joinedGroups", { keyPath: "id" }).createIndex("updatedAt", "updatedAt");
+  }
+
+  if (!db.objectStoreNames.contains("joinedExpenses")) {
+    const store = db.createObjectStore("joinedExpenses", { keyPath: "id" });
+    store.createIndex("updatedAt", "updatedAt");
+    store.createIndex("groupId", "groupId");
+  }
+
   if (!db.objectStoreNames.contains("transactions")) {
     const store = db.createObjectStore("transactions", { keyPath: "id" });
     store.createIndex("updatedAt", "updatedAt");
@@ -95,6 +111,11 @@ function createStores(db: IDBPDatabase<VaultSchema>): void {
     store.createIndex("toAccountId", "toAccountId");
     store.createIndex("pendingReview", "pendingReview");
     store.createIndex("deleted", "deleted");
+  }
+
+  const transactions = upgrade.objectStore("transactions");
+  if (!transactions.indexNames.contains("addedFrom")) {
+    transactions.createIndex("addedFrom", "addedFrom");
   }
 
   if (!db.objectStoreNames.contains("outbox")) {
@@ -181,8 +202,8 @@ export async function openVault(
   if (!isVaultSupported()) throw new VaultUnavailableError();
 
   const db = await openDB<VaultSchema>(vaultDatabaseName(userId), definition.schemaVersion, {
-    upgrade(database) {
-      createStores(database);
+    upgrade(database, _oldVersion, _newVersion, transaction) {
+      createStores(database, transaction);
     },
     blocking(_currentVersion, _blockedVersion, event) {
       // Another tab is upgrading the schema; holding this connection open would stall it forever.
