@@ -37,7 +37,7 @@ export default function GlobalError({
   return (
     <html lang={lang} data-palette={DEFAULT_PALETTE}>
       <body className="bg-bg text-text">
-        <main className="mx-auto flex min-h-dvh w-full max-w-[520px] flex-col items-center justify-center gap-3 px-4 text-center">
+        <main className="mx-auto flex min-h-dvh w-full max-w-[520px] flex-col items-center justify-center gap-3 px-4 pb-(--safe-bottom) text-center">
           <h1 className="text-xl font-semibold">{copy.title}</h1>
           <p className="text-text-2">{copy.body}</p>
           <button

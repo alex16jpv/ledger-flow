@@ -21,7 +21,7 @@ interface TabBarProps {
 }
 
 const SLOT =
-  "relative flex h-(--tabbar-h) flex-col items-center justify-center gap-[3px] text-xs font-medium";
+  "relative flex h-full flex-col items-center justify-center gap-[3px] text-xs font-medium";
 
 function slotClasses(active: boolean) {
   return cn(SLOT, active ? "text-brand-text [&>svg]:stroke-[2.25]" : "text-text-3");
@@ -59,12 +59,12 @@ export function TabBar({ pendingCount, invitations = 0, moreOpen, onAdd, onMore 
   return (
     <nav
       aria-label={t("label")}
-      className="z-(--z-nav) grid h-(--tabbar-h) min-w-0 grid-cols-5 items-end border-t border-border bg-[color-mix(in_oklab,var(--surface)_88%,transparent)] px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-(--nav-blur) md:hidden"
+      className="z-(--z-nav) grid h-[calc(var(--tabbar-h)+var(--safe-bottom))] min-w-0 grid-cols-5 border-t border-border bg-[color-mix(in_oklab,var(--surface)_88%,transparent)] px-2 pb-(--safe-bottom) backdrop-blur-(--nav-blur) md:hidden"
     >
       {TAB_SLOTS.map((slot) => {
         if (slot === "add") {
           return (
-            <div key={slot} className="flex h-(--tabbar-h) items-center justify-center">
+            <div key={slot} className="flex h-full items-center justify-center">
               <button
                 type="button"
                 aria-label={t("add")}

@@ -9,7 +9,7 @@ import { LanguageChip } from "./LanguageChoice";
 export function AuthFrame({ children }: { children: ReactNode }) {
   const t = useTranslations("common");
   return (
-    <main className="flex min-h-dvh flex-col">
+    <main className="flex min-h-dvh flex-col pb-(--safe-bottom)">
       <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center gap-5 px-4 py-8">
         <div className="flex items-center justify-between gap-2 pb-2">
           <span aria-hidden="true" className="w-16" />

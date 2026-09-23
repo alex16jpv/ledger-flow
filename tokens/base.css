@@ -40,6 +40,7 @@
 
   --bp-sm: 600px; --bp-md: 900px; --bp-lg: 1200px;
   --sidebar-w: 240px; --content-max: 1120px; --tabbar-h: 64px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 @media (prefers-reduced-motion: reduce) {
   :root { --dur-1: 0ms; --dur-2: 0ms; --dur-3: 0ms; }

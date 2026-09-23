@@ -15,7 +15,7 @@ export default function PublicError({ error, reset }: { error: Error; reset: () 
     reportError(error, "boundary");
   }, [error]);
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[520px] items-center px-4">
+    <main className="mx-auto flex min-h-dvh w-full max-w-[520px] items-center px-4 pb-(--safe-bottom)">
       <Empty
         tone="danger"
         icon={<CircleAlert {...iconProps("lg")} />}

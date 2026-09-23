@@ -31,6 +31,10 @@
   2026-09-16 (T-82): the answer on the left, the follow-ups and the way into Trends on the right. Not
   at 900px like Home: there the sidebar leaves 596px of content and the wide column lands at 272px,
   narrower than a phone. Stats' empty, loading and error states stay one column at every width.
+- **The bottom safe area** (`--safe-bottom`, the phone's navigation bar or home indicator when the
+  app draws under it) is never covered by a control: the tab bar grows by it, the toast rises by it,
+  a bottom sheet pads its footer by it, and the full-page frames (sign-in, onboarding, the public
+  pages, the error pages) end that far above the edge. Where there is no inset it is 0px.
 - **600px and up:** grids of two or three columns, and bottom sheets become a centred 520px modal.
 - **Page header:** eyebrow plus h1 on the left, actions on the right (40px icon-only, 36px avatar).
   Forms: a header with back and a centred title, a maximum width of 640px, and a 48px save button at

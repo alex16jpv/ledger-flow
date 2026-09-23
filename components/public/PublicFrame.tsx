@@ -14,7 +14,7 @@ export async function PublicFrame({ children }: { children: ReactNode }) {
   const otherLocale = locale === "es" ? "en" : "es";
   const year = new Date().getFullYear();
   return (
-    <div className="flex min-h-dvh flex-col bg-bg text-text">
+    <div className="flex min-h-dvh flex-col bg-bg pb-(--safe-bottom) text-text">
       <header className="mx-auto flex w-full max-w-(--content-max) items-center gap-3 px-4 py-4 sm:px-6 md:px-8">
         <Link href="/" className="flex items-center gap-2 text-md font-semibold whitespace-nowrap">
           <span className="grid size-8 place-items-center rounded-[10px] bg-brand text-on-brand">
