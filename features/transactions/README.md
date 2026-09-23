@@ -9,7 +9,9 @@ was chosen too) and invalidates every money domain (`lib/query/domains.ts`). `us
 backs the toast's Undo. The sheet itself is composed in the app layer
 (`app/[locale]/(app)/QuickAddSheet.tsx`) because it needs the category and account pickers of other
 features; `draftToSearchParams` carries what was typed to the full form through "More details". On a
-phone the sheet fills the screen with Save in its top bar (T-150).
+phone the sheet fills the screen with Save in its top bar (T-150). Its category row (T-151) is
+`FittedChips`: the four most used categories that fit whole in two lines together with More, which
+is always drawn last, and the chosen category always among them.
 
 T-73 gives that sheet the three types the endpoint has always accepted. `schemas.ts` owns the shape:
 `QUICK_TYPES` comes from `QuickAddTransactionInput["type"]`, `quickAddSchema` checks a transfer's two

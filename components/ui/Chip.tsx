@@ -77,7 +77,7 @@ export function CategoryChip({
       >
         {icon}
       </span>
-      {children}
+      <span className="min-w-0 truncate">{children}</span>
     </button>
   );
 }

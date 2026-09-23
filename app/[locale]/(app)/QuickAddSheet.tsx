@@ -7,8 +7,9 @@ import { useEffect, useRef, useState } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { AmountInput } from "@/components/ui/AmountInput";
 import { Button } from "@/components/ui/Button";
-import { CategoryChip, Chip, ChipRow } from "@/components/ui/Chip";
+import { CategoryChip, Chip } from "@/components/ui/Chip";
 import { Input } from "@/components/ui/Field";
+import { FittedChips } from "@/components/ui/FittedChips";
 import { Segment, type SegmentOption } from "@/components/ui/Segment";
 import { Sheet, SheetAction } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
@@ -32,7 +33,8 @@ import { isValidationKey, validationMessage } from "@/lib/i18n/validation";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
 
-export const QUICK_RECENT_LIMIT = 5;
+const QUICK_RECENT_LIMIT = 4;
+const QUICK_CHIP_LINES = 2;
 
 const TYPE_TONE = { EXPENSE: "default", INCOME: "income", TRANSFER: "transfer" } as const;
 
@@ -269,30 +271,38 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
               <span className="font-medium text-text-2">{t("transactions.quick.category")}</span>
               <span className="text-text-3">{t("transactions.quick.categoryHint")}</span>
             </div>
-            <ChipRow role="group" aria-label={t("transactions.quick.category")}>
-              {chips.map((category) => (
+            <FittedChips
+              role="group"
+              aria-label={t("transactions.quick.category")}
+              items={chips}
+              keyOf={(category) => category.id}
+              pinned={categoryId}
+              lines={QUICK_CHIP_LINES}
+              renderItem={(category) => (
                 <CategoryChip
-                  key={category.id}
                   color={category.color}
                   selected={category.id === categoryId}
                   icon={<CategoryIcon icon={category.icon} size="sm" />}
+                  className="max-w-full"
                   onClick={() => {
                     setCategoryId(category.id === categoryId ? null : category.id);
                   }}
                 >
                   {category.name}
                 </CategoryChip>
-              ))}
-              <Chip
-                icon={<MoreHorizontal {...iconProps("sm")} />}
-                aria-haspopup="dialog"
-                onClick={() => {
-                  setPickerOpen(true);
-                }}
-              >
-                {t("common.more")}
-              </Chip>
-            </ChipRow>
+              )}
+              trailing={
+                <Chip
+                  icon={<MoreHorizontal {...iconProps("sm")} />}
+                  aria-haspopup="dialog"
+                  onClick={() => {
+                    setPickerOpen(true);
+                  }}
+                >
+                  {t("common.more")}
+                </Chip>
+              }
+            />
           </div>
           <div className="flex flex-col gap-1">
             <AccountPicker

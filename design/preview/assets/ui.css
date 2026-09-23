@@ -217,6 +217,9 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 /* ── Chips, badges, tags ────────────────────────────────────────────────── */
 .chips { display: flex; gap: var(--sp-2); overflow-x: auto; min-width: 0; max-width: 100%; scrollbar-width: none; padding-bottom: 2px; }
 .chips::-webkit-scrollbar { display: none; }
+.chips.fit { flex-wrap: wrap; overflow: visible; }
+.chips.fit .chip { max-width: 100%; }
+.chip .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 var(--sp-3); border-radius: var(--r-full); border: 1px solid var(--border-strong); background: var(--surface); font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--text-2); white-space: nowrap; cursor: pointer; transition: all var(--dur-1) var(--ease); }
 .chip:hover { background: var(--surface-2); }
 .chip.selected { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
