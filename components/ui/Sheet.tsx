@@ -236,7 +236,7 @@ export function Sheet({
       >
         <div
           className={cn(
-            "flex max-h-[92%] w-full flex-col gap-4 rounded-t-2xl bg-surface px-4 pt-2 pb-[calc(var(--sp-4)+env(safe-area-inset-bottom))] text-text shadow-3",
+            "flex max-h-[92%] w-full flex-col gap-4 rounded-t-2xl bg-surface px-4 pt-2 pb-[calc(var(--sp-4)+var(--safe-bottom))] text-text shadow-3",
             width === "sm" ? "sm:w-[min(360px,92%)]" : "sm:w-[min(520px,92%)]",
             "sm:rounded-xl sm:pb-5",
           )}

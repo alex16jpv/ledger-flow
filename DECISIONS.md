@@ -4879,3 +4879,32 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
 - **Consequence:** a re-mint reads every row of those eight stores once. It happens only on a
   collision of fresh UUIDs or a merge by name, so the cost is paid almost never; the account and
   category re-mints already read every movement.
+
+## 2026-09-23 · The tab bar grows by the bottom safe area instead of containing it (T-148)
+
+- **Context:** in the installed app on Android, the phone's navigation buttons covered the tab bar
+  and the modules could not be reached. With `viewport-fit=cover`, Chrome for Android (135 and later)
+  draws the page down to the bottom edge, under the system navigation bar, and reports that bar as
+  `env(safe-area-inset-bottom)`, a value that changes while the app runs (the bar shown or hidden,
+  gesture or three-button navigation). The tab bar had a fixed `--tabbar-h` with the inset as padding
+  inside it, and each slot was `--tabbar-h` tall on its own, so the padding pushed nothing up: the
+  slots overflowed into the padding and sat under the system bar. `design/spec/layout.md` already
+  said "a 64px tab bar plus safe area"; the app and the preview's `ui.css` did not do it.
+- **Decision:** one token, `--safe-bottom` (`env(safe-area-inset-bottom, 0px)`), in `tokens/base.css`.
+  The bar is `--tabbar-h + --safe-bottom` tall with `--safe-bottom` as bottom padding, the slots fill
+  the row that is left (`h-full`) instead of carrying their own height, and the toast sits
+  `--safe-bottom` higher so it keeps clearing the bar. The sheet already added the inset and now
+  reads the same token. The full-page frames the installed app also shows — `AuthFrame` (sign-in,
+  register, onboarding), `PublicFrame` and both error pages — pad their bottom by it, so their last
+  control is not left under the bar either.
+- **Alternatives:** `safe-area-max-inset-bottom`, which is stable while the inset moves — rejected
+  because it keeps the gap after the user hides the system bar, and with `viewport-fit=cover` Chrome
+  never shows the chin that makes the live value jump. Dropping `viewport-fit=cover` so Android keeps
+  the page above its bar — rejected because iOS needs it for the home indicator, and a browser that
+  draws under the bar anyway would still cover the tabs. Detecting the bar from script — rejected:
+  no API reports it other than the inset itself.
+- **Consequence:** with no inset (desktop browser, an Android that keeps the page above its bar) the
+  bar is the same 64px as before. With one, the bar is taller and its background reaches the edge.
+  `tests/e2e/shell.spec.ts` emulates a 48px bar through CDP (`Emulation.setSafeAreaInsetsOverride`)
+  and fails if a tab ends inside it. What CSS cannot fix is a browser that draws under its bar and
+  reports an inset of 0; that has to be seen on the device.
