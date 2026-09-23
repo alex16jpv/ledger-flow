@@ -4015,6 +4015,8 @@ const PEOPLE = {
   "Beto Cano": ["BC", "TEAL"],
   "Lucía Mesa": ["LM", "AMBER"],
   "Diego Pardo": ["DP", "INDIGO"],
+  "Marta Ríos": ["MR", "PURPLE"],
+  Carlitos: ["CA", "ORANGE"],
 };
 
 const face = (name, size = "") => {
@@ -4683,17 +4685,23 @@ const inviteRow = (name, meta, right, badge = "") =>
 
 const inviteSheet = (beto = "none") => {
   const betoRow =
-    beto === "waiting"
+    beto === "left"
       ? inviteRow(
           "Beto Cano",
-          "beto@example.com · invited just now · open until Oct 22",
-          `<button class="btn ghost sm">Withdraw</button>`,
+          "beto@example.com · left Sep 23",
+          `<button class="btn secondary sm">Invite again</button>`,
         )
-      : inviteRow(
-          "Beto Cano",
-          "beto@example.com · not invited",
-          `<button class="btn secondary sm">Invite</button>`,
-        );
+      : beto === "waiting"
+        ? inviteRow(
+            "Beto Cano",
+            "beto@example.com · invited just now · open until Oct 22",
+            `<button class="btn ghost sm">Withdraw</button>`,
+          )
+        : inviteRow(
+            "Beto Cano",
+            "beto@example.com · not invited",
+            `<button class="btn secondary sm">Invite</button>`,
+          );
   const said =
     beto === "waiting"
       ? `<p class="small muted" role="status" style="margin:0"><b>Beto sees it in Shared</b> the next time he opens Ledger Flow with beto@example.com. If that address has no account yet, the invitation waits for it all the same — and you are not told which: it reads <i>waiting</i> either way until he answers.</p>`
@@ -4718,6 +4726,146 @@ const stopSharingSheet = () =>
 <p class="xs faint" style="margin:0">To let her see it again, invite her again.</p>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn danger solid lg" style="flex:1.4">Stop sharing</button></div>`,
     "Stop sharing with Ana?",
+  );
+
+// ── Somebody else's group · T-130 ───────────────────────────────────────────
+const JOINED_OWED = 80000;
+
+const joinedSummary = () =>
+  twoFigureCard(
+    "Owed to you",
+    OWED_TO_YOU,
+    "3 people with something open · 23 contacts",
+    "You owe",
+    YOU_OWE + JOINED_OWED,
+  );
+
+const joinedGroupRow = (badge = STATE_BADGE.partial) =>
+  groupRow(
+    "Villa de Leyva weekend",
+    "TEAL",
+    "Shared by Ana Ruiz · Sep 19 – 21",
+    4,
+    1660000,
+    415000,
+    0,
+    null,
+    badge,
+  );
+
+const sharedWithYou = () =>
+  sharedScreen(`${sharedSeg("groups")}
+${joinedSummary()}
+<div class="list card flush">
+${groupRow("Cartagena trip", "TEAL", "Aug 29 – Sep 12", 4, 3200000, 800000, 46, "$1,100,000 paid of $2,400,000")}
+${groupRow("Night out", "PURPLE", "Sep 20", 3, 228900, 86300, 0, "$0 paid of $52,600")}
+${groupRow("Diego’s birthday gift", "PINK", "Sep 8", 3, 180000, 60000, 0, null, '<span class="badge">You owe $60,000</span>')}
+</div>
+<section class="stack-sm"><div class="section-head"><h3 class="h3">Shared with you</h3></div>
+<div class="list card flush">${joinedGroupRow()}</div>
+<p class="xs faint" style="margin:0">Only the person who shared a group can change it. Its badge says where you stand with her: you have paid Ana part of what you owe her there.</p></section>`);
+
+const sharedPeopleWithJoined = () =>
+  sharedScreen(`${sharedSeg("people")}
+${joinedSummary()}
+<section class="stack-sm"><div class="section-head"><h3 class="h3">Owes you</h3><span class="small muted amount">${money(OWED_TO_YOU)}</span></div>
+<div class="list card flush">
+${personRow("Beto Cano", "Cartagena trip · Night out", 526300, "owes you")}
+${personRow("Ana Ruiz", "Cartagena trip · Night out", 26300, "owes you")}
+</div></section>
+<section class="stack-sm"><div class="section-head"><h3 class="h3">You owe</h3><span class="small muted amount">${money(YOU_OWE + JOINED_OWED)}</span></div>
+<div class="list card flush">
+${personRow("Diego Pardo", "Diego’s birthday gift", 60000, "you owe")}
+</div>
+<p class="xs faint" style="margin:0">${moneyText(JOINED_OWED)} more to Ana Ruiz, in 1 group shared with you.</p></section>`);
+
+const IN_LEDGER = `<span class="badge success">${iconSvg("circle-check")}In your ledger</span>`;
+
+const JOINED_LINES = (archived) => [
+  ["Cabin", "bed", "BROWN", "Sep 19 · Ana paid · Lodging · Nequi", 900000, 225000, IN_LEDGER],
+  [
+    "Groceries at the market",
+    "shopping-basket",
+    "GREEN",
+    "Sep 19 · Ana paid · ready for your ledger",
+    240000,
+    60000,
+    STATE_BADGE.paid,
+  ],
+  [
+    "Dinner at Casa Quintero",
+    "utensils",
+    "ORANGE",
+    archived
+      ? "Sep 20 · Ana paid · no money of yours moved"
+      : "Sep 20 · Ana paid · yours to add once Ana marks it paid",
+    320000,
+    80000,
+    archived ? STATE_BADGE.off : STATE_BADGE.unpaid,
+  ],
+  ["Horse ride", "trees", "TEAL", "Sep 21 · Marta paid · between you and Marta", 200000, 50000, ""],
+];
+
+const joinedGroup = ({ sheet = "", archived = false } = {}) => {
+  const lines = JOINED_LINES(archived)
+    .map(
+      ([name, icon, color, meta, total, yours, badge]) =>
+        `<a class="row" href="#">${tile(icon, color)}<span class="body"><span class="title"><span class="truncate">${name}</span>${badge}</span><span class="meta">${meta}</span></span><span class="right"><span class="amount">${money(total)}</span><span class="sub">Your share ${moneyText(yours)}</span></span></a>`,
+    )
+    .join("");
+  const stand = archived
+    ? `<span class="eyebrow" style="margin-top:6px">Square with Ana</span><span class="amount-hero" style="font-size:32px">${money(0)}</span>`
+    : `<span class="eyebrow" style="margin-top:6px">You owe Ana</span><span class="amount-hero" style="font-size:32px">${money(JOINED_OWED)}</span>`;
+  const gap = archived
+    ? `Ana archived this group and wrote off the ${moneyText(JOINED_OWED)} that was still open. No money of yours moved.`
+    : `Shared by Ana Ruiz · only she can change it. You see it as she keeps it.`;
+  const body = `<section class="card color-TEAL stack-sm" style="gap:6px;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--f)"></span>
+<div class="hstack" style="justify-content:space-between">${tile("users", "TEAL")}<span class="badge outline">${iconSvg("calendar")}Sep 19 – 21</span></div>
+<span class="h2">Villa de Leyva weekend</span>
+${stand}
+<span class="small muted">total <b class="amount">${money(1660000)}</b> · your share <b class="amount">${money(415000)}</b></span>
+<div style="display:flex;flex-direction:column;gap:4px;padding-top:10px"><div class="progress thin"><span class="fill" style="width:78%"></span></div><span class="xs faint">$285,000 paid of the $365,000 you owe Ana</span></div>
+<span class="small muted" style="padding-top:2px">${gap}</span></section>
+${archived ? `<div class="alert neutral">${iconSvg("archive")}<span><b>Ana archived this group.</b> It stays here to read, and what you already added to your ledger stays yours.</span></div>` : ""}
+<button class="btn primary block">${iconSvg("circle-plus", "sm")}Add to my ledger · 1 ready</button>
+<section class="stack-sm"><div class="section-head"><h3 class="h3">People</h3><span class="small muted">Equal split by default</span></div>
+<div class="list card flush">
+${personRow("Ana Ruiz", "Shared this group · paid for 3 expenses", 415000, "share")}
+${personRow("You", archived ? "Paid $285,000 · the rest written off" : "Paid $285,000 · $80,000 still owed to Ana", 415000, "share", archived ? STATE_BADGE.off : STATE_BADGE.partial)}
+${personRow("Marta Ríos", "Paid Ana in full", 415000, "share", STATE_BADGE.paid)}
+${personRow("Carlitos", "Has not joined · the name Ana gave him", 415000, "share", archived ? STATE_BADGE.off : STATE_BADGE.unpaid)}
+</div></section>
+<section class="stack-sm"><div class="section-head"><h3 class="h3">Expenses · 4</h3></div>
+<div class="list card flush">${lines}</div></section>
+<p class="xs faint" style="text-align:center;margin:0">Nothing of Ana’s ledger reaches you — her accounts, categories and notes stay hers — and nothing of yours reaches her.</p>`;
+  return screen(body, {
+    tab: "mas",
+    side: "shared",
+    back: true,
+    title: "Shared with you",
+    sheet,
+    actions: `<button class="btn ghost icon-only round" aria-label="More">${iconSvg("ellipsis")}</button>`,
+  });
+};
+
+const addToLedgerSheet = () =>
+  sheetWrap(
+    `<div class="inset hstack" style="justify-content:space-between"><span class="small muted">Your share of Groceries at the market · Sep 19</span><span class="amount">${money(60000)}</span></div>
+<button class="picker">${tile("wallet", "PURPLE", "sm")}<span class="body"><span class="lbl">Where it came from</span><span class="val">Nequi</span></span>${iconSvg("chevron-down", "sm")}</button>
+<button class="picker">${tile("shopping-basket", "GREEN", "sm")}<span class="body"><span class="lbl">Category</span><span class="val">Groceries</span></span>${iconSvg("chevron-down", "sm")}</button>
+<div class="alert neutral">${iconSvg("info")}<span><b>This is an expense of yours.</b> It records ${moneyText(60000)} dated September 19, the day of the groceries, so it counts in Stats and in that month’s budget, even if that month is already closed. <b>The category is yours to choose</b>: the group carries none, and Ana’s categories are hers.</span></div>
+<p class="xs faint" style="margin:0">Ana marked your part paid, so the money has already left you: this is that payment seen from your ledger. It can be added once, on any of your devices, and deleting the expense later makes it ready again.</p>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Add ${moneyText(60000)}</button></div>`,
+    "Add to my ledger",
+  );
+
+const leaveGroupSheet = () =>
+  sheetWrap(
+    `<div class="alert warning">${iconSvg("triangle-alert")}<span><b>You stop seeing Villa de Leyva weekend.</b> You stay in it as somebody Ana splits with.</span></div>
+<p class="small muted" style="margin:0">Nothing about the money changes: your share, what you have paid and the ${moneyText(JOINED_OWED)} you still owe Ana stay exactly as they are. What you added to your ledger is yours and stays there.</p>
+<p class="xs faint" style="margin:0">Ana sees that you left. To see it again, she invites you again.</p>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn danger solid lg" style="flex:1.4">Leave</button></div>`,
+    "Leave Villa de Leyva weekend?",
   );
 
 const NEWS = 2;
@@ -5454,6 +5602,55 @@ const PAGES = [
         "Stop sharing",
         "The way back from <b>Joined</b>. She stops seeing the group and stays in it as a person you split with: nothing about the money moves, on either side.",
         groupDetail({ sheet: stopSharingSheet() }),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "invite-left",
+        "They left",
+        "The person who joined can leave by themselves, and the row says so: <b>left</b>, and when. Nothing about the money moved: they are still somebody you split with. <b>Invite again</b> is how they come back.",
+        groupDetail({ sheet: inviteSheet("left") }),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "shared-with-you",
+        "Groups shared with you",
+        "Your own groups first, then <b>Shared with you</b>: who shared each one, its range, what it cost and your share. The badge says where you stand with the person who shared it, because that is the only debt the group keeps. It has no bar, because a bar that fills the other way is worse than none. What you owe there is real, so it counts in <b>You owe</b>.",
+        sharedWithYou(),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "people-with-a-group-shared-with-you",
+        "People, when you owe in a group shared with you",
+        "People lists your contacts, and Ana is not one of them. So one line closes the arithmetic, the same way guest blocks do: the $140,000 in <b>You owe</b> is Diego’s $60,000 plus $80,000 to Ana in the group she shared.",
+        sharedPeopleWithJoined(),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "joined-group",
+        "A group shared with you",
+        "Read, not worked: only Ana writes in it. It leads with <b>where you stand with her</b>, neutral with a word for the direction. <code>Counts as yours</code> does not lead, because nothing here is in your ledger until you add it. Ana and Marta joined, so they go by the names on their own profiles. Carlitos has not, so he goes by the name Ana gave him. Each line Ana paid says where your part stands: <b>In your ledger</b>, <b>Paid</b> and ready to add, or <b>Not paid</b>. A line Marta paid is between you and Marta.",
+        joinedGroup(),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "add-to-my-ledger",
+        "Add to my ledger",
+        "Offered only on a line Ana has marked paid for you. She recorded the money arriving in her account, and this records it leaving yours: two sides of one payment, so nothing lands before your money moved and nothing lands twice. It asks for your account and your category, dates the expense on the day of the line, and needs a connection. Several ready lines share one sheet, with one category picker that can be changed per line, like paying somebody back.",
+        joinedGroup({ sheet: addToLedgerSheet() }),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "joined-archived",
+        "Archived by the person who shared it",
+        "It stays with you, read-only, and folds away with the settled ones. Archiving wrote off what was still open on Ana’s side, so you are square and the dinner reads <b>Written off</b>. No money of yours moved, so there is nothing to add for it. The groceries were paid, so they can still go into your ledger: that writes nothing in the group.",
+        joinedGroup({ archived: true }),
+        { added: "2026-09-22" },
+      ),
+      plate(
+        "leave-group",
+        "Leaving",
+        "From the <code>⋯</code> menu: <code>Stop sharing</code> seen from your side. You stop seeing the group and stay in it as somebody Ana splits with. Your share, what you paid and what you owe do not move, and what you added to your ledger stays yours. It needs a connection, like every invitation write.",
+        joinedGroup({ sheet: leaveGroupSheet() }),
         { added: "2026-09-22" },
       ),
       plate(

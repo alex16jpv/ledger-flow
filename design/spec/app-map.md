@@ -76,8 +76,9 @@ picker, where the paging and the two limits are said. ✅ Loading and error, and
 `Exact` modes of the split sheet. Everything is written in [screens/shared.md](screens/shared.md) and
 built. ✅ Inviting the people in a group by their email, withdrawing and stopping sharing, and ✅ the
 invitations waiting for you above both faces — with how they are found from More and the sidebar, a
-group in another currency, answered and offline. 🔮 What somebody who joined sees of the group, and
-`Add to my ledger`, are next.
+group in another currency, answered and offline. ✅ What somebody who joined sees of the group — under
+`Shared with you`, read-only, archived or not — ✅ `Add to my ledger` on the lines the owner marked paid,
+and ✅ leaving it.
 
 ## Notifications ✅
 

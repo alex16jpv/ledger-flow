@@ -446,6 +446,7 @@ one of them — and where each stands:
 | Waiting              | their email · invited when · open until when | `Withdraw`     |
 | Joined               | `Joined` · since when                        | `Stop sharing` |
 | Declined             | their email · `declined` · when              | `Invite again` |
+| Left                 | their email · `left` · when                  | `Invite again` |
 | Not answered in time | their email · `not answered in 30 days`      | `Invite again` |
 
 The sheet says, before anything is sent, **what joining shows and what it never shows**: the group —
@@ -494,9 +495,9 @@ reaches anybody.
 **Answered, the row says how it ended** — `Joined` (`success`) or `Declined` (neutral) — instead of
 vanishing under the finger, and it leaves the next time Shared opens. The same happens when it was
 answered on another device. **The person who invited learns the answer**: `Joined` or `declined` on
-their row. Accepting puts the group among your **Shared groups**; what you see there and what you can
-do with it is [the next section's](#what-this-section-is-not-in-v1) business, and joining touches
-nothing in your ledger.
+their row. Accepting puts the group among your **Shared groups**, under `Shared with you`
+([Somebody else's group](#somebody-elses-group-shared-with-you-joined-group-add-to-my-ledger)), and
+joining touches nothing in your ledger.
 
 **An invitation stops being answerable** when it is withdrawn, when the group is archived, or when its
 30 days pass. The row then goes from the block; answering one that stopped a moment ago on the server
@@ -532,6 +533,106 @@ side, and the sheet says so the same way.
 **The person who invited sees the answer the next time their app catches up**, like everything else
 that arrives from the server.
 
+## Somebody else's group (`#shared-with-you`, `#joined-group`, `#add-to-my-ledger`)
+
+**The shared layer arrives whole, and nothing of anybody's ledger arrives with it.** Somebody who
+joined sees the group, its people, its expenses, who paid each one, how each one is split and where
+everybody stands. They never see the owner's accounts, categories or notes, what counts as the owner's,
+or which movement an expense is. That is the frontier every shared screen keeps, seen from the other
+side.
+
+**Only the person who shared it writes in it.** It is v1's rule, and the owner has said it changes soon.
+So a group shared with you is **read, not worked**, like an archived one, for a different reason: no
+`Settle up`, no `Add expense`, no `Add people`, no `Edit`, no `Archive`. Its one line says so: "Shared by
+Ana Ruiz · only she can change it".
+
+### Where it is (`#shared-with-you`)
+
+In **Shared groups**, under your own, a section **`Shared with you`**, one row per group. Each row has
+the name, `Shared by Ana Ruiz`, the range, how many people, what it cost and your share, and a badge
+saying where you stand with the person who shared it. That is one of the four states, because that
+is what the group keeps.
+
+**What you owe there is real, so it counts in `You owe`** at the top of the section. It is information,
+not spending, because none of it is in your ledger until you pay. The **People** face lists your
+contacts, and the owner is not one of them, so one line closes the arithmetic, exactly as guest blocks
+do: "$80,000 more to Ana Ruiz, in 1 group shared with you". When everything you have here was shared
+with you, Shared opens on `Shared groups`.
+
+### The group (`#joined-group`)
+
+The header leads with **where you stand with the person who shared it**: `You owe Ana $80,000`,
+`Ana owes you $40,000` or `Square with Ana`. It is drawn neutral, with a word for the direction, like
+every debt between people. Under it, as context, come the total and your share, and the bar of what you
+have paid of what you owe her. **`Counts as yours` does not lead here**: nothing of this group is in your
+ledger until you add it, and what you add is an ordinary expense of yours.
+
+**People**, one row each, named by decision 28: **the owner and anybody who joined go by the name on
+their own profile**; anybody who has not joined goes by the name the owner gave them, the only name the
+group has for them; and you are `You`. Each row has its share and its state, which is always about
+the owner, because that is the only debt the group keeps.
+
+**Expenses**, one row each, with its date, who paid and your share. A line **the owner paid** also
+says where your part of it stands:
+
+| Your part      | The row says                              | And offers                       |
+| -------------- | ----------------------------------------- | -------------------------------- |
+| Not paid       | `Not paid`                                | Nothing yet                      |
+| Paid           | `Paid`                                    | `Add to my ledger`               |
+| In your ledger | `In your ledger` · its category · account | Opens that movement              |
+| Written off    | `Written off`                             | Nothing: no money of yours moved |
+
+**A line somebody else paid** reads "Marta paid · between you and Marta". The group keeps what each
+person owes the one who shared it, and what you owe Marta is for the two of you to settle, in v1.
+**A line you paid** reads "you paid": that money left your account, so it is in your ledger if you
+recorded it, and nothing here adds it for you.
+
+### Add to my ledger (`#add-to-my-ledger`)
+
+**It is offered only on a line the owner has marked paid for you** (the owner's decision 25). She
+records the money arriving in her account, and you record it leaving yours: they are two sides of
+one payment. So nothing reaches your ledger before your money moved, and nothing reaches it twice.
+
+**One sheet** covers every line that is ready. The group's primary action says how many,
+`Add to my ledger · 2 ready`, and a single line opens the same sheet with that line only. It asks for
+the **account** the money left from and the **category**: one picker fills them all and can be
+changed per line, the same control as paying somebody back, and for the same reason. The group
+carries no categories, and the owner's are hers. It writes **one ordinary expense per line**: your
+share, **dated that line** and with its description. So it lands in the month the money was spent,
+and the sheet says that a month you already closed can change.
+
+**Added, the line reads `In your ledger`** and cannot be added again, on this device or any other. The
+movement is yours like any other: edit it, move it or delete it, and deleting it makes the line ready
+again. Its detail says where it came from: "Added from Villa de Leyva weekend, shared by Ana Ruiz".
+
+**Your ledger is yours, and nobody else writes in it.** If the owner later undoes that payment or
+changes the line, your movement stays as it is, and the line says what no longer matches:
+"In your ledger for $60,000 · your part is now $75,000", or "Ana no longer has it marked paid". You
+decide what to do with the movement.
+
+**It needs a connection.** Whether the line is still paid and still shared with you is the server's to
+say, so offline the button is disabled and one line says why, the same way answering an invitation
+is.
+
+### Archived (`#joined-archived`)
+
+**A group the owner archives stays with you** (decision 26). It is still read-only and folds away with
+the settled ones, and its one line says "Ana archived this group". `Add to my ledger` still works on
+its paid lines, because it writes nothing in the group, only in your ledger, and that money did move.
+What you already added stays yours.
+
+### Leaving (`#leave-group`)
+
+**`Leave this group`** is in the group's `⋯` menu (decision 27). It is `Stop sharing` seen from your
+side, and its confirmation says what it does not do. You stop seeing the group, and you **stay in it
+as somebody Ana splits with**: your share, what you paid and what you owe do not move, and what you
+added to your ledger stays yours. Ana's row for you reads `left`, and inviting you again is how you
+come back. It needs a connection, like every invitation write.
+
+**The group also leaves your Shared** when the owner stops sharing, takes you out of it, archives your
+contact or deletes her account. It leaves the next time your app catches up, with nothing of yours
+touched. Archiving does not end it.
+
 ## The four states
 
 - **Data** — the plates above.
@@ -553,5 +654,6 @@ alone until somebody accepts an invitation to it (`#invitations`).
 ## What this section is not, in v1
 
 Sharing an income or a transfer, more than one currency inside a group, and weights expressed as shares
-are all out. **What somebody who joined sees of the group, and putting their part into their own
-ledger (`Add to my ledger`), is still being designed**; it changes nothing that is written here.
+are all out. So is **anybody but the owner writing in a group**: somebody who joined reads it and takes
+their part into their own ledger, and the owner has said this changes soon — nothing above assumes it
+never will.

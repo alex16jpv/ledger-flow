@@ -106,6 +106,14 @@ Without this list, a figure that falls two weeks later in a month already closed
 A participant can read `Paid` here and `Partially paid` in the group, because a payment covers the
 **oldest expense first** ([shared.md](shared.md)).
 
+## Added from a group shared with you
+
+An expense created by `Add to my ledger` ([shared.md](shared.md#add-to-my-ledger-add-to-my-ledger)) is
+**an ordinary expense of yours**: your account, your category, your budget, and no shared card, because
+the group it came from is somebody else's and what counts as yours is its whole amount. The attribute
+table gains one row, **Added from**, reading "Villa de Leyva weekend, shared by Ana Ruiz". It is edited,
+moved and deleted like any other, and deleting it makes that line ready to add again.
+
 ## Deleting one people have paid for (`#delete-a-shared-expense`)
 
 The ordinary delete confirmation, plus what it drags — and the surprising half is what it does **not**
