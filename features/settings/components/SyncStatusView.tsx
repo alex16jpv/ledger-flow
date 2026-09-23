@@ -404,6 +404,7 @@ export function SyncStatusView() {
         }}
       />
       <Sheet
+        layout="dialog"
         open={confirming}
         onClose={() => {
           setConfirming(false);

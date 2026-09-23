@@ -22,16 +22,15 @@ amount:
 `POST /transactions/quick` already accepts `type` (INCOME, EXPENSE, TRANSFER) and both account ids, and
 the offline queue already applies the same per-type defaults, so this costs no sync work.
 
-**The bar on top of the sheet opens the full form.** It is 44×4 here, not the decorative 36×4 of every
-other sheet, and it is a real control: dragging it up **or tapping it** turns quick add into "New
-transaction" carrying the amount, the type, the category and the note already entered — the same jump
-the "More details" button makes, so the gesture is a shortcut and never the only way (owner's choice
-of 2026-09-15). Its accessible name is "Open the full form"; at 4px tall it cannot be the only way in,
-which is why the button stays. Dismissing the sheet is a tap outside it, ESC or the close button, not
-the bar. The two alternatives — taking the bar out of every sheet, and turning it into
-drag-to-dismiss — stay drawn in `preview/variants.html`.
+**On a phone it is a full-screen sheet** (T-150): "Add" in the bar with the close button on its left
+and **Save** on its right, the body scrolling under it, and "More details" at the end of the body,
+carrying the amount, the type, the category and the note into "New transaction". From 600px up it is
+the centred modal with "More details" and "Save" in its footer. The bar that opened the full form by
+dragging or tapping it (T-75, 2026-09-15) went with the bottom sheet: there is no edge left to pull, and
+"More details" was always the way that is not a gesture. `#full-screen-quick-add` draws it with the
+numeric keyboard up.
 
-A sheet: the amount focused with the numeric keyboard open; a row of chips with the five most used
+The amount focused with the numeric keyboard open; a row of chips with the five most used
 categories plus "More", which opens the full picker; an account picker preselected with the main
 account (with no main account, `NO_DEFAULT_ACCOUNT` → an empty, required picker); a quick note; and the
 buttons "More details" (which carries the state into the full form) and "Save".

@@ -212,9 +212,9 @@ test("a tap outside the quick sheet closes it, and a tap inside does not", async
   page,
   request,
 }) => {
+  test.skip(test.info().project.name === "mobile", "on a phone quick add fills the screen (T-150)");
   const tap = async (x: number, y: number) => {
-    if (test.info().project.name === "mobile") await page.touchscreen.tap(x, y);
-    else await page.mouse.click(x, y);
+    await page.mouse.click(x, y);
   };
   await signIn(page, request);
   await addButton(page).click();
@@ -288,66 +288,4 @@ test("the quick sheet records an income and a transfer against the real backend"
   expect(moved?.pendingDetails).toBe(false);
   expect(moved?.categoryId).toBeTruthy();
   await request.delete(`/api/transactions/${moved?.id}`, { headers: { origin: APP } });
-});
-
-// T-75: the bar existed on 38 sheets and did nothing. Only a browser has the gesture and the layout.
-test("the bar on top of the quick sheet opens the full form carrying what was typed", async ({
-  page,
-  request,
-}) => {
-  test.skip(test.info().project.name !== "mobile", "the bar is only drawn below 600px");
-  await signIn(page, request);
-  await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add" });
-  const amount = uniqueAmount();
-  await sheet.getByRole("textbox", { name: "Amount" }).fill(String(amount));
-
-  const bar = sheet.getByRole("button", { name: "Open the full form" });
-  const box = await bar.boundingBox();
-  expect(box).not.toBeNull();
-  if (!box) return;
-  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
-
-  await expect(page.getByRole("heading", { level: 1, name: "New transaction" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Amount" })).toHaveValue(
-    new Intl.NumberFormat("en-US").format(amount),
-  );
-  await expect(sheet).toBeHidden();
-});
-
-// T-75: the drag is the half of the gesture only a browser has, and a pull down must open nothing.
-test("the bar is dragged up to the full form, and a pull down opens nothing", async ({
-  page,
-  request,
-}) => {
-  test.skip(test.info().project.name !== "mobile", "the bar is only drawn below 600px");
-  await signIn(page, request);
-  await addButton(page).click();
-  const sheet = page.getByRole("dialog", { name: "Add" });
-  const amount = uniqueAmount();
-  await sheet.getByRole("textbox", { name: "Amount" }).fill(String(amount));
-
-  const bar = sheet.getByRole("button", { name: "Open the full form" });
-  const box = await bar.boundingBox();
-  expect(box).not.toBeNull();
-  if (!box) return;
-  const x = box.x + box.width / 2;
-  const y = box.y + box.height / 2;
-
-  await page.mouse.move(x, y);
-  await page.mouse.down();
-  await page.mouse.move(x, y + 60, { steps: 6 });
-  await page.mouse.up();
-  await expect(sheet).toBeVisible();
-  await expect(page).not.toHaveURL(/\/transactions\/new/);
-
-  await page.mouse.move(x, y);
-  await page.mouse.down();
-  await page.mouse.move(x, y - 60, { steps: 6 });
-  await page.mouse.up();
-
-  await expect(page.getByRole("heading", { level: 1, name: "New transaction" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Amount" })).toHaveValue(
-    new Intl.NumberFormat("en-US").format(amount),
-  );
 });

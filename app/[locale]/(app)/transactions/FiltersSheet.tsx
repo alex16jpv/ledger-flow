@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { CategoryChip, Chip, ChipRow } from "@/components/ui/Chip";
 import { DateField } from "@/components/ui/DateTimeField";
 import { Field, Input, Switch } from "@/components/ui/Field";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetAction } from "@/components/ui/Sheet";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { CategoryPickerSheet } from "@/features/categories/components/CategoryPickerSheet";
 import { useCategoriesQuery, useRecentCategories } from "@/features/categories/hooks";
@@ -67,6 +67,7 @@ export function FiltersSheet({ open, filters, onClose, onApply }: FiltersSheetPr
   return (
     <>
       <Sheet
+        layout="full"
         open={open}
         onClose={onClose}
         title={t("filters.title")}
@@ -82,8 +83,7 @@ export function FiltersSheet({ open, filters, onClose, onApply }: FiltersSheetPr
             >
               {t("filters.clear")}
             </Button>
-            <Button
-              size="lg"
+            <SheetAction
               className="flex-[1.4]"
               onClick={() => {
                 onApply(draft);
@@ -92,7 +92,7 @@ export function FiltersSheet({ open, filters, onClose, onApply }: FiltersSheetPr
               {count.data === undefined
                 ? t("filters.showCounting")
                 : t("filters.show", { count: count.data })}
-            </Button>
+            </SheetAction>
           </div>
         }
       >

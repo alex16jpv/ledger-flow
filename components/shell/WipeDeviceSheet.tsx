@@ -24,6 +24,7 @@ export function WipeDeviceSheet({
 
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onCancel}
       title={t("confirmTitle")}

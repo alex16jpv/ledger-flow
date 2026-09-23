@@ -5,11 +5,10 @@ import { useRef, useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { AmountInput } from "@/components/ui/AmountInput";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Field } from "@/components/ui/Field";
-import { Sheet, SheetCancel } from "@/components/ui/Sheet";
+import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
@@ -167,6 +166,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
 
   return (
     <Sheet
+      layout="full"
       open={open}
       onClose={onClose}
       unsaved={amount !== null}
@@ -174,8 +174,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
       footer={
         <>
           {error && <Alert tone="danger">{t(error.messageKey)}</Alert>}
-          <Button
-            size="lg"
+          <SheetAction
             block
             disabled={!ready}
             loading={create.isPending}
@@ -184,7 +183,7 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
             }}
           >
             {t(paidPrincipal ? "accounts.pay.sendAgain" : "accounts.pay.pay")}
-          </Button>
+          </SheetAction>
           <SheetCancel />
         </>
       }

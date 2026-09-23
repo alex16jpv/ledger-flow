@@ -39,6 +39,7 @@ export function UndoPaymentSheet({
       });
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={t("title")}

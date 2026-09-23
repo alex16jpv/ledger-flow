@@ -104,6 +104,7 @@ export function TimePickerSheet({
 
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={title}

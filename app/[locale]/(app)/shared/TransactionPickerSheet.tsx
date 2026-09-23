@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Field";
 import { List, RowBody, rowClasses, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
-import { Sheet, SheetCancel } from "@/components/ui/Sheet";
+import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { useAccountsQuery } from "@/features/accounts/hooks";
@@ -73,13 +73,13 @@ export function TransactionPickerSheet({
 
   return (
     <Sheet
+      layout="full"
       open={open}
       onClose={onClose}
       title={t(onRecordNew ? "titleInGroup" : "title")}
       footer={
         <>
-          <Button
-            size="lg"
+          <SheetAction
             block
             disabled={chosen.length === 0}
             onClick={() => {
@@ -87,12 +87,12 @@ export function TransactionPickerSheet({
             }}
           >
             {t("add", { count: chosen.length, amount: money.format(total) })}
-          </Button>
+          </SheetAction>
           <SheetCancel />
         </>
       }
     >
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 max-sm:min-h-0 max-sm:flex-1">
         <Input
           type="search"
           leading={<Search {...iconProps("sm")} />}
@@ -103,7 +103,7 @@ export function TransactionPickerSheet({
             setSearch(event.target.value);
           }}
         />
-        <div className="-mx-4 max-h-[320px] overflow-auto">
+        <div className="-mx-4 max-h-[320px] overflow-auto max-sm:max-h-none max-sm:min-h-0 max-sm:flex-1">
           {list.isPending && (
             <div
               className="flex flex-col gap-3 px-4 py-3"

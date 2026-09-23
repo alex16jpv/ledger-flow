@@ -38,25 +38,35 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     shadow 1; it colours its own label by type (income, transfer).
 11. **Picker** — a 48px row with an sm tile, an 11px label and a 14px value, plus a chevron; it opens a
     sheet or modal with search and a list of rows.
-12. **Bottom sheet / modal** — radius 28 on top, a 36×4 handle, a header with a title and a close
-    button; at 600px and up it becomes a 520px modal with radius 20. **The page behind it is tinted by
+12. **Sheet** — every overlay in the product. **Below 600px it takes one of two forms** (T-150, the
+    owner's decision of 2026-09-23 that no phone sheet rises from the bottom, and his correction the same
+    day that the structure has to follow the mobile standard, not just move): **a form — more than one
+    field — or a list that scrolls is a full-screen dialog** (Material 3's full-screen dialog, iOS's
+    sheet with a navigation bar); **a question with its answers, a short choice, or one field with its
+    button is a centred dialog**. The full-screen dialog has a 56px bar on top — the close button on the
+    left, the title, and the sheet's one primary action on the right, `md` — and the body scrolls under
+    it; the footer's other buttons end the body, and its Cancel is the close button. So the keyboard can
+    cover part of the body and never the action. The centred dialog is a card 16px from the sides with
+    radius 28, keeps its footer, and is centred on what the screen shows. **With the keyboard up, every
+    sheet fits the area above it** (the `visualViewport`), on every width, since a phone on its side is
+    wider than 600px: the full-screen dialog ends there, and a centred one centres there. The top of a full-screen dialog is padded by `--safe-top` and the end of its body by
+    `--safe-bottom`. **From 600px up both are the same centred modal** — 520px, or 360px for the
+    calendar and the clock, radius 20, a header with the title and the close button, the footer
+    underneath. There is no bar to drag on any sheet any more. **The page behind is tinted by
     `--overlay` and blurred by `--overlay-blur`** (T-77), so the sheet reads as a layer and not as
     something sitting inside the screen; those two tokens are the whole setting, and a blur of 0 turns
     that half off. The same `--nav-blur`/`--overlay-blur` pair is what the tab bar and the preview's
     `.scrim` read, so no overlay in the product carries a hardcoded radius. Both drop to 0 under
-    `prefers-reduced-transparency`. **It closes on a tap anywhere outside the sheet and on ESC**,
-    except in the two sheets that turn `dismissible` off: the three exits of local mode, where a
-    choice has to be made, and the expired-session sheet, which outside local mode has only one way
-    out. **A sheet whose form has something typed does not close on any of its four
-    exits**: it asks in place, with "Keep editing" as the primary and focused action and "Leave" as
-    the quiet one, the body inert behind the question, and ESC answering "Keep editing" (T-78, drawn
-    as `unsaved-before-leaving` in [screens/states.md](screens/states.md)). **Since T-104 the four ask** (his decision, 2026-09-18:
-    «para evirar problemas de miss click»). The footer's Cancel is `SheetCancel`, which the sheet
-    renders inside itself, so it asks the same question the other three do.
-    **The 36×4 bar is decoration in every sheet but quick add**, where it is 44×4 and is a control that
-    opens the full form: see [screens/add.md](screens/add.md). Its target is 64×28 around that bar, a
-    pull **downwards** does nothing at all, and while the unsaved question is up the bar is inert like
-    the body — it is not a third answer to it. There is no other drag gesture in the app.
+    `prefers-reduced-transparency`. **It closes on a tap outside the sheet and on ESC**, except in the
+    two sheets that turn `dismissible` off: the three exits of local mode, where a choice has to be
+    made, and the expired-session sheet, which outside local mode has only one way out. **A sheet whose
+    form has something typed does not close on any of its four exits**: it asks, in a centred dialog over
+    the sheet on every width, with "Keep editing" as the primary and focused action and "Leave" as the
+    quiet one, everything behind the question inert, and ESC answering "Keep editing" (T-78, drawn as
+    `unsaved-before-leaving` in [screens/states.md](screens/states.md)). **Since T-104 the four ask**
+    (his decision, 2026-09-18: «para evirar problemas de miss click»). The footer's Cancel is
+    `SheetCancel` and its primary is `SheetAction`, which the sheet places itself, so Cancel asks the
+    same question the other three do and the primary lands in the bar of a full-screen dialog.
 13. **Toast** — `--ink`, one action ("Undo"), five seconds, above the tab bar.
 14. **Alert** — inline, four variants; the main-account warning uses `warning`.
 15. **Empty** — an lg outline tile plus a title, a line and a call to action. The title is an `h2` at

@@ -69,7 +69,7 @@ export function CategoryPickerSheet({
 
   if (creating) {
     return (
-      <Sheet open={open} onClose={close} title={t("categories.form.title")}>
+      <Sheet layout="full" open={open} onClose={close} title={t("categories.form.title")}>
         <CategoryForm
           type={type}
           typeEditable={false}
@@ -84,8 +84,8 @@ export function CategoryPickerSheet({
   }
 
   return (
-    <Sheet open={open} onClose={close} title={t("categories.picker.title")}>
-      <div className="flex flex-col gap-3">
+    <Sheet layout="full" open={open} onClose={close} title={t("categories.picker.title")}>
+      <div className="flex flex-col gap-3 max-sm:min-h-0 max-sm:flex-1">
         <Input
           type="search"
           value={query}
@@ -120,7 +120,7 @@ export function CategoryPickerSheet({
             </ChipRow>
           </div>
         )}
-        <List className="-mx-4 max-h-[55dvh] overflow-y-auto">
+        <List className="-mx-4 max-h-[55dvh] overflow-y-auto max-sm:max-h-none max-sm:min-h-0 max-sm:flex-1">
           {categories.isPending ? (
             <>
               <SkeletonRow />

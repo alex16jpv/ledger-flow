@@ -42,7 +42,7 @@ export function LanguageChoiceSheet({ open, onClose }: { open: boolean; onClose:
   const switchTo = useLocaleSwitch();
 
   return (
-    <Sheet open={open} onClose={onClose} title={t("settings.language.title")}>
+    <Sheet layout="dialog" open={open} onClose={onClose} title={t("settings.language.title")}>
       <List className="-mx-4">
         <div role="listbox" aria-label={t("settings.language.title")} className="flex flex-col">
           {routing.locales.map((option) => {

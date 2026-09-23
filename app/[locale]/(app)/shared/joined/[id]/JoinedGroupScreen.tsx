@@ -383,6 +383,7 @@ function JoinedBody({
       )}
       {leaving && (
         <Sheet
+          layout="dialog"
           open
           onClose={() => {
             setLeaving(false);

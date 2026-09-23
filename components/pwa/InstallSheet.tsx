@@ -26,7 +26,7 @@ export function InstallSheet({ open, onClose }: { open: boolean; onClose: () => 
         : [t("desktopStep1"), t("desktopStep2")];
 
   return (
-    <Sheet open={open} onClose={onClose} title={t("title")}>
+    <Sheet layout="dialog" open={open} onClose={onClose} title={t("title")}>
       <div className="flex flex-col gap-4">
         <Alert tone="info">{t("intro")}</Alert>
         <p className="text-sm text-text-2">{t("asked")}</p>

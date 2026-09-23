@@ -304,6 +304,7 @@ export function PersonScreen({ id }: { id: string }) {
             />
           )}
           <Sheet
+            layout="dialog"
             open={sheet === "archive"}
             onClose={() => {
               setSheet(null);

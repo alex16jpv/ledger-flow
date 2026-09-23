@@ -9,13 +9,12 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { Avatar } from "@/components/shell/Avatar";
 import { Alert } from "@/components/ui/Alert";
 import { AmountInput } from "@/components/ui/AmountInput";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { DateField } from "@/components/ui/DateTimeField";
 import { Field, Input } from "@/components/ui/Field";
 import { Picker } from "@/components/ui/Picker";
 import { PickerSheet } from "@/components/ui/PickerSheet";
-import { Sheet, SheetCancel } from "@/components/ui/Sheet";
+import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { fieldErrors, presentError } from "@/lib/api/errors";
 import { dayKey, localNoon } from "@/lib/format/dates";
@@ -112,6 +111,7 @@ export function PaidByOtherSheet({ open, onClose, group, people }: PaidByOtherSh
 
   return (
     <Sheet
+      layout="full"
       open={open}
       onClose={onClose}
       unsaved={isDirty}
@@ -119,8 +119,7 @@ export function PaidByOtherSheet({ open, onClose, group, people }: PaidByOtherSh
       footer={
         <>
           {failure && <Alert tone="danger">{t(failure.messageKey)}</Alert>}
-          <Button
-            size="lg"
+          <SheetAction
             block
             loading={create.isPending}
             onClick={() => {
@@ -128,7 +127,7 @@ export function PaidByOtherSheet({ open, onClose, group, people }: PaidByOtherSh
             }}
           >
             {t("shared.paidByOther.add")}
-          </Button>
+          </SheetAction>
           <SheetCancel />
         </>
       }

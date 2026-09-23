@@ -463,11 +463,11 @@ describe("PaySheet", () => {
       fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
 
     cancel();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText("Amount to pay"), "300000");
     cancel();
-    expect(screen.getByRole("alert")).toHaveTextContent("Are you sure you want to leave?");
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Are you sure you want to leave?");
   });
 
   it("offers the whole debt on a loan too, which is exactly its ceiling", async () => {

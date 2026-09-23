@@ -18,6 +18,7 @@ import {
   profileRecord,
   transactionRecord,
 } from "@/lib/local/schema";
+import { withPhoneWidth } from "@/lib/testing/phone";
 import { renderWithProviders } from "@/lib/testing/render";
 import {
   account,
@@ -390,5 +391,38 @@ describe("the Resolve sync conflict sheet", () => {
     const sent = (queued?.payload as { body: { date: string } }).body.date;
     expect(dayKey(new Date(sent), "America/Bogota")).toBe(onTheServer);
     resetClockOffset();
+  });
+
+  describe("on a phone (T-150)", () => {
+    withPhoneWidth();
+
+    it("puts one action in the bar when a correction leads and discarding follows", async () => {
+      await vaultWith([
+        {
+          action: "create",
+          payload: { body: { id: "t1", amount: 15, date: "2026-09-25T18:10:00.000Z" } },
+          status: "failed",
+          lastError: "FUTURE_DATE",
+          serverRow: undefined,
+          baseUpdatedAt: undefined,
+        },
+      ]);
+      renderWithProviders(
+        <ToastProvider>
+          <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+        </ToastProvider>,
+      );
+
+      const title = await screen.findByRole("heading", { name: "Fix the date" });
+      const bar = title.parentElement;
+      expect(bar).not.toBeNull();
+      if (!bar) return;
+      expect(
+        within(bar)
+          .getAllByRole("button")
+          .map((button) => button.textContent),
+      ).toEqual(["", "Save and try again"]);
+      expect(screen.getByRole("button", { name: "Discard this change" })).toBeInTheDocument();
+    });
   });
 });

@@ -47,6 +47,7 @@ export function DeleteTransactionSheet({
     fromCents(toCents(row.paid) - toCents(row.wouldOwe));
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={t("transactions.form.deleteTitle")}

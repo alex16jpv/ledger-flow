@@ -99,7 +99,7 @@ export function AccountPickerSheet({
 
   if (creating) {
     return (
-      <Sheet open={open} onClose={close} title={t("accounts.form.title")}>
+      <Sheet layout="full" open={open} onClose={close} title={t("accounts.form.title")}>
         <AccountForm
           submitLabel={t("accounts.form.create")}
           onSaved={choose}
@@ -113,6 +113,7 @@ export function AccountPickerSheet({
 
   return (
     <Sheet
+      layout="full"
       open={open}
       onClose={close}
       title={t("accounts.picker.title")}
@@ -124,7 +125,7 @@ export function AccountPickerSheet({
         </p>
       }
     >
-      <List className="-mx-4 max-h-[60dvh] overflow-y-auto">
+      <List className="-mx-4 max-h-[60dvh] overflow-y-auto max-sm:max-h-none max-sm:min-h-0 max-sm:flex-1">
         {accounts.isPending ? (
           <>
             <SkeletonRow />

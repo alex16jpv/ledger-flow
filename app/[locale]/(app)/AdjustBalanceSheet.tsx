@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Field";
 import { Segment } from "@/components/ui/Segment";
-import { Sheet, SheetCancel } from "@/components/ui/Sheet";
+import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { useAccountQuery } from "@/features/accounts/hooks";
 import {
@@ -127,6 +127,7 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
 
   return (
     <Sheet
+      layout="full"
       open={open}
       onClose={onClose}
       unsaved={input !== null || note !== ""}
@@ -134,8 +135,7 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
       footer={
         <>
           {error && <Alert tone="danger">{t(error.messageKey)}</Alert>}
-          <Button
-            size="lg"
+          <SheetAction
             block
             disabled={!input}
             loading={create.isPending}
@@ -144,7 +144,7 @@ export function AdjustBalanceSheet({ account, open, onClose }: AdjustBalanceShee
             }}
           >
             {t("accounts.adjust.save")}
-          </Button>
+          </SheetAction>
           <SheetCancel />
         </>
       }
@@ -292,6 +292,7 @@ export function EditAdjustmentSheet({ adjustment, open, onClose }: EditAdjustmen
   return (
     <>
       <Sheet
+        layout="full"
         open={open}
         onClose={onClose}
         unsaved={changes !== null && !nothingChanged(changes)}
@@ -311,8 +312,7 @@ export function EditAdjustmentSheet({ adjustment, open, onClose }: EditAdjustmen
                 <Trash2 {...iconProps("sm")} />
                 {t("common.delete")}
               </Button>
-              <Button
-                size="lg"
+              <SheetAction
                 className="flex-[1.4]"
                 disabled={changes === null}
                 loading={update.isPending}
@@ -321,7 +321,7 @@ export function EditAdjustmentSheet({ adjustment, open, onClose }: EditAdjustmen
                 }}
               >
                 {t("common.saveChanges")}
-              </Button>
+              </SheetAction>
             </div>
           </>
         }

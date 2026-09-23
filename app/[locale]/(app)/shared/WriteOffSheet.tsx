@@ -33,6 +33,7 @@ export function WriteOffSheet({
     .reduce((cents, one) => cents + Math.max(0, toCents(one.owesYou) - toCents(one.youOwe)), 0);
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={t("title", { name: person.name, amount: money.format(person.owesYou) })}
@@ -82,6 +83,7 @@ export function ArchiveGroupSheet({
   const money = useMoney();
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={t("title", { name: view.group.name })}
@@ -129,6 +131,7 @@ export function UndoWriteOffSheet({
   const money = useMoney();
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={t("undoTitle", { name: person.name })}

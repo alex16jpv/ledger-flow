@@ -44,6 +44,7 @@ export function WhatChangesSheet({
 
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={t("title", { count: transactions.length, name: groupName })}

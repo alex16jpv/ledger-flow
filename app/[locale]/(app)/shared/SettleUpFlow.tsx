@@ -39,7 +39,7 @@ export function SettleUpFlow({
   if (!open) return null;
   if (!person) {
     return (
-      <Sheet open onClose={onClose} title={t("group.whoToSettle")}>
+      <Sheet layout="full" open onClose={onClose} title={t("group.whoToSettle")}>
         <Card flush>
           <List>
             {parties.map((one) => (

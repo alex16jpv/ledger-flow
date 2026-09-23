@@ -391,6 +391,7 @@ export function UiCatalog() {
               {t("openSheet")}
             </Button>
             <Sheet
+              layout="dialog"
               open={sheetOpen}
               onClose={() => {
                 setSheetOpen(false);

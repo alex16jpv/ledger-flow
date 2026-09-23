@@ -42,6 +42,7 @@ export function TypeLine({ type }: { type: FormTransactionType }) {
         <CircleHelp {...iconProps("sm")} />
       </Button>
       <Sheet
+        layout="dialog"
         open={open}
         title={t("typesHelp")}
         onClose={() => {
