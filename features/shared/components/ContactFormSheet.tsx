@@ -7,9 +7,8 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { Alert } from "@/components/ui/Alert";
-import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
-import { Sheet, SheetCancel, useUnsavedGuard } from "@/components/ui/Sheet";
+import { Sheet, SheetAction, SheetCancel, useUnsavedGuard } from "@/components/ui/Sheet";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
@@ -85,14 +84,14 @@ export function ContactFormSheet({ open, onClose, contact, onSaved }: ContactFor
 
   return (
     <Sheet
+      layout="full"
       open={open}
       onClose={onClose}
       unsaved={isDirty}
       title={t(contact ? "shared.form.editTitle" : "shared.form.title")}
       footer={
         <>
-          <Button
-            size="lg"
+          <SheetAction
             block
             loading={mutation.isPending}
             onClick={() => {
@@ -100,7 +99,7 @@ export function ContactFormSheet({ open, onClose, contact, onSaved }: ContactFor
             }}
           >
             {t(contact ? "common.saveChanges" : "shared.form.create")}
-          </Button>
+          </SheetAction>
           <SheetCancel />
         </>
       }

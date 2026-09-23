@@ -459,6 +459,7 @@ export function AttentionScreen() {
         }}
       />
       <Sheet
+        layout="dialog"
         open={confirming !== null}
         onClose={() => {
           setConfirming(null);

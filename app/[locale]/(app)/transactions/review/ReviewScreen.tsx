@@ -235,6 +235,7 @@ export function ReviewScreen() {
         </>
       )}
       <Sheet
+        layout="dialog"
         open={confirming}
         onClose={() => {
           setConfirming(false);

@@ -145,8 +145,8 @@ describe("QuickAddSheet", () => {
     await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "12500");
     tapOutside();
     expect(onClose).toHaveBeenCalledOnce();
-    expect(screen.getByRole("alert")).toHaveTextContent("Are you sure you want to leave?");
-    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Are you sure you want to leave?");
+    expect(screen.getByRole("button", { name: "Save" }).closest("[inert]")).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Leave" }));
     expect(onClose).toHaveBeenCalledTimes(2);
   });
@@ -380,21 +380,6 @@ describe("QuickAddSheet", () => {
     expect(screen.getByRole("button", { name: /^From.*Cash/ })).toBeVisible();
     expect(screen.getByRole("button", { name: /^To.*Bancolombia/ })).toBeVisible();
     expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("3,000");
-  });
-
-  // T-75: the bar on top was decoration. It now makes the same jump the "More details" button does.
-  it("hands the same draft to the full form from the bar on top", async () => {
-    routeFetch();
-    const { onClose, onMoreDetails } = renderSheet();
-    await screen.findByRole("button", { name: /From your main account.*Bancolombia/ });
-    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "4500");
-    await userEvent.type(screen.getByRole("textbox", { name: "Quick note (optional)" }), "Bus");
-
-    await userEvent.click(screen.getByRole("button", { name: "Open the full form" }));
-
-    const draft = onMoreDetails.mock.calls[0]?.[0] as URLSearchParams | undefined;
-    expect(draft?.toString()).toBe("type=EXPENSE&amount=4500&accountId=a1&description=Bus");
-    expect(onClose).toHaveBeenCalled();
   });
 
   // The design is explicit: switching type never clears the amount, and always clears the category.

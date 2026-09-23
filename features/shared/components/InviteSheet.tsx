@@ -169,6 +169,7 @@ export function InviteSheet({ open, group, contacts, onClose }: InviteSheetProps
     const name = stopping.contact.name;
     return (
       <Sheet
+        layout="dialog"
         open
         onClose={() => {
           setStopping(null);
@@ -216,7 +217,12 @@ export function InviteSheet({ open, group, contacts, onClose }: InviteSheetProps
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={t("shared.invite.title", { group: group.name })}>
+    <Sheet
+      layout="full"
+      open={open}
+      onClose={onClose}
+      title={t("shared.invite.title", { group: group.name })}
+    >
       <div className="flex flex-col gap-4">
         <p className="text-sm text-text-3">
           {t.rich("shared.invite.intro", { group: group.name, ...rich })}

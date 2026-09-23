@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   createContext,
-  type MouseEvent,
+  type CSSProperties,
   type PointerEvent,
   type ReactNode,
   type SyntheticEvent,
@@ -14,17 +14,87 @@ import {
   useId,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
 
 import { iconProps } from "@/lib/icons/sizes";
 
 import { Alert } from "./Alert";
-import { Button } from "./Button";
+import { Button, type ButtonProps } from "./Button";
 import { cn } from "./cn";
 
 const UnsavedContext = createContext<((id: string, unsaved: boolean) => void) | null>(null);
 
 const DismissContext = createContext<(() => void) | null>(null);
+
+const FullScreenContext = createContext(false);
+
+const ActionSlotContext = createContext<HTMLElement | null>(null);
+
+const PHONE = "(max-width: 599.98px)";
+
+function phoneQuery(): MediaQueryList | null {
+  return typeof window.matchMedia === "function" ? window.matchMedia(PHONE) : null;
+}
+
+function subscribePhone(listener: () => void): () => void {
+  const query = phoneQuery();
+  query?.addEventListener("change", listener);
+  return () => {
+    query?.removeEventListener("change", listener);
+  };
+}
+
+function usePhone(): boolean {
+  return useSyncExternalStore(
+    subscribePhone,
+    () => phoneQuery()?.matches ?? false,
+    () => false,
+  );
+}
+
+function subscribeViewport(listener: () => void): () => void {
+  const viewport = window.visualViewport;
+  viewport?.addEventListener("resize", listener);
+  viewport?.addEventListener("scroll", listener);
+  return () => {
+    viewport?.removeEventListener("resize", listener);
+    viewport?.removeEventListener("scroll", listener);
+  };
+}
+
+function subscribeNothing(): () => void {
+  return () => undefined;
+}
+
+// A pinch zoom shrinks the visual viewport too, and the sheet must not shrink with it.
+function viewportArea(): string {
+  const viewport = window.visualViewport;
+  if (!viewport || Math.abs(viewport.scale - 1) > 0.01) return "";
+  return `${viewport.offsetTop} ${viewport.height}`;
+}
+
+function noArea(): string {
+  return "";
+}
+
+function useVisibleArea(active: boolean): CSSProperties | undefined {
+  const area = useSyncExternalStore(
+    active ? subscribeViewport : subscribeNothing,
+    active ? viewportArea : noArea,
+    noArea,
+  );
+  if (area === "") return undefined;
+  const [top, height] = area.split(" ").map(Number);
+  return { top, height };
+}
+
+export function SheetAction({ className, block, ...props }: Omit<ButtonProps, "size">) {
+  const slot = useContext(ActionSlotContext);
+  if (slot) return createPortal(<Button {...props} size="md" />, slot);
+  return <Button {...props} size="lg" block={block} className={className} />;
+}
 
 export function SheetCancel({
   children,
@@ -37,7 +107,9 @@ export function SheetCancel({
 }) {
   const t = useTranslations("common");
   const dismiss = useContext(DismissContext);
+  const fullScreen = useContext(FullScreenContext);
   if (!dismiss) throw new Error("SheetCancel must be rendered inside a Sheet");
+  if (fullScreen) return null;
   return (
     <Button variant={variant} size="lg" block={!className} className={className} onClick={dismiss}>
       {children ?? t("cancel")}
@@ -59,18 +131,12 @@ export function useUnsavedGuard(unsaved: boolean): void {
 const FOCUSABLE =
   'a[href],button,input,select,textarea,summary,[contenteditable],[tabindex]:not([tabindex="-1"])';
 
-export const EXPAND_DRAG_PX = 16;
-// Below this the finger never moved: the browser will send a click and it is a tap, not a drag.
-const TAP_SLOP_PX = 4;
-
-// A bar that does something has to say what: the two arrive together or not at all.
-type ExpandProps =
-  { onExpand: () => void; expandLabel: string } | { onExpand?: undefined; expandLabel?: undefined };
-
-export type SheetProps = {
+export interface SheetProps {
   open: boolean;
   onClose: () => void;
   title: ReactNode;
+  // Below `sm`: a form or a list fills the screen, a question or a single field is a centred dialog.
+  layout: "full" | "dialog";
   children: ReactNode;
   footer?: ReactNode;
   dismissible?: boolean;
@@ -78,18 +144,17 @@ export type SheetProps = {
   // The calendar and the wheel of 7.28 are 360 px wide from `sm` up; everything else is 520.
   width?: "md" | "sm";
   className?: string;
-} & ExpandProps;
+}
 
 export function Sheet({
   open,
   onClose,
   title,
+  layout,
   children,
   footer,
   dismissible = true,
   unsaved = false,
-  onExpand,
-  expandLabel,
   width = "md",
   className,
 }: SheetProps) {
@@ -98,12 +163,16 @@ export function Sheet({
   const body = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const scrimGesture = useRef(false);
-  const dragFrom = useRef<number | null>(null);
-  const gestured = useRef(false);
+  const questionGesture = useRef(false);
+  const phone = usePhone();
+  const fullScreen = phone && layout === "full";
+  const area = useVisibleArea(open);
+  const [actionSlot, setActionSlot] = useState<HTMLElement | null>(null);
   const [bodyNeedsFocus, setBodyNeedsFocus] = useState(false);
   const [reported, setReported] = useState<readonly string[]>([]);
   const [asking, setAsking] = useState(false);
   const keep = useRef<HTMLButtonElement>(null);
+  const askedBefore = useRef(false);
   const footerBox = useRef<HTMLDivElement>(null);
   const returnTo = useRef<HTMLElement | null>(null);
   const questionId = useId();
@@ -124,13 +193,20 @@ export function Sheet({
 
   useEffect(() => {
     if (asking) {
+      askedBefore.current = true;
       keep.current?.focus();
       return;
     }
+    if (!askedBefore.current) return;
+    askedBefore.current = false;
     const back = returnTo.current;
     returnTo.current = null;
-    // The footer is swapped out while the question is up, so the exit that asked may be gone with it.
-    (back?.isConnected ? back : footerBox.current?.querySelector<HTMLElement>(FOCUSABLE))?.focus();
+    // The exit that asked may have unmounted while the question stood.
+    (back?.isConnected
+      ? back
+      : (footerBox.current?.querySelector<HTMLElement>(FOCUSABLE) ??
+        ref.current?.querySelector<HTMLElement>(FOCUSABLE))
+    )?.focus();
   }, [asking]);
 
   // axe `scrollable-region-focusable`: a tab stop only when nothing inside the body can take one.
@@ -171,36 +247,6 @@ export function Sheet({
     if (open) onClose();
   }
 
-  function handleBarDown(event: PointerEvent<HTMLButtonElement>) {
-    dragFrom.current = event.clientY;
-    gestured.current = false;
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-
-  function handleBarUp(event: PointerEvent<HTMLButtonElement>) {
-    const from = dragFrom.current;
-    dragFrom.current = null;
-    if (from === null) return;
-    const up = from - event.clientY;
-    if (Math.abs(up) < TAP_SLOP_PX) return;
-    // A drag answers here, in either direction: only upwards opens, and neither may click again.
-    gestured.current = true;
-    if (up >= EXPAND_DRAG_PX) onExpand?.();
-  }
-
-  function handleBarCancel() {
-    dragFrom.current = null;
-  }
-
-  function handleBarClick(event: MouseEvent<HTMLButtonElement>) {
-    // A keyboard activation carries detail 0 and follows no gesture, so it never reads the flag.
-    if (event.detail > 0 && gestured.current) {
-      gestured.current = false;
-      return;
-    }
-    onExpand?.();
-  }
-
   // A click lands on the common ancestor, so both ends of the gesture have to be on the scrim.
   function handleScrimDown(event: PointerEvent<HTMLElement>) {
     scrimGesture.current = event.target === event.currentTarget;
@@ -216,12 +262,25 @@ export function Sheet({
     if (dismissible && onScrim) requestClose();
   }
 
+  function leave() {
+    returnTo.current = null;
+    setAsking(false);
+    onClose();
+  }
+
+  const close = (
+    <Button variant="ghost" size="sm" iconOnly round onClick={requestClose} aria-label={t("close")}>
+      <X {...iconProps("sm")} />
+    </Button>
+  );
+
   return (
     <dialog
       ref={ref}
       aria-labelledby={titleId}
       onCancel={handleCancel}
       onClose={handleClose}
+      style={area}
       className={cn(
         "m-0 max-h-none max-w-none bg-transparent p-0 backdrop:bg-overlay backdrop:backdrop-blur-(--overlay-blur)",
         "fixed inset-0 h-full w-full",
@@ -232,99 +291,101 @@ export function Sheet({
         onPointerDown={handleScrimDown}
         onPointerUp={handleScrimUp}
         onClick={handleScrimClick}
-        className="flex h-full w-full items-end justify-center sm:items-center"
+        className={cn(
+          "flex h-full w-full items-center justify-center",
+          layout === "dialog" && "p-4 sm:p-0",
+        )}
       >
         <div
+          inert={question}
           className={cn(
-            "flex max-h-[92%] w-full flex-col gap-4 rounded-t-2xl bg-surface px-4 pt-2 pb-[calc(var(--sp-4)+var(--safe-bottom))] text-text shadow-3",
+            "flex w-full flex-col bg-surface text-text shadow-3",
+            fullScreen
+              ? "h-full pt-(--safe-top)"
+              : "max-h-full gap-4 rounded-2xl p-5 sm:max-h-[92%] sm:rounded-xl sm:px-4 sm:pt-2 sm:pb-5",
             width === "sm" ? "sm:w-[min(360px,92%)]" : "sm:w-[min(520px,92%)]",
-            "sm:rounded-xl sm:pb-5",
           )}
         >
-          {onExpand ? (
-            <button
-              type="button"
-              // The question is the only thing on screen while it stands; this is not a way past it.
-              inert={question}
-              aria-label={expandLabel}
-              onPointerDown={handleBarDown}
-              onPointerUp={handleBarUp}
-              onPointerCancel={handleBarCancel}
-              onClick={handleBarClick}
-              className="mx-auto -mt-2 flex w-16 touch-none justify-center py-3 sm:hidden"
-            >
-              <span className="h-1 w-11 rounded-full bg-border-strong" />
-            </button>
-          ) : (
-            <span
-              aria-hidden="true"
-              className="mx-auto mt-1 h-1 w-9 rounded-full bg-border-strong sm:hidden"
-            />
-          )}
-          <div className="flex items-center justify-between">
-            <h2 id={titleId} className="text-md font-semibold">
-              {title}
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              iconOnly
-              round
-              onClick={requestClose}
-              aria-label={t("close")}
-            >
-              <X {...iconProps("sm")} />
-            </Button>
-          </div>
-          <div
-            ref={body}
-            inert={question}
-            tabIndex={bodyNeedsFocus ? 0 : undefined}
-            className="min-h-0 flex-1 overflow-y-auto"
-          >
-            <UnsavedContext.Provider value={report}>{children}</UnsavedContext.Provider>
-          </div>
-          {question ? (
-            <div className="flex flex-col gap-3">
-              <Alert id={questionId} tone="warning" role="alert" title={t("unsaved.title")}>
-                {t("unsaved.body")}
-              </Alert>
-              <div className="flex gap-3">
-                <Button
-                  ref={keep}
-                  size="lg"
-                  className="flex-[1.2]"
-                  aria-describedby={questionId}
-                  onClick={keepEditing}
-                >
-                  {t("unsaved.keep")}
-                </Button>
-                <Button
-                  variant="dangerGhost"
-                  size="lg"
-                  className="flex-1"
-                  aria-describedby={questionId}
-                  onClick={() => {
-                    returnTo.current = null;
-                    setAsking(false);
-                    onClose();
-                  }}
-                >
-                  {t("unsaved.leave")}
-                </Button>
-              </div>
+          {fullScreen ? (
+            <div className="grid min-h-14 grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-border px-3">
+              {close}
+              <h2 id={titleId} className="min-w-0 text-md font-semibold break-words">
+                {title}
+              </h2>
+              <div ref={setActionSlot} className="flex" />
             </div>
           ) : (
-            footer && (
-              <DismissContext.Provider value={requestClose}>
-                <div ref={footerBox} className="flex flex-col gap-2">
-                  {footer}
-                </div>
-              </DismissContext.Provider>
-            )
+            <div className="flex items-center justify-between">
+              <h2 id={titleId} className="text-md font-semibold">
+                {title}
+              </h2>
+              {close}
+            </div>
           )}
+          <DismissContext.Provider value={requestClose}>
+            <FullScreenContext.Provider value={fullScreen}>
+              <ActionSlotContext.Provider value={fullScreen ? actionSlot : null}>
+                <div
+                  ref={body}
+                  tabIndex={bodyNeedsFocus ? 0 : undefined}
+                  className={cn(
+                    "min-h-0 flex-1 overflow-y-auto",
+                    fullScreen &&
+                      "flex flex-col px-4 pt-4 pb-[calc(var(--sp-4)+var(--safe-bottom))]",
+                  )}
+                >
+                  <UnsavedContext.Provider value={report}>{children}</UnsavedContext.Provider>
+                  {fullScreen && footer && (
+                    <div ref={footerBox} className="mt-4 flex flex-col gap-2 empty:hidden">
+                      {footer}
+                    </div>
+                  )}
+                </div>
+                {!fullScreen && footer && (
+                  <div ref={footerBox} className="flex flex-col gap-2">
+                    {footer}
+                  </div>
+                )}
+              </ActionSlotContext.Provider>
+            </FullScreenContext.Provider>
+          </DismissContext.Provider>
         </div>
       </div>
+      {question && (
+        <div
+          onPointerDown={(event) => {
+            questionGesture.current = event.target === event.currentTarget;
+          }}
+          onPointerUp={(event) => {
+            questionGesture.current =
+              questionGesture.current && event.target === event.currentTarget;
+          }}
+          onClick={() => {
+            const outside = questionGesture.current;
+            questionGesture.current = false;
+            if (outside) keepEditing();
+          }}
+          className="absolute inset-0 flex items-center justify-center bg-overlay p-4"
+        >
+          <div
+            role="alertdialog"
+            aria-labelledby={questionId}
+            className="flex w-full max-w-[400px] flex-col gap-3 rounded-2xl bg-surface p-5 text-text shadow-3 sm:rounded-xl"
+          >
+            <Alert id={questionId} tone="warning" title={t("unsaved.title")}>
+              {t("unsaved.body")}
+            </Alert>
+            <div className="flex gap-3">
+              <Button ref={keep} size="lg" className="flex-[1.2]" onClick={keepEditing}>
+                {t("unsaved.keep")}
+              </Button>
+              <Button variant="dangerGhost" size="lg" className="flex-1" onClick={leave}>
+                {t("unsaved.leave")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </dialog>
   );
 }

@@ -8,7 +8,7 @@ import { Amount } from "@/components/ui/Amount";
 import { Button } from "@/components/ui/Button";
 import { DateTimeField, type DateTimeValue } from "@/components/ui/DateTimeField";
 import { Field, Input } from "@/components/ui/Field";
-import { Sheet, SheetCancel } from "@/components/ui/Sheet";
+import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { dateTimeInstant, dateTimeParts } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
@@ -374,26 +374,17 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
     const { operation } = view;
     // A refusal for good repeats, so discarding leads and Try again is the second chance.
     const discardFirst = operation.status === "failed";
+    const onDiscard = () => void resolve((db) => discardOperation(db, operation.seq));
+    const onRetry = () => void resolve((db) => retryOperation(db, operation.seq));
     const discard = (
       <Button
         size="lg"
         block
         variant={discardFirst ? "dangerSolid" : "ghost"}
         disabled={busy}
-        onClick={() => void resolve((db) => discardOperation(db, operation.seq))}
+        onClick={onDiscard}
       >
         {discardFirst ? t("discard") : t("keepServer")}
-      </Button>
-    );
-    const retry = (
-      <Button
-        size="lg"
-        block
-        variant={discardFirst ? "secondary" : "primary"}
-        disabled={busy}
-        onClick={() => void resolve((db) => retryOperation(db, operation.seq))}
-      >
-        {discardFirst ? t("retry") : t("keepMine")}
       </Button>
     );
     // A creation the server never took cannot be edited from the list, so it is corrected here.
@@ -401,10 +392,8 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
       const value = correctedTo ?? dateTimeParts(serverInstant(), timeZone);
       return (
         <>
-          <Button
-            size="lg"
+          <SheetAction
             block
-            variant="primary"
             disabled={busy}
             onClick={() =>
               void resolve((db) =>
@@ -417,7 +406,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
             }
           >
             {t("futureDate.save")}
-          </Button>
+          </SheetAction>
           {discard}
         </>
       );
@@ -427,15 +416,13 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
       const typed = (renameTo ?? suggestedName(view)).trim();
       return (
         <>
-          <Button
-            size="lg"
+          <SheetAction
             block
-            variant="primary"
             disabled={busy || typed === ""}
             onClick={() => void resolve((db) => restoreWithName(db, operation.seq, typed))}
           >
             {t("nameTaken.confirm", { name: typed })}
-          </Button>
+          </SheetAction>
           {discard}
         </>
       );
@@ -444,10 +431,8 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
     if (isArchivedAccount(operation)) {
       return (
         <>
-          <Button
-            size="lg"
+          <SheetAction
             block
-            variant="primary"
             disabled={busy}
             onClick={() =>
               void resolve(async (db) => {
@@ -458,19 +443,25 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
             }
           >
             {t("archived.restore")}
-          </Button>
+          </SheetAction>
           {discard}
         </>
       );
     }
     return discardFirst ? (
       <>
-        {discard}
-        {retry}
+        <SheetAction block variant="dangerSolid" disabled={busy} onClick={onDiscard}>
+          {t("discard")}
+        </SheetAction>
+        <Button size="lg" block variant="secondary" disabled={busy} onClick={onRetry}>
+          {t("retry")}
+        </Button>
       </>
     ) : (
       <>
-        {retry}
+        <SheetAction block disabled={busy} onClick={onRetry}>
+          {t("keepMine")}
+        </SheetAction>
         {discard}
       </>
     );
@@ -478,6 +469,7 @@ export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps
 
   return (
     <Sheet
+      layout="full"
       open={open}
       onClose={onClose}
       unsaved={stillSendable()}

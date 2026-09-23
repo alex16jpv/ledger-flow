@@ -15,7 +15,7 @@
 - **Space:** a grid of 4 (`--sp-1…16`). Page padding 16 on mobile, 24 on tablet, 32 on desktop.
   Sections are 20 or 24 apart.
 - **Radii:** 6 sm (badges, kbd) · 10 md (buttons, fields, nav links) · 14 lg (cards) · 20 xl (modals)
-  · 28 2xl (bottom sheet) · a circle for the FAB, the avatar and the swatch.
+  · 28 2xl (a centred sheet on a phone) · a circle for the FAB, the avatar and the swatch.
 - **Controls:** 32 sm · 40 md · 48 lg (fields and the save button) · 44 minimum touch target.
 - **Elevation:** in light, shadow 1 for cards, 2 for the FAB and menus, 3 for sheets. In dark,
   elevation is a border plus a lighter surface, with no shadow except on the sheet.

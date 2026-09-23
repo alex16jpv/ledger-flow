@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Field, Input } from "@/components/ui/Field";
 import { Segment } from "@/components/ui/Segment";
-import { Sheet, SheetCancel } from "@/components/ui/Sheet";
+import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { Tile } from "@/components/ui/Tile";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
@@ -130,13 +130,13 @@ export function SplitSheet({
 
   return (
     <Sheet
+      layout="full"
       open={open}
       onClose={onClose}
       title={title}
       footer={
         <>
-          <Button
-            size="lg"
+          <SheetAction
             block
             loading={pending}
             disabled={!canSave}
@@ -150,7 +150,7 @@ export function SplitSheet({
             }}
           >
             {saveLabel}
-          </Button>
+          </SheetAction>
           <SheetCancel />
         </>
       }

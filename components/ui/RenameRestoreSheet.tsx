@@ -47,6 +47,7 @@ export function RenameRestoreSheet({
 
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       unsaved={!unchanged}

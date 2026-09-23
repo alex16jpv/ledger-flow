@@ -4,9 +4,8 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
-import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
-import { Sheet, SheetCancel } from "@/components/ui/Sheet";
+import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
@@ -76,14 +75,14 @@ export function GroupEditSheet({ group, people, open, onClose }: GroupEditSheetP
 
   return (
     <Sheet
+      layout="full"
       open={open}
       onClose={onClose}
       unsaved={changed}
       title={t("shared.edit.title")}
       footer={
         <>
-          <Button
-            size="lg"
+          <SheetAction
             block
             disabled={!ready}
             loading={save.isPending}
@@ -92,7 +91,7 @@ export function GroupEditSheet({ group, people, open, onClose }: GroupEditSheetP
             }}
           >
             {t("common.saveChanges")}
-          </Button>
+          </SheetAction>
           <SheetCancel />
         </>
       }

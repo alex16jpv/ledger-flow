@@ -68,6 +68,7 @@ export function BudgetsScreen() {
         }}
       />
       <Sheet
+        layout="dialog"
         open={creating !== null}
         onClose={() => {
           setCreating(null);

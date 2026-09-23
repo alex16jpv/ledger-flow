@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { Alert } from "@/components/ui/Alert";
@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Field";
 import { IconGrid } from "@/components/ui/IconGrid";
 import { Segment } from "@/components/ui/Segment";
-import { useUnsavedGuard } from "@/components/ui/Sheet";
+import { SheetAction, useUnsavedGuard } from "@/components/ui/Sheet";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { Tile } from "@/components/ui/Tile";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
@@ -54,6 +54,7 @@ export function CategoryForm({
   secondaryAction,
 }: CategoryFormProps) {
   const t = useTranslations();
+  const formId = useId();
   const create = useCreateCategory();
   const update = useUpdateCategory(category?.id ?? "");
   const mutation = category ? update : create;
@@ -111,6 +112,7 @@ export function CategoryForm({
 
   return (
     <form
+      id={formId}
       onSubmit={(event) => {
         void submit(event);
       }}
@@ -230,9 +232,9 @@ export function CategoryForm({
       </div>
       <div className="flex flex-col gap-2">
         {formError && <Alert tone="danger">{t(formError.messageKey)}</Alert>}
-        <Button type="submit" size="lg" block loading={mutation.isPending}>
+        <SheetAction type="submit" form={formId} block loading={mutation.isPending}>
           {submitLabel ?? (category ? t("common.saveChanges") : t("categories.form.create"))}
-        </Button>
+        </SheetAction>
         {secondaryAction}
         {onCancel && (
           <Button type="button" variant="ghost" size="lg" block onClick={onCancel}>

@@ -150,6 +150,7 @@ export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<voi
         </p>
       )}
       <Sheet
+        layout="dialog"
         open={confirming}
         onClose={() => {
           setConfirming(false);

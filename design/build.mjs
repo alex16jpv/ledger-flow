@@ -534,6 +534,8 @@ const quickSheet = ({
   extra = "",
   over = "",
   hint = "",
+  full = false,
+  keyboard: kb = null,
 } = {}) => {
   const title = "Add";
   const bar = {
@@ -582,6 +584,16 @@ ${quickPicker("To", "Savings · $8,900,000", "piggy-bank", "GREEN")}</div>`
   const sheetHead =
     head ??
     `<div class="sheet-head"><span class="h3">${title}</span><button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button></div>`;
+  if (full)
+    return fullScreen({
+      title,
+      body: `${seg}${hint}${amount}${cats}${accounts}${QUICK_NOTE}${extra}`,
+      action: "Save",
+      secondary: '<button class="btn ghost lg block">More details</button>',
+      footer: QUICK_BUTTONS,
+      keyboard: kb,
+      over,
+    });
   return `<div class="scrim"><div class="sheet" role="dialog" aria-label="${title}">
 ${bar}${sheetHead}${seg}${hint}${amount}${cats}${accounts}${QUICK_NOTE}${extra}${QUICK_BUTTONS}
 </div>${over}</div>`;
@@ -962,7 +974,7 @@ const sheetWrap = (inner, title, closable = true) => {
   const close = closable
     ? `<button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button>`
     : "";
-  return `<div class="scrim"><div class="sheet" role="dialog" aria-label="${title}"><div class="handle"></div><div class="sheet-head"><span class="h3">${title}</span>${close}</div>${inner}</div></div>`;
+  return `<div class="scrim center"><div class="sheet" role="dialog" aria-label="${title}"><div class="handle"></div><div class="sheet-head"><span class="h3">${title}</span>${close}</div>${inner}</div></div>`;
 };
 
 const ACCT_TYPE_ICON = {
@@ -1010,7 +1022,7 @@ const accountTypeSheet = (sel = "CASH") => {
         `<button class="row" style="border-top:1px solid var(--border)">${tile(ACCT_TYPE_ICON[k], k == sel ? "GRAY" : "NONE", "sm")}<span class="body"><span class="title">${ACCT_TYPE_LABEL[k]}</span><span class="meta">${TYPE_HELP[k]}</span></span><span class="right" style="flex-direction:row">${k == sel ? iconSvg("circle-check", "sm") : ""}</span></button>`,
     )
     .join("");
-  return sheetWrap(
+  return fullWrap(
     `<div class="list" style="margin:0 -16px;max-height:400px;overflow:auto">${rows}</div>`,
     "Account type",
   );
@@ -1336,7 +1348,7 @@ ${row("hash", "NONE", "Quick expense", "8:42", 12500, "expense", { pending: true
 ${row("briefcase", "GREEN", "August salary", "", 4200000, "income")}${row("repeat", "GRAY", "→ Savings", "Transfer", 1000000, "transfer")}
 ${row("utensils", "ORANGE", "Carulla groceries", "Sun 20", 78900)}</div>`;
   const sh = sheet
-    ? sheetWrap(
+    ? fullWrap(
         `<div class="stack-sm"><span class="label">Actual balance in Bancolombia</span><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">3,408,200</span><span class="caret"></span></div><p class="small muted" style="text-align:center;margin:0">Recorded balance: <b class="amount">${money(3420500)}</b></p></div>
 <div class="alert neutral" style="align-items:center">${iconSvg("scale")}<span>An <b>adjustment of ${money(12300, "−")}</b> will be created to reconcile the account. It does not count as spending or in budgets.</span></div>
 ${field("Note", null, "August bank fee", { opt: true })}
@@ -1659,7 +1671,7 @@ const paySheet = (a, title, o = {}) => {
       ? ""
       : `\n<div class="alert neutral">${iconSvg("arrow-left-right")}<span>Bancolombia <b class="amount">${money(amt, "\u2212")}</b> \u00b7 ${a.name} <b class="amount">${money(amt)}</b> less owed.</span></div>`);
   const stopped = empty || Boolean(o.error);
-  return sheetWrap(
+  return fullWrap(
     `<div class="stack-sm"><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span>${num}<span class="caret"></span></div>
 <div class="chips" style="justify-content:center">${chip}</div>${o.error ? `<span class="help error">${iconSvg("circle-alert", "sm")}${o.error}</span>` : ""}</div>
 <button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">From</span><span class="val">Bancolombia \u00b7 $3,420,500</span></span>${iconSvg("chevron-down", "sm")}</button>${o.cat ?? ""}${o.extra ?? ""}${read}
@@ -1680,7 +1692,7 @@ const debtDetail = (a, o = {}) =>
   });
 
 const adjustDebtSheet = (name, typed, o) =>
-  sheetWrap(
+  fullWrap(
     `<div class="stack-sm"><span class="label">${o.owed ? `How much do you owe on ${name} right now?` : `How much of your own money is on ${name} right now?`}</span><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">${nf.format(typed)}</span><span class="caret"></span></div>
 ${o.loan ? "" : `<div class="segment" style="margin:0 auto"><button${o.owed ? ' aria-pressed="true"' : ""}>Owed</button><button${o.owed ? "" : ' aria-pressed="true"'}>Your own money</button></div>`}
 <p class="small muted" style="text-align:center;margin:0">Recorded: <b class="amount">${money(o.recorded)}</b> ${o.owed ? "owed" : "of your own money on it"}</p></div>
@@ -1734,7 +1746,7 @@ const outsideSheet = (kind) => {
     kind === "income"
       ? `<div class="alert warning">${iconSvg("triangle-alert")}<span>Visa Gold <b class="amount">${money(CARD_OWED)}</b> less owed — and this month’s <b>Income</b> goes up by ${moneyText(CARD_OWED)}, which is not money you earned.</span></div>`
       : `<div class="alert neutral">${iconSvg("scale")}<span>Visa Gold <b class="amount">${money(CARD_OWED)}</b> less owed. It does not count as income or as spending, because the money never was in Ledger Flow.</span></div>`;
-  return sheetWrap(
+  return fullWrap(
     `<div class="stack-sm"><div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">${nf.format(CARD_OWED)}</span><span class="caret"></span></div>
 <div class="chips" style="justify-content:center"><button class="chip selected">Everything owed</button><button class="chip">Another amount</button></div></div>
 <button class="picker">${tile("circle-dollar-sign", "NONE", "sm")}<span class="body"><span class="lbl">From</span><span class="val">Somewhere else · not an account here</span></span>${iconSvg("chevron-down", "sm")}</button>
@@ -1764,7 +1776,7 @@ ${field("Note", "August bank fee", null, { icon: "notebook-pen", opt: true })}
       narrow: true,
     });
   }
-  const sheet = sheetWrap(
+  const sheet = fullWrap(
     `<div class="stack-sm"><div class="segment"><button>Increase balance</button><button aria-pressed="true">Decrease balance</button></div>
 <div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">12,300</span><span class="caret"></span></div></div>
 <div class="alert neutral" style="align-items:center">${iconSvg("scale")}<span>Recorded on <b>Sep 21</b>, it took <b class="amount">${money(12300, "−")}</b> off Bancolombia. Changing the amount rewrites that difference, not today's balance.</span></div>
@@ -2738,13 +2750,12 @@ const state = (kind) => {
   }
   if (kind == "sin-guardar") {
     const inner = `${field("Amount", "$ 12,500")}
-<div class="alert warning">${iconSvg("triangle-alert")}<span><b>Are you sure you want to leave?</b> What you have typed will be lost.</span></div>
-<div class="hstack" style="gap:10px"><button class="btn primary lg" style="flex:1.2">Keep editing</button><button class="btn ghost lg" style="flex:1;color:var(--danger)">Leave</button></div>`;
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Save adjustment</button></div>`;
     return screen(settingsBodyDim(), {
       tab: "",
       side: "cuentas",
       title: "Accounts",
-      sheet: sheetWrap(inner, "Adjust balance"),
+      sheet: fullWrap(inner, "Adjust balance", { over: UNSAVED_DIALOG }),
     });
   }
   if (kind == "confirmar") {
@@ -2881,7 +2892,7 @@ const filtersSheet = () => {
     tab: "mov",
     side: "mov",
     title: "Transactions",
-    sheet: sheetWrap(inner, "Filters"),
+    sheet: fullWrap(inner, "Filters"),
   });
 };
 
@@ -3011,7 +3022,7 @@ const categoryPicker = () => {
     back: true,
     title: "New transaction",
     narrow: true,
-    sheet: sheetWrap(inner, "Category"),
+    sheet: fullWrap(inner, "Category"),
   });
 };
 
@@ -3047,7 +3058,7 @@ const accountPicker = (kind = "all") => {
     back: true,
     title: "New transaction",
     narrow: true,
-    sheet: sheetWrap(inner, "Account"),
+    sheet: fullWrap(inner, "Account"),
   });
 };
 
@@ -3167,7 +3178,7 @@ ${field("New name", "Cash (old)", null, { cls: "focus", help: "Names are case-in
       side: "mov",
       title: "Transactions",
       banner: `<div class="banner error" role="alert">${iconSvg("circle-alert")}<span class="txt"><b>Some changes need your attention.</b><span class="sub">1 change could not sync</span></span><span class="actions"><button class="action">Review</button><button class="action">See all</button></span></div>`,
-      sheet: sheetWrap(inner, "Fix the date"),
+      sheet: fullWrap(inner, "Fix the date"),
     });
   } else {
     inner = `<div class="alert success">${iconSvg("circle-check")}<span><b>Nothing left to resolve.</b> This change is no longer waiting to sync.</span></div><button class="btn secondary lg block">Close</button>`;
@@ -3178,7 +3189,7 @@ ${field("New name", "Cash (old)", null, { cls: "focus", help: "Names are case-in
     side: "mov",
     title: "Transactions",
     banner,
-    sheet: sheetWrap(inner, "Resolve sync conflict"),
+    sheet: fullWrap(inner, "Resolve sync conflict"),
   });
 };
 
@@ -3959,7 +3970,7 @@ const navMenuSheet = (withAccounts, news = 0, invites = 0) => {
     "",
     "INDIGO",
   );
-  return sheetWrap(
+  return fullWrap(
     `<div class="list card flush">${acc}${settingsRow("users", "Shared", invites ? `${invites} invitation${invites > 1 ? "s" : ""} waiting for you` : `${moneyText(OWED_TO_YOU)} owed to you`, invites ? `<span class="badge brand">${invites}<span class="sr-only"> waiting</span></span>` : "", "PURPLE")}${notif}${settingsRow("chart-column", "Stats", "Where the money went", "", "TEAL")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}${settingsRow("settings", "Settings", "Profile, currency, appearance", "", "GRAY")}</div>
 <div class="list card flush"><a class="row" href="#"><span class="avatar" style="width:32px;height:32px;font-size:12px">JD</span><span class="body"><span class="title">John Doe</span><span class="meta">john@example.com</span></span>${iconSvg("chevron-right", "sm")}</a></div>`,
     "More",
@@ -4012,6 +4023,158 @@ const sheetHandleVariant = (kind) => {
     });
   const extra = `${field("Date", "Today · 18:10", null, { icon: "calendar" })}${field("Description", "Uber to work", null, { icon: "pencil" })}`;
   return home({ sheet: quickSheet({ type: "expense", handle: "wide", extra }) });
+};
+
+// T-150 · on a phone a sheet is a full-screen dialog or a centred one; from 600px up, the modal it was.
+const KEYBOARD_H = { numeric: 232, text: 232 };
+
+const keyboard = (kind) => {
+  const key = (label, o = {}) =>
+    `<span class="key${o.fn ? " fn" : ""}"${o.span ? ` style="grid-column:span ${o.span}"` : ""}>${label}</span>`;
+  const keys = (cols, row) =>
+    `<div class="keys" style="grid-template-columns:repeat(${cols},1fr)">${row.join("")}</div>`;
+  const rows =
+    kind === "numeric"
+      ? [
+          keys(
+            4,
+            ["1", "2", "3", "\u2212"].map((k, i) => key(k, { fn: i === 3 })),
+          ),
+          keys(
+            4,
+            ["4", "5", "6", "\u2423"].map((k, i) => key(k, { fn: i === 3 })),
+          ),
+          keys(
+            4,
+            ["7", "8", "9", "\u232b"].map((k, i) => key(k, { fn: i === 3 })),
+          ),
+          keys(
+            4,
+            [",", "0", ".", "\u21b5"].map((k, i) => key(k, { fn: i !== 1 })),
+          ),
+        ]
+      : [
+          keys(
+            10,
+            [..."qwertyuiop"].map((k) => key(k)),
+          ),
+          keys(
+            20,
+            [..."asdfghjkl"].map((k) => key(k, { span: 2 })),
+          ),
+          keys(10, [
+            key("\u21e7", { fn: true, span: 2 }),
+            ...[..."zxcvbn"].map((k) => key(k)),
+            key("\u232b", { fn: true, span: 2 }),
+          ]),
+          keys(10, [
+            key("?123", { fn: true, span: 2 }),
+            key(","),
+            key("", { span: 4 }),
+            key("."),
+            key("\u21b5", { fn: true, span: 2 }),
+          ]),
+        ];
+  return `<div class="kbd" aria-hidden="true" style="height:${KEYBOARD_H[kind]}px">${rows.join("")}</div>`;
+};
+
+const keyboardUnder = (html, kind, scrimClass) => {
+  const style = kind ? ` style="bottom:${KEYBOARD_H[kind]}px"` : "";
+  return html.replace(
+    '<div class="scrim">',
+    `${kind ? keyboard(kind) : ""}<div class="scrim ${scrimClass}"${style}>`,
+  );
+};
+
+const fullScreen = ({
+  title,
+  body,
+  action = null,
+  lead = "",
+  secondary = "",
+  footer = "",
+  keyboard: kind = null,
+  over = "",
+}) => {
+  const close = `<button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button>`;
+  const act = action ? `<button class="btn primary">${action}</button>` : "<span></span>";
+  const sheet = `<div class="scrim"><div class="sheet" role="dialog" aria-label="${title}">
+<div class="fs-bar">${close}<span class="h3">${title}</span>${act}</div>
+<div class="sheet-head modal-only"><span class="h3">${title}</span>${close}</div>
+${lead ? `<div class="fs-lead">${lead}</div>` : ""}<div class="fs-body">${body}${secondary ? `<div class="fs-only">${secondary}</div>` : ""}</div>
+${footer ? `<div class="modal-only">${footer}</div>` : ""}</div>${over}</div>`;
+  return keyboardUnder(sheet, kind, "full");
+};
+
+const FOOTER_START = '<div class="hstack" style="gap:10px">';
+const BUTTON = /<button class="btn ([^"]*)"([^>]*)>([\s\S]*?)<\/button>/g;
+
+// A form's footer on a phone: the primary goes up to the bar, Cancel is the close button, the rest ends the body.
+const fullWrap = (inner, title, o = {}) => {
+  const at = inner.lastIndexOf(FOOTER_START);
+  if (at < 0) {
+    const block = inner.match(/<button class="btn primary lg block">([\s\S]*?)<\/button>/);
+    if (!block) return fullScreen({ title, body: inner, ...o });
+    return fullScreen({
+      title,
+      body: inner.replace(block[0], `<span class="modal-only">${block[0]}</span>`),
+      action: block[1].replace(/<svg[\s\S]*?<\/svg>/g, ""),
+      ...o,
+    });
+  }
+  const end = inner.indexOf("</div>", at) + "</div>".length;
+  const footer = inner.slice(at, end);
+  const buttons = [...footer.matchAll(BUTTON)];
+  const primary = buttons.findLast(([, cls]) => /primary|danger solid/.test(cls));
+  const secondary = buttons
+    .filter((b) => b !== primary && b[3].trim() !== "Cancel")
+    .map(
+      ([, cls, attrs, label]) =>
+        `<button class="btn ${cls.replace(/ block/, "")} block"${attrs.replace(/ style="[^"]*"/, "")}>${label}</button>`,
+    )
+    .join("");
+  return fullScreen({
+    title,
+    body: inner.slice(0, at) + inner.slice(end),
+    action: primary?.[3],
+    secondary: secondary ? `<div class="stack-sm">${secondary}</div>` : "",
+    footer,
+    ...o,
+  });
+};
+
+const centred = (html, kind) =>
+  html.replace(
+    '<div class="scrim center">',
+    `${keyboard(kind)}<div class="scrim center" style="bottom:${KEYBOARD_H[kind]}px">`,
+  );
+
+const UNSAVED_DIALOG = `<div class="scrim center" style="z-index:calc(var(--z-sheet) + 2)"><div class="sheet" role="alertdialog" aria-label="Are you sure you want to leave?">
+<div class="alert warning">${iconSvg("triangle-alert")}<span><b>Are you sure you want to leave?</b> What you have typed will be lost.</span></div>
+<div class="hstack" style="gap:10px"><button class="btn primary lg" style="flex:1.2">Keep editing</button><button class="btn ghost lg" style="flex:1;color:var(--danger)">Leave</button></div></div></div>`;
+
+const quickFullScreen = (o = {}) =>
+  home({
+    sheet: quickSheet({ type: "expense", hint: typeLine("EXPENSE"), full: true, ...o }),
+  });
+
+const pickerFullScreen = () => {
+  const r = (name, sel = false) => {
+    const [ic, col] = CATS[name];
+    return `<button class="row" style="border-top:1px solid var(--border)">${tile(ic, col)}<span class="body"><span class="title">${name}</span><span class="meta">Expense</span></span><span class="right" style="flex-direction:row">${sel ? iconSvg("circle-check", "sm") : ""}</span></button>`;
+  };
+  const lead = `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span style="flex:1">Search categories</span><span class="caret"></span></div>`;
+  const body = `<div class="stack-sm"><span class="eyebrow">Recent</span><div class="chips">${catChip("Coffee")}${catChip("Food")}${catChip("Transport")}</div></div>
+<div class="list" style="margin:0 -16px">${r("Coffee")}${r("Food", true)}${r("Transport")}${r("Housing")}${r("Bills")}${r("Lifestyle")}${r("Health")}${r("Pets")}
+<button class="row" style="border-top:1px solid var(--border)">${tile("plus", "NONE")}<span class="body"><span class="title" style="color:var(--brand-text)">New category</span><span class="meta">Create it without leaving this form</span></span></button></div>`;
+  return screen(transactionFormBodyDim(), {
+    tab: "",
+    side: "",
+    back: true,
+    title: "New transaction",
+    narrow: true,
+    sheet: fullScreen({ title: "Category", lead, body, keyboard: "text" }),
+  });
 };
 
 // ── Shared expenses · T-110 and T-111 ───────────────────────────────────────
@@ -4246,7 +4409,7 @@ const undoPayment = () =>
 
 const newContact = () =>
   sharedScreen(sharedPeopleBody(), {
-    sheet: sheetWrap(
+    sheet: fullWrap(
       `<div class="stack">${field("Name", "Beto Cano", null, { icon: "user" })}
 <div class="field"><span class="label">Colour</span>${swatches("TEAL")}</div>
 ${field("Email", null, "beto@example.com", { icon: "globe", opt: true, help: "So you can invite them to a shared group. Nothing is emailed: the invitation waits in their Shared." })}
@@ -4284,7 +4447,7 @@ const pickRow = (icon, color, title, meta, amt, on) =>
 
 const pickTransactions = () =>
   newGroup({
-    sheet: sheetWrap(
+    sheet: fullWrap(
       `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span class="placeholder" style="flex:1">Search description, note or tag</span></div>
 <div class="chips"><button class="chip selected">August – September</button><button class="chip">${iconSvg("wallet", "sm")}Any account</button><button class="chip">Expenses</button></div>
 <div class="list" style="margin:0 -16px;max-height:320px;overflow:auto">
@@ -4300,7 +4463,7 @@ ${pickRow("coffee", "BROWN", "Pergamino Coffee", "Sep 3 · Cash", 9800, false)}
 
 const recordNewExpense = () =>
   groupDetail({
-    sheet: sheetWrap(
+    sheet: fullWrap(
       `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span class="placeholder" style="flex:1">Search description, note or tag</span></div>
 <div class="list" style="margin:0 -16px;max-height:260px;overflow:auto">
 ${pickRow("coffee", "BROWN", "Pergamino Coffee", "Sep 3 \u00b7 Cash", 9800, true)}
@@ -4314,7 +4477,7 @@ ${pickRow("bus", "BLUE", "Bus to the old town", "Sep 4 \u00b7 Cash", 12000, fals
 
 const expenseSomebodyElsePaid = () =>
   nightOut({
-    sheet: sheetWrap(
+    sheet: fullWrap(
       `<div class="stack">
 ${field("What was it", "Concert tickets", null, { icon: "receipt" })}
 ${field("Date", "September 20, 2026", null, { icon: "calendar" })}
@@ -4333,7 +4496,7 @@ const whoPaidPicker = () => {
   const row = (name, on) =>
     `<button class="row" style="width:100%">${face(name)}<span class="body"><span class="title"><span class="truncate">${name}</span></span></span>${on ? iconSvg("check", "sm") : ""}</button>`;
   return nightOut({
-    sheet: sheetWrap(
+    sheet: fullWrap(
       `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span class="placeholder" style="flex:1">Search</span></div>
 <div class="list" style="margin:0 -16px">${row("Ana Ruiz", true)}${row("Beto Cano", false)}</div>`,
       "Who paid it, in Night out?",
@@ -4414,7 +4577,7 @@ const splitSheet = (mode = "equal", loose = false) => {
   const creates = loose
     ? `<p class="xs faint" style="margin:0">It creates a shared group called <b>Groceries for the trip</b> with these three people, so this expense lives where every other shared one does. You can rename it or add more expenses to it later.</p>`
     : "";
-  return sheetWrap(
+  return fullWrap(
     `${who}${seg}
 <div class="stack-sm" style="gap:10px;padding-top:4px">${rows}</div>
 ${ADD_GUESTS}
@@ -4429,7 +4592,7 @@ ${note}${creates}
 
 const settleUp = (kind = "full") => {
   if (kind === "owe") {
-    return sheetWrap(
+    return fullWrap(
       `<div class="inset hstack" style="justify-content:space-between"><span class="small muted">You owe Diego</span><span class="amount">${money(60000)}</span></div>
 <div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">60,000</span><span class="caret"></span></div>
 <button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">Where it comes from</span><span class="val">Bancolombia</span></span>${iconSvg("chevron-down", "sm")}</button>
@@ -4440,7 +4603,7 @@ const settleUp = (kind = "full") => {
     );
   }
   if (kind === "both") {
-    return sheetWrap(
+    return fullWrap(
       `<div class="inset stack-sm" style="gap:8px">
 <div class="hstack" style="justify-content:space-between"><span class="small muted">Ana owes you</span><span class="amount">${money(56300)}</span></div>
 <div class="hstack" style="justify-content:space-between"><span class="small muted">You owe Ana</span><span class="amount">${money(30000)}</span></div>
@@ -4455,7 +4618,7 @@ const settleUp = (kind = "full") => {
     );
   }
   if (kind === "partial") {
-    return sheetWrap(
+    return fullWrap(
       `<div class="inset hstack" style="justify-content:space-between"><span class="small muted">Beto owes you</span><span class="amount">${money(526300)}</span></div>
 <div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">200,000</span><span class="caret"></span></div>
 <button class="picker">${tile("banknote", "GRAY", "sm")}<span class="body"><span class="lbl">Where it lands</span><span class="val">Nowhere here · cash in hand</span></span>${iconSvg("chevron-down", "sm")}</button>
@@ -4467,7 +4630,7 @@ const settleUp = (kind = "full") => {
       "Record a payment from Beto",
     );
   }
-  return sheetWrap(
+  return fullWrap(
     `<div class="inset hstack" style="justify-content:space-between"><span class="small muted">Beto owes you</span><span class="amount">${money(526300)}</span></div>
 <div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">526,300</span><span class="caret"></span></div>
 <button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">Where it arrives</span><span class="val">Bancolombia</span></span>${iconSvg("chevron-down", "sm")}</button>
@@ -4479,7 +4642,7 @@ const settleUp = (kind = "full") => {
 };
 
 const settleUpWho = () =>
-  sheetWrap(
+  fullWrap(
     `<p class="small muted" style="margin:0">This group has more than one person with something open, so it asks before it settles.</p>
 <div class="list card flush">
 ${personRow("Ana Ruiz", "Cartagena trip", 26300, "owes you")}
@@ -4553,7 +4716,7 @@ const pickPeople = () => {
     `<label class="row" style="cursor:pointer"><span class="box${on ? " on" : ""}">${on ? iconSvg("check", "sm") : ""}</span>${face(name)}
 <span class="body"><span class="title"><span class="truncate">${name}</span></span><span class="meta">${meta}</span></span></label>`;
   return newGroup({
-    sheet: sheetWrap(
+    sheet: fullWrap(
       `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span class="placeholder" style="flex:1">Search a name or an email</span></div>
 <div class="list" style="margin:0 -16px;max-height:300px;overflow:auto">
 ${person("Ana Ruiz", "Owes you $26,300", true)}${person("Beto Cano", "Owes you $526,300", true)}${person("Lucía Mesa", "Nothing open", true)}${person("Diego Pardo", "You owe $60,000", false)}
@@ -4581,7 +4744,7 @@ const ADD_GUESTS = `<button class="btn ghost sm" style="align-self:flex-start;pa
 
 const splitOneExpense = () =>
   groupDetail({
-    sheet: sheetWrap(
+    sheet: fullWrap(
       `<div class="segment"><button aria-pressed="false">Equal</button><button aria-pressed="false">Percent</button><button aria-pressed="true">Exact</button><button aria-pressed="false">Fixed + rest</button></div>
 <div class="stack-sm" style="gap:10px;padding-top:4px">${splitRow("You", "$60,000")}${splitRow("Ana Ruiz", "$120,000")}${splitRow("Beto Cano", "$90,000")}${splitRow("Lucía Mesa", "$90,000")}</div>
 ${ADD_GUESTS}
@@ -4595,7 +4758,7 @@ ${ADD_GUESTS}
 
 const splitWithGuests = () =>
   nightOut({
-    sheet: sheetWrap(
+    sheet: fullWrap(
       `<div class="segment"><button aria-pressed="true">Equal</button><button aria-pressed="false">Percent</button><button aria-pressed="false">Exact</button><button aria-pressed="false">Fixed + rest</button></div>
 ${guestCount(20, 3, 23)}
 <div class="stack-sm" style="gap:10px;padding-top:4px">${splitRow("You", "$10,000")}${splitRow("Ana Ruiz", "$10,000")}${splitRow("Beto Cano", "$10,000")}${blockRow("Guests · 20", "$200,000")}</div>
@@ -4612,7 +4775,7 @@ const previewRow = (name, meta, badge = "") =>
 
 const addPeopleSheet = () =>
   groupDetail({
-    sheet: sheetWrap(
+    sheet: fullWrap(
       `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span class="placeholder" style="flex:1">Search a name or an email</span></div>
 <div class="list" style="margin:0 -16px;max-height:160px;overflow:auto">
 <label class="row" style="cursor:pointer"><span class="box on">${iconSvg("check", "sm")}</span>${face("Diego Pardo")}<span class="body"><span class="title">Diego Pardo</span><span class="meta">You owe $60,000 · Diego’s birthday gift</span></span></label>
@@ -4751,7 +4914,7 @@ const inviteSheet = (beto = "none") => {
     beto === "waiting"
       ? `<p class="small muted" role="status" style="margin:0"><b>Beto sees it in Shared</b> the next time he opens Ledger Flow with beto@example.com. If that address has no account yet, the invitation waits for it all the same — and you are not told which: it reads <i>waiting</i> either way until he answers.</p>`
       : "";
-  return sheetWrap(
+  return fullWrap(
     `<p class="small muted" style="margin:0">Somebody who joins sees <b>Cartagena trip</b> — its expenses, who paid and how each one is split — and never your accounts, categories or notes. Nothing is emailed: the invitation waits in their Shared.</p>
 <div class="list card flush">
 ${inviteRow("Ana Ruiz", "ana@example.com · joined Sep 19", `<button class="btn ghost sm">Stop sharing</button>`, '<span class="badge success">Joined</span>')}
@@ -4894,7 +5057,7 @@ ${personRow("Carlitos", "Has not joined · the name Ana gave him", 415000, "shar
 };
 
 const addToLedgerSheet = () =>
-  sheetWrap(
+  fullWrap(
     `<div class="inset hstack" style="justify-content:space-between"><span class="small muted">Your share of Groceries at the market · Sep 19</span><span class="amount">${money(60000)}</span></div>
 <button class="picker">${tile("wallet", "PURPLE", "sm")}<span class="body"><span class="lbl">Where it came from</span><span class="val">Nequi</span></span>${iconSvg("chevron-down", "sm")}</button>
 <button class="picker">${tile("shopping-basket", "GREEN", "sm")}<span class="body"><span class="lbl">Category</span><span class="val">Groceries</span></span>${iconSvg("chevron-down", "sm")}</button>
@@ -5134,15 +5297,15 @@ const PAGES = [
       plate(
         "quick-capture",
         "Quick capture",
-        "The sheet behind the centre button. The three-way segment on top records all three types (T-73) and the bar above it opens the full form (T-75).",
-        home({ sheet: quickSheet({ type: "expense", handle: "wide", hint: typeLine("EXPENSE") }) }),
+        "What the centre button opens. The three-way segment on top records all three types (T-73). On a phone it fills the screen with Save in the bar on top, and More details, at the end, opens the full form (T-150); from 600px up it is the centred modal with both buttons in its footer.",
+        home({ sheet: quickSheet({ type: "expense", hint: typeLine("EXPENSE"), full: true }) }),
         { added: "2026-09-01", updated: "2026-09-15" },
       ),
       plate(
         "quick-capture-income",
         "Quick capture · income",
         "The type tints the amount and reconfigures the body: the income categories, and the account row reads “Into your main account”. The amount survives the switch.",
-        home({ sheet: quickSheet({ type: "income", handle: "wide", hint: typeLine("INCOME") }) }),
+        home({ sheet: quickSheet({ type: "income", hint: typeLine("INCOME"), full: true }) }),
         { added: "2026-09-15" },
       ),
       plate(
@@ -5150,9 +5313,23 @@ const PAGES = [
         "Quick capture · transfer",
         "Two accounts instead of one, with the swap button between them, and the two have to differ. Since T-86 it keeps a category row like the other two types — the ones marked Transfer — because the sheet hands its state to the full form, where that field exists.",
         home({
-          sheet: quickSheet({ type: "transfer", handle: "wide", hint: typeLine("TRANSFER") }),
+          sheet: quickSheet({ type: "transfer", hint: typeLine("TRANSFER"), full: true }),
         }),
         { added: "2026-09-15" },
+      ),
+      plate(
+        "full-screen-quick-add",
+        "A phone sheet with a form fills the screen",
+        "T-150. His decision of 2026-09-23 that no phone sheet keeps rising from the bottom, and his correction the same day: \u00abno es ponerlo arriba literalmente. el modal debe cambiar su estructura para que no sea abajo no simplemente subirlo. debe de existir algun estandar para modales en movil\u00bb. This is the standard both platforms share \u2014 Material 3\u2019s full-screen dialog, iOS\u2019s sheet with a navigation bar \u2014 and the first of the two forms every phone sheet now takes. <b>The rule: a form (more than one field) or a list that scrolls is a full-screen dialog; a question, a short choice, or one field with its button is a centred dialog.</b> Full screen means a 56px bar on top \u2014 close on the left, the title, the sheet\u2019s one primary action on the right \u2014 and the body scrolling under it, so the keyboard can cover part of the body but never the action. In quick add, Save moves up to the bar and More details goes to the end of the body. <b>The bar that opened the full form goes</b>: there is no sheet edge left to pull (his gesture of 2026-09-15), and More details stays as the way in. Drawn with the numeric keyboard up. From 600px up nothing changes: the same sheet is the centred 520px modal with its footer \u2014 switch the device to see it.",
+        quickFullScreen({ keyboard: "numeric" }),
+        { added: "2026-09-23" },
+      ),
+      plate(
+        "full-screen-picker",
+        "A phone sheet with a list fills the screen",
+        "The list half of the rule. The picker fills the screen with its search pinned under the bar, and the list scrolls between the search and the keyboard, so every row can be reached while typing. There is no action on the right: choosing a row is the answer and closes it, as today. The account, contact, transaction and account-type pickers, Filters, and every sheet that creates or edits something \u2014 an account, a category, a contact, a group, a split, settle up, pay, adjust balance, invite \u2014 take this same form.",
+        pickerFullScreen(),
+        { added: "2026-09-23" },
       ),
       plate(
         "full-form-expense",
@@ -5429,6 +5606,13 @@ const PAGES = [
         "An active account already holds the name, so restoring asks for a new one. The same component serves categories.",
         accountRestoreSheet(),
         { added: "2026-09-06" },
+      ),
+      plate(
+        "centred-dialog-with-the-keyboard",
+        "A centred dialog, with the keyboard up",
+        "One field and its button stay a centred dialog. With the keyboard up it centres on the space above it rather than on the whole screen, so the field and the button are never behind the keyboard. Drawn on restoring an account whose name is taken; renaming, the ceiling of a budget and every one-figure sheet work the same.",
+        centred(accountRestoreSheet(), "text"),
+        { added: "2026-09-23" },
       ),
       plate(
         "account-type-sheet",
@@ -6459,7 +6643,7 @@ const PAGES = [
       plate(
         "unsaved-before-leaving",
         "Leaving a form with something typed",
-        "A tap outside a sheet closes it, so a half-written form would go with it. When there is something to lose, none of the four exits closes: the sheet asks, in place, and “Keep editing” is the primary action. Since T-104 the close button and the footer’s Cancel ask the same question, because those are the two a thumb hits by accident. A sheet with nothing typed closes on the first tap, as it should.",
+        "Closing a form with something typed does not close it, on any of its four exits: a tap outside, ESC, the close button and Cancel (T-78, T-104, his decision of 2026-09-18). It asks, with the same words, in a centred dialog over the form \u2014 Keep editing first and focused, Leave the quiet one, ESC keeps editing. Since T-150 the question is that dialog on every width: a full-screen form has no footer to swap for it, and at the end of the body it could land under the keyboard. A form with nothing typed closes on the first tap, as it should.",
         state("sin-guardar"),
         { added: "2026-09-15", updated: "2026-09-18" },
       ),
@@ -7254,6 +7438,7 @@ const PAGES = [
 const ALL_PLATES = PAGES.flatMap((page) => (page.plates ?? []).map((p) => ({ ...p, page })));
 const IN_REVIEW = ALL_PLATES.filter((p) => p.review);
 const OPEN = ALL_PLATES.filter((p) => p.verdict === "open");
+const WAITING = IN_REVIEW.length + new Set(OPEN.map((p) => p.asks)).size;
 const LATEST = [...ALL_PLATES].map(plateDay).sort().at(-1);
 
 const GROUPS = ["Foundations", "Screens", "States", "Decisions"];
@@ -7288,7 +7473,7 @@ const sideNav = (current) => {
   return `<aside class="pv-side">
 <div class="pv-search"><input id="pv-q" type="search" placeholder="Search a screen or a state" autocomplete="off" aria-label="Search"><div id="pv-results" class="pv-results" hidden></div></div>
 <nav class="pv-nav">
-<div class="pv-group">${link("index.html", "Start here")}${link("in-review.html", "Waiting on you", IN_REVIEW.length + OPEN.length, IN_REVIEW.length + OPEN.length > 0 ? " waiting" : "")}${link("changes.html", "What changed")}</div>
+<div class="pv-group">${link("index.html", "Start here")}${link("in-review.html", "Waiting on you", WAITING, WAITING > 0 ? " waiting" : "")}${link("changes.html", "What changed")}</div>
 ${groups}
 </nav></aside>`;
 };

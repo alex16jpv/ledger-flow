@@ -35,6 +35,7 @@ export function SessionExpiredSheet({
 
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={dismissible && onClose ? onClose : onSignIn}
       dismissible={dismissible}

@@ -80,7 +80,7 @@ export function LanguageSheet({ open, onClose }: LanguageSheetProps) {
   ];
 
   return (
-    <Sheet open={open} onClose={onClose} title={t("title")}>
+    <Sheet layout="dialog" open={open} onClose={onClose} title={t("title")}>
       <div className="flex flex-col gap-4">
         {offline && <Alert tone="warning">{tErrors("settings.needsConnection")}</Alert>}
         {failure && <Alert tone="danger">{tErrors(failure.messageKey)}</Alert>}

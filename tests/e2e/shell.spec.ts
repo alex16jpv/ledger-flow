@@ -87,6 +87,54 @@ test("the tab bar clears the system navigation bar", async ({ page, request, isM
   await expect(page).toHaveURL(/\/transactions$/);
 });
 
+// T-150: which of the two forms a phone sheet takes is geometry, and jsdom has none.
+test("on a phone a form fills the screen with its action on top, and a short sheet is centred", async ({
+  page,
+  request,
+  isMobile,
+}) => {
+  test.skip(!isMobile, "both forms are the centred modal from 600px up");
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { top: 24, bottom: 48 } });
+  await signUp(request);
+  await page.context().addCookies((await request.storageState()).cookies);
+  await page.goto("/home");
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error("the mobile project always sets a viewport");
+
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  const quick = page.getByRole("dialog", { name: "Add" });
+  const title = quick.getByRole("heading", { name: "Add" });
+  const panel = title.locator("xpath=../..");
+  expect(await panel.boundingBox()).toEqual({
+    x: 0,
+    y: 0,
+    width: viewport.width,
+    height: viewport.height,
+  });
+  expect(await panel.evaluate((node) => getComputedStyle(node).paddingTop)).toBe("24px");
+  const bar = await title.locator("..").boundingBox();
+  const save = await quick.getByRole("button", { name: "Save" }).boundingBox();
+  expect(bar && save && save.y >= bar.y && save.y + save.height <= bar.y + bar.height).toBe(true);
+  await expect(quick.getByRole("button", { name: "Cancel" })).toHaveCount(0);
+  await expectNoAxeViolations(page);
+  await quick.getByRole("button", { name: "Close" }).click();
+  await expect(quick).toBeHidden();
+
+  await page.goto("/budgets");
+  await page.getByRole("button", { name: "Create a monthly budget" }).click();
+  const ceiling = page.getByRole("dialog", { name: "A ceiling for the month" });
+  const card = await ceiling
+    .getByRole("heading", { name: "A ceiling for the month" })
+    .locator("xpath=../..")
+    .boundingBox();
+  expect(card).not.toBeNull();
+  if (!card) return;
+  expect(Math.round(card.x)).toBe(16);
+  expect(Math.round(card.x + card.width)).toBe(viewport.width - 16);
+  expect(Math.abs(card.y + card.height / 2 - viewport.height / 2)).toBeLessThanOrEqual(1);
+});
+
 test("the sign-in frame ends above the system navigation bar", async ({ page, isMobile }) => {
   test.skip(!isMobile, "only a phone draws under a system bar");
   const cdp = await page.context().newCDPSession(page);

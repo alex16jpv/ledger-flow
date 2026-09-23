@@ -5,9 +5,8 @@ import { useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Sheet, SheetCancel } from "@/components/ui/Sheet";
+import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
@@ -88,6 +87,7 @@ export function AddToLedgerSheet({ open, groupId, owner, lines, onClose }: AddTo
 
   return (
     <Sheet
+      layout="full"
       open={open}
       onClose={onClose}
       unsaved={accountId !== null || categoryId !== null}
@@ -95,8 +95,7 @@ export function AddToLedgerSheet({ open, groupId, owner, lines, onClose }: AddTo
       footer={
         <>
           {error && <Alert tone="danger">{t(error.messageKey)}</Alert>}
-          <Button
-            size="lg"
+          <SheetAction
             block
             disabled={!ready}
             loading={add.isPending}
@@ -105,7 +104,7 @@ export function AddToLedgerSheet({ open, groupId, owner, lines, onClose }: AddTo
             }}
           >
             {t("shared.joined.add.confirm", { amount: money.format(total) })}
-          </Button>
+          </SheetAction>
           <SheetCancel />
         </>
       }

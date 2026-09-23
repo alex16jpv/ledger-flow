@@ -52,13 +52,14 @@ export function AccountTypePicker({ value, onChange, label, error }: AccountType
         </span>
       )}
       <Sheet
+        layout="full"
         open={open}
         onClose={() => {
           setOpen(false);
         }}
         title={t("accounts.typePicker.title")}
       >
-        <List className="-mx-4 max-h-[60dvh] overflow-y-auto">
+        <List className="-mx-4 max-h-[60dvh] overflow-y-auto max-sm:max-h-none max-sm:min-h-0 max-sm:flex-1">
           <div role="listbox" aria-label={t("accounts.typePicker.title")} className="flex flex-col">
             {ACCOUNT_TYPES.map((type) => {
               const selected = type === value;

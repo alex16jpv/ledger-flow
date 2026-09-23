@@ -199,7 +199,7 @@ test("a card in credit still says what is available, and a loan that is paid is 
   await expect(
     adjusting.getByRole("textbox", { name: /How much do you owe on Loan owing right now/ }),
   ).toHaveValue("8,400,000");
-  await adjusting.getByRole("button", { name: "Cancel" }).click();
+  await adjusting.getByRole("button", { name: "Close" }).click();
 
   await page.getByRole("button", { name: /Pay this loan/ }).click();
   const paying = page.getByRole("dialog", { name: "Pay Loan owing" });

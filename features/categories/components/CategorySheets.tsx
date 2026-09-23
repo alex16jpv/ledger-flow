@@ -26,6 +26,7 @@ export function ArchiveCategorySheet({
   const t = useTranslations("categories.archive");
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={t("title", { name: category.name })}

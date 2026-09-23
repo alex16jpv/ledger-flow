@@ -41,6 +41,7 @@ export function HomeScreen() {
         recent={<RecentTransactions />}
       />
       <Sheet
+        layout="full"
         open={open === "account"}
         onClose={() => {
           setOpen(null);
@@ -52,6 +53,7 @@ export function HomeScreen() {
         )}
       </Sheet>
       <Sheet
+        layout="dialog"
         open={open === "budget"}
         onClose={() => {
           setOpen(null);

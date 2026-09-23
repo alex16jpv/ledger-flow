@@ -53,7 +53,7 @@ export function NoSessionChoiceSheet({
 
   return (
     // The one sheet that cannot be closed without answering (P-32).
-    <Sheet open={open} onClose={onSignIn} dismissible={false} title={t("title")}>
+    <Sheet layout="dialog" open={open} onClose={onSignIn} dismissible={false} title={t("title")}>
       <div className="flex flex-col gap-4">
         <Alert tone="warning">{pending > 0 ? t("body", { count: pending }) : t("bodyEmpty")}</Alert>
         <div className="flex flex-col gap-1.5">

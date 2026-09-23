@@ -78,7 +78,7 @@ export function MoreSheet({
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={t("nav.more")}>
+    <Sheet layout="full" open={open} onClose={onClose} title={t("nav.more")}>
       <div className="flex flex-col gap-3">
         <Card flush>
           <List>

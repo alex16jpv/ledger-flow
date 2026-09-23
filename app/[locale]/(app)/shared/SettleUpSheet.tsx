@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { DateField } from "@/components/ui/DateTimeField";
 import { Field } from "@/components/ui/Field";
-import { Sheet, SheetCancel } from "@/components/ui/Sheet";
+import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
@@ -145,6 +145,7 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
 
   return (
     <Sheet
+      layout="full"
       open={open}
       onClose={onClose}
       unsaved={toCents(cash) !== toCents(most)}
@@ -156,8 +157,7 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
       footer={
         <>
           {error && <Alert tone="danger">{t(error.messageKey)}</Alert>}
-          <Button
-            size="lg"
+          <SheetAction
             block
             disabled={!ready}
             loading={record.isPending}
@@ -168,7 +168,7 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
             {inbound
               ? t("shared.settle.record")
               : t("shared.settle.pay", { amount: money.format(cash) })}
-          </Button>
+          </SheetAction>
           <SheetCancel />
         </>
       }

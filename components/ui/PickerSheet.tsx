@@ -69,8 +69,8 @@ export function PickerSheet<T extends string>({
   );
 
   return (
-    <Sheet open={open} onClose={onClose} title={title} footer={footer}>
-      <div className="flex flex-col gap-3">
+    <Sheet layout="full" open={open} onClose={onClose} title={title} footer={footer}>
+      <div className="flex flex-col gap-3 max-sm:min-h-0 max-sm:flex-1">
         {searchable && (
           <Input
             ref={search}
@@ -89,7 +89,7 @@ export function PickerSheet<T extends string>({
           <Empty icon={<Search {...iconProps("lg")} />} title={emptyTitle ?? t("noResults")} />
         ) : (
           <List
-            className="max-h-[60dvh] overflow-y-auto"
+            className="max-h-[60dvh] overflow-y-auto max-sm:max-h-none max-sm:min-h-0 max-sm:flex-1"
             role="listbox"
             aria-label={typeof title === "string" ? title : undefined}
           >

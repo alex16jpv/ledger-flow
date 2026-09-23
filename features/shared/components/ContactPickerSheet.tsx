@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Field";
 import { List, Row, RowBody, rowClasses, RowMeta, RowTitle } from "@/components/ui/Row";
-import { Sheet, SheetCancel } from "@/components/ui/Sheet";
+import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { iconProps } from "@/lib/icons/sizes";
 import type { Contact } from "@/types/api";
@@ -80,13 +80,13 @@ export function ContactPickerSheet({
 
   return (
     <Sheet
+      layout="full"
       open={open}
       onClose={onClose}
       title={title ?? t("title")}
       footer={
         <>
-          <Button
-            size="lg"
+          <SheetAction
             block
             loading={pending}
             disabled={disabled}
@@ -95,12 +95,12 @@ export function ContactPickerSheet({
             }}
           >
             {confirmLabel ?? t("add", { count: picked.length })}
-          </Button>
+          </SheetAction>
           <SheetCancel />
         </>
       }
     >
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 max-sm:min-h-0 max-sm:flex-1">
         <Input
           type="search"
           leading={<Search {...iconProps("sm")} />}
@@ -111,7 +111,7 @@ export function ContactPickerSheet({
             setSearch(event.target.value);
           }}
         />
-        <div className="-mx-4 max-h-[300px] overflow-auto">
+        <div className="-mx-4 max-h-[300px] overflow-auto max-sm:max-h-none max-sm:min-h-0 max-sm:flex-1">
           {page.isPending && (
             <div
               className="flex flex-col gap-3 px-4 py-3"

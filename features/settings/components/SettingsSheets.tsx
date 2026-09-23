@@ -38,6 +38,7 @@ export function CurrencySheet({
   const failure = error ? presentError(error) : null;
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       unsaved={!locked && value !== currency}
@@ -67,7 +68,6 @@ export function CurrencySheet({
         <Alert tone="neutral">{t("settings.currency.lockedBody", { currency })}</Alert>
       ) : (
         <div className="flex flex-col gap-3">
-          {offline && <Alert tone="warning">{t("settings.needsConnection")}</Alert>}
           {offline && <Alert tone="warning">{t("settings.needsConnection")}</Alert>}
           {failure && <Alert tone="danger">{t(failure.messageKey)}</Alert>}
           <CurrencyPicker
@@ -103,6 +103,7 @@ export function TimeZoneSheet({
   const failure = error ? presentError(error) : null;
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       unsaved={value !== timeZone}
@@ -151,6 +152,7 @@ export function DeleteAccountSheet({
   const failure = error ? presentError(error) : null;
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       unsaved={typed !== ""}
@@ -202,6 +204,7 @@ export function SignOutSheet({
   const t = useTranslations();
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={t("settings.signOutPending.title")}

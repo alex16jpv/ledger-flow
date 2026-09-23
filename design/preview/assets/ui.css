@@ -297,10 +297,31 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .sheet { width: 100%; background: var(--surface); border-radius: var(--r-2xl) var(--r-2xl) 0 0; padding: var(--sp-2) var(--sp-4) calc(var(--sp-4) + var(--safe-bottom)); box-shadow: var(--shadow-3); display: flex; flex-direction: column; gap: var(--sp-4); max-height: 92%; }
 .sheet .handle { width: 36px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 4px auto 0; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; }
+/* T-150 · on a phone a sheet is a full-screen dialog (fields, long lists) or a centred one (the rest) */
+.scrim.full { align-items: stretch; }
+.scrim.full > .sheet { max-height: none; height: 100%; border-radius: 0; padding: var(--safe-top) 0 0; gap: 0; }
+@container app (max-width: 599.9px) { .scrim.full .modal-only { display: none; } }
+.fs-bar .h3 { min-width: 0; overflow-wrap: break-word; }
+.fs-bar { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: var(--sp-2); min-height: 56px; padding: 0 var(--sp-3); border-bottom: 1px solid var(--border); }
+.fs-lead { padding: var(--sp-3) var(--sp-4) 0; }
+.fs-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4) var(--sp-4) calc(var(--sp-4) + var(--safe-bottom)); }
+.scrim.center { align-items: center; padding: var(--sp-4); }
+.scrim.center > .sheet { border-radius: var(--r-2xl); padding: var(--sp-5); }
+.scrim.center > .sheet .handle { display: none; }
+.kbd { position: absolute; inset: auto 0 0; z-index: calc(var(--z-sheet) + 1); display: grid; gap: 8px; align-content: start; padding: 10px 6px calc(10px + var(--safe-bottom)); background: var(--surface-3); }
+.kbd .keys { display: grid; gap: 6px; }
+.kbd .key { height: 44px; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--surface); color: var(--text); font-size: var(--fs-md); box-shadow: 0 1px 0 var(--border-strong); }
+.kbd .key.fn { background: var(--surface-2); color: var(--text-2); font-size: var(--fs-sm); }
 @container app (min-width: 600px) {
   .scrim { align-items: center; }
   .sheet { width: min(520px, 92%); border-radius: var(--r-xl); padding-bottom: var(--sp-5); }
   .sheet .handle { display: none; }
+  .scrim.full, .scrim.center { align-items: center; padding: 0; bottom: 0 !important; }
+  .scrim.full > .sheet { height: auto; max-height: 92%; padding: var(--sp-2) var(--sp-4) var(--sp-5); gap: var(--sp-4); }
+  .scrim.center > .sheet { border-radius: var(--r-xl); padding: var(--sp-2) var(--sp-4) var(--sp-5); }
+  .scrim.center > .sheet[role="alertdialog"] { padding: var(--sp-5); }
+  .scrim.full .fs-only, .fs-bar, .kbd { display: none; }
+  .fs-lead, .fs-body { padding: 0; }
 }
 
 /* ── Feedback ───────────────────────────────────────────────────────────── */

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { CategoryChip, Chip, ChipRow } from "@/components/ui/Chip";
 import { Input } from "@/components/ui/Field";
 import { Segment, type SegmentOption } from "@/components/ui/Segment";
-import { Sheet } from "@/components/ui/Sheet";
+import { Sheet, SheetAction } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { useAccountsQuery } from "@/features/accounts/hooks";
@@ -204,6 +204,7 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
   return (
     <>
       <Sheet
+        layout="full"
         open={open}
         onClose={close}
         unsaved={
@@ -214,15 +215,12 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
           description !== ""
         }
         title={t("transactions.quick.title")}
-        onExpand={moreDetails}
-        expandLabel={t("transactions.quick.expand")}
         footer={
           <div className="flex gap-3">
             <Button variant="ghost" size="lg" className="flex-1" onClick={moreDetails}>
               {t("transactions.quick.moreDetails")}
             </Button>
-            <Button
-              size="lg"
+            <SheetAction
               className="flex-1"
               loading={quickAdd.isPending}
               onClick={() => {
@@ -230,7 +228,7 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
               }}
             >
               {t("transactions.quick.save")}
-            </Button>
+            </SheetAction>
           </div>
         }
       >

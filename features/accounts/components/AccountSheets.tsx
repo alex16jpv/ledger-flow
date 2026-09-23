@@ -28,6 +28,7 @@ export function MakeMainSheet({
   const t = useTranslations("accounts.main");
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={t("title", { name: account.name })}
@@ -58,6 +59,7 @@ export function ArchiveAccountSheet({
   const t = useTranslations("accounts.archive");
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={t("title", { name: account.name })}

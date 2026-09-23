@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Landmark } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { AccountCard, AccountTypeTile, useAccountReading } from "@/components/ui/AccountCard";
@@ -13,7 +13,7 @@ import { AmountInput } from "@/components/ui/AmountInput";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Field";
-import { useUnsavedGuard } from "@/components/ui/Sheet";
+import { SheetAction, useUnsavedGuard } from "@/components/ui/Sheet";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { type DebtField, debtFieldOf } from "@/lib/accounts/debt";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
@@ -56,6 +56,7 @@ export function AccountForm({
   secondaryAction,
 }: AccountFormProps) {
   const t = useTranslations();
+  const formId = useId();
   const create = useCreateAccount();
   const update = useUpdateAccount(account?.id ?? "");
   const mutation = account ? update : create;
@@ -146,6 +147,7 @@ export function AccountForm({
 
   return (
     <form
+      id={formId}
       onSubmit={(event) => {
         void submit(event);
       }}
@@ -277,9 +279,9 @@ export function AccountForm({
       </div>
       <div className="flex flex-col gap-2">
         {formError && <Alert tone="danger">{t(formError.messageKey)}</Alert>}
-        <Button type="submit" size="lg" block loading={mutation.isPending}>
+        <SheetAction type="submit" form={formId} block loading={mutation.isPending}>
           {submitLabel}
-        </Button>
+        </SheetAction>
         {secondaryAction}
         {onCancel && (
           <Button type="button" variant="ghost" size="lg" block onClick={onCancel}>

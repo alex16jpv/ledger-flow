@@ -4181,6 +4181,10 @@ cover` is set once in the root layout for the standalone display.
 > loading one (it comes back when the read lands), and in the resolve view only the field the current
 > operation actually renders. `Sheet` drops a question that stops applying while it is up, instead of
 > leaving an answer nobody can see.
+>
+> **And moved on 2026-09-23 (T-150):** the question is no longer where the footer was. It is a centred
+> dialog over the sheet on every width, with the whole panel `inert` behind it, because a full-screen
+> sheet has no footer to swap and the end of its body can sit under the keyboard.
 
 - **Decision:** a tap outside a sheet, and ESC, stop closing it when the form inside has something to
   lose. The sheet asks in place instead: a `warning` alert where the footer was, with **Keep editing**
@@ -4275,6 +4279,10 @@ cover` is set once in the root layout for the standalone display.
   adds an expense, and a name that says otherwise is a message that lies. `nav.addExpense` is gone.
 
 ## 2026-09-15 · The bar on top of the quick sheet opens the full form (T-75)
+
+> **Reversed on 2026-09-23 (T-150):** on a phone quick add is a full-screen sheet, so there is no
+> bottom edge left to pull; the bar, `onExpand` and `EXPAND_DRAG_PX` are gone and "More details" is
+> the way into the full form.
 
 - **Decision:** in quick add the 36×4 bar becomes a 44×4 button named "Open the full form". Tapping it,
   or dragging it up by at least `EXPAND_DRAG_PX` (16), makes the same jump the "More details" button
@@ -4908,3 +4916,40 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   `tests/e2e/shell.spec.ts` emulates a 48px bar through CDP (`Emulation.setSafeAreaInsetsOverride`)
   and fails if a tab ends inside it. What CSS cannot fix is a browser that draws under its bar and
   reports an inset of 0; that has to be seen on the device.
+
+## 2026-09-23 · On a phone a sheet fills the screen or sits in the middle, never at the bottom (T-150)
+
+- **Context:** below 600px every sheet rose from the bottom edge, so with the keyboard open it covered
+  the lower half of a tall sheet, and often its buttons. The owner decided that no phone sheet stays
+  at the bottom, then rejected the first draft (the same sheet hung from the top) and asked for the
+  mobile standard. Material 3 and iOS agree on it: a task with fields or a long list is a full-screen
+  dialog with its action in a bar on top; anything short is a dialog in the middle.
+- **Decision:** `Sheet` takes a required `layout`. `"full"` below `sm` is a full-screen panel with a
+  bar — close, title, and a slot for the primary action — and the body scrolling under it; `"dialog"`
+  below `sm` is a card 16px from the sides, centred. From `sm` up both are the centred modal they were.
+  The rule for choosing is in `design/spec/components.md` §12: a form of more than one field or a list
+  that scrolls is `full`; a question, a short choice or one field is `dialog`. The primary is
+  `SheetAction`: inside a full-screen sheet it is portalled into the bar at `sm`, anywhere else it is
+  the ordinary large button, so a form that pages also show (`AccountForm`, `CategoryForm`) uses it
+  unchanged and points it at its `<form>` with the `form` attribute, since the portal takes it out of
+  the form. `SheetCancel` renders nothing in a full-screen sheet, because the close button is that
+  exit. The rest of the footer ends the body there.
+- **The keyboard:** while a sheet is open the dialog element takes the `visualViewport`'s height and
+  offset, so a full-screen sheet ends above the keyboard and a centred one centres in what is left. It
+  applies at every width, because a phone held sideways is wider than `sm` and has the same keyboard.
+  Android Chrome resizes only the visual viewport by default and iOS never resizes the layout one, so
+  `100%` alone would still reach under the keyboard on both. It stops while the page is pinch-zoomed
+  (`scale` not 1), where the visual viewport shrinks for a reason that is not a keyboard, and a closed
+  sheet does not subscribe at all.
+- **Why a JS media query:** where the primary is rendered, bar or footer, is a DOM decision, not a
+  style: two copies toggled by CSS would put two buttons with the same name in the accessibility tree
+  of every test and every screen reader. `usePhone` reads `(max-width: 599.98px)`, the `sm` breakpoint;
+  the server snapshot and a test without `matchMedia` get the wide layout.
+- **Alternatives:** the bottom sheet hung from the top — drawn and rejected by the owner. Moving the
+  sheet only while a keyboard is open — rejected by him before that. A full-screen layout for every
+  sheet — rejected: a two-button question filling a phone reads as a new screen.
+- **Consequence:** the unsaved question moved (see T-78 above), the quick add bar went (see T-75), and
+  every call site states its layout. Pickers let their list fill the body below `sm` instead of a fixed
+  height, so the search stays put and the list runs to the keyboard. `tests/e2e/shell.spec.ts` measures
+  both forms on the Pixel 7 project; the keyboard itself cannot be opened by Playwright, so the viewport
+  tracking is covered by `Sheet.test.tsx` with a stubbed `visualViewport`.

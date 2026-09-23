@@ -38,6 +38,7 @@ export function OverrideSheet({
 
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       unsaved={amount !== budget.amount}
@@ -97,6 +98,7 @@ export function ArchiveBudgetSheet({
   const t = useTranslations("budgets.detail");
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={t("archiveTitle", { name: budget.name })}
@@ -130,6 +132,7 @@ export function RestoreBudgetConflictSheet({
   const period = t(`periodTypes.${budget.periodType}`).toLocaleLowerCase();
   return (
     <Sheet
+      layout="dialog"
       open={open}
       onClose={onClose}
       title={t("restoreConflict.title")}
