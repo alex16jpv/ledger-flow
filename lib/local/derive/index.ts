@@ -12,6 +12,16 @@ export {
   lifetimeFloor,
 } from "./budgets";
 export { type DayWindow, dayWindow, widenedBound, withinDays } from "./days";
+export {
+  deriveJoined,
+  type JoinedGroupStanding,
+  type JoinedLine,
+  type JoinedLineState,
+  type JoinedOwnerTotal,
+  type JoinedPerson,
+  type JoinedTotals,
+  joinedTotals,
+} from "./joined";
 export { fromCents, runningTotals, sumAmounts, toCents } from "./money";
 export { type PeriodDefinition, type ResolvedPeriod, resolvePeriod } from "./period";
 export {

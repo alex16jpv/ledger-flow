@@ -4,10 +4,12 @@ import {
   Archive,
   ArchiveRestore,
   Calendar,
+  ChevronRight,
   HandCoins,
   Pencil,
   Plus,
   Receipt,
+  User,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -25,8 +27,10 @@ import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
 import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
 import { Progress } from "@/components/ui/Progress";
+import { Projected } from "@/components/ui/Projected";
 import { List, Row, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SyncBadge } from "@/components/ui/SyncBadge";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { AddPeopleSheet } from "@/features/shared/components/AddPeopleSheet";
@@ -38,17 +42,21 @@ import {
   useArchiveSharedGroup,
   useContactsQuery,
   useCreateSharedExpense,
+  useGroupInvitations,
   useRestoreSharedGroup,
+  useSharedPending,
   useSharedSection,
   useUndoWriteOff,
   useWriteOff,
 } from "@/features/shared/hooks";
+import { inviteStateOf, latestByContact } from "@/features/shared/invitations";
 import {
   type GroupView,
   groupView,
   type PartyView,
   type SharedSection,
 } from "@/features/shared/ledger";
+import { partyPending, rowSync, type SharedPending } from "@/features/shared/pending";
 import { hasSomethingToSettle, settleParty } from "@/features/shared/settle";
 import { expenseFromTransaction } from "@/features/shared/write";
 import { presentError } from "@/lib/api/errors";
@@ -69,6 +77,9 @@ import { ArchiveGroupSheet, UndoWriteOffSheet, WriteOffSheet } from "../../Write
 // Two taps behind the screen it belongs to, and 220 kB gz is the screen's budget (T-139).
 const PaidByOtherSheet = dynamic(() =>
   import("@/features/shared/components/PaidByOtherSheet").then((module) => module.PaidByOtherSheet),
+);
+const InviteSheet = dynamic(() =>
+  import("@/features/shared/components/InviteSheet").then((module) => module.InviteSheet),
 );
 
 function useNoteOf(view: GroupView): (person: PartyView) => string {
@@ -112,7 +123,15 @@ function useNoteOf(view: GroupView): (person: PartyView) => string {
   };
 }
 
-function PartyBody({ person, note }: { person: PartyView; note: string }) {
+function PartyBody({
+  person,
+  note,
+  projected,
+}: {
+  person: PartyView;
+  note: string;
+  projected: boolean;
+}) {
   const t = useTranslations("shared.group");
   return (
     <>
@@ -134,7 +153,9 @@ function PartyBody({ person, note }: { person: PartyView; note: string }) {
         <RowMeta items={[note]} />
       </RowBody>
       <RowRight sub={t("share")}>
-        <Amount value={person.share} signed={false} />
+        <Projected when={projected}>
+          <Amount value={person.share} signed={false} />
+        </Projected>
       </RowRight>
     </>
   );
@@ -143,22 +164,24 @@ function PartyBody({ person, note }: { person: PartyView; note: string }) {
 function PartyRow({
   person,
   note,
+  projected,
   onOpen,
 }: {
   person: PartyView;
   note: string;
+  projected: boolean;
   onOpen: (() => void) | undefined;
 }) {
   if (!onOpen) {
     return (
       <Row>
-        <PartyBody person={person} note={note} />
+        <PartyBody person={person} note={note} projected={projected} />
       </Row>
     );
   }
   return (
     <RowButton onClick={onOpen}>
-      <PartyBody person={person} note={note} />
+      <PartyBody person={person} note={note} projected={projected} />
     </RowButton>
   );
 }
@@ -166,13 +189,17 @@ function PartyRow({
 function ExpenseRow({
   expense,
   payer,
+  pending,
   onSplit,
 }: {
   expense: SharedExpense;
   payer: string;
+  pending: SharedPending;
   onSplit: () => void;
 }) {
   const t = useTranslations("shared.group");
+  const states = useTranslations("states");
+  const sync = rowSync(pending, expense.id);
   const money = useMoney();
   const dates = useDates();
   const yours = expense.split.shares.find((share) => share.party === "USER")?.amount ?? 0;
@@ -185,6 +212,7 @@ function ExpenseRow({
       <RowBody>
         <RowTitle>
           <span>{expense.description ?? t("noDescription")}</span>
+          {sync && <SyncBadge sync={sync} />}
           {!mine && <Badge>{t("paidBy", { name: payer })}</Badge>}
           {expense.customSplit && <Badge>{t("customSplit")}</Badge>}
         </RowTitle>
@@ -193,6 +221,7 @@ function ExpenseRow({
             dates.formatDay(new Date(expense.date)),
             // Somebody else's line is not a movement of yours until you settle with them.
             mine ? t("youPaid") : t("notInYourLedger"),
+            ...(sync ? [states("savedHere")] : []),
           ]}
         />
       </RowBody>
@@ -203,7 +232,7 @@ function ExpenseRow({
   );
 }
 
-function GroupHero({ view }: { view: GroupView }) {
+function GroupHero({ view, projected }: { view: GroupView; projected: boolean }) {
   const t = useTranslations();
   const money = useMoney();
   const range = useGroupRange();
@@ -234,7 +263,9 @@ function GroupHero({ view }: { view: GroupView }) {
       </span>
       <h2 className="text-xl font-semibold tracking-[-0.02em]">{group.name}</h2>
       {/* The lead figure is neither what it cost nor what is fairly yours: it is what is left. */}
-      <Amount value={view.countsAsYours} signed={false} size="hero" />
+      <Projected when={projected}>
+        <Amount value={view.countsAsYours} signed={false} size="hero" />
+      </Projected>
       <span className="text-sm text-text-3">
         {t("shared.group.lead", {
           total: money.format(group.totals.amount),
@@ -243,14 +274,17 @@ function GroupHero({ view }: { view: GroupView }) {
       </span>
       {view.barTotal > 0 && (
         <div className="flex flex-col gap-1 pt-2.5">
-          <Progress
-            thin
-            plain
-            value={view.collected}
-            max={view.barTotal}
-            color={group.color}
-            label={t("shared.groups.barLabel", { name: group.name })}
-          />
+          <Projected when={projected} align="center" className="w-full">
+            <Progress
+              thin
+              plain
+              value={view.collected}
+              max={view.barTotal}
+              color={group.color}
+              label={t("shared.groups.barLabel", { name: group.name })}
+              className="flex-1"
+            />
+          </Projected>
           <span className="text-xs text-text-3">
             {t("shared.groups.bar", {
               paid: money.format(view.collected),
@@ -279,6 +313,7 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
   const router = useRouter();
   const toast = useToast();
   const noteOf = useNoteOf(view);
+  const pending = useSharedPending(section);
   const createExpense = useCreateSharedExpense();
   const writeOff = useWriteOff();
   const undo = useUndoWriteOff();
@@ -293,7 +328,9 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
   const [archiving, setArchiving] = useState(false);
   const [addingPeople, setAddingPeople] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const restore = useRestoreSharedGroup();
+  const invitations = useGroupInvitations(view.group.id);
   const you = t("shared.group.you");
   // Somebody added and not yet in an expense holds no share, so their name comes from the contact.
   const contacts = useContactsQuery(true);
@@ -307,6 +344,23 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
     };
   });
   const named = splitPeople.filter((person) => person.contactId !== null && person.name !== "");
+  const latestInvites = latestByContact(invitations.data ?? []);
+  const tally = { joined: 0, waiting: 0, notInvited: 0 };
+  for (const participant of view.group.participants) {
+    if (participant.contactId === null) continue;
+    const { state } = inviteStateOf(
+      byId.get(participant.contactId)?.email,
+      latestInvites.get(participant.contactId),
+    );
+    if (state === "joined") tally.joined += 1;
+    else if (state === "waiting") tally.waiting += 1;
+    else tally.notInvited += 1;
+  }
+  const inviteCounts = [
+    tally.joined > 0 && t("shared.invite.joinedCount", { count: tally.joined }),
+    tally.waiting > 0 && t("shared.invite.waitingCount", { count: tally.waiting }),
+    tally.notInvited > 0 && t("shared.invite.notInvitedCount", { count: tally.notInvited }),
+  ].filter((item): item is string => typeof item === "string");
   // A list of payers missing somebody would move money to the wrong person, so it is all or none.
   const otherPayers =
     named.length === view.group.participants.length - 1
@@ -355,7 +409,7 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
 
   return (
     <>
-      <GroupHero view={view} />
+      <GroupHero view={view} projected={pending.groups.has(view.group.id)} />
       {/* A group that is closed is read, not worked: the way back is the only action it has. */}
       {view.group.archivedAt === null ? (
         <>
@@ -459,7 +513,9 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
                 />
               </RowBody>
               <RowRight sub={t("shared.group.share")}>
-                <Amount value={view.you.share} signed={false} />
+                <Projected when={partyPending(pending, view.group.id, null)}>
+                  <Amount value={view.you.share} signed={false} />
+                </Projected>
               </RowRight>
             </Row>
             {view.people.map((person) => (
@@ -467,9 +523,28 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
                 key={person.key}
                 person={person}
                 note={noteOf(person)}
+                projected={partyPending(pending, view.group.id, person.key)}
                 onOpen={actionFor(person)}
               />
             ))}
+            {view.group.archivedAt === null && view.group.participants.length > 1 && (
+              <RowButton
+                onClick={() => {
+                  setInviting(true);
+                }}
+              >
+                <Tile size="sm" color="GRAY">
+                  <User {...iconProps("sm")} />
+                </Tile>
+                <RowBody>
+                  <RowTitle>
+                    <span>{t("shared.invite.door")}</span>
+                  </RowTitle>
+                  <RowMeta items={inviteCounts} />
+                </RowBody>
+                <ChevronRight {...iconProps("sm")} className="text-text-3" />
+              </RowButton>
+            )}
           </List>
         </Card>
       </section>
@@ -493,6 +568,7 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
                   key={expense.id}
                   expense={expense}
                   payer={payerOf(expense)}
+                  pending={pending}
                   onSplit={() => {
                     setSplitting(expense);
                   }}
@@ -596,6 +672,16 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           view={view}
           onClose={() => {
             setAddingPeople(false);
+          }}
+        />
+      )}
+      {inviting && (
+        <InviteSheet
+          open
+          group={view.group}
+          contacts={byId}
+          onClose={() => {
+            setInviting(false);
           }}
         />
       )}

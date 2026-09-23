@@ -1,11 +1,12 @@
 "use client";
 
-import { CloudOff, HandCoins, Hash, Repeat, Scale, Users } from "lucide-react";
+import { HandCoins, Hash, Repeat, Scale, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
 import { Row, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
+import { SyncBadge } from "@/components/ui/SyncBadge";
 import { Tile } from "@/components/ui/Tile";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
@@ -68,8 +69,9 @@ export function TransactionRow({ transaction, lookups, dated, onOpen }: Transact
   const shared = lookups.shared?.expenses.get(transaction.sharedExpenseId ?? "");
   const payment = lookups.shared?.payments.get(transaction.sharedSettlementId ?? "");
   // F-16 (a): an unconfirmed movement says so on its own row, since the figures include it.
-  const queued = outbox.queuedRows.has(transaction.id);
-  const stuck = outbox.attentionRows.has(transaction.id);
+  const ids = [transaction.id, transaction.sharedExpenseId ?? ""];
+  const queued = ids.some((id) => outbox.queuedRows.has(id));
+  const stuck = ids.some((id) => outbox.attentionRows.has(id));
   const when = new Date(transaction.date);
   // A list that spans days answers "when" with the day the row froze, never with the instant.
   const frozen = transaction.dayKey ?? dates.dayKey(when);
@@ -106,12 +108,7 @@ export function TransactionRow({ transaction, lookups, dated, onOpen }: Transact
       <RowBody>
         <RowTitle>
           <span>{transactionTitle(transaction, lookups, t)}</span>
-          {queued && (
-            <Badge tone={stuck ? "danger" : "warning"}>
-              <CloudOff aria-hidden="true" />
-              {t(stuck ? "states.needsAttention" : "states.pendingSync")}
-            </Badge>
-          )}
+          {queued && <SyncBadge sync={stuck ? "attention" : "pending"} />}
           {transaction.pendingDetails && (
             <Badge tone="warning">{t("transactions.list.toReview")}</Badge>
           )}

@@ -3,14 +3,23 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import {
+  deriveJoined,
+  type JoinedGroupStanding,
+  type JoinedTotals,
+  joinedTotals,
+} from "@/lib/local/derive";
 import type { WriteOffTarget } from "@/lib/local/outbox";
-import type { SharedLedgerRows } from "@/lib/local/repository";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
+import { isAnswerable, type JoinedRows, type SharedLedgerRows } from "@/lib/local/repository";
 import { REFERENCE_STALE_TIME_MS } from "@/lib/query/client";
 import { invalidateMoneyMovement, QUERY_DOMAINS } from "@/lib/query/domains";
 import type { AddParticipantsInput, Contact, RestoreInput, UpdateContactInput } from "@/types/api";
 
 import {
   addParticipants,
+  addToLedger,
+  answerInvitation,
   archiveContact,
   archiveSharedGroup,
   createContact,
@@ -20,7 +29,12 @@ import {
   fetchContact,
   fetchContacts,
   fetchContactsPage,
+  fetchGroupInvitations,
+  fetchJoined,
+  fetchReceivedInvitations,
   fetchSharedLedger,
+  inviteToGroup,
+  leaveJoinedGroup,
   previewParticipants,
   recordSettlement,
   removeParticipant,
@@ -30,10 +44,12 @@ import {
   undoWriteOff,
   updateContact,
   updateSharedGroup,
+  withdrawInvitation,
   writeOffParty,
 } from "./api";
 import { contactKeys, sharedKeys } from "./keys";
 import { sectionOf, type SharedSection } from "./ledger";
+import { NOTHING_PENDING, pendingIn, type SharedPending } from "./pending";
 
 export function useContactsQuery(includeArchived = false, enabled = true) {
   return useQuery({
@@ -123,6 +139,11 @@ export function useSharedSection(enabled = true): SharedSectionQuery {
       void contacts.refetch();
     },
   };
+}
+
+export function useSharedPending(section: SharedSection | undefined): SharedPending {
+  const outbox = useOutbox();
+  return useMemo(() => (section ? pendingIn(section, outbox) : NOTHING_PENDING), [section, outbox]);
 }
 
 function useSharedInvalidation() {
@@ -251,6 +272,130 @@ export function useRestoreContact() {
   const invalidate = useContactInvalidation();
   return useMutation({
     mutationFn: ({ id, name }: RestoreContactVariables) => restoreContact(id, name ? { name } : {}),
+    onSuccess: invalidate,
+  });
+}
+
+export function useReceivedInvitations(enabled = true) {
+  return useQuery({
+    queryKey: sharedKeys.received(),
+    queryFn: fetchReceivedInvitations,
+    staleTime: REFERENCE_STALE_TIME_MS,
+    enabled,
+  });
+}
+
+// What More and the sidebar count: the invitations that can still be answered, nothing else.
+export function useWaitingInvitationCount(enabled = true): number {
+  const { data } = useReceivedInvitations(enabled);
+  return data?.filter((invitation) => isAnswerable(invitation)).length ?? 0;
+}
+
+export function useGroupInvitations(groupId: string, enabled = true) {
+  return useQuery({
+    queryKey: sharedKeys.sent(groupId),
+    queryFn: () => fetchGroupInvitations(groupId),
+    staleTime: REFERENCE_STALE_TIME_MS,
+    enabled,
+  });
+}
+
+function useInvitationInvalidation() {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: QUERY_DOMAINS.shared });
+}
+
+export interface InviteVariables {
+  groupId: string;
+  contactId: string;
+}
+
+export function useInvite() {
+  const invalidate = useInvitationInvalidation();
+  return useMutation({
+    mutationFn: ({ groupId, contactId }: InviteVariables) => inviteToGroup(groupId, contactId),
+    onSuccess: invalidate,
+  });
+}
+
+export interface WithdrawVariables {
+  groupId: string;
+  invitationId: string;
+}
+
+export function useWithdrawInvitation() {
+  const invalidate = useInvitationInvalidation();
+  return useMutation({
+    mutationFn: ({ groupId, invitationId }: WithdrawVariables) =>
+      withdrawInvitation(groupId, invitationId),
+    onSuccess: invalidate,
+  });
+}
+
+export interface AnswerVariables {
+  id: string;
+  answer: "accept" | "decline";
+}
+
+export function useAnswerInvitation() {
+  const invalidate = useInvitationInvalidation();
+  return useMutation({
+    mutationFn: ({ id, answer }: AnswerVariables) => answerInvitation(id, answer),
+    onSuccess: invalidate,
+  });
+}
+
+export interface JoinedView {
+  rows: JoinedRows;
+  standings: Map<string, JoinedGroupStanding>;
+  totals: JoinedTotals;
+}
+
+export function useJoinedGroups(enabled = true) {
+  const query = useQuery({
+    queryKey: sharedKeys.joined(),
+    queryFn: fetchJoined,
+    staleTime: REFERENCE_STALE_TIME_MS,
+    enabled,
+  });
+  const view = useMemo<JoinedView | undefined>(() => {
+    if (!query.data) return undefined;
+    const { groups, expenses, added } = query.data;
+    const standings = new Map(
+      groups.map((group) => [group.id, deriveJoined(group, expenses, added)]),
+    );
+    return { rows: query.data, standings, totals: joinedTotals(groups, standings) };
+  }, [query.data]);
+  return { ...query, view };
+}
+
+export interface AddToLedgerVariables {
+  id: string;
+  groupId: string;
+  expenseId: string;
+  accountId: string;
+  categoryId: string | null;
+}
+
+export function useAddToLedger() {
+  const invalidate = useSharedInvalidation();
+  return useMutation({
+    mutationFn: ({ id, groupId, expenseId, accountId, categoryId }: AddToLedgerVariables) =>
+      addToLedger(groupId, expenseId, { id, accountId, categoryId }),
+    onSuccess: invalidate,
+  });
+}
+
+export interface LeaveVariables {
+  invitationId: string;
+  groupId: string;
+}
+
+export function useLeaveGroup() {
+  const invalidate = useInvitationInvalidation();
+  return useMutation({
+    mutationFn: ({ invitationId, groupId }: LeaveVariables) =>
+      leaveJoinedGroup(invitationId, groupId),
     onSuccess: invalidate,
   });
 }

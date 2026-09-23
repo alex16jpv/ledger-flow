@@ -318,6 +318,8 @@ const adjustment: Transaction = {
   sharedExpenseId: null,
   sharedGroupId: null,
   sharedSettlementId: null,
+  importedFromGroupId: null,
+  importedFromExpenseId: null,
   sharedHistory: [],
   createdAt: "",
   updatedAt: "",

@@ -2,10 +2,11 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { resetOutboxStatus } from "@/lib/local/outbox";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
-import { contact, sharedExpense, sharedGroup } from "@/lib/testing/vault";
+import { contact, queueWrite, sharedExpense, sharedGroup, wipeVaults } from "@/lib/testing/vault";
 import type { SharedGroup, SharedShare } from "@/types/api";
 
 import { SharedGroupScreen } from "./SharedGroupScreen";
@@ -99,8 +100,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
+  resetOutboxStatus();
+  await wipeVaults();
 });
 
 const view = () =>
@@ -113,6 +116,21 @@ const view = () =>
   );
 
 describe("SharedGroupScreen", () => {
+  // T-140: an expense is everybody's share, so the one the server refused clouds the whole group.
+  it("says which expense the server has not taken, and marks every figure it moves", async () => {
+    await queueWrite({ entity: "sharedExpense", entityId: "s2", status: "conflict" });
+    view();
+
+    const row = await screen.findByRole("button", { name: /Tickets/ });
+    expect(row).toHaveTextContent("Needs attention");
+    expect(row).toHaveTextContent("Saved on this device");
+    expect(screen.getByRole("button", { name: /Food/ })).not.toHaveTextContent(
+      "Saved on this device",
+    );
+    // What counts as yours, the bar, and the share of each of the three of you.
+    expect(screen.getAllByRole("img", { name: "Includes changes not yet synced" })).toHaveLength(5);
+  });
+
   it("leads with what still counts as yours, not with what the outing cost", async () => {
     view();
 

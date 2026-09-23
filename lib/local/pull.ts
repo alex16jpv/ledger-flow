@@ -3,9 +3,16 @@ import type { SyncChangesResponse } from "@/types/api";
 
 import { rememberServerTime } from "./clock";
 import type { VaultHandle } from "./db";
-import { writeTransaction } from "./outbox/queue";
+import { type WriteTransaction, writeTransaction } from "./outbox/queue";
 import { reconcileContext, reconcileRow } from "./outbox/reconcile";
-import { PROFILE_KEY, profileRecord } from "./schema";
+import {
+  joinedExpenseRecord,
+  joinedGroupRecord,
+  PROFILE_KEY,
+  profileRecord,
+  receivedInvitationRecord,
+  sentInvitationRecord,
+} from "./schema";
 
 export const PULL_PAGE_LIMIT = 500;
 
@@ -53,11 +60,50 @@ async function isNews(store: StampedStore, id: string, updatedAt: string): Promi
   return (await store.get(id))?.updatedAt !== updatedAt;
 }
 
-async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promise<boolean> {
+interface Applied {
+  news: boolean;
+  // The invitations to the new address are older than the cursor, so only a snapshot brings them.
+  readdressed: boolean;
+}
+
+// Left and joined again: rows placed by the new join sit after the end of the old one, so they stay.
+async function dropJoinedGroup(
+  tx: WriteTransaction,
+  groupId: string,
+  endedAt: string,
+): Promise<boolean> {
+  const invitations = await tx.objectStore("invitationsReceived").getAll();
+  if (invitations.some((r) => r.row.groupId === groupId && r.row.status === "ACCEPTED")) {
+    return false;
+  }
+  const upTo = Date.parse(endedAt);
+  const settled = (updatedAt: string) => Date.parse(updatedAt) <= upTo;
+  let dropped = false;
+  const group = await tx.objectStore("joinedGroups").get(groupId);
+  if (group && settled(group.updatedAt)) {
+    await tx.objectStore("joinedGroups").delete(groupId);
+    dropped = true;
+  }
+  const expenses = tx.objectStore("joinedExpenses");
+  for (const line of await expenses.index("groupId").getAll(groupId)) {
+    if (!settled(line.updatedAt)) continue;
+    await expenses.delete(line.id);
+    dropped = true;
+  }
+  return dropped;
+}
+
+async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promise<Applied> {
   const { changes, pagination } = page;
   const tx = writeTransaction(handle.db);
   let news = false;
+  let readdressed = false;
   if (changes.user) {
+    const before = await tx.objectStore("profile").get(PROFILE_KEY);
+    if (before && before.row.email !== changes.user.email) {
+      readdressed = true;
+      await tx.objectStore("invitationsReceived").clear();
+    }
     news ||= await isNews(tx.objectStore("profile"), PROFILE_KEY, changes.user.updatedAt);
     await tx.objectStore("profile").put(profileRecord(changes.user));
   }
@@ -95,14 +141,37 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
     news ||= await isNews(tx.objectStore("settlements"), row.id, row.updatedAt);
     await reconcileRow(tx, "settlement", row.id, row, context);
   }
+  // No queue ever holds an invitation: every write of one needs a connection, so the row is the server's.
+  for (const row of changes.invitationsSent) {
+    news ||= await isNews(tx.objectStore("invitationsSent"), row.id, row.updatedAt);
+    await tx.objectStore("invitationsSent").put(sentInvitationRecord(row));
+  }
+  for (const row of changes.invitationsReceived) {
+    news ||= await isNews(tx.objectStore("invitationsReceived"), row.id, row.updatedAt);
+    await tx.objectStore("invitationsReceived").put(receivedInvitationRecord(row));
+  }
+  for (const row of changes.joinedGroups) {
+    news ||= await isNews(tx.objectStore("joinedGroups"), row.id, row.updatedAt);
+    await tx.objectStore("joinedGroups").put(joinedGroupRecord(row));
+  }
+  for (const row of changes.joinedExpenses) {
+    news ||= await isNews(tx.objectStore("joinedExpenses"), row.id, row.updatedAt);
+    await tx.objectStore("joinedExpenses").put(joinedExpenseRecord(row));
+  }
+  for (const row of changes.invitationsReceived) {
+    if (row.status === "ACCEPTED") continue;
+    const dropped = await dropJoinedGroup(tx, row.groupId, row.updatedAt);
+    news ||= dropped;
+  }
 
   const meta = tx.objectStore("meta");
   // Stored verbatim: the cursor is opaque, and the next run resumes from it whatever it encodes.
-  await meta.put({ key: "syncCursor", value: pagination.nextCursor });
+  if (readdressed) await meta.delete("syncCursor");
+  else await meta.put({ key: "syncCursor", value: pagination.nextCursor });
   // Only a drained feed marks the mirror readable; a half-applied snapshot must not answer reads.
   if (!pagination.hasMore) await meta.put({ key: "syncedAt", value: page.serverTime });
   await tx.done;
-  return news;
+  return { news: news || readdressed, readdressed };
 }
 
 export async function pullChanges(
@@ -121,9 +190,14 @@ export async function pullChanges(
     // F-66: every answer carries the server's clock, needed before there is a refusal to explain.
     await rememberServerTime(handle.db, page.serverTime);
     // Rows are applied by id with put, so the deliberate 60-second overlap of D-14 costs nothing.
-    changed = (await applyPage(handle, page)) || changed;
+    const applied = await applyPage(handle, page);
+    changed = applied.news || changed;
     pages += 1;
     rows += page.pagination.count;
+    if (applied.readdressed) {
+      cursor = undefined;
+      continue;
+    }
 
     const next = page.pagination.nextCursor;
     if (!page.pagination.hasMore) {

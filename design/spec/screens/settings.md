@@ -9,7 +9,8 @@ eyebrows:
 
 - **Preferences** — Language with its current value; Currency with the code as a badge and the state
   "Locked: you already have accounts" or "You can change it until you create your first account"; Time
-  zone; Appearance with palette · mode; Categories.
+  zone; Appearance with palette · mode; **Notifications**, "What reaches you, and where", which opens
+  the page specified in [notifications.md](notifications.md); Categories.
 - **Security** — Password & email; Active sessions with a count.
 - **Your data** — the user's rights: access, rectification, erasure and withdrawal of consent; the
   version of the policy accepted and its date; the contact address `ledgerflow@alexpiral.com`; and a

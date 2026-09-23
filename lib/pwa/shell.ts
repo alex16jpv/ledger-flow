@@ -50,6 +50,7 @@ export const DETAIL_TEMPLATES = [
   "/categories/[id]/edit",
   "/shared/groups/[id]",
   "/shared/people/[id]",
+  "/shared/joined/[id]",
 ] as const;
 
 // The id a path carries for one of the templates above, or undefined when it matches none of them.

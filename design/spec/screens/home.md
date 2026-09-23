@@ -2,8 +2,9 @@
 
 `preview/home.html`
 
-- **Header:** an eyebrow with the long date, an h1 "Hi, {name}"; actions are search (desktop only) and
-  the avatar, which leads to Settings.
+- **Header:** an eyebrow with the long date, an h1 "Hi, {name}"; actions are search (desktop only), the
+  **bell**, which leads to the inbox and carries the count of what is unseen
+  ([notifications.md](notifications.md)), and the avatar, which leads to Settings.
 
   **Where the name comes from, and what happens when there is none** (`#home-without-a-name`): the
   name and the avatar's initials come from the session **or, with no session, from the profile the

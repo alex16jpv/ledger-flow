@@ -3,6 +3,7 @@
 import { ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { List, RowBody, rowClasses, RowMeta, RowTitle } from "@/components/ui/Row";
 import { Sheet } from "@/components/ui/Sheet";
@@ -28,6 +29,7 @@ interface MoreSheetProps {
   accountCount?: number;
   categoryCounts?: CategoryCounts;
   owedToYou?: number;
+  invitations?: number;
 }
 
 const TILE_COLOR: Partial<Record<NavKey, ColorToken>> = {
@@ -46,6 +48,7 @@ export function MoreSheet({
   accountCount,
   categoryCounts,
   owedToYou,
+  invitations = 0,
 }: MoreSheetProps) {
   const t = useTranslations();
   const money = useMoney();
@@ -63,6 +66,8 @@ export function MoreSheet({
             active: categoryCounts.active,
             archived: categoryCounts.archived,
           });
+    if (key === "shared" && invitations > 0)
+      return t("nav.moreInvitations", { count: invitations });
     if (key === "shared")
       return owedToYou === undefined
         ? undefined
@@ -96,6 +101,14 @@ export function MoreSheet({
                     </RowTitle>
                     {meta && <RowMeta items={[meta]} />}
                   </RowBody>
+                  {item.key === "shared" && invitations > 0 && (
+                    <Badge tone="brand">
+                      <span aria-hidden="true">{invitations}</span>
+                      <span className="sr-only">
+                        {t("nav.waitingCount", { count: invitations })}
+                      </span>
+                    </Badge>
+                  )}
                   <ChevronRight {...iconProps("sm")} className="text-text-3" />
                 </Link>
               );

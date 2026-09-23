@@ -12,6 +12,7 @@ import { TabBar } from "./TabBar";
 interface AppShellProps {
   userName: string;
   pendingCount: number;
+  invitations?: number;
   moreOpen: boolean;
   onAdd: (options: AddOptions) => void;
   onMore: () => void;
@@ -25,6 +26,7 @@ export const MAIN_ID = "main";
 export function AppShell({
   userName,
   pendingCount,
+  invitations = 0,
   moreOpen,
   onAdd,
   onMore,
@@ -41,7 +43,12 @@ export function AppShell({
       >
         {t("skipToContent")}
       </a>
-      <Sidebar userName={userName} pendingCount={pendingCount} onAdd={onAdd} />
+      <Sidebar
+        userName={userName}
+        pendingCount={pendingCount}
+        invitations={invitations}
+        onAdd={onAdd}
+      />
       <main
         id={MAIN_ID}
         tabIndex={-1}
@@ -57,7 +64,13 @@ export function AppShell({
           {children}
         </div>
       </main>
-      <TabBar pendingCount={pendingCount} moreOpen={moreOpen} onAdd={onAdd} onMore={onMore} />
+      <TabBar
+        pendingCount={pendingCount}
+        invitations={invitations}
+        moreOpen={moreOpen}
+        onAdd={onAdd}
+        onMore={onMore}
+      />
     </div>
   );
 }

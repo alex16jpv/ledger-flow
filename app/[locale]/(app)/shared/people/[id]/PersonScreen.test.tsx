@@ -2,10 +2,18 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { resetOutboxStatus } from "@/lib/local/outbox";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
-import { contact, settlement, sharedExpense, sharedGroup } from "@/lib/testing/vault";
+import {
+  contact,
+  queueWrite,
+  settlement,
+  sharedExpense,
+  sharedGroup,
+  wipeVaults,
+} from "@/lib/testing/vault";
 import type { SharedGroup, SharedShare } from "@/types/api";
 
 import { PersonScreen } from "./PersonScreen";
@@ -97,8 +105,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
+  resetOutboxStatus();
+  await wipeVaults();
 });
 
 const view = () =>
@@ -111,6 +121,18 @@ const view = () =>
   );
 
 describe("PersonScreen", () => {
+  // T-140: a payment recorded with no network is the row that waits, and it moves their figures.
+  it("marks a payment still on this device, and every figure of theirs it moves", async () => {
+    await queueWrite({ entity: "settlement", entityId: "p1" });
+    view();
+
+    const row = await screen.findByRole("button", { name: /Paid you \$20,000/ });
+    expect(row).toHaveTextContent("Pending sync");
+    expect(row).toHaveTextContent("Saved on this device");
+    // Their net on top and their figure in the one group they share.
+    expect(screen.getAllByRole("img", { name: "Includes changes not yet synced" })).toHaveLength(2);
+  });
+
   it("says what is open with them, what they have paid, and that they are not an account", async () => {
     view();
 
@@ -120,6 +142,15 @@ describe("PersonScreen", () => {
     expect(group).toHaveTextContent("Paid $20,000 of");
     expect(screen.getByText("Paid you $20,000")).toBeInTheDocument();
     expect(screen.getByText(/A person is not an account/)).toBeInTheDocument();
+  });
+
+  it("says an undo the server refused needs attention, on the payment it would have undone", async () => {
+    await queueWrite({ entity: "settlement", entityId: "p1", action: "delete", status: "failed" });
+    view();
+
+    const row = await screen.findByRole("button", { name: /Paid you \$20,000/ });
+    expect(row).toHaveTextContent("Needs attention");
+    expect(row).not.toHaveTextContent("Pending sync");
   });
 
   // The one thing that can be done to a payment, and the only door to the movement it wrote (T-138).

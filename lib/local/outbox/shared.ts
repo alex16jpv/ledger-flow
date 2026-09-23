@@ -480,6 +480,8 @@ const mintedRow = (
   sharedExpenseId: null,
   sharedGroupId: null,
   sharedSettlementId: settlementId,
+  importedFromGroupId: null,
+  importedFromExpenseId: null,
   sharedHistory: [],
   deletedAt: null,
   createdAt: owner.occurredAt,

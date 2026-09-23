@@ -14,6 +14,7 @@ export const HOLD_TO_CHAIN_MS = 500;
 
 interface TabBarProps {
   pendingCount: number;
+  invitations?: number;
   moreOpen: boolean;
   onAdd: (options: AddOptions) => void;
   onMore: () => void;
@@ -26,7 +27,7 @@ function slotClasses(active: boolean) {
   return cn(SLOT, active ? "text-brand-text [&>svg]:stroke-[2.25]" : "text-text-3");
 }
 
-export function TabBar({ pendingCount, moreOpen, onAdd, onMore }: TabBarProps) {
+export function TabBar({ pendingCount, invitations = 0, moreOpen, onAdd, onMore }: TabBarProps) {
   const t = useTranslations("nav");
   const pathname = usePathname();
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,11 +92,20 @@ export function TabBar({ pendingCount, moreOpen, onAdd, onMore }: TabBarProps) {
               aria-haspopup="dialog"
               aria-expanded={moreOpen}
               aria-current={behindMore ? "page" : undefined}
+              aria-label={
+                invitations > 0 ? t("moreWithInvitations", { count: invitations }) : undefined
+              }
               onClick={onMore}
               className={slotClasses(behindMore || moreOpen)}
             >
               <MORE_ICON {...iconProps("md")} />
               <span>{t("more")}</span>
+              {invitations > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-3 right-[calc(50%-14px)] size-[7px] rounded-full border-2 border-surface bg-brand"
+                />
+              )}
             </button>
           );
         }

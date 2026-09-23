@@ -33,6 +33,8 @@ function expense(id: string, description: string, extra: Partial<Transaction> = 
     sharedExpenseId: null,
     sharedGroupId: null,
     sharedSettlementId: null,
+    importedFromGroupId: null,
+    importedFromExpenseId: null,
     sharedHistory: [],
     pendingDetails: false,
     source: "MANUAL",

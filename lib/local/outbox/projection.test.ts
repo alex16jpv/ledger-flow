@@ -33,6 +33,8 @@ function mirrorRow(userId: string, currency: string, row: ParityFixture["transac
     sharedExpenseId: null,
     sharedGroupId: null,
     sharedSettlementId: null,
+    importedFromGroupId: null,
+    importedFromExpenseId: null,
     sharedHistory: [],
     deletedAt: row.deletedAt,
     createdAt: date,

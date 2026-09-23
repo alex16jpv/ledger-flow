@@ -1,9 +1,15 @@
 import { dayKey } from "@/lib/format/dates";
 import { openVault, type VaultDefinition, type VaultHandle } from "@/lib/local/db";
+import { refreshOutboxStatus } from "@/lib/local/outbox";
+import type { OutboxOperation } from "@/lib/local/schema";
 import type {
   Account,
   Category,
   Contact,
+  JoinedExpense,
+  JoinedGroup,
+  ReceivedInvitation,
+  SentInvitation,
   Settlement,
   SharedExpense,
   SyncBudget,
@@ -89,6 +95,8 @@ export function transaction(overrides: Partial<SyncTransaction> = {}): SyncTrans
     sharedExpenseId: null,
     sharedGroupId: null,
     sharedSettlementId: null,
+    importedFromGroupId: null,
+    importedFromExpenseId: null,
     sharedHistory: [],
     deletedAt: null,
     createdAt: "2026-08-01T10:00:00.000Z",
@@ -125,7 +133,6 @@ export function contact(overrides: Partial<Contact> = {}): Contact {
     id: "k1",
     name: "Ana",
     color: "BLUE",
-    linkedUserId: null,
     userId: USER_ID,
     archivedAt: null,
     createdAt: "2026-01-01T00:00:00.000Z",
@@ -194,6 +201,115 @@ export function settlement(overrides: Partial<Settlement> = {}): Settlement {
   };
 }
 
+export function sentInvitation(overrides: Partial<SentInvitation> = {}): SentInvitation {
+  return {
+    id: "i1",
+    groupId: "g1",
+    contactId: "k1",
+    email: "beto@example.com",
+    status: "PENDING",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    answeredAt: null,
+    withdrawnAt: null,
+    leftAt: null,
+    createdAt: "2026-09-21T10:00:00.000Z",
+    updatedAt: "2026-09-21T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function receivedInvitation(
+  overrides: Partial<ReceivedInvitation> = {},
+): ReceivedInvitation {
+  return {
+    id: "r1",
+    groupId: "g9",
+    groupName: "Villa de Leyva weekend",
+    groupColor: "TEAL",
+    groupCurrency: "COP",
+    inviterName: "Ana Ruiz",
+    inviterEmail: "ana@example.com",
+    status: "PENDING",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    answeredAt: null,
+    leftAt: null,
+    createdAt: "2026-09-21T10:00:00.000Z",
+    updatedAt: "2026-09-21T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+// A group Ana shared with you: you are k2, and Carlitos (k3) has not joined.
+export function joinedGroup(overrides: Partial<JoinedGroup> = {}): JoinedGroup {
+  return {
+    id: "g9",
+    invitationId: "r1",
+    name: "Villa de Leyva weekend",
+    color: "TEAL",
+    currency: "COP",
+    ownerId: "u-ana",
+    ownerName: "Ana Ruiz",
+    participants: [
+      { contactId: null, name: "Ana Ruiz", color: null, you: false, joined: true },
+      { contactId: "k2", name: "John Doe", color: "TEAL", you: true, joined: true },
+      { contactId: "k3", name: "Carlitos", color: "ORANGE", you: false, joined: false },
+    ],
+    defaultSplit: { mode: "EQUAL", shares: [] },
+    writeOffs: [],
+    archivedAt: null,
+    createdAt: "2026-09-19T10:00:00.000Z",
+    updatedAt: "2026-09-21T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function joinedExpense(overrides: Partial<JoinedExpense> = {}): JoinedExpense {
+  return {
+    id: "je1",
+    groupId: "g9",
+    description: "Groceries at the market",
+    date: "2026-09-19T15:00:00.000Z",
+    amount: 240000,
+    paidByContactId: null,
+    split: {
+      mode: "EQUAL",
+      guests: null,
+      shares: [
+        {
+          party: "USER",
+          contactId: null,
+          percent: null,
+          fixedAmount: null,
+          amount: 80000,
+          collected: 0,
+        },
+        {
+          party: "CONTACT",
+          contactId: "k2",
+          percent: null,
+          fixedAmount: null,
+          amount: 80000,
+          collected: 80000,
+        },
+        {
+          party: "CONTACT",
+          contactId: "k3",
+          percent: null,
+          fixedAmount: null,
+          amount: 80000,
+          collected: 0,
+        },
+      ],
+    },
+    customSplit: false,
+    currency: "COP",
+    deletedAt: null,
+    createdAt: "2026-09-19T15:00:00.000Z",
+    updatedAt: "2026-09-21T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
 // Every entity the feed carries, so a test names only the rows its case is about.
 export function changes(
   overrides: Partial<SyncChangesResponse["changes"]> = {},
@@ -208,6 +324,10 @@ export function changes(
     sharedGroups: [],
     sharedExpenses: [],
     settlements: [],
+    invitationsSent: [],
+    invitationsReceived: [],
+    joinedGroups: [],
+    joinedExpenses: [],
     ...overrides,
   };
 }
@@ -222,6 +342,26 @@ export async function openTestVault(
   const handle = definition ? await openVault(userId, definition) : await openVault(userId);
   opened.add(handle);
   return handle;
+}
+
+export async function queueWrite(
+  operation: Pick<OutboxOperation, "entity" | "entityId"> & Partial<OutboxOperation>,
+): Promise<void> {
+  const vault = await openTestVault(USER_ID);
+  await vault.db.put("outbox", {
+    seq: 1,
+    opId: `op-${operation.entityId}`,
+    opVersion: 1,
+    action: "create",
+    occurredAt: "2026-09-23T10:00:00.000Z",
+    payload: {},
+    dependsOn: [],
+    status: "pending",
+    attempts: 0,
+    lastError: null,
+    ...operation,
+  });
+  await refreshOutboxStatus(vault.db);
 }
 
 export async function wipeVaults(): Promise<void> {

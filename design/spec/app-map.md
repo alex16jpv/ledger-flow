@@ -72,12 +72,23 @@ group's, and ✅ an expense with **guests**, who weigh a head count and settle a
 people after the group exists, with the question of what happens to the expenses already recorded. ✅ Getting paid — money that is not income, partial
 payments, cash outside the app, and the case where the two of you owe each other — ✅ writing off, and
 ✅ archiving a group with people still owing, ✅ a group two people paid for, and ✅ the contact
-picker, where the paging and the two limits are said. ⬜ Loading and error, and ⬜ the `Percent` and
-`Exact` modes of the split sheet, are specified and not drawn: their plates are made by the session
-that builds the screen, before its code, like every other screen's states (D-36). Everything is
-written in [screens/shared.md](screens/shared.md) and **nothing of it is built yet**: the backend
-arrives with T-113…T-119 and the screens with T-120…T-124. 🔮 Inviting somebody by email and letting them see the
-group in their own app is the second delivery, with the notification system it needs.
+picker, where the paging and the two limits are said. ✅ Loading and error, and ✅ the `Percent` and
+`Exact` modes of the split sheet. Everything is written in [screens/shared.md](screens/shared.md) and
+built. ✅ Inviting the people in a group by their email, withdrawing and stopping sharing, and ✅ the
+invitations waiting for you above both faces — with how they are found from More and the sidebar, a
+group in another currency, answered and offline. ✅ What somebody who joined sees of the group — under
+`Shared with you`, read-only, archived or not — ✅ `Add to my ledger` on the lines the owner marked paid,
+and ✅ leaving it.
+
+## Notifications ✅
+
+✅ How they arrive — the bell in Home's header, the dot on More and the count in the sidebar — ✅ the
+inbox at `/notifications`, newest first, with what is new, what is unread, the two answers of an
+invitation and how it ended, ✅ changes to one group folded into one row, ✅ its empty, loading, error,
+offline and this-device-only states, and ✅ Settings › Notifications, one switch per topic and per
+channel that exists. Written in [screens/notifications.md](screens/notifications.md); **nothing of it
+is built yet**, and it is not scheduled: the backend is T-127 and the inbox T-128. 🔮 Email and push add a column
+each to the settings page.
 
 ## Categories ✅
 

@@ -2,9 +2,13 @@
 
 - **Below 900px (mobile, portrait tablet):** a 64px tab bar plus safe area with five positions: Home ·
   Transactions · **Add** (a raised 52px FAB) · Budgets · **More**. An amber dot sits on Transactions
-  when something is waiting to be reviewed.
+  when something is waiting to be reviewed, and a brand dot on More while a notification is unseen
+  ([screens/notifications.md](screens/notifications.md)) or an invitation to a shared group is waiting
+  to be answered ([screens/shared.md](screens/shared.md#how-it-is-found-invitations-in-more)).
 - **More** (the `ellipsis` icon) opens a bottom sheet titled "More" with the destinations the bar
-  cannot hold: **Accounts** (with its count), **Shared** (with what people owe you), **Stats**,
+  cannot hold: **Accounts** (with its count), **Shared** (with what people owe you, or the invitations
+  waiting for you, with their count), **Notifications**
+  (with what is new), **Stats**,
   **Categories**, **Settings**, and the user's row at the bottom. It is the sidebar's list minus what the bar already has, and it is the owner's
   choice of 2026-09-15 over the four alternatives that stay drawn in `preview/variants.html`. Accounts
   gives up its tab to make room, so on a phone it is two taps instead of one — the price he accepted.
@@ -14,10 +18,12 @@
   and the destination is reached exactly the same. That is the intended behaviour, confirmed by the
   owner on 2026-09-16; it is not a swallowed error.
   More is a button, not a link: it says `aria-haspopup="dialog"` and carries the selected look while
-  its sheet is open **and** whenever the screen underneath is one of its four destinations, so the bar
+  its sheet is open **and** whenever the screen underneath is one of its destinations, so the bar
   never stops saying where you are. Taking a destination closes the sheet.
 - **900px and up:** a 240px sidebar with the brand, an "Add" button, Home, Transactions (with the
-  count of items to review), Budgets, Accounts, **Shared**, Stats and Categories; the footer holds
+  count of items to review), **Notifications** (with the count of what is new, in brand rather than
+  amber), Budgets, Accounts, **Shared** (with the count of invitations waiting, in brand), Stats and
+  Categories; the footer holds
   Settings and the user. Shared sits next to Accounts because it answers the same question — where
   the money is — and it is the one destination that is about people rather than about your own ledger
   ([screens/shared.md](screens/shared.md)). Content is capped at 1120px, and Home splits into two columns (1.6fr / 1fr).

@@ -1,6 +1,7 @@
 "use client";
 
 import { HandCoins, Split, Users } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -8,12 +9,14 @@ import { Avatar } from "@/components/shell/Avatar";
 import { Amount } from "@/components/ui/Amount";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Projected } from "@/components/ui/Projected";
 import { List, Row, RowBody, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { StateBadge } from "@/features/shared/components/parts";
-import { useDeleteSettlement } from "@/features/shared/hooks";
+import { useDeleteSettlement, useSharedPending } from "@/features/shared/hooks";
 import type { GroupView, PartyView, SharedSection } from "@/features/shared/ledger";
+import { partyPending } from "@/features/shared/pending";
 import { presentError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
@@ -24,10 +27,15 @@ import { fromCents, toCents } from "@/lib/local/derive/money";
 import { countsAsYours as countsAsYoursOf } from "@/lib/local/derive/shared";
 import type { Settlement, SharedExpense, SharedHistoryEntry, Transaction } from "@/types/api";
 
-import { EditSplitSheet } from "../../shared/EditSplitSheet";
 import { PaymentRows } from "../../shared/PaymentRows";
-import { SettleUpFlow } from "../../shared/SettleUpFlow";
 import { UndoPaymentSheet } from "../../shared/UndoPaymentSheet";
+
+const EditSplitSheet = dynamic(() =>
+  import("../../shared/EditSplitSheet").then((module) => module.EditSplitSheet),
+);
+const SettleUpFlow = dynamic(() =>
+  import("../../shared/SettleUpFlow").then((module) => module.SettleUpFlow),
+);
 
 export interface SharedExpenseCardProps {
   row: Transaction;
@@ -146,6 +154,7 @@ export function SharedExpenseCard({
   const [settling, setSettling] = useState(false);
   const [undoing, setUndoing] = useState<Settlement | null>(null);
   const undoPayment = useDeleteSettlement();
+  const pending = useSharedPending(section);
   const toast = useToast();
   const yours = expense.split.shares.find((share) => share.party === "USER")?.amount ?? 0;
   const countsAsYours = countsAsYoursOf(row, section);
@@ -201,7 +210,9 @@ export function SharedExpenseCard({
             {t("openGroup")}
           </Link>
         </div>
-        <Amount value={countsAsYours} signed={false} size="lg" />
+        <Projected when={pending.groups.has(view.group.id) || pending.queued.has(row.id)}>
+          <Amount value={countsAsYours} signed={false} size="lg" />
+        </Projected>
         <span className="text-sm text-text-3">
           {writtenOffCents > 0
             ? t("leadWithWriteOff", {
@@ -226,7 +237,9 @@ export function SharedExpenseCard({
               />
             </RowBody>
             <RowRight sub={t("yoursSub")}>
-              <Amount value={yours} signed={false} />
+              <Projected when={partyPending(pending, view.group.id, null)}>
+                <Amount value={yours} signed={false} />
+              </Projected>
             </RowRight>
           </Row>
           {shares.map((one) => (
@@ -246,7 +259,9 @@ export function SharedExpenseCard({
                 <RowMeta items={[noteOf(one)]} />
               </RowBody>
               <RowRight sub={t("ofShare", { amount: money.format(one.share) })}>
-                <Amount value={one.paid} signed={false} />
+                <Projected when={partyPending(pending, view.group.id, one.key)}>
+                  <Amount value={one.paid} signed={false} />
+                </Projected>
               </RowRight>
             </Row>
           ))}
@@ -255,7 +270,7 @@ export function SharedExpenseCard({
           <>
             <h4 className="px-1 pt-1 text-sm font-semibold">{t("guestPayments")}</h4>
             <List>
-              <PaymentRows rows={guestPayments} onUndo={setUndoing} />
+              <PaymentRows rows={guestPayments} pending={pending} onUndo={setUndoing} />
             </List>
           </>
         )}
@@ -296,23 +311,27 @@ export function SharedExpenseCard({
             {t("settleUp")}
           </Button>
         </div>
-        <EditSplitSheet
-          group={view.group}
-          expense={expense}
-          open={editing}
-          onClose={() => {
-            setEditing(false);
-          }}
-        />
-        <SettleUpFlow
-          section={section}
-          view={view}
-          parties={owing}
-          open={settling}
-          onClose={() => {
-            setSettling(false);
-          }}
-        />
+        {editing && (
+          <EditSplitSheet
+            group={view.group}
+            expense={expense}
+            open
+            onClose={() => {
+              setEditing(false);
+            }}
+          />
+        )}
+        {settling && (
+          <SettleUpFlow
+            section={section}
+            view={view}
+            parties={owing}
+            open
+            onClose={() => {
+              setSettling(false);
+            }}
+          />
+        )}
       </Card>
       {row.sharedHistory.length > 0 && <History entries={row.sharedHistory} amount={row.amount} />}
     </>

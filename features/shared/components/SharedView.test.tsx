@@ -1,10 +1,21 @@
 import { screen, within } from "@testing-library/react";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { resetOutboxStatus } from "@/lib/local/outbox";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
-import { contact, sharedExpense, sharedGroup } from "@/lib/testing/vault";
+import {
+  contact,
+  joinedExpense,
+  joinedGroup,
+  queueWrite,
+  receivedInvitation,
+  settlement,
+  sharedExpense,
+  sharedGroup,
+  wipeVaults,
+} from "@/lib/testing/vault";
 import type { SharedGroup, SharedShare, SyncSharedGroup } from "@/types/api";
 
 import { SharedView } from "./SharedView";
@@ -75,13 +86,21 @@ function serve(
     expenses?: unknown[];
     settlements?: unknown[];
     contacts?: unknown[];
+    invitations?: unknown[];
+    joined?: unknown[];
+    joinedExpenses?: unknown[];
   } = {},
 ) {
   fetchMock.mockImplementation((input) => {
     const url = urlOf(input);
     if (url.startsWith("/api/contacts")) return Promise.resolve(page(rows.contacts ?? contacts));
+    if (url.startsWith("/api/joined-groups/")) {
+      return Promise.resolve(page(rows.joinedExpenses ?? []));
+    }
+    if (url.startsWith("/api/joined-groups")) return Promise.resolve(page(rows.joined ?? []));
     if (url.includes("/expenses")) return Promise.resolve(page(rows.expenses ?? expenses));
     if (url.startsWith("/api/settlements")) return Promise.resolve(page(rows.settlements ?? []));
+    if (url.startsWith("/api/invitations")) return Promise.resolve(page(rows.invitations ?? []));
     return Promise.resolve(page(rows.groups ?? groups));
   });
 }
@@ -131,11 +150,48 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
+  resetOutboxStatus();
+  await wipeVaults();
 });
 
 describe("SharedView", () => {
+  // T-140: a queued payment marks what it touches — Beto and the totals — and leaves Ana alone.
+  it("marks the figures a payment still on this device moves, and only those", async () => {
+    const fromBeto = settlement({
+      id: "p1",
+      counterparty: { kind: "CONTACT", contactId: BETO, expenseId: null },
+      collected: 10_000,
+    });
+    serve({ settlements: [fromBeto] });
+    await queueWrite({ entity: "settlement", entityId: "p1" });
+    view();
+
+    const beto = await screen.findByRole("link", { name: /Beto Cano/ });
+    const mark = { name: "Includes changes not yet synced" };
+    expect(within(beto).getByRole("img", mark)).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("link", { name: /Ana Ruiz/ })).queryByRole("img", mark),
+    ).toBeNull();
+    // Owed to you and You owe on the card, and the total over the Owes you list.
+    expect(screen.getAllByRole("img", mark)).toHaveLength(4);
+  });
+
+  it("says a group created on this device has not reached the server", async () => {
+    serve();
+    search = "face=groups";
+    await queueWrite({ entity: "sharedGroup", entityId: "g1" });
+    view();
+
+    const row = await screen.findByRole("link", { name: /Night out/ });
+    expect(row).toHaveTextContent("Pending sync");
+    expect(row).toHaveTextContent("Saved on this device");
+    expect(
+      within(row).getAllByRole("img", { name: "Includes changes not yet synced" }),
+    ).toHaveLength(2);
+  });
+
   it("opens on the people, with the direction said in a word and never in a colour", async () => {
     serve();
     view();
@@ -176,6 +232,62 @@ describe("SharedView", () => {
     expect(await screen.findByRole("link", { name: /Night out/ })).toBeInTheDocument();
   });
 
+  it("lists a group shared with you under your own, with where you stand with who shared it", async () => {
+    serve({ joined: [joinedGroup()], joinedExpenses: [joinedExpense()] });
+    search = "face=groups";
+    view();
+
+    const row = await screen.findByRole("link", { name: /Villa de Leyva weekend/ });
+    expect(row).toHaveAttribute("href", "/shared/joined/g9");
+    expect(row).toHaveTextContent("Shared by Ana Ruiz");
+    expect(row).toHaveTextContent("Paid");
+    expect(screen.getByRole("heading", { name: "Shared with you" })).toBeInTheDocument();
+  });
+
+  it("counts what you owe in a group shared with you, and closes the People arithmetic", async () => {
+    const unpaid = joinedExpense({
+      split: {
+        mode: "EQUAL",
+        guests: null,
+        shares: [
+          share({ party: "USER", contactId: null, amount: 80_000 }),
+          share({ contactId: "k2", amount: 80_000 }),
+        ],
+      },
+    });
+    serve({ joined: [joinedGroup()], joinedExpenses: [unpaid] });
+    view();
+
+    expect(
+      await screen.findByText("$80,000 more to Ana Ruiz, in 1 group shared with you."),
+    ).toBeInTheDocument();
+    const summary = screen.getByText("You owe").parentElement;
+    expect(summary).toHaveTextContent("80,000");
+  });
+
+  it("says a failure to read what was shared with you in its own place, and keeps your groups", async () => {
+    serve();
+    const own = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) =>
+      urlOf(input).startsWith("/api/joined-groups")
+        ? Promise.resolve(json({ code: "INTERNAL", message: "boom" }, { status: 500 }))
+        : (own?.(input, init) ?? Promise.reject(new Error("no route"))),
+    );
+    search = "face=groups";
+    view();
+
+    expect(await screen.findByRole("link", { name: /Night out/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("opens on the groups when everything here was shared with you", async () => {
+    serve({ groups: [], contacts: [], joined: [joinedGroup()], joinedExpenses: [] });
+    view();
+
+    expect(await screen.findByRole("link", { name: /Villa de Leyva weekend/ })).toBeInTheDocument();
+    expect(screen.queryByText("Nothing shared yet")).not.toBeInTheDocument();
+  });
+
   it("says there is nothing yet rather than drawing two empty faces", async () => {
     serve({ groups: [], contacts: [] });
     view();
@@ -198,5 +310,14 @@ describe("SharedView", () => {
     view();
 
     expect(await screen.findByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("puts an invitation above everything, the empty state included", async () => {
+    serve({ groups: [], contacts: [], invitations: [receivedInvitation()] });
+    view();
+
+    const invitations = await screen.findByRole("region", { name: "Invitations" });
+    const empty = await screen.findByText("Nothing shared yet");
+    expect(invitations.compareDocumentPosition(empty)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 });

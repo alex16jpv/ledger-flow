@@ -31,6 +31,17 @@ no copy yet. Writes go through `lib/local/outbox`: `contact` is an entity of the
 account or a category, so a person can be added, renamed or archived with no network. A person is
 **archived, never deleted**: the groups and the payments that name them stay readable.
 
+**What has not reached the server** says so with the two marks the rest of the app uses. `pending.ts`
+reads the queue against the section and answers which rows **are** a queued write — they carry
+`SyncBadge` and "Saved on this device" — and which figures **include** one, which carry `Projected`.
+A write marks what it touches and nothing else: a payment marks its person and every group shared with
+them, because it covers the oldest line first across all of them; an expense or a change to a group
+marks that group and everybody in it, and those people in every other group too, since a new share
+changes which lines their payments cover first; a person added or renamed marks only their own row. `Owed to
+you` and `You owe` are marked together whenever anything is. A payment undone on this device is no
+longer in the section, so the mirror's read hands back the undone ones (`undone`) and the queue's id
+finds its person there.
+
 **Splitting.** `split.ts` is the sheet's model — the four modes, the block of guests, what is left to
 assign — and it resolves through `resolveShares` (`lib/local/derive`), the same arithmetic the server
 runs, so a split made with no network agrees with it to the minor unit. `write.ts` turns a group's
@@ -93,6 +104,31 @@ in, which is the only place a block is read at all.
 **Giving up moves no figure.** A write-off stores the decision and the ceiling that was open when it
 was taken; archiving a group writes off what is still owed on your behalf. Neither touches a figure of
 yours: that money was counted as yours from the day it left the account.
+
+**Letting somebody in is an invitation, and every write of one needs a connection.** An invitation is
+addressed to the email of a contact who is in the group; nothing is emailed, and it waits in the other
+person's Shared for 30 days. The feed brings both sides — `invitationsSent` and `invitationsReceived`,
+two stores of the mirror with no outbox route — so they are **seen** offline; inviting, withdrawing,
+stopping sharing and answering go straight to the server (`api.ts`) and keep its answer in the mirror
+(`keepSentInvitation`, `keepReceivedInvitation`) so the screen does not wait for the next pull. Each is
+about somebody else, and only the server can say whether the invitation still stands.
+`InvitationsBlock` sits above both faces and above the empty state; an answer given during the visit
+keeps its row, saying how it ended, until Shared opens again. `InviteSheet` is the group's door:
+`invitations.ts` reads where each person stands from the newest invitation they have — no email, not
+invited, waiting, out of time, joined or declined — and **never** tells a waiting invitation to an
+address with an account from one without, because the server never says. An invitation past its date
+is still `PENDING` on the server and is read against the server's clock (`isAnswerable`). The count on
+More, on the bar and in the sidebar is the invitations that can still be answered.
+
+**A group somebody shared with you is read, not worked.** Only its owner writes in it (v1), so it has
+no outbox route: the feed brings it as `joinedGroups` and `joinedExpenses`, the mirror keeps it, and
+`useJoinedGroups` derives each one's standing with `deriveJoined` (`lib/local/derive`) from the owner's
+own `collected` figures. It sits under `Shared with you` in the groups face, archived ones fold with
+the settled, what you owe there counts in `You owe`, and the People face closes the arithmetic with one
+line per person who shared something. `/shared/joined/[id]` leads with where you stand with the owner.
+**`Add to my ledger`** is offered only on a line the owner marked paid for you: it writes one ordinary
+expense of yours per line, dated that line, in your account and category, and needs a connection.
+**`Leave this group`** ends your invitation, drops the group from the device, and moves no money.
 
 The screens that compose other features — the group detail, the person, the settle-up sheet, the
 transaction picker and the sheet that says what adding them changes — live in the **app layer**, like

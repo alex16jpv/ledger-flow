@@ -4,6 +4,10 @@ import type {
   Account,
   Category,
   Contact,
+  JoinedExpense,
+  JoinedGroup,
+  ReceivedInvitation,
+  SentInvitation,
   Settlement,
   SharedExpense,
   SyncBudget,
@@ -28,6 +32,10 @@ export const MIRROR_STORES = [
   "sharedGroups",
   "sharedExpenses",
   "settlements",
+  "invitationsSent",
+  "invitationsReceived",
+  "joinedGroups",
+  "joinedExpenses",
 ] as const;
 export type MirrorStore = (typeof MIRROR_STORES)[number];
 
@@ -78,7 +86,15 @@ export interface DeletableRecord<T> extends MirrorRecord<T> {
 }
 
 export type SharedExpenseRecord = DeletableRecord<SharedExpense>;
+// Nothing on either side is ever deleted: an invitation that stops waiting says how in its status.
+export type SentInvitationRecord = MirrorRecord<SentInvitation>;
+export type ReceivedInvitationRecord = MirrorRecord<ReceivedInvitation>;
 export type SettlementRecord = DeletableRecord<Settlement>;
+
+export type JoinedGroupRecord = MirrorRecord<JoinedGroup>;
+export interface JoinedExpenseRecord extends DeletableRecord<JoinedExpense> {
+  groupId: string;
+}
 
 export interface TransactionRecord extends MirrorRecord<SyncTransaction> {
   deleted: 0 | 1;
@@ -89,6 +105,8 @@ export interface TransactionRecord extends MirrorRecord<SyncTransaction> {
   fromAccountId?: string;
   toAccountId?: string;
   pendingReview?: 1;
+  // Live rows only: which lines of a group shared with you are already in your ledger.
+  addedFrom?: string;
 }
 
 export type OutboxEntity =
@@ -141,6 +159,18 @@ export interface VaultSchema extends DBSchema {
     value: SettlementRecord;
     indexes: { updatedAt: string; deleted: number };
   };
+  invitationsSent: { key: string; value: SentInvitationRecord; indexes: { updatedAt: string } };
+  invitationsReceived: {
+    key: string;
+    value: ReceivedInvitationRecord;
+    indexes: { updatedAt: string };
+  };
+  joinedGroups: { key: string; value: JoinedGroupRecord; indexes: { updatedAt: string } };
+  joinedExpenses: {
+    key: string;
+    value: JoinedExpenseRecord;
+    indexes: { updatedAt: string; groupId: string };
+  };
   profile: { key: string; value: ProfileRecord };
   accounts: { key: string; value: AccountRecord; indexes: { updatedAt: string; archived: number } };
   categories: {
@@ -160,6 +190,7 @@ export interface VaultSchema extends DBSchema {
       fromAccountId: string;
       toAccountId: string;
       pendingReview: number;
+      addedFrom: string;
       deleted: number;
     };
   };
@@ -247,6 +278,28 @@ export function settlementRecord(row: Settlement, server?: Settlement): Settleme
   };
 }
 
+export function sentInvitationRecord(row: SentInvitation): SentInvitationRecord {
+  return { id: row.id, row, updatedAt: row.updatedAt };
+}
+
+export function receivedInvitationRecord(row: ReceivedInvitation): ReceivedInvitationRecord {
+  return { id: row.id, row, updatedAt: row.updatedAt };
+}
+
+export function joinedGroupRecord(row: JoinedGroup): JoinedGroupRecord {
+  return { id: row.id, row, updatedAt: row.updatedAt };
+}
+
+export function joinedExpenseRecord(row: JoinedExpense): JoinedExpenseRecord {
+  return {
+    id: row.id,
+    row,
+    updatedAt: row.updatedAt,
+    deleted: row.deletedAt ? 1 : 0,
+    groupId: row.groupId,
+  };
+}
+
 export function profileRecord(row: User): ProfileRecord {
   return { id: PROFILE_KEY, row, updatedAt: row.updatedAt };
 }
@@ -269,5 +322,6 @@ export function transactionRecord(
   if (row.fromAccountId) record.fromAccountId = row.fromAccountId;
   if (row.toAccountId) record.toAccountId = row.toAccountId;
   if (!deleted && row.pendingDetails) record.pendingReview = 1;
+  if (!deleted && row.importedFromExpenseId) record.addedFrom = row.importedFromExpenseId;
   return record;
 }

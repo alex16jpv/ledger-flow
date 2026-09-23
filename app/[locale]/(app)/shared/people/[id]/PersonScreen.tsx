@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
 import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
+import { Projected } from "@/components/ui/Projected";
 import { List, RowBody, rowClasses, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -24,9 +25,11 @@ import {
   useContactQuery,
   useDeleteSettlement,
   useRestoreContact,
+  useSharedPending,
   useSharedSection,
 } from "@/features/shared/hooks";
 import { personView, type SharedSection } from "@/features/shared/ledger";
+import { partyPending, type SharedPending } from "@/features/shared/pending";
 import { hasSomethingToSettle, settlePerson } from "@/features/shared/settle";
 import { presentError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
@@ -42,10 +45,12 @@ import { UndoPaymentSheet } from "../../UndoPaymentSheet";
 function Payments({
   section,
   contactId,
+  pending,
   onUndo,
 }: {
   section: SharedSection;
   contactId: string;
+  pending: SharedPending;
   onUndo: (settlement: Settlement) => void;
 }) {
   const t = useTranslations("shared.person");
@@ -56,7 +61,7 @@ function Payments({
       <h2 className="px-1 text-md font-semibold">{t("payments")}</h2>
       <Card flush>
         <List>
-          <PaymentRows rows={rows} onUndo={onUndo} />
+          <PaymentRows rows={rows} pending={pending} onUndo={onUndo} />
         </List>
       </Card>
     </section>
@@ -75,6 +80,7 @@ function PersonBody({
   const t = useTranslations();
   const money = useMoney();
   const view = personView(section, contact.id);
+  const pending = useSharedPending(section);
   const net = view?.net ?? 0;
   const groups = section.groups.flatMap((group) => {
     const person = group.people.find((one) => one.contactId === contact.id);
@@ -87,7 +93,9 @@ function PersonBody({
         <Avatar name={contact.name} color={contact.color} size="lg" />
         <h2 className="text-xl font-semibold tracking-[-0.02em]">{contact.name}</h2>
         {contact.email && <span className="text-sm text-text-3">{contact.email}</span>}
-        <Amount value={Math.abs(net)} signed={false} size="hero" />
+        <Projected when={pending.people.has(contact.id)}>
+          <Amount value={Math.abs(net)} signed={false} size="hero" />
+        </Projected>
         {/* Colour is data, so the direction is a word: a debt is neither income nor spending. */}
         <span className="text-sm text-text-3">
           {t(net >= 0 ? "shared.person.owesYou" : "shared.person.youOwe", {
@@ -130,7 +138,9 @@ function PersonBody({
                         : "shared.people.youOweWord",
                     )}
                   >
-                    <Amount value={Math.abs(person.owesYou - person.youOwe)} signed={false} />
+                    <Projected when={partyPending(pending, group.group.id, person.key)}>
+                      <Amount value={Math.abs(person.owesYou - person.youOwe)} signed={false} />
+                    </Projected>
                   </RowRight>
                 </Link>
               ))}
@@ -138,7 +148,7 @@ function PersonBody({
           </Card>
         </section>
       )}
-      <Payments section={section} contactId={contact.id} onUndo={onUndo} />
+      <Payments section={section} contactId={contact.id} pending={pending} onUndo={onUndo} />
       {/* A person is not an account, and this is where the section says so. */}
       <p className="px-1 text-center text-xs text-text-3">{t("shared.person.notAnAccount")}</p>
     </>

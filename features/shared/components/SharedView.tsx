@@ -7,6 +7,7 @@ import { useId, useMemo, useState } from "react";
 
 import { Avatar } from "@/components/shell/Avatar";
 import { PageHeader } from "@/components/shell/PageHeader";
+import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
@@ -14,18 +15,25 @@ import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/cn";
 import { Empty } from "@/components/ui/Empty";
 import { LoadErrorBody } from "@/components/ui/LoadErrorBody";
+import { Projected } from "@/components/ui/Projected";
 import { List, RowBody, rowClasses, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Segment } from "@/components/ui/Segment";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SyncBadge } from "@/components/ui/SyncBadge";
 import { NetworkError } from "@/lib/api/errors";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
+import { sumAmounts } from "@/lib/local/derive";
+import type { JoinedGroup } from "@/types/api";
 
-import { useSharedSection } from "../hooks";
+import { useJoinedGroups, useSharedPending, useSharedSection } from "../hooks";
 import type { GroupView, PersonView } from "../ledger";
+import { rowSync, type SharedPending } from "../pending";
 import { ContactFormSheet } from "./ContactFormSheet";
 import { GroupRowLink } from "./GroupRowLink";
+import { InvitationsBlock } from "./InvitationsBlock";
+import { JoinedGroupRowLink } from "./JoinedGroupRowLink";
 import { TwoFigures } from "./parts";
 
 type Face = "people" | "groups";
@@ -34,23 +42,33 @@ const FACES: readonly Face[] = ["people", "groups"];
 
 const NEW_HREF = "/shared/new";
 
-const parseFace = (value: string | null): Face =>
-  (FACES as readonly string[]).includes(value ?? "") ? (value as Face) : "people";
+const parseFace = (value: string | null, fallback: Face): Face =>
+  (FACES as readonly string[]).includes(value ?? "") ? (value as Face) : fallback;
 
-function PersonRowLink({ person }: { person: PersonView }) {
+function PersonRowLink({ person, pending }: { person: PersonView; pending: SharedPending }) {
   const t = useTranslations("shared.people");
+  const states = useTranslations("states");
+  const sync = rowSync(pending, person.contactId);
   return (
     <Link href={`/shared/people/${person.contactId}`} className={rowClasses({ interactive: true })}>
       <Avatar name={person.name} color={person.color} />
       <RowBody>
         <RowTitle>
           <span>{person.name}</span>
+          {sync && <SyncBadge sync={sync} />}
         </RowTitle>
-        <RowMeta items={person.groups.map((group) => group.name)} />
+        <RowMeta
+          items={[
+            ...person.groups.map((group) => group.name),
+            ...(sync ? [states("savedHere")] : []),
+          ]}
+        />
       </RowBody>
       {/* Colour is data, so the direction is a word: a debt is neither income nor spending. */}
       <RowRight sub={person.net >= 0 ? t("owesYouWord") : t("youOweWord")}>
-        <Amount value={Math.abs(person.net)} signed={false} />
+        <Projected when={pending.people.has(person.contactId)}>
+          <Amount value={Math.abs(person.net)} signed={false} />
+        </Projected>
       </RowRight>
     </Link>
   );
@@ -103,8 +121,17 @@ export function SharedView() {
   const money = useMoney();
   const router = useRouter();
   const params = useSearchParams();
-  const face = parseFace(params.get("face"));
-  const { section, isPending, isError, error, refetch } = useSharedSection();
+  const shared = useSharedSection();
+  const joined = useJoinedGroups();
+  const isPending = shared.isPending || (joined.isPending && !joined.isError);
+  const { isError, error } = shared;
+  const refetch = () => {
+    shared.refetch();
+    void joined.refetch();
+  };
+  const { section } = shared;
+  const pending = useSharedPending(section);
+  const joinedView = joined.view;
   // Offline with nothing on the device: there is no failure to report, only no copy to read.
   const offline = error instanceof NetworkError && !error.timedOut && section === undefined;
   const [newPerson, setNewPerson] = useState(false);
@@ -127,7 +154,21 @@ export function SharedView() {
     return { open: rows.filter((view) => !folded(view)), folded: rows.filter(folded) };
   }, [section]);
 
-  const nothingAtAll = section?.groups.length === 0 && section.people.length === 0;
+  const joinedGroups = useMemo(() => {
+    const rows = joinedView?.rows.groups ?? [];
+    const folded = (group: JoinedGroup) => group.archivedAt !== null;
+    return { open: rows.filter((group) => !folded(group)), folded: rows.filter(folded) };
+  }, [joinedView]);
+  const hasJoined = (joinedView?.rows.groups.length ?? 0) > 0;
+  const ownNothing = section?.groups.length === 0 && section.people.length === 0;
+  const nothingAtAll = ownNothing && !hasJoined;
+  const face = parseFace(params.get("face"), ownNothing && hasJoined ? "groups" : "people");
+  const joinedRow = (group: JoinedGroup) => {
+    const standing = joinedView?.standings.get(group.id);
+    return standing ? (
+      <JoinedGroupRowLink key={group.id} group={group} standing={standing} />
+    ) : null;
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -153,6 +194,7 @@ export function SharedView() {
           </>
         }
       />
+      <InvitationsBlock />
       {isPending ? (
         <div
           className="flex flex-col gap-4"
@@ -243,12 +285,13 @@ export function SharedView() {
             ]}
           />
           <TwoFigures
-            owedToYou={section?.owedToYou ?? 0}
-            youOwe={section?.youOwe ?? 0}
+            owedToYou={sumAmounts([section?.owedToYou ?? 0, joinedView?.totals.ownerOwes ?? 0])}
+            youOwe={sumAmounts([section?.youOwe ?? 0, joinedView?.totals.youOwe ?? 0])}
             meta={t("shared.summary.counts", {
               open: people.owesYou.length + people.youOwe.length,
               contacts: section?.contacts ?? 0,
             })}
+            projected={pending.any}
           />
           {face === "people" ? (
             <>
@@ -256,14 +299,16 @@ export function SharedView() {
                 <section className="flex flex-col gap-2">
                   <div className="flex items-baseline justify-between px-1">
                     <h2 className="text-md font-semibold">{t("shared.people.owesYou")}</h2>
-                    <span className="text-sm text-text-3 tabular-nums">
-                      {money.format(section?.owedToYou ?? 0)}
-                    </span>
+                    <Projected when={pending.any}>
+                      <span className="text-sm text-text-3 tabular-nums">
+                        {money.format(section?.owedToYou ?? 0)}
+                      </span>
+                    </Projected>
                   </div>
                   <Card flush>
                     <List>
                       {people.owesYou.map((person) => (
-                        <PersonRowLink key={person.contactId} person={person} />
+                        <PersonRowLink key={person.contactId} person={person} pending={pending} />
                       ))}
                     </List>
                   </Card>
@@ -273,14 +318,16 @@ export function SharedView() {
                 <section className="flex flex-col gap-2">
                   <div className="flex items-baseline justify-between px-1">
                     <h2 className="text-md font-semibold">{t("shared.people.youOwe")}</h2>
-                    <span className="text-sm text-text-3 tabular-nums">
-                      {money.format(section?.youOwe ?? 0)}
-                    </span>
+                    <Projected when={pending.any}>
+                      <span className="text-sm text-text-3 tabular-nums">
+                        {money.format(section?.youOwe ?? 0)}
+                      </span>
+                    </Projected>
                   </div>
                   <Card flush>
                     <List>
                       {people.youOwe.map((person) => (
-                        <PersonRowLink key={person.contactId} person={person} />
+                        <PersonRowLink key={person.contactId} person={person} pending={pending} />
                       ))}
                     </List>
                   </Card>
@@ -289,18 +336,42 @@ export function SharedView() {
               {/* A block of guests is not a person: one line closes the arithmetic instead. */}
               {section && section.guests.owed > 0 && (
                 <p className="px-1 text-sm text-text-3">
-                  {t("shared.people.guests", {
-                    amount: money.format(section.guests.owed),
-                    count: section.guests.groupCount,
-                  })}
+                  <Projected when={pending.guests}>
+                    {t("shared.people.guests", {
+                      amount: money.format(section.guests.owed),
+                      count: section.guests.groupCount,
+                    })}
+                  </Projected>
                 </p>
               )}
+              {joinedView?.totals.owners.map((owner) => (
+                <div key={owner.ownerId} className="flex flex-col gap-1 px-1 text-sm text-text-3">
+                  {owner.youOwe > 0 && (
+                    <p>
+                      {t("shared.joined.peopleLine", {
+                        amount: money.format(owner.youOwe),
+                        name: owner.name,
+                        count: owner.groupsYouOwe,
+                      })}
+                    </p>
+                  )}
+                  {owner.ownerOwes > 0 && (
+                    <p>
+                      {t("shared.joined.peopleLineFrom", {
+                        amount: money.format(owner.ownerOwes),
+                        name: owner.name,
+                        count: owner.groupsOwingYou,
+                      })}
+                    </p>
+                  )}
+                </div>
+              ))}
               {people.settled.length > 0 && (
                 <Fold label={t("shared.people.settled")} count={people.settled.length}>
                   <Card flush>
                     <List>
                       {people.settled.map((person) => (
-                        <PersonRowLink key={person.contactId} person={person} />
+                        <PersonRowLink key={person.contactId} person={person} pending={pending} />
                       ))}
                     </List>
                   </Card>
@@ -331,23 +402,55 @@ export function SharedView() {
                 <Card flush>
                   <List>
                     {groups.open.map((view) => (
-                      <GroupRowLink key={view.group.id} view={view} />
+                      <GroupRowLink key={view.group.id} view={view} pending={pending} />
                     ))}
                   </List>
                 </Card>
               )}
-              {groups.folded.length > 0 && (
-                <Fold label={t("shared.groups.settled")} count={groups.folded.length}>
+              {joined.isError && (
+                <Alert
+                  tone="danger"
+                  title={t("shared.joined.section")}
+                  action={
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        void joined.refetch();
+                      }}
+                    >
+                      {t("common.retry")}
+                    </Button>
+                  }
+                >
+                  <LoadErrorBody error={joined.error} />
+                </Alert>
+              )}
+              {joinedGroups.open.length > 0 && (
+                <section className="flex flex-col gap-2">
+                  <h2 className="px-1 text-md font-semibold">{t("shared.joined.section")}</h2>
+                  <Card flush>
+                    <List>{joinedGroups.open.map(joinedRow)}</List>
+                  </Card>
+                  <p className="px-1 text-xs text-text-3">{t("shared.joined.sectionNote")}</p>
+                </section>
+              )}
+              {groups.folded.length + joinedGroups.folded.length > 0 && (
+                <Fold
+                  label={t("shared.groups.settled")}
+                  count={groups.folded.length + joinedGroups.folded.length}
+                >
                   <Card flush>
                     <List>
                       {groups.folded.map((view) => (
-                        <GroupRowLink key={view.group.id} view={view} />
+                        <GroupRowLink key={view.group.id} view={view} pending={pending} />
                       ))}
+                      {joinedGroups.folded.map(joinedRow)}
                     </List>
                   </Card>
                 </Fold>
               )}
-              {groups.open.length === 0 && groups.folded.length === 0 && (
+              {groups.open.length === 0 && groups.folded.length === 0 && !hasJoined && (
                 <Empty
                   icon={<Users {...iconProps("lg")} />}
                   title={t("shared.empty.title")}

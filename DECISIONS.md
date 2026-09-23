@@ -5,6 +5,53 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-23 · A group shared with you is a read-only copy, and Add to my ledger is online (T-130)
+
+- **Context:** the owner decided on 2026-09-22 that somebody who joined a group reads it, and takes
+  their part of a line into their own ledger only once the owner marked it paid; that an archived
+  group stays with them; that they can leave; and whose names they see. The backend sends those groups
+  and their lines as `joinedGroups` and `joinedExpenses`, placed at the moment you joined.
+- **Decision:** two more mirror stores, again with **no outbox route**: only the owner writes in the
+  group, and _Add to my ledger_ and _Leave_ go to the server and keep its answer. When a received
+  invitation stops being `ACCEPTED`, the pull drops the group and its lines, unless another accepted
+  invitation to the same group is on the device (left, then invited back). Which lines are already in
+  your ledger is read from an `addedFrom` index on `transactions`, not by walking every movement.
+  What you owe there is derived in `lib/local/derive/joined.ts` from the owner's own `collected`
+  figures, which is the server's imputation, so the client adds nothing it has to agree with. **They
+  are not a projection** and carry no projection mark: nothing written on the device ever enters those
+  rows, so every figure is a sum of what the server last said. The owner's "ahead" surplus is not
+  shown there: the figures clamp a share to what it cost.
+- **Alternatives:** queueing _Add to my ledger_ offline. Rejected: whether the line is still paid and
+  still shared is the server's to say, and a queued one would come back as a conflict about somebody
+  else's group. Fetching the joined groups on demand instead of mirroring them. Rejected: every other
+  screen of the section reads offline, and this one would have been the exception.
+- **Consequence:** `MIRROR_VERSION` 5 and `VAULT_SCHEMA_VERSION` 4, so every device pulls once more.
+  A device with no mirror falls back to `/joined-groups`, which cannot say what is already in your
+  ledger; the server refuses a second one with `SHARED_LINE_IN_LEDGER`, and the sheet skips that line,
+  says so and adds the rest. Each line carries a client-minted id for the life of the sheet, so a retry
+  after a lost answer replays instead of being refused.
+
+## 2026-09-22 · Invitations are online writes, and the mirror keeps both sides (T-129)
+
+- **Context:** an invitation is the first thing one user writes for another to read. The owner decided
+  on 2026-09-22 that each group is its own invitation, addressed to a contact's email, waiting 30 days,
+  never joinable across currencies, and that unverified addresses are a known risk the inviter undoes
+  with _Stop sharing_. The design (`design/spec/screens/shared.md`, _Invitations_) says it is found from
+  More and the sidebar, without the notifications inbox, which is not scheduled.
+- **Decision:** the feed's two new arrays go into **two mirror stores with no outbox route**, and
+  inviting, withdrawing, stopping sharing and answering call the server directly and keep its answer in
+  the mirror. The invitations are therefore read offline — from the copy, like everything else — and
+  answered only online, with the buttons disabled and one line saying why.
+- **Alternatives:** queueing the answers like any other write. Rejected: the answer goes to somebody
+  else and can be refused for reasons the device cannot know — withdrawn, archived, out of time, or a
+  group in another currency — so a queued _Accept_ would sit in the device as a promise, and come back
+  as a conflict the person has to resolve about somebody else's group. The one queued write that fits
+  the shape, marking an inbox row read, belongs to the notifications that are not built.
+- **Consequence:** the count on More, on the bar and in the sidebar is derived from the copy
+  (`useWaitingInvitationCount`), costs no request of its own once the mirror is filled, and is right
+  offline. `MIRROR_VERSION` went to 4 and `VAULT_SCHEMA_VERSION` to 3, so every device re-pulls once and
+  gets its invitations.
+
 ## 2026-09-18 · A loan instalment is two movements, not one (T-94)
 
 - **Context:** the instalment was written as a single TRANSFER, so a $420,000 payment of which $126,000
@@ -4705,3 +4752,40 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   `Currency, COP · Colombian Peso`. It does not take `aria-invalid` either, which ARIA does not define
   for `button` and the lint rule refuses. The sheet this task adds does not use `Field` around its
   picker at all, because the field's label and the picker's own would say the same word twice.
+
+## 2026-09-23 · What has not reached the server, in Shared: only what the write touches (T-140)
+
+- **Context:** a Transactions row written with no network carries `Pending sync`, and every balance
+  that includes it carries the projection mark; nothing in Shared read the queue, so a payment, an
+  expense or a group made offline was drawn exactly like what the server had confirmed — house rule 6
+  broken across the whole section.
+- **Decision (the owner's, 2026-09-23):** a queued write marks **what it touches and nothing else**. The
+  rows that **are** the write — an expense, a payment, a group created or changed here, a person added
+  or edited here — carry `Pending sync` or `Needs attention` and "Saved on this device". The figures
+  that **include** one carry `Projected`: a payment marks its person and every group shared with them
+  (it is imputed oldest first across all of them), an expense or a group change marks that group,
+  everybody's share in it, their nets **and every other group they are in**: a new or re-split share
+  changes which of their lines their payments cover first, so their standing moves everywhere. The
+  independent review caught that the first version marked only the group. `Owed to you` and `You owe` are marked together, because both
+  add up everybody and a payment can move somebody from one to neither.
+- **Alternatives:** marking every figure of the section from the first queued write, which is what
+  `projected.balances` does for accounts and costs one boolean; the owner chose the exact version,
+  because a section where one payment clouds every figure teaches that the mark means nothing. Knowing
+  exactly **which** figure changed would need the section derived twice — once from the server's rows
+  and once from the projection — on the most expensive computation of the client; the rule above is the
+  conservative reading of what each write can move, and never leaves out a figure it did move.
+- **`undone` in the ledger read:** a payment undone offline disappears from the section, and the queue
+  names only its id. The mirror already keeps undone payments (the feed delivers them), so its read
+  hands them back beside the live ones. The server's read returns none and needs none: until the
+  server takes the undo, it still answers that payment among the live ones, and the id is found there.
+- **Two edges outside the section:** a movement put into a group offline carries `Pending sync` on
+  its Transactions row, because its `Shared` badge and its share are the queued expense; and the card
+  of a shared movement marks its lead figure when the movement itself was edited here, since that
+  figure reads the movement's amount.
+- **The weight it cost:** the transaction detail went from 217.2 to 218.5 kB gz of its 220. The card's
+  `Edit split` and `Settle up` sheets now mount when opened, through `next/dynamic`, as the group screen
+  already does with its own.
+- **`SyncBadge`** moves the badge Transactions drew inline into `components/ui`, so the two sections
+  cannot drift apart.
+- **Consequence:** the joined side has neither mark, because nothing a person who joined does is queued:
+  `Add to my ledger`, answering an invitation and leaving all need a connection.

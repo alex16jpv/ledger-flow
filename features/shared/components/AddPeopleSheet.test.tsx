@@ -111,6 +111,7 @@ function open() {
         }),
       ],
       settlements: [],
+      undone: [],
     },
     contacts,
   );

@@ -77,6 +77,7 @@ function nightOut(): SharedLedgerRows {
       }),
     ],
     settlements: [],
+    undone: [],
   };
 }
 

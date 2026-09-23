@@ -2,7 +2,7 @@
 
 # lag-money-manager API endpoints
 
-Version 1.0.0 · 69 operations · 82 schemas.
+Version 1.0.0 · 80 operations · 93 schemas.
 
 Regenerate with `npm run gen:api-types` against a running backend. The client never calls these
 URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), which adds the
@@ -15,8 +15,10 @@ URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), wh
 | [Budgets](#budgets)             | 8          |
 | [Categories](#categories)       | 7          |
 | [Contacts](#contacts)           | 6          |
+| [Invitations](#invitations)     | 4          |
+| [Joined groups](#joined-groups) | 4          |
 | [Settlements](#settlements)     | 4          |
-| [Shared groups](#shared-groups) | 16         |
+| [Shared groups](#shared-groups) | 19         |
 | [Stats](#stats)                 | 1          |
 | [Sync](#sync)                   | 2          |
 | [Transactions](#transactions)   | 8          |
@@ -735,7 +737,7 @@ The people you split expenses with. Archived contacts are hidden unless includeA
 ### `POST /contacts`
 
 Requires `name`. Active contact names are unique per user, case-insensitively ("Ana" = "ana"; accents still distinct) and trimmed; archiving a contact frees its name.
-`email` is optional and is only an **identifier for inviting them later**: nothing is sent from here, and two contacts may carry the same address. `linkedUserId` is server-owned and always null until an invitation is accepted; a client that sends it has it dropped.
+`email` is optional and is only an **identifier for inviting them later**: nothing is sent from here, and two contacts may carry the same address. A contact is never linked to a user: who joined a group is the accepted invitation, which never tells the inviter who answered.
 A user is capped at `SharedLimits.maxContactsPerUser` active contacts (400 CONTACT_LIMIT_REACHED). Read that schema instead of copying the number: the sheet that adds a contact is meant to say the limit before a save can fail on it.
 Accepts an optional client-minted `id` (UUID). An id the user already owns replays with 200 and the stored resource, whatever the payload says now; an id that belongs to another user is rejected with 409 ID_TAKEN.
 
@@ -834,6 +836,189 @@ Idempotent — restoring an already-active contact returns it unchanged.
 | `404`  | `ErrorResponse`   | Contact not found (uniform for missing and not owned)                                                                                                                                                          |
 | `409`  | `ContactConflict` | An active contact took this name while it was archived (code DUPLICATE) — rename that one first, or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) |
 
+## Invitations
+
+| Endpoint                         | Auth   | Summary                                   |
+| -------------------------------- | ------ | ----------------------------------------- |
+| `GET /invitations`               | bearer | The invitations waiting for you           |
+| `POST /invitations/{id}/accept`  | bearer | Join the shared group you were invited to |
+| `POST /invitations/{id}/decline` | bearer | Decline an invitation to a shared group   |
+| `POST /invitations/{id}/leave`   | bearer | Leave a shared group you joined           |
+
+### `GET /invitations`
+
+Invitations to somebody else's shared group, addressed to your email, still waiting and still in time, oldest first. Each one shows only the group's name, its colour and currency, and who sent it. The offline client reads them from the change feed (`invitationsReceived`), which also brings the ones already answered; this listing is its fallback.
+
+**Query**
+
+| Name     | Type                         | Required | Description                                                                                          |
+| -------- | ---------------------------- | -------- | ---------------------------------------------------------------------------------------------------- |
+| `limit`  | integer, 1–100, default `20` | no       | Maximum number of items to return                                                                    |
+| `offset` | integer, 0–, default `0`     | no       | Number of items to skip (offset-based pagination)                                                    |
+| `cursor` | string (uuid)                | no       | ID of the last item of the previous page; must name an invitation of this listing (overrides offset) |
+
+**Responses**
+
+| Status | Schema                   | Description                                                                                                            |
+| ------ | ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `ReceivedInvitationList` | Paginated list of the invitations waiting for you                                                                      |
+| `400`  | `ErrorResponse`          | Invalid query parameters (code VALIDATION), or a cursor that names no invitation of this listing (code INVALID_CURSOR) |
+| `401`  | `ErrorResponse`          | Unauthorized                                                                                                           |
+
+### `POST /invitations/{id}/accept`
+
+Joining touches nothing in your ledger. A group in another currency cannot be joined (only declined), and an invitation that was withdrawn, whose group was archived, or whose 30 days passed answers INVITATION_UNAVAILABLE. Accepting twice answers the invitation as it is.
+
+**Path**
+
+| Name | Type          | Required | Description   |
+| ---- | ------------- | -------- | ------------- |
+| `id` | string (uuid) | yes      | Invitation ID |
+
+**Responses**
+
+| Status | Schema               | Description                                                                                                                                                                                                                                                                                                       |
+| ------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `ReceivedInvitation` | The invitation, accepted                                                                                                                                                                                                                                                                                          |
+| `400`  | `ErrorResponse`      | Validation error (code VALIDATION), an invitation that can no longer be answered (code INVITATION_UNAVAILABLE), a group in another currency (code CURRENCY_MISMATCH), your own invitation (code INVITATION_TO_SELF), or a group you already joined through another invitation (code PARTICIPANT_ALREADY_IN_GROUP) |
+| `401`  | `ErrorResponse`      | Unauthorized                                                                                                                                                                                                                                                                                                      |
+| `404`  | `ErrorResponse`      | Invitation not found (uniform for missing and addressed to somebody else)                                                                                                                                                                                                                                         |
+
+### `POST /invitations/{id}/decline`
+
+The person who invited learns it was declined, never why. Declining twice answers the invitation as it is.
+
+**Path**
+
+| Name | Type          | Required | Description   |
+| ---- | ------------- | -------- | ------------- |
+| `id` | string (uuid) | yes      | Invitation ID |
+
+**Responses**
+
+| Status | Schema               | Description                                                                                                                                                      |
+| ------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `ReceivedInvitation` | The invitation, declined                                                                                                                                         |
+| `400`  | `ErrorResponse`      | Validation error (code VALIDATION), an invitation that can no longer be answered (code INVITATION_UNAVAILABLE), or your own invitation (code INVITATION_TO_SELF) |
+| `401`  | `ErrorResponse`      | Unauthorized                                                                                                                                                     |
+| `404`  | `ErrorResponse`      | Invitation not found (uniform for missing and addressed to somebody else)                                                                                        |
+
+### `POST /invitations/{id}/leave`
+
+Stop seeing the group, from your side. You stay in it as somebody the owner splits with: your share, what you paid and what you owe do not move, and nothing in your ledger is touched. The owner's row reads LEFT. Leaving twice answers the invitation as it is; one that is no longer joined (the owner stopped sharing) answers INVITATION_UNAVAILABLE.
+
+**Path**
+
+| Name | Type          | Required | Description   |
+| ---- | ------------- | -------- | ------------- |
+| `id` | string (uuid) | yes      | Invitation ID |
+
+**Responses**
+
+| Status | Schema               | Description                                                                                                 |
+| ------ | -------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `200`  | `ReceivedInvitation` | The invitation, left                                                                                        |
+| `400`  | `ErrorResponse`      | Validation error (code VALIDATION), or an invitation that is no longer joined (code INVITATION_UNAVAILABLE) |
+| `401`  | `ErrorResponse`      | Unauthorized                                                                                                |
+| `404`  | `ErrorResponse`      | Invitation not found (uniform for missing and not yours)                                                    |
+
+## Joined groups
+
+| Endpoint                                                      | Auth   | Summary                                         |
+| ------------------------------------------------------------- | ------ | ----------------------------------------------- |
+| `GET /joined-groups`                                          | bearer | The groups somebody else shared with you        |
+| `GET /joined-groups/{id}`                                     | bearer | One group shared with you                       |
+| `GET /joined-groups/{id}/expenses`                            | bearer | The lines of a group shared with you            |
+| `POST /joined-groups/{id}/expenses/{expenseId}/add-to-ledger` | bearer | Add your part of a paid line to your own ledger |
+
+### `GET /joined-groups`
+
+The groups whose invitation you accepted and that are still shared with you, archived ones included, read-only. Nothing of anybody's ledger travels: no account, category or note. The offline client reads them from the change feed (`joinedGroups`); this listing is its fallback.
+
+**Query**
+
+| Name     | Type                         | Required | Description                                                                   |
+| -------- | ---------------------------- | -------- | ----------------------------------------------------------------------------- |
+| `limit`  | integer, 1–100, default `20` | no       | Maximum number of items to return                                             |
+| `offset` | integer, 0–, default `0`     | no       | Number of items to skip (offset-based pagination)                             |
+| `cursor` | string (uuid)                | no       | ID of the invitation last read (the group's `invitationId`); overrides offset |
+
+**Responses**
+
+| Status | Schema            | Description                                                                                                  |
+| ------ | ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| `200`  | `JoinedGroupList` | Paginated list of the groups shared with you                                                                 |
+| `400`  | `ErrorResponse`   | Invalid query parameters (code VALIDATION), or a cursor that names none of your groups (code INVALID_CURSOR) |
+| `401`  | `ErrorResponse`   | Unauthorized                                                                                                 |
+
+### `GET /joined-groups/{id}`
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Responses**
+
+| Status | Schema          | Description                                                                        |
+| ------ | --------------- | ---------------------------------------------------------------------------------- |
+| `200`  | `JoinedGroup`   | The group                                                                          |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                 |
+| `401`  | `ErrorResponse` | Unauthorized                                                                       |
+| `404`  | `ErrorResponse` | Not a group shared with you (uniform for missing, not joined and no longer shared) |
+
+### `GET /joined-groups/{id}/expenses`
+
+Newest expense first, keyset over (date, id), exactly as the owner keeps them. Your part of each is the CONTACT share your participant row names.
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Query**
+
+| Name     | Type                         | Required | Description                                                    |
+| -------- | ---------------------------- | -------- | -------------------------------------------------------------- |
+| `limit`  | integer, 1–100, default `20` | no       | Maximum number of items to return                              |
+| `offset` | integer, 0–, default `0`     | no       | Number of items to skip (offset-based pagination)              |
+| `cursor` | string (uuid)                | no       | ID of the last expense of the previous page (overrides offset) |
+
+**Responses**
+
+| Status | Schema              | Description                                                                                              |
+| ------ | ------------------- | -------------------------------------------------------------------------------------------------------- |
+| `200`  | `JoinedExpenseList` | Paginated list of the group's lines                                                                      |
+| `400`  | `ErrorResponse`     | Invalid parameters (code VALIDATION), or a cursor that names no line of this group (code INVALID_CURSOR) |
+| `401`  | `ErrorResponse`     | Unauthorized                                                                                             |
+| `404`  | `ErrorResponse`     | Not a group shared with you                                                                              |
+
+### `POST /joined-groups/{id}/expenses/{expenseId}/add-to-ledger`
+
+Offered only on a line the person who shared the group paid, and only once they have marked your part of it paid: they recorded the money arriving in their account, and this records it leaving yours. It writes one ordinary expense of yours — your share, dated the line, with its description, from `accountId` and in `categoryId` — and nothing in the group. One line reaches your ledger once; deleting that expense makes it ready again. Needs a connection: there is no batch operation for it.
+
+**Path**
+
+| Name        | Type          | Required | Description     |
+| ----------- | ------------- | -------- | --------------- |
+| `id`        | string (uuid) | yes      | Shared group ID |
+| `expenseId` | string (uuid) | yes      | The line        |
+
+**Body** `AddToLedgerInput` (required)
+
+**Responses**
+
+| Status | Schema          | Description                                                                                                                                                                                                                                                       |
+| ------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `Transaction`   | The expense already created under that client-minted id (replay)                                                                                                                                                                                                  |
+| `201`  | `Transaction`   | Your expense                                                                                                                                                                                                                                                      |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION), a line somebody else paid, one you have no part in or whose part is not marked paid (code SHARED_LINE_NOT_PAID), a line already in your ledger (code SHARED_LINE_IN_LEDGER), or an archived category (code CATEGORY_ARCHIVED) |
+| `401`  | `ErrorResponse` | Unauthorized                                                                                                                                                                                                                                                      |
+| `404`  | `ErrorResponse` | Not a group shared with you, a line not in it, or an account or category not yours                                                                                                                                                                                |
+| `409`  | `ErrorResponse` | The client-minted id belongs to somebody else (code ID_TAKEN)                                                                                                                                                                                                     |
+
 ## Settlements
 
 | Endpoint                   | Auth   | Summary                                                         |
@@ -924,24 +1109,27 @@ Reverses every movement it recorded — the collection, your expenses and any re
 
 ## Shared groups
 
-| Endpoint                                              | Auth   | Summary                                                       |
-| ----------------------------------------------------- | ------ | ------------------------------------------------------------- |
-| `GET /shared-groups`                                  | bearer | Get all shared groups                                         |
-| `POST /shared-groups`                                 | bearer | Create a shared group                                         |
-| `GET /shared-groups/{id}`                             | bearer | Get a shared group by ID                                      |
-| `PUT /shared-groups/{id}`                             | bearer | Update a shared group                                         |
-| `DELETE /shared-groups/{id}`                          | bearer | Archive a shared group (soft delete)                          |
-| `GET /shared-groups/{id}/expenses`                    | bearer | The expenses of a shared group                                |
-| `POST /shared-groups/{id}/expenses`                   | bearer | Record an expense in a shared group                           |
-| `GET /shared-groups/{id}/expenses/{expenseId}`        | bearer | Get one expense of a shared group                             |
-| `PUT /shared-groups/{id}/expenses/{expenseId}`        | bearer | Edit an expense of a shared group                             |
-| `DELETE /shared-groups/{id}/expenses/{expenseId}`     | bearer | Delete an expense of a shared group (soft delete)             |
-| `POST /shared-groups/{id}/participants`               | bearer | Add people to a shared group                                  |
-| `DELETE /shared-groups/{id}/participants/{contactId}` | bearer | Take somebody out of a shared group                           |
-| `POST /shared-groups/{id}/participants/preview`       | bearer | Work out what adding people would do, without doing it        |
-| `POST /shared-groups/{id}/restore`                    | bearer | Restore an archived shared group, optionally under a new name |
-| `POST /shared-groups/{id}/write-offs`                 | bearer | Give up on what somebody still owes you here                  |
-| `DELETE /shared-groups/{id}/write-offs/{partyId}`     | bearer | Take back a write-off                                         |
+| Endpoint                                                | Auth   | Summary                                                          |
+| ------------------------------------------------------- | ------ | ---------------------------------------------------------------- |
+| `GET /shared-groups`                                    | bearer | Get all shared groups                                            |
+| `POST /shared-groups`                                   | bearer | Create a shared group                                            |
+| `GET /shared-groups/{id}`                               | bearer | Get a shared group by ID                                         |
+| `PUT /shared-groups/{id}`                               | bearer | Update a shared group                                            |
+| `DELETE /shared-groups/{id}`                            | bearer | Archive a shared group (soft delete)                             |
+| `GET /shared-groups/{id}/expenses`                      | bearer | The expenses of a shared group                                   |
+| `POST /shared-groups/{id}/expenses`                     | bearer | Record an expense in a shared group                              |
+| `GET /shared-groups/{id}/expenses/{expenseId}`          | bearer | Get one expense of a shared group                                |
+| `PUT /shared-groups/{id}/expenses/{expenseId}`          | bearer | Edit an expense of a shared group                                |
+| `DELETE /shared-groups/{id}/expenses/{expenseId}`       | bearer | Delete an expense of a shared group (soft delete)                |
+| `GET /shared-groups/{id}/invitations`                   | bearer | The invitations sent for this group                              |
+| `POST /shared-groups/{id}/invitations`                  | bearer | Invite somebody in the group to see it                           |
+| `DELETE /shared-groups/{id}/invitations/{invitationId}` | bearer | Withdraw an invitation, or stop sharing with somebody who joined |
+| `POST /shared-groups/{id}/participants`                 | bearer | Add people to a shared group                                     |
+| `DELETE /shared-groups/{id}/participants/{contactId}`   | bearer | Take somebody out of a shared group                              |
+| `POST /shared-groups/{id}/participants/preview`         | bearer | Work out what adding people would do, without doing it           |
+| `POST /shared-groups/{id}/restore`                      | bearer | Restore an archived shared group, optionally under a new name    |
+| `POST /shared-groups/{id}/write-offs`                   | bearer | Give up on what somebody still owes you here                     |
+| `DELETE /shared-groups/{id}/write-offs/{partyId}`       | bearer | Take back a write-off                                            |
 
 ### `GET /shared-groups`
 
@@ -1169,6 +1357,76 @@ When the expense was a movement of yours, **the movement is not deleted**: it le
 | `401`  | `ErrorResponse`         | Unauthorized                                                          |
 | `404`  | `ErrorResponse`         | Shared expense not found (uniform for missing and not owned)          |
 | `409`  | `SharedExpenseConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE) |
+
+### `GET /shared-groups/{id}/invitations`
+
+Every invitation ever sent for this group, oldest first, in the inviter's view: who it was addressed to and how it stands. It never says whether an address has an account, nor who answered.
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Query**
+
+| Name     | Type                         | Required | Description                                                                                          |
+| -------- | ---------------------------- | -------- | ---------------------------------------------------------------------------------------------------- |
+| `limit`  | integer, 1–100, default `20` | no       | Maximum number of items to return                                                                    |
+| `offset` | integer, 0–, default `0`     | no       | Number of items to skip (offset-based pagination)                                                    |
+| `cursor` | string (uuid)                | no       | ID of the last item of the previous page; must name an invitation of this group's (overrides offset) |
+
+**Responses**
+
+| Status | Schema               | Description                                                                                                            |
+| ------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SentInvitationList` | Paginated list of the group's invitations                                                                              |
+| `400`  | `ErrorResponse`      | Invalid query parameters (code VALIDATION), or a cursor that names no invitation of this group's (code INVALID_CURSOR) |
+| `401`  | `ErrorResponse`      | Unauthorized                                                                                                           |
+| `404`  | `ErrorResponse`      | Shared group not found (uniform for missing and not owned)                                                             |
+
+### `POST /shared-groups/{id}/invitations`
+
+Addressed to the email of a contact who is in the group. **Nothing is emailed**: the invitation waits in that person's Shared, found by the address, for 30 days. The answer is the same whether or not the address has an account — the route never looks — so an invitation cannot be used to find out who uses the app.
+One live invitation per person per group: inviting somebody who is already waiting or already joined answers that invitation with 200. One that ran out of time steps aside and a new one is sent (201).
+
+**Path**
+
+| Name | Type          | Required | Description     |
+| ---- | ------------- | -------- | --------------- |
+| `id` | string (uuid) | yes      | Shared group ID |
+
+**Body** `CreateInvitationInput` (required)
+
+**Responses**
+
+| Status | Schema           | Description                                                                                                                                                                                                                                                                                                     |
+| ------ | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SentInvitation` | That person already has a live invitation to this group; it is answered as it is                                                                                                                                                                                                                                |
+| `201`  | `SentInvitation` | Invitation sent                                                                                                                                                                                                                                                                                                 |
+| `400`  | `ErrorResponse`  | Validation error (code VALIDATION), somebody who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a contact with no email (code CONTACT_HAS_NO_EMAIL), your own email (code INVITATION_TO_SELF), too many invitations waiting (code INVITATION_LIMIT_REACHED) or an archived group (code RESOURCE_ARCHIVED) |
+| `401`  | `ErrorResponse`  | Unauthorized                                                                                                                                                                                                                                                                                                    |
+| `404`  | `ErrorResponse`  | Shared group or contact not found (uniform for missing and not owned)                                                                                                                                                                                                                                           |
+
+### `DELETE /shared-groups/{id}/invitations/{invitationId}`
+
+A waiting invitation stops being answerable; a joined one ends, and that person stops seeing the group. **Nothing about the money changes**: they stay in the group as a person you split with. Idempotent — an invitation that already ended is answered as it is.
+
+**Path**
+
+| Name           | Type          | Required | Description     |
+| -------------- | ------------- | -------- | --------------- |
+| `id`           | string (uuid) | yes      | Shared group ID |
+| `invitationId` | string (uuid) | yes      | Invitation ID   |
+
+**Responses**
+
+| Status | Schema           | Description                                                            |
+| ------ | ---------------- | ---------------------------------------------------------------------- |
+| `200`  | `SentInvitation` | The invitation, withdrawn                                              |
+| `400`  | `ErrorResponse`  | Validation error (code VALIDATION)                                     |
+| `401`  | `ErrorResponse`  | Unauthorized                                                           |
+| `404`  | `ErrorResponse`  | Invitation not found in this group (uniform for missing and not owned) |
 
 ### `POST /shared-groups/{id}/participants`
 

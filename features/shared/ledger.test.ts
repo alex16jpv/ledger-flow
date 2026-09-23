@@ -78,6 +78,7 @@ function nightOut(): SharedLedgerRows {
       }),
     ],
     settlements: [],
+    undone: [],
   };
 }
 
@@ -181,6 +182,7 @@ describe("the section a screen reads", () => {
         }),
       ],
       settlements: [],
+      undone: [],
     };
     const section = sectionOf(rows, contacts);
 
