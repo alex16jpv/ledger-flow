@@ -534,7 +534,8 @@ const quickSheet = ({
   extra = "",
   over = "",
   hint = "",
-  scroll = false,
+  full = false,
+  keyboard: kb = null,
 } = {}) => {
   const title = "Add";
   const bar = {
@@ -583,8 +584,18 @@ ${quickPicker("To", "Savings · $8,900,000", "piggy-bank", "GREEN")}</div>`
   const sheetHead =
     head ??
     `<div class="sheet-head"><span class="h3">${title}</span><button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button></div>`;
+  if (full)
+    return fullScreen({
+      title,
+      body: `${seg}${hint}${amount}${cats}${accounts}${QUICK_NOTE}${extra}`,
+      action: "Save",
+      secondary: '<button class="btn secondary lg block">More details</button>',
+      footer: QUICK_BUTTONS,
+      keyboard: kb,
+      over,
+    });
   return `<div class="scrim"><div class="sheet" role="dialog" aria-label="${title}">
-${bar}${sheetHead}${scroll ? '<div class="sheet-body">' : ""}${seg}${hint}${amount}${cats}${accounts}${QUICK_NOTE}${extra}${scroll ? "</div>" : ""}${QUICK_BUTTONS}
+${bar}${sheetHead}${seg}${hint}${amount}${cats}${accounts}${QUICK_NOTE}${extra}${QUICK_BUTTONS}
 </div>${over}</div>`;
 };
 
@@ -4015,7 +4026,7 @@ const sheetHandleVariant = (kind) => {
   return home({ sheet: quickSheet({ type: "expense", handle: "wide", extra }) });
 };
 
-// T-150 · every phone sheet hangs from the top, and with a keyboard up it ends above it.
+// T-150 · on a phone a sheet is a full-screen dialog or a centred one; from 600px up, the modal it was.
 const KEYBOARD_H = { numeric: 232, text: 232 };
 
 const keyboard = (kind) => {
@@ -4068,36 +4079,69 @@ const keyboard = (kind) => {
   return `<div class="kbd" aria-hidden="true" style="height:${KEYBOARD_H[kind]}px">${rows.join("")}</div>`;
 };
 
-const onTop = (sheet, { keyboard: kind = null, bar = "bottom" } = {}) => {
+const keyboardUnder = (html, kind, scrimClass) => {
   const style = kind ? ` style="bottom:${KEYBOARD_H[kind]}px"` : "";
-  const scrim = `<div class="scrim top${bar === "top" ? " bar-top" : ""}"${style}>`;
-  return (kind ? keyboard(kind) : "") + sheet.replace('<div class="scrim">', scrim);
+  return html.replace(
+    '<div class="scrim">',
+    `${kind ? keyboard(kind) : ""}<div class="scrim ${scrimClass}"${style}>`,
+  );
 };
 
-const quickOnTop = (bar) =>
+const fullScreen = ({
+  title,
+  body,
+  action = null,
+  lead = "",
+  secondary = "",
+  footer = "",
+  keyboard: kind = null,
+  over = "",
+}) => {
+  const close = `<button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button>`;
+  const act = action ? `<button class="btn primary sm">${action}</button>` : "<span></span>";
+  const sheet = `<div class="scrim"><div class="sheet" role="dialog" aria-label="${title}">
+<div class="fs-bar">${close}<span class="h3">${title}</span>${act}</div>
+<div class="sheet-head modal-only"><span class="h3">${title}</span>${close}</div>
+${lead ? `<div class="fs-lead">${lead}</div>` : ""}<div class="fs-body">${body}${secondary ? `<div class="fs-only">${secondary}</div>` : ""}</div>
+${footer ? `<div class="modal-only">${footer}</div>` : ""}</div>${over}</div>`;
+  return keyboardUnder(sheet, kind, "full");
+};
+
+const SHEET_WRAP =
+  /^<div class="scrim"><div class="sheet" role="dialog" aria-label="([^"]*)"><div class="handle"><\/div><div class="sheet-head"><span class="h3">[^<]*<\/span>(?:<button[^>]*>[\s\S]*?<\/button>)?<\/div>([\s\S]*)<\/div><\/div>$/;
+
+const asFullScreen = (sheet, o = {}) => {
+  const [, title, body] = sheet.match(SHEET_WRAP);
+  return fullScreen({ title, body, ...o });
+};
+
+const centred = (html, kind = null) => keyboardUnder(html, kind, "center");
+
+const UNSAVED_DIALOG = `<div class="scrim center" style="z-index:calc(var(--z-sheet) + 2)"><div class="sheet" role="alertdialog" aria-label="Are you sure you want to leave?">
+<div class="alert warning">${iconSvg("triangle-alert")}<span><b>Are you sure you want to leave?</b> What you have typed will be lost.</span></div>
+<div class="hstack" style="gap:10px"><button class="btn primary lg" style="flex:1.2">Keep editing</button><button class="btn ghost lg" style="flex:1;color:var(--danger)">Leave</button></div></div></div>`;
+
+const quickFullScreen = (o = {}) =>
   home({
-    sheet: onTop(
-      quickSheet({ type: "expense", handle: "wide", hint: typeLine("EXPENSE"), scroll: true }),
-      { keyboard: "numeric", bar },
-    ),
+    sheet: quickSheet({ type: "expense", hint: typeLine("EXPENSE"), full: true, ...o }),
   });
 
-const pickerOnTop = () => {
+const pickerFullScreen = () => {
   const r = (name, sel = false) => {
     const [ic, col] = CATS[name];
     return `<button class="row" style="border-top:1px solid var(--border)">${tile(ic, col)}<span class="body"><span class="title">${name}</span><span class="meta">Expense</span></span><span class="right" style="flex-direction:row">${sel ? iconSvg("circle-check", "sm") : ""}</span></button>`;
   };
-  const inner = `<div class="sheet-body"><div class="input" style="height:44px;flex:none">${iconSvg("search", "sm")}<span style="flex:1">Search categories</span><span class="caret"></span></div>
-<div class="stack-sm"><span class="eyebrow">Recent</span><div class="chips">${catChip("Coffee")}${catChip("Food")}${catChip("Transport")}</div></div>
+  const lead = `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span style="flex:1">Search categories</span><span class="caret"></span></div>`;
+  const body = `<div class="stack-sm"><span class="eyebrow">Recent</span><div class="chips">${catChip("Coffee")}${catChip("Food")}${catChip("Transport")}</div></div>
 <div class="list" style="margin:0 -16px">${r("Coffee")}${r("Food", true)}${r("Transport")}${r("Housing")}${r("Bills")}${r("Lifestyle")}${r("Health")}${r("Pets")}
-<button class="row" style="border-top:1px solid var(--border)">${tile("plus", "NONE")}<span class="body"><span class="title" style="color:var(--brand-text)">New category</span><span class="meta">Create it without leaving this form</span></span></button></div></div>`;
+<button class="row" style="border-top:1px solid var(--border)">${tile("plus", "NONE")}<span class="body"><span class="title" style="color:var(--brand-text)">New category</span><span class="meta">Create it without leaving this form</span></span></button></div>`;
   return screen(transactionFormBodyDim(), {
     tab: "",
     side: "",
     back: true,
     title: "New transaction",
     narrow: true,
-    sheet: onTop(sheetWrap(inner, "Category"), { keyboard: "text" }),
+    sheet: fullScreen({ title: "Category", lead, body, keyboard: "text" }),
   });
 };
 
@@ -5204,6 +5248,13 @@ const PAGES = [
         { added: "2026-09-15", updated: "2026-09-22" },
       ),
       plate(
+        "full-screen-more",
+        "More fills the screen",
+        "More has no field, but it is a list of seven destinations, so it takes the list half of the rule: the whole screen, close on the left, no action. A centred dialog would also hold it; full screen keeps one form for every list in the app. Taking a destination still closes it, and the More tab keeps its selected look underneath.",
+        home({ nav: tabbar("mas"), sheet: asFullScreen(navMenuSheet(true)) }),
+        { added: "2026-09-23", review: true },
+      ),
+      plate(
         "home-without-a-name",
         "Home without a name",
         "Neither the session nor the local mirror knows the name: the greeting loses the comma instead of showing an empty one.",
@@ -5242,17 +5293,24 @@ const PAGES = [
         { added: "2026-09-15" },
       ),
       plate(
-        "sheet-on-top",
-        "Every phone sheet hangs from the top",
-        "T-150, his decision of 2026-09-23: \u00abno solo es subirlo cuando detecte el teclado. es subirlo en general. y no aplica solo para ese. aplica para todos los modales que se muestran en movil pintados en la parte inferior\u00bb. Below 600px every sheet \u2014 all of them, not only quick add \u2014 now hangs from the top edge instead of rising from the bottom: square on top, the 28 radius on the two bottom corners, and the bar on the edge that is free, the bottom one. Its top padding grows by the notch (<code>--safe-top</code>, the twin of <code>--safe-bottom</code>), which is 0 wherever the app does not draw under the status bar; the bottom no longer adds <code>--safe-bottom</code>, because the sheet never reaches that edge. Everything else is the sheet it was: the header and its close button, the four exits and the unsaved question, the tinted and blurred page behind, and from 600px up the centred modal. There is no entrance animation today, so none is added. The toast stays above the tab bar: the sheet has left that edge, so the two cannot meet. Drawn on <b>More</b>, whose button is in the tab bar.",
-        home({ nav: tabbar("mas"), sheet: onTop(navMenuSheet(true)) }),
+        "full-screen-quick-add",
+        "A phone sheet with a form fills the screen",
+        "T-150. His decision of 2026-09-23 that no phone sheet keeps rising from the bottom, and his correction the same day: \u00abno es ponerlo arriba literalmente. el modal debe cambiar su estructura para que no sea abajo no simplemente subirlo. debe de existir algun estandar para modales en movil\u00bb. This is the standard both platforms share \u2014 Material 3\u2019s full-screen dialog, iOS\u2019s sheet with a navigation bar \u2014 and the first of the two forms every phone sheet now takes. <b>The rule: a form (more than one field) or a list that scrolls is a full-screen dialog; a question, a short choice, or one field with its button is a centred dialog.</b> Full screen means a 56px bar on top \u2014 close on the left, the title, the sheet\u2019s one primary action on the right \u2014 and the body scrolling under it, so the keyboard can cover part of the body but never the action. In quick add, Save moves up to the bar and More details goes to the end of the body. <b>The bar that opened the full form goes</b>: there is no sheet edge left to pull (his gesture of 2026-09-15), and More details stays as the way in. Drawn with the numeric keyboard up. From 600px up nothing changes: the same sheet is the centred 520px modal with its footer \u2014 switch the device to see it.",
+        quickFullScreen({ keyboard: "numeric" }),
         { added: "2026-09-23", review: true },
       ),
       plate(
-        "sheet-on-top-with-the-keyboard",
-        "A sheet on top, with the keyboard up",
-        "What the move is for. With the keyboard open the sheet ends above it, never behind it: its height is capped to what the screen still shows (the <code>visualViewport</code>), less the same strip of page a sheet always leaves below it. The title and the footer stay where they are and only the body scrolls \u2014 here the category picker, typing in its search, with its list running under the title. Before, a tall sheet on the bottom edge put its last rows and its buttons behind the keyboard.",
-        pickerOnTop(),
+        "full-screen-picker",
+        "A phone sheet with a list fills the screen",
+        "The list half of the rule. The picker fills the screen with its search pinned under the bar, and the list scrolls between the search and the keyboard, so every row can be reached while typing. There is no action on the right: choosing a row is the answer and closes it, as today. The account, contact, transaction and account-type pickers, Filters, and every sheet that creates or edits something \u2014 an account, a category, a contact, a group, a split, settle up, pay, adjust balance, invite \u2014 take this same form.",
+        pickerFullScreen(),
+        { added: "2026-09-23", review: true },
+      ),
+      plate(
+        "full-screen-unsaved-question",
+        "Leaving a full-screen form with something typed",
+        "Closing with something typed still asks, on the same four exits, with the same words: Keep editing first and focused, Leave the quiet one, ESC keeps editing (T-78, T-104). What changes is where. A full-screen dialog has no footer to swap for the question, and at the end of the body it could land under the keyboard, so the question is a centred dialog over the form. It is drawn the same on every width, so from 600px up it also sits over the modal instead of replacing its footer \u2014 the one thing that changes there.",
+        quickFullScreen({ over: UNSAVED_DIALOG }),
         { added: "2026-09-23", review: true },
       ),
       plate(
@@ -5530,6 +5588,13 @@ const PAGES = [
         "An active account already holds the name, so restoring asks for a new one. The same component serves categories.",
         accountRestoreSheet(),
         { added: "2026-09-06" },
+      ),
+      plate(
+        "centred-dialog-with-the-keyboard",
+        "A centred dialog, with the keyboard up",
+        "One field and its button stay a centred dialog. With the keyboard up it centres on the space above it rather than on the whole screen, so the field and the button are never behind the keyboard. Drawn on restoring an account whose name is taken; renaming, the ceiling of a budget and every one-figure sheet work the same.",
+        centred(accountRestoreSheet(), "text"),
+        { added: "2026-09-23", review: true },
       ),
       plate(
         "account-type-sheet",
@@ -6571,6 +6636,13 @@ const PAGES = [
         state("confirmar"),
         { added: "2026-09-01" },
       ),
+      plate(
+        "centred-dialog",
+        "What is short is a centred dialog",
+        "The second form, for what is short: a question with its answers, a small choice. A card with its four corners rounded, 16px from the sides, centred on what the screen shows, over the same tinted and blurred page. Drawn on archiving a category; the same goes for deleting a transaction or everything on the device, undoing a payment, writing a debt off, the expired session and the choice after it, the language, the calendar and the clock. Its buttons are the ones it has today.",
+        centred(state("confirmar")),
+        { added: "2026-09-23", review: true },
+      ),
       plate("new-version", "New version available", "", state("sw-update"), {
         added: "2026-09-06",
       }),
@@ -6936,28 +7008,6 @@ const PAGES = [
         "His choice, 2026-09-15: «me parece bien la opcion de si se arrastra o se clickea se expande el formulario a su version completa». Drag the bar up — or just tap it — and quick add grows into the full transaction form — the date and the description arrive here, tags and the note come with a taller sheet — carrying the amount, the category and the note already typed. It is the same jump the “More details” button already makes, so the gesture is a shortcut and never the only way. What it costs: the bar means something in quick add and nothing in the other 37 sheets, and at 4px tall it cannot be the only way in, so “More details” stays. It is drawn wider here — 44×4 instead of 36×4 — because a bar you can tap has to look like one.",
         sheetHandleVariant("expand"),
         { added: "2026-09-15", verdict: "chosen" },
-      ),
-      plate(
-        "quick-add-bar-at-the-bottom-edge",
-        "Quick add on top \u00b7 the bar at the bottom edge",
-        "Recommended. The bar goes where every other sheet\u2019s bar now goes, to the free edge, and the gesture keeps its sense: pull it <b>down</b>, the way the sheet grows, or tap it, and quick add becomes the full form carrying what was typed, as today. With the keyboard up that edge sits just above it, under the thumb. Pulling it up does nothing, as pulling down does nothing today, and More details stays as the way that is not a gesture. Drawn with the numeric keyboard open: the segment and the amount at the top, Save at the foot; on this phone everything fits, and on a shorter one what does not scrolls between the two.",
-        quickOnTop("bottom"),
-        {
-          added: "2026-09-23",
-          verdict: "open",
-          asks: "Where the bar that opens the full form goes, with quick add on top",
-        },
-      ),
-      plate(
-        "quick-add-bar-stays-on-top",
-        "Quick add on top \u00b7 the bar stays above the title",
-        "The bar stays where it is, above the title, and becomes <b>tap only</b>: dragging it up would point off the screen, and down across the whole sheet would read as nothing. It is the one bar on the top edge while every other sheet has it at the bottom, and the pull he chose on 2026-09-15 is gone \u2014 only the tap is left.",
-        quickOnTop("top"),
-        {
-          added: "2026-09-23",
-          verdict: "open",
-          asks: "Where the bar that opens the full form goes, with quick add on top",
-        },
       ),
       plate(
         "pace-mark-tooltip-only",
@@ -7377,6 +7427,7 @@ const PAGES = [
 const ALL_PLATES = PAGES.flatMap((page) => (page.plates ?? []).map((p) => ({ ...p, page })));
 const IN_REVIEW = ALL_PLATES.filter((p) => p.review);
 const OPEN = ALL_PLATES.filter((p) => p.verdict === "open");
+const WAITING = IN_REVIEW.length + new Set(OPEN.map((p) => p.asks)).size;
 const LATEST = [...ALL_PLATES].map(plateDay).sort().at(-1);
 
 const GROUPS = ["Foundations", "Screens", "States", "Decisions"];
@@ -7411,7 +7462,7 @@ const sideNav = (current) => {
   return `<aside class="pv-side">
 <div class="pv-search"><input id="pv-q" type="search" placeholder="Search a screen or a state" autocomplete="off" aria-label="Search"><div id="pv-results" class="pv-results" hidden></div></div>
 <nav class="pv-nav">
-<div class="pv-group">${link("index.html", "Start here")}${link("in-review.html", "Waiting on you", IN_REVIEW.length + OPEN.length, IN_REVIEW.length + OPEN.length > 0 ? " waiting" : "")}${link("changes.html", "What changed")}</div>
+<div class="pv-group">${link("index.html", "Start here")}${link("in-review.html", "Waiting on you", WAITING, WAITING > 0 ? " waiting" : "")}${link("changes.html", "What changed")}</div>
 ${groups}
 </nav></aside>`;
 };
