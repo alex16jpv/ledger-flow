@@ -485,7 +485,9 @@ the only way in.
   `startMirror`. A network failure or a 5xx says nothing new about the data and pulls nothing.
 - **`ID_TAKEN` re-mints** (F-21). O-B1 with D-17 leaves that code for an id another user owns,
   so the row takes a fresh one — in the mirror, in the rows that named it, and in the queued
-  operations that named it — and goes back in line **once**. A second collision on a fresh UUID v7
+  operations that named it — and goes back in line **once**. The id moves by value wherever the
+  device wrote it, Shared rows included, except in the `importedFrom*` pointers into a group
+  somebody else shared (T-144). A second collision on a fresh UUID v7
   is a bug, not luck.
 - **A refusal the queue cannot undo.** The rollback a write registers lives in memory, so an
   operation that outlived its tab has none: it stays queued as `failed` rather than vanishing, and

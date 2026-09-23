@@ -1,10 +1,25 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { setErrorReporter } from "@/lib/observability/reporter";
-import { account, openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
+import {
+  account,
+  contact,
+  openTestVault,
+  profile,
+  sharedExpense,
+  transaction,
+  wipeVaults,
+} from "@/lib/testing/vault";
 import type { Account, SyncBatchInput, SyncOpResult } from "@/types/api";
 
 import { setCurrentVault } from "../repository/read";
-import { accountRecord, type OutboxOperation, profileRecord, transactionRecord } from "../schema";
+import {
+  accountRecord,
+  contactRecord,
+  type OutboxOperation,
+  profileRecord,
+  sharedExpenseRecord,
+  transactionRecord,
+} from "../schema";
 import { archiveAccount, createAccount, restoreAccount, updateAccount } from "./accounts";
 import type { SyncOperationInput } from "./batch";
 import {
@@ -13,6 +28,7 @@ import {
   BACKOFF_MIN_MS,
   backoffDelay,
   isSyncPaused,
+  registerRollback,
   requestSync,
   resetSyncEngine,
   resumeSyncEngine,
@@ -964,6 +980,69 @@ describe("a client id another user already owns (F-21)", () => {
 
     expect(await vault.db.get("transactions", id)).toBeUndefined();
     expect(before?.after).toMatchObject({ amount: 40 });
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+});
+
+describe("an undo registered before its row was re-minted (T-144)", () => {
+  const OLD = "01900000-0000-7000-8000-0000000000aa";
+
+  it("puts back what the write replaced under the new id, not the one that was taken", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("contacts", contactRecord(contact({ id: OLD })));
+    const before = sharedExpense({ paidByContactId: OLD, description: "Cena" });
+    await vault.db.put(
+      "sharedExpenses",
+      sharedExpenseRecord({ ...before, paidByContactId: OLD, description: "Almuerzo" }),
+    );
+    await seed(vault.db, [
+      { entity: "contact", entityId: OLD, action: "create", payload: { body: { id: OLD } } },
+      {
+        entity: "sharedExpense",
+        entityId: "s1",
+        action: "update",
+        payload: { body: { description: "Almuerzo" }, params: { groupId: "g1" } },
+        dependsOn: [OLD],
+      },
+    ]);
+    registerRollback(2, async (tx) => {
+      await tx.objectStore("sharedExpenses").put(sharedExpenseRecord(before));
+    });
+    let round = 0;
+    answers((op) => {
+      if (op.entity === "contact") {
+        return round++ === 0 ? conflictWith("ID_TAKEN") : {};
+      }
+      return round === 1
+        ? blockedBy(opsOf(fetchMock.mock.calls[0]?.[1])[0]?.opId ?? "")
+        : rejectedWith("VALIDATION");
+    });
+
+    await requestSync();
+
+    const minted = opsOf(fetchMock.mock.calls[1]?.[1]).find((op) => op.entity === "contact")?.id;
+    expect(minted).not.toBe(OLD);
+    expect(await vault.db.get("contacts", OLD)).toBeUndefined();
+    const expense = await vault.db.get("sharedExpenses", "s1");
+    expect(expense?.row).toMatchObject({ description: "Cena", paidByContactId: minted });
+  });
+
+  it("takes away the row a refused create wrote, under the id it had moved to", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("contacts", contactRecord(contact({ id: OLD })));
+    await seed(vault.db, [
+      { entity: "contact", entityId: OLD, action: "create", payload: { body: { id: OLD } } },
+    ]);
+    registerRollback(1, async (tx) => {
+      await tx.objectStore("contacts").delete(OLD);
+    });
+    let round = 0;
+    answers(() => (round++ === 0 ? conflictWith("ID_TAKEN") : rejectedWith("VALIDATION")));
+
+    await requestSync();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(await vault.db.getAll("contacts")).toEqual([]);
     expect(await pendingOperations(vault.db)).toEqual([]);
   });
 });

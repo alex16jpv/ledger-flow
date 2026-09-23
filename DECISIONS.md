@@ -4849,3 +4849,33 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
 - **Consequence:** accounts are not in the list yet, so a movement written with no network followed
   by archiving its account still conflicts with yourself (T-146); when the backend adds them, the
   front needs only the store in `STORE_OF`.
+
+## 2026-09-23 · A re-minted id moves by value, everywhere the device wrote it (T-144)
+
+- **Context:** `remint` (F-21 for `ID_TAKEN`, F-57 for a create that merged into a row the server
+  already had) moved the row and its references through a list of fields written by hand: account,
+  category, budget and transaction only. A contact, a shared group, a shared expense or a payment
+  created offline whose id somebody else already used went out again under the new id, and the
+  mirror kept the old row beside the server's, with the groups, expenses, payments and movements
+  still naming the old id. The same list had also missed a queued payment's `accountId` and the
+  `categoryId` of each line it covers.
+- **Decision:** every id the device mints is a UUID v7, so a value equal to the old id is a
+  reference to that row whatever field holds it. `remint` swaps it by value, at any depth, in every
+  row and baseline of the eight stores the outbox writes and in every queued operation's payload and
+  `dependsOn`. The one exception is `importedFromGroupId` and `importedFromExpenseId`: they point into
+  a group somebody else shared, and the id that was taken may be exactly theirs. The stores that only
+  hold what the server sent — invitations, joined groups and their expenses, the profile — are left
+  alone, because they cannot name an id the server never accepted.
+- **The stores are named by entity** (`swapMirror`, `satisfies Record<OutboxEntity, …>`), so a new
+  outbox entity does not typecheck until its store is swapped too.
+- **The undos kept in memory:** a write's rollback (`registerRollback`) holds the rows from before
+  the re-mint, so undoing a later refusal put back a row naming the taken id, and the re-minted
+  create's own undo deleted the old id and left the new row behind. After a re-mint the engine wraps
+  every pending rollback: the mirror goes back to the old id, the undo runs, and the new id is swapped
+  in again, all in the undo's transaction.
+- **Alternatives:** extending the field list to the four Shared entities (twelve more paths, nested
+  inside splits, default splits, write-offs, counterparties and `archivedOwing`), which is how the
+  list drifted in the first place and would drift again with the next field that names a row.
+- **Consequence:** a re-mint reads every row of those eight stores once. It happens only on a
+  collision of fresh UUIDs or a merge by name, so the cost is paid almost never; the account and
+  category re-mints already read every movement.

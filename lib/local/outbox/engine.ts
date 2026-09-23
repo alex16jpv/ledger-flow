@@ -6,7 +6,7 @@ import type { Account, SyncBatchResponse } from "@/types/api";
 
 import { rememberServerTime } from "../clock";
 import { currentVault } from "../repository/read";
-import type { OutboxOperation } from "../schema";
+import type { OutboxEntity, OutboxOperation } from "../schema";
 import { batchBody, chunkBatch, postBatch } from "./batch";
 import { type Cancelled, coalesce, type Collapsed } from "./coalesce";
 import { conflictKind } from "./conflict";
@@ -24,7 +24,7 @@ import {
   writeTransaction,
 } from "./queue";
 import { reconcileCarried, reconcileRemoval, reconcileRow } from "./reconcile";
-import { remint } from "./remint";
+import { remint, swapMirror } from "./remint";
 import { applyRestamps, splitRestamps } from "./restamp";
 import { routeFor, serverBaseline } from "./routes";
 import { outboxStatusStore, refreshOutboxStatus } from "./status";
@@ -119,6 +119,23 @@ function takeRollbacks(seqs: number[]): ((tx: WriteTransaction) => Promise<void>
 const forget = (seqs: number[]): void => {
   for (const seq of seqs) rollbacks.delete(seq);
 };
+
+// A rollback holds the rows from before the re-mint: it runs on the old id, and the new one comes back.
+async function remintEverywhere(
+  db: VaultDb,
+  entity: OutboxEntity,
+  oldId: string,
+  newId: string,
+): Promise<void> {
+  await remint(db, entity, oldId, newId);
+  for (const [seq, undo] of rollbacks) {
+    rollbacks.set(seq, async (tx) => {
+      await swapMirror(tx, newId, oldId);
+      await undo(tx);
+      await swapMirror(tx, oldId, newId);
+    });
+  }
+}
 
 // Resolving a conflict settles operations the engine never sent: their rollbacks go with them.
 export const forgetRollbacks = forget;
@@ -268,7 +285,7 @@ async function sendPlanned(
       }
       if (isIdTaken(error) && !operation.reminted) {
         const minted = newEntityId();
-        await remint(db, entity, entityId, minted);
+        await remintEverywhere(db, entity, entityId, minted);
         report.set(seq, { kind: "reminted", entityId: minted });
         result.progressed = true;
         result.answered = true;
@@ -403,7 +420,7 @@ async function applyLanded(run: BatchRun, entry: Collapsed, answer: BatchAnswer)
   const waiting = awaited(operation.seq);
   // F-57: the re-mint moves the id everywhere this device wrote it; no pull would fix it later.
   if (answer.mergedInto !== undefined && answer.mergedInto !== operation.entityId) {
-    await remint(db, operation.entity, operation.entityId, answer.mergedInto);
+    await remintEverywhere(db, operation.entity, operation.entityId, answer.mergedInto);
     operation = { ...operation, entityId: answer.mergedInto };
     run.stale = true;
   }
@@ -446,7 +463,7 @@ async function applyConflict(run: BatchRun, entry: Collapsed, answer: BatchAnswe
   // O-B1 with D-17: the id belongs to another user, so the row takes a new one (F-21).
   if (code === "ID_TAKEN" && !operation.reminted) {
     const minted = newEntityId();
-    await remint(db, entity, entityId, minted);
+    await remintEverywhere(db, entity, entityId, minted);
     report.set(seq, { kind: "reminted", entityId: minted });
     run.result.progressed = true;
     run.stale = true;
