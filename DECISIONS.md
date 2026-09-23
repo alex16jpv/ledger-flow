@@ -4973,6 +4973,11 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   from `getBoundingClientRect` and the gap is scaled by the same ratio, so a transformed sheet fits the
   same. The ruler is clipped to the row's width, so a long name cannot widen the sheet's scroll area.
   The quick add asks for four recents instead of five.
+- **The quick add loads on its own chunk** (`next/dynamic` in `AppFrame`). With the fitting in it, the
+  heaviest screen reached 219.9 kB gz of its 220 kB budget; with the sheet split out it is 216.7 kB.
+  It is always mounted, so its chunk is requested as the frame renders rather than on the tap, and the
+  service worker precaches the whole build, so it opens offline. A chunk missing after a deploy is the
+  same case the five sheets already split with `next/dynamic` have; this adds no new one.
 - **Alternatives (not taken):** a count per breakpoint — a long name or a larger text size still hides More. CSS
   alone (`flex-wrap` with overflow clipped to two lines) — the clipped chips stay focusable and in the
   accessibility tree, and More could be the one clipped. More outside the row — the spec
