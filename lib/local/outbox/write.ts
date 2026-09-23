@@ -1,4 +1,6 @@
 import { ApiError } from "@/lib/api/errors";
+import { reportError } from "@/lib/observability/reporter";
+import type { Restamp } from "@/types/api";
 
 import { vaultReady } from "../repository/read";
 import {
@@ -16,7 +18,9 @@ import {
   type QueueOptions,
   queueWrite,
   type VaultDb,
+  writeTransaction,
 } from "./queue";
+import { applyRestamps, splitRestamps } from "./restamp";
 import { routeFor } from "./routes";
 import { refreshOutboxStatus } from "./status";
 
@@ -26,14 +30,37 @@ export interface WriteRequest<T> {
   optimistic: (db: VaultDb) => Promise<T> | T;
 }
 
+// F-27: the write already landed, so a vault that fails here must not tell the form it did not.
+async function restampVault(db: VaultDb, restamped: Restamp[]): Promise<boolean> {
+  if (restamped.length === 0) return false;
+  const tx = writeTransaction(db);
+  try {
+    const moved = await applyRestamps(tx, restamped);
+    await tx.done;
+    return moved.rows > 0;
+  } catch (error) {
+    tx.done.catch(() => undefined);
+    try {
+      tx.abort();
+    } catch {
+      // Already gone: the failure that brought us here aborted it.
+    }
+    reportError(error, "vault");
+    return false;
+  }
+}
+
 // What the request looks like on the wire lives once, in `routes.ts`, for the engine to replay.
-async function sendDirect<T>(local: LocalWrite): Promise<T> {
+async function sendDirect<T>(local: LocalWrite, db?: VaultDb): Promise<T> {
   const route = routeFor(local.entity, local.action);
   // No vault, or a row the mirror cannot project: the write goes out as it did before O-F4.
-  const answer = (await route.send({ entityId: local.entityId, payload: local.payload }, {})) as T;
+  const { row, restamped } = splitRestamps(
+    await route.send({ entityId: local.entityId, payload: local.payload }, {}),
+  );
+  const rewrote = db !== undefined && (await restampVault(db, restamped));
   // It reached the server and left no trace in the mirror, which is what the screen reads (F-33).
-  await pullAfterDirectSend();
-  return answer;
+  await pullAfterDirectSend(rewrote);
+  return row as T;
 }
 
 // Follows a seq through the fold: an operation merged into an earlier one shares its fate.
@@ -68,7 +95,7 @@ export async function write<T>(request: WriteRequest<T>): Promise<T> {
     queued = await queueWrite(db, request.local);
   } catch (error) {
     if (!(error instanceof NotProjectableError)) throw error;
-    return sendDirect<T>(request.local);
+    return sendDirect<T>(request.local, db);
   }
   const { seq } = queued.operation;
   registerRollback(seq, queued.undo);
@@ -113,7 +140,7 @@ export async function writeAll<T>(requests: WriteRequest<T>[]): Promise<PromiseS
     requests.map(async (request, index) => {
       const entry = queued[index];
       if (entry instanceof ApiError) throw entry;
-      if (!entry) return sendDirect<T>(request.local);
+      if (!entry) return sendDirect<T>(request.local, db);
       const outcome = outcomeOf(report, entry.operation.seq);
       if (outcome?.kind === "rejected") throw outcome.error;
       if (outcome?.kind === "sent") return outcome.result as T;

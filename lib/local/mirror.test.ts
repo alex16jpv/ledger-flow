@@ -4,9 +4,23 @@ import type { SyncChangesResponse } from "@/types/api";
 
 import { VAULT } from "./db";
 import { forceFullResync, PULL_STALE_MS, startMirror } from "./mirror";
+import type * as Outbox from "./outbox";
+import type { SyncEngineOptions } from "./outbox/engine";
 import type { PullPageQuery } from "./pull";
 import { currentVault, expectVault, read, resetVaultGate, setCurrentVault } from "./repository";
 import { PROFILE_KEY, vaultDatabaseName } from "./schema";
+
+const engine = vi.hoisted(() => ({ options: undefined as SyncEngineOptions | undefined }));
+vi.mock("./outbox", async (importOriginal) => {
+  const original = await importOriginal<typeof Outbox>();
+  return {
+    ...original,
+    startSyncEngine: (options?: SyncEngineOptions) => {
+      engine.options = options;
+      return original.startSyncEngine(options);
+    },
+  };
+});
 
 const originalStorage = Object.getOwnPropertyDescriptor(navigator, "storage");
 const persist = vi.fn().mockResolvedValue(true);
@@ -25,6 +39,7 @@ const feed: SyncChangesResponse = {
 let queries: PullPageQuery[] = [];
 let clock = 0;
 let answer: (page: SyncChangesResponse) => void = () => undefined;
+let failing = false;
 const onChanged = vi.fn();
 
 function start(pending = false): () => void {
@@ -34,6 +49,7 @@ function start(pending = false): () => void {
     pull: {
       fetchPage: (query) => {
         queries.push(query);
+        if (failing) return Promise.reject(new Error("the feed is down"));
         if (!pending) return Promise.resolve(feed);
         return new Promise<SyncChangesResponse>((resolve) => {
           answer = resolve;
@@ -45,6 +61,7 @@ function start(pending = false): () => void {
 
 beforeEach(() => {
   queries = [];
+  failing = false;
   clock = 1_000_000;
   persist.mockClear();
   onChanged.mockClear();
@@ -189,6 +206,40 @@ describe("startMirror", () => {
       expect(queries).toHaveLength(2);
     });
     expect(onChanged).toHaveBeenCalledOnce();
+    stop();
+  });
+
+  // T-145: a restamped row already carries the stamp the pull brings, so its stamp says no news.
+  it("says the mirror changed after a round that restamped rows, even when the pull replays them", async () => {
+    const stop = start();
+    await vi.waitFor(() => {
+      expect(onChanged).toHaveBeenCalledOnce();
+    });
+
+    await engine.options?.afterRound?.(false);
+    expect(onChanged).toHaveBeenCalledOnce();
+
+    await engine.options?.afterRound?.(true);
+    expect(queries).toHaveLength(3);
+    expect(onChanged).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
+  it("keeps that news for the next pull when the one after the round fails", async () => {
+    const stop = start();
+    await vi.waitFor(() => {
+      expect(onChanged).toHaveBeenCalledOnce();
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    failing = true;
+    await engine.options?.afterRound?.(true);
+    expect(onChanged).toHaveBeenCalledOnce();
+
+    failing = false;
+    await engine.options?.afterRound?.(false);
+    expect(onChanged).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
     stop();
   });
 

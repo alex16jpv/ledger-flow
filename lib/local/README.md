@@ -185,7 +185,9 @@ of IndexedDB and not a request, and `changed` is **not** "rows arrived". The fee
 on purpose (D-14), so every pull after a push replays the row that was just pushed; a row counts as
 news only when its `updatedAt` is one the mirror did not already hold. Every domain is re-read rather
 than the ones whose store moved: a stale screen fails in silence, and a map from entity to the
-domains that show it drifts the first time a screen joins one more.
+domains that show it drifts the first time a screen joins one more. A restamped row (T-145) is the
+one stamp that says nothing: the mirror already holds the stamp the pull brings but not its content,
+so the engine tells the pull after that round (`afterRound(true)`) and that pull counts as news.
 
 ## Reading from it: `repository/`
 
@@ -459,6 +461,17 @@ the only way in.
   rebase still happens: when an operation lands and answers a row, whatever of that row still shares its old
   guard moves to the new stamp inside the transaction that settles it, and a guard a pull moved in
   the meantime is another device's edit, left alone to earn its conflict.
+- **Rows a write rewrote besides its own** (T-145). A movement that carries its shared expense, and
+  every Shared write that imputes payments again, rewrite other expenses and movements, and the
+  server lists them in `restamped` — each with the stamp it had and the one it has now — beside the
+  row on a route and beside `result` in `POST /sync`. `applyRestamps` moves every queued guard on
+  those rows that is **exactly** the old stamp, and the mirror's baseline when it holds that same
+  stamp, inside the transaction that settles the operation; any other stamp is another write's and
+  stays. An operation that lands after its own guard was moved rebases the ones behind it from the
+  stamp stored in the queue, not from the plan's copy. The list never reaches the mirror's row, and a write sent straight to the server because
+  the mirror could not project it moves the queue the same way. Without it, editing a split
+  movement's amount and then its split with no network ended in a conflict with yourself whenever
+  the two did not travel in the same batch.
 - **Backoff.** 1 s doubling to 60 s, with equal jitter that can only shorten the step, and never
   shorter than a 429's `Retry-After`. It is the only timer the engine owns: there is no periodic
   push and no periodic pull (§4.2).

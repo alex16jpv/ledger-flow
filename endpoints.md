@@ -2,7 +2,7 @@
 
 # lag-money-manager API endpoints
 
-Version 1.0.0 · 80 operations · 93 schemas.
+Version 1.0.0 · 80 operations · 99 schemas.
 
 Regenerate with `npm run gen:api-types` against a running backend. The client never calls these
 URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), which adds the
@@ -1099,13 +1099,13 @@ Reverses every movement it recorded — the collection, your expenses and any re
 
 **Responses**
 
-| Status | Schema          | Description                                                           |
-| ------ | --------------- | --------------------------------------------------------------------- |
-| `200`  | `Settlement`    | The undone payment (also when it was already undone)                  |
-| `400`  | `ErrorResponse` | Invalid ID format (code VALIDATION)                                   |
-| `401`  | `ErrorResponse` | Unauthorized                                                          |
-| `404`  | `ErrorResponse` | Payment not found (uniform for missing and not owned)                 |
-| `409`  | `ErrorResponse` | The resource changed since the `If-Match` version (code STALE_UPDATE) |
+| Status | Schema                   | Description                                                           |
+| ------ | ------------------------ | --------------------------------------------------------------------- |
+| `200`  | `SettlementWithRestamps` | The undone payment (also when it was already undone)                  |
+| `400`  | `ErrorResponse`          | Invalid ID format (code VALIDATION)                                   |
+| `401`  | `ErrorResponse`          | Unauthorized                                                          |
+| `404`  | `ErrorResponse`          | Payment not found (uniform for missing and not owned)                 |
+| `409`  | `ErrorResponse`          | The resource changed since the `If-Match` version (code STALE_UPDATE) |
 
 ## Shared groups
 
@@ -1228,13 +1228,13 @@ Idempotent — archiving an already-archived group answers it unchanged. Its exp
 
 **Responses**
 
-| Status | Schema                | Description                                                           |
-| ------ | --------------------- | --------------------------------------------------------------------- |
-| `200`  | `SharedGroup`         | The archived group (also when it was already archived)                |
-| `400`  | `ErrorResponse`       | Invalid ID format (code VALIDATION)                                   |
-| `401`  | `ErrorResponse`       | Unauthorized                                                          |
-| `404`  | `ErrorResponse`       | Shared group not found (uniform for missing and not owned)            |
-| `409`  | `SharedGroupConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE) |
+| Status | Schema                    | Description                                                           |
+| ------ | ------------------------- | --------------------------------------------------------------------- |
+| `200`  | `SharedGroupWithRestamps` | The archived group (also when it was already archived)                |
+| `400`  | `ErrorResponse`           | Invalid ID format (code VALIDATION)                                   |
+| `401`  | `ErrorResponse`           | Unauthorized                                                          |
+| `404`  | `ErrorResponse`           | Shared group not found (uniform for missing and not owned)            |
+| `409`  | `SharedGroupConflict`     | The resource changed since the `If-Match` version (code STALE_UPDATE) |
 
 ### `GET /shared-groups/{id}/expenses`
 
@@ -1281,14 +1281,14 @@ Accepts a client-minted `id`, with the usual replay.
 
 **Responses**
 
-| Status | Schema          | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `SharedExpense` | Replay of a create already made with this client-minted id                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `201`  | `SharedExpense` | Expense recorded                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `400`  | `ErrorResponse` | Validation error (code VALIDATION), a split that cannot describe one (code SPLIT_INVALID), somebody in the split who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a date more than 24h ahead (code FUTURE_DATE), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), an archived group (code RESOURCE_ARCHIVED), a movement that is already in a group (code TRANSACTION_ALREADY_SHARED), one that is not an expense (code TRANSACTION_NOT_SPLITTABLE) or one in another currency (code CURRENCY_MISMATCH) |
-| `401`  | `ErrorResponse` | Unauthorized                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `404`  | `ErrorResponse` | Shared group not found, or a `transactionId` that names no movement of the caller's (uniform for missing and not owned)                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `409`  | `ErrorResponse` | The client-minted id is already in use (code ID_TAKEN)                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Status | Schema                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------ | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SharedExpenseWithRestamps` | Replay of a create already made with this client-minted id                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `201`  | `SharedExpenseWithRestamps` | Expense recorded                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `400`  | `ErrorResponse`             | Validation error (code VALIDATION), a split that cannot describe one (code SPLIT_INVALID), somebody in the split who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a date more than 24h ahead (code FUTURE_DATE), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), an archived group (code RESOURCE_ARCHIVED), a movement that is already in a group (code TRANSACTION_ALREADY_SHARED), one that is not an expense (code TRANSACTION_NOT_SPLITTABLE) or one in another currency (code CURRENCY_MISMATCH) |
+| `401`  | `ErrorResponse`             | Unauthorized                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `404`  | `ErrorResponse`             | Shared group not found, or a `transactionId` that names no movement of the caller's (uniform for missing and not owned)                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `409`  | `ErrorResponse`             | The client-minted id is already in use (code ID_TAKEN)                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 ### `GET /shared-groups/{id}/expenses/{expenseId}`
 
@@ -1328,13 +1328,13 @@ The expense has to belong to the group in the path: reaching one of your own exp
 
 **Responses**
 
-| Status | Schema                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `SharedExpense`         | Expense updated                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `400`  | `ErrorResponse`         | Validation error (code VALIDATION), a split that cannot describe one (code SPLIT_INVALID), somebody in the split who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a date more than 24h ahead (code FUTURE_DATE), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), restating what the linked movement states (code SHARED_EXPENSE_LINKED), or the expense is deleted or its group archived (code RESOURCE_ARCHIVED) |
-| `401`  | `ErrorResponse`         | Unauthorized                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `404`  | `ErrorResponse`         | Shared expense not found (uniform for missing and not owned)                                                                                                                                                                                                                                                                                                                                                                           |
-| `409`  | `SharedExpenseConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE)                                                                                                                                                                                                                                                                                                                                                                  |
+| Status | Schema                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SharedExpenseWithRestamps` | Expense updated                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `400`  | `ErrorResponse`             | Validation error (code VALIDATION), a split that cannot describe one (code SPLIT_INVALID), somebody in the split who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a date more than 24h ahead (code FUTURE_DATE), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), restating what the linked movement states (code SHARED_EXPENSE_LINKED), or the expense is deleted or its group archived (code RESOURCE_ARCHIVED) |
+| `401`  | `ErrorResponse`             | Unauthorized                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `404`  | `ErrorResponse`             | Shared expense not found (uniform for missing and not owned)                                                                                                                                                                                                                                                                                                                                                                           |
+| `409`  | `SharedExpenseConflict`     | The resource changed since the `If-Match` version (code STALE_UPDATE)                                                                                                                                                                                                                                                                                                                                                                  |
 
 ### `DELETE /shared-groups/{id}/expenses/{expenseId}`
 
@@ -1350,13 +1350,13 @@ When the expense was a movement of yours, **the movement is not deleted**: it le
 
 **Responses**
 
-| Status | Schema                  | Description                                                           |
-| ------ | ----------------------- | --------------------------------------------------------------------- |
-| `200`  | `SharedExpense`         | The deleted expense (also when it was already deleted)                |
-| `400`  | `ErrorResponse`         | Invalid ID format (code VALIDATION)                                   |
-| `401`  | `ErrorResponse`         | Unauthorized                                                          |
-| `404`  | `ErrorResponse`         | Shared expense not found (uniform for missing and not owned)          |
-| `409`  | `SharedExpenseConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE) |
+| Status | Schema                      | Description                                                           |
+| ------ | --------------------------- | --------------------------------------------------------------------- |
+| `200`  | `SharedExpenseWithRestamps` | The deleted expense (also when it was already deleted)                |
+| `400`  | `ErrorResponse`             | Invalid ID format (code VALIDATION)                                   |
+| `401`  | `ErrorResponse`             | Unauthorized                                                          |
+| `404`  | `ErrorResponse`             | Shared expense not found (uniform for missing and not owned)          |
+| `409`  | `SharedExpenseConflict`     | The resource changed since the `If-Match` version (code STALE_UPDATE) |
 
 ### `GET /shared-groups/{id}/invitations`
 
@@ -1534,13 +1534,13 @@ Idempotent, and undone with `DELETE` while the group is open.
 
 **Responses**
 
-| Status | Schema                | Description                                                                                                                                        |
-| ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `SharedGroup`         | The group, with what it now counts as owed                                                                                                         |
-| `400`  | `ErrorResponse`       | Validation error (code VALIDATION), somebody who is not in the group (code PARTICIPANT_NOT_IN_GROUP) or an archived group (code RESOURCE_ARCHIVED) |
-| `401`  | `ErrorResponse`       | Unauthorized                                                                                                                                       |
-| `404`  | `ErrorResponse`       | Shared group or expense not found (uniform for missing and not owned)                                                                              |
-| `409`  | `SharedGroupConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE)                                                                              |
+| Status | Schema                    | Description                                                                                                                                        |
+| ------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SharedGroupWithRestamps` | The group, with what it now counts as owed                                                                                                         |
+| `400`  | `ErrorResponse`           | Validation error (code VALIDATION), somebody who is not in the group (code PARTICIPANT_NOT_IN_GROUP) or an archived group (code RESOURCE_ARCHIVED) |
+| `401`  | `ErrorResponse`           | Unauthorized                                                                                                                                       |
+| `404`  | `ErrorResponse`           | Shared group or expense not found (uniform for missing and not owned)                                                                              |
+| `409`  | `SharedGroupConflict`     | The resource changed since the `If-Match` version (code STALE_UPDATE)                                                                              |
 
 ### `DELETE /shared-groups/{id}/write-offs/{partyId}`
 
@@ -1555,13 +1555,13 @@ What they owe is owed again, and the history says so. Idempotent, and only while
 
 **Responses**
 
-| Status | Schema                | Description                                                                       |
-| ------ | --------------------- | --------------------------------------------------------------------------------- |
-| `200`  | `SharedGroup`         | The group, with what it now counts as owed                                        |
-| `400`  | `ErrorResponse`       | Invalid ID format (code VALIDATION) or an archived group (code RESOURCE_ARCHIVED) |
-| `401`  | `ErrorResponse`       | Unauthorized                                                                      |
-| `404`  | `ErrorResponse`       | Shared group not found (uniform for missing and not owned)                        |
-| `409`  | `SharedGroupConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE)             |
+| Status | Schema                    | Description                                                                       |
+| ------ | ------------------------- | --------------------------------------------------------------------------------- |
+| `200`  | `SharedGroupWithRestamps` | The group, with what it now counts as owed                                        |
+| `400`  | `ErrorResponse`           | Invalid ID format (code VALIDATION) or an archived group (code RESOURCE_ARCHIVED) |
+| `401`  | `ErrorResponse`           | Unauthorized                                                                      |
+| `404`  | `ErrorResponse`           | Shared group not found (uniform for missing and not owned)                        |
+| `409`  | `SharedGroupConflict`     | The resource changed since the `If-Match` version (code STALE_UPDATE)             |
 
 ## Stats
 
@@ -1880,13 +1880,13 @@ restate the split on the expense first. Changing its type is refused
 
 **Responses**
 
-| Status | Schema                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `Transaction`         | Transaction updated                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `400`  | `ErrorResponse`       | Validation error. Codes include SPLIT_INVALID and TRANSACTION_NOT_SPLITTABLE (a movement in a shared group), FUTURE_DATE, CURRENCY_MISMATCH, INCOME_ON_CARD_OR_LOAN (an income moved onto an account type listed in `IncomeRefusedAccountType`), AMOUNT_PRECISION (only when the edit carries an amount) and LOAN_OVERPAID (a movement that would leave a LOAN above zero), the first and the last checked again whenever the edit moves money, CATEGORY_ARCHIVED (assigning an archived category; keeping the one it already had is allowed), CATEGORY_TYPE_MISMATCH. |
-| `401`  | —                     | Unauthorized                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `404`  | —                     | Transaction, category, or account not found (or not owned by the user)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `409`  | `TransactionConflict` | The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy)                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Status | Schema                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------ | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `TransactionWithRestamps` | Transaction updated                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `400`  | `ErrorResponse`           | Validation error. Codes include SPLIT_INVALID and TRANSACTION_NOT_SPLITTABLE (a movement in a shared group), FUTURE_DATE, CURRENCY_MISMATCH, INCOME_ON_CARD_OR_LOAN (an income moved onto an account type listed in `IncomeRefusedAccountType`), AMOUNT_PRECISION (only when the edit carries an amount) and LOAN_OVERPAID (a movement that would leave a LOAN above zero), the first and the last checked again whenever the edit moves money, CATEGORY_ARCHIVED (assigning an archived category; keeping the one it already had is allowed), CATEGORY_TYPE_MISMATCH. |
+| `401`  | —                         | Unauthorized                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `404`  | —                         | Transaction, category, or account not found (or not owned by the user)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `409`  | `TransactionConflict`     | The resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy)                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 ### `DELETE /transactions/{id}`
 
@@ -1902,7 +1902,7 @@ Deletes the transaction (soft delete) and reverses any balance changes on associ
 
 | Status | Schema                | Description                                                                                                |
 | ------ | --------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `200`  | `Message`             | Transaction deleted                                                                                        |
+| `200`  | `MessageWithRestamps` | Transaction deleted                                                                                        |
 | `400`  | —                     | Invalid ID format                                                                                          |
 | `401`  | —                     | Unauthorized                                                                                               |
 | `404`  | —                     | Transaction not found                                                                                      |
