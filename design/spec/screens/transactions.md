@@ -106,6 +106,11 @@ Without this list, a figure that falls two weeks later in a month already closed
 A participant can read `Paid` here and `Partially paid` in the group, because a payment covers the
 **oldest expense first** ([shared.md](shared.md)).
 
+**While a write to its group waits in the queue** (`#shared-expense-pending`), the card marks what that
+write touches and nothing else, by the rule of [shared.md](shared.md): the lead figure when its group is
+marked or the movement itself was edited here, a person's row when their figure in the group is, and a guests' payment row with its own
+`Pending sync`. The history is not marked: every line of it is one the server wrote.
+
 ## Added from a group shared with you
 
 An expense created by `Add to my ledger` ([shared.md](shared.md#add-to-my-ledger-add-to-my-ledger)) is
@@ -131,7 +136,8 @@ them is a deletion.
 
 While the write waits, the row carries the `warning` badge "Pending sync" (`cloud-off`); when its
 operation is in conflict or was refused, the badge becomes `danger` **"Needs attention"**. In both
-cases the metadata adds "Saved on this device".
+cases the metadata adds "Saved on this device". A movement put into a shared group with no network
+carries it too, because its `Shared` badge and its share are the group's write that is waiting.
 
 ## Offline with no local copy (`#offline-without-a-copy`)
 

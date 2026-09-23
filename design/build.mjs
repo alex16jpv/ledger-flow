@@ -1129,6 +1129,7 @@ const transactionDetail = ({
   shared = false,
   splitting = false,
   guestPayments = false,
+  sharedPending = false,
   sheet = "",
 } = {}) => {
   let pend = pending
@@ -1185,12 +1186,12 @@ const transactionDetail = ({
   const sharedCard = shared
     ? `<section class="card color-TEAL stack-sm">
 <div class="card-head"><h3 class="h3">${tile("users", "TEAL", "sm")}Cartagena trip</h3><a class="link" href="#">Open group</a></div>
-<span class="amount-lg amount">${money(600000)}</span>
+${pendingFigure(`<span class="amount-lg amount">${money(600000)}</span>`, sharedPending)}
 <span class="small muted">counts as yours, and it is what Stats and your budgets use. Your share is ${moneyText(300000)}; Lucía’s ${moneyText(300000)} was written off, so it stays yours.</span>
 <div class="list" style="margin:0 -16px 0">
 ${personRow("You", "Your share · Travel, August", 300000, "yours")}
 ${personRow("Ana Ruiz", "Paid Sep 18", 300000, "of $300,000", STATE_BADGE.paid)}
-${personRow("Beto Cano", "Paid Sep 20 · oldest expense first", 300000, "of $300,000", STATE_BADGE.paid)}
+${personRow("Beto Cano", "Paid Sep 20 · oldest expense first", 300000, "of $300,000", STATE_BADGE.paid, sharedPending)}
 ${personRow("Lucía Mesa", "Written off Sep 21", 300000, "never paid", STATE_BADGE.off)}
 </div>
 ${
@@ -1467,9 +1468,14 @@ const MAIN_BADGE = `<span class="badge brand">${iconSvg("star")}Main</span>`;
 const holdCard = (name, typ, color, balance, isDefault = false) =>
   acctCardFace({ name, typ, color, balance }, { badge: isDefault ? MAIN_BADGE : "" });
 
-const twoFigureCard = (leftLabel, leftValue, leftMeta, rightLabel, rightValue) =>
-  `<div class="card" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div class="stat"><span class="k">${leftLabel}</span><span class="amount-hero" style="font-size:32px">${money(leftValue)}</span><span class="small faint">${leftMeta}</span></div>
-<div class="stat" style="text-align:right;align-items:flex-end"><span class="k">${rightLabel}</span><span class="amount-lg amount">${money(rightValue)}</span></div></div>`;
+const SYNC_MARK = `<span class="tooltip">${iconSvg("cloud-off")}<span class="tip">Includes changes not yet synced</span></span>`;
+const PENDING_SYNC = `<span class="badge warning">${iconSvg("cloud-off")}Pending sync</span>`;
+const pendingFigure = (html, on = true, align = "") =>
+  on ? `<span class="projected${align ? ` ${align}` : ""}">${html}${SYNC_MARK}</span>` : html;
+
+const twoFigureCard = (leftLabel, leftValue, leftMeta, rightLabel, rightValue, pending = false) =>
+  `<div class="card" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div class="stat"><span class="k">${leftLabel}</span>${pendingFigure(`<span class="amount-hero" style="font-size:32px">${money(leftValue)}</span>`, pending)}<span class="small faint">${leftMeta}</span></div>
+<div class="stat" style="text-align:right;align-items:flex-end"><span class="k">${rightLabel}</span>${pendingFigure(`<span class="amount-lg amount">${money(rightValue)}</span>`, pending)}</div></div>`;
 
 const debtSummary = (yours = YOURS, owed = OWED, active = 5) =>
   twoFigureCard(
@@ -4024,10 +4030,10 @@ const face = (name, size = "") => {
   return `<span class="avatar person ${size} color-${color}" aria-hidden="true">${initials}</span>`;
 };
 
-const personRow = (name, meta, amt, note, badge = "") =>
+const personRow = (name, meta, amt, note, badge = "", pending = false) =>
   `<a class="row" href="#">${face(name)}
 <span class="body"><span class="title"><span class="truncate">${name}</span>${badge}</span><span class="meta">${meta}</span></span>
-<span class="right"><span class="amount">${money(amt)}</span><span class="sub">${note}</span></span></a>`;
+<span class="right">${pendingFigure(`<span class="amount">${money(amt)}</span>`, pending)}<span class="sub">${note}</span></span></a>`;
 
 const STATE_BADGE = {
   paid: '<span class="badge success">Paid</span>',
@@ -4036,13 +4042,14 @@ const STATE_BADGE = {
   off: `<span class="badge">${iconSvg("circle-x")}Written off</span>`,
 };
 
-const sharedSummary = () =>
+const sharedSummary = (pending = false) =>
   twoFigureCard(
     "Owed to you",
-    OWED_TO_YOU,
+    OWED_TO_YOU - (pending ? PENDING_PAYMENT : 0),
     "3 people with something open · 23 contacts",
     "You owe",
     YOU_OWE,
+    pending,
   );
 
 const sharedSeg = (on) =>
@@ -4057,14 +4064,14 @@ const sharedScreen = (body, o = {}) =>
     ...o,
   });
 
-const sharedPeopleBody = () => `${sharedSeg("people")}
-${sharedSummary()}
-<section class="stack-sm"><div class="section-head"><h3 class="h3">Owes you</h3><span class="small muted amount">${money(OWED_TO_YOU)}</span></div>
+const sharedPeopleBody = (pending = false) => `${sharedSeg("people")}
+${sharedSummary(pending)}
+<section class="stack-sm"><div class="section-head"><h3 class="h3">Owes you</h3>${pendingFigure(`<span class="small muted amount">${money(OWED_TO_YOU - (pending ? PENDING_PAYMENT : 0))}</span>`, pending)}</div>
 <div class="list card flush">
-${personRow("Beto Cano", "Cartagena trip · Night out", 526300, "owes you")}
+${personRow("Beto Cano", "Cartagena trip · Night out", 526300 - (pending ? PENDING_PAYMENT : 0), "owes you", "", pending)}
 ${personRow("Ana Ruiz", "Cartagena trip · Night out", 26300, "owes you")}
 </div></section>
-<section class="stack-sm"><div class="section-head"><h3 class="h3">You owe</h3><span class="small muted amount">${money(YOU_OWE)}</span></div>
+<section class="stack-sm"><div class="section-head"><h3 class="h3">You owe</h3>${pendingFigure(`<span class="small muted amount">${money(YOU_OWE)}</span>`, pending)}</div>
 <div class="list card flush">
 ${personRow("Diego Pardo", "Diego’s birthday gift", 60000, "you owe")}
 </div></section>
@@ -4073,11 +4080,28 @@ ${personRow("Diego Pardo", "Diego’s birthday gift", 60000, "you owe")}
 
 const sharedPeople = () => sharedScreen(sharedPeopleBody());
 
-const groupRow = (name, color, when, people, total, yours, pct, gauge, badge = "") =>
+const PENDING_PAYMENT = 200000;
+const WAITING_BANNER = `<div class="banner offline" role="status">${iconSvg("cloud-off")}<span class="txt"><b>Changes waiting to sync.</b> They are saved on this device.<span class="sub">1 change waiting</span></span></div>`;
+
+const sharedPeoplePending = () => sharedScreen(sharedPeopleBody(true), { banner: WAITING_BANNER });
+
+const groupRow = (
+  name,
+  color,
+  when,
+  people,
+  total,
+  yours,
+  pct,
+  gauge,
+  badge = "",
+  pending = false,
+  saved = false,
+) =>
   `<a class="row color-${color}" href="#">${tile("users", color)}
-<span class="body"><span class="title"><span class="truncate">${name}</span>${badge}</span><span class="meta">${when} · ${people} people</span>
-${gauge === null ? "" : `<span style="display:flex;flex-direction:column;gap:3px;padding-top:6px"><div class="progress thin"><span class="fill" style="width:${pct}%"></span></div><span class="xs faint">${gauge}</span></span>`}</span>
-<span class="right"><span class="amount">${money(total)}</span><span class="sub">Your share ${moneyText(yours)}</span></span></a>`;
+<span class="body"><span class="title"><span class="truncate">${name}</span>${badge}</span><span class="meta">${when} · ${people} people${saved ? " · Saved on this device" : ""}</span>
+${gauge === null ? "" : `<span style="display:flex;flex-direction:column;gap:3px;padding-top:6px">${pendingFigure(`<div class="progress thin" style="flex:1"><span class="fill" style="width:${pct}%"></span></div>`, pending, "center")}<span class="xs faint">${gauge}</span></span>`}</span>
+<span class="right">${pendingFigure(`<span class="amount">${money(total)}</span>`, pending)}<span class="sub">Your share ${moneyText(yours)}</span></span></a>`;
 
 const sharedGroups = () =>
   sharedScreen(`${sharedSeg("groups")}
@@ -4091,6 +4115,19 @@ ${groupRow("Diego’s birthday gift", "PINK", "Sep 8", 3, 180000, 60000, 0, null
 <div class="list card flush">
 ${groupRow("Office lunch", "AMBER", "Aug 27", 5, 240000, 48000, 100, "$192,000 paid of $192,000", '<span class="badge success">Settled</span>')}
 </div>`);
+
+const sharedGroupsPending = () =>
+  sharedScreen(
+    `${sharedSeg("groups")}
+${sharedSummary(true)}
+<div class="list card flush">
+${groupRow("Coffee farm tour", "GREEN", "Sep 23", 3, 150000, 50000, 0, "$0 paid of $100,000", PENDING_SYNC, true, true)}
+${groupRow("Cartagena trip", "TEAL", "Aug 29 – Sep 12", 4, 3200000, 800000, 54, "$1,300,000 paid of $2,400,000", "", true)}
+${groupRow("Night out", "PURPLE", "Sep 20", 3, 228900, 86300, 0, "$0 paid of $52,600", "", true)}
+${groupRow("Diego’s birthday gift", "PINK", "Sep 8", 3, 180000, 60000, 0, null, '<span class="badge">You owe $60,000</span>')}
+</div>`,
+    { banner: WAITING_BANNER.replace("1 change waiting", "2 changes waiting") },
+  );
 
 const sharedEmpty = () =>
   sharedScreen(`<div class="empty"><span class="tile lg outline">${iconSvg("users")}</span>
@@ -4127,17 +4164,17 @@ const GROUP_LINES = [
   ["Taxi to the airport", "car", "BLUE", "Sep 12", 80000, 20000],
 ];
 
-const groupDetail = ({ sheet = "", archived = false } = {}) => {
-  const lines = GROUP_LINES.map(
-    ([name, icon, color, when, total, yours]) =>
-      `<a class="row" href="#">${tile(icon, color)}<span class="body"><span class="title"><span class="truncate">${name}</span></span><span class="meta">${when} · you paid</span></span><span class="right">${amount(total, "expense")}<span class="sub">Your share ${moneyText(yours)}</span></span></a>`,
-  ).join("");
+const groupDetail = ({ sheet = "", archived = false, pending = false } = {}) => {
+  const lines = GROUP_LINES.map(([name, icon, color, when, total, yours], index) => {
+    const queued = pending && index === GROUP_LINES.length - 1;
+    return `<a class="row" href="#">${tile(icon, color)}<span class="body"><span class="title"><span class="truncate">${name}</span>${queued ? PENDING_SYNC : ""}</span><span class="meta">${when} · you paid${queued ? " · Saved on this device" : ""}</span></span><span class="right">${amount(total, "expense")}<span class="sub">Your share ${moneyText(yours)}</span></span></a>`;
+  }).join("");
   const body = `<section class="card color-TEAL stack-sm" style="gap:6px;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--f)"></span>
 <div class="hstack" style="justify-content:space-between">${tile("users", "TEAL")}<span class="badge outline">${iconSvg("calendar")}Aug 29 – Sep 12</span></div>
 <span class="eyebrow" style="margin-top:6px">4 people · ${archived ? "archived" : "open"}</span><span class="h2">Cartagena trip</span>
-<span class="amount-hero" style="font-size:32px">${money(2100000)}</span>
+${pendingFigure(`<span class="amount-hero" style="font-size:32px">${money(2100000)}</span>`, pending)}
 <span class="small muted">counts as yours · total <b class="amount">${money(3200000)}</b> · your share <b class="amount">${money(800000)}</b></span>
-<div style="display:flex;flex-direction:column;gap:4px;padding-top:10px"><div class="progress thin"><span class="fill" style="width:46%"></span></div><span class="xs faint">$1,100,000 paid of $2,400,000</span></div>
+<div style="display:flex;flex-direction:column;gap:4px;padding-top:10px">${pendingFigure(`<div class="progress thin" style="flex:1"><span class="fill" style="width:46%"></span></div>`, pending, "center")}<span class="xs faint">$1,100,000 paid of $2,400,000</span></div>
 <span class="small muted" style="padding-top:2px">${moneyText(500000)} is still owed to you, and ${moneyText(800000)} was written off — that part stays counted as yours.</span></section>
 ${
   archived
@@ -4148,10 +4185,10 @@ ${
 }
 <section class="stack-sm"><div class="section-head"><h3 class="h3">People</h3><a class="link" href="#">Equal split by default</a></div>
 <div class="list card flush">
-${personRow("You", "Nothing to collect from yourself", 800000, "share")}
-${personRow("Ana Ruiz", "Paid in full on Sep 18 · into Bancolombia", 800000, "share", STATE_BADGE.paid)}
-${personRow("Beto Cano", "Paid $300,000 · $500,000 still owed", 800000, "share", STATE_BADGE.partial)}
-${personRow("Lucía Mesa", "Written off Sep 21 · the $800,000 stays yours", 800000, "share", STATE_BADGE.off)}
+${personRow("You", "Nothing to collect from yourself", 800000, "share", "", pending)}
+${personRow("Ana Ruiz", "Paid in full on Sep 18 · into Bancolombia", 800000, "share", STATE_BADGE.paid, pending)}
+${personRow("Beto Cano", "Paid $300,000 · $500,000 still owed", 800000, "share", STATE_BADGE.partial, pending)}
+${personRow("Lucía Mesa", "Written off Sep 21 · the $800,000 stays yours", 800000, "share", STATE_BADGE.off, pending)}
 ${archived ? "" : inviteDoor()}
 </div></section>
 <section class="stack-sm"><div class="section-head"><h3 class="h3">Expenses · 5</h3><a class="link" href="#">Add expense</a></div>
@@ -4162,30 +4199,38 @@ ${archived ? "" : inviteDoor()}
     back: true,
     title: "Shared group",
     sheet,
+    ...(pending ? { banner: WAITING_BANNER } : {}),
     actions: `<button class="btn ghost icon-only round" aria-label="More">${iconSvg("ellipsis")}</button>`,
   });
 };
 
-const personDetail = ({ sheet = "" } = {}) =>
+const personDetail = ({ sheet = "", pending = false } = {}) =>
   screen(
     `<div class="card color-TEAL stack-sm" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${face("Beto Cano", "lg")}
 <span class="h2">Beto Cano</span><span class="small muted">beto@example.com</span>
-<span class="amount-hero" style="font-size:36px">${money(526300)}</span>
+${pendingFigure(`<span class="amount-hero" style="font-size:36px">${money(526300 - (pending ? PENDING_PAYMENT : 0))}</span>`, pending)}
 <span class="small muted">owes you, across 2 shared groups</span>
 <button class="btn primary lg" style="margin-top:6px">${iconSvg("hand-coins", "sm")}Settle up</button></div>
 <section class="stack-sm"><div class="section-head"><h3 class="h3">Shared groups</h3></div>
 <div class="list card flush">
-<a class="row" href="#">${tile("users", "TEAL")}<span class="body"><span class="title"><span class="truncate">Cartagena trip</span>${STATE_BADGE.partial}</span><span class="meta">Aug 29 – Sep 12 · paid $300,000 of $800,000</span></span><span class="right"><span class="amount">${money(500000)}</span><span class="sub">owes you</span></span></a>
-<a class="row" href="#">${tile("users", "PURPLE")}<span class="body"><span class="title"><span class="truncate">Night out</span>${STATE_BADGE.unpaid}</span><span class="meta">Sep 20 · nothing paid yet</span></span><span class="right"><span class="amount">${money(26300)}</span><span class="sub">owes you</span></span></a>
+<a class="row" href="#">${tile("users", "TEAL")}<span class="body"><span class="title"><span class="truncate">Cartagena trip</span>${STATE_BADGE.partial}</span><span class="meta">Aug 29 – Sep 12 · paid ${pending ? "$500,000" : "$300,000"} of $800,000</span></span><span class="right">${pendingFigure(`<span class="amount">${money(500000 - (pending ? PENDING_PAYMENT : 0))}</span>`, pending)}<span class="sub">owes you</span></span></a>
+<a class="row" href="#">${tile("users", "PURPLE")}<span class="body"><span class="title"><span class="truncate">Night out</span>${STATE_BADGE.unpaid}</span><span class="meta">Sep 20 · nothing paid yet</span></span><span class="right">${pendingFigure(`<span class="amount">${money(26300)}</span>`, pending)}<span class="sub">owes you</span></span></a>
 </div></section>
 <section class="stack-sm"><div class="section-head"><h3 class="h3">Payments</h3></div>
-<div class="list card flush">
+<div class="list card flush">${pending ? `<a class="row" href="#">${tile("hand-coins", "GRAY")}<span class="body"><span class="title"><span class="truncate">Paid you ${moneyText(PENDING_PAYMENT)}</span>${PENDING_SYNC}</span><span class="meta">Sep 23 · Saved on this device</span></span><span class="right"><span class="amount">${money(PENDING_PAYMENT)}</span></span></a>` : ""}
 <a class="row" href="#">${tile("hand-coins", "GRAY")}<span class="body"><span class="title"><span class="truncate">Paid you $300,000</span></span><span class="meta">Sep 20</span></span><span class="right"><span class="amount">${money(300000)}</span></span></a>
 <a class="row" href="#">${tile("hand-coins", "GRAY")}<span class="body"><span class="title"><span class="truncate">Paid you $26,300</span></span><span class="meta">Sep 12 · in cash, outside the app</span></span><span class="right"><span class="amount">${money(26300)}</span></span></a>
 </div></section>
 <div class="hstack" style="gap:10px"><button class="btn secondary lg" style="flex:1">${iconSvg("pencil", "sm")}Edit</button><button class="btn secondary lg" style="flex:1">${iconSvg("archive", "sm")}Archive</button></div>
 <p class="xs faint" style="text-align:center;margin:0">A person is not an account: Beto has no balance of his own and never appears among your accounts, in a transfer, or in Stats by account. The money moves in your accounts, as it always has.</p>`,
-    { tab: "mas", side: "shared", back: true, title: "Person", sheet },
+    {
+      tab: "mas",
+      side: "shared",
+      back: true,
+      title: "Person",
+      sheet,
+      ...(pending ? { banner: WAITING_BANNER } : {}),
+    },
   );
 
 const undoPayment = () =>
@@ -5327,6 +5372,13 @@ const PAGES = [
         { added: "2026-09-20" },
       ),
       plate(
+        "shared-expense-pending",
+        "A shared expense · a payment not synced yet",
+        "Beto’s payment is still on this device. The card follows its group: the lead figure is marked, and so is Beto’s row, because his figure here includes it. Everybody else’s row carries nothing, and the history is never marked — every line of it is one the server wrote.",
+        transactionDetail({ shared: true, sharedPending: true }),
+        { added: "2026-09-23" },
+      ),
+      plate(
         "shared-expense-guest-payments",
         "A shared expense · what the guests have paid",
         "A block of guests lives in <b>this expense alone</b>: it is not a person, it never reaches the <code>People</code> face, and it has no page of its own. So its payments are listed here and nowhere else, and each one undoes itself like any other (<code>shared.html#undo-a-payment</code>). Without this list a payment to a block could not be taken back \u2014 and the expense could not be deleted either, because the server refuses to lose a block that has paid.",
@@ -5575,6 +5627,34 @@ const PAGES = [
         "The invitation still shows — it came down with everything else — but answering waits for a connection: the answer goes to somebody else, and only the server can tell whether the invitation still stands.",
         sharedInvitationsOffline(),
         { added: "2026-09-22" },
+      ),
+      plate(
+        "pending-people",
+        "Not synced yet · People",
+        "A payment from Beto was recorded with no connection. It marks what it touches and nothing else (owner’s decision, 2026-09-23): Beto’s net, and the two figures on top, which add up everybody and move together. Ana and Diego are untouched, so their figures carry nothing.",
+        sharedPeoplePending(),
+        { added: "2026-09-23" },
+      ),
+      plate(
+        "pending-groups",
+        "Not synced yet · Shared groups",
+        "The same payment on the other face: a payment covers the oldest line first across every group shared with that person, so <b>both</b> of Beto’s groups are marked, and Diego’s gift is not. Coffee farm tour was created here, so the row itself is the write and says <i>Pending sync</i>, like a Transactions row.",
+        sharedGroupsPending(),
+        { added: "2026-09-23" },
+      ),
+      plate(
+        "pending-group",
+        "Not synced yet · a group",
+        "An expense recorded here with no connection. The row that <b>is</b> the write carries <i>Pending sync</i> and <i>Saved on this device</i>; an expense changes everybody’s share, so the lead figure, the bar and every person’s figure carry the projection mark — and so do Ana, Beto and Lucía wherever else they appear, because their payments are spread over their lines again. When the operation is refused, the badge turns <i>Needs attention</i>.",
+        groupDetail({ pending: true }),
+        { added: "2026-09-23" },
+      ),
+      plate(
+        "pending-person",
+        "Not synced yet · a person",
+        "Beto’s side of the same payment. The payment row is the write; his net and his figure in each group include it. Undoing a payment with no connection marks exactly the same figures.",
+        personDetail({ pending: true }),
+        { added: "2026-09-23" },
       ),
       plate(
         "invitations-in-more",

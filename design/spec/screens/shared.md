@@ -648,8 +648,48 @@ touched. Archiving does not end it.
 unit, and what is left to assign is what says the figures do not add up yet.
 
 Offline, everything in this section is projected from the local mirror like every other figure, and
-whatever includes an unconfirmed write carries the projection mark (component 24). A group is yours
-alone until somebody accepts an invitation to it (`#invitations`).
+what has not reached the server says so (`#pending-people`, below). A group is yours alone until
+somebody accepts an invitation to it (`#invitations`).
+
+## What has not reached the server (`#pending-people`, `#pending-groups`, `#pending-group`, `#pending-person`)
+
+Every write in this section works with no network and waits in the queue like any other, so the
+section uses the two marks the rest of the app already uses, and no third one:
+
+- **A row that is itself the write** carries the `warning` badge **`Pending sync`** (`cloud-off`) and
+  the metadata **`Saved on this device`**, exactly like a Transactions row; when its operation is in
+  conflict or was refused, the badge is `danger` **`Needs attention`**. Those rows are an expense in a
+  group's list, a payment on a person, a group on the `Shared groups` face when the group itself was
+  created or changed here, and a person on the `People` face when the contact was.
+- **A figure that includes a write** carries the projection mark (component 24), and only that figure:
+  a queued write marks **what it touches and nothing else** (owner's decision, 2026-09-23). A section
+  where one payment clouds every figure teaches that the mark means nothing.
+
+What each write touches:
+
+| Waiting in the queue                                                                                             | Marks                                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **A payment with somebody**, or undoing one                                                                      | That person: their net on `People`, the lead figure of their screen, their row in **every** group shared with them — a payment covers the oldest line first, across all of them — and those groups' figures                                            |
+| **An expense** added, recorded or re-split                                                                       | Its group: the group's row, its header and the figure of everybody in it. And **everybody in it, everywhere**: a new or re-split share changes which of their lines their payments cover first, so their nets and every group they are in move with it |
+| **A change to the group itself** — created, edited, people added or taken out, a write-off, archived or restored | The same as an expense                                                                                                                                                                                                                                 |
+| **A person** added or edited                                                                                     | Their row's badge only: no money moved, so no figure is marked                                                                                                                                                                                         |
+
+**`Owed to you` and `You owe` are marked together** whenever anything in the section is marked: both
+add up everybody, and a payment that settles somebody takes them out of one without putting them in the
+other, so neither can be cleared on its own; the same goes for the total over each list on `People`. The
+line that closes the arithmetic for guests is marked when a block it counts is touched — a payment from
+that block, or a write to its group — and not for a payment from a person in the same group, because a
+block's payments are its own. **The shared card of a transaction** follows its group: its lead figure
+when the group is marked or when the movement itself was edited here, and each person's row when that
+person's figure is ([transactions.md](transactions.md)).
+
+**One mark per figure a row or a header leads with** — its amount, and its bar when it has one. The
+smaller figures under them — `Your share` under a group's cost, the sentence under a group's header, the
+share under a person's paid amount — are read under that mark rather than carrying one each: a row with
+four clouds is a row nobody reads.
+
+Somebody who joined a group has neither mark, because nothing they do is written without a connection:
+`Add to my ledger`, answering an invitation and leaving a group all wait for one (`#invitations-offline`, `#add-to-my-ledger`).
 
 ## What this section is not, in v1
 
