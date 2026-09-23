@@ -1,3 +1,5 @@
+import { ApiError } from "@/lib/api/errors";
+
 import { vaultReady } from "../repository/read";
 import {
   type DrainOutcome,
@@ -88,13 +90,18 @@ export async function writeAll<T>(requests: WriteRequest<T>[]): Promise<PromiseS
   if (!vault) return Promise.allSettled(requests.map((request) => sendDirect<T>(request.local)));
   const { db } = vault;
 
-  const queued: (QueuedWrite | null)[] = [];
+  const queued: (QueuedWrite | ApiError | null)[] = [];
   for (const request of requests) {
     try {
       const entry = await queueWrite(db, request.local);
       registerRollback(entry.operation.seq, entry.undo);
       queued.push(entry);
     } catch (error) {
+      // The mirror refused it the way the server would: that row fails, and the others still go.
+      if (error instanceof ApiError) {
+        queued.push(error);
+        continue;
+      }
       if (!(error instanceof NotProjectableError)) throw error;
       queued.push(null);
     }
@@ -105,6 +112,7 @@ export async function writeAll<T>(requests: WriteRequest<T>[]): Promise<PromiseS
   return Promise.allSettled(
     requests.map(async (request, index) => {
       const entry = queued[index];
+      if (entry instanceof ApiError) throw entry;
       if (!entry) return sendDirect<T>(request.local);
       const outcome = outcomeOf(report, entry.operation.seq);
       if (outcome?.kind === "rejected") throw outcome.error;

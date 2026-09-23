@@ -229,3 +229,79 @@ test("a settle-up with no network moves every figure, and the server's movement 
   await expect(page.getByRole("button", { name: /Pending sync/ })).toHaveCount(0);
   await expect(page.getByText("Payment")).toHaveCount(1);
 });
+
+// T-141: the server writes a split movement's expense in the same request, and so must the device.
+test("a new amount on a split movement with no network splits its group again, as the server then does", async ({
+  page,
+  request,
+  context,
+}) => {
+  test.setTimeout(300_000);
+  const user = await freshUser(request, "split-edit");
+  await signInAs(context, request, user);
+
+  const [account] = await listAccounts(request);
+  const expense = await request.post("/api/transactions", {
+    headers: { origin: APP },
+    data: {
+      type: "EXPENSE",
+      amount: 100_000,
+      date: "2026-09-20T20:00:00.000Z",
+      description: "Dinner",
+      fromAccountId: account?.id,
+    },
+  });
+  const created = (await expense.json()) as { id: string };
+  const person = await request.post("/api/contacts", {
+    headers: { origin: APP },
+    data: { name: "Beto Cano", color: "BLUE" },
+  });
+  const contact = (await person.json()) as { id: string };
+  const group = await request.post("/api/shared-groups", {
+    headers: { origin: APP },
+    data: { name: "Night out", contactIds: [contact.id] },
+  });
+  const outing = (await group.json()) as { id: string };
+  const line = await request.post(`/api/shared-groups/${outing.id}/expenses`, {
+    headers: { origin: APP },
+    data: { transactionId: created.id },
+  });
+  const shared = (await line.json()) as { id: string };
+
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+  // Nested templates are cached once opened (T-01), so both are visited before the network goes.
+  await page.goto(`/shared/groups/${outing.id}`);
+  await expect(page.getByRole("heading", { level: 2, name: "Night out" })).toBeVisible();
+  await page.goto(`/transactions/${created.id}/edit`);
+  await expect(page.getByRole("textbox", { name: "Amount" })).toBeVisible();
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText("You’re offline.")).toBeVisible();
+  await page.getByRole("textbox", { name: "Amount" }).fill("120000");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page).toHaveURL(/\/transactions$/);
+
+  expect((await vaultState(page))?.pending).toBe(1);
+  await expect(page.getByText("Your share $60,000")).toBeVisible();
+  await page.goto(`/shared/groups/${outing.id}`);
+  await expect(page.getByText(/\$120,000/).first()).toBeVisible({ timeout: 30_000 });
+
+  await context.setOffline(false);
+  await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
+
+  const stored = await request.get(`/api/shared-groups/${outing.id}/expenses?limit=10`);
+  const [row] = (
+    (await stored.json()) as {
+      data: { id: string; amount: number; split: { shares: { amount: number }[] } }[];
+    }
+  ).data;
+  expect(row?.id).toBe(shared.id);
+  expect(row?.amount).toBe(120_000);
+  expect(row?.split.shares.map((one) => one.amount)).toEqual([60_000, 60_000]);
+  await page.goto("/transactions");
+  await expect(page.getByText("Your share $60,000")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Pending sync/ })).toHaveCount(0);
+});

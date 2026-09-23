@@ -31,6 +31,7 @@ import {
   type QueuedMirror,
   queuedMirror,
   reprojectWalk,
+  rowKey,
 } from "./reproject";
 
 const STORE_OF = {
@@ -76,7 +77,7 @@ export async function reconcileRow(
   const { outbox, queued } = context ?? (await reconcileContext(tx));
   const mine = outbox.filter((op) => op.entity === entity && op.entityId === id);
   const { row, steps } = reprojectWalk(entity, baseline, queued);
-  const kept = mine.length > 0 ? baseline : undefined;
+  const kept = queued.touched.has(rowKey(entity, id)) ? baseline : undefined;
 
   if (entity === "account") {
     await tx.objectStore("accounts").put(accountRecord(row as Account, kept as Account));
@@ -104,6 +105,16 @@ export async function reconcileRow(
       .put(transactionRecord(row as SyncTransaction, kept as SyncTransaction));
   }
 
+  const carried = entity === "transaction" ? (row as SyncTransaction).sharedExpenseId : null;
+  // A refused, conflicting or discarded edit stops writing the expense it carried: it looks again.
+  if (
+    carried !== null &&
+    (queued.touched.has(rowKey("sharedExpense", carried)) ||
+      (await tx.objectStore("sharedExpenses").get(carried))?.server !== undefined)
+  ) {
+    await reconcileRow(tx, "sharedExpense", carried, undefined, { outbox, queued });
+  }
+
   // Each effect starts from the server's row just brought, and only when the server has it.
   if (entity !== "transaction" || mine.some((op) => isCreate(op.action))) return;
   const outboxStore = tx.objectStore("outbox");
@@ -116,6 +127,26 @@ export async function reconcileRow(
     if (sameEffect(payload.effect, effect)) continue;
     await outboxStore.put({ ...step.operation, payload: { ...payload, effect } });
   }
+}
+
+// The server wrote the movement's expense in the same request, so that baseline moves as well.
+export async function reconcileCarried(
+  tx: WriteTransaction,
+  operation: OutboxOperation,
+): Promise<void> {
+  const { sharedExpenseId } = operationPayload(operation);
+  if (sharedExpenseId === undefined) return;
+  const record = await tx.objectStore("sharedExpenses").get(sharedExpenseId);
+  const baseline = record?.server ?? record?.row;
+  if (!baseline) return;
+  const context = await reconcileContext(tx);
+  await reconcileRow(
+    tx,
+    "sharedExpense",
+    sharedExpenseId,
+    applyOperation("sharedExpense", baseline, operation, context.queued),
+    context,
+  );
 }
 
 // The server did it and nothing else says so until the next pull, so the baseline moves.
@@ -135,4 +166,5 @@ export async function reconcileRemoval(
     applyOperation(entity, baseline, operation, context.queued),
     context,
   );
+  await reconcileCarried(tx, operation);
 }

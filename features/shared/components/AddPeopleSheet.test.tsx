@@ -112,6 +112,7 @@ function open() {
       ],
       settlements: [],
       undone: [],
+      dropped: [],
     },
     contacts,
   );

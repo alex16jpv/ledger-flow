@@ -1,12 +1,14 @@
-import type { SharedShare } from "@/types/api";
+import type { SharedShare, SharedSplit } from "@/types/api";
 
 import {
+  carriedExpense,
   countsAsYours,
   deriveShared,
   impute,
   type LedgerExpense,
   type LedgerSettlement,
   resolveShares,
+  splitForAmount,
   SplitInvalidError,
 } from "./shared";
 
@@ -441,5 +443,80 @@ describe("the cases one fixture cannot hold", () => {
       ["contact:ana", 30000, 0],
       ["contact:beto", 30000, 20000],
     ]);
+  });
+});
+
+describe("the same split over a new amount, as an edited movement carries it", () => {
+  const split = (
+    mode: SharedSplit["mode"],
+    shares: SharedShare[],
+    guests: SharedSplit["guests"] = null,
+  ): SharedSplit => ({
+    mode,
+    guests,
+    shares,
+  });
+  const amounts = (resolved: SharedSplit) => resolved.shares.map((one) => one.amount);
+
+  it("splits equally again and hands the odd unit to whoever fronted it", () => {
+    const stored = split("EQUAL", [
+      share({ amount: 50000 }),
+      contact("ana", 50000),
+      contact("leo", 0),
+    ]);
+    expect(amounts(splitForAmount(stored, 100000, "COP", "ana"))).toEqual([33333, 33334, 33333]);
+    expect(amounts(splitForAmount(stored, 100000, "COP", null))).toEqual([33334, 33333, 33333]);
+  });
+
+  it("keeps the percentages and weighs a block of guests by its head count", () => {
+    const percent = split("PERCENT", [
+      share({ percent: 25, amount: 25000 }),
+      share({ party: "CONTACT", contactId: "ana", percent: 75, amount: 75000 }),
+    ]);
+    expect(amounts(splitForAmount(percent, 80000, "COP", null))).toEqual([20000, 60000]);
+
+    const guests = split("EQUAL", [share({ amount: 0 }), share({ party: "GUESTS", amount: 0 })], {
+      count: 3,
+      name: null,
+    });
+    expect(amounts(splitForAmount(guests, 80000, "COP", null))).toEqual([20000, 60000]);
+  });
+
+  it("keeps what was pinned and gives the rest to whoever takes it", () => {
+    const fixed = split("FIXED_REST", [
+      share({ amount: 70000 }),
+      share({ party: "CONTACT", contactId: "ana", fixedAmount: 30000, amount: 30000 }),
+    ]);
+    const resolved = splitForAmount(fixed, 50000, "COP", null);
+    expect(amounts(resolved)).toEqual([20000, 30000]);
+    expect(resolved.shares[1]?.fixedAmount).toBe(30000);
+  });
+
+  it("refuses an exact split, whose amounts stop adding up, as the server does", () => {
+    const exact = split("EXACT", [
+      share({ fixedAmount: 40000, amount: 40000 }),
+      share({ party: "CONTACT", contactId: "ana", fixedAmount: 60000, amount: 60000 }),
+    ]);
+    expect(() => splitForAmount(exact, 90000, "COP", null)).toThrow(SplitInvalidError);
+  });
+
+  it("refuses a share of guests with no block to count them", () => {
+    const orphan = split("EQUAL", [share({ amount: 0 }), share({ party: "GUESTS", amount: 0 })]);
+    expect(() => splitForAmount(orphan, 80000, "COP", null)).toThrow(SplitInvalidError);
+  });
+
+  it("carries the date and the description, and leaves the split alone when the amount holds", () => {
+    const stored = {
+      amount: 100000,
+      date: "2026-08-10T20:00:00.000Z",
+      description: "Cena",
+      currency: "COP",
+      paidByContactId: null,
+      // Even an exact split survives a movement whose amount did not move.
+      split: split("EXACT", [share({ fixedAmount: 100000, amount: 100000 })]),
+    };
+    const carried = carriedExpense(stored, { date: "2026-08-11T20:00:00.000Z", description: null });
+    expect(carried).toEqual({ ...stored, date: "2026-08-11T20:00:00.000Z", description: null });
+    expect(carried.split).toBe(stored.split);
   });
 });

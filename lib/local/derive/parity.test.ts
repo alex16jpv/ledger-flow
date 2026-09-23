@@ -28,7 +28,7 @@ import {
   parityFixture,
 } from "./fixtures";
 import { sumAmounts } from "./money";
-import { countsAsYours, deriveShared, resolveShares } from "./shared";
+import { countsAsYours, deriveShared, resolveShares, splitForAmount } from "./shared";
 import { deriveSpending } from "./spending";
 
 const VENDORED = resolve(process.cwd(), "lib/local/derive/fixtures");
@@ -461,6 +461,22 @@ describe.each(SHARED_FIXTURES)("$id · the shared layer", (fixture) => {
         })),
         payerIndex: payerIndexOf(expense),
       });
+      expect({ key: expense.key, shares }).toEqual({
+        key: expense.key,
+        shares: expense.split.shares.map((share) => share.amount),
+      });
+    }
+  });
+
+  // T-141: an edited movement restates its expense's split from the stored one, never from a form.
+  it("restates every stored split over its amount to the figures the server stored", () => {
+    for (const expense of expenses) {
+      const shares = splitForAmount(
+        expense.split,
+        expense.amount,
+        fixture.user.currency,
+        expense.paidByContactId,
+      ).shares.map((share) => share.amount);
       expect({ key: expense.key, shares }).toEqual({
         key: expense.key,
         shares: expense.split.shares.map((share) => share.amount),

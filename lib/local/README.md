@@ -76,6 +76,17 @@ movements carrying that `sharedSettlementId` — the server's own ids by then, n
 they are tombstoned with the payment, and the operation carries **one** effect, the net of what they
 did to the account, so the balance goes back exactly the way the payment moved it.
 
+**A movement in a group carries its expense** (T-141). The server writes the expense in the same
+request that edits or deletes the movement — the amount, the date and the description, with the split
+resolved again over a new amount, or the expense soft-deleted with it — so the projection does the
+same: `transactions.ts` writes the mirror's expense, keeps its server copy aside and names it in the
+operation's `payload.sharedExpenseId`. That name is what lets the rest follow a row with no operation
+of its own: `queuedMirror` walks the operation over the expense too (with its own rules, `CARRIED` in
+`reproject.ts`), the fold keeps it, `queuedRows` lists it so the group is marked, a refusal, a conflict or a discard of the movement's edit puts the expense back, and a landing moves its baseline
+(`reconcileCarried`) until the next pull brings the server's. What the server would refuse for the
+link — a new amount under an `EXACT` split, a new type, deleting a movement whose block of guests has
+paid — is refused here with the same code, before anything is queued.
+
 What the endpoints derive on every read — a group's `totals`, its `status`, and the state of each
 person in it, which no endpoint exposes at all — is derived here too, by `derive/shared.ts`, from the
 stored rows. The rules it reproduces to the minor unit are the backend's own

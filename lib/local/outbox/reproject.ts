@@ -10,7 +10,7 @@ import type {
 } from "@/types/api";
 
 import { resolvePeriod } from "../derive";
-import { withoutParticipant } from "../derive/shared";
+import { carriedExpense, SplitInvalidError, withoutParticipant } from "../derive/shared";
 import type { OutboxEntity, OutboxOperation } from "../schema";
 import { operationPayload } from "./envelope";
 import { patch } from "./projected";
@@ -57,9 +57,14 @@ export function queuedMirror(
   };
   for (const operation of [...operations].sort((left, right) => left.seq - right.seq)) {
     const key = rowKey(operation.entity, operation.entityId);
+    const { sharedExpenseId } = operationPayload(operation);
+    // The expense a movement carries keeps its server copy aside for as long as the movement does.
+    const carried = sharedExpenseId === undefined ? null : rowKey("sharedExpense", sharedExpenseId);
     touched.add(key);
+    if (carried !== null) touched.add(carried);
     if (!willBeSent(operation)) continue;
     under(key, operation);
+    if (carried !== null) under(carried, operation);
     // D-24 for a row with no operation of its own: a payment's movements go when the payment does.
     for (const id of operationPayload(operation).removed ?? []) {
       const movement = rowKey("transaction", id);
@@ -257,6 +262,29 @@ const RULES: Partial<Record<RouteKey, Rule>> = {
   },
 };
 
+// What a movement's write does to the shared expense it carries, which has no operation of its own.
+const CARRIED: Partial<Record<RouteKey, Rule>> = {
+  "transaction:update": (row, operation) => {
+    const { amount, date, description } = bodyOf(operation);
+    try {
+      return carriedExpense(row as SharedExpense, {
+        amount: typeof amount === "number" ? amount : undefined,
+        date: typeof date === "string" ? date : undefined,
+        description:
+          description === null || typeof description === "string" ? description : undefined,
+      });
+    } catch (error) {
+      // The server refuses the same split, so what it holds is what the group will keep.
+      if (error instanceof SplitInvalidError) return row;
+      throw error;
+    }
+  },
+  "transaction:delete": (row, operation) => ({
+    ...(row as SharedExpense),
+    deletedAt: operation.occurredAt,
+  }),
+};
+
 // What one operation does to a row it is applied on top of; a create leaves it as it is.
 export function applyOperation<R extends MirrorRow>(
   entity: OutboxEntity,
@@ -264,7 +292,11 @@ export function applyOperation<R extends MirrorRow>(
   operation: OutboxOperation,
   queued: QueuedMirror,
 ): R {
-  const rule = RULES[`${entity}:${operation.action}` as RouteKey];
+  const key = `${operation.entity}:${operation.action}` as RouteKey;
+  const rule =
+    entity === "sharedExpense" && operation.entity === "transaction"
+      ? CARRIED[key]
+      : RULES[`${entity}:${operation.action}` as RouteKey];
   return rule ? (rule(row, operation, queued) as R) : row;
 }
 

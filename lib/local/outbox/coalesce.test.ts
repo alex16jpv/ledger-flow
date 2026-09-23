@@ -50,6 +50,16 @@ const money = (before: number | null, after: number | null) => ({
 });
 
 describe("folding the queue before it is sent", () => {
+  // T-141: a pull re-projects the expense through the survivor, so the fold must still name it.
+  it("keeps the shared expense an edit carries, whichever of the two named it", () => {
+    const plan = coalesce([
+      operation(1, "update", { payload: { body: { amount: 10 }, sharedExpenseId: "e1" } }),
+      operation(2, "update", { payload: { body: { note: "x" } } }),
+    ]);
+
+    expect(operationPayload(plan.operations[0]!.operation).sharedExpenseId).toBe("e1");
+  });
+
   it("collapses ten edits of the same row into one request, at the place the first one held", () => {
     const edits = Array.from({ length: 10 }, (_, index) =>
       operation(index + 1, "update", { payload: { body: { amount: index + 1 } } }),

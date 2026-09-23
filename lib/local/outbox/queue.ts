@@ -79,6 +79,8 @@ export interface LocalChange {
   dependsOn: string[];
   // What the write moved, recorded while the mirror still holds the row it replaces.
   effect?: MoneyEffect;
+  // The shared expense a movement in a group carries, which the server writes in the same request.
+  sharedExpenseId?: string;
   undo: (tx: WriteTransaction) => Promise<void>;
 }
 
@@ -121,6 +123,7 @@ export async function queueWrite(
         payload: {
           ...write.payload,
           ...(change.effect ? { effect: change.effect } : {}),
+          ...(change.sharedExpenseId ? { sharedExpenseId: change.sharedExpenseId } : {}),
         },
         baseUpdatedAt: change.baseUpdatedAt,
         dependsOn: change.dependsOn,

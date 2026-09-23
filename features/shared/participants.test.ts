@@ -87,6 +87,7 @@ function trip(): SharedLedgerRows {
       }),
     ],
     undone: [],
+    dropped: [],
   };
 }
 

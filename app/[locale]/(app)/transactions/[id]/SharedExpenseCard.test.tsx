@@ -92,6 +92,7 @@ function render(collected: number) {
     {
       groups: [withTotals(sharedGroup({ id: "g1", name: "Night out" }))],
       undone: [],
+      dropped: [],
       expenses: [expense],
       settlements:
         collected > 0
@@ -150,6 +151,7 @@ function renderWithGuests() {
     {
       groups: [withTotals(sharedGroup({ id: "g1", name: "Night out" }))],
       undone: [],
+      dropped: [],
       expenses: [withGuests],
       settlements: [
         settlement({
