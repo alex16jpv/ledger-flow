@@ -4866,6 +4866,13 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   a group somebody else shared, and the id that was taken may be exactly theirs. The stores that only
   hold what the server sent — invitations, joined groups and their expenses, the profile — are left
   alone, because they cannot name an id the server never accepted.
+- **The stores are named by entity** (`swapMirror`, `satisfies Record<OutboxEntity, …>`), so a new
+  outbox entity does not typecheck until its store is swapped too.
+- **The undos kept in memory:** a write's rollback (`registerRollback`) holds the rows from before
+  the re-mint, so undoing a later refusal put back a row naming the taken id, and the re-minted
+  create's own undo deleted the old id and left the new row behind. After a re-mint the engine wraps
+  every pending rollback: the mirror goes back to the old id, the undo runs, and the new id is swapped
+  in again, all in the undo's transaction.
 - **Alternatives:** extending the field list to the four Shared entities (twelve more paths, nested
   inside splits, default splits, write-offs, counterparties and `archivedOwing`), which is how the
   list drifted in the first place and would drift again with the next field that names a row.

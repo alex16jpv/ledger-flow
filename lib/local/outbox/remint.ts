@@ -62,15 +62,23 @@ async function swapIn<T, R extends MirrorRecord<T>>(
 }
 
 // D-24: the baseline kept aside names the same ids, or the next reconcile puts the old id back.
-async function swapMirror(tx: WriteTransaction, oldId: string, newId: string): Promise<void> {
-  await swapIn(tx.objectStore("accounts"), accountRecord, oldId, newId);
-  await swapIn(tx.objectStore("categories"), categoryRecord, oldId, newId);
-  await swapIn(tx.objectStore("budgets"), budgetRecord, oldId, newId);
-  await swapIn(tx.objectStore("transactions"), transactionRecord, oldId, newId);
-  await swapIn(tx.objectStore("contacts"), contactRecord, oldId, newId);
-  await swapIn(tx.objectStore("sharedGroups"), sharedGroupRecord, oldId, newId);
-  await swapIn(tx.objectStore("sharedExpenses"), sharedExpenseRecord, oldId, newId);
-  await swapIn(tx.objectStore("settlements"), settlementRecord, oldId, newId);
+export async function swapMirror(
+  tx: WriteTransaction,
+  oldId: string,
+  newId: string,
+): Promise<void> {
+  const swaps = {
+    account: () => swapIn(tx.objectStore("accounts"), accountRecord, oldId, newId),
+    category: () => swapIn(tx.objectStore("categories"), categoryRecord, oldId, newId),
+    budget: () => swapIn(tx.objectStore("budgets"), budgetRecord, oldId, newId),
+    transaction: () => swapIn(tx.objectStore("transactions"), transactionRecord, oldId, newId),
+    contact: () => swapIn(tx.objectStore("contacts"), contactRecord, oldId, newId),
+    sharedGroup: () => swapIn(tx.objectStore("sharedGroups"), sharedGroupRecord, oldId, newId),
+    sharedExpense: () =>
+      swapIn(tx.objectStore("sharedExpenses"), sharedExpenseRecord, oldId, newId),
+    settlement: () => swapIn(tx.objectStore("settlements"), settlementRecord, oldId, newId),
+  } satisfies Record<OutboxEntity, () => Promise<void>>;
+  for (const run of Object.values(swaps)) await run();
 }
 
 // F-21 (O-B1 with D-17): `reminted` makes it once — a second collision on a v7 is a bug.

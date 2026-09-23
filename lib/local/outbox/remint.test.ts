@@ -1,4 +1,5 @@
 import {
+  account,
   contact,
   joinedExpense,
   openTestVault,
@@ -11,6 +12,7 @@ import {
 import type { SharedSplit } from "@/types/api";
 
 import {
+  accountRecord,
   contactRecord,
   joinedExpenseRecord,
   type OutboxOperation,
@@ -434,5 +436,90 @@ describe("re-minting what a queued payment names besides Shared", () => {
       },
     });
     expect(payment?.dependsOn).toEqual([NEW]);
+  });
+});
+
+describe("what a re-mint must keep true besides the rows", () => {
+  it("files a moved movement under the new account in the indexes the screens read", async () => {
+    const db = await vault();
+    await db.put("accounts", accountRecord(account({ id: OLD })));
+    await db.put("transactions", transactionRecord(transaction({ id: "t1", fromAccountId: OLD })));
+
+    await remint(db, "account", OLD, NEW);
+
+    expect(
+      (await db.getAllFromIndex("transactions", "fromAccountId", NEW)).map((one) => one.id),
+    ).toEqual(["t1"]);
+    expect(await db.getAllFromIndex("transactions", "fromAccountId", OLD)).toEqual([]);
+  });
+
+  it("moves the account inside a queued movement's effect, which the balances read", async () => {
+    const db = await vault();
+    const effect = {
+      before: null,
+      after: {
+        type: "EXPENSE",
+        amount: 12,
+        fromAccountId: OLD,
+        toAccountId: null,
+        deletedAt: null,
+      },
+    };
+    await queue(
+      db,
+      queued({
+        entity: "transaction",
+        entityId: "t1",
+        action: "create",
+        payload: { body: { id: "t1", fromAccountId: OLD }, effect },
+        dependsOn: [OLD],
+      }),
+    );
+
+    await remint(db, "account", OLD, NEW);
+
+    const [movement] = await outbox(db);
+    expect(operationPayload(movement!).effect?.after).toMatchObject({ fromAccountId: NEW });
+    expect(movement?.payload).toMatchObject({ body: { fromAccountId: NEW } });
+  });
+
+  it("leaves a queued write alone when it names neither the old id nor somebody else's", async () => {
+    const db = await vault();
+    const untouched = queued({
+      entity: "transaction",
+      entityId: "t9",
+      action: "update",
+      payload: { body: { importedFromExpenseId: OLD, description: "Cena" } },
+      baseUpdatedAt: "2026-09-01T00:00:00.000Z",
+    });
+    await queue(db, untouched);
+
+    await remint(db, "sharedExpense", OLD, NEW);
+
+    expect(await outbox(db)).toEqual([untouched]);
+  });
+
+  it("points the queued writes at the server's group when the create merged into it", async () => {
+    const db = await vault();
+    await db.put("sharedGroups", sharedGroupRecord(sharedGroup({ id: OLD, name: "Cartagena" })));
+    await db.put("sharedGroups", sharedGroupRecord(sharedGroup({ id: NEW, color: "RED" })));
+    await queue(
+      db,
+      queued({
+        entity: "sharedExpense",
+        entityId: "s1",
+        action: "create",
+        payload: { body: { id: "s1" }, params: { groupId: OLD } },
+        dependsOn: [OLD],
+      }),
+    );
+
+    await remint(db, "sharedGroup", OLD, NEW);
+
+    expect(await db.get("sharedGroups", OLD)).toBeUndefined();
+    expect((await db.get("sharedGroups", NEW))?.row.color).toBe("RED");
+    const [expense] = await outbox(db);
+    expect(expense?.payload).toMatchObject({ params: { groupId: NEW } });
+    expect(expense?.dependsOn).toEqual([NEW]);
   });
 });
