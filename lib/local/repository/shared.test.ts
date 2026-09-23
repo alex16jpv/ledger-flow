@@ -222,4 +222,18 @@ describe("the shared ledger through the repository", () => {
     expect(rows.groups[0]?.totals.amount).toBe(100000);
     expect(rows.expenses.map((row) => row.id)).toEqual(["s1"]);
   });
+
+  // T-140: a queued undo names only the payment, and this is where its person is found.
+  it("hands back the payments that were undone, apart from the live ones", async () => {
+    const undone = { ...anaPays, id: "p2", deletedAt: "2026-08-20T00:00:00.000Z" };
+    await mirrorOf({
+      sharedGroups: [trip],
+      sharedExpenses: [dinner],
+      settlements: [anaPays, undone],
+    });
+
+    const rows = await readSharedLedger();
+    expect(rows.settlements.map((row) => row.id)).toEqual([anaPays.id]);
+    expect(rows.undone).toEqual([undone]);
+  });
 });

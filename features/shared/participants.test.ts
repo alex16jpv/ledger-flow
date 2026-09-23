@@ -86,6 +86,7 @@ function trip(): SharedLedgerRows {
         collected: 100_000,
       }),
     ],
+    undone: [],
   };
 }
 

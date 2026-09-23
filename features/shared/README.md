@@ -31,6 +31,17 @@ no copy yet. Writes go through `lib/local/outbox`: `contact` is an entity of the
 account or a category, so a person can be added, renamed or archived with no network. A person is
 **archived, never deleted**: the groups and the payments that name them stay readable.
 
+**What has not reached the server** says so with the two marks the rest of the app uses. `pending.ts`
+reads the queue against the section and answers which rows **are** a queued write — they carry
+`SyncBadge` and "Saved on this device" — and which figures **include** one, which carry `Projected`.
+A write marks what it touches and nothing else: a payment marks its person and every group shared with
+them, because it covers the oldest line first across all of them; an expense or a change to a group
+marks that group and everybody in it, and those people in every other group too, since a new share
+changes which lines their payments cover first; a person added or renamed marks only their own row. `Owed to
+you` and `You owe` are marked together whenever anything is. A payment undone on this device is no
+longer in the section, so the mirror's read hands back the undone ones (`undone`) and the queue's id
+finds its person there.
+
 **Splitting.** `split.ts` is the sheet's model — the four modes, the block of guests, what is left to
 assign — and it resolves through `resolveShares` (`lib/local/derive`), the same arithmetic the server
 runs, so a split made with no network agrees with it to the minor unit. `write.ts` turns a group's

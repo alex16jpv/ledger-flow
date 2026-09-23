@@ -4752,3 +4752,40 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   `Currency, COP · Colombian Peso`. It does not take `aria-invalid` either, which ARIA does not define
   for `button` and the lint rule refuses. The sheet this task adds does not use `Field` around its
   picker at all, because the field's label and the picker's own would say the same word twice.
+
+## 2026-09-23 · What has not reached the server, in Shared: only what the write touches (T-140)
+
+- **Context:** a Transactions row written with no network carries `Pending sync`, and every balance
+  that includes it carries the projection mark; nothing in Shared read the queue, so a payment, an
+  expense or a group made offline was drawn exactly like what the server had confirmed — house rule 6
+  broken across the whole section.
+- **Decision (the owner's, 2026-09-23):** a queued write marks **what it touches and nothing else**. The
+  rows that **are** the write — an expense, a payment, a group created or changed here, a person added
+  or edited here — carry `Pending sync` or `Needs attention` and "Saved on this device". The figures
+  that **include** one carry `Projected`: a payment marks its person and every group shared with them
+  (it is imputed oldest first across all of them), an expense or a group change marks that group,
+  everybody's share in it, their nets **and every other group they are in**: a new or re-split share
+  changes which of their lines their payments cover first, so their standing moves everywhere. The
+  independent review caught that the first version marked only the group. `Owed to you` and `You owe` are marked together, because both
+  add up everybody and a payment can move somebody from one to neither.
+- **Alternatives:** marking every figure of the section from the first queued write, which is what
+  `projected.balances` does for accounts and costs one boolean; the owner chose the exact version,
+  because a section where one payment clouds every figure teaches that the mark means nothing. Knowing
+  exactly **which** figure changed would need the section derived twice — once from the server's rows
+  and once from the projection — on the most expensive computation of the client; the rule above is the
+  conservative reading of what each write can move, and never leaves out a figure it did move.
+- **`undone` in the ledger read:** a payment undone offline disappears from the section, and the queue
+  names only its id. The mirror already keeps undone payments (the feed delivers them), so its read
+  hands them back beside the live ones. The server's read returns none and needs none: until the
+  server takes the undo, it still answers that payment among the live ones, and the id is found there.
+- **Two edges outside the section:** a movement put into a group offline carries `Pending sync` on
+  its Transactions row, because its `Shared` badge and its share are the queued expense; and the card
+  of a shared movement marks its lead figure when the movement itself was edited here, since that
+  figure reads the movement's amount.
+- **The weight it cost:** the transaction detail went from 217.2 to 218.5 kB gz of its 220. The card's
+  `Edit split` and `Settle up` sheets now mount when opened, through `next/dynamic`, as the group screen
+  already does with its own.
+- **`SyncBadge`** moves the badge Transactions drew inline into `components/ui`, so the two sections
+  cannot drift apart.
+- **Consequence:** the joined side has neither mark, because nothing a person who joined does is queued:
+  `Add to my ledger`, answering an invitation and leaving all need a connection.

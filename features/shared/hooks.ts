@@ -10,6 +10,7 @@ import {
   joinedTotals,
 } from "@/lib/local/derive";
 import type { WriteOffTarget } from "@/lib/local/outbox";
+import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { isAnswerable, type JoinedRows, type SharedLedgerRows } from "@/lib/local/repository";
 import { REFERENCE_STALE_TIME_MS } from "@/lib/query/client";
 import { invalidateMoneyMovement, QUERY_DOMAINS } from "@/lib/query/domains";
@@ -48,6 +49,7 @@ import {
 } from "./api";
 import { contactKeys, sharedKeys } from "./keys";
 import { sectionOf, type SharedSection } from "./ledger";
+import { NOTHING_PENDING, pendingIn, type SharedPending } from "./pending";
 
 export function useContactsQuery(includeArchived = false, enabled = true) {
   return useQuery({
@@ -137,6 +139,11 @@ export function useSharedSection(enabled = true): SharedSectionQuery {
       void contacts.refetch();
     },
   };
+}
+
+export function useSharedPending(section: SharedSection | undefined): SharedPending {
+  const outbox = useOutbox();
+  return useMemo(() => (section ? pendingIn(section, outbox) : NOTHING_PENDING), [section, outbox]);
 }
 
 function useSharedInvalidation() {

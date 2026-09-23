@@ -53,6 +53,7 @@ export interface SharedSection {
   cameBack: ReadonlyMap<string, number>;
   contacts: number;
   settlements: Settlement[];
+  undone: Settlement[];
   people: PersonView[];
   // Guest blocks are not people: one line closes the arithmetic instead of a row each.
   guests: { owed: number; groupCount: number };
@@ -236,6 +237,7 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     cameBack: ledger.cameBack,
     contacts: contacts.filter((row) => row.archivedAt === null).length,
     settlements: [...rows.settlements].sort(newestFirst),
+    undone: rows.undone,
     people,
     guests: { owed: guestsOwed, groupCount: guestGroups.size },
     owedToYou: fromCents(

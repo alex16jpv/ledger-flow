@@ -1,5 +1,7 @@
 import { dayKey } from "@/lib/format/dates";
 import { openVault, type VaultDefinition, type VaultHandle } from "@/lib/local/db";
+import { refreshOutboxStatus } from "@/lib/local/outbox";
+import type { OutboxOperation } from "@/lib/local/schema";
 import type {
   Account,
   Category,
@@ -340,6 +342,26 @@ export async function openTestVault(
   const handle = definition ? await openVault(userId, definition) : await openVault(userId);
   opened.add(handle);
   return handle;
+}
+
+export async function queueWrite(
+  operation: Pick<OutboxOperation, "entity" | "entityId"> & Partial<OutboxOperation>,
+): Promise<void> {
+  const vault = await openTestVault(USER_ID);
+  await vault.db.put("outbox", {
+    seq: 1,
+    opId: `op-${operation.entityId}`,
+    opVersion: 1,
+    action: "create",
+    occurredAt: "2026-09-23T10:00:00.000Z",
+    payload: {},
+    dependsOn: [],
+    status: "pending",
+    attempts: 0,
+    lastError: null,
+    ...operation,
+  });
+  await refreshOutboxStatus(vault.db);
 }
 
 export async function wipeVaults(): Promise<void> {

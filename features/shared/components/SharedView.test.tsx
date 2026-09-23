@@ -1,6 +1,7 @@
 import { screen, within } from "@testing-library/react";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { resetOutboxStatus } from "@/lib/local/outbox";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
@@ -8,9 +9,12 @@ import {
   contact,
   joinedExpense,
   joinedGroup,
+  queueWrite,
   receivedInvitation,
+  settlement,
   sharedExpense,
   sharedGroup,
+  wipeVaults,
 } from "@/lib/testing/vault";
 import type { SharedGroup, SharedShare, SyncSharedGroup } from "@/types/api";
 
@@ -146,11 +150,48 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
+  resetOutboxStatus();
+  await wipeVaults();
 });
 
 describe("SharedView", () => {
+  // T-140: a queued payment marks what it touches — Beto and the totals — and leaves Ana alone.
+  it("marks the figures a payment still on this device moves, and only those", async () => {
+    const fromBeto = settlement({
+      id: "p1",
+      counterparty: { kind: "CONTACT", contactId: BETO, expenseId: null },
+      collected: 10_000,
+    });
+    serve({ settlements: [fromBeto] });
+    await queueWrite({ entity: "settlement", entityId: "p1" });
+    view();
+
+    const beto = await screen.findByRole("link", { name: /Beto Cano/ });
+    const mark = { name: "Includes changes not yet synced" };
+    expect(within(beto).getByRole("img", mark)).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("link", { name: /Ana Ruiz/ })).queryByRole("img", mark),
+    ).toBeNull();
+    // Owed to you and You owe on the card, and the total over the Owes you list.
+    expect(screen.getAllByRole("img", mark)).toHaveLength(4);
+  });
+
+  it("says a group created on this device has not reached the server", async () => {
+    serve();
+    search = "face=groups";
+    await queueWrite({ entity: "sharedGroup", entityId: "g1" });
+    view();
+
+    const row = await screen.findByRole("link", { name: /Night out/ });
+    expect(row).toHaveTextContent("Pending sync");
+    expect(row).toHaveTextContent("Saved on this device");
+    expect(
+      within(row).getAllByRole("img", { name: "Includes changes not yet synced" }),
+    ).toHaveLength(2);
+  });
+
   it("opens on the people, with the direction said in a word and never in a colour", async () => {
     serve();
     view();

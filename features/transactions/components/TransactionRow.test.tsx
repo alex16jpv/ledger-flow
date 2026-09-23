@@ -96,6 +96,21 @@ describe("a movement row", () => {
     expect(screen.queryByText("Pending sync")).not.toBeInTheDocument();
   });
 
+  // T-140: put into a group with no network, its Shared badge and its share are the queue's.
+  it("waits with the group's expense its movement was put into offline", async () => {
+    await queueOf([{ entity: "sharedExpense", entityId: "s1", action: "create" }]);
+    renderWithProviders(
+      <TransactionRow
+        transaction={{ ...row(), sharedExpenseId: "s1", sharedGroupId: "g1" }}
+        lookups={lookups}
+        onOpen={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Pending sync")).toBeInTheDocument();
+    expect(screen.getByText("Saved on this device")).toBeInTheDocument();
+  });
+
   // The row keeps the gross amount — that is what left the account — and says your share under it.
   it("keeps the whole amount on a shared expense and says your share underneath", () => {
     renderWithProviders(

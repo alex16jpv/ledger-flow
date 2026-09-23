@@ -3,10 +3,19 @@ import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { sectionOf } from "@/features/shared/ledger";
+import { resetOutboxStatus } from "@/lib/local/outbox";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { json } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
-import { contact, settlement, sharedExpense, sharedGroup, transaction } from "@/lib/testing/vault";
+import {
+  contact,
+  queueWrite,
+  settlement,
+  sharedExpense,
+  sharedGroup,
+  transaction,
+  wipeVaults,
+} from "@/lib/testing/vault";
 import type { SharedGroup, SharedShare, SyncSharedGroup } from "@/types/api";
 
 import { SharedExpenseCard } from "./SharedExpenseCard";
@@ -33,8 +42,10 @@ beforeEach(() => {
   );
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
+  resetOutboxStatus();
+  await wipeVaults();
 });
 
 const share = (over: Partial<SharedShare> & { amount: number }): SharedShare => ({
@@ -80,6 +91,7 @@ function render(collected: number) {
   const section = sectionOf(
     {
       groups: [withTotals(sharedGroup({ id: "g1", name: "Night out" }))],
+      undone: [],
       expenses: [expense],
       settlements:
         collected > 0
@@ -137,6 +149,7 @@ function renderWithGuests() {
   const section = sectionOf(
     {
       groups: [withTotals(sharedGroup({ id: "g1", name: "Night out" }))],
+      undone: [],
       expenses: [withGuests],
       settlements: [
         settlement({
@@ -177,6 +190,26 @@ describe("the shared card of a movement", () => {
     expect(
       screen.getByText(/counts as yours.*Your share is .* everybody has settled/),
     ).toBeInTheDocument();
+  });
+
+  // T-140: the card follows its group, and a payment moves only its payer's row in it.
+  it("marks the lead figure and the payer's row while their payment is on this device", async () => {
+    await queueWrite({ entity: "settlement", entityId: "p1" });
+    render(50_000);
+
+    // What counts as yours and what Ana has paid; your own share did not move.
+    expect(
+      await screen.findAllByRole("img", { name: "Includes changes not yet synced" }),
+    ).toHaveLength(2);
+  });
+
+  it("marks what counts as yours when the movement itself was edited here", async () => {
+    await queueWrite({ entity: "transaction", entityId: "t1", action: "update" });
+    render(0);
+
+    expect(
+      await screen.findAllByRole("img", { name: "Includes changes not yet synced" }),
+    ).toHaveLength(1);
   });
 
   it("keeps the history that explains a figure falling weeks later", () => {

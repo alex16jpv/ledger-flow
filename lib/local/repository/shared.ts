@@ -24,6 +24,7 @@ export interface SharedLedgerRows {
   groups: SharedGroup[];
   expenses: SharedExpense[];
   settlements: Settlement[];
+  undone: Settlement[];
 }
 
 const totalsOf = (view: SharedGroupView): SharedGroup["totals"] => ({
@@ -78,7 +79,7 @@ async function fromServer(): Promise<SharedLedgerRows> {
     ),
     drain<SettlementList["data"][number]>("/settlements"),
   ]);
-  return { groups, expenses: expenses.flat(), settlements };
+  return { groups, expenses: expenses.flat(), settlements, undone: [] };
 }
 
 // The feed sends the group as stored; `totals` and `status` are worked out on every read, here too.
@@ -103,6 +104,7 @@ async function fromMirror(db: VaultDb): Promise<SharedLedgerRows> {
       return view ? [{ ...record.row, totals: totalsOf(view), status: view.status }] : [];
     }),
     ...live,
+    undone: settlements.filter((record) => record.deleted === 1).map((record) => record.row),
   };
 }
 
