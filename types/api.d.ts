@@ -3232,7 +3232,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Settlement"];
+                        "application/json": components["schemas"]["SettlementWithRestamps"];
                     };
                 };
                 /** @description Invalid ID format (code VALIDATION) */
@@ -3581,7 +3581,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SharedGroup"];
+                        "application/json": components["schemas"]["SharedGroupWithRestamps"];
                     };
                 };
                 /** @description Invalid ID format (code VALIDATION) */
@@ -3726,7 +3726,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SharedExpense"];
+                        "application/json": components["schemas"]["SharedExpenseWithRestamps"];
                     };
                 };
                 /** @description Expense recorded */
@@ -3735,7 +3735,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SharedExpense"];
+                        "application/json": components["schemas"]["SharedExpenseWithRestamps"];
                     };
                 };
                 /** @description Validation error (code VALIDATION), a split that cannot describe one (code SPLIT_INVALID), somebody in the split who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a date more than 24h ahead (code FUTURE_DATE), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), an archived group (code RESOURCE_ARCHIVED), a movement that is already in a group (code TRANSACTION_ALREADY_SHARED), one that is not an expense (code TRANSACTION_NOT_SPLITTABLE) or one in another currency (code CURRENCY_MISMATCH) */
@@ -3879,7 +3879,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SharedExpense"];
+                        "application/json": components["schemas"]["SharedExpenseWithRestamps"];
                     };
                 };
                 /** @description Validation error (code VALIDATION), a split that cannot describe one (code SPLIT_INVALID), somebody in the split who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a date more than 24h ahead (code FUTURE_DATE), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), restating what the linked movement states (code SHARED_EXPENSE_LINKED), or the expense is deleted or its group archived (code RESOURCE_ARCHIVED) */
@@ -3949,7 +3949,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SharedExpense"];
+                        "application/json": components["schemas"]["SharedExpenseWithRestamps"];
                     };
                 };
                 /** @description Invalid ID format (code VALIDATION) */
@@ -4579,7 +4579,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SharedGroup"];
+                        "application/json": components["schemas"]["SharedGroupWithRestamps"];
                     };
                 };
                 /** @description Validation error (code VALIDATION), somebody who is not in the group (code PARTICIPANT_NOT_IN_GROUP) or an archived group (code RESOURCE_ARCHIVED) */
@@ -4663,7 +4663,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SharedGroup"];
+                        "application/json": components["schemas"]["SharedGroupWithRestamps"];
                     };
                 };
                 /** @description Invalid ID format (code VALIDATION) or an archived group (code RESOURCE_ARCHIVED) */
@@ -5326,7 +5326,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Transaction"];
+                        "application/json": components["schemas"]["TransactionWithRestamps"];
                     };
                 };
                 /** @description Validation error. Codes include SPLIT_INVALID and TRANSACTION_NOT_SPLITTABLE (a movement in a shared group), FUTURE_DATE, CURRENCY_MISMATCH, INCOME_ON_CARD_OR_LOAN (an income moved onto an account type listed in `IncomeRefusedAccountType`), AMOUNT_PRECISION (only when the edit carries an amount) and LOAN_OVERPAID (a movement that would leave a LOAN above zero), the first and the last checked again whenever the edit moves money, CATEGORY_ARCHIVED (assigning an archived category; keeping the one it already had is allowed), CATEGORY_TYPE_MISMATCH. */
@@ -5389,7 +5389,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Message"];
+                        "application/json": components["schemas"]["MessageWithRestamps"];
                     };
                 };
                 /** @description Invalid ID format */
@@ -5911,6 +5911,8 @@ export type components = {
         AddParticipantsResult: {
             group: components["schemas"]["SharedGroup"];
             applied: components["schemas"]["AddParticipantsPreview"];
+            /** @description The other rows this write rewrote, empty when it touched none. A queued write on one of them guarded by `previousUpdatedAt` may be guarded by `updatedAt` instead: nothing else moved it in between. */
+            restamped: components["schemas"]["Restamp"][];
         };
         AddToLedgerInput: {
             /** Format: uuid */
@@ -6323,6 +6325,10 @@ export type components = {
         Message: {
             message: string;
         };
+        MessageWithRestamps: components["schemas"]["Message"] & {
+            /** @description The other rows this write rewrote, empty when it touched none. A queued write on one of them guarded by `previousUpdatedAt` may be guarded by `updatedAt` instead: nothing else moved it in between. */
+            restamped: components["schemas"]["Restamp"][];
+        };
         Pagination: {
             limit: number;
             offset: number;
@@ -6396,6 +6402,17 @@ export type components = {
             currency?: string;
             /** @enum {string} */
             locale?: "en" | "es";
+        };
+        /** @description A row a write rewrote besides the one it answers: an expense whose split was imputed again, a movement whose figure or history moved. */
+        Restamp: {
+            /** @enum {string} */
+            entity: "sharedExpense" | "transaction";
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            previousUpdatedAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         RestoreDefaultsResponse: {
             data: components["schemas"]["Category"][];
@@ -6516,6 +6533,12 @@ export type components = {
             covered: components["schemas"]["SettlementCoverage"][];
             /** @description What you handed over that covered no line: their money going back to them. */
             refunded: number;
+            /** @description The other rows this write rewrote, empty when it touched none. A queued write on one of them guarded by `previousUpdatedAt` may be guarded by `updatedAt` instead: nothing else moved it in between. */
+            restamped: components["schemas"]["Restamp"][];
+        };
+        SettlementWithRestamps: components["schemas"]["Settlement"] & {
+            /** @description The other rows this write rewrote, empty when it touched none. A queued write on one of them guarded by `previousUpdatedAt` may be guarded by `updatedAt` instead: nothing else moved it in between. */
+            restamped: components["schemas"]["Restamp"][];
         };
         SharedExpense: {
             /** Format: uuid */
@@ -6552,6 +6575,10 @@ export type components = {
         SharedExpenseList: {
             data: components["schemas"]["SharedExpense"][];
             pagination: components["schemas"]["Pagination"];
+        };
+        SharedExpenseWithRestamps: components["schemas"]["SharedExpense"] & {
+            /** @description The other rows this write rewrote, empty when it touched none. A queued write on one of them guarded by `previousUpdatedAt` may be guarded by `updatedAt` instead: nothing else moved it in between. */
+            restamped: components["schemas"]["Restamp"][];
         };
         /** @description An outing, a dinner or a two-month trip. It has no month of its own. */
         SharedGroup: {
@@ -6628,6 +6655,10 @@ export type components = {
             dateFrom: string | null;
             /** Format: date-time */
             dateTo: string | null;
+        };
+        SharedGroupWithRestamps: components["schemas"]["SharedGroup"] & {
+            /** @description The other rows this write rewrote, empty when it touched none. A queued write on one of them guarded by `previousUpdatedAt` may be guarded by `updatedAt` instead: nothing else moved it in between. */
+            restamped: components["schemas"]["Restamp"][];
         };
         /** @description One thing that happened to what counts as yours. Splitting an expense and editing its split move no money — it left the account when it was spent — so those entries repeat the figure rather than change it. */
         SharedHistoryEntry: {
@@ -6874,6 +6905,8 @@ export type components = {
             mergedInto?: string;
             /** @description The write landed, but not as it was sent: CATEGORY_ARCHIVED_DROPPED — the category was archived online, so the movement was saved without it and flagged pendingDetails. */
             warnings?: "CATEGORY_ARCHIVED_DROPPED"[];
+            /** @description On the writes whose route answers `restamped`: the same list, lifted out of `result`, and kept with the opId so a resent one answered `duplicate` carries it again. Later operations of the same batch guarded by a `previousUpdatedAt` here were already run against its `updatedAt`. */
+            restamped?: components["schemas"]["Restamp"][];
         };
         /** @description A group as STORED, not the view GET /shared-groups returns: no totals and no status. Both are worked out from the group's expenses on every read, and the client already holds the expenses. */
         SyncSharedGroup: {
@@ -7056,6 +7089,10 @@ export type components = {
             summary?: {
                 totalAmount: number;
             };
+        };
+        TransactionWithRestamps: components["schemas"]["Transaction"] & {
+            /** @description The other rows this write rewrote, empty when it touched none. A queued write on one of them guarded by `previousUpdatedAt` may be guarded by `updatedAt` instead: nothing else moved it in between. */
+            restamped: components["schemas"]["Restamp"][];
         };
         UpdateAccountInput: {
             name?: string;
@@ -7253,12 +7290,14 @@ export type JoinedGroupList = components['schemas']['JoinedGroupList'];
 export type JoinedParticipant = components['schemas']['JoinedParticipant'];
 export type LoginInput = components['schemas']['LoginInput'];
 export type Message = components['schemas']['Message'];
+export type MessageWithRestamps = components['schemas']['MessageWithRestamps'];
 export type Pagination = components['schemas']['Pagination'];
 export type QuickAddTransactionInput = components['schemas']['QuickAddTransactionInput'];
 export type ReceivedInvitation = components['schemas']['ReceivedInvitation'];
 export type ReceivedInvitationList = components['schemas']['ReceivedInvitationList'];
 export type RefreshInput = components['schemas']['RefreshInput'];
 export type RegisterInput = components['schemas']['RegisterInput'];
+export type Restamp = components['schemas']['Restamp'];
 export type RestoreDefaultsResponse = components['schemas']['RestoreDefaultsResponse'];
 export type RestoreInput = components['schemas']['RestoreInput'];
 export type SentInvitation = components['schemas']['SentInvitation'];
@@ -7269,14 +7308,17 @@ export type Settlement = components['schemas']['Settlement'];
 export type SettlementCoverage = components['schemas']['SettlementCoverage'];
 export type SettlementList = components['schemas']['SettlementList'];
 export type SettlementResult = components['schemas']['SettlementResult'];
+export type SettlementWithRestamps = components['schemas']['SettlementWithRestamps'];
 export type SharedExpense = components['schemas']['SharedExpense'];
 export type SharedExpenseConflict = components['schemas']['SharedExpenseConflict'];
 export type SharedExpenseList = components['schemas']['SharedExpenseList'];
+export type SharedExpenseWithRestamps = components['schemas']['SharedExpenseWithRestamps'];
 export type SharedGroup = components['schemas']['SharedGroup'];
 export type SharedGroupConflict = components['schemas']['SharedGroupConflict'];
 export type SharedGroupList = components['schemas']['SharedGroupList'];
 export type SharedGroupParticipant = components['schemas']['SharedGroupParticipant'];
 export type SharedGroupTotals = components['schemas']['SharedGroupTotals'];
+export type SharedGroupWithRestamps = components['schemas']['SharedGroupWithRestamps'];
 export type SharedHistoryEntry = components['schemas']['SharedHistoryEntry'];
 export type SharedLimits = components['schemas']['SharedLimits'];
 export type SharedShare = components['schemas']['SharedShare'];
@@ -7295,6 +7337,7 @@ export type TagList = components['schemas']['TagList'];
 export type Transaction = components['schemas']['Transaction'];
 export type TransactionConflict = components['schemas']['TransactionConflict'];
 export type TransactionList = components['schemas']['TransactionList'];
+export type TransactionWithRestamps = components['schemas']['TransactionWithRestamps'];
 export type UpdateAccountInput = components['schemas']['UpdateAccountInput'];
 export type UpdateBudgetInput = components['schemas']['UpdateBudgetInput'];
 export type UpdateCategoryInput = components['schemas']['UpdateCategoryInput'];

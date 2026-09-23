@@ -25,6 +25,7 @@ import {
 } from "./queue";
 import { reconcileCarried, reconcileRemoval, reconcileRow } from "./reconcile";
 import { remint } from "./remint";
+import { applyRestamps, splitRestamps } from "./restamp";
 import { routeFor, serverBaseline } from "./routes";
 import { outboxStatusStore, refreshOutboxStatus } from "./status";
 import { reportSynced, resetSynced } from "./synced";
@@ -174,6 +175,8 @@ interface PassResult {
   // The session died under the queue: the pass stops and nothing is scheduled (F-26).
   unauthorized: boolean;
   retryAfterMs: number;
+  // The mirror took stamps whose rows only the pull brings, so that pull is news whatever it finds.
+  rewrote: boolean;
 }
 
 const emptyPass = (): PassResult => ({
@@ -182,6 +185,7 @@ const emptyPass = (): PassResult => ({
   answered: false,
   unauthorized: false,
   retryAfterMs: 0,
+  rewrote: false,
 });
 
 interface Holds {
@@ -235,16 +239,21 @@ async function sendPlanned(
     creating.delete(entityId);
     await beginSending(db, [seq]);
     try {
-      const answer = await routeFor(entity, action).send(
-        { entityId, payload: operationPayload(operation) },
-        { ifMatch: operation.baseUpdatedAt },
+      const { row, restamped } = splitRestamps(
+        await routeFor(entity, action).send(
+          { entityId, payload: operationPayload(operation) },
+          { ifMatch: operation.baseUpdatedAt },
+        ),
       );
       let rebased = 0;
       await settle(db, entry, async (tx) => {
-        await routeFor(entity, action).confirm(tx, answer, operation);
-        rebased = await rebaseGuards(tx, operation, stampOf(answer));
+        await routeFor(entity, action).confirm(tx, row, operation);
+        rebased = await rebaseGuards(tx, operation, stampOf(row));
+        const moved = await applyRestamps(tx, restamped);
+        rebased += moved.guards;
+        result.rewrote ||= moved.rows > 0;
       });
-      report.set(seq, { kind: "sent", result: answer });
+      report.set(seq, { kind: "sent", result: row });
       result.progressed = true;
       result.answered = true;
       // The plan still holds the guards this answer just moved: the pass looks again.
@@ -408,6 +417,9 @@ async function applyLanded(run: BatchRun, entry: Collapsed, answer: BatchAnswer)
   await settle(db, { ...entry, operation: landed }, async (tx) => {
     await confirmLanded(tx, landed, answer.result);
     rebased = await rebaseGuards(tx, landed, stampOf(answer.result));
+    const moved = await applyRestamps(tx, answer.restamped ?? []);
+    rebased += moved.guards;
+    run.result.rewrote ||= moved.rows > 0;
     await recordNotices(tx, notices);
   });
   report.set(
@@ -654,7 +666,7 @@ interface EngineState {
   cancelRetry: (() => void) | null;
   // Set by a 401 and cleared by a refresh or a fresh sign-in; while it is on, nothing is sent.
   paused: boolean;
-  afterRound: (() => Promise<void> | void) | null;
+  afterRound: ((rewrote: boolean) => Promise<void> | void) | null;
   random: () => number;
   stop: (() => void) | null;
 }
@@ -695,6 +707,7 @@ function scheduleRetry(retryAfterMs: number): void {
 async function pass(db: VaultDb): Promise<DrainReport> {
   const report: DrainReport = new Map();
   let answered = false;
+  let rewrote = false;
   let retryAfterMs = 0;
   let backOff = false;
 
@@ -716,6 +729,7 @@ async function pass(db: VaultDb): Promise<DrainReport> {
           : await sendPlanned(db, plan.operations, report);
       await refreshOutboxStatus(db);
       answered ||= outcome.answered;
+      rewrote ||= outcome.rewrote;
       if (outcome.stopped) {
         // F-26: a dead session is not a slow network, so the queue holds until `resumeSyncEngine`.
         if (outcome.unauthorized) {
@@ -731,7 +745,7 @@ async function pass(db: VaultDb): Promise<DrainReport> {
     }
 
     // §4.2: a pull after every round the server answered, and never on a background timer.
-    if (answered && state.afterRound) await state.afterRound();
+    if (answered && state.afterRound) await state.afterRound(rewrote);
   } catch (error) {
     // F-27: the write is queued and durable, so the pass ends like a cut network, not a failure.
     reportError(error, "vault");
@@ -790,7 +804,7 @@ async function registerBackgroundSync(): Promise<void> {
 
 export interface SyncEngineOptions {
   // The pull of §4.2, run after a round in which the server answered something about the data.
-  afterRound?: () => Promise<void> | void;
+  afterRound?: (rewrote: boolean) => Promise<void> | void;
   random?: () => number;
   schedule?: Scheduler;
 }
@@ -860,8 +874,8 @@ export function setSyncTransport(transport: SyncTransport): void {
 }
 
 // F-33: a direct send never touched the mirror, so the one caller with no round asks for a pull.
-export async function pullAfterDirectSend(): Promise<void> {
-  await state.afterRound?.();
+export async function pullAfterDirectSend(rewrote = false): Promise<void> {
+  await state.afterRound?.(rewrote);
 }
 
 // Test seam: the queue survives, the engine's in-memory bookkeeping does not.

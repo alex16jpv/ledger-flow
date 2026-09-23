@@ -4819,3 +4819,33 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
 - **Deleted expenses in the ledger read:** a deleted expense leaves the group's list, so the queue's
   name for it found no group to mark. The mirror keeps it, and its read hands it back as `dropped`,
   the way it already hands back undone payments.
+
+## 2026-09-23 · The rows a write rewrote besides its own (T-145, the front)
+
+- **Context:** editing a split movement's amount and then its split with no network ended in a
+  `STALE_UPDATE` against your own edit. The movement's write rewrites its expense, and imputing the
+  payments again rewrites other expenses and movements, so every one of them changes `updatedAt`
+  while the split still carried the stamp the phone had. The backend now names them in `restamped`
+  (`lag-money-manager/docs/modules/sync.md`, "Rows a write rewrote besides its own") and already
+  moves the guard inside one batch; a split sent in a later batch, a later pass, one route at a time,
+  or queued after the movement landed still arrived with the old stamp.
+- **Decision:** `applyRestamps` (`lib/local/outbox/restamp.ts`) runs in the transaction that settles
+  each landed operation, on both transports and on a direct send: every queued guard on a listed row
+  that is exactly `previousUpdatedAt` moves to `updatedAt`, and so does the mirror's baseline when it
+  holds that stamp, so a write queued before the next pull guards with the new one. A moved guard
+  makes the engine read the queue again, as `rebaseGuards` already does. The engine strips the list
+  from a route's answer before `confirm`, so the mirror stores the row only.
+- **The screens:** a pull counts a row as news by its stamp (F-38), and a restamped row already holds
+  the stamp the pull brings, with content only the pull brings. So the round tells the pull after it
+  (`afterRound(rewrote)`), and `startMirror` treats that pull as news even when every stamp matches;
+  if that pull fails, the next one does.
+- **Alternatives:** moving only the queued guards, which leaves a split queued after the landing and
+  before a pull (or after a failed pull) guarded by the old stamp; remembering the restamps and
+  rewriting guards at send time, a second copy of the server's stamps that has to be kept and purged;
+  telling news from content in the pull, which compares every row the 60-second overlap replays.
+- **A direct send racing a batch:** if it restamps a row whose operation is already in flight, that
+  operation left with the old guard and earns a real 409; the queue behind it is moved. Nothing on
+  the device can move a guard that is already on the wire.
+- **Consequence:** accounts are not in the list yet, so a movement written with no network followed
+  by archiving its account still conflicts with yourself (T-146); when the backend adds them, the
+  front needs only the store in `STORE_OF`.

@@ -81,6 +81,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   let wanted = 0;
   let served = 0;
   let lastPullAt = 0;
+  let restamped = false;
   const state = { stopped: false };
 
   // H-14: the feed carries the profile only when it changed, so a mirror can end with no zone.
@@ -93,6 +94,8 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
 
   const pullOnce = (vault: VaultHandle): Promise<void> => {
     served = wanted;
+    const forced = restamped;
+    restamped = false;
     return pullChanges(vault, options.pull)
       .then(async (result) => {
         lastPullAt = now();
@@ -105,9 +108,10 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
           lastPullError = error instanceof Error ? error : new Error(String(error));
           console.warn("ledger-flow: the mirror could not fetch the profile it lacks", error);
         }
-        if (result.changed || stored) options.onChanged?.();
+        if (result.changed || stored || forced) options.onChanged?.();
       })
       .catch((error: unknown) => {
+        restamped ||= forced;
         // lib/api already reported it; the mirror keeps serving whatever the last pull left.
         lastPullError = error instanceof Error ? error : new Error(String(error));
         console.warn("ledger-flow: pulling the offline mirror failed", error);
@@ -142,7 +146,12 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   window.addEventListener("focus", pullIfStale);
   document.addEventListener("visibilitychange", pullIfStale);
   // The engine owns its own triggers; what it borrows from here is the pull that follows a round.
-  const stopEngine = startSyncEngine({ afterRound: pull });
+  const stopEngine = startSyncEngine({
+    afterRound: (rewrote) => {
+      restamped ||= rewrote;
+      return pull();
+    },
+  });
 
   // F-14: another tab's new schema closes this connection, so reads go back to the server.
   const reopen = (): void => {
