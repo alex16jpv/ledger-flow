@@ -1,4 +1,4 @@
-import { ApiError } from "@/lib/api/errors";
+import { ApiError, type ErrorCode } from "@/lib/api/errors";
 import { dayKey } from "@/lib/format/dates";
 import type {
   BatchUpdateFailure,
@@ -6,13 +6,15 @@ import type {
   BatchUpdateTransactionsInput,
   CreateTransactionInput,
   QuickAddTransactionInput,
+  SharedExpense,
   SyncTransaction,
   Transaction,
   UpdateTransactionInput,
 } from "@/types/api";
 
+import { carriedExpense, SplitInvalidError } from "../derive/shared";
 import { toApiRow } from "../repository/transactions";
-import { transactionRecord } from "../schema";
+import { sharedExpenseRecord, transactionRecord } from "../schema";
 import type { MoneyEffect } from "./envelope";
 import {
   balanceOf,
@@ -28,6 +30,7 @@ import {
   type VaultDb,
   type WriteTransaction,
 } from "./queue";
+import { reconcileRow } from "./reconcile";
 import { write, writeAll, type WriteRequest } from "./write";
 
 async function currentRow(tx: WriteTransaction, id: string): Promise<SyncTransaction> {
@@ -66,6 +69,77 @@ async function projectTransaction(
         if (previous) await undone.put(previous);
         else await undone.delete(id);
       },
+    },
+  };
+}
+
+const refused = (code: ErrorCode, message: string): ApiError =>
+  new ApiError({ status: 400, code, message, requestId: "mirror" });
+
+const sameInstant = (left: string, right: string): boolean =>
+  Date.parse(left) === Date.parse(right);
+
+async function guestsHavePaid(tx: WriteTransaction, expenseId: string): Promise<boolean> {
+  const settlements = await tx.objectStore("settlements").getAll();
+  return settlements.some(
+    (record) => record.row.deletedAt === null && record.row.counterparty.expenseId === expenseId,
+  );
+}
+
+function carriedBy(expense: SharedExpense, next: SyncTransaction): SharedExpense | null {
+  if (next.deletedAt !== null) return { ...expense, deletedAt: next.deletedAt };
+  if (next.type !== "EXPENSE") {
+    throw refused("TRANSACTION_NOT_SPLITTABLE", "Only an expense can be split with other people");
+  }
+  if (
+    next.amount === expense.amount &&
+    sameInstant(next.date, expense.date) &&
+    next.description === expense.description
+  ) {
+    return null;
+  }
+  try {
+    return carriedExpense(expense, {
+      amount: next.amount,
+      date: next.date,
+      description: next.description,
+    });
+  } catch (error) {
+    if (error instanceof SplitInvalidError) throw refused("SPLIT_INVALID", error.message);
+    throw error;
+  }
+}
+
+// The server writes a movement's shared expense in the same request, and refuses what it would.
+async function carryToExpense(tx: WriteTransaction, next: SyncTransaction): Promise<string | null> {
+  const expenseId = next.sharedExpenseId;
+  if (expenseId === null) return null;
+  const store = tx.objectStore("sharedExpenses");
+  const record = await store.get(expenseId);
+  if (!record)
+    throw new NotProjectableError(`shared expense ${expenseId} of transaction ${next.id}`);
+  if (record.row.deletedAt !== null) return null;
+  if (next.deletedAt !== null && (await guestsHavePaid(tx, expenseId))) {
+    throw refused(
+      "GUEST_BLOCK_HAS_PAYMENTS",
+      "Its block of guests has paid: undo those payments first, and then this can go",
+    );
+  }
+  const carried = carriedBy(record.row, next);
+  if (carried === null) return null;
+  await store.put(sharedExpenseRecord(carried, record.server ?? record.row));
+  return expenseId;
+}
+
+// The refused operation is already off the queue, so the expense is restated rather than restored.
+function withCarried(change: LocalChange, sharedExpenseId: string | null): LocalChange {
+  if (sharedExpenseId === null) return change;
+  return {
+    ...change,
+    sharedExpenseId,
+    undo: async (undoTx) => {
+      await change.undo(undoTx);
+      await reconcileRow(undoTx, "sharedExpense", sharedExpenseId);
     },
   };
 }
@@ -199,8 +273,9 @@ function updateRequest(id: string, input: UpdateTransactionInput): WriteRequest<
           const { timeZone } = await projectionContext(tx, occurredAt);
           next.dayKey = dayKey(new Date(next.date), timeZone);
         }
+        const carried = await carryToExpense(tx, next);
         const { change, effect } = await projectTransaction(tx, id, next);
-        return { ...change, effect };
+        return { ...withCarried(change, carried), effect };
       },
     },
     optimistic: readBack(id),
@@ -247,8 +322,9 @@ export function deleteTransaction(id: string): Promise<unknown> {
       project: async (tx, occurredAt) => {
         // A tombstone keeps no `liveDate`, so the row leaves every window the moment it is written.
         const next = { ...(await currentRow(tx, id)), deletedAt: occurredAt };
+        const carried = await carryToExpense(tx, next);
         const { change, effect } = await projectTransaction(tx, id, next);
-        return { ...change, effect };
+        return { ...withCarried(change, carried), effect };
       },
     },
     optimistic: () => null,

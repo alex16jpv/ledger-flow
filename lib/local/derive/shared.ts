@@ -160,6 +160,72 @@ export function resolveShares(input: SplitInput): number[] {
   );
 }
 
+const statedInputOf = (mode: SplitMode, share: SharedShare): number | null =>
+  mode === "EQUAL" ? null : mode === "PERCENT" ? share.percent : share.fixedAmount;
+
+// The server's `resplitForNewAmount`: an EXACT split states its amounts, so over another total it throws.
+export function splitForAmount(
+  split: SharedSplit,
+  total: number,
+  currency: string,
+  paidByContactId: string | null,
+): SharedSplit {
+  const guestRows = split.shares.filter((share) => share.party === "GUESTS").length;
+  if (split.guests ? guestRows !== 1 : guestRows > 0) {
+    throw invalid(
+      "A block of guests needs exactly one share, and a share of guests needs its block",
+    );
+  }
+  const amounts = resolveShares({
+    total,
+    currency,
+    mode: split.mode,
+    rows: split.shares.map((share) => ({
+      units: share.party === "GUESTS" ? (split.guests?.count ?? 0) : 1,
+      input: statedInputOf(split.mode, share),
+    })),
+    payerIndex: split.shares.findIndex((share) =>
+      paidByContactId === null
+        ? share.party === "USER"
+        : share.party === "CONTACT" && share.contactId === paidByContactId,
+    ),
+  });
+  return {
+    mode: split.mode,
+    guests: split.guests,
+    shares: split.shares.map((share, index) => ({
+      party: share.party,
+      contactId: share.party === "CONTACT" ? share.contactId : null,
+      percent: split.mode === "PERCENT" ? share.percent : null,
+      fixedAmount: split.mode === "EXACT" || split.mode === "FIXED_REST" ? share.fixedAmount : null,
+      amount: amounts[index] ?? 0,
+      collected: 0,
+    })),
+  };
+}
+
+// What a movement in a group writes on its expense, the other side of the same fact.
+export type CarriedFields = Partial<Pick<SharedExpense, "amount" | "date" | "description">>;
+
+export function carriedExpense<
+  T extends Pick<
+    SharedExpense,
+    "amount" | "date" | "description" | "split" | "currency" | "paidByContactId"
+  >,
+>(expense: T, carried: CarriedFields): T {
+  const amount = carried.amount ?? expense.amount;
+  return {
+    ...expense,
+    amount,
+    date: carried.date ?? expense.date,
+    description: carried.description === undefined ? expense.description : carried.description,
+    split:
+      amount === expense.amount
+        ? expense.split
+        : splitForAmount(expense.split, amount, expense.currency, expense.paidByContactId),
+  };
+}
+
 export interface OwedLine {
   // The expense id, which also breaks the tie between two lines of the same instant.
   key: string;

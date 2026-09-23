@@ -59,6 +59,8 @@ function merged(
   body: unknown,
 ): OutboxOperation {
   const effect = mergeEffect(first, second);
+  const sharedExpenseId =
+    operationPayload(second).sharedExpenseId ?? operationPayload(first).sharedExpenseId;
   return {
     ...first,
     action,
@@ -68,6 +70,7 @@ function merged(
       ...(body === undefined ? {} : { body }),
       ...(operationPayload(second).query ? { query: operationPayload(second).query } : {}),
       ...(effect ? { effect } : {}),
+      ...(sharedExpenseId === undefined ? {} : { sharedExpenseId }),
     },
     dependsOn: [...new Set([...first.dependsOn, ...second.dependsOn])],
   };

@@ -54,6 +54,7 @@ export interface SharedSection {
   contacts: number;
   settlements: Settlement[];
   undone: Settlement[];
+  dropped: SharedExpense[];
   people: PersonView[];
   // Guest blocks are not people: one line closes the arithmetic instead of a row each.
   guests: { owed: number; groupCount: number };
@@ -238,6 +239,7 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     contacts: contacts.filter((row) => row.archivedAt === null).length,
     settlements: [...rows.settlements].sort(newestFirst),
     undone: rows.undone,
+    dropped: rows.dropped,
     people,
     guests: { owed: guestsOwed, groupCount: guestGroups.size },
     owedToYou: fromCents(

@@ -81,6 +81,7 @@ function rows(over: Partial<SharedLedgerRows> = {}): SharedLedgerRows {
     ],
     settlements: [],
     undone: [],
+    dropped: [],
     ...over,
   };
 }
@@ -155,6 +156,21 @@ describe("what a queued write marks in Shared", () => {
 
     expect([...pending.people]).toEqual([BETO]);
     expect([...pending.groups].sort()).toEqual(["g1", "g2"]);
+  });
+
+  // T-141: deleting a movement in a group takes its expense, so the section no longer lists it.
+  it("marks the group of an expense a movement took with it, and everybody in it", () => {
+    const gone = sharedExpense({
+      id: "s9",
+      groupId: "g1",
+      amount: 30_000,
+      split: split(30_000, [null, ANA]),
+      deletedAt: "2026-09-23T10:00:00.000Z",
+    });
+    const pending = pendingIn(sectionOf(rows({ dropped: [gone] }), contacts), queue(["t9", "s9"]));
+
+    expect(pending.written.has("g1")).toBe(true);
+    expect([...pending.people].sort()).toEqual([ANA, BETO].sort());
   });
 
   it("marks the guests' line and their group, not the people, for a payment from a block", () => {

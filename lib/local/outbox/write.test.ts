@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/errors";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { answerBatch, conflictWith, operationsOf, rejectedWith } from "@/lib/testing/sync";
 import {
@@ -24,6 +25,7 @@ import {
   quickAddTransaction,
   updateTransaction,
 } from "./transactions";
+import { writeAll } from "./write";
 
 const fetchMock = vi.fn<typeof fetch>();
 const cash = account({ id: "a1", name: "Cash", balance: 1000, openingBalance: 1000 });
@@ -358,5 +360,47 @@ describe("when IndexedDB refuses the write", () => {
     const income = await quickAddTransaction({ amount: 700, type: "INCOME" }, "k-default");
 
     expect(income).toMatchObject({ type: "INCOME", toAccountId: "a1", fromAccountId: null });
+  });
+});
+
+// T-141: the mirror refuses some writes the way the server would, and in a lot that is one row's fate.
+describe("a lot where the device refuses one row", () => {
+  it("fails that row with the server's code and still queues the others", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("transactions", transactionRecord(transaction({ id: "t1" })));
+    reportOnline(false);
+    const refusal = new ApiError({
+      status: 400,
+      code: "SPLIT_INVALID",
+      message: "no",
+      requestId: "mirror",
+    });
+
+    const [refused, queued] = await writeAll<string>([
+      {
+        local: {
+          entity: "transaction",
+          entityId: "t1",
+          action: "update",
+          payload: { body: { amount: 1 } },
+          project: () => Promise.reject(refusal),
+        },
+        optimistic: () => "never",
+      },
+      {
+        local: {
+          entity: "transaction",
+          entityId: "t1",
+          action: "update",
+          payload: { body: { description: "Taxi" } },
+          project: () => Promise.resolve({ dependsOn: [], undo: () => Promise.resolve() }),
+        },
+        optimistic: () => "queued",
+      },
+    ]);
+
+    expect(refused).toEqual({ status: "rejected", reason: refusal });
+    expect(queued).toEqual({ status: "fulfilled", value: "queued" });
+    expect(await pendingOperations(vault.db)).toHaveLength(1);
   });
 });

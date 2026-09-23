@@ -4789,3 +4789,33 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   cannot drift apart.
 - **Consequence:** the joined side has neither mark, because nothing a person who joined does is queued:
   `Add to my ledger`, answering an invitation and leaving all need a connection.
+
+## 2026-09-23 · A movement in a group carries its expense offline too (T-141)
+
+- **Context:** the server writes a movement's shared expense in the same request that edits or deletes
+  the movement (`lag-money-manager/docs/modules/transactions.md`, "The link to a shared expense"). The
+  projection wrote only the movement, so with no network the movement said the new amount while the
+  group, the person and the movement's own shared card kept splitting the old one, and a deleted
+  movement left its expense in the group, until the pull.
+- **Decision:** the projection writes the expense the way the server does — amount, date and
+  description, the stored split resolved again over a new amount (`splitForAmount`, the server's
+  `resplitForNewAmount`), or the expense soft-deleted with the movement — and the operation names it in
+  `payload.sharedExpenseId`. That one field is what the rest of the engine reads: the re-projection
+  over a pulled expense (`CARRIED` rules, because the movement's body is not the expense's), the fold,
+  the pending marks, the undo of a refusal and the baseline of a landing. The imputation of payments
+  needs nothing new: it is derived on every read from the expenses the mirror holds.
+- **What the server would refuse for the link is refused here, with its code, before anything is
+  queued:** a new amount under an `EXACT` split (`SPLIT_INVALID`), a new type (`TRANSACTION_NOT_SPLITTABLE`),
+  deleting a movement whose block of guests has paid (`GUEST_BLOCK_HAS_PAYMENTS`). The mirror cannot
+  resolve those splits at all, and queuing an operation that can only come back refused would leave the
+  movement edited and the group not, for hours, with no network to say why.
+- **Alternatives:** projecting the movement and leaving the expense to the pull, which is the defect;
+  a `NotProjectableError` for the refusals, which sends the write straight to the server and with no
+  network fails as a network error instead of saying what is wrong; a separate queued operation on the
+  expense, which the server would receive as a `SHARED_EXPENSE_LINKED` edit it refuses.
+- **Parity:** `parity.test.ts` now resolves every stored split of the fixtures through `splitForAmount`
+  and gets the figures the server stored, every mode, guests and a contact who fronted it included. An
+  edited amount is that same resolution over another total, so no new fixture is needed from the back.
+- **Deleted expenses in the ledger read:** a deleted expense leaves the group's list, so the queue's
+  name for it found no group to mark. The mirror keeps it, and its read hands it back as `dropped`,
+  the way it already hands back undone payments.

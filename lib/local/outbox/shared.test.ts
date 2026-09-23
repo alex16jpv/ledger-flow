@@ -1,18 +1,29 @@
+import { ApiError } from "@/lib/api/errors";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { answerBatch, applied, operationsOf } from "@/lib/testing/sync";
+import { answerBatch, applied, operationsOf, rejectedWith } from "@/lib/testing/sync";
 import {
   openTestVault,
   profile,
+  settlement,
   sharedExpense,
   sharedGroup,
+  transaction,
   wipeVaults,
 } from "@/lib/testing/vault";
 import type { SharedSplit } from "@/types/api";
 
 import { setCurrentVault } from "../repository/read";
-import { profileRecord, sharedExpenseRecord, sharedGroupRecord } from "../schema";
-import { pendingOperations, writeTransaction } from "./queue";
+import {
+  profileRecord,
+  settlementRecord,
+  sharedExpenseRecord,
+  sharedGroupRecord,
+  transactionRecord,
+} from "../schema";
+import { createCategory } from "./categories";
+import { markOperation, pendingOperations, writeTransaction } from "./queue";
 import { reconcileRow } from "./reconcile";
+import { discardOperation } from "./resolve";
 import {
   addParticipants,
   archiveSharedGroup,
@@ -27,7 +38,8 @@ import {
   updateSharedGroup,
   writeOffParty,
 } from "./shared";
-import { createTransaction } from "./transactions";
+import { refreshOutboxStatus } from "./status";
+import { createTransaction, deleteTransaction, updateTransaction } from "./transactions";
 
 const ANA = "k1";
 
@@ -812,5 +824,256 @@ describe("what a pull sees while a group's edit is still queued", () => {
     });
     await tx.done;
     expect((await vault.db.get("sharedGroups", "g1"))?.row.archivedAt).toBeNull();
+  });
+});
+
+// T-141: the server writes a movement's shared expense in the same request, so the mirror does too.
+describe("a movement in a group carries its expense", () => {
+  const movement = () =>
+    transaction({
+      id: "t1",
+      amount: 90_000,
+      date: "2026-08-10T20:00:00.000Z",
+      description: "Cena",
+      countsAsYours: 90_000,
+      sharedExpenseId: "e1",
+      sharedGroupId: "g1",
+      updatedAt: "2026-08-10T20:00:00.000Z",
+    });
+  const stored = (split: SharedSplit = equal(90_000)) =>
+    sharedExpense({
+      id: "e1",
+      groupId: "g1",
+      amount: 90_000,
+      date: "2026-08-10T20:00:00.000Z",
+      description: "Cena",
+      split,
+    });
+  const exact: SharedSplit = {
+    ...equal(90_000),
+    mode: "EXACT",
+    shares: equal(90_000).shares.map((one) => ({ ...one, fixedAmount: 45_000 })),
+  };
+
+  async function inAGroup(split?: SharedSplit) {
+    const vault = await vaultWith();
+    await vault.db.put("sharedGroups", sharedGroupRecord(sharedGroup({ id: "g1" })));
+    await vault.db.put("sharedExpenses", sharedExpenseRecord(stored(split)));
+    await vault.db.put("transactions", transactionRecord(movement()));
+    return vault;
+  }
+
+  const expenseIn = async (vault: Awaited<ReturnType<typeof vaultWith>>) =>
+    vault.db.get("sharedExpenses", "e1");
+
+  it("writes the new amount, date and description on the expense and splits it again", async () => {
+    const vault = await inAGroup();
+    reportOnline(false);
+
+    await updateTransaction("t1", {
+      amount: 120_001,
+      date: "2026-08-11T20:00:00.000Z",
+      description: "Cena y vino",
+    });
+
+    const record = await expenseIn(vault);
+    expect(record?.row).toMatchObject({
+      amount: 120_001,
+      date: "2026-08-11T20:00:00.000Z",
+      description: "Cena y vino",
+    });
+    // You fronted it, so the odd peso is yours, exactly as the server resolves it.
+    expect(record?.row.split.shares.map((one) => one.amount)).toEqual([60_001, 60_000]);
+    expect(record?.server?.amount).toBe(90_000);
+    const [operation] = await pendingOperations(vault.db);
+    expect(operation?.payload).toMatchObject({ sharedExpenseId: "e1" });
+    // The group waits on the server too, so it wears the same badge as the movement.
+    expect((await refreshOutboxStatus(vault.db)).queuedRows.has("e1")).toBe(true);
+  });
+
+  it("leaves the expense alone when the edit moves nothing the group sees", async () => {
+    const vault = await inAGroup();
+    reportOnline(false);
+
+    await updateTransaction("t1", { categoryId: "c2", note: "con Ana" });
+
+    expect((await expenseIn(vault))?.row).toEqual(stored());
+    const [operation] = await pendingOperations(vault.db);
+    expect(operation?.payload).not.toHaveProperty("sharedExpenseId");
+  });
+
+  it("refuses a new amount under an exact split, and a new type, the way the server would", async () => {
+    const vault = await inAGroup(exact);
+    reportOnline(false);
+
+    await expect(updateTransaction("t1", { amount: 100_000 })).rejects.toMatchObject({
+      code: "SPLIT_INVALID",
+    });
+    await expect(updateTransaction("t1", { type: "INCOME" })).rejects.toMatchObject({
+      code: "TRANSACTION_NOT_SPLITTABLE",
+    });
+
+    expect(await pendingOperations(vault.db)).toEqual([]);
+    expect((await vault.db.get("transactions", "t1"))?.row.amount).toBe(90_000);
+    expect((await expenseIn(vault))?.row).toEqual(stored(exact));
+  });
+
+  it("takes the expense with it when the movement is deleted", async () => {
+    const vault = await inAGroup();
+    reportOnline(false);
+
+    await deleteTransaction("t1");
+
+    expect((await expenseIn(vault))?.deleted).toBe(1);
+    const [operation] = await pendingOperations(vault.db);
+    expect(operation).toMatchObject({ action: "delete", payload: { sharedExpenseId: "e1" } });
+  });
+
+  it("refuses to delete it while its block of guests has paid", async () => {
+    const vault = await inAGroup();
+    await vault.db.put(
+      "settlements",
+      settlementRecord(
+        settlement({ counterparty: { kind: "GUESTS", contactId: null, expenseId: "e1" } }),
+      ),
+    );
+    reportOnline(false);
+
+    await expect(deleteTransaction("t1")).rejects.toMatchObject({
+      code: "GUEST_BLOCK_HAS_PAYMENTS",
+    });
+    expect((await expenseIn(vault))?.deleted).toBe(0);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+
+  it("keeps the edit on the expense through a pull, until the server has it", async () => {
+    const vault = await inAGroup();
+    reportOnline(false);
+    await updateTransaction("t1", { amount: 60_000 });
+
+    const tx = writeTransaction(vault.db);
+    await reconcileRow(tx, "sharedExpense", "e1", stored());
+    await tx.done;
+
+    const record = await expenseIn(vault);
+    expect(record?.row.amount).toBe(60_000);
+    expect(record?.row.split.shares.map((one) => one.amount)).toEqual([30_000, 30_000]);
+    expect(record?.server).toEqual(stored());
+  });
+
+  it("puts the expense back as the server has it when the edit fails for good", async () => {
+    const vault = await inAGroup();
+    reportOnline(false);
+    await updateTransaction("t1", { amount: 60_000 });
+    const [operation] = await pendingOperations(vault.db);
+    // Replayed after a reload: no form waits for it, so nothing undoes it but the reconcile.
+    await markOperation(vault.db, operation?.seq ?? 0, "failed", "VALIDATION", {}, (tx) =>
+      reconcileRow(tx, "transaction", "t1"),
+    );
+
+    expect((await expenseIn(vault))?.row).toEqual(stored());
+  });
+
+  it("undoes the expense with the movement when the server refuses the edit", async () => {
+    const vault = await inAGroup();
+    reportOnline(true);
+    answerBatch(fetchMock, () => rejectedWith("VALIDATION"));
+
+    await expect(updateTransaction("t1", { amount: 60_000 })).rejects.toBeInstanceOf(ApiError);
+
+    expect((await expenseIn(vault))?.row).toEqual(stored());
+    expect((await vault.db.get("transactions", "t1"))?.row.amount).toBe(90_000);
+  });
+
+  it("refuses a new amount below what a fixed-plus-rest split pinned", async () => {
+    const fixed: SharedSplit = {
+      ...equal(90_000),
+      mode: "FIXED_REST",
+      shares: equal(90_000).shares.map((one, index) =>
+        index === 1 ? { ...one, fixedAmount: 50_000, amount: 50_000 } : { ...one, amount: 40_000 },
+      ),
+    };
+    const vault = await inAGroup(fixed);
+    reportOnline(false);
+
+    await expect(updateTransaction("t1", { amount: 40_000 })).rejects.toMatchObject({
+      code: "SPLIT_INVALID",
+    });
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+
+  it("lets the movement go once the guests' payment has been undone", async () => {
+    const vault = await inAGroup();
+    await vault.db.put(
+      "settlements",
+      settlementRecord(
+        settlement({
+          counterparty: { kind: "GUESTS", contactId: null, expenseId: "e1" },
+          deletedAt: "2026-08-20T00:00:00.000Z",
+        }),
+      ),
+    );
+    reportOnline(false);
+
+    await deleteTransaction("t1");
+
+    expect((await expenseIn(vault))?.deleted).toBe(1);
+  });
+
+  it("puts the expense back when the edit carrying it is discarded along with what it waited on", async () => {
+    const vault = await inAGroup();
+    reportOnline(false);
+    const category = await createCategory({ name: "Salidas", type: "EXPENSE" });
+    await updateTransaction("t1", { amount: 60_000, categoryId: category.id });
+    const [create] = await pendingOperations(vault.db);
+    await markOperation(vault.db, create?.seq ?? 0, "failed", "VALIDATION");
+
+    expect(await discardOperation(vault.db, create?.seq ?? 0)).toEqual({ discarded: 2 });
+
+    expect((await vault.db.get("transactions", "t1"))?.row.amount).toBe(90_000);
+    const record = await expenseIn(vault);
+    expect(record?.row).toEqual(stored());
+    expect(record?.server).toBeUndefined();
+  });
+
+  it("keeps the expense edited when a pull brings the movement back while the edit waits", async () => {
+    const vault = await inAGroup();
+    reportOnline(false);
+    await updateTransaction("t1", { amount: 60_000 });
+
+    const tx = writeTransaction(vault.db);
+    await reconcileRow(tx, "transaction", "t1", movement());
+    await tx.done;
+
+    expect((await vault.db.get("transactions", "t1"))?.row.amount).toBe(60_000);
+    expect((await expenseIn(vault))?.row.amount).toBe(60_000);
+  });
+
+  it("keeps the expense deleted once the server has taken the movement with it", async () => {
+    const vault = await inAGroup();
+    reportOnline(true);
+    answerBatch(fetchMock);
+
+    await deleteTransaction("t1");
+
+    const record = await expenseIn(vault);
+    expect(record?.deleted).toBe(1);
+    expect(record?.server).toBeUndefined();
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+
+  it("moves the expense's baseline once the server has written it, until the next pull", async () => {
+    const vault = await inAGroup();
+    reportOnline(true);
+    answerBatch(fetchMock, () =>
+      applied({ ...movement(), amount: 60_000, updatedAt: "2026-09-06T10:00:00.000Z" }),
+    );
+
+    await updateTransaction("t1", { amount: 60_000 });
+
+    const record = await expenseIn(vault);
+    expect(record?.row.amount).toBe(60_000);
+    expect(record?.server).toBeUndefined();
+    expect(await pendingOperations(vault.db)).toEqual([]);
   });
 });

@@ -49,6 +49,8 @@ export interface OperationPayload {
   minted?: string[];
   // Mirror rows it tombstoned that carry no operation of their own: a payment's movements.
   removed?: string[];
+  // The shared expense a movement in a group carries with it: the server writes both in one request.
+  sharedExpenseId?: string;
   // What a write-off gave up on, and what archiving gives up on for everybody still owing. The
   // wire carries neither: the server works them out, and the mirror has to say the same thing.
   writtenOff?: number;

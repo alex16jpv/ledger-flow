@@ -23,7 +23,7 @@ import {
   type WriteTransaction,
   writeTransaction,
 } from "./queue";
-import { reconcileRemoval, reconcileRow } from "./reconcile";
+import { reconcileCarried, reconcileRemoval, reconcileRow } from "./reconcile";
 import { remint } from "./remint";
 import { routeFor, serverBaseline } from "./routes";
 import { outboxStatusStore, refreshOutboxStatus } from "./status";
@@ -375,6 +375,7 @@ async function confirmLanded(
     return;
   }
   await reconcileRow(tx, operation.entity, operation.entityId);
+  await reconcileCarried(tx, operation);
 }
 
 // The form is told what the route would have told it: the name is taken, which it can act on.

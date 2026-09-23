@@ -236,4 +236,14 @@ describe("the shared ledger through the repository", () => {
     expect(rows.settlements.map((row) => row.id)).toEqual([anaPays.id]);
     expect(rows.undone).toEqual([undone]);
   });
+
+  // T-141: a queued delete of a movement names its expense, and this is where its group is found.
+  it("hands back the expenses a movement took with it, apart from the live ones", async () => {
+    const taken = { ...dinner, id: "s2", deletedAt: "2026-08-20T00:00:00.000Z" };
+    await mirrorOf({ sharedGroups: [trip], sharedExpenses: [dinner, taken], settlements: [] });
+
+    const rows = await readSharedLedger();
+    expect(rows.expenses.map((row) => row.id)).toEqual([dinner.id]);
+    expect(rows.dropped).toEqual([taken]);
+  });
 });

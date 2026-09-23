@@ -60,6 +60,11 @@ function projectionOf(operations: OutboxOperation[]): OutboxProjection {
 
 let blocked: readonly number[] = [];
 
+const carriedIds = (operation: OutboxOperation): string[] => {
+  const { sharedExpenseId } = operationPayload(operation);
+  return sharedExpenseId === undefined ? [] : [sharedExpenseId];
+};
+
 function summarise(operations: OutboxOperation[]): OutboxStatus {
   const stuck = operations.filter(needsAttention);
   return {
@@ -71,6 +76,7 @@ function summarise(operations: OutboxOperation[]): OutboxStatus {
       operations.flatMap((operation) => [
         operation.entityId,
         ...(operationPayload(operation).minted ?? []),
+        ...carriedIds(operation),
       ]),
     ),
     // Reversed so the lowest `seq` on a row is the one that survives the collapse into a map.

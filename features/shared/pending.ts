@@ -49,14 +49,15 @@ export function rowSync(pending: SharedPending, id: string): RowSync | null {
 export function pendingIn(section: SharedSection, queue: Queue): SharedPending {
   if (queue.queuedRows.size === 0) return NOTHING_PENDING;
   const queued = queue.queuedRows;
-  const written = new Set(
-    section.groups
+  const written = new Set([
+    ...section.groups
       .filter(
         (view) =>
           queued.has(view.group.id) || view.expenses.some((expense) => queued.has(expense.id)),
       )
       .map((view) => view.group.id),
-  );
+    ...section.dropped.filter((expense) => queued.has(expense.id)).map((one) => one.groupId),
+  ]);
   const spread = new Set(
     [...section.settlements, ...section.undone]
       .filter((one) => queued.has(one.id))

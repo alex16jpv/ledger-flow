@@ -18,7 +18,7 @@ import type {
 import type { OutboxEntity, OutboxOperation } from "../schema";
 import { type OperationPayload, operationPayload, type OutboxAction } from "./envelope";
 import type { WriteTransaction } from "./queue";
-import { reconcileRemoval, reconcileRow } from "./reconcile";
+import { reconcileCarried, reconcileRemoval, reconcileRow } from "./reconcile";
 import type { MirrorRow } from "./reproject";
 
 // O-B2: absent for a create and an unsent row — guarding an unprinted `updatedAt` is a 409.
@@ -250,7 +250,10 @@ export const ROUTES: Record<RouteKey, Route> = {
         body: payload.body,
         ...ifMatch(guard),
       }),
-    confirm: (tx, row) => confirmRow(tx, "transaction", row),
+    confirm: async (tx, row, operation) => {
+      await confirmRow(tx, "transaction", row);
+      await reconcileCarried(tx, operation);
+    },
   }),
   "transaction:delete": route<unknown>({
     send: ({ entityId }, guard) =>
