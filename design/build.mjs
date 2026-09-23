@@ -534,6 +534,7 @@ const quickSheet = ({
   extra = "",
   over = "",
   hint = "",
+  scroll = false,
 } = {}) => {
   const title = "Add";
   const bar = {
@@ -583,7 +584,7 @@ ${quickPicker("To", "Savings · $8,900,000", "piggy-bank", "GREEN")}</div>`
     head ??
     `<div class="sheet-head"><span class="h3">${title}</span><button class="btn ghost icon-only sm round" aria-label="Close">${iconSvg("x", "sm")}</button></div>`;
   return `<div class="scrim"><div class="sheet" role="dialog" aria-label="${title}">
-${bar}${sheetHead}${seg}${hint}${amount}${cats}${accounts}${QUICK_NOTE}${extra}${QUICK_BUTTONS}
+${bar}${sheetHead}${scroll ? '<div class="sheet-body">' : ""}${seg}${hint}${amount}${cats}${accounts}${QUICK_NOTE}${extra}${scroll ? "</div>" : ""}${QUICK_BUTTONS}
 </div>${over}</div>`;
 };
 
@@ -4014,6 +4015,92 @@ const sheetHandleVariant = (kind) => {
   return home({ sheet: quickSheet({ type: "expense", handle: "wide", extra }) });
 };
 
+// T-150 · every phone sheet hangs from the top, and with a keyboard up it ends above it.
+const KEYBOARD_H = { numeric: 232, text: 232 };
+
+const keyboard = (kind) => {
+  const key = (label, o = {}) =>
+    `<span class="key${o.fn ? " fn" : ""}"${o.span ? ` style="grid-column:span ${o.span}"` : ""}>${label}</span>`;
+  const keys = (cols, row) =>
+    `<div class="keys" style="grid-template-columns:repeat(${cols},1fr)">${row.join("")}</div>`;
+  const rows =
+    kind === "numeric"
+      ? [
+          keys(
+            4,
+            ["1", "2", "3", "\u2212"].map((k, i) => key(k, { fn: i === 3 })),
+          ),
+          keys(
+            4,
+            ["4", "5", "6", "\u2423"].map((k, i) => key(k, { fn: i === 3 })),
+          ),
+          keys(
+            4,
+            ["7", "8", "9", "\u232b"].map((k, i) => key(k, { fn: i === 3 })),
+          ),
+          keys(
+            4,
+            [",", "0", ".", "\u21b5"].map((k, i) => key(k, { fn: i !== 1 })),
+          ),
+        ]
+      : [
+          keys(
+            10,
+            [..."qwertyuiop"].map((k) => key(k)),
+          ),
+          keys(
+            20,
+            [..."asdfghjkl"].map((k) => key(k, { span: 2 })),
+          ),
+          keys(10, [
+            key("\u21e7", { fn: true, span: 2 }),
+            ...[..."zxcvbn"].map((k) => key(k)),
+            key("\u232b", { fn: true, span: 2 }),
+          ]),
+          keys(10, [
+            key("?123", { fn: true, span: 2 }),
+            key(","),
+            key("", { span: 4 }),
+            key("."),
+            key("\u21b5", { fn: true, span: 2 }),
+          ]),
+        ];
+  return `<div class="kbd" aria-hidden="true" style="height:${KEYBOARD_H[kind]}px">${rows.join("")}</div>`;
+};
+
+const onTop = (sheet, { keyboard: kind = null, bar = "bottom" } = {}) => {
+  const style = kind ? ` style="bottom:${KEYBOARD_H[kind]}px"` : "";
+  const scrim = `<div class="scrim top${bar === "top" ? " bar-top" : ""}"${style}>`;
+  return (kind ? keyboard(kind) : "") + sheet.replace('<div class="scrim">', scrim);
+};
+
+const quickOnTop = (bar) =>
+  home({
+    sheet: onTop(
+      quickSheet({ type: "expense", handle: "wide", hint: typeLine("EXPENSE"), scroll: true }),
+      { keyboard: "numeric", bar },
+    ),
+  });
+
+const pickerOnTop = () => {
+  const r = (name, sel = false) => {
+    const [ic, col] = CATS[name];
+    return `<button class="row" style="border-top:1px solid var(--border)">${tile(ic, col)}<span class="body"><span class="title">${name}</span><span class="meta">Expense</span></span><span class="right" style="flex-direction:row">${sel ? iconSvg("circle-check", "sm") : ""}</span></button>`;
+  };
+  const inner = `<div class="sheet-body"><div class="input" style="height:44px;flex:none">${iconSvg("search", "sm")}<span style="flex:1">Search categories</span><span class="caret"></span></div>
+<div class="stack-sm"><span class="eyebrow">Recent</span><div class="chips">${catChip("Coffee")}${catChip("Food")}${catChip("Transport")}</div></div>
+<div class="list" style="margin:0 -16px">${r("Coffee")}${r("Food", true)}${r("Transport")}${r("Housing")}${r("Bills")}${r("Lifestyle")}${r("Health")}${r("Pets")}
+<button class="row" style="border-top:1px solid var(--border)">${tile("plus", "NONE")}<span class="body"><span class="title" style="color:var(--brand-text)">New category</span><span class="meta">Create it without leaving this form</span></span></button></div></div>`;
+  return screen(transactionFormBodyDim(), {
+    tab: "",
+    side: "",
+    back: true,
+    title: "New transaction",
+    narrow: true,
+    sheet: onTop(sheetWrap(inner, "Category"), { keyboard: "text" }),
+  });
+};
+
 // ── Shared expenses · T-110 and T-111 ───────────────────────────────────────
 const PEOPLE = {
   You: ["JD", "GRAY"],
@@ -5153,6 +5240,20 @@ const PAGES = [
           sheet: quickSheet({ type: "transfer", handle: "wide", hint: typeLine("TRANSFER") }),
         }),
         { added: "2026-09-15" },
+      ),
+      plate(
+        "sheet-on-top",
+        "Every phone sheet hangs from the top",
+        "T-150, his decision of 2026-09-23: \u00abno solo es subirlo cuando detecte el teclado. es subirlo en general. y no aplica solo para ese. aplica para todos los modales que se muestran en movil pintados en la parte inferior\u00bb. Below 600px every sheet \u2014 all of them, not only quick add \u2014 now hangs from the top edge instead of rising from the bottom: square on top, the 28 radius on the two bottom corners, and the bar on the edge that is free, the bottom one. Its top padding grows by the notch (<code>--safe-top</code>, the twin of <code>--safe-bottom</code>), which is 0 wherever the app does not draw under the status bar; the bottom no longer adds <code>--safe-bottom</code>, because the sheet never reaches that edge. Everything else is the sheet it was: the header and its close button, the four exits and the unsaved question, the tinted and blurred page behind, and from 600px up the centred modal. There is no entrance animation today, so none is added. The toast stays above the tab bar: the sheet has left that edge, so the two cannot meet. Drawn on <b>More</b>, whose button is in the tab bar.",
+        home({ nav: tabbar("mas"), sheet: onTop(navMenuSheet(true)) }),
+        { added: "2026-09-23", review: true },
+      ),
+      plate(
+        "sheet-on-top-with-the-keyboard",
+        "A sheet on top, with the keyboard up",
+        "What the move is for. With the keyboard open the sheet ends above it, never behind it: its height is capped to what the screen still shows (the <code>visualViewport</code>), less the same strip of page a sheet always leaves below it. The title and the footer stay where they are and only the body scrolls \u2014 here the category picker, typing in its search, with its list running under the title. Before, a tall sheet on the bottom edge put its last rows and its buttons behind the keyboard.",
+        pickerOnTop(),
+        { added: "2026-09-23", review: true },
       ),
       plate(
         "full-form-expense",
@@ -6835,6 +6936,28 @@ const PAGES = [
         "His choice, 2026-09-15: «me parece bien la opcion de si se arrastra o se clickea se expande el formulario a su version completa». Drag the bar up — or just tap it — and quick add grows into the full transaction form — the date and the description arrive here, tags and the note come with a taller sheet — carrying the amount, the category and the note already typed. It is the same jump the “More details” button already makes, so the gesture is a shortcut and never the only way. What it costs: the bar means something in quick add and nothing in the other 37 sheets, and at 4px tall it cannot be the only way in, so “More details” stays. It is drawn wider here — 44×4 instead of 36×4 — because a bar you can tap has to look like one.",
         sheetHandleVariant("expand"),
         { added: "2026-09-15", verdict: "chosen" },
+      ),
+      plate(
+        "quick-add-bar-at-the-bottom-edge",
+        "Quick add on top \u00b7 the bar at the bottom edge",
+        "Recommended. The bar goes where every other sheet\u2019s bar now goes, to the free edge, and the gesture keeps its sense: pull it <b>down</b>, the way the sheet grows, or tap it, and quick add becomes the full form carrying what was typed, as today. With the keyboard up that edge sits just above it, under the thumb. Pulling it up does nothing, as pulling down does nothing today, and More details stays as the way that is not a gesture. Drawn with the numeric keyboard open: the segment and the amount at the top, Save at the foot; on this phone everything fits, and on a shorter one what does not scrolls between the two.",
+        quickOnTop("bottom"),
+        {
+          added: "2026-09-23",
+          verdict: "open",
+          asks: "Where the bar that opens the full form goes, with quick add on top",
+        },
+      ),
+      plate(
+        "quick-add-bar-stays-on-top",
+        "Quick add on top \u00b7 the bar stays above the title",
+        "The bar stays where it is, above the title, and becomes <b>tap only</b>: dragging it up would point off the screen, and down across the whole sheet would read as nothing. It is the one bar on the top edge while every other sheet has it at the bottom, and the pull he chose on 2026-09-15 is gone \u2014 only the tap is left.",
+        quickOnTop("top"),
+        {
+          added: "2026-09-23",
+          verdict: "open",
+          asks: "Where the bar that opens the full form goes, with quick add on top",
+        },
       ),
       plate(
         "pace-mark-tooltip-only",
