@@ -12,11 +12,14 @@ import { useToast } from "@/components/ui/Toast";
 import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
 import { useAddToLedger } from "@/features/shared/hooks";
-import { presentError } from "@/lib/api/errors";
+import { ApiError, type ErrorCode, presentError } from "@/lib/api/errors";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { sumAmounts } from "@/lib/local/derive";
+import { newEntityId } from "@/lib/local/outbox";
 import { useOffline } from "@/lib/network/useOffline";
+
+const SKIPPABLE = new Set<ErrorCode>(["SHARED_LINE_IN_LEDGER", "SHARED_LINE_NOT_PAID"]);
 
 export interface LedgerLine {
   expenseId: string;
@@ -33,7 +36,6 @@ export interface AddToLedgerSheetProps {
   onClose: () => void;
 }
 
-// One expense per line, dated that line: the category is yours, and the group carries none.
 export function AddToLedgerSheet({ open, groupId, owner, lines, onClose }: AddToLedgerSheetProps) {
   const t = useTranslations();
   const money = useMoney();
@@ -42,6 +44,8 @@ export function AddToLedgerSheet({ open, groupId, owner, lines, onClose }: AddTo
   const offline = useOffline();
   const add = useAddToLedger();
   const [left, setLeft] = useState(lines);
+  // One id per line for the life of the sheet: a retry after a lost answer replays, never adds twice.
+  const [ids] = useState(() => new Map(lines.map((line) => [line.expenseId, newEntityId()])));
   const [accountId, setAccountId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [perLine, setPerLine] = useState<Record<string, string>>({});
@@ -55,18 +59,27 @@ export function AddToLedgerSheet({ open, groupId, owner, lines, onClose }: AddTo
   async function save() {
     if (!ready) return;
     const remaining = [...left];
+    const skipped: ApiError[] = [];
     try {
-      // Whatever lands stays landed: a second try sends only what is still missing.
       for (const line of left) {
-        await add.mutateAsync({
-          groupId,
-          expenseId: line.expenseId,
-          accountId,
-          categoryId: categoryOf(line),
-        });
+        try {
+          await add.mutateAsync({
+            id: ids.get(line.expenseId) ?? newEntityId(),
+            groupId,
+            expenseId: line.expenseId,
+            accountId,
+            categoryId: categoryOf(line),
+          });
+        } catch (error) {
+          if (!(error instanceof ApiError && error.code && SKIPPABLE.has(error.code))) throw error;
+          skipped.push(error);
+        }
         remaining.shift();
       }
-      toast.show({ message: t("shared.joined.add.done") });
+      const [first] = skipped;
+      toast.show({
+        message: t(first ? presentError(first).messageKey : "shared.joined.add.done"),
+      });
       onClose();
     } catch {
       setLeft(remaining);

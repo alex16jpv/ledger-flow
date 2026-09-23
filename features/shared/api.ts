@@ -115,7 +115,6 @@ export function fetchJoined(): Promise<JoinedRows> {
   return readJoined();
 }
 
-// Needs a connection: whether the line is still paid and still shared with you is the server's.
 export async function addToLedger(
   groupId: string,
   expenseId: string,

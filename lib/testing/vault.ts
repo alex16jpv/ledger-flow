@@ -245,6 +245,7 @@ export function joinedGroup(overrides: Partial<JoinedGroup> = {}): JoinedGroup {
     name: "Villa de Leyva weekend",
     color: "TEAL",
     currency: "COP",
+    ownerId: "u-ana",
     ownerName: "Ana Ruiz",
     participants: [
       { contactId: null, name: "Ana Ruiz", color: null, you: false, joined: true },

@@ -3,7 +3,6 @@ import type { JoinedExpense, JoinedGroup, SyncTransaction } from "@/types/api";
 import { fromCents, toCents } from "./money";
 import type { PersonState } from "./shared";
 
-// Where your part of one line stands. Only a line the owner paid can reach your ledger from here.
 export type JoinedLineState =
   "IN_LEDGER" | "PAID" | "NOT_PAID" | "WRITTEN_OFF" | "OTHER_PAID" | "YOU_PAID" | "NO_PART";
 
@@ -11,9 +10,10 @@ export interface JoinedLine {
   id: string;
   state: JoinedLineState;
   yourShare: number;
-  // IN_LEDGER only: the expense you added, and whether the owner's line still agrees with it.
   addedId: string | null;
   addedAmount: number | null;
+  addedCategoryId: string | null;
+  addedAccountId: string | null;
   stillPaid: boolean;
 }
 
@@ -22,7 +22,6 @@ export interface JoinedPerson {
   share: number;
   paid: number;
   open: number;
-  // Null for the owner: the group keeps what each person owes the one who shared it.
   state: PersonState | null;
 }
 
@@ -30,12 +29,9 @@ export interface JoinedGroupStanding {
   id: string;
   amount: number;
   yourShare: number;
-  // What you still owe the owner, and what the owner still owes you, over their lines and yours.
   youOwe: number;
   ownerOwes: number;
-  // Both directions in one figure, the way a settle-up between the two of you would move it.
   net: number;
-  // Of the lines the owner paid, what you have paid of what was yours: the bar.
   paidToOwner: number;
   owedToOwner: number;
   state: PersonState;
@@ -134,13 +130,22 @@ export function deriveJoined(
       yourShare: fromCents(yours),
       addedId: null,
       addedAmount: null,
+      addedCategoryId: null,
+      addedAccountId: null,
       stillPaid: settled,
     };
     if (expense.paidByContactId !== null) {
       return { ...base, state: expense.paidByContactId === me ? "YOU_PAID" : "OTHER_PAID" };
     }
     if (addedRow) {
-      return { ...base, state: "IN_LEDGER", addedId: addedRow.id, addedAmount: addedRow.amount };
+      return {
+        ...base,
+        state: "IN_LEDGER",
+        addedId: addedRow.id,
+        addedAmount: addedRow.amount,
+        addedCategoryId: addedRow.categoryId,
+        addedAccountId: addedRow.fromAccountId,
+      };
     }
     if (yours === 0) return { ...base, state: "NO_PART" };
     if (settled) return { ...base, state: "PAID" };
@@ -182,16 +187,17 @@ function sharesOfOwner(rows: readonly JoinedExpense[]): number {
 }
 
 export interface JoinedOwnerTotal {
+  ownerId: string;
   name: string;
   youOwe: number;
   ownerOwes: number;
-  groups: number;
+  groupsYouOwe: number;
+  groupsOwingYou: number;
 }
 
 export interface JoinedTotals {
   youOwe: number;
   ownerOwes: number;
-  // One line per person who shared something with you, to close the People face's arithmetic.
   owners: JoinedOwnerTotal[];
 }
 
@@ -199,28 +205,46 @@ export function joinedTotals(
   groups: readonly JoinedGroup[],
   standings: ReadonlyMap<string, JoinedGroupStanding>,
 ): JoinedTotals {
-  const owners = new Map<string, { youOwe: number; ownerOwes: number; groups: number }>();
+  const owners = new Map<
+    string,
+    {
+      name: string;
+      youOwe: number;
+      ownerOwes: number;
+      groupsYouOwe: number;
+      groupsOwingYou: number;
+    }
+  >();
   let youOwe = 0;
   let ownerOwes = 0;
   for (const group of groups) {
     const standing = standings.get(group.id);
     if (!standing) continue;
-    const owner = owners.get(group.ownerName) ?? { youOwe: 0, ownerOwes: 0, groups: 0 };
-    owner.youOwe += toCents(standing.youOwe);
-    owner.ownerOwes += toCents(standing.ownerOwes);
-    owner.groups += 1;
-    owners.set(group.ownerName, owner);
-    youOwe += toCents(standing.youOwe);
-    ownerOwes += toCents(standing.ownerOwes);
+    const owner = owners.get(group.ownerId) ?? {
+      name: group.ownerName,
+      youOwe: 0,
+      ownerOwes: 0,
+      groupsYouOwe: 0,
+      groupsOwingYou: 0,
+    };
+    const mine = toCents(standing.youOwe);
+    const theirs = toCents(standing.ownerOwes);
+    owner.youOwe += mine;
+    owner.ownerOwes += theirs;
+    if (mine > 0) owner.groupsYouOwe += 1;
+    if (theirs > 0) owner.groupsOwingYou += 1;
+    owners.set(group.ownerId, owner);
+    youOwe += mine;
+    ownerOwes += theirs;
   }
   return {
     youOwe: fromCents(youOwe),
     ownerOwes: fromCents(ownerOwes),
-    owners: [...owners].map(([name, owner]) => ({
-      name,
+    owners: [...owners].map(([ownerId, owner]) => ({
+      ...owner,
+      ownerId,
       youOwe: fromCents(owner.youOwe),
       ownerOwes: fromCents(owner.ownerOwes),
-      groups: owner.groups,
     })),
   };
 }

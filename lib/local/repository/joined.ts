@@ -15,11 +15,9 @@ const PAGE_LIMIT = 100;
 // One request per group, four at a time: a cold device must not open a connection per group at once.
 const AT_A_TIME = 4;
 
-// Groups other people shared with you: read-only, and nothing of anybody's ledger.
 export interface JoinedRows {
   groups: JoinedGroup[];
   expenses: JoinedExpense[];
-  // Your own expenses added from their lines. Only the mirror can say; the server refuses a second one.
   added: SyncTransaction[];
 }
 
@@ -70,7 +68,6 @@ export function readJoined(): Promise<JoinedRows> {
   });
 }
 
-// Leaving takes the group off this device now; the next pull says the same through the invitation.
 export async function forgetJoinedGroup(groupId: string): Promise<void> {
   const db = currentVault()?.db;
   if (!db) return;
@@ -81,7 +78,6 @@ export async function forgetJoinedGroup(groupId: string): Promise<void> {
   await tx.done;
 }
 
-// Add to my ledger answers the expense it wrote; keeping it now shows it before the next pull.
 export async function keepAddedExpense(row: Transaction): Promise<void> {
   await currentVault()?.db.put("transactions", transactionRecord({ ...row, deletedAt: null }));
 }

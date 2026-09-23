@@ -16,7 +16,6 @@ import type { JoinedGroup } from "@/types/api";
 import { useGroupRange } from "./GroupRowLink";
 import { StateBadge } from "./parts";
 
-// No bar: a bar that fills the other way from the rows above it is worse than none.
 export function JoinedGroupRowLink({
   group,
   standing,

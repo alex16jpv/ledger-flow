@@ -91,7 +91,6 @@ export type SentInvitationRecord = MirrorRecord<SentInvitation>;
 export type ReceivedInvitationRecord = MirrorRecord<ReceivedInvitation>;
 export type SettlementRecord = DeletableRecord<Settlement>;
 
-// Somebody else's group: dropped whole when the invitation that let you in stops being ACCEPTED.
 export type JoinedGroupRecord = MirrorRecord<JoinedGroup>;
 export interface JoinedExpenseRecord extends DeletableRecord<JoinedExpense> {
   groupId: string;

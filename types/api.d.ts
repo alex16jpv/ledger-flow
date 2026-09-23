@@ -6272,6 +6272,11 @@ export type components = {
             color: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK" | null;
             /** @example COP */
             currency: string;
+            /**
+             * Format: uuid
+             * @description Who shared it: the same for every group of theirs, so their groups can be told apart from another person's with the same name.
+             */
+            ownerId: string;
             ownerName: string;
             participants: components["schemas"]["JoinedParticipant"][];
             defaultSplit: components["schemas"]["DefaultSplit"];

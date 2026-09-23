@@ -17,14 +17,19 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   invitation to the same group is on the device (left, then invited back). Which lines are already in
   your ledger is read from an `addedFrom` index on `transactions`, not by walking every movement.
   What you owe there is derived in `lib/local/derive/joined.ts` from the owner's own `collected`
-  figures, which is the server's imputation, so the client adds nothing it has to agree with.
+  figures, which is the server's imputation, so the client adds nothing it has to agree with. **They
+  are not a projection** and carry no projection mark: nothing written on the device ever enters those
+  rows, so every figure is a sum of what the server last said. The owner's "ahead" surplus is not
+  shown there: the figures clamp a share to what it cost.
 - **Alternatives:** queueing _Add to my ledger_ offline. Rejected: whether the line is still paid and
   still shared is the server's to say, and a queued one would come back as a conflict about somebody
   else's group. Fetching the joined groups on demand instead of mirroring them. Rejected: every other
   screen of the section reads offline, and this one would have been the exception.
 - **Consequence:** `MIRROR_VERSION` 5 and `VAULT_SCHEMA_VERSION` 4, so every device pulls once more.
   A device with no mirror falls back to `/joined-groups`, which cannot say what is already in your
-  ledger; the server refuses a second one with `SHARED_LINE_IN_LEDGER`, and the screen says so.
+  ledger; the server refuses a second one with `SHARED_LINE_IN_LEDGER`, and the sheet skips that line,
+  says so and adds the rest. Each line carries a client-minted id for the life of the sheet, so a retry
+  after a lost answer replays instead of being refused.
 
 ## 2026-09-22 · Invitations are online writes, and the mirror keeps both sides (T-129)
 

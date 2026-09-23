@@ -1,7 +1,7 @@
 import { joinedExpense, joinedGroup, transaction } from "@/lib/testing/vault";
 import type { JoinedExpense } from "@/types/api";
 
-import { deriveJoined } from "./joined";
+import { deriveJoined, joinedTotals } from "./joined";
 
 type Share = JoinedExpense["split"]["shares"][number];
 
@@ -119,5 +119,50 @@ describe("deriveJoined", () => {
     );
 
     expect(standing.lines.map((l) => [l.id, l.state])).toEqual([["groceries", "PAID"]]);
+  });
+});
+
+describe("joinedTotals", () => {
+  it("keeps two people with the same name apart, and counts only the groups that owe that way", () => {
+    const owing = joinedExpense({
+      id: "a",
+      groupId: "g1",
+      split: {
+        mode: "EQUAL",
+        guests: null,
+        shares: [
+          {
+            party: "USER",
+            contactId: null,
+            percent: null,
+            fixedAmount: null,
+            amount: 50000,
+            collected: 0,
+          },
+          {
+            party: "CONTACT",
+            contactId: "k2",
+            percent: null,
+            fixedAmount: null,
+            amount: 50000,
+            collected: 0,
+          },
+        ],
+      },
+    });
+    const groups = [
+      joinedGroup({ id: "g1", ownerId: "ana-1", ownerName: "Ana" }),
+      joinedGroup({ id: "g2", ownerId: "ana-1", ownerName: "Ana" }),
+      joinedGroup({ id: "g3", ownerId: "ana-2", ownerName: "Ana" }),
+    ];
+    const standings = new Map(groups.map((group) => [group.id, deriveJoined(group, [owing], [])]));
+
+    const totals = joinedTotals(groups, standings);
+
+    expect(totals.youOwe).toBe(50000);
+    expect(totals.owners).toEqual([
+      expect.objectContaining({ ownerId: "ana-1", youOwe: 50000, groupsYouOwe: 1 }),
+      expect.objectContaining({ ownerId: "ana-2", youOwe: 0, groupsYouOwe: 0 }),
+    ]);
   });
 });

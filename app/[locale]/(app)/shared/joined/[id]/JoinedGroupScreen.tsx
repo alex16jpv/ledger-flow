@@ -20,6 +20,8 @@ import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
+import { useAccountsQuery } from "@/features/accounts/hooks";
+import { useCategoriesQuery } from "@/features/categories/hooks";
 import { useGroupRange } from "@/features/shared/components/GroupRowLink";
 import { StateBadge } from "@/features/shared/components/parts";
 import { useJoinedGroups, useLeaveGroup } from "@/features/shared/hooks";
@@ -36,7 +38,6 @@ import type { JoinedExpense, JoinedGroup } from "@/types/api";
 
 import type { LedgerLine } from "../../AddToLedgerSheet";
 
-// Two taps behind a screen that reads; nothing on it needs the pickers until you add something.
 const AddToLedgerSheet = dynamic(() =>
   import("../../AddToLedgerSheet").then((module) => module.AddToLedgerSheet),
 );
@@ -73,7 +74,6 @@ function Hero({ group, standing }: { group: JoinedGroup; standing: JoinedGroupSt
       </div>
       <h2 className="pt-1.5 text-xl font-semibold tracking-[-0.02em]">{group.name}</h2>
       <span className="text-xs font-medium tracking-caps text-text-3 uppercase">{lead}</span>
-      {/* A debt between two people is neither income nor spending: neutral, with a word. */}
       <Amount value={Math.abs(standing.net)} signed={false} size="hero" />
       <span className="text-sm text-text-3">
         {t("lead", {
@@ -131,6 +131,10 @@ function useLineNote(group: JoinedGroup): (line: JoinedLine, expense: JoinedExpe
   const t = useTranslations("shared.joined.line");
   const money = useMoney();
   const dates = useDates();
+  const accounts = useAccountsQuery(true);
+  const categories = useCategoriesQuery(undefined, true, true);
+  const nameIn = (rows: { id: string; name: string }[] | undefined, id: string | null) =>
+    rows?.find((row) => row.id === id)?.name ?? "";
   const owner = group.ownerName;
   const nameOf = (contactId: string | null) =>
     group.participants.find((one) => one.contactId === contactId)?.name ?? "";
@@ -138,8 +142,12 @@ function useLineNote(group: JoinedGroup): (line: JoinedLine, expense: JoinedExpe
     const day = dates.formatDay(new Date(expense.date));
     switch (line.state) {
       case "IN_LEDGER": {
-        const notes = [day, t("added", { owner })];
-        // Your ledger is yours: what changed on the owner's side is said, never applied.
+        const notes = [
+          day,
+          t("added", { owner }),
+          nameIn(categories.data, line.addedCategoryId),
+          nameIn(accounts.data, line.addedAccountId),
+        ].filter(Boolean);
         if (line.addedAmount !== null && line.addedAmount !== line.yourShare) {
           notes.push(
             t("amountChanged", {

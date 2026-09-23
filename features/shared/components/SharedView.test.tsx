@@ -224,6 +224,21 @@ describe("SharedView", () => {
     expect(summary).toHaveTextContent("80,000");
   });
 
+  it("says a failure to read what was shared with you in its own place, and keeps your groups", async () => {
+    serve();
+    const own = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) =>
+      urlOf(input).startsWith("/api/joined-groups")
+        ? Promise.resolve(json({ code: "INTERNAL", message: "boom" }, { status: 500 }))
+        : (own?.(input, init) ?? Promise.reject(new Error("no route"))),
+    );
+    search = "face=groups";
+    view();
+
+    expect(await screen.findByRole("link", { name: /Night out/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
   it("opens on the groups when everything here was shared with you", async () => {
     serve({ groups: [], contacts: [], joined: [joinedGroup()], joinedExpenses: [] });
     view();

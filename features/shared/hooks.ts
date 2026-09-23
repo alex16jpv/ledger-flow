@@ -344,7 +344,6 @@ export interface JoinedView {
   totals: JoinedTotals;
 }
 
-// Groups other people shared with you: read here, written only by their owner.
 export function useJoinedGroups(enabled = true) {
   const query = useQuery({
     queryKey: sharedKeys.joined(),
@@ -364,6 +363,7 @@ export function useJoinedGroups(enabled = true) {
 }
 
 export interface AddToLedgerVariables {
+  id: string;
   groupId: string;
   expenseId: string;
   accountId: string;
@@ -373,8 +373,8 @@ export interface AddToLedgerVariables {
 export function useAddToLedger() {
   const invalidate = useSharedInvalidation();
   return useMutation({
-    mutationFn: ({ groupId, expenseId, accountId, categoryId }: AddToLedgerVariables) =>
-      addToLedger(groupId, expenseId, { accountId, categoryId }),
+    mutationFn: ({ id, groupId, expenseId, accountId, categoryId }: AddToLedgerVariables) =>
+      addToLedger(groupId, expenseId, { id, accountId, categoryId }),
     onSuccess: invalidate,
   });
 }

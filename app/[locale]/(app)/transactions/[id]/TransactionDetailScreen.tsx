@@ -383,7 +383,6 @@ export function TransactionDetailScreen({ id }: { id: string }) {
             />
           )}
           {/* Decision 4: splitting a loose expense creates a shared group of one. */}
-          {/* One added from a group shared with you already is your part of one. */}
           {row.type === "EXPENSE" &&
             row.sharedExpenseId === null &&
             row.importedFromExpenseId === null && (

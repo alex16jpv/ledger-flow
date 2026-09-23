@@ -280,6 +280,27 @@ describe("a group shared with you", () => {
     expect(await vault.db.getAllKeys("joinedGroups")).toEqual(["g9"]);
     expect(await vault.db.getAllKeys("joinedExpenses")).toEqual(["je1"]);
   });
+  it("keeps what a join brought when the new invitation arrives a page after the old one ended", async () => {
+    const vault = await openTestVault("u1");
+    await pullChanges(vault, {
+      fetchPage: feed([
+        page(
+          {
+            invitationsReceived: [
+              { ...joined, id: "r0", status: "LEFT", updatedAt: "2026-09-21T09:00:00.000Z" },
+            ],
+            joinedGroups: [joinedGroup({ updatedAt: "2026-09-21T10:00:00.000Z" })],
+            joinedExpenses: [joinedExpense({ updatedAt: "2026-09-21T10:00:00.000Z" })],
+          },
+          { count: 3, hasMore: true, nextCursor: "c1" },
+        ),
+        page({ invitationsReceived: [{ ...joined, id: "r1" }] }, end),
+      ]).fetchPage,
+    });
+
+    expect(await vault.db.getAllKeys("joinedGroups")).toEqual(["g9"]);
+    expect(await vault.db.getAllKeys("joinedExpenses")).toEqual(["je1"]);
+  });
 });
 
 describe("a pull with operations still queued", () => {

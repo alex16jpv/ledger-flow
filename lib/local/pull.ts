@@ -66,18 +66,31 @@ interface Applied {
   readdressed: boolean;
 }
 
-// A group can be left and joined again with a new invitation, so one that ended proves nothing alone.
-async function dropJoinedGroup(tx: WriteTransaction, groupId: string): Promise<boolean> {
+// Left and joined again: rows placed by the new join sit after the end of the old one, so they stay.
+async function dropJoinedGroup(
+  tx: WriteTransaction,
+  groupId: string,
+  endedAt: string,
+): Promise<boolean> {
   const invitations = await tx.objectStore("invitationsReceived").getAll();
   if (invitations.some((r) => r.row.groupId === groupId && r.row.status === "ACCEPTED")) {
     return false;
   }
+  const upTo = Date.parse(endedAt);
+  const settled = (updatedAt: string) => Date.parse(updatedAt) <= upTo;
+  let dropped = false;
+  const group = await tx.objectStore("joinedGroups").get(groupId);
+  if (group && settled(group.updatedAt)) {
+    await tx.objectStore("joinedGroups").delete(groupId);
+    dropped = true;
+  }
   const expenses = tx.objectStore("joinedExpenses");
-  const lines = await expenses.index("groupId").getAllKeys(groupId);
-  const had = (await tx.objectStore("joinedGroups").get(groupId)) !== undefined;
-  await tx.objectStore("joinedGroups").delete(groupId);
-  for (const id of lines) await expenses.delete(id);
-  return had || lines.length > 0;
+  for (const line of await expenses.index("groupId").getAll(groupId)) {
+    if (!settled(line.updatedAt)) continue;
+    await expenses.delete(line.id);
+    dropped = true;
+  }
+  return dropped;
 }
 
 async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promise<Applied> {
@@ -137,7 +150,6 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
     news ||= await isNews(tx.objectStore("invitationsReceived"), row.id, row.updatedAt);
     await tx.objectStore("invitationsReceived").put(receivedInvitationRecord(row));
   }
-  // Read-only: only the owner writes in a group, so nothing is ever queued against these rows.
   for (const row of changes.joinedGroups) {
     news ||= await isNews(tx.objectStore("joinedGroups"), row.id, row.updatedAt);
     await tx.objectStore("joinedGroups").put(joinedGroupRecord(row));
@@ -146,9 +158,9 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
     news ||= await isNews(tx.objectStore("joinedExpenses"), row.id, row.updatedAt);
     await tx.objectStore("joinedExpenses").put(joinedExpenseRecord(row));
   }
-  const ended = changes.invitationsReceived.filter((row) => row.status !== "ACCEPTED");
-  for (const groupId of new Set(ended.map((row) => row.groupId))) {
-    const dropped = await dropJoinedGroup(tx, groupId);
+  for (const row of changes.invitationsReceived) {
+    if (row.status === "ACCEPTED") continue;
+    const dropped = await dropJoinedGroup(tx, row.groupId, row.updatedAt);
     news ||= dropped;
   }
 

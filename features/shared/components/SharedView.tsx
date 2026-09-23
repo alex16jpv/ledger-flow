@@ -7,6 +7,7 @@ import { useId, useMemo, useState } from "react";
 
 import { Avatar } from "@/components/shell/Avatar";
 import { PageHeader } from "@/components/shell/PageHeader";
+import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
 import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
@@ -109,9 +110,8 @@ export function SharedView() {
   const params = useSearchParams();
   const shared = useSharedSection();
   const joined = useJoinedGroups();
-  const isPending = shared.isPending || joined.isPending;
-  const isError = shared.isError || joined.isError;
-  const error = shared.error ?? joined.error;
+  const isPending = shared.isPending || (joined.isPending && !joined.isError);
+  const { isError, error } = shared;
   const refetch = () => {
     shared.refetch();
     void joined.refetch();
@@ -148,7 +148,6 @@ export function SharedView() {
   const hasJoined = (joinedView?.rows.groups.length ?? 0) > 0;
   const ownNothing = section?.groups.length === 0 && section.people.length === 0;
   const nothingAtAll = ownNothing && !hasJoined;
-  // When everything here was shared with you, the People face has nothing of yours to list.
   const face = parseFace(params.get("face"), ownNothing && hasJoined ? "groups" : "people");
   const joinedRow = (group: JoinedGroup) => {
     const standing = joinedView?.standings.get(group.id);
@@ -325,13 +324,13 @@ export function SharedView() {
                 </p>
               )}
               {joinedView?.totals.owners.map((owner) => (
-                <div key={owner.name} className="flex flex-col gap-1 px-1 text-sm text-text-3">
+                <div key={owner.ownerId} className="flex flex-col gap-1 px-1 text-sm text-text-3">
                   {owner.youOwe > 0 && (
                     <p>
                       {t("shared.joined.peopleLine", {
                         amount: money.format(owner.youOwe),
                         name: owner.name,
-                        count: owner.groups,
+                        count: owner.groupsYouOwe,
                       })}
                     </p>
                   )}
@@ -340,7 +339,7 @@ export function SharedView() {
                       {t("shared.joined.peopleLineFrom", {
                         amount: money.format(owner.ownerOwes),
                         name: owner.name,
-                        count: owner.groups,
+                        count: owner.groupsOwingYou,
                       })}
                     </p>
                   )}
@@ -386,6 +385,25 @@ export function SharedView() {
                     ))}
                   </List>
                 </Card>
+              )}
+              {joined.isError && (
+                <Alert
+                  tone="danger"
+                  title={t("shared.joined.section")}
+                  action={
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        void joined.refetch();
+                      }}
+                    >
+                      {t("common.retry")}
+                    </Button>
+                  }
+                >
+                  <LoadErrorBody error={joined.error} />
+                </Alert>
               )}
               {joinedGroups.open.length > 0 && (
                 <section className="flex flex-col gap-2">
