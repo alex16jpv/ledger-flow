@@ -141,11 +141,13 @@ const CATS = {
   Transfer: ["repeat", "GRAY"],
   "Card payment": ["credit-card", "INDIGO"],
   Uncategorized: ["hash", "NONE"],
+  "Home groceries": ["shopping-cart", "GREEN"],
+  "Monthly subscriptions for the whole family, streaming and cloud storage": ["repeat", "PURPLE"],
 };
 
 const catChip = (name, selected = false) => {
   const [ic, col] = CATS[name];
-  return `<button class="chip cat color-${col}${selected ? " selected" : ""}"><span class="dot">${iconSvg(ic)}</span>${name}</button>`;
+  return `<button class="chip cat color-${col}${selected ? " selected" : ""}"><span class="dot">${iconSvg(ic)}</span><span class="name">${name}</span></button>`;
 };
 
 // ── Charts ──────────────────────────────────────────────────────────────────
@@ -536,6 +538,7 @@ const quickSheet = ({
   hint = "",
   full = false,
   keyboard: kb = null,
+  chips: chipsOverride = null,
 } = {}) => {
   const title = "Add";
   const bar = {
@@ -562,14 +565,14 @@ const quickSheet = ({
   const chips = {
     income: `${catChip("Salary", true)}${catChip("Business")}${catChip("Other income")}`,
     transfer: `${catChip("Card payment")}${catChip("Transfer")}`,
-    expense: `${catChip("Food", true)}${catChip("Coffee")}${catChip("Transport")}${catChip("Lifestyle")}${catChip("Bills")}`,
+    expense: `${catChip("Food", true)}${catChip("Coffee")}${catChip("Transport")}${catChip("Lifestyle")}`,
   }[type ?? "expense"];
   const cats =
     type === null
       ? `<div class="stack-sm"><span class="label">Category <span class="opt">optional · you can add it later</span></span>
-<div class="chips">${catChip("Food", true)}${catChip("Coffee")}${catChip("Transport")}${catChip("Lifestyle")}${catChip("Bills")}<button class="chip">${iconSvg("ellipsis", "sm")}More</button></div></div>`
+<div class="chips fit">${catChip("Food", true)}${catChip("Coffee")}${catChip("Transport")}${catChip("Lifestyle")}<button class="chip">${iconSvg("ellipsis", "sm")}More</button></div></div>`
       : `<div class="stack-sm"><span class="label">Category <span class="opt">optional · you can add it later</span></span>
-<div class="chips">${chips}<button class="chip">${iconSvg("ellipsis", "sm")}More</button></div></div>`;
+<div class="chips fit">${chipsOverride ?? chips}<button class="chip">${iconSvg("ellipsis", "sm")}More</button></div></div>`;
   const accounts =
     type === "transfer"
       ? `<div class="stack-sm">${quickPicker("From", "Bancolombia · $3,420,500", "landmark", "BLUE")}
@@ -5299,7 +5302,7 @@ const PAGES = [
         "Quick capture",
         "What the centre button opens. The three-way segment on top records all three types (T-73). On a phone it fills the screen with Save in the bar on top, and More details, at the end, opens the full form (T-150); from 600px up it is the centred modal with both buttons in its footer.",
         home({ sheet: quickSheet({ type: "expense", hint: typeLine("EXPENSE"), full: true }) }),
-        { added: "2026-09-01", updated: "2026-09-15" },
+        { added: "2026-09-01", updated: "2026-09-23" },
       ),
       plate(
         "quick-capture-income",
@@ -5316,6 +5319,37 @@ const PAGES = [
           sheet: quickSheet({ type: "transfer", hint: typeLine("TRANSFER"), full: true }),
         }),
         { added: "2026-09-15" },
+      ),
+      plate(
+        "quick-capture-long-names",
+        "Quick capture · long category names",
+        "T-151. The chips take at most two lines and never scroll, and <b>More is always drawn, last</b>: a row that scrolled sideways hid it past the edge, and on a desktop nothing says a row of chips can be scrolled. The chips are the four most used and only those that fit whole in the two lines with More, measured on each name at the current text size. Here the second most used is \u201cMonthly subscriptions for the whole family, streaming and cloud storage\u201d, longer than a line: it is not drawn, and Coffee and Transport take its place in the ranking\u2019s order. Two lines rather than one is his choice of 2026-09-23.",
+        home({
+          sheet: quickSheet({
+            type: "expense",
+            hint: typeLine("EXPENSE"),
+            full: true,
+            chips: `${catChip("Home groceries", true)}${catChip("Coffee")}${catChip("Transport")}`,
+          }),
+        }),
+        { added: "2026-09-23" },
+      ),
+      plate(
+        "quick-capture-name-longer-than-row",
+        "Quick capture · a chosen name longer than the row",
+        "T-151. The chosen category is always drawn, and it is the only chip that can be cut: when its name alone is longer than a line, it fills the first one with an ellipsis and More goes to the second.",
+        home({
+          sheet: quickSheet({
+            type: "expense",
+            hint: typeLine("EXPENSE"),
+            full: true,
+            chips: `${catChip(
+              "Monthly subscriptions for the whole family, streaming and cloud storage",
+              true,
+            )}`,
+          }),
+        }),
+        { added: "2026-09-23" },
       ),
       plate(
         "full-screen-quick-add",

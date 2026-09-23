@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { useLocale } from "next-intl";
 import { type ReactNode, Suspense, useCallback, useEffect, useState } from "react";
 
@@ -38,8 +39,11 @@ import { invalidateMirrorBacked } from "@/lib/query/domains";
 import { useMounted } from "@/lib/react/useMounted";
 import { SessionProvider, useSession } from "@/lib/session";
 
-import { QuickAddSheet } from "./QuickAddSheet";
 import { ServiceWorkerUpdates } from "./ServiceWorkerUpdates";
+
+const QuickAddSheet = dynamic(() =>
+  import("./QuickAddSheet").then((module) => module.QuickAddSheet),
+);
 
 function Frame({ children }: { children: ReactNode }) {
   // F-31: the gate that makes a read wait for the vault must go up before the screens query.

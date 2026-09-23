@@ -72,7 +72,7 @@ test("an expense is captured in two interactions, lands in the inbox and can be 
   await expect(
     sheet.getByRole("button", { name: /From your main account.*Bancolombia/ }),
   ).toBeVisible();
-  await expect(sheet.getByRole("group", { name: "Category" }).getByRole("button")).toHaveCount(6);
+  await expect(sheet.getByRole("group", { name: "Category" }).getByRole("button")).toHaveCount(5);
   expect((await new AxeBuilder({ page }).include("dialog[open]").analyze()).violations).toEqual([]);
   // T-77: the tint and the blur of a backdrop are resolved values, which jsdom cannot give.
   const backdrop = await sheet.evaluate((node) => {
@@ -172,6 +172,7 @@ test("without a main account the sheet asks for one instead of failing silently"
   expect(registered.ok(), await registered.text()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
   await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await addButton(page).click();
   const sheet = page.getByRole("dialog", { name: "Add" });
   await expect(sheet.getByRole("button", { name: /Account.*Choose an account/ })).toBeVisible();
@@ -288,4 +289,113 @@ test("the quick sheet records an income and a transfer against the real backend"
   expect(moved?.pendingDetails).toBe(false);
   expect(moved?.categoryId).toBeTruthy();
   await request.delete(`/api/transactions/${moved?.id}`, { headers: { origin: APP } });
+});
+
+const LONG_NAME = "Monthly subscriptions for the whole family, streaming and cloud storage";
+
+async function chipLayout(page: Page) {
+  const group = page.getByRole("dialog", { name: "Add" }).getByRole("group", { name: "Category" });
+  return group.evaluate((row) => {
+    const box = row.getBoundingClientRect();
+    const chips = [...row.querySelectorAll("button")].map((chip) => {
+      const rect = chip.getBoundingClientRect();
+      return {
+        name: chip.textContent,
+        top: Math.round(rect.top),
+        inside: rect.left >= box.left - 0.5 && rect.right <= box.right + 0.5,
+      };
+    });
+    const dialog = row.closest("dialog");
+    const scrollers = dialog
+      ? [dialog, ...dialog.querySelectorAll("*")].filter(
+          (node) => node === dialog || /auto|scroll/.test(getComputedStyle(node).overflowX),
+        )
+      : [];
+    return {
+      overflows:
+        row.scrollWidth > row.clientWidth ||
+        scrollers.some((node) => node.scrollWidth > node.clientWidth + 1),
+      lines: new Set(chips.map((chip) => chip.top)).size,
+      names: chips.map((chip) => chip.name),
+      outside: chips.filter((chip) => !chip.inside).map((chip) => chip.name),
+    };
+  });
+}
+
+test("the category chips never hide More, whatever the names and the text size (T-151)", async ({
+  page,
+  request,
+}) => {
+  const registered = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: { name: "Chips E2E", email: uniqueEmail("chips"), password: "LedgerFlow!2026" },
+  });
+  expect(registered.ok(), await registered.text()).toBe(true);
+  const account = await request.post("/api/accounts", {
+    headers: { origin: APP },
+    data: { name: "Chips cash", type: "CASH", balance: 5_000_000, isDefault: true },
+  });
+  expect(account.ok(), await account.text()).toBe(true);
+  const accountId = ((await account.json()) as { id: string }).id;
+  const ranked = ["Tacos", LONG_NAME, "Latte", "Taxi", "Vet"];
+  for (const [rank, name] of ranked.entries()) {
+    const made = await request.post("/api/categories", {
+      headers: { origin: APP },
+      data: { name, icon: "utensils", color: "ORANGE", type: "EXPENSE" },
+    });
+    expect(made.ok(), await made.text()).toBe(true);
+    const categoryId = ((await made.json()) as { id: string }).id;
+    for (let use = 0; use < ranked.length - rank; use += 1) {
+      const spent = await request.post("/api/transactions", {
+        headers: { origin: APP },
+        data: {
+          type: "EXPENSE",
+          amount: 1_000,
+          date: new Date().toISOString(),
+          fromAccountId: accountId,
+          categoryId,
+        },
+      });
+      expect(spent.ok(), await spent.text()).toBe(true);
+    }
+  }
+  await page.context().addCookies((await request.storageState()).cookies);
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await addButton(page).click();
+  const sheet = page.getByRole("dialog", { name: "Add" });
+  const more = sheet.getByRole("group", { name: "Category" }).getByRole("button", { name: "More" });
+  await expect(more).toBeVisible();
+
+  await expect
+    .poll(async () => (await chipLayout(page)).names)
+    .toEqual(["Tacos", "Latte", "Taxi", "More"]);
+  let layout = await chipLayout(page);
+  expect(layout).toMatchObject({ overflows: false, outside: [] });
+  expect(layout.lines).toBeLessThanOrEqual(2);
+
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "150%";
+  });
+  await expect.poll(async () => (await chipLayout(page)).names.at(-1)).toBe("More");
+  await expect.poll(async () => (await chipLayout(page)).lines).toBeLessThanOrEqual(2);
+  layout = await chipLayout(page);
+  expect(layout).toMatchObject({ overflows: false, outside: [] });
+  expect(layout.names[0]).toBe("Tacos");
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "";
+  });
+
+  await more.click();
+  await page
+    .getByRole("dialog", { name: "Category" })
+    .getByRole("option", { name: LONG_NAME })
+    .click();
+  await expect(sheet.getByRole("button", { name: LONG_NAME, pressed: true })).toBeVisible();
+  await expect(more).toBeVisible();
+  layout = await chipLayout(page);
+  expect(layout.names[0]).toBe(LONG_NAME);
+  expect(layout.names.at(-1)).toBe("More");
+  expect(layout).toMatchObject({ overflows: false, outside: [] });
+  expect(layout.lines).toBeLessThanOrEqual(2);
 });

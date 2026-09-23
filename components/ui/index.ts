@@ -31,6 +31,7 @@ export { DayBars } from "./DayBars";
 export { DayHeat } from "./DayHeat";
 export { Empty } from "./Empty";
 export { Field, FieldGroup, Input, Switch, Textarea } from "./Field";
+export { FittedChips } from "./FittedChips";
 export { GBars, type GBarsProps, type Pair } from "./GBars";
 export { IconGrid } from "./IconGrid";
 export { PeriodNav } from "./PeriodNav";

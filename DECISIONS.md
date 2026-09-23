@@ -4953,3 +4953,36 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   height, so the search stays put and the list runs to the keyboard. `tests/e2e/shell.spec.ts` measures
   both forms on the Pixel 7 project; the keyboard itself cannot be opened by Playwright, so the viewport
   tracking is covered by `Sheet.test.tsx` with a stubbed `visualViewport`.
+
+## 2026-09-23 · The quick add chips are measured, not counted, and More is never cut (T-151)
+
+- **Context:** the quick add's category row scrolled sideways with More at its end. Five recent
+  categories plus the chosen one pushed More past the edge, and on a desktop nothing says a chip row
+  scrolls, so the category wanted was unreachable. The owner asked for a limit that guarantees More,
+  and not only by count, because one long name hides it too.
+- **Decision:** `components/ui/FittedChips` wraps the chips in at most `lines` lines (two, his choice
+  of 2026-09-23: one line holds only two of four chips on a phone) with the trailing chip last. An
+  invisible, inert ruler renders every candidate at its natural width; `fitChips`, a pure function,
+  keeps the pinned chip (the chosen category), then each chip in ranking order that still leaves the
+  trailing chip inside the last line, skipping one that does not; a chip wider than a line is dropped
+  unless pinned, and the pinned one is capped at the line and cut with an ellipsis. The chip that holds
+  the focus is kept like the pinned one, so a re-fit never drops focus to the page. A `ResizeObserver`
+  on the row and on the ruler re-fits when the width, the text size or a name changes; the first fit
+  runs in a layout effect and the observer's through `flushSync`, so a stale fit is never painted. A
+  row of width 0 (the closed `<dialog>`) keeps the last fit instead of measuring nothing. Widths come
+  from `getBoundingClientRect` and the gap is scaled by the same ratio, so a transformed sheet fits the
+  same. The ruler is clipped to the row's width, so a long name cannot widen the sheet's scroll area.
+  The quick add asks for four recents instead of five.
+- **The quick add loads on its own chunk** (`next/dynamic` in `AppFrame`). With the fitting in it, the
+  heaviest screen reached 219.9 kB gz of its 220 kB budget; with the sheet split out it is 216.7 kB.
+  It is always mounted, so its chunk is requested as the frame renders rather than on the tap, and the
+  service worker precaches the whole build, so it opens offline. A chunk missing after a deploy is the
+  same case the five sheets already split with `next/dynamic` have; this adds no new one.
+- **Alternatives (not taken):** a count per breakpoint — a long name or a larger text size still hides More. CSS
+  alone (`flex-wrap` with overflow clipped to two lines) — the clipped chips stay focusable and in the
+  accessibility tree, and More could be the one clipped. More outside the row — the spec
+  draws it as the row’s last chip, and the row would still scroll.
+- **Consequence:** `CategoryChip` wraps its name in a truncating span, which only matters where a
+  chip is narrower than its name; the other chip rows keep scrolling as before. jsdom lays nothing
+  out, so the unit tests stub `getBoundingClientRect` and `vitest.setup.ts` gives jsdom a no-op
+  `ResizeObserver`; the real layout, including a 150% root font size, is in `tests/e2e/quick-add.spec.ts`.

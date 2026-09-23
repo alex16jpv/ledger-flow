@@ -39,6 +39,21 @@ if (typeof Element !== "undefined" && !Element.prototype.setPointerCapture) {
   };
 }
 
+// jsdom has no ResizeObserver and lays nothing out, so there is never a size to report.
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {
+      return undefined;
+    }
+    unobserve() {
+      return undefined;
+    }
+    disconnect() {
+      return undefined;
+    }
+  };
+}
+
 // F-87: jsdom has no matchMedia, and nothing is standalone unless a test says so.
 if (typeof window !== "undefined" && !window.matchMedia) {
   window.matchMedia = (query: string) => ({

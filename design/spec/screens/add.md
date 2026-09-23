@@ -30,10 +30,29 @@ dragging or tapping it (T-75, 2026-09-15) went with the bottom sheet: there is n
 "More details" was always the way that is not a gesture. `#full-screen-quick-add` draws it with the
 numeric keyboard up.
 
-The amount focused with the numeric keyboard open; a row of chips with the five most used
+The amount focused with the numeric keyboard open; a row of chips with the four most used
 categories plus "More", which opens the full picker; an account picker preselected with the main
 account (with no main account, `NO_DEFAULT_ACCOUNT` → an empty, required picker); a quick note; and the
 buttons "More details" (which carries the state into the full form) and "Save".
+
+### The chip row always shows "More" (`#quick-capture-long-names`)
+
+**The chips take at most two lines and never scroll** (T-151). A row that scrolled sideways hid
+"More" past the edge, and on a desktop nothing says a row of chips can be scrolled: with the category
+wanted not among the chips, there was no way to reach it. His words: «se debe de limitar las
+categorias para asegurar que simepre se pueda ver el boton de more, y el limite no debe ser solo por
+numero de items». Two lines rather than one is his choice of 2026-09-23: on a phone one line holds only
+two of the four (Food, Coffee and More fill 261 of its 358px), and the sheet has room for a second.
+
+- **"More" is always drawn, last**, on the first line or on the second.
+- **The chips are the four most used, and only those that fit whole** in the two lines together with
+  "More", measured on the real width of each name at the current text size. A chip that does not fit
+  is not drawn — the next one down the ranking takes its place if it is shorter — and the ones that are
+  drawn keep the ranking's order.
+- **The chosen category is always drawn**, first if it is not among the four (one chosen in "More",
+  or in the full form and brought back). It is the only chip that can be cut: if its name alone is
+  longer than a line, it fills the first one with an ellipsis and "More" goes to the second
+  (`#quick-capture-name-longer-than-row`).
 
 Saving posts to `/transactions/quick` with a UUID `Idempotency-Key` per distinct payload
 (`IdempotencyKeyring`): a retry of the same amount, category and account reuses the key, and an
