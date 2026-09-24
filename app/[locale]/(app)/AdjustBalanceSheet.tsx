@@ -284,7 +284,7 @@ export function EditAdjustmentSheet({ adjustment, open, onClose }: EditAdjustmen
       toast.show({ message: t("transactions.form.deleted") });
       onClose();
     } catch (caught) {
-      toast.show({ message: t(presentError(caught).messageKey), tone: "danger" });
+      toast.show({ message: t(presentError(caught, true).messageKey), tone: "danger" });
       setConfirming(false);
     }
   }

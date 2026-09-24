@@ -99,7 +99,7 @@ export function EditTransactionScreen({ id }: { id: string }) {
       toast.show({ message: t("transactions.form.deleted") });
       router.push(AFTER_SAVE_PATH);
     } catch (error) {
-      toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
+      toast.show({ message: t(presentError(error, true).messageKey), tone: "danger" });
       setConfirming(false);
     }
   }

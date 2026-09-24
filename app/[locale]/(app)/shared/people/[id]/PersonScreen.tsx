@@ -191,7 +191,7 @@ export function PersonScreen({ id }: { id: string }) {
       toast.show({ message: t("shared.undoPayment.done") });
     } catch (error) {
       setUndoing(null);
-      toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
+      toast.show({ message: t(presentError(error, true).messageKey), tone: "danger" });
     }
   }
 

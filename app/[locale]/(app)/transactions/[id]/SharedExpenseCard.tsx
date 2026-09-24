@@ -180,7 +180,7 @@ export function SharedExpenseCard({
       toast.show({ message: whole("shared.undoPayment.done") });
     } catch (error) {
       setUndoing(null);
-      toast.show({ message: whole(presentError(error).messageKey), tone: "danger" });
+      toast.show({ message: whole(presentError(error, true).messageKey), tone: "danger" });
     }
   }
 

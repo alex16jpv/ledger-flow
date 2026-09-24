@@ -25,6 +25,7 @@ import {
 } from "../schema";
 import { type MoneyEffect, newEntityId } from "./envelope";
 import { NotProjectableError, type ProjectionContext, projectionContext } from "./projected";
+import { refuseLoanInCredit } from "./projection";
 import {
   dependenciesOf,
   type LocalChange,
@@ -546,6 +547,7 @@ export function recordSettlement(input: NewSettlement): Promise<Settlement> {
         ...(minted.length > 0 ? { minted: minted.map((movement) => movement.id) } : {}),
       },
       project: async (tx, occurredAt) => {
+        if (effect) await refuseLoanInCredit(tx, effect);
         const owner = await projectionContext(tx, occurredAt);
         const row: Settlement = {
           id,
@@ -659,6 +661,7 @@ export function deleteSettlement(id: string): Promise<unknown> {
             .put(transactionRecord({ ...row, deletedAt: occurredAt }, record?.server));
         }
         const effect = undoEffect(written);
+        if (effect) await refuseLoanInCredit(tx, effect);
         return {
           ...(effect ? { effect } : {}),
           dependsOn: [],

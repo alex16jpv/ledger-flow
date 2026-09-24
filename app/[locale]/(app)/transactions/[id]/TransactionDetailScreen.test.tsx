@@ -135,6 +135,28 @@ describe("TransactionDetailScreen", () => {
     expect(await screen.findByText("Transaction deleted")).toBeVisible();
   });
 
+  it("says why a delete that would leave a loan above zero was refused, and stays [T-156]", async () => {
+    const answer = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) =>
+      urlOf(input).endsWith("/api/transactions/t1") && init?.method === "DELETE"
+        ? Promise.resolve(
+            json(
+              { code: "LOAN_OVERPAID", message: "A loan cannot end above zero" },
+              { status: 400 },
+            ),
+          )
+        : (answer?.(input, init) ?? Promise.reject(new Error("unrouted"))),
+    );
+    render();
+    await screen.findByRole("heading", { level: 2, name: "Uber to work" });
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = screen.getByRole("dialog", { name: "Delete this transaction?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    expect(await screen.findByText(/paid off after that was recorded/)).toBeVisible();
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it("offers to complete a pending quick expense and shows not-found for a missing id", async () => {
     fetchMock.mockImplementation((input) =>
       Promise.resolve(

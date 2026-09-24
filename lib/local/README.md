@@ -87,6 +87,13 @@ of its own: `queuedMirror` walks the operation over the expense too (with its ow
 link — a new amount under an `EXACT` split, a new type, deleting a movement whose block of guests has
 paid — is refused here with the same code, before anything is queued.
 
+**A loan never ends above zero, whatever the write** (T-156). The server caps a `LOAN` on the net a
+whole write leaves on it, so a delete or an edit that takes back what was borrowed from a loan paid off
+since is `400 LOAN_OVERPAID` like a payment past what it owes. `refuseLoanInCredit` (`projection.ts`)
+asks the same question before anything is queued — the loan's balance as the queue projects it, plus
+this write's effect — for every movement write and for recording and undoing a payment, so offline the
+mirror never draws a loan with money of its own that the sync would take back later.
+
 What the endpoints derive on every read — a group's `totals`, its `status`, and the state of each
 person in it, which no endpoint exposes at all — is derived here too, by `derive/shared.ts`, from the
 stored rows. The rules it reproduces to the minor unit are the backend's own

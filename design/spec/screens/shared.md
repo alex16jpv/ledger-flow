@@ -399,6 +399,10 @@ from:
   the expense it landed on — and it is why this is safe to offer rather than something to be afraid
   of.
 
+**A payment made from a loan paid off since cannot be undone** (T-156): giving that money back would
+leave the loan above zero. The sheet closes and the `danger` toast of the movement's detail says what
+to do first — lower the loan's payment — ([transactions.md](transactions.md)); nothing is undone.
+
 The confirmation is the destructive one the section already uses for `Write off` and `Archive`, and it
 names the amount. **Undoing is not itself undoable**: what comes back is the debt, and recording the
 payment again is the way back — the sheet does not pretend otherwise.
