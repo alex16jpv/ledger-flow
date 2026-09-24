@@ -32,9 +32,12 @@
   lock) and the time zone (a picker with `Intl.DateTimeFormat().resolvedOptions().timeZone`).
 
   Signing up returns tokens, so it goes straight into onboarding. `reactivated: true`
-  (`#account-reactivated`) shows an `info` alert, "Welcome back…", on the first screen after signing up
-  and skips onboarding, because accounts already exist. A 409 `EMAIL_TAKEN`/`DUPLICATE` shows an inline
-  error under the email with a "Sign in" link. A 500 shows "Your account may already have been created:
+  (`#account-reactivated`) skips onboarding, because accounts already exist, and lands on Home with an
+  `info` alert, "Welcome back…". The server reactivates a deleted account only with the password it
+  had (T-153); with any other one it answers like a live account. A 409 `EMAIL_TAKEN`
+  (`#create-account-email-taken`) shows an inline error under the email, "This email already has an
+  account. If you deleted it, sign up with the password it had to bring it back.", with a "Sign in"
+  link. A 500 shows "Your account may already have been created:
   try signing in before signing up again."
 
 - **Onboarding 1 · first account** (`#onboarding-first-account`): step dots on top; name, type (**the

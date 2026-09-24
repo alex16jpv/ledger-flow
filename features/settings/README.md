@@ -11,8 +11,10 @@ password; a credential change asks for the current password and signs this devic
 new pair, because the API revokes every refresh token), `SessionsView` (`/settings/sessions`: one row
 per device from the user agent, sign out one, or every device with a confirmation that warns this one
 goes too), the "Your data" section (rights under Law 1581, contact mailbox, policy link), the
-"Install app" row (`beforeinstallprompt`), About with the version, and `DeleteAccountSheet` (type the
-word, `DELETE /users/:id`, then sign out to `/login?deleted=1`).
+"Install app" row (`beforeinstallprompt`), About with the version, and `DeleteAccountSheet` (the current
+password is the confirmation and goes as `currentPassword` in `DELETE /users/:id`, so a stolen session
+cannot delete the account; a wrong one is an error under the field; then sign out to
+`/login?deleted=1`).
 
 O-F6 part 2 adds `/settings/sync`, the screen support needs when someone spent three months without
 network: the sync cursor and last full pull, how many writes are still queued and the last error the

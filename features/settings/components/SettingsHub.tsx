@@ -412,9 +412,9 @@ export function SettingsHub() {
         offline={offline}
         pending={deleteAccount.isPending}
         error={deleteAccount.error}
-        onConfirm={() => {
+        onConfirm={(currentPassword) => {
           deleteAccount
-            .mutateAsync()
+            .mutateAsync(currentPassword)
             .then(async () => {
               await session.logout();
               router.replace({ pathname: LOGIN_PATH, query: { deleted: "1" } });

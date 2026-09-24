@@ -2,7 +2,14 @@ import { api } from "@/lib/api/client";
 import { noteSessionStarted } from "@/lib/api/refresh";
 import { pullAfterDirectSend } from "@/lib/local/outbox";
 import { readAccounts, readCategoriesPage } from "@/lib/local/repository";
-import type { AccountList, AuthTokens, Session, UpdateUserInput, User } from "@/types/api";
+import type {
+  AccountList,
+  AuthTokens,
+  DeleteUserInput,
+  Session,
+  UpdateUserInput,
+  User,
+} from "@/types/api";
 
 export async function updateUser(id: string, input: UpdateUserInput): Promise<User> {
   const answer = await api<User>(`/users/${id}`, { method: "PUT", body: input });
@@ -11,8 +18,8 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
   return answer;
 }
 
-export function deleteUser(id: string): Promise<unknown> {
-  return api<unknown>(`/users/${id}`, { method: "DELETE" });
+export function deleteUser(id: string, input: DeleteUserInput): Promise<unknown> {
+  return api<unknown>(`/users/${id}`, { method: "DELETE", body: input });
 }
 
 export interface CategorySummary {

@@ -1,10 +1,9 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { AuthHeading } from "@/components/shell/AuthFrame";
-import { ONBOARDING_PATH, safeNextPath, withSearchParam } from "@/lib/auth/routes";
+import { APP_HOME_PATH, ONBOARDING_PATH } from "@/lib/auth/routes";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
 
@@ -13,7 +12,6 @@ import { RegisterForm } from "./RegisterForm";
 export function RegisterView() {
   const t = useTranslations("auth.register");
   const router = useRouter();
-  const params = useSearchParams();
   const locale = useLocale();
 
   return (
@@ -23,7 +21,7 @@ export function RegisterView() {
         locale={isAppLocale(locale) ? locale : "en"}
         onSuccess={({ user }) => {
           if (user.reactivated) {
-            router.replace(withSearchParam(safeNextPath(params.get("next")), "reactivated", "1"));
+            router.replace({ pathname: APP_HOME_PATH, query: { reactivated: "1" } });
             return;
           }
           router.replace(ONBOARDING_PATH);
