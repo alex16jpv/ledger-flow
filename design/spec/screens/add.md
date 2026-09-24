@@ -100,6 +100,11 @@ field responsible (`CATEGORY_TYPE_MISMATCH`, `CATEGORY_ARCHIVED`, `AMOUNT_PRECIS
 `CURRENCY_MISMATCH`). Editing uses the same form under the title "Edit transaction", with "Delete" as
 the secondary action (confirmed; there is no restore).
 
+**Loading** is the form's skeleton under its header — the title, then four bars — and it stays until the
+user's time zone and currency are known, not only until the data is (T-159): opened cold from the
+installed app's shortcut, the date the form starts from and the decimals of its amount are the user's,
+never the fallback's. The group-expense form and the budget forms wait the same way.
+
 ## Adjustment leaves this form (T-85)
 
 The segmented control presented four kinds as equals and they are not: an expense, an income and a

@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { json, urlOf } from "@/lib/testing/http";
 import { UUID } from "@/lib/testing/ids";
@@ -157,6 +158,28 @@ describe("GroupExpenseScreen", () => {
       id: expect.stringMatching(UUID),
       transactionId: "t9",
     });
+  });
+
+  // T-159: the date it starts from is the user's, so the form waits until the profile is known.
+  it("waits for the user's zone before it draws the form", async () => {
+    const screenIn = (profileResolved: boolean) => (
+      <QueryProvider>
+        <ToastProvider>
+          <FormatSettingsProvider profileResolved={profileResolved}>
+            <GroupExpenseScreen groupId="g1" />
+          </FormatSettingsProvider>
+        </ToastProvider>
+      </QueryProvider>
+    );
+    const { rerender } = renderWithProviders(screenIn(false));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    expect(screen.getByRole("status", { name: "Loading" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Save and add to the group" })).toBeNull();
+
+    rerender(screenIn(true));
+    expect(await screen.findByRole("button", { name: "Save and add to the group" })).toBeVisible();
   });
 
   it("does not offer a type nobody can share", async () => {

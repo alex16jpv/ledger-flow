@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
+import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import { renderWithProviders } from "@/lib/testing/render";
 
 import { AmountInput } from "./AmountInput";
@@ -154,6 +155,30 @@ describe("AmountInput", () => {
     await userEvent.click(screen.getByRole("button", { name: "Fill" }));
     await userEvent.type(input, "00");
     expect(input).toHaveValue("2.50");
+  });
+
+  // T-159: until the profile says which currency this is, what is typed could lose its decimals.
+  it("takes nothing until the user's currency is known, then writes its figure in it", async () => {
+    const onChange = vi.fn();
+    const field = (profileResolved: boolean) => (
+      <FormatSettingsProvider
+        profileResolved={profileResolved}
+        {...(profileResolved ? { currency: "USD" } : {})}
+      >
+        <AmountInput defaultValue={12.5} onChange={onChange} label="Amount" />
+      </FormatSettingsProvider>
+    );
+    const { rerender } = renderWithProviders(field(false));
+    const input = screen.getByRole("textbox", { name: "Amount" });
+    expect(input).toHaveAttribute("readonly");
+    expect(input).toHaveValue("13");
+
+    rerender(field(true));
+    expect(input).not.toHaveAttribute("readonly");
+    expect(input).toHaveValue("12.5");
+    await userEvent.type(input, "0");
+    expect(onChange).toHaveBeenLastCalledWith(12.5);
+    expect(input).toHaveValue("12.50");
   });
 
   it("keeps the caret next to the digit the user edited", async () => {

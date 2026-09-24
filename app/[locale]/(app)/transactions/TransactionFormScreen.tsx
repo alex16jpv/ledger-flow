@@ -37,10 +37,26 @@ import { TransactionForm } from "./TransactionForm";
 
 const AFTER_SAVE_PATH = "/transactions";
 
-export function NewTransactionScreen() {
+function FormSkeleton() {
+  const t = useTranslations();
+  return (
+    <div
+      className="flex flex-col gap-4"
+      role="status"
+      aria-busy="true"
+      aria-label={t("common.loading")}
+    >
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="mx-auto h-16 w-48" />
+      <Skeleton className="h-12 w-full" />
+      <Skeleton className="h-12 w-full" />
+    </div>
+  );
+}
+
+function NewTransactionForm() {
   const t = useTranslations();
   const router = useRouter();
-  const back = useBackNavigation();
   const toast = useToast();
   const params = useSearchParams();
   const { timeZone } = useFormatSettings();
@@ -53,6 +69,26 @@ export function NewTransactionScreen() {
   );
 
   return (
+    <TransactionForm
+      defaultValues={defaults}
+      submitLabel={t("transactions.form.save")}
+      pending={create.isPending}
+      error={create.error}
+      onSubmit={async (input, idempotencyKey) => {
+        await create.mutateAsync({ input, idempotencyKey });
+        toast.show({ message: t("transactions.form.saved") });
+        router.push(AFTER_SAVE_PATH);
+      }}
+    />
+  );
+}
+
+export function NewTransactionScreen() {
+  const t = useTranslations();
+  const back = useBackNavigation();
+  const { profileResolved } = useFormatSettings();
+
+  return (
     <div className="flex flex-col gap-5">
       <PageHeader
         title={t("transactions.form.newTitle")}
@@ -60,17 +96,7 @@ export function NewTransactionScreen() {
           back(AFTER_SAVE_PATH);
         }}
       />
-      <TransactionForm
-        defaultValues={defaults}
-        submitLabel={t("transactions.form.save")}
-        pending={create.isPending}
-        error={create.error}
-        onSubmit={async (input, idempotencyKey) => {
-          await create.mutateAsync({ input, idempotencyKey });
-          toast.show({ message: t("transactions.form.saved") });
-          router.push(AFTER_SAVE_PATH);
-        }}
-      />
+      {profileResolved ? <NewTransactionForm /> : <FormSkeleton />}
     </div>
   );
 }
@@ -80,7 +106,7 @@ export function EditTransactionScreen({ id }: { id: string }) {
   const router = useRouter();
   const back = useBackNavigation();
   const toast = useToast();
-  const { timeZone } = useFormatSettings();
+  const { timeZone, profileResolved } = useFormatSettings();
   const transaction = useTransactionQuery(id);
   const update = useUpdateTransaction(id);
   const remove = useDeleteTransaction();
@@ -130,18 +156,8 @@ export function EditTransactionScreen({ id }: { id: string }) {
             )
           }
         />
-      ) : !row || elsewhere ? (
-        <div
-          className="flex flex-col gap-4"
-          role="status"
-          aria-busy="true"
-          aria-label={t("common.loading")}
-        >
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="mx-auto h-16 w-48" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-        </div>
+      ) : !row || elsewhere || !profileResolved ? (
+        <FormSkeleton />
       ) : (
         <TransactionForm
           defaultValues={fromTransaction(row, timeZone)}

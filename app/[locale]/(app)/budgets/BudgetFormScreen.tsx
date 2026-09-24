@@ -48,7 +48,7 @@ export function NewBudgetScreen() {
   const back = useBackNavigation();
   const toast = useToast();
   const params = useSearchParams();
-  const { timeZone } = useFormatSettings();
+  const { timeZone, profileResolved } = useFormatSettings();
   const [now] = useState(() => new Date());
   const [suggestedColor] = useState(() => randomColorToken());
   const from = params.get("from");
@@ -56,7 +56,7 @@ export function NewBudgetScreen() {
   const source = useBudgetQuery(from ?? "", undefined);
   const categories = useCategoriesQuery(undefined, true, true);
   const create = useCreateBudget();
-  const waiting = (Boolean(from) && source.isPending) || categories.isPending;
+  const waiting = (Boolean(from) && source.isPending) || categories.isPending || !profileResolved;
   const defaults =
     from && source.data
       ? fromBudget(source.data, timeZone, "copy", now)
@@ -98,7 +98,7 @@ export function EditBudgetScreen({ id }: { id: string }) {
   const t = useTranslations();
   const back = useBackNavigation();
   const toast = useToast();
-  const { timeZone } = useFormatSettings();
+  const { timeZone, profileResolved } = useFormatSettings();
   const [now] = useState(() => new Date());
   const budget = useBudgetQuery(id);
   const categories = useCategoriesQuery(undefined, true, true);
@@ -114,7 +114,7 @@ export function EditBudgetScreen({ id }: { id: string }) {
           back(`/budgets/${id}`);
         }}
       />
-      {budget.isPending || categories.isPending ? (
+      {budget.isPending || categories.isPending || !profileResolved ? (
         <FormSkeleton label={t("common.loading")} />
       ) : budget.isError || !row ? (
         <Empty

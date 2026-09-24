@@ -8,5 +8,5 @@ import { useSession } from "./SessionProvider";
 export function useAppUser() {
   const session = useSession();
   const mirror = useMirrorProfile(session.user === null && session.status !== "loading");
-  return session.user ?? mirror;
+  return session.user ?? mirror.user;
 }

@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import type { SettleParty } from "@/features/shared/settle";
+import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { json } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
@@ -31,6 +32,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 const line = (over: Partial<SettleParty["theyOwe"][number]> = {}) => ({
@@ -107,5 +109,24 @@ describe("the settle-up sheet", () => {
 
     expect(screen.getByRole("dialog", { name: /Pay Ana Ruiz/ })).toBeInTheDocument();
     expect(screen.getByText("This one is an expense of yours.")).toBeInTheDocument();
+  });
+
+  // T-159: a sheet drawn before the profile arrived takes the user's day once it does.
+  it("keeps today as the day when the profile moves it to another zone", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-24T22:30:00.000Z"));
+    const sheet = (timeZone?: string) => (
+      <QueryProvider>
+        <ToastProvider>
+          <FormatSettingsProvider {...(timeZone ? { timeZone } : {})}>
+            <SettleUpSheet open party={party()} onClose={vi.fn()} />
+          </FormatSettingsProvider>
+        </ToastProvider>
+      </QueryProvider>
+    );
+    const { rerender } = renderWithProviders(sheet());
+    rerender(sheet("Europe/Madrid"));
+
+    expect(screen.getByRole("button", { name: /^Date/ })).toHaveTextContent(/Today/);
   });
 });

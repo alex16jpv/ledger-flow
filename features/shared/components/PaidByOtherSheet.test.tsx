@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { dayKey } from "@/lib/format/dates";
+import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import type { VaultHandle } from "@/lib/local/db";
 import { pendingOperations } from "@/lib/local/outbox/queue";
 import { setCurrentVault } from "@/lib/local/repository/read";
@@ -50,6 +51,7 @@ afterEach(async () => {
   setCurrentVault(null);
   connectivityStore.reset();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   await wipeVaults();
 });
 
@@ -175,6 +177,35 @@ describe("recording a line somebody else paid", () => {
     // Bogotá is UTC-5, so noon there is 17:00Z on the same day.
     expect(date).toMatch(/T17:00:00\.000Z$/);
     expect(date.slice(0, 10)).toBe(dayKey(new Date(), profile().timezone));
+  });
+
+  // T-159: a sheet drawn before the profile arrived takes the user's day once it does.
+  it("moves its untouched day to the user's zone when the profile arrives", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-24T22:30:00.000Z"));
+    const user = userEvent.setup();
+    const sheet = (timeZone?: string) => (
+      <QueryProvider>
+        <ToastProvider>
+          <FormatSettingsProvider {...(timeZone ? { timeZone } : {})}>
+            <PaidByOtherSheet open group={group} people={people} onClose={onClose} />
+          </FormatSettingsProvider>
+        </ToastProvider>
+      </QueryProvider>
+    );
+    const { rerender } = renderWithProviders(sheet());
+    rerender(sheet("Europe/Madrid"));
+
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+
+    await vi.waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+    const [queued] = await pendingOperations(vault.db);
+    expect((queued?.payload as { body: { date: string } }).body.date).toBe(
+      "2026-09-25T10:00:00.000Z",
+    );
   });
 
   // Picking yourself is what the two other ways into the group already are.

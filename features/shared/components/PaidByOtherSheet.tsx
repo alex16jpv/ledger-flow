@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert, Receipt } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { Avatar } from "@/components/shell/Avatar";
@@ -63,6 +63,9 @@ export function PaidByOtherSheet({ open, onClose, group, people }: PaidByOtherSh
       paidByContactId: people.length === 1 ? (people[0]?.contactId ?? "") : "",
     },
   });
+  useEffect(() => {
+    if (!form.getFieldState("date").isDirty) form.resetField("date", { defaultValue: today });
+  }, [form, today]);
   const { errors, isDirty } = form.formState;
   const serverFields = fieldErrors(create.error);
   const failure =

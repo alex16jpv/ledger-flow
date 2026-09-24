@@ -18,6 +18,7 @@ import {
   padLeadingDecimal,
 } from "@/lib/format/amount-editing";
 import { decimalSeparators, figureIn, formatPlainNumber, parseDecimal } from "@/lib/format/money";
+import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useMoney } from "@/lib/i18n/useMoney";
 
 import { cn } from "./cn";
@@ -75,6 +76,7 @@ export function AmountInput({
   className,
 }: AmountInputProps) {
   const money = useMoney();
+  const { profileResolved } = useFormatSettings();
   const field = useFieldContext();
   const invalidNow = invalid ?? field?.invalid;
   const describedByAll = describedBy ?? field?.describedBy;
@@ -87,7 +89,15 @@ export function AmountInput({
   );
   const [mine, setMine] = useState<number | null>(defaultValue);
   const [loose, setLoose] = useState(false);
+  const format = `${money.locale}:${money.fractionDigits}`;
+  const [formattedFor, setFormattedFor] = useState(format);
   const { group, decimal } = decimalSeparators(money.locale);
+
+  if (formattedFor !== format) {
+    setFormattedFor(format);
+    setLoose(false);
+    setText(initialText(mine, money.locale, money.fractionDigits));
+  }
 
   // Only a figure this input did not produce is written back in: an echo of its own would eat a half-typed decimal.
   if (value !== undefined && value !== mine) {
@@ -167,6 +177,7 @@ export function AmountInput({
         type="text"
         inputMode={money.fractionDigits === 0 ? "numeric" : "decimal"}
         autoComplete="off"
+        readOnly={!profileResolved}
         autoFocus={autoFocus}
         aria-label={label}
         aria-invalid={invalidNow ? true : undefined}

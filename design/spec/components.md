@@ -32,7 +32,8 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
    native numeric keyboard (`inputmode="decimal"` or `numeric` depending on the currency). The keypad
    follows the device, not the app, so either `.` or `,` typed as the first separator is the decimal
    point, and it turns back into a thousands group when a third digit is typed after it at the end
-   (T-160). **A second
+   (T-160). Until the user's currency is known it takes no typing (read-only), and when the currency
+   arrives it rewrites the figure it holds with that currency's decimals (T-159). **A second
    size, 28px with a 16px symbol** (T-94), for a second amount beside the one a screen is about — the
    interest inside a loan instalment: at 52px the two would read as equals.
    It takes an **optional figure from its parent**, and adjusts its text only when the figure is one it
