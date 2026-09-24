@@ -9,7 +9,7 @@ import type {
 } from "@/types/api";
 
 import { transactionRecord } from "../schema";
-import { currentVault, read } from "./read";
+import { currentVault, ownVault, read } from "./read";
 
 const PAGE_LIMIT = 100;
 // One request per group, four at a time: a cold device must not open a connection per group at once.
@@ -79,5 +79,5 @@ export async function forgetJoinedGroup(groupId: string): Promise<void> {
 }
 
 export async function keepAddedExpense(row: Transaction): Promise<void> {
-  await currentVault()?.db.put("transactions", transactionRecord({ ...row, deletedAt: null }));
+  await ownVault()?.db.put("transactions", transactionRecord({ ...row, deletedAt: null }));
 }

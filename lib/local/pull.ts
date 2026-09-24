@@ -1,4 +1,6 @@
 import { api } from "@/lib/api/client";
+import { SESSION_USER_HEADER } from "@/lib/auth/cookies";
+import { sessionIsFor } from "@/lib/auth/marker";
 import type { SyncChangesResponse } from "@/types/api";
 
 import { rememberServerTime } from "./clock";
@@ -21,7 +23,10 @@ export interface PullPageQuery {
   limit: number;
 }
 
-export type PullPageFetcher = (query: PullPageQuery) => Promise<SyncChangesResponse>;
+export type PullPageFetcher = (
+  query: PullPageQuery,
+  userId: string,
+) => Promise<SyncChangesResponse>;
 
 export interface PullOptions {
   limit?: number;
@@ -47,8 +52,22 @@ export class SyncFeedStalledError extends Error {
   }
 }
 
-function requestPage(query: PullPageQuery): Promise<SyncChangesResponse> {
-  return api<SyncChangesResponse>("/sync/changes", { query: { ...query } });
+export class SessionChangedError extends Error {
+  readonly userId: string;
+
+  constructor(userId: string) {
+    super("Another user signed in on this device, so this copy stops downloading");
+    this.name = "SessionChangedError";
+    this.userId = userId;
+  }
+}
+
+// T-152: the proxy refuses a page when the session that answers it is not the copy's owner.
+function requestPage(query: PullPageQuery, userId: string): Promise<SyncChangesResponse> {
+  return api<SyncChangesResponse>("/sync/changes", {
+    query: { ...query },
+    headers: { [SESSION_USER_HEADER]: userId },
+  });
 }
 
 interface StampedStore {
@@ -186,7 +205,8 @@ export async function pullChanges(
   let changed = false;
 
   for (;;) {
-    const page = await fetchPage({ cursor, limit });
+    if (!sessionIsFor(handle.userId)) throw new SessionChangedError(handle.userId);
+    const page = await fetchPage({ cursor, limit }, handle.userId);
     // F-66: every answer carries the server's clock, needed before there is a refusal to explain.
     await rememberServerTime(handle.db, page.serverTime);
     // Rows are applied by id with put, so the deliberate 60-second overlap of D-14 costs nothing.

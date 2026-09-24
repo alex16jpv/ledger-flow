@@ -3,10 +3,10 @@ import { account, changes as feedChanges, wipeVaults } from "@/lib/testing/vault
 import type { SyncChangesResponse } from "@/types/api";
 
 import { VAULT } from "./db";
-import { forceFullResync, PULL_STALE_MS, startMirror } from "./mirror";
+import { forceFullResync, PULL_STALE_MS, pullNow, startMirror } from "./mirror";
 import type * as Outbox from "./outbox";
 import type { SyncEngineOptions } from "./outbox/engine";
-import type { PullPageQuery } from "./pull";
+import { type PullPageQuery, SessionChangedError } from "./pull";
 import { currentVault, expectVault, read, resetVaultGate, setCurrentVault } from "./repository";
 import { PROFILE_KEY, vaultDatabaseName } from "./schema";
 
@@ -285,6 +285,74 @@ describe("startMirror", () => {
     const profile = await currentVault()?.db.get("profile", PROFILE_KEY);
     expect(profile?.row.timezone).toBe("America/Bogota");
 
+    stop();
+  });
+});
+
+describe("another user signing in on this device (T-152)", () => {
+  // jsdom refuses to set a `__Host-` cookie over http, so the read is stubbed instead.
+  const marker = (userId: string) =>
+    vi.spyOn(document, "cookie", "get").mockReturnValue(`__Host-session=${userId}.1000`);
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("stops pulling into the copy, and says so when asked for a pass", async () => {
+    const cookie = marker("u1");
+    const stop = start();
+    await vi.waitFor(() => {
+      expect(queries).toHaveLength(1);
+    });
+
+    cookie.mockReturnValue("__Host-session=u2.1000");
+    clock += PULL_STALE_MS;
+    window.dispatchEvent(new Event("focus"));
+    reportOnline(false);
+    reportOnline(true);
+    await engine.options?.afterRound?.(false);
+
+    await expect(pullNow()).rejects.toBeInstanceOf(SessionChangedError);
+    expect(queries).toHaveLength(1);
+    stop();
+  });
+
+  it("refuses the resync before it empties the copy", async () => {
+    const cookie = marker("u1");
+    const stop = start();
+    await vi.waitFor(async () => {
+      expect(await currentVault()?.db.get("accounts", "a1")).toBeDefined();
+    });
+
+    cookie.mockReturnValue("__Host-session=u2.1000");
+
+    await expect(forceFullResync("u1")).rejects.toBeInstanceOf(SessionChangedError);
+    expect(await currentVault()?.db.get("accounts", "a1")).toBeDefined();
+    stop();
+  });
+
+  it("does not keep a profile the server answered for someone else", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(
+          JSON.stringify({ user: { id: "u2", name: "Bea", timezone: "Europe/Madrid" } }),
+          {
+            headers: { "content-type": "application/json" },
+          },
+        ),
+      ),
+    );
+    const stop = start();
+
+    await vi.waitFor(() => {
+      expect(warn).toHaveBeenCalledWith(
+        "ledger-flow: the mirror could not fetch the profile it lacks",
+        expect.any(SessionChangedError),
+      );
+    });
+    expect(await currentVault()?.db.get("profile", PROFILE_KEY)).toBeUndefined();
     stop();
   });
 });

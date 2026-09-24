@@ -5,6 +5,7 @@ import { openTestVault, profile, wipeVaults } from "@/lib/testing/vault";
 import {
   expectVault,
   mirrorPage,
+  ownVault,
   read,
   resetVaultGate,
   setCurrentVault,
@@ -134,5 +135,21 @@ describe("mirrorPage", () => {
       nextCursor: null,
     });
     expect(mirrorPage([], 100).pagination.nextCursor).toBeNull();
+  });
+});
+
+describe("ownVault (T-152)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("is the open copy only while the session is its owner's", async () => {
+    const vault = await readyVault("u1");
+    // jsdom refuses to set a `__Host-` cookie over http, so the read is stubbed instead.
+    const cookie = vi.spyOn(document, "cookie", "get").mockReturnValue("__Host-session=u1.1000");
+    expect(ownVault()).toBe(vault);
+
+    cookie.mockReturnValue("__Host-session=u2.1000");
+    expect(ownVault()).toBeNull();
   });
 });

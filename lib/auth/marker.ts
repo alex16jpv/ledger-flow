@@ -14,6 +14,12 @@ export function readSessionMarker(): SessionMarker | null {
   return null;
 }
 
+// §2.6: another user signing in on this device changes the cookies every one of its tabs sends.
+export function sessionIsFor(userId: string): boolean {
+  const marker = readSessionMarker();
+  return marker === null || marker.userId === userId;
+}
+
 export type SessionResolution = "loading" | "resolved";
 
 // §2.6: while the session is still loading nobody opens anything, or /me races into another user.

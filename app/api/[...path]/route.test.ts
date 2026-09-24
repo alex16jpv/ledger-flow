@@ -94,6 +94,28 @@ describe("generic API proxy", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("refuses a request that names another user than the one the session belongs to (T-152)", async () => {
+    const token = (userId: string) =>
+      `h.${Buffer.from(JSON.stringify({ userId })).toString("base64url")}.s`;
+    const ask = (userId: string) =>
+      GET(
+        new NextRequest(`${APP}/api/sync/changes?limit=500`, {
+          headers: { cookie: `__Host-access=${token(userId)}`, "x-lf-session-user": "u1" },
+        }),
+        context("sync", "changes"),
+      );
+
+    const refused = await ask("u2");
+    expect(refused.status).toBe(409);
+    await expect(refused.json()).resolves.toMatchObject({ code: "SESSION_CHANGED" });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fetchMock.mockResolvedValue(json({ changes: {} }));
+    expect((await ask("u1")).status).toBe(200);
+    const headers = fetchMock.mock.calls[0]?.[1]?.headers as Record<string, string>;
+    expect(headers["x-lf-session-user"]).toBeUndefined();
+  });
+
   it("maps a backend timeout to 504 JSON", async () => {
     fetchMock.mockRejectedValue(new DOMException("timeout", "TimeoutError"));
     const response = await GET(

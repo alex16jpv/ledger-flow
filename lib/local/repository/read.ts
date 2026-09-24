@@ -1,6 +1,7 @@
 import type { IDBPDatabase } from "idb";
 
 import { ApiError } from "@/lib/api/errors";
+import { sessionIsFor } from "@/lib/auth/marker";
 import { connectivityStore } from "@/lib/network/connectivity";
 import type { Pagination } from "@/types/api";
 
@@ -45,6 +46,11 @@ export function setCurrentVault(handle: VaultHandle | null): void {
 
 export function currentVault(): VaultHandle | null {
   return current;
+}
+
+// T-152: an answer given under another user's session never lands in this copy.
+export function ownVault(): VaultHandle | null {
+  return current && sessionIsFor(current.userId) ? current : null;
 }
 
 // R-3 §B3: a write must wait too, or the first save of a load would skip the outbox.
