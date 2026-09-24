@@ -5100,3 +5100,52 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   changes the sentence, not the rule.
 - **Consequence:** deleting a movement is no longer always possible: this one case is refused until
   the payment is lowered. The form's edit keeps the ordinary `LOAN_OVERPAID` alert.
+
+## 2026-09-24 · Transactions are downloaded from the device's copy, as Excel or CSV (T-188)
+
+- **Context:** the Transactions header has carried a disabled download button since 2026-09-01. The
+  owner decided on 2026-09-24 what it downloads — the list as filtered, with everything one tap away —
+  and in what — Excel and CSV, in the app's language, a shared expense with its full amount and its
+  share (`design/spec/screens/transactions.md`, "Download").
+- **Decision:** the file is built on the device, from the mirror (`lib/local`) whenever it can answer —
+  it holds the whole history with queued writes projected in — and from `/transactions`, paged at its
+  limit, only when it cannot and there is a network. The structure:
+  - `lib/local/repository/transactions.ts` gains a reader that takes the same `toMirrorFilter` as
+    `readTransactions`, with no page limit, and walks the `dateCursor` index (which is what leaves the
+    tombstones out) inside **one** IndexedDB transaction, collecting rows and awaiting nothing else,
+    because a foreign await auto-commits it. It reads through `ownVault()`, so a session switch
+    mid-walk can never hand it another user's rows, and answers `undefined` when the copy cannot
+    answer, which sends the caller to the server path.
+  - The search never reaches the mirror or the server: `features/transactions/export/` applies
+    `matchesSearch` after the rows arrive, and counts that way for the sheet when a search is in force.
+  - `lib/export/` holds the writers, pure and feature-agnostic so Stats and Settings can reuse them:
+    `csv.ts` (RFC 4180, UTF-8 BOM, CRLF, a `'` before text cells that start with `= + - @`, tab or CR),
+    `xlsx.ts` (a minimal SpreadsheetML workbook zipped with `fflate`: inline-string cells, XML-escaped
+    and stripped of the control characters XML forbids, date serials computed from the `YYYY-MM-DD`
+    text, a number format per row from `currencyFractionDigits`, frozen header, autofilter, the _About_
+    sheet) and `download.ts` (a `Blob` and an object URL revoked after a delay, since Safari and Firefox
+    can lose a download revoked at once; `navigator.share({ files })` where `canShare` allows it in an
+    installed iOS app). `xlsx.ts` and `fflate` load with a dynamic `import()` when Excel is chosen, so
+    they never count against the 220 kB screen budget.
+  - `features/transactions/export/` maps a row to its cells (`columns.ts`: the list's own
+    `transactionTitle`; the sign from the account the money left, `fromAccountId` negative and
+    `toAccountId` alone positive, a transfer unsigned; the API's amount written as it comes, never
+    rounded or parsed from formatted text; Sync from the outbox's `queuedRows`/`attentionRows` for the
+    row and its `sharedExpenseId`), names the file (`fileName.ts`), and holds the sheet
+    (`ExportSheet.tsx`) and its hook. Its lookups carry **archived** accounts and categories, and the
+    shared section is loaded for the build whenever an exported row carries a shared id — not only
+    when a scrolled page does — and its failure fails the build.
+  - Serializing yields to the UI every 2,000 rows so the spinner stays alive and Cancel is honoured;
+    50,000 rows is the size it is measured at.
+  - The `exportTransactions` flag goes: Transactions' button is simply live, and Stats' button moves to
+    a flag of its own, `exportStats`, off.
+- **Alternatives (not taken):** a server endpoint that streams the file — it would not work offline or
+  in _this device only_, it is the other repository's, and the device already holds the rows; the
+  server path for every export — a hundred rows a request for a whole history, when the copy can
+  answer at once; SheetJS or ExcelJS — hundreds of kilobytes to write one flat sheet, where a
+  hand-written workbook over `fflate` is a few; exporting only with a live session — _this device
+  only_ has none, and the file holds nothing the screen does not show.
+- **Consequence:** the file is what the device holds — rows still waiting to sync included and marked —
+  and offline with no copy there is nothing to download from. A comma-separated CSV opens in one
+  column in Spanish-locale Excel; Excel is the default format for that reason, and the CSV's help line
+  says how to open it there.
