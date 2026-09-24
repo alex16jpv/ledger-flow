@@ -4,6 +4,7 @@ import { operationsFor, type WriteTransaction } from "./queue";
 import { reconcileRow } from "./reconcile";
 
 const STORE_OF = {
+  account: "accounts",
   sharedExpense: "sharedExpenses",
   transaction: "transactions",
 } as const satisfies Record<Restamp["entity"], string>;
@@ -29,7 +30,7 @@ export interface Restamped {
   rows: number;
 }
 
-// Backend T-145: a stamp is moved only from the exact one the server replaced, never from another.
+// Backend T-145 and T-146: a stamp is moved only from the exact one the server replaced, never from another.
 export async function applyRestamps(
   tx: WriteTransaction,
   restamps: readonly Restamp[],

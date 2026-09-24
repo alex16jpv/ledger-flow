@@ -24,6 +24,7 @@ import type {
   ReceivedInvitation,
   SentInvitation,
   Transaction,
+  TransactionWithRestamps,
 } from "@/types/api";
 
 // O-F4: reads go through the repository (mirror fallback); writes go through the outbox.
@@ -120,12 +121,11 @@ export async function addToLedger(
   expenseId: string,
   body: AddToLedgerInput,
 ): Promise<Transaction> {
-  const row = await api<Transaction>(
+  const answer = await api<TransactionWithRestamps>(
     `/joined-groups/${groupId}/expenses/${expenseId}/add-to-ledger`,
     { method: "POST", body },
   );
-  await keepAddedExpense(row);
-  return row;
+  return keepAddedExpense(answer);
 }
 
 export async function leaveJoinedGroup(

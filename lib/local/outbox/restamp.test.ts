@@ -1,6 +1,7 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { answerBatch, applied, operationsOf, SERVER_TIME } from "@/lib/testing/sync";
 import {
+  account,
   openTestVault,
   profile,
   sharedExpense,
@@ -10,18 +11,21 @@ import {
 } from "@/lib/testing/vault";
 import type { Restamp, SharedSplit } from "@/types/api";
 
+import { keepAddedExpense } from "../repository/joined";
 import { setCurrentVault } from "../repository/read";
 import {
+  accountRecord,
   profileRecord,
   sharedExpenseRecord,
   sharedGroupRecord,
   transactionRecord,
 } from "../schema";
+import { archiveAccount, setDefaultAccount } from "./accounts";
 import { requestSync, resetSyncEngine, setSyncTransport, startSyncEngine } from "./engine";
 import { pendingOperations, type VaultDb } from "./queue";
 import { saveSharedSplit } from "./shared";
 import { resetOutboxStatus } from "./status";
-import { updateTransaction } from "./transactions";
+import { createTransaction, updateTransaction } from "./transactions";
 
 const T0 = "2026-08-10T20:00:00.000Z";
 const T1 = "2026-09-06T10:00:00.100Z";
@@ -337,5 +341,164 @@ describe("the rows a write rewrote besides its own (T-145)", () => {
     await requestSync();
 
     expect(afterRound).toHaveBeenCalledWith(false);
+  });
+});
+
+const A0 = "2026-08-01T00:00:00.000Z";
+const A1 = "2026-09-06T10:00:00.400Z";
+const SPENT_ID = "11111111-1111-7111-8111-111111111146";
+
+const accountMoved: Restamp = {
+  entity: "account",
+  id: "a2",
+  previousUpdatedAt: A0,
+  updatedAt: A1,
+};
+
+async function withTwoAccounts() {
+  const vault = await openTestVault("u1");
+  await vault.db.put("profile", profileRecord(profile()));
+  await vault.db.put("meta", { key: "syncedAt", value: "2026-09-04T00:00:00.000Z" });
+  await vault.db.put("accounts", accountRecord(account({ id: "a1", updatedAt: A0 })));
+  await vault.db.put(
+    "accounts",
+    accountRecord(account({ id: "a2", name: "Savings", isDefault: false, updatedAt: A0 })),
+  );
+  setCurrentVault(vault);
+  return vault;
+}
+
+// The line of T-146: an expense from an account, then an account write on it, both with no network.
+async function spendThen(accountWrite: () => Promise<unknown>): Promise<void> {
+  reportOnline(false);
+  await createTransaction(
+    { type: "EXPENSE", amount: 10_000, date: T0, fromAccountId: "a2" },
+    SPENT_ID,
+  );
+  await accountWrite();
+}
+
+const spent = () => transaction({ id: SPENT_ID, fromAccountId: "a2", updatedAt: T1 });
+
+describe("the accounts a movement moved (T-146)", () => {
+  it("archives the account with the stamp the movement's answer gave it, one route at a time", async () => {
+    const vault = await withTwoAccounts();
+    await spendThen(() => archiveAccount("a2"));
+    setSyncTransport("routes");
+    const guards: (string | null)[] = [];
+    fetchMock.mockImplementation((input, init) => {
+      guards.push(ifMatchOf(init));
+      return Promise.resolve(
+        urlOf(input).endsWith("/api/transactions")
+          ? json({ ...spent(), restamped: [accountMoved] })
+          : json({ message: "Account archived" }),
+      );
+    });
+    reportOnline(true);
+
+    await requestSync();
+
+    expect(calls()).toEqual(["POST /api/transactions", "DELETE /api/accounts/a2"]);
+    expect(guards).toEqual([null, A1]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+
+  it("sets the default with that stamp when the movement went in an earlier batch of the pass", async () => {
+    const vault = await withTwoAccounts();
+    await spendThen(() => setDefaultAccount("a2"));
+    const [create] = await pendingOperations(vault.db);
+    if (!create) throw new Error("the movement was not queued");
+    // Heavy enough that the two operations cannot share one batch.
+    await vault.db.put("outbox", {
+      ...create,
+      payload: {
+        ...(create.payload as object),
+        body: { ...(create.payload as { body: object }).body, description: "x".repeat(900_000) },
+      },
+    });
+    const sentGuards: (string | undefined)[][] = [];
+    fetchMock.mockImplementation((_input, init) => {
+      const operations = operationsOf(init);
+      sentGuards.push(operations.map((op) => op.baseUpdatedAt));
+      return Promise.resolve(
+        json({
+          serverTime: SERVER_TIME,
+          results: operations.map((op) => ({
+            opId: op.opId,
+            seq: op.seq,
+            entity: op.entity,
+            id: op.id,
+            status: "applied",
+            ...(op.entity === "transaction"
+              ? { result: spent(), restamped: [accountMoved] }
+              : { result: account({ id: "a2", isDefault: true, updatedAt: SERVER_TIME }) }),
+          })),
+        }),
+      );
+    });
+    reportOnline(true);
+
+    await requestSync();
+
+    expect(sentGuards).toEqual([[undefined], [A1]]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+
+  it("moves the mirror's account to the new stamp and tells the pull it is news", async () => {
+    const vault = await withTwoAccounts();
+    await spendThen(() => Promise.resolve());
+    const afterRound = vi.fn();
+    startSyncEngine({ afterRound });
+    answerBatch(fetchMock, () => ({ ...applied(spent()), restamped: [accountMoved] }));
+    reportOnline(true);
+
+    await requestSync();
+
+    expect((await vault.db.get("accounts", "a2"))?.updatedAt).toBe(A1);
+    expect((await vault.db.get("accounts", "a1"))?.updatedAt).toBe(A0);
+    expect(afterRound).toHaveBeenCalledWith(true);
+  });
+
+  it("archives the account a new default was taken from with the stamp that answer gave it", async () => {
+    const vault = await withTwoAccounts();
+    reportOnline(false);
+    await setDefaultAccount("a2");
+    await archiveAccount("a1");
+    setSyncTransport("routes");
+    const guards: (string | null)[] = [];
+    fetchMock.mockImplementation((input, init) => {
+      guards.push(ifMatchOf(init));
+      return Promise.resolve(
+        urlOf(input).endsWith("/api/accounts/a2/default")
+          ? json({
+              ...account({ id: "a2", isDefault: true, updatedAt: SERVER_TIME }),
+              restamped: [{ ...accountMoved, id: "a1" }],
+            })
+          : json({ message: "Account archived" }),
+      );
+    });
+    reportOnline(true);
+
+    await requestSync();
+
+    expect(calls()).toEqual(["POST /api/accounts/a2/default", "DELETE /api/accounts/a1"]);
+    expect(guards).toEqual([A0, A1]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+
+  it("moves a queued account guard when a line is added to the ledger straight from a group", async () => {
+    const vault = await withTwoAccounts();
+    reportOnline(false);
+    await archiveAccount("a2");
+    const afterRound = vi.fn();
+    startSyncEngine({ afterRound });
+    const added = transaction({ id: "t9", fromAccountId: "a2", updatedAt: T1 });
+
+    const row = await keepAddedExpense({ ...added, restamped: [accountMoved] });
+
+    expect(row).not.toHaveProperty("restamped");
+    expect((await vault.db.get("transactions", "t9"))?.row).not.toHaveProperty("restamped");
+    expect(await guardsOf(vault.db)).toEqual([`account:a2@${A1}`]);
+    expect(afterRound).toHaveBeenCalledWith(true);
   });
 });

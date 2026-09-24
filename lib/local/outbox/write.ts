@@ -31,7 +31,7 @@ export interface WriteRequest<T> {
 }
 
 // F-27: the write already landed, so a vault that fails here must not tell the form it did not.
-async function restampVault(db: VaultDb, restamped: Restamp[]): Promise<boolean> {
+export async function restampVault(db: VaultDb, restamped: Restamp[]): Promise<boolean> {
   if (restamped.length === 0) return false;
   const tx = writeTransaction(db);
   try {

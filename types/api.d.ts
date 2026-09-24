@@ -365,13 +365,13 @@ export type paths = {
             };
             requestBody?: never;
             responses: {
-                /** @description Default account set */
+                /** @description Default account set; `restamped` holds the account it took the default from */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Account"];
+                        "application/json": components["schemas"]["AccountWithRestamps"];
                     };
                 };
                 /** @description Invalid ID format (code VALIDATION) */
@@ -2956,7 +2956,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Transaction"];
+                        "application/json": components["schemas"]["TransactionWithRestamps"];
                     };
                 };
                 /** @description Your expense */
@@ -2965,7 +2965,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Transaction"];
+                        "application/json": components["schemas"]["TransactionWithRestamps"];
                     };
                 };
                 /** @description Validation error (code VALIDATION), a line somebody else paid, one you have no part in or whose part is not marked paid (code SHARED_LINE_NOT_PAID), a line already in your ledger (code SHARED_LINE_IN_LEDGER), or an archived category (code CATEGORY_ARCHIVED) */
@@ -5170,7 +5170,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Transaction"];
+                        "application/json": components["schemas"]["TransactionWithRestamps"];
                     };
                 };
                 /** @description Transaction created */
@@ -5179,7 +5179,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Transaction"];
+                        "application/json": components["schemas"]["TransactionWithRestamps"];
                     };
                 };
                 /** @description Validation error. Codes include FUTURE_DATE (date more than 24h in the future), CURRENCY_MISMATCH (transfer between accounts with different currencies), INCOME_ON_CARD_OR_LOAN (an income landing on an account type listed in `IncomeRefusedAccountType`), AMOUNT_PRECISION (decimals in a `ZeroDecimalCurrency`), LOAN_OVERPAID (a movement that would leave a LOAN above zero), CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH, IDEMPOTENCY_KEY_INVALID (malformed Idempotency-Key header). */
@@ -5552,7 +5552,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Transaction"];
+                        "application/json": components["schemas"]["TransactionWithRestamps"];
                     };
                 };
                 /** @description Transaction created (pendingDetails=true, source=QUICK) */
@@ -5561,7 +5561,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Transaction"];
+                        "application/json": components["schemas"]["TransactionWithRestamps"];
                     };
                 };
                 /** @description Validation error. Codes include NO_DEFAULT_ACCOUNT (no account id given and no default account set), FUTURE_DATE, CURRENCY_MISMATCH, INCOME_ON_CARD_OR_LOAN (a quick income whose destination account has a type listed in `IncomeRefusedAccountType`), LOAN_OVERPAID, CATEGORY_ARCHIVED, CATEGORY_TYPE_MISMATCH, IDEMPOTENCY_KEY_INVALID. */
@@ -5901,6 +5901,10 @@ export type components = {
         AccountList: {
             data: components["schemas"]["Account"][];
             pagination: components["schemas"]["Pagination"];
+        };
+        AccountWithRestamps: components["schemas"]["Account"] & {
+            /** @description The other rows this write rewrote, empty when it touched none. A queued write on one of them guarded by `previousUpdatedAt` may be guarded by `updatedAt` instead: nothing else moved it in between. */
+            restamped: components["schemas"]["Restamp"][];
         };
         AddParticipantsInput: {
             contactIds: string[];
@@ -6428,10 +6432,10 @@ export type components = {
             /** @enum {string} */
             locale?: "en" | "es";
         };
-        /** @description A row a write rewrote besides the one it answers: an expense whose split was imputed again, a movement whose figure or history moved. */
+        /** @description A row a write rewrote besides the one it answers: an expense whose split was imputed again, a movement whose figure or history moved, an account whose balance a movement moved or whose default was taken. */
         Restamp: {
             /** @enum {string} */
-            entity: "sharedExpense" | "transaction";
+            entity: "account" | "sharedExpense" | "transaction";
             /** Format: uuid */
             id: string;
             /** Format: date-time */
@@ -7278,6 +7282,7 @@ export type components = {
 export type Account = components['schemas']['Account'];
 export type AccountConflict = components['schemas']['AccountConflict'];
 export type AccountList = components['schemas']['AccountList'];
+export type AccountWithRestamps = components['schemas']['AccountWithRestamps'];
 export type AddParticipantsInput = components['schemas']['AddParticipantsInput'];
 export type AddParticipantsPreview = components['schemas']['AddParticipantsPreview'];
 export type AddParticipantsResult = components['schemas']['AddParticipantsResult'];

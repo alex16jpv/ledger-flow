@@ -128,6 +128,8 @@ the settled, what you owe there counts in `You owe`, and the People face closes 
 line per person who shared something. `/shared/joined/[id]` leads with where you stand with the owner.
 **`Add to my ledger`** is offered only on a line the owner marked paid for you: it writes one ordinary
 expense of yours per line, dated that line, in your account and category, and needs a connection.
+It moves that account's stamp, so it moves the guards the queue holds on it and pulls the new balance
+(T-146).
 **`Leave this group`** ends your invitation, drops the group from the device, and moves no money.
 
 The screens that compose other features — the group detail, the person, the settle-up sheet, the

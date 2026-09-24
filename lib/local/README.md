@@ -491,7 +491,13 @@ the only way in.
   stamp stored in the queue, not from the plan's copy. The list never reaches the mirror's row, and a write sent straight to the server because
   the mirror could not project it moves the queue the same way. Without it, editing a split
   movement's amount and then its split with no network ended in a conflict with yourself whenever
-  the two did not travel in the same batch.
+  the two did not travel in the same batch. **Accounts are in the list too** (T-146): every
+  movement moves its account's balance and so its stamp, and the server names each account it
+  moved — on a create, an edit that moves money, a delete, a payment, `Add to my ledger` — and the
+  account a new default was taken from. Without it, spending from an account and then archiving it
+  or making it the default with no network ended in a conflict with yourself. `Add to my ledger` is
+  online only and not queued, so `keepAddedExpense` applies the list itself and asks for the pull
+  that brings the account's new balance.
 - **Backoff.** 1 s doubling to 60 s, with equal jitter that can only shorten the step, and never
   shorter than a 429's `Retry-After`. It is the only timer the engine owns: there is no periodic
   push and no periodic pull (§4.2).

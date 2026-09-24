@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { reportError } from "@/lib/observability/reporter";
 import type {
   JoinedExpense,
   JoinedExpenseList,
@@ -6,8 +7,12 @@ import type {
   JoinedGroupList,
   SyncTransaction,
   Transaction,
+  TransactionWithRestamps,
 } from "@/types/api";
 
+import { pullAfterDirectSend } from "../outbox/engine";
+import { splitRestamps } from "../outbox/restamp";
+import { restampVault } from "../outbox/write";
 import { transactionRecord } from "../schema";
 import { currentVault, ownVault, read } from "./read";
 
@@ -78,6 +83,18 @@ export async function forgetJoinedGroup(groupId: string): Promise<void> {
   await tx.done;
 }
 
-export async function keepAddedExpense(row: Transaction): Promise<void> {
-  await ownVault()?.db.put("transactions", transactionRecord({ ...row, deletedAt: null }));
+// The movement moved an account's balance on the server, so its stamp moves and a pull brings the figure.
+export async function keepAddedExpense(answer: TransactionWithRestamps): Promise<Transaction> {
+  const { row, restamped } = splitRestamps(answer);
+  const added = row as Transaction;
+  const vault = ownVault();
+  if (!vault) return added;
+  try {
+    await vault.db.put("transactions", transactionRecord({ ...added, deletedAt: null }));
+  } catch (error) {
+    // F-27: the movement already landed, so a vault that fails must not tell the form it did not.
+    reportError(error, "vault");
+  }
+  await pullAfterDirectSend(await restampVault(vault.db, restamped));
+  return added;
 }
