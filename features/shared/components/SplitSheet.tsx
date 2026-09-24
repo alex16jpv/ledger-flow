@@ -12,6 +12,8 @@ import { Field, Input } from "@/components/ui/Field";
 import { Segment } from "@/components/ui/Segment";
 import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { Tile } from "@/components/ui/Tile";
+import { currencyFractionDigits } from "@/lib/format/currency";
+import { formatPlainNumber } from "@/lib/format/money";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { SplitInvalidError } from "@/lib/local/derive";
@@ -22,6 +24,7 @@ import {
   GUESTS_KEY,
   leftToAssign,
   partiesOf,
+  PERCENT_FRACTION_DIGITS,
   resolveDraft,
   SPLIT_MODES,
   type SplitDraft,
@@ -108,7 +111,9 @@ export function SplitSheet({
 
   const setInput = (key: string, raw: string) => {
     setTyped((was) => ({ ...was, [key]: raw }));
-    const value = raw.trim() === "" ? null : money.parse(raw);
+    const digits =
+      draft.mode === "PERCENT" ? PERCENT_FRACTION_DIGITS : currencyFractionDigits(currency);
+    const value = raw.trim() === "" ? null : money.parse(raw, digits);
     setDraft((was) => ({
       ...was,
       inputs: { ...was.inputs, [key]: value === null || Number.isNaN(value) ? null : value },
@@ -123,7 +128,7 @@ export function SplitSheet({
       return share ? money.format(share.amount) : "";
     }
     const value = draft.inputs[party.key];
-    return value === null || value === undefined ? "" : String(value);
+    return value === null || value === undefined ? "" : formatPlainNumber(value, money.locale);
   };
 
   const canSave = resolved.shares !== null && left === 0;

@@ -109,7 +109,8 @@ the sheet lists it under the accounts and explains it in the footer, the closed 
 it once it is the choice — and since T-100 the transfer in the full form passes it too, on the same
 condition the Pay sheet itself appears on: the account owes money (`owesMoney`). `PaySheet` reads its
 movement back through the shared `TransferReadback`, including the one-sided sentence for money from
-outside, so the sentence is the same one the transaction form shows.
+outside, so the sentence is the same one the transaction form shows. Until you pick one, _From_ is the
+main account whenever it is known, so a sheet opened before the accounts arrive still fills it.
 
 **On a LOAN the sheet also asks how much of the instalment was interest** (T-94, the owner's decision of
 2026-09-18). Filled, it saves **two** movements instead of one: the `TRANSFER` of the principal first,

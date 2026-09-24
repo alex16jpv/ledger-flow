@@ -29,7 +29,10 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
    `--danger`; focus is a brand border plus the `--focus-ring` ring. Textarea 88px. A two-column group
    for date and time. The switch is 44×26.
 9. **Large amount (`amount-input`)** — 52px semibold, a 20px symbol in `--text-3`, a brand caret; the
-   native numeric keyboard (`inputmode="decimal"` or `numeric` depending on the currency). **A second
+   native numeric keyboard (`inputmode="decimal"` or `numeric` depending on the currency). The keypad
+   follows the device, not the app, so either `.` or `,` typed as the first separator is the decimal
+   point, and it turns back into a thousands group when a third digit is typed after it at the end
+   (T-160). **A second
    size, 28px with a 16px symbol** (T-94), for a second amount beside the one a screen is about — the
    interest inside a loan instalment: at 52px the two would read as equals.
    It takes an **optional figure from its parent**, and adjusts its text only when the figure is one it

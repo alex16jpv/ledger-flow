@@ -1,4 +1,5 @@
 import { currencyFractionDigits } from "@/lib/format/currency";
+import { parseDecimal } from "@/lib/format/money";
 import { resolveShares, type SplitMode, type SplitRow } from "@/lib/local/derive";
 import type { ColorToken } from "@/lib/theme/feature-color";
 import type { SharedShare, SharedSplit } from "@/types/api";
@@ -65,8 +66,13 @@ const rowsOf = (draft: SplitDraft, parties: readonly SplitParty[]): SplitRow[] =
     input: draft.mode === "EQUAL" ? null : inputOf(draft, party.key),
   }));
 
-export const PERCENT_SCALE = 100;
+export const PERCENT_FRACTION_DIGITS = 2;
+export const PERCENT_SCALE = 10 ** PERCENT_FRACTION_DIGITS;
 export const WHOLE = PERCENT_SCALE * PERCENT_SCALE;
+const PERCENT_LOCALE = "en";
+
+export const parsePercent = (text: string): number =>
+  parseDecimal(text, PERCENT_LOCALE, PERCENT_FRACTION_DIGITS) ?? 0;
 
 // The server adds percentages as basis points; in floats three thirds of 100 do not make 100.
 export const basisPoints = (percent: number): number => Math.round(percent * PERCENT_SCALE);

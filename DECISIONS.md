@@ -5224,3 +5224,37 @@ id], true), 1000)` on `dateCursor` (which leaves the tombstones out), one short 
   Spanish-locale Excel; Excel is the default format for that reason, and the CSV's help line says how to
   open it there. Tags are joined by `, `: the backend accepts a comma inside a tag today, and the import
   task has to decide what such a tag becomes.
+
+## 2026-09-24 · A typed amount takes either separator as its decimal point (T-160)
+
+- **Context:** the separators come from the app's format locale, which borrows the device's region only
+  when the device speaks the app's language (`formatLocaleFor`). With the app in Spanish and the phone
+  in English the locale is `es-CO` (decimal `,`) while iOS's `inputmode="decimal"` keypad offers `.`:
+  `AmountInput` threw the `.` away as a grouping mark, so `12.50` was saved as `1.250`, and the other way
+  round the same. The share rows of `SplitSheet` (`parseDecimal`) had the same fault, and the default
+  split's percentages (`Number.parseFloat`) had its mirror image: `33,33` was read as `33`.
+- **Decision:** a keystroke is read by `acceptDecimalKey` (`lib/format/amount-editing.ts`): under a
+  currency with decimals, the other of `.` and `,` typed while the rest of the text has no decimal —
+  inserted, or typed over a selection, read from the text before and after around the caret, since
+  Android composes and `InputEvent.data` cannot be trusted — becomes the locale's decimal, marked as
+  _loose_. If a third digit is then typed at the end, the loose mark is given back as a thousands group,
+  so `1,000` typed by hand in English still means a thousand; a digit landing anywhere else fixes it as
+  a decimal. A separator typed first is shown as `0,` with the caret after it (`padLeadingDecimal`), so
+  `.50` is half a unit and not fifty, as it wrongly was before in both languages. `parseDecimal` — the
+  share rows, the percentages and a paste into `AmountInput` — takes the number of decimals the figure
+  may have: with both marks the last one is the decimal; a lone mark is the decimal when no more digits
+  follow it than the currency allows, unless it is the locale's group with exactly three after it;
+  anything else is a group, and groups must be in threes (or the Indian twos). So `12,500` pasted under
+  COP is twelve thousand five hundred, and a paste loses its symbol first (`figureIn`: `$12.50`,
+  `COP 12.500`). Percentages allow two decimals and have no thousands (`parsePercent`), and the share
+  rows use the expense's currency, not the user's. The figures these fields are seeded with are
+  written in the locale (`formatPlainNumber`), not with `String()`, so Spanish no longer shows `33.33`.
+- **Alternatives (not taken):** following the device's language for the separators — it would change
+  every figure the app prints for a user who chose Spanish, when only the keypad disagrees; showing
+  both keys ourselves — a custom keypad loses the native one's accessibility and autofill; reading the
+  keystroke's `InputEvent.data` — Android composes, so the inserted character is taken from the text
+  around the caret instead.
+- **Consequence:** typing `.` then three digits in `es-CO` yields a grouped integer, which is what the
+  `.` means there; so does a stray third digit after a keypad decimal (`12.500`), and the field shows it
+  grouped before anything is saved. A typed `.` or `,` under a zero-decimal currency is still dropped, as before (T-159
+  owns the moment the currency is not known yet).

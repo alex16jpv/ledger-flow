@@ -351,6 +351,26 @@ describe("the instalment split (T-94)", () => {
     expect(bodies()[0]).toMatchObject({ type: "ADJUSTMENT", amount: 420_000 });
   });
 
+  it("takes the main account when it arrives after the sheet opened", async () => {
+    routeLoan([interestCategory]);
+    const sheet = (withMain: typeof main | undefined) => (
+      <QueryProvider>
+        <ToastProvider>
+          <PaySheet account={loan} main={withMain} open onClose={vi.fn()} />
+        </ToastProvider>
+      </QueryProvider>
+    );
+    const { rerender } = renderWithProviders(sheet(undefined));
+    expect(await screen.findByRole("button", { name: /^From/ })).toHaveTextContent(
+      "Choose an account",
+    );
+
+    rerender(sheet(main));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^From/ })).toHaveTextContent(main.name);
+    });
+  });
+
   it("splits in minor units, so a currency with cents does not drift", async () => {
     routeLoan([interestCategory]);
     renderWithProviders(

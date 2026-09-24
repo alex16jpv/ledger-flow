@@ -81,8 +81,10 @@ export function PaySheet({ account, main, open, onClose }: PaySheetProps) {
   const [interest, setInterest] = useState<number | null>(null);
   const [chosenInterestCategory, setChosenInterestCategory] = useState<string | null>(null);
   const [paidPrincipal, setPaidPrincipal] = useState(false);
+  const [chosenFrom, setFrom] = useState<Account | null | undefined>(undefined);
   // The main account can be the very account being paid, and nothing is paid with itself.
-  const [from, setFrom] = useState<Account | null>(main?.id === account.id ? null : (main ?? null));
+  const from =
+    chosenFrom !== undefined ? chosenFrom : main?.id === account.id ? null : (main ?? null);
   const [openedAt] = useState(() => new Date());
   const [outside, setOutside] = useState(false);
   const [categoryId, setCategoryId] = useState<string | null>(null);

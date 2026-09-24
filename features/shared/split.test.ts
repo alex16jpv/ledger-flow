@@ -4,6 +4,7 @@ import type { Transaction } from "@/types/api";
 import {
   GUESTS_KEY,
   leftToAssign,
+  parsePercent,
   partiesOf,
   percentLeft,
   resolveDraft,
@@ -193,6 +194,23 @@ describe("what a new expense inherits", () => {
       shares: [
         { contactId: null, percent: 60 },
         { contactId: ANA, percent: 40 },
+      ],
+    });
+  });
+
+  it("reads a typed percentage whichever separator the keyboard gave it", () => {
+    expect(parsePercent("33,33")).toBe(33.33);
+    expect(parsePercent(" 33.34 ")).toBe(33.34);
+    expect(parsePercent("50,")).toBe(50);
+    expect(parsePercent("")).toBe(0);
+    expect(parsePercent("1e2")).toBe(0);
+    expect(
+      groupDefaultSplit("PERCENT", [null, ANA], { [USER_KEY]: "66,67", [ANA]: "33.33" }),
+    ).toEqual({
+      mode: "PERCENT",
+      shares: [
+        { contactId: null, percent: 66.67 },
+        { contactId: ANA, percent: 33.33 },
       ],
     });
   });
