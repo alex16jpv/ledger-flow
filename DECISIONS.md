@@ -4986,3 +4986,38 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   chip is narrower than its name; the other chip rows keep scrolling as before. jsdom lays nothing
   out, so the unit tests stub `getBoundingClientRect` and `vitest.setup.ts` gives jsdom a no-op
   `ResizeObserver`; the real layout, including a 150% root font size, is in `tests/e2e/quick-add.spec.ts`.
+
+## 2026-09-23 · A copy stops downloading when another user signs in on the device (T-152)
+
+- **Context:** the cookies are the browser's, not the tab's. With the first user's session expired in
+  one tab and a second user signing in from another (`?reauth=1`), the first tab's next pull (focus
+  after five minutes, the network coming back, Sync now) went out under the second user's cookies and
+  wrote their accounts and movements into the first user's copy. The feed of the first user never
+  names those rows, so nothing ever purged them. The engine already refused to start a drain under
+  another user's session; the pull, the profile fetch and the resync did not look.
+- **Decision:** the marker check becomes `sessionIsFor(userId)` in `lib/auth/marker.ts`. It runs
+  before every pull pass and every page, before the resync empties the copy, and before and after
+  every request of a drain (each batch, each route), against the user the drain started for. A
+  refused `pullNow` or resync rejects with `SessionChangedError`, so Settings never says done. A drain
+  that finds the marker moved puts what it was sending back to `pending` with no attempt counted and
+  ends with no retry scheduled. Every page of the pull and every `POST /sync` batch names the copy's
+  owner in `x-lf-session-user`, and the BFF proxy answers `409 SESSION_CHANGED` when the access token's
+  user is another; the header is never forwarded. The profile fetched when the feed never carried one
+  is kept only if its `id` is the owner's, and the three writes that keep a server answer in the copy
+  (`keepSentInvitation`, `keepReceivedInvitation`, `keepAddedExpense`) go through `ownVault()`.
+- **Why the header as well:** the marker is read before a request, but `lib/api` retries a `401` after
+  a refresh inside the same call, and that refresh can come back with the other user's session. Only a
+  check on the request that actually reaches the BFF sees that.
+- **Alternatives (not taken):** binding the cursor to its user in the backend — the right defence
+  in depth, but it is the other repository's, and the BFF check already covers every client; sending
+  the header on every request of the tab — the screens would then meet a `409` with no code of the
+  API's contract, and what the tab shows after a switch is the owner's decision (T-167); the header on
+  the per-route sends too — about thirty call sites for the path the queue takes only after a refused
+  envelope or against a backend without `POST /sync`; there the marker check after a failed request
+  keeps a foreign answer from settling the write, and what is left is a refresh swapping the session
+  inside a request that then succeeds, a window of one round trip.
+- **Consequence:** a tab left on the first user after a switch stops syncing in both directions and
+  keeps serving the copy it had until T-167 decides what it shows. `SESSION_CHANGED` is a BFF code like
+  `UNTRUSTED_ORIGIN`: it is not in the API's contract and the client never branches on it. The pull
+  surfaces it as a failed pass; a batch refused while the marker still names the owner (no marker at
+  all) is requeued like any other refusal, with its attempt counted and the ordinary backoff.

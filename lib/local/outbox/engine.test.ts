@@ -21,7 +21,7 @@ import {
   transactionRecord,
 } from "../schema";
 import { archiveAccount, createAccount, restoreAccount, updateAccount } from "./accounts";
-import type { SyncOperationInput } from "./batch";
+import { SYNC_MAX_OPERATIONS, type SyncOperationInput } from "./batch";
 import {
   AUTO_MERGE_ATTEMPTS,
   BACKOFF_MAX_MS,
@@ -123,6 +123,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   setErrorReporter(null);
   await resetSyncEngine();
   resetOutboxStatus();
@@ -577,6 +578,78 @@ describe("a session that died under the queue (F-26)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect((await pendingOperations(vault.db)).map((entry) => entry.seq)).toEqual([1]);
     cookie.mockRestore();
+  });
+
+  it("stops between two batches once another user signed in on the device (T-152)", async () => {
+    const vault = await vaultWith();
+    startSyncEngine({ schedule: () => () => undefined });
+    const total = SYNC_MAX_OPERATIONS + 1;
+    await seed(
+      vault.db,
+      Array.from({ length: total }, (_, index) => ({ entityId: `t${index + 1}` })),
+    );
+    const cookie = vi.spyOn(document, "cookie", "get").mockReturnValue("__Host-session=u1.1000");
+    fetchMock.mockImplementation((_input, init) => {
+      cookie.mockReturnValue("__Host-session=someone-else.1000");
+      return Promise.resolve(
+        json({
+          serverTime: SERVER_TIME,
+          results: opsOf(init).map((op) => ({
+            opId: op.opId,
+            seq: op.seq,
+            entity: op.entity,
+            id: op.id,
+            status: "applied",
+            result: transaction({ id: op.id }),
+          })),
+        }),
+      );
+    });
+
+    await requestSync();
+
+    expect(batches()).toHaveLength(1);
+    expect((await pendingOperations(vault.db)).map((entry) => entry.seq)).toEqual([total]);
+  });
+
+  it("keeps a route's answer under another user's session from settling the write (T-152)", async () => {
+    const vault = await vaultWith();
+    startSyncEngine({ schedule: () => () => undefined });
+    await vault.db.put("transactions", transactionRecord(transaction({ id: "t1" })));
+    await seed(vault.db, [{ seq: 1, action: "delete" }]);
+    const cookie = vi.spyOn(document, "cookie", "get").mockReturnValue("__Host-session=u1.1000");
+    fetchMock.mockImplementation((input) => {
+      if (urlOf(input).endsWith("/api/sync")) {
+        return Promise.resolve(json({ code: "NOT_FOUND", message: "no" }, { status: 404 }));
+      }
+      cookie.mockReturnValue("__Host-session=someone-else.1000");
+      return Promise.resolve(json({ code: "NOT_FOUND", message: "no" }, { status: 404 }));
+    });
+
+    await requestSync();
+
+    expect(calls()).toEqual(["POST /api/sync", "DELETE /api/transactions/t1"]);
+    const [operation] = await pendingOperations(vault.db);
+    expect(operation).toMatchObject({ seq: 1, status: "pending", attempts: 0 });
+    expect(await vault.db.get("transactions", "t1")).toBeDefined();
+  });
+
+  it("keeps the batch the proxy refused for another user's session as it was (T-152)", async () => {
+    const vault = await vaultWith();
+    startSyncEngine({ schedule: () => () => undefined });
+    await seed(vault.db, [{ seq: 1 }]);
+    const cookie = vi.spyOn(document, "cookie", "get").mockReturnValue("__Host-session=u1.1000");
+    fetchMock.mockImplementation(() => {
+      cookie.mockReturnValue("__Host-session=someone-else.1000");
+      return Promise.resolve(json({ code: "SESSION_CHANGED", message: "no" }, { status: 409 }));
+    });
+
+    await requestSync();
+
+    const headers = fetchMock.mock.calls[0]?.[1]?.headers as Record<string, string>;
+    expect(headers["x-lf-session-user"]).toBe("u1");
+    const [operation] = await pendingOperations(vault.db);
+    expect(operation).toMatchObject({ seq: 1, status: "pending", attempts: 0, lastError: null });
   });
 });
 

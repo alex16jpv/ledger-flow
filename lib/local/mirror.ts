@@ -1,4 +1,4 @@
-import { readSessionMarker } from "@/lib/auth/marker";
+import { readSessionMarker, sessionIsFor } from "@/lib/auth/marker";
 import { connectivityStore } from "@/lib/network/connectivity";
 import { isLocalOnly } from "@/lib/network/local-only";
 import { fetchCurrentUser } from "@/lib/session/api";
@@ -14,7 +14,7 @@ import {
   startSyncEngine,
 } from "./outbox";
 import { requestPersistentStorage } from "./persist";
-import { pullChanges, type PullOptions } from "./pull";
+import { pullChanges, type PullOptions, SessionChangedError } from "./pull";
 import { purgeVault } from "./purge";
 import { setCurrentVault } from "./repository";
 import { PROFILE_KEY, profileRecord } from "./schema";
@@ -69,6 +69,7 @@ export async function pullNow(): Promise<void> {
 // Invariant 7: the queue is the only place unsent work exists, so a resync leaves it alone.
 export async function forceFullResync(userId: string): Promise<void> {
   if (isLocalOnly()) throw new ResyncUnavailableError("this device is working on its own");
+  if (!sessionIsFor(userId)) throw new SessionChangedError(userId);
   const pull = activePull;
   await purgeVault(userId, { discardPendingWork: false });
   await runPull(pull);
@@ -88,6 +89,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   const ensureProfile = async (vault: VaultHandle): Promise<boolean> => {
     if (await vault.db.get("profile", PROFILE_KEY)) return false;
     const { user } = await fetchCurrentUser();
+    if (user.id !== vault.userId) throw new SessionChangedError(vault.userId);
     await vault.db.put("profile", profileRecord(user));
     return true;
   };
@@ -124,6 +126,10 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     if (!vault || state.stopped) return Promise.resolve();
     // P-32: in this-device-only nothing goes out, and a pull is a request like any other.
     if (isLocalOnly()) return Promise.resolve();
+    if (!sessionIsFor(vault.userId)) {
+      lastPullError = new SessionChangedError(vault.userId);
+      return Promise.resolve();
+    }
     wanted += 1;
     const mine = wanted;
     running ??= pullOnce(vault).finally(() => {

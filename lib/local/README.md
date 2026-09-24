@@ -172,6 +172,19 @@ Scheduling lives in `mirror.ts`. `startMirror(userId)` opens the vault, calls
 30-second poll is 2 880 requests a day per device, worse than the traffic local-first exists to
 remove. `AppFrame` starts it with the signed-in user and tears it down when that user changes.
 
+**A copy only ever fills with its owner's rows** (T-152). The cookies belong to the browser, not to
+the tab: when another user signs in on the device (their own tab, `?reauth=1`), every request a tab
+still showing the first user makes goes out under the second one's session, and the feed never names
+those rows again, so nothing would ever purge them. Three checks close it. The mirror reads the
+session marker before every pass (`sessionIsFor`, the same test `requestSync` makes) and `pullChanges`
+before every page, so a pass stops at the page boundary; `pullNow` and the resync reject with
+`SessionChangedError` instead of saying done, and the resync refuses before it empties the copy. Every
+page names the copy's owner in `x-lf-session-user`, and the BFF answers `409 SESSION_CHANGED` when the
+access token belongs to someone else — the marker cannot see a refresh that swapped the session inside
+one request. And the profile the mirror asks for when the feed never carried one is kept only if it is
+the owner's, and the answers the screens keep in the copy (`keepSentInvitation`,
+`keepReceivedInvitation`, `keepAddedExpense`) go through `ownVault()`. Whose copy the tab should show after the switch is T-167, not this.
+
 A request that arrives while a pull is running joins it and asks for **one more pass** when it ends
 (F-32): the pull in flight cannot carry what the server wrote after it started. It is the same
 `wanted`/`served` discipline the engine uses for the queue.
@@ -436,6 +449,13 @@ the only way in.
   a `400`/`413` on the envelope — nothing applied, this client's own bug — sends that pass one request
   at a time so each operation earns the verdict of its own route instead of the queue stalling on a
   batch nobody can fix.
+- **Only under its owner's session** (§2.6, T-152). `requestSync` sends nothing while the marker
+  names another user, and a pass looks again before every request and after every failed one — each
+  batch, each route — because another user can sign in on the device while it drains. When the marker
+  moved, what was being sent goes back to `pending` with no attempt counted, and the pass ends with no
+  retry scheduled, the way a dead session does. `POST /sync` also names the owner in
+  `x-lf-session-user`, so the BFF refuses a batch a refresh inside `lib/api` swapped to the other
+  session.
 - **Single flight.** One drain runs at a time; every trigger that arrives while it runs joins it. A
   request that lands _after_ the running pass took its last look at the queue is not lost — the pass
   records which request it served, and a later one asks for a pass of its own.

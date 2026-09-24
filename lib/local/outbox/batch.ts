@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { SESSION_USER_HEADER } from "@/lib/auth/cookies";
 import type { SyncBatchInput, SyncBatchResponse } from "@/types/api";
 
 import type { OutboxOperation } from "../schema";
@@ -83,5 +84,10 @@ export function chunkBatch(entries: Collapsed[]): Collapsed[][] {
   return chunks;
 }
 
-export const postBatch = (body: SyncBatchInput): Promise<SyncBatchResponse> =>
-  api<SyncBatchResponse>("/sync", { method: "POST", body });
+// T-152: the proxy refuses the batch when the session that would apply it is not the queue's owner.
+export const postBatch = (body: SyncBatchInput, userId: string): Promise<SyncBatchResponse> =>
+  api<SyncBatchResponse>("/sync", {
+    method: "POST",
+    body,
+    headers: { [SESSION_USER_HEADER]: userId },
+  });

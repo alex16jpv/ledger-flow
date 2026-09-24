@@ -1,5 +1,5 @@
 import { ApiError, isErrorCode, NetworkError } from "@/lib/api/errors";
-import { readSessionMarker } from "@/lib/auth/marker";
+import { sessionIsFor } from "@/lib/auth/marker";
 import { connectivityStore } from "@/lib/network/connectivity";
 import { reportError } from "@/lib/observability/reporter";
 import type { Account, SyncBatchResponse } from "@/types/api";
@@ -97,6 +97,9 @@ const stampOf = (answer: unknown): string | undefined => {
   return typeof updatedAt === "string" ? updatedAt : undefined;
 };
 
+// §2.6: a pass outlives the check that started it, so every request looks at the marker again.
+const sessionMoved = (owner: string): boolean => !sessionIsFor(owner);
+
 const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
 
 // An operation replayed after a reload has no undo, so it is left `failed` for the tray (O-F5a).
@@ -191,6 +194,8 @@ interface PassResult {
   answered: boolean;
   // The session died under the queue: the pass stops and nothing is scheduled (F-26).
   unauthorized: boolean;
+  // Another user signed in on the device: the pass stops and nothing is scheduled (T-152).
+  moved: boolean;
   retryAfterMs: number;
   // The mirror took stamps whose rows only the pull brings, so that pull is news whatever it finds.
   rewrote: boolean;
@@ -201,6 +206,7 @@ const emptyPass = (): PassResult => ({
   stopped: false,
   answered: false,
   unauthorized: false,
+  moved: false,
   retryAfterMs: 0,
   rewrote: false,
 });
@@ -233,6 +239,7 @@ function heldOn(operation: OutboxOperation, holds: Holds): string | undefined {
 
 async function sendPlanned(
   db: VaultDb,
+  owner: string,
   entries: Collapsed[],
   report: DrainReport,
 ): Promise<PassResult> {
@@ -250,6 +257,11 @@ async function sendPlanned(
       blocked.add(entityId);
       report.set(seq, { kind: "held", on: waitingOn });
       continue;
+    }
+    if (sessionMoved(owner)) {
+      result.stopped = true;
+      result.moved = true;
+      return result;
     }
     for (const absorbed of entry.absorbed) report.set(absorbed, { kind: "absorbed", into: seq });
 
@@ -276,6 +288,12 @@ async function sendPlanned(
       // The plan still holds the guards this answer just moved: the pass looks again.
       if (rebased > 0) return result;
     } catch (error) {
+      if (sessionMoved(owner)) {
+        await holdOperations(db, [seq]);
+        result.stopped = true;
+        result.moved = true;
+        return result;
+      }
       if (isAlreadyGone(error, action)) {
         await settle(db, entry, (tx) => reconcileRemoval(tx, operation));
         report.set(seq, { kind: "gone" });
@@ -584,6 +602,7 @@ async function applyAnswers(
 // §6 O-F5b: up to 200 operations and a megabyte; what it cannot take goes behind, in `seq` order.
 async function sendBatch(
   db: VaultDb,
+  owner: string,
   entries: Collapsed[],
   report: DrainReport,
 ): Promise<PassResult> {
@@ -608,11 +627,16 @@ async function sendBatch(
 
   // The queue as it stands, never the plan: what an earlier batch settled must not go twice.
   const byRoute = async (): Promise<PassResult> =>
-    sendPlanned(db, coalesce(await pendingOperations(db)).operations, report);
+    sendPlanned(db, owner, coalesce(await pendingOperations(db)).operations, report);
 
   // Spans every batch of this pass: the rows already guarded must not be guarded again (F-61).
   const guarded = new Set<string>();
   for (const chunk of chunkBatch(sendable)) {
+    if (sessionMoved(owner)) {
+      result.stopped = true;
+      result.moved = true;
+      return result;
+    }
     const sent: Collapsed[] = [];
     for (const entry of chunk) {
       // An earlier batch of this pass may have left a row blocked: what named it waits for the next.
@@ -632,9 +656,14 @@ async function sendBatch(
     await beginSending(db, seqs);
     let response: SyncBatchResponse;
     try {
-      response = await postBatch(batchBody(sent, guarded));
+      response = await postBatch(batchBody(sent, guarded), owner);
     } catch (error) {
       await holdOperations(db, seqs);
+      if (sessionMoved(owner)) {
+        result.stopped = true;
+        result.moved = true;
+        return result;
+      }
       if (isBatchMissing(error)) {
         state.transport = "routes";
         return byRoute();
@@ -721,7 +750,7 @@ function scheduleRetry(retryAfterMs: number): void {
   }, delay);
 }
 
-async function pass(db: VaultDb): Promise<DrainReport> {
+async function pass(db: VaultDb, owner: string): Promise<DrainReport> {
   const report: DrainReport = new Map();
   let answered = false;
   let rewrote = false;
@@ -742,8 +771,8 @@ async function pass(db: VaultDb): Promise<DrainReport> {
       if (plan.operations.length === 0) break;
       const outcome =
         state.transport === "batch"
-          ? await sendBatch(db, plan.operations, report)
-          : await sendPlanned(db, plan.operations, report);
+          ? await sendBatch(db, owner, plan.operations, report)
+          : await sendPlanned(db, owner, plan.operations, report);
       await refreshOutboxStatus(db);
       answered ||= outcome.answered;
       rewrote ||= outcome.rewrote;
@@ -751,6 +780,10 @@ async function pass(db: VaultDb): Promise<DrainReport> {
         // F-26: a dead session is not a slow network, so the queue holds until `resumeSyncEngine`.
         if (outcome.unauthorized) {
           state.paused = true;
+          clearRetry();
+          return report;
+        }
+        if (outcome.moved) {
           clearRetry();
           return report;
         }
@@ -788,13 +821,12 @@ export function requestSync(): Promise<DrainReport> {
   if (!vault) return Promise.resolve(EMPTY_REPORT);
   if (state.paused) return Promise.resolve(EMPTY_REPORT);
   // §2.6: sending now would file one user's writes under another's session.
-  const marker = readSessionMarker();
-  if (marker && marker.userId !== vault.userId) return Promise.resolve(EMPTY_REPORT);
+  if (!sessionIsFor(vault.userId)) return Promise.resolve(EMPTY_REPORT);
   state.wanted += 1;
   const mine = state.wanted;
   if (!state.inFlight) {
     clearRetry();
-    state.inFlight = pass(vault.db).finally(() => {
+    state.inFlight = pass(vault.db, vault.userId).finally(() => {
       state.inFlight = null;
     });
   }

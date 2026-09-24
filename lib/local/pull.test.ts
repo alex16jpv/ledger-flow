@@ -14,7 +14,7 @@ import {
 import type { SyncChangesResponse } from "@/types/api";
 
 import type { VaultHandle } from "./db";
-import { pullChanges, type PullPageQuery, SyncFeedStalledError } from "./pull";
+import { pullChanges, type PullPageQuery, SessionChangedError, SyncFeedStalledError } from "./pull";
 import type { OutboxOperation } from "./schema";
 
 type Changes = Partial<SyncChangesResponse["changes"]>;
@@ -515,5 +515,71 @@ describe("a pull with operations still queued", () => {
     await pullChanges(vault, { fetchPage });
 
     expect((await vault.db.get("transactions", "t1"))?.row.description).toBe("Named there");
+  });
+});
+
+describe("another user signing in on this device (T-152)", () => {
+  // jsdom refuses to set a `__Host-` cookie over http, so the read is stubbed instead.
+  const marker = (userId: string) =>
+    vi.spyOn(document, "cookie", "get").mockReturnValue(`__Host-session=${userId}.1000`);
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    await wipeVaults();
+  });
+
+  it("stops before the next page and keeps the other user's rows out of the copy", async () => {
+    const vault = await openTestVault("u1");
+    const cookie = marker("u1");
+    const { fetchPage, queries } = feed([
+      page({ accounts: [account({ id: "mine" })] }, { count: 1, hasMore: true, nextCursor: "c1" }),
+      page(
+        { accounts: [account({ id: "theirs" })] },
+        { count: 1, hasMore: false, nextCursor: "c2" },
+      ),
+    ]);
+
+    await expect(
+      pullChanges(vault, {
+        fetchPage: (query) => {
+          const answer = fetchPage(query);
+          cookie.mockReturnValue("__Host-session=u2.1000");
+          return answer;
+        },
+      }),
+    ).rejects.toBeInstanceOf(SessionChangedError);
+
+    expect(queries).toHaveLength(1);
+    expect(await vault.db.get("accounts", "theirs")).toBeUndefined();
+    expect((await vault.db.get("meta", "syncCursor"))?.value).toBe("c1");
+    vault.close();
+  });
+
+  it("asks nothing when the device already belongs to someone else", async () => {
+    const vault = await openTestVault("u1");
+    marker("u2");
+    const { fetchPage, queries } = feed([]);
+
+    await expect(pullChanges(vault, { fetchPage })).rejects.toBeInstanceOf(SessionChangedError);
+
+    expect(queries).toEqual([]);
+    vault.close();
+  });
+
+  it("names the copy's owner on every page it asks for", async () => {
+    const vault = await openTestVault("u1");
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify(page({}, { count: 0, hasMore: false, nextCursor: "c1" })), {
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await pullChanges(vault);
+
+    const headers = fetchMock.mock.calls[0]?.[1]?.headers as Record<string, string>;
+    expect(headers["x-lf-session-user"]).toBe("u1");
+    vault.close();
   });
 });

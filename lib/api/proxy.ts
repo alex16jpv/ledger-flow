@@ -2,8 +2,9 @@ import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
 
-import { ACCESS_COOKIE } from "@/lib/auth/cookies";
+import { ACCESS_COOKIE, SESSION_USER_HEADER } from "@/lib/auth/cookies";
 import { unavailableResponse, untrustedOriginResponse } from "@/lib/auth/handlers";
+import { decodeAccessToken } from "@/lib/auth/jwt";
 import { logRequest } from "@/lib/observability/log";
 
 import { backendFetch, BackendUnavailableError } from "./backend";
@@ -45,6 +46,17 @@ export async function proxyToBackend(
     return NextResponse.json(
       { error: "Unauthorized", message: "No session" },
       { status: 401, headers: robots() },
+    );
+  }
+  const expectedUser = request.headers.get(SESSION_USER_HEADER);
+  if (expectedUser !== null && decodeAccessToken(accessToken)?.userId !== expectedUser) {
+    return NextResponse.json(
+      {
+        error: "Conflict",
+        message: "The session belongs to another user",
+        code: "SESSION_CHANGED",
+      },
+      { status: 409, headers: robots() },
     );
   }
 

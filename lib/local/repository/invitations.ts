@@ -8,7 +8,7 @@ import type {
 
 import { serverNow } from "../clock";
 import { receivedInvitationRecord, sentInvitationRecord } from "../schema";
-import { currentVault, read } from "./read";
+import { ownVault, read } from "./read";
 
 const PAGE_LIMIT = 100;
 
@@ -56,9 +56,9 @@ export function readGroupInvitations(groupId: string): Promise<SentInvitation[]>
 
 // An answer from the server is the row the next pull would bring; keeping it now spares the wait.
 export async function keepSentInvitation(row: SentInvitation): Promise<void> {
-  await currentVault()?.db.put("invitationsSent", sentInvitationRecord(row));
+  await ownVault()?.db.put("invitationsSent", sentInvitationRecord(row));
 }
 
 export async function keepReceivedInvitation(row: ReceivedInvitation): Promise<void> {
-  await currentVault()?.db.put("invitationsReceived", receivedInvitationRecord(row));
+  await ownVault()?.db.put("invitationsReceived", receivedInvitationRecord(row));
 }

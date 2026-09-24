@@ -2,6 +2,7 @@ export const ACCESS_COOKIE = "__Host-access";
 // __Host- forbids a Path other than "/", so the refresh cookie uses __Secure- to stay scoped to the BFF.
 export const REFRESH_COOKIE = "__Secure-refresh";
 export const SESSION_COOKIE = "__Host-session";
+export const SESSION_USER_HEADER = "x-lf-session-user";
 
 export const ACCESS_MAX_AGE_SECONDS = 15 * 60;
 export const REFRESH_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
