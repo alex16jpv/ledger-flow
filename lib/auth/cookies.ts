@@ -2,6 +2,7 @@ export const ACCESS_COOKIE = "__Host-access";
 // __Host- forbids a Path other than "/", so the refresh cookie uses __Secure- to stay scoped to the BFF.
 export const REFRESH_COOKIE = "__Secure-refresh";
 export const SESSION_COOKIE = "__Host-session";
+export const DEVICE_COOKIE = "__Secure-device";
 export const SESSION_USER_HEADER = "x-lf-session-user";
 
 export const ACCESS_MAX_AGE_SECONDS = 15 * 60;
@@ -9,6 +10,7 @@ export const REFRESH_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 // §2.6: says this device holds a vault, never that the session is valid; 400 d is the browser cap.
 export const SESSION_MARKER_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
 export const LOCALE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
+export const DEVICE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
 
 export const REFRESH_COOKIE_PATH = "/api/auth";
 
@@ -40,6 +42,19 @@ export function refreshCookie(token: string): CookieSpec {
     value: token,
     path: REFRESH_COOKIE_PATH,
     maxAge: REFRESH_MAX_AGE_SECONDS,
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+  };
+}
+
+// Recognizes the device on its next sign-in, so it outlives every logout; it opens nothing.
+export function deviceCookie(token: string): CookieSpec {
+  return {
+    name: DEVICE_COOKIE,
+    value: token,
+    path: REFRESH_COOKIE_PATH,
+    maxAge: DEVICE_MAX_AGE_SECONDS,
     httpOnly: true,
     secure: true,
     sameSite: "strict",

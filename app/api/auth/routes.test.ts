@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 function post(path: string, body: unknown, headers: Record<string, string> = {}) {
-  return new Request(`${APP}${path}`, {
+  return new NextRequest(`${APP}${path}`, {
     method: "POST",
     headers: {
       origin: APP,
@@ -100,6 +100,58 @@ describe("login handler", () => {
     );
     const headers = fetchMock.mock.calls[0]?.[1]?.headers as Record<string, string>;
     expect(headers["x-client-ip"]).toBeUndefined();
+  });
+
+  it("keeps the device token the backend answers in its own long-lived cookie", async () => {
+    fetchMock.mockResolvedValue(json({ ...tokens, deviceToken: "dev1" }, { status: 200 }));
+    const response = await authenticate(
+      "/auth/login",
+      post("/api/auth/login", { email: "a@b.co", password: "x" }),
+    );
+    await expect(response.json()).resolves.toEqual({ user: tokens.user });
+    expect(
+      setCookies(response).some(
+        (c) =>
+          c.startsWith("__Secure-device=dev1") &&
+          /Path=\/api\/auth/i.test(c) &&
+          /Max-Age=31536000/i.test(c) &&
+          /HttpOnly/i.test(c) &&
+          /Secure/i.test(c) &&
+          /SameSite=strict/i.test(c),
+      ),
+    ).toBe(true);
+  });
+
+  it.each(["/auth/login", "/auth/register"] as const)(
+    "sends %s the device cookie, never a device token the browser wrote",
+    async (path) => {
+      fetchMock.mockResolvedValue(json(tokens, { status: 200 }));
+      await authenticate(
+        path,
+        post(
+          `/api${path}`,
+          { email: "a@b.co", password: "x", deviceToken: "forged" },
+          { cookie: "__Secure-device=dev1" },
+        ),
+      );
+      expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+        email: "a@b.co",
+        password: "x",
+        deviceToken: "dev1",
+      });
+    },
+  );
+
+  it("drops a device token the browser wrote when the device has no cookie", async () => {
+    fetchMock.mockResolvedValue(json(tokens, { status: 200 }));
+    await authenticate(
+      "/auth/login",
+      post("/api/auth/login", { email: "a@b.co", password: "x", deviceToken: "forged" }),
+    );
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      email: "a@b.co",
+      password: "x",
+    });
   });
 
   it("passes backend errors through with their code and Retry-After", async () => {
@@ -196,5 +248,6 @@ describe("logout handler", () => {
     expect(response.headers.get("clear-site-data")).toBe('"cache"');
     const cookies = setCookies(response);
     expect(cookies.filter((c) => /Max-Age=0/i.test(c))).toHaveLength(3);
+    expect(cookies.some((c) => c.startsWith("__Secure-device="))).toBe(false);
   });
 });

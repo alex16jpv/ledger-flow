@@ -1,6 +1,6 @@
 import "server-only";
 
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 import { backendFetch, BackendUnavailableError, readBackendJson } from "@/lib/api/backend";
 import { clientIpOf } from "@/lib/api/client-ip";
@@ -11,6 +11,8 @@ import type { AuthTokens, ErrorResponse, User } from "@/types/api";
 
 import {
   type CookieSpec,
+  DEVICE_COOKIE,
+  deviceCookie,
   expiredAuthCookies,
   expiredSessionCookies,
   localeCookie,
@@ -123,9 +125,16 @@ export function endExpiredSessionResponse(status = 401): NextResponse {
   return response;
 }
 
+function withDeviceToken(body: unknown, deviceToken: string | undefined): unknown {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) return body;
+  const fields: Record<string, unknown> = { ...body };
+  delete fields.deviceToken;
+  return deviceToken ? { ...fields, deviceToken } : fields;
+}
+
 export async function authenticate(
   path: "/auth/login" | "/auth/register",
-  request: Request,
+  request: NextRequest,
 ): Promise<NextResponse> {
   const denied = untrustedOriginResponse(request);
   if (denied) return denied;
@@ -139,7 +148,7 @@ export async function authenticate(
   const requestId = forwardedRequestId(request);
   const upstream = await backendFetch(path, {
     method: "POST",
-    body,
+    body: withDeviceToken(body, request.cookies.get(DEVICE_COOKIE)?.value),
     requestId,
     clientIp: clientIpOf(request),
     userAgent: request.headers.get("user-agent"),
@@ -152,5 +161,7 @@ export async function authenticate(
       { status: 502 },
     );
   }
-  return sessionResponse(tokens, tokens.user, upstream.status, requestId);
+  const response = sessionResponse(tokens, tokens.user, upstream.status, requestId);
+  if (tokens.deviceToken) applyCookies(response, [deviceCookie(tokens.deviceToken)]);
+  return response;
 }

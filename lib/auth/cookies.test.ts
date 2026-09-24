@@ -51,6 +51,10 @@ describe("session cookies", () => {
     expect(names).not.toContain("__Host-session");
   });
 
+  it("keeps the device cookie on logout: it recognizes the device, it is not the session", () => {
+    expect(expiredSessionCookies().map((cookie) => cookie.name)).not.toContain("__Secure-device");
+  });
+
   it("expires all three on logout", () => {
     for (const cookie of expiredSessionCookies()) {
       expect(cookie.maxAge).toBe(0);

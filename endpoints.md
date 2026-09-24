@@ -193,7 +193,7 @@ Idempotent - restoring an already-active account returns it unchanged.
 
 ### `POST /auth/login`
 
-Returns a short-lived access token (~15 min) plus a refresh token. Rate-limited per IP and per email; the per-email counter only burns on failed attempts (successful logins are refunded).
+Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or register and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded.
 
 No token required.
 
@@ -201,12 +201,12 @@ No token required.
 
 **Responses**
 
-| Status | Schema          | Description                           |
-| ------ | --------------- | ------------------------------------- |
-| `200`  | `AuthTokens`    | Login successful                      |
-| `400`  | `ErrorResponse` | Validation error (code VALIDATION)    |
-| `401`  | `ErrorResponse` | Invalid email or password             |
-| `429`  | `ErrorResponse` | Too many attempts (code RATE_LIMITED) |
+| Status | Schema          | Description                                                                                                                                                                             |
+| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `AuthTokens`    | Login successful                                                                                                                                                                        |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                                                      |
+| `401`  | `ErrorResponse` | Invalid email or password                                                                                                                                                               |
+| `429`  | `ErrorResponse` | Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total (code RATE_LIMITED) |
 
 ### `POST /auth/logout`
 
@@ -263,12 +263,12 @@ No token required.
 
 **Responses**
 
-| Status | Schema          | Description                                                                                                                                                                 |
-| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `201`  | `AuthTokens`    | User registered and logged in                                                                                                                                               |
-| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                                          |
-| `409`  | `ErrorResponse` | Email is already registered (code EMAIL_TAKEN): a live account, a soft-deleted one registered with a different password, or a concurrent register that reactivated it first |
-| `429`  | `ErrorResponse` | Too many attempts from this client IP, or too many failed ones against this email, counted with the failed logins (code RATE_LIMITED)                                       |
+| Status | Schema          | Description                                                                                                                                                                                                              |
+| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `201`  | `AuthTokens`    | User registered and logged in                                                                                                                                                                                            |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                                                                                       |
+| `409`  | `ErrorResponse` | Email is already registered (code EMAIL_TAKEN): a live account, a soft-deleted one registered with a different password, or a concurrent register that reactivated it first                                              |
+| `429`  | `ErrorResponse` | Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total — counted with the failed logins (code RATE_LIMITED) |
 
 ### `GET /auth/sessions`
 
