@@ -5,6 +5,27 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-24 · The BFF keeps a device cookie so nobody can lock you out of Sign in (T-176)
+
+- **Context:** the backend counted failed sign-ins per email alone, so ten wrong passwords typed by
+  anyone locked the real owner out for fifteen minutes, and repeating it locked them out for good.
+  The owner chose on 2026-09-24 to recognize the devices that already signed in.
+- **Decision:** login and register answer a `deviceToken`, and the BFF keeps it in
+  **`__Secure-device`**: httpOnly, `Secure`, `SameSite=Strict`, `Path=/api/auth` like the refresh
+  cookie, one year, the token's own lifetime. `authenticate` sends it back as `deviceToken` on every
+  login and register and drops any `deviceToken` the browser put in the body, so only a token the
+  backend issued to this browser counts. Failed attempts from a recognized device then spend a
+  budget of their own (`lag-money-manager/docs/modules/auth.md`, "Rate Limiting"). No logout
+  expires it: it says this browser signed in to that email before, and it opens nothing.
+- **Alternatives:** counting per email and IP only, which gives an attacker with many addresses
+  unlimited guesses; slowing every attempt down, which still makes the owner wait during an attack.
+- **Consequence:** nothing changes on screen. On a device that never signed in, a `429` can still
+  happen during an attack that rotates addresses; the sign-in form already shows it with its wait. A
+  password or email change and Log out everywhere revoke every device token, so after them each
+  browser is recognized again only from its next sign-in. A browser holds one device cookie: if two
+  people sign in on it, the last one's token replaces the other's, and the first is no longer
+  recognized there.
+
 ## 2026-09-24 · Accounts a movement moved are restamped too (T-146)
 
 - **Context:** every movement moves its account's balance, and with it the account's `updatedAt`.

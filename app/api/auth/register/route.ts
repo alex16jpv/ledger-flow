@@ -1,5 +1,7 @@
+import type { NextRequest } from "next/server";
+
 import { authenticate } from "@/lib/auth/handlers";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   return authenticate("/auth/register", request);
 }

@@ -514,7 +514,7 @@ export type paths = {
         put?: never;
         /**
          * Login and obtain a JWT token
-         * @description Returns a short-lived access token (~15 min) plus a refresh token. Rate-limited per IP and per email; the per-email counter only burns on failed attempts (successful logins are refunded).
+         * @description Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or register and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded.
          */
         post: {
             parameters: {
@@ -556,7 +556,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Too many attempts (code RATE_LIMITED) */
+                /** @description Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total (code RATE_LIMITED) */
                 429: {
                     headers: {
                         [name: string]: unknown;
@@ -814,7 +814,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Too many attempts from this client IP, or too many failed ones against this email, counted with the failed logins (code RATE_LIMITED) */
+                /** @description Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total — counted with the failed logins (code RATE_LIMITED) */
                 429: {
                     headers: {
                         [name: string]: unknown;
@@ -5952,6 +5952,8 @@ export type components = {
             accessToken: string;
             refreshToken: string;
             user?: components["schemas"]["User"];
+            /** @description Login and register only. Proof that this device already signed in to this email: send it back as `deviceToken` on the next login or register and its failed attempts get a budget of their own, so a stranger's failures cannot lock this device out. Keep it across logouts, and keep the new one each login or register answers. A password or email change and a logout-all revoke every device token issued before. */
+            deviceToken?: string;
         };
         BatchUpdateFailure: {
             /** Format: uuid */
@@ -6350,6 +6352,7 @@ export type components = {
             /** Format: email */
             email: string;
             password: string;
+            deviceToken?: string;
         };
         Message: {
             message: string;
@@ -6431,6 +6434,7 @@ export type components = {
             currency?: string;
             /** @enum {string} */
             locale?: "en" | "es";
+            deviceToken?: string;
         };
         /** @description A row a write rewrote besides the one it answers: an expense whose split was imputed again, a movement whose figure or history moved, an account whose balance a movement moved or whose default was taken. */
         Restamp: {

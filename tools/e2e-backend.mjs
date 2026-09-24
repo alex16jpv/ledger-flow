@@ -21,6 +21,7 @@ const env = {
     "mongodb://localhost:27017/lag_money_test?replicaSet=rs0&directConnection=true",
   JWT_SECRET: process.env.E2E_JWT_SECRET ?? "e2e-only-secret",
   AUTH_RATE_LIMIT_MAX: "1000",
+  AUTH_EMAIL_RATE_LIMIT_MAX: "1000",
   // Register and login are capped per IP, and every run of this suite is the same one address.
   AUTH_IP_RATE_LIMIT_MAX: "10000",
   REFRESH_RATE_LIMIT_MAX: "1000",

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { authenticate } from "@/lib/auth/handlers";
 import { safeNextPath } from "@/lib/auth/routes";
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     );
   const login = await authenticate(
     "/auth/login",
-    new Request(`${url.origin}/api/auth/login`, {
+    new NextRequest(`${url.origin}/api/auth/login`, {
       method: "POST",
       headers: { origin: url.origin, "content-type": "application/json" },
       body: JSON.stringify({ email, password }),
