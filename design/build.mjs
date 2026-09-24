@@ -1058,7 +1058,7 @@ const register = (state = "") => {
       : "";
   return authFrame(`<div class="stack" style="gap:20px">
 <div class="stack-sm" style="text-align:center"><h1 class="h1">Create account</h1><p class="muted" style="margin:0">Under a minute. No card needed.</p></div>${react}
-<div class="stack">${field("Name", "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
+<div class="stack">${field("Name", "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, state == "taken" ? { icon: "user", error: '<span>This email already has an account. If you deleted it, sign up with the password it had to bring it back. <a href="#" style="font-weight:500;text-decoration:underline">Sign in</a></span>' } : { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
 <div class="field"><span class="label">Language</span><button class="picker">${tile("globe", "TEAL", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">English</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">The language of your account. You can change it any time in Settings.</span></div>
 <div class="field"><span class="label">Currency</span><button class="picker">${tile("coins", "GREEN", "sm")}<span class="body"><span class="lbl">Detected from your region</span><span class="val">COP · Colombian peso</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">Used for all your accounts. It locks once you create your first account.</span></div>
 <div class="field"><span class="label">Time zone</span><button class="picker">${tile("globe", "BLUE", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">America/Bogota · GMT−5</span></span>${iconSvg("chevron-down", "sm")}</button></div></div>
@@ -2704,10 +2704,10 @@ ${field("Current password", "••••••••••", null, { icon: "loc
 const settingsBodyDim = () =>
   '<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px;font-size:17px">JD</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">John Doe</span><span class="small muted">john@example.com</span></span></div><div class="skeleton" style="height:180px"></div><div class="skeleton" style="height:120px"></div>';
 
-const deleteAccountScreen = () => {
-  const inner = `<div class="alert danger">${iconSvg("triangle-alert")}<span><b>Your account will no longer be available.</b> Your data is kept: if you sign up again with <b>john@example.com</b> you get your full history back.</span></div>
-${field("Type DELETE to confirm", null, "DELETE")}
-<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn danger solid lg" style="flex:1.2">Delete account</button></div>`;
+const deleteAccountScreen = (state = "") => {
+  const inner = `<div class="alert danger">${iconSvg("circle-alert")}<span>Your account and your financial history are kept for a while so you can come back: signing up again with the same email and this password brings everything back. You’ll be signed out now.</span></div>
+${field("Current password", "••••••••••", null, { help: "So nobody else can delete your account.", ...(state == "wrong" ? { error: "Your current password is wrong." } : {}) })}
+<div class="stack-sm"><button class="btn danger solid lg block">Delete account</button><button class="btn ghost lg block">Cancel</button></div>`;
   return screen(settingsBodyDim(), {
     tab: "",
     side: "ajustes",
@@ -5487,6 +5487,13 @@ const PAGES = [
         added: "2026-09-01",
       }),
       plate(
+        "create-account-email-taken",
+        "Create account · email taken",
+        "EMAIL_TAKEN: a live account, or a deleted one signed up with a password it did not have.",
+        register("taken"),
+        { added: "2026-09-23" },
+      ),
+      plate(
         "account-reactivated",
         "Create account · reactivated",
         "The server answers that the account existed: the history comes back and the currency is kept.",
@@ -6518,9 +6525,16 @@ const PAGES = [
       plate(
         "delete-account",
         "Delete my account",
-        "Reversible by signing up again with the same email.",
+        "Reversible by signing up again with the same email and password. The password is the confirmation.",
         deleteAccountScreen(),
         { added: "2026-09-01" },
+      ),
+      plate(
+        "delete-account-wrong-password",
+        "Delete my account · wrong password",
+        "CURRENT_PASSWORD_INVALID: the error goes under the field and nothing is deleted.",
+        deleteAccountScreen("wrong"),
+        { added: "2026-09-23" },
       ),
       plate("language", "Language", "", languageSheet(), { added: "2026-09-01" }),
       plate(

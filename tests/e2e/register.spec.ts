@@ -40,6 +40,38 @@ test("a taken email shows the inline error with a sign-in link", async ({ page, 
   ).toBeVisible();
 });
 
+test("a deleted account comes back only with the password it had", async ({ page, request }) => {
+  const email = uniqueEmail("reactivate");
+  const password = "LedgerFlow!2026";
+  const registered = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: { name: "Before", email, password },
+  });
+  expect(registered.ok(), await registered.text()).toBe(true);
+  const { user } = (await registered.json()) as { user: { id: string } };
+  const deleted = await request.delete(`/api/users/${user.id}`, {
+    headers: { origin: APP },
+    data: { currentPassword: password },
+  });
+  expect(deleted.ok(), await deleted.text()).toBe(true);
+  await request.post("/api/auth/logout", { headers: { origin: APP } });
+
+  const signUp = async (withPassword: string) => {
+    await page.getByRole("textbox", { name: "Name" }).fill("After");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(withPassword);
+    await page.getByRole("checkbox").check({ force: true });
+    await page.getByRole("button", { name: "Create account" }).click();
+  };
+  await page.goto("/register");
+  await signUp("Someone-else!2026");
+  await expect(page.getByText(/If you deleted it, sign up with the password it had/)).toBeVisible();
+
+  await signUp(password);
+  await expect(page).toHaveURL(`${APP}/home?reactivated=1`);
+  await expect(page.getByText("Welcome back.")).toBeVisible();
+});
+
 test("the currency picker opens with the search box focused", async ({ page }) => {
   await page.goto("/register");
   await page.getByRole("button", { name: /[A-Z]{3} · / }).click();

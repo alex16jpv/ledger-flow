@@ -120,7 +120,10 @@ test("a new user edits the profile, changes currency and time zone, reviews sess
   await page.getByRole("button", { name: "Delete my account" }).click();
   const remove = page.getByRole("dialog", { name: "Delete my account" });
   await expect(remove.getByRole("button", { name: "Delete account" })).toBeDisabled();
-  await remove.getByRole("textbox").fill("DELETE");
+  await remove.getByLabel("Current password").fill("not-my-password");
+  await remove.getByRole("button", { name: "Delete account" }).click();
+  await expect(remove.getByText("Your current password is wrong.")).toBeVisible();
+  await remove.getByLabel("Current password").fill("Another!2026");
   // F-83: the request is awaited before the URL, so a failure says which half broke.
   const deleted = page.waitForResponse(
     (response) =>

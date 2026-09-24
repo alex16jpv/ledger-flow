@@ -129,7 +129,7 @@
       "invalidCredentials": "Correo o contraseña incorrectos.",
       "tooManyAttempts": "Demasiados intentos.",
       "retryIn": "Puedes intentarlo de nuevo en {time}.",
-      "deleted": "Tu cuenta fue eliminada. Regístrate de nuevo con el mismo correo cuando quieras volver.",
+      "deleted": "Tu cuenta fue eliminada. Regístrate de nuevo con el mismo correo y la misma contraseña cuando quieras volver.",
       "wiped": "Se borró todo en este dispositivo. Tu cuenta sigue ahí: entra para descargarla otra vez."
     },
     "register": {
@@ -151,7 +151,7 @@
       "submit": "Crear cuenta",
       "alreadyHaveAccount": "¿Ya tienes cuenta?",
       "signIn": "Entrar",
-      "emailTaken": "Este correo ya tiene una cuenta.",
+      "emailTaken": "Este correo ya tiene una cuenta. Si la eliminaste, regístrate con la contraseña que tenía para recuperarla.",
       "maybeCreated": "Puede que tu cuenta ya se haya creado: intenta entrar antes de registrarte otra vez.",
       "reactivated": {
         "title": "Bienvenido de vuelta.",
@@ -351,11 +351,10 @@
     },
     "delete": {
       "title": "Eliminar mi cuenta",
-      "body": "Tu cuenta y tu historial financiero se conservan un tiempo para que puedas volver: registrarte de nuevo con el mismo correo lo reactiva todo. Se cerrará tu sesión ahora.",
-      "confirmLabel": "Escribe {word} para confirmar",
-      "word": "ELIMINAR",
-      "confirm": "Eliminar cuenta",
-      "done": "Cuenta eliminada. Regístrate de nuevo con el mismo correo para volver."
+      "body": "Tu cuenta y tu historial financiero se conservan un tiempo para que puedas volver: registrarte de nuevo con el mismo correo y esta contraseña lo recupera todo. Se cerrará tu sesión ahora.",
+      "passwordLabel": "Contraseña actual",
+      "passwordHelp": "Para que nadie más pueda eliminar tu cuenta.",
+      "confirm": "Eliminar cuenta"
     },
     "needsConnection": "Cambiar esto necesita conexión: se guarda en el servidor.",
     "signOutOffline": "Cerrar sesión necesita conexión: la sesión vive en el servidor.",

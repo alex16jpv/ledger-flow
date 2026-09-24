@@ -772,7 +772,7 @@ export type paths = {
         put?: never;
         /**
          * Register a new user
-         * @description Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored). On a 500 the user may still have been created: try login before retrying register.
+         * @description Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email and the password of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored); with any other password it answers 409 EMAIL_TAKEN, like a live account. On a 500 the user may still have been created: try login before retrying register.
          */
         post: {
             parameters: {
@@ -805,7 +805,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Email is already registered (code DUPLICATE from the unique index, or EMAIL_TAKEN when a concurrent register reactivated the same soft-deleted account) */
+                /** @description Email is already registered (code EMAIL_TAKEN): a live account, a soft-deleted one registered with a different password, or a concurrent register that reactivated it first */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -814,7 +814,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Too many attempts from this client IP (code RATE_LIMITED) */
+                /** @description Too many attempts from this client IP, or too many failed ones against this email, counted with the failed logins (code RATE_LIMITED) */
                 429: {
                     headers: {
                         [name: string]: unknown;
@@ -5781,12 +5781,21 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /** @description Too many wrong currentPassword guesses for this user (code RATE_LIMITED) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
             };
         };
         post?: never;
         /**
          * Delete a user
-         * @description Soft delete: the account and its financial history are kept, and registering again with the same email reactivates it.
+         * @description Requires `currentPassword`: a hijacked 15-minute access token must not be able to delete the account. Soft delete: the account and its financial history are kept, and registering again with the same email and the password it had reactivates it.
          */
         delete: {
             parameters: {
@@ -5798,7 +5807,11 @@ export type paths = {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeleteUserInput"];
+                };
+            };
             responses: {
                 /** @description User deleted */
                 200: {
@@ -5809,7 +5822,7 @@ export type paths = {
                         "application/json": components["schemas"]["Message"];
                     };
                 };
-                /** @description Invalid ID format (code VALIDATION) */
+                /** @description Invalid ID format or missing currentPassword (code VALIDATION) */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -5818,7 +5831,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Missing, invalid or expired access token */
+                /** @description Missing, invalid or expired access token, or wrong currentPassword (code CURRENT_PASSWORD_INVALID) */
                 401: {
                     headers: {
                         [name: string]: unknown;
@@ -5829,6 +5842,15 @@ export type paths = {
                 };
                 /** @description User not found (or not the authenticated user's id) */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many wrong currentPassword guesses for this user (code RATE_LIMITED) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -6210,6 +6232,9 @@ export type components = {
                 contactId: string | null;
                 percent: number;
             }[];
+        };
+        DeleteUserInput: {
+            currentPassword: string;
         };
         ErrorResponse: {
             /** @example NotFoundError */
@@ -7281,6 +7306,7 @@ export type CreateSharedExpenseInput = components['schemas']['CreateSharedExpens
 export type CreateSharedGroupInput = components['schemas']['CreateSharedGroupInput'];
 export type CreateTransactionInput = components['schemas']['CreateTransactionInput'];
 export type DefaultSplit = components['schemas']['DefaultSplit'];
+export type DeleteUserInput = components['schemas']['DeleteUserInput'];
 export type ErrorResponse = components['schemas']['ErrorResponse'];
 export type IncomeRefusedAccountType = components['schemas']['IncomeRefusedAccountType'];
 export type JoinedExpense = components['schemas']['JoinedExpense'];

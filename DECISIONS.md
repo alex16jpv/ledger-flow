@@ -5,6 +5,24 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-23 · Deleting the account asks for its password, and only that password brings it back (T-153)
+
+- **Context:** with a 15-minute access token anyone could delete an account, register again with its
+  email and take the account and its whole history (the backend revived any deleted account on
+  register, R2-09). The owner decided on 2026-09-23 that a deleted account comes back only with the
+  password it had, and that the password replaces the typed "DELETE" in the sheet.
+- **Decision:** `DeleteAccountSheet` asks for **Current password** and sends it as `currentPassword`;
+  `CURRENT_PASSWORD_INVALID` is an error under the field, anything else the sheet's alert. Register
+  answers `EMAIL_TAKEN` both for a live account and for a deleted one signed up with another
+  password, so the inline error says how to bring a deleted account back. A reactivation lands on
+  Home with `reactivated=1`, the only screen that shows "Welcome back", instead of following `next`,
+  which a first registration does not follow either.
+- **Alternatives:** keeping "DELETE" and adding the password. Rejected by the owner: two fields where
+  the password alone proves both who and what.
+- **Consequence:** the backend's `DELETE /users/:id` refuses a missing password (400) and a wrong one
+  (401); `register.spec.ts` walks the whole chain, and `settings.spec.ts` deletes with a wrong
+  password first.
+
 ## 2026-09-23 · A `next` path is judged by what the browser would open, not by its text (T-154)
 
 - **Context:** `safeNextPath` refused only a leading `//`. The URL parser also reads `\` as `/` and
@@ -17,8 +35,8 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   normalised path, never the raw text. Returning it is what makes the `//` check necessary:
   `/.//evil.example` normalises to `//evil.example`, and `/en//evil.example` only stays home today
   because next-intl's middleware squeezes repeated slashes. Every `next` in the app goes through it, the two
-  dev routes included. `withSearchParam` adds `reactivated=1` without breaking a query `next` already
-  carries, and the proxy builds its guest-only redirect with `new URL` instead of assigning the path,
+  dev routes included. `withSearchParam` added `reactivated=1` without breaking a query `next` already
+  carries (retired by T-153: a reactivation now always lands on Home), and the proxy builds its guest-only redirect with `new URL` instead of assigning the path,
   which percent-encoded the `?`.
 - **Alternatives:** a denylist of characters (`\`, control characters). Rejected: it answers the
   cases known today, while the parser is the one that decides where the browser goes.

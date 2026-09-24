@@ -9,7 +9,9 @@ import { CurrencyPicker } from "@/components/ui/CurrencyPicker";
 import { Field, Input } from "@/components/ui/Field";
 import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { TimeZonePicker } from "@/components/ui/TimeZonePicker";
-import { presentError } from "@/lib/api/errors";
+import { ApiError, presentError } from "@/lib/api/errors";
+
+const DELETE_FORM_ID = "delete-account-form";
 
 interface SheetProps {
   open: boolean;
@@ -145,27 +147,33 @@ export function DeleteAccountSheet({
   offline = false,
   error,
   onConfirm,
-}: SheetProps & { pending: boolean; offline?: boolean; error: unknown; onConfirm: () => void }) {
+}: SheetProps & {
+  pending: boolean;
+  offline?: boolean;
+  error: unknown;
+  onConfirm: (currentPassword: string) => void;
+}) {
   const t = useTranslations();
-  const word = t("settings.delete.word");
-  const [typed, setTyped] = useState("");
+  const [password, setPassword] = useState("");
   const failure = error ? presentError(error) : null;
+  const wrongPassword = error instanceof ApiError && error.code === "CURRENT_PASSWORD_INVALID";
   return (
     <Sheet
       layout="dialog"
       open={open}
       onClose={onClose}
-      unsaved={typed !== ""}
+      unsaved={password !== ""}
       title={t("settings.delete.title")}
       footer={
         <>
           <Button
+            type="submit"
+            form={DELETE_FORM_ID}
             variant="dangerSolid"
             size="lg"
             block
-            disabled={typed.trim() !== word || offline}
+            disabled={password === "" || offline}
             loading={pending}
-            onClick={onConfirm}
           >
             {t("settings.delete.confirm")}
           </Button>
@@ -173,22 +181,32 @@ export function DeleteAccountSheet({
         </>
       }
     >
-      <div className="flex flex-col gap-4">
+      <form
+        id={DELETE_FORM_ID}
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (password !== "" && !offline) onConfirm(password);
+        }}
+      >
         <Alert tone="danger">{t("settings.delete.body")}</Alert>
         {offline && <Alert tone="warning">{t("settings.needsConnection")}</Alert>}
-        {failure && <Alert tone="danger">{t(failure.messageKey)}</Alert>}
-        <Field label={t("settings.delete.confirmLabel", { word })}>
+        {failure && !wrongPassword && <Alert tone="danger">{t(failure.messageKey)}</Alert>}
+        <Field
+          label={t("settings.delete.passwordLabel")}
+          help={t("settings.delete.passwordHelp")}
+          error={wrongPassword ? t("errors.CURRENT_PASSWORD_INVALID") : undefined}
+        >
           <Input
-            value={typed}
-            autoComplete="off"
-            autoCapitalize="characters"
-            placeholder={word}
+            type="password"
+            autoComplete="current-password"
+            value={password}
             onChange={(event) => {
-              setTyped(event.target.value);
+              setPassword(event.target.value);
             }}
           />
         </Field>
-      </div>
+      </form>
     </Sheet>
   );
 }

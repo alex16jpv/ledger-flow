@@ -129,7 +129,7 @@
       "invalidCredentials": "Wrong email or password.",
       "tooManyAttempts": "Too many attempts.",
       "retryIn": "You can try again in {time}.",
-      "deleted": "Your account was deleted. Sign up again with the same email whenever you want to come back.",
+      "deleted": "Your account was deleted. Sign up again with the same email and password whenever you want to come back.",
       "wiped": "Everything on this device was deleted. Your account is still there: sign in to download it again."
     },
     "register": {
@@ -151,7 +151,7 @@
       "submit": "Create account",
       "alreadyHaveAccount": "Already have an account?",
       "signIn": "Sign in",
-      "emailTaken": "This email already has an account.",
+      "emailTaken": "This email already has an account. If you deleted it, sign up with the password it had to bring it back.",
       "maybeCreated": "Your account may already exist: try signing in before registering again.",
       "reactivated": {
         "title": "Welcome back.",
@@ -351,11 +351,10 @@
     },
     "delete": {
       "title": "Delete my account",
-      "body": "Your account and your financial history are kept for a while so you can come back: signing up again with the same email reactivates everything. You’ll be signed out now.",
-      "confirmLabel": "Type {word} to confirm",
-      "word": "DELETE",
-      "confirm": "Delete account",
-      "done": "Account deleted. Sign up again with the same email to come back."
+      "body": "Your account and your financial history are kept for a while so you can come back: signing up again with the same email and this password brings everything back. You’ll be signed out now.",
+      "passwordLabel": "Current password",
+      "passwordHelp": "So nobody else can delete your account.",
+      "confirm": "Delete account"
     },
     "needsConnection": "Changing this needs a connection: it is saved on the server.",
     "signOutOffline": "Signing out needs a connection: your session lives on the server.",

@@ -2,7 +2,7 @@
 
 # lag-money-manager API endpoints
 
-Version 1.0.0 · 80 operations · 99 schemas.
+Version 1.0.0 · 80 operations · 100 schemas.
 
 Regenerate with `npm run gen:api-types` against a running backend. The client never calls these
 URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), which adds the
@@ -255,7 +255,7 @@ No token required.
 
 ### `POST /auth/register`
 
-Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored). On a 500 the user may still have been created: try login before retrying register.
+Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email and the password of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored); with any other password it answers 409 EMAIL_TAKEN, like a live account. On a 500 the user may still have been created: try login before retrying register.
 
 No token required.
 
@@ -263,12 +263,12 @@ No token required.
 
 **Responses**
 
-| Status | Schema          | Description                                                                                                                                             |
-| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `201`  | `AuthTokens`    | User registered and logged in                                                                                                                           |
-| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                      |
-| `409`  | `ErrorResponse` | Email is already registered (code DUPLICATE from the unique index, or EMAIL_TAKEN when a concurrent register reactivated the same soft-deleted account) |
-| `429`  | `ErrorResponse` | Too many attempts from this client IP (code RATE_LIMITED)                                                                                               |
+| Status | Schema          | Description                                                                                                                                                                 |
+| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `201`  | `AuthTokens`    | User registered and logged in                                                                                                                                               |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                                          |
+| `409`  | `ErrorResponse` | Email is already registered (code EMAIL_TAKEN): a live account, a soft-deleted one registered with a different password, or a concurrent register that reactivated it first |
+| `429`  | `ErrorResponse` | Too many attempts from this client IP, or too many failed ones against this email, counted with the failed logins (code RATE_LIMITED)                                       |
 
 ### `GET /auth/sessions`
 
@@ -2027,10 +2027,11 @@ Changing `email` or `password` requires `currentPassword` (re-authentication) an
 | `401`  | `ErrorResponse` | Missing, invalid or expired access token, or wrong currentPassword (code CURRENT_PASSWORD_INVALID)                                                            |
 | `404`  | `ErrorResponse` | User not found (or not the authenticated user's id)                                                                                                           |
 | `409`  | `ErrorResponse` | Email already used by another account (code DUPLICATE)                                                                                                        |
+| `429`  | `ErrorResponse` | Too many wrong currentPassword guesses for this user (code RATE_LIMITED)                                                                                      |
 
 ### `DELETE /users/{id}`
 
-Soft delete: the account and its financial history are kept, and registering again with the same email reactivates it.
+Requires `currentPassword`: a hijacked 15-minute access token must not be able to delete the account. Soft delete: the account and its financial history are kept, and registering again with the same email and the password it had reactivates it.
 
 **Path**
 
@@ -2038,11 +2039,14 @@ Soft delete: the account and its financial history are kept, and registering aga
 | ---- | ------------- | -------- | ----------- |
 | `id` | string (uuid) | yes      | User ID     |
 
+**Body** `DeleteUserInput` (required)
+
 **Responses**
 
-| Status | Schema          | Description                                         |
-| ------ | --------------- | --------------------------------------------------- |
-| `200`  | `Message`       | User deleted                                        |
-| `400`  | `ErrorResponse` | Invalid ID format (code VALIDATION)                 |
-| `401`  | `ErrorResponse` | Missing, invalid or expired access token            |
-| `404`  | `ErrorResponse` | User not found (or not the authenticated user's id) |
+| Status | Schema          | Description                                                                                        |
+| ------ | --------------- | -------------------------------------------------------------------------------------------------- |
+| `200`  | `Message`       | User deleted                                                                                       |
+| `400`  | `ErrorResponse` | Invalid ID format or missing currentPassword (code VALIDATION)                                     |
+| `401`  | `ErrorResponse` | Missing, invalid or expired access token, or wrong currentPassword (code CURRENT_PASSWORD_INVALID) |
+| `404`  | `ErrorResponse` | User not found (or not the authenticated user's id)                                                |
+| `429`  | `ErrorResponse` | Too many wrong currentPassword guesses for this user (code RATE_LIMITED)                           |

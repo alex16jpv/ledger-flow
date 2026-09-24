@@ -174,5 +174,8 @@ screen used to be given the iPhone's steps, and an Android without the event was
   locked, a read-only sheet with the `CURRENCY_LOCKED` explanation. Time zone: a searchable IANA list
   with offsets; saving refreshes the token so budgets and stats use the new one immediately.
 - **Delete account** (`#delete-account`): a `danger` alert with the guarantee that the data is kept and
-  the account can be reactivated by email, a confirmation field reading "DELETE", and a solid `danger`
-  button. `DELETE /users/:id` leads back to sign-in with a message.
+  the account comes back by signing up again with the same email and this password, a **Current
+  password** field (help "So nobody else can delete your account.") and a solid `danger` button,
+  disabled until the field has something. The password is the confirmation: a stolen session cannot
+  delete the account (T-153). A wrong one (`CURRENT_PASSWORD_INVALID`, `#delete-account-wrong-password`)
+  is an error under the field. `DELETE /users/:id` leads back to sign-in with a message.

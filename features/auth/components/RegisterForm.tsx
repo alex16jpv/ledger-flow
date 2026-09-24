@@ -71,9 +71,7 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
   });
 
   const failure = registerMutation.error;
-  const emailTaken =
-    failure instanceof ApiError &&
-    (failure.code === "EMAIL_TAKEN" || failure.code === "DUPLICATE" || failure.status === 409);
+  const emailTaken = failure instanceof ApiError && failure.code === "EMAIL_TAKEN";
   const serverError = failure instanceof ApiError && failure.status >= 500;
   const otherFailure =
     failure && !emailTaken && !serverError && retryAfter === null ? presentError(failure) : null;
@@ -110,12 +108,12 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
           label={t("auth.email")}
           error={
             emailTaken ? (
-              <>
+              <span>
                 {t("auth.register.emailTaken")}{" "}
                 <Link href="/login" className="font-medium underline">
                   {t("auth.register.signInLink")}
                 </Link>
-              </>
+              </span>
             ) : (
               validationMessage(t, errors.email?.message)
             )

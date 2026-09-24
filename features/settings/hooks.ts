@@ -121,9 +121,9 @@ export function useUpdateCurrency() {
 export function useDeleteAccount() {
   const { user } = useSession();
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (currentPassword: string) => {
       if (!user) throw new Error("No session");
-      await deleteUser(user.id);
+      await deleteUser(user.id, { currentPassword });
     },
   });
 }
