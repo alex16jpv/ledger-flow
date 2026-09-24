@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import { rememberServerTime, resetClockOffset } from "@/lib/local/clock";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { UUID } from "@/lib/testing/ids";
@@ -147,6 +148,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   resetClockOffset();
 });
 
@@ -185,6 +187,43 @@ describe("NewTransactionScreen", () => {
     });
     expect(new Headers(post?.[1]?.headers).get("Idempotency-Key")).toBeNull();
     expect(await screen.findByText("Transaction saved")).toBeVisible();
+  });
+
+  // T-159: opened cold from the installed app's shortcut, before the profile says where the user is.
+  it("waits for the user's zone and currency before it fixes the date and the amount", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-24T22:30:00.000Z"));
+    search = "accountId=a1";
+    const screenIn = (profileResolved: boolean) => (
+      <QueryProvider>
+        <ToastProvider>
+          <FormatSettingsProvider
+            profileResolved={profileResolved}
+            {...(profileResolved ? { timeZone: "Europe/Madrid", currency: "USD" } : {})}
+          >
+            <NewTransactionScreen />
+          </FormatSettingsProvider>
+        </ToastProvider>
+      </QueryProvider>
+    );
+    const { rerender } = renderWithProviders(screenIn(false));
+    expect(screen.getByRole("status", { name: "Loading" })).toBeVisible();
+    expect(screen.queryByRole("textbox", { name: "Amount" })).not.toBeInTheDocument();
+
+    rerender(screenIn(true));
+    expect(await screen.findByRole("button", { name: /Account.*Bancolombia/ })).toBeVisible();
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "12.5");
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("12.5");
+    await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/transactions");
+    });
+    const [post] = calls("POST");
+    expect(JSON.parse(post?.[1]?.body as string)).toMatchObject({
+      amount: 12.5,
+      date: "2026-09-24T22:30:00.000Z",
+    });
   });
 
   it("keeps the amount when switching to a transfer and refuses the same account twice", async () => {
@@ -623,6 +662,31 @@ describe("EditTransactionScreen", () => {
   });
 
   // R-5 §A: the API refuses an empty PUT, and offline it would sit in the attention tray.
+  it("waits for the user's zone before it reads the stored date into the form", async () => {
+    const screenIn = (profileResolved: boolean) => (
+      <QueryProvider>
+        <ToastProvider>
+          <FormatSettingsProvider profileResolved={profileResolved}>
+            <EditTransactionScreen id="t1" />
+          </FormatSettingsProvider>
+        </ToastProvider>
+      </QueryProvider>
+    );
+    const { rerender } = renderWithProviders(screenIn(false));
+    await waitFor(() => {
+      expect(calls("GET").some(([input]) => urlOf(input).endsWith("/api/transactions/t1"))).toBe(
+        true,
+      );
+    });
+    expect(screen.getByRole("status", { name: "Loading" })).toBeVisible();
+    expect(screen.queryByRole("textbox", { name: /^Description/ })).not.toBeInTheDocument();
+
+    rerender(screenIn(true));
+    expect(await screen.findByRole("textbox", { name: /^Description/ })).toHaveValue(
+      "Uber to work",
+    );
+  });
+
   it("saving an untouched edit sends nothing and leaves the form", async () => {
     render(<EditTransactionScreen id="t1" />);
     expect(await screen.findByRole("textbox", { name: /^Description/ })).toHaveValue(

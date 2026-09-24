@@ -127,6 +127,45 @@ test("a point typed in Spanish is the decimal, not a thousands group", async ({
   expect((await rows(request)).map((row) => row.amount)).toEqual([1284.5]);
 });
 
+// T-159: the installed app's shortcut opens the form before the profile says where the user lives.
+test("a form opened before the profile arrives dates the movement in the user's zone", async ({
+  page,
+  request,
+}) => {
+  const signedUp = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: {
+      name: "Madrid E2E",
+      email: uniqueEmail("madrid"),
+      password: "LedgerFlow!2026",
+      timezone: "Europe/Madrid",
+      currency: "EUR",
+    },
+  });
+  expect(signedUp.ok()).toBe(true);
+  await page.context().addCookies((await request.storageState()).cookies);
+  const made = await request.post("/api/accounts", {
+    headers: { origin: APP },
+    data: { name: "Cuenta E2E", type: "ACCOUNT", balance: 0 },
+  });
+  expect(made.status()).toBe(201);
+  const account = (await made.json()) as { id: string };
+
+  await page.clock.setFixedTime(new Date("2026-09-24T22:30:00.000Z"));
+  await page.route("**/api/auth/me", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    await route.continue();
+  });
+  await page.goto(`/transactions/new?amount=12&accountId=${account.id}`);
+  await expect(page.getByRole("button", { name: /^Account/ })).toContainText("Cuenta E2E");
+  await page.getByRole("button", { name: "Save transaction" }).click();
+  await expect(page.getByText("Transaction saved")).toBeVisible();
+
+  const [saved] = await rows(request);
+  expect(saved).toMatchObject({ amount: 12 });
+  expect((saved as Row & { date: string }).date).toBe("2026-09-24T22:30:00.000Z");
+});
+
 test("a transfer refuses the same account on both sides and swaps them", async ({
   page,
   request,

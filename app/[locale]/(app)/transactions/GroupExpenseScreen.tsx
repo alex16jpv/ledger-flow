@@ -160,6 +160,7 @@ export function GroupExpenseScreen({ groupId }: { groupId: string }) {
   const router = useRouter();
   const back = useBackNavigation();
   const { section, isPending, isError, error, refetch } = useSharedSection();
+  const { profileResolved } = useFormatSettings();
   const view = section && groupView(section, groupId);
   const groupPath = `/shared/groups/${groupId}`;
 
@@ -171,7 +172,7 @@ export function GroupExpenseScreen({ groupId }: { groupId: string }) {
           back(groupPath);
         }}
       />
-      {isPending ? (
+      {isPending || !profileResolved ? (
         <div
           className="flex flex-col gap-4"
           role="status"

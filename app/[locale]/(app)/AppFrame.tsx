@@ -38,6 +38,7 @@ import { warmAppShell } from "@/lib/pwa/service-worker";
 import { invalidateMirrorBacked } from "@/lib/query/domains";
 import { useMounted } from "@/lib/react/useMounted";
 import { SessionProvider, useSession } from "@/lib/session";
+import { profileResolved } from "@/lib/session/profile";
 
 import { ServiceWorkerUpdates } from "./ServiceWorkerUpdates";
 
@@ -76,7 +77,12 @@ function Frame({ children }: { children: ReactNode }) {
   );
   // F-63: offline or in local mode (§2.6), the mirror profile carries the currency and the zone.
   const mirrorProfile = useMirrorProfile(Boolean(localUserId) && session.user === null);
-  const user = session.user ?? mirrorProfile;
+  const user = session.user ?? mirrorProfile.user;
+  const resolved = profileResolved({
+    user,
+    sessionStatus,
+    mirrorPending: mirrorProfile.pending,
+  });
   const accountCount = useAccountCount(moreOpen);
   const categorySummary = useCategorySummary(moreOpen);
   const shared = useSharedSection(moreOpen);
@@ -106,7 +112,11 @@ function Frame({ children }: { children: ReactNode }) {
   }, [router, pathname]);
 
   return (
-    <FormatSettingsProvider currency={user?.currency} timeZone={user?.timezone}>
+    <FormatSettingsProvider
+      currency={user?.currency}
+      timeZone={user?.timezone}
+      profileResolved={resolved}
+    >
       <Suspense>
         <HistoryTracker />
       </Suspense>

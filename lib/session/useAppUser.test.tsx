@@ -15,7 +15,7 @@ vi.mock("./SessionProvider", () => ({ useSession: () => session.value }));
 vi.mock("@/lib/local/useMirrorProfile", () => ({
   useMirrorProfile: (enabled: boolean) => {
     mirror.enabled = enabled;
-    return enabled ? mirror.value : null;
+    return { user: enabled ? mirror.value : null, pending: false };
   },
 }));
 

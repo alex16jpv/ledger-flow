@@ -3,6 +3,9 @@
 import { useLocale } from "next-intl";
 import { createContext, type ReactNode, useContext, useMemo, useSyncExternalStore } from "react";
 
+import { DEFAULT_CURRENCY_CODE } from "@/lib/format/currency";
+import { DEFAULT_TIME_ZONE_ID } from "@/lib/format/timezone";
+
 import { formatLocaleFor } from "./format-locale";
 import { type AppLocale, isAppLocale } from "./routing";
 
@@ -11,10 +14,8 @@ export interface FormatSettings {
   formatLocale: string;
   currency: string;
   timeZone: string;
+  profileResolved: boolean;
 }
-
-export const DEFAULT_CURRENCY = "COP";
-export const DEFAULT_TIME_ZONE = "America/Bogota";
 
 const FormatSettingsContext = createContext<FormatSettings | null>(null);
 
@@ -25,12 +26,14 @@ const noDeviceLanguage = () => null;
 interface Props {
   currency?: string;
   timeZone?: string;
+  profileResolved?: boolean;
   children: ReactNode;
 }
 
 export function FormatSettingsProvider({
-  currency = DEFAULT_CURRENCY,
-  timeZone = DEFAULT_TIME_ZONE,
+  currency = DEFAULT_CURRENCY_CODE,
+  timeZone = DEFAULT_TIME_ZONE_ID,
+  profileResolved = true,
   children,
 }: Props) {
   const rawLocale = useLocale();
@@ -38,8 +41,14 @@ export function FormatSettingsProvider({
   const language = useSyncExternalStore(noop, deviceLanguage, noDeviceLanguage);
 
   const value = useMemo<FormatSettings>(
-    () => ({ locale, formatLocale: formatLocaleFor(locale, language), currency, timeZone }),
-    [locale, language, currency, timeZone],
+    () => ({
+      locale,
+      formatLocale: formatLocaleFor(locale, language),
+      currency,
+      timeZone,
+      profileResolved,
+    }),
+    [locale, language, currency, timeZone, profileResolved],
   );
 
   return <FormatSettingsContext.Provider value={value}>{children}</FormatSettingsContext.Provider>;

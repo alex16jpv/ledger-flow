@@ -5257,4 +5257,34 @@ id], true), 1000)` on `dateCursor` (which leaves the tombstones out), one short 
 - **Consequence:** typing `.` then three digits in `es-CO` yields a grouped integer, which is what the
   `.` means there; so does a stray third digit after a keypad decimal (`12.500`), and the field shows it
   grouped before anything is saved. A typed `.` or `,` under a zero-decimal currency is still dropped, as before (T-159
-  owns the moment the currency is not known yet).
+  owns the moment the currency is not known yet, and since then `AmountInput` takes no typing until it
+  is).
+
+## 2026-09-24 · A form that fixes a date waits for the user's zone and currency (T-159)
+
+- **Context:** `(app)` paints before `/auth/me` answers, and until then `FormatSettingsProvider` falls
+  back to `America/Bogota` and `COP`. The new-transaction form and the group-expense form freeze their
+  starting date in a `useState`, and React Hook Form never reads its defaults again, so the installed
+  app's shortcut (`/transactions/new`) opened at 00:30 in Madrid dated the movement at 17:30 of the day
+  before — Bogota's wall clock read back in Madrid's zone. In that instant the amount was also COP, with
+  no decimals, which is the half of T-160 left to this task.
+- **Decision:** the provider says whether the settings are the user's: `profileResolved`
+  (`lib/session/profile.ts`) is false only while nobody can tell yet — no user, and either the session
+  is still loading or the device's copy is still being read (`useMirrorProfile` returns
+  `{ user, pending }`, and reports a copy it cannot read instead of falling back in silence). If both
+  answer with nobody, the fallbacks stand, as before; they are `DEFAULT_CURRENCY_CODE` and
+  `DEFAULT_TIME_ZONE_ID`, no longer a second copy in the provider.
+  - The new, edit and group-expense transaction forms and the new and edit budget forms draw their own
+    skeleton until then.
+  - The settle-up sheet's day and the paid-by-someone-else sheet's date follow the zone until the user
+    picks one, as `PaySheet`'s _From_ follows the main account.
+  - `AmountInput` is read-only until then, so nothing typed into the quick add in that window can lose
+    its decimals, and it rewrites its figure when the locale or the currency's decimals change.
+- **Alternatives (not taken):** holding every screen in the frame until the profile is known — the
+  mirror reads already wait for the session, so it would cost nothing in time, but online the content
+  area would be blank for as long as `/auth/me` takes instead of showing each screen's skeleton, which
+  is a visible change to every screen; resetting a form when the zone changes — it would throw away
+  what was already typed.
+- **Consequence:** a new form that freezes a zone- or currency-dependent value has to wait on
+  `profileResolved` the same way; opened cold, these forms show their skeleton for as long as
+  `/auth/me` or the copy takes, and with a copy on the device that is one IndexedDB read.

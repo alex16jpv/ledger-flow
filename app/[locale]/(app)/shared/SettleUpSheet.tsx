@@ -99,7 +99,8 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
   const [perLine, setPerLine] = useState<Record<string, string>>({});
   const { timeZone } = useFormatSettings();
   const [openedAt] = useState(() => new Date());
-  const [day, setDay] = useState(() => dayKey(openedAt, timeZone));
+  const [chosenDay, setDay] = useState<string | null>(null);
+  const day = chosenDay ?? dayKey(openedAt, timeZone);
 
   const cash = amount ?? 0;
   const plan = planSettlement(party, cash);

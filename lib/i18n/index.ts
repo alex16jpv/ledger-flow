@@ -1,7 +1,5 @@
 export { formatLocaleFor } from "./format-locale";
 export {
-  DEFAULT_CURRENCY,
-  DEFAULT_TIME_ZONE,
   type FormatSettings,
   FormatSettingsProvider,
   useFormatSettings,
