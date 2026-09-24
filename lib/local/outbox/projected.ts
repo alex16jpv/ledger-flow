@@ -1,3 +1,4 @@
+import { ApiError, type ErrorCode } from "@/lib/api/errors";
 import type { SyncTransaction, User } from "@/types/api";
 
 import { PROFILE_KEY } from "../schema";
@@ -10,6 +11,10 @@ export class NotProjectableError extends Error {
     this.name = "NotProjectableError";
   }
 }
+
+// What the server would answer, so the screen reads the same code whichever side refused it.
+export const refused = (code: ErrorCode, message: string): ApiError =>
+  new ApiError({ status: 400, code, message, requestId: "mirror" });
 
 // Invariant 2: stamped fields are copied from the profile and marked as a projection.
 export interface ProjectionContext {

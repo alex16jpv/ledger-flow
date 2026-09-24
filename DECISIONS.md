@@ -5078,3 +5078,25 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   `UNTRUSTED_ORIGIN`: it is not in the API's contract and the client never branches on it. The pull
   surfaces it as a failed pass; a batch refused while the marker still names the owner (no marker at
   all) is requeued like any other refusal, with its attempt counted and the ordinary backoff.
+
+## 2026-09-24 · A loan is capped on where every write leaves it, deletes included (T-156)
+
+- **Context:** the backend capped a `LOAN` only when money arrived at it. Borrowing 200 of interest on a
+  loan of 1,000, paying 1,200 and deleting the interest left the loan at +200 — a debt holding money
+  of its own — on the server, and offline the mirror drew the same. The owner decided on 2026-09-24
+  that such a delete is refused: the payment is lowered first, then what was borrowed goes.
+- **Decision:** the backend caps the net a whole write leaves on a loan (`LOAN_OVERPAID` on a delete,
+  an edit and undoing a payment as well), and this client asks the same question before anything is
+  queued: `refuseLoanInCredit` (`lib/local/outbox/projection.ts`) adds the write's effect to the loan's
+  balance as the queue projects it, for every movement write and for recording and undoing a payment.
+  A gesture that takes something back — deleting a movement or an adjustment, undoing a payment —
+  presents the code with its own sentence (`presentError(error, true)` → `errors.LOAN_PAID_OFF_SINCE`),
+  because "a loan cannot be paid more than it still owes" does not say what to do about a delete. The
+  sync attention screen does the same for a queued delete the server refused (`presentCode`): another
+  device can pay the loan off while this one is offline, and only the server sees that.
+- **Alternatives (not taken):** warning inside the delete sheet before the tap — it needs the projected
+  balance of the loan in the screen, which is money arithmetic outside `lib/local/derive` for a case
+  this rare; a new error code — the backend already has the one that means it, and the gesture is what
+  changes the sentence, not the rule.
+- **Consequence:** deleting a movement is no longer always possible: this one case is refused until
+  the payment is lowered. The form's edit keeps the ordinary `LOAN_OVERPAID` alert.

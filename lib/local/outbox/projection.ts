@@ -1,7 +1,10 @@
 import { type AccountBalance, type BalanceTransaction, deriveBalances } from "../derive";
 import { fromCents, toCents } from "../derive/money";
 import type { OutboxOperation } from "../schema";
-import { operationPayload } from "./envelope";
+import { type MoneyEffect, operationPayload } from "./envelope";
+import { refused } from "./projected";
+import type { WriteTransaction } from "./queue";
+import { willBeSent } from "./reproject";
 
 export interface ProjectedAccount {
   id: string;
@@ -13,11 +16,18 @@ export function projectBalances(
   accounts: ProjectedAccount[],
   operations: OutboxOperation[],
 ): AccountBalance[] {
-  const before: BalanceTransaction[] = [];
-  const after: BalanceTransaction[] = [];
+  const effects: MoneyEffect[] = [];
   for (const operation of operations) {
     const { effect } = operationPayload(operation);
-    if (!effect) continue;
+    if (effect) effects.push(effect);
+  }
+  return applyEffects(accounts, effects);
+}
+
+function applyEffects(accounts: ProjectedAccount[], effects: MoneyEffect[]): AccountBalance[] {
+  const before: BalanceTransaction[] = [];
+  const after: BalanceTransaction[] = [];
+  for (const effect of effects) {
     if (effect.before) before.push(effect.before);
     if (effect.after) after.push(effect.after);
   }
@@ -37,4 +47,32 @@ export function projectBalances(
         toCents(removed.get(account.id) ?? 0),
     ),
   }));
+}
+
+// T-156: the server caps a loan on where a write leaves it, so the mirror refuses what it would.
+export async function refuseLoanInCredit(tx: WriteTransaction, effect: MoneyEffect): Promise<void> {
+  const touched = new Set<string>();
+  for (const side of [effect.before, effect.after]) {
+    if (side?.fromAccountId) touched.add(side.fromAccountId);
+    if (side?.toAccountId) touched.add(side.toAccountId);
+  }
+  const loans = [];
+  for (const id of touched) {
+    const record = await tx.objectStore("accounts").get(id);
+    if (record?.row.type === "LOAN") loans.push(record.row);
+  }
+  if (loans.length === 0) return;
+  const queued = (await tx.objectStore("outbox").getAll()).filter(willBeSent);
+  for (const loan of loans) {
+    const [now] = projectBalances([{ id: loan.id, balance: loan.balance }], queued);
+    const from = now?.balance ?? loan.balance;
+    const [next] = applyEffects([{ id: loan.id, balance: from }], [effect]);
+    const to = toCents(next?.balance ?? from);
+    if (to > toCents(from) && to > 0) {
+      throw refused(
+        "LOAN_OVERPAID",
+        "A loan cannot end above zero: it cannot be paid more than it still owes",
+      );
+    }
+  }
 }

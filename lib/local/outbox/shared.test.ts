@@ -2,6 +2,7 @@ import { ApiError } from "@/lib/api/errors";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { answerBatch, applied, operationsOf, rejectedWith } from "@/lib/testing/sync";
 import {
+  account,
   openTestVault,
   profile,
   settlement,
@@ -14,6 +15,7 @@ import type { SharedSplit } from "@/types/api";
 
 import { setCurrentVault } from "../repository/read";
 import {
+  accountRecord,
   profileRecord,
   settlementRecord,
   sharedExpenseRecord,
@@ -341,6 +343,53 @@ describe("recording a payment with no network", () => {
         effect: { before: { type: "SETTLEMENT", amount: 30_000, toAccountId: "a1" }, after: null },
       },
     });
+  });
+
+  it("refuses to undo a payment made from a loan paid off since, and queues nothing [T-156]", async () => {
+    const vault = await vaultWith();
+    await vault.db.put(
+      "accounts",
+      accountRecord(account({ id: "a1", type: "LOAN", balance: -10_000 })),
+    );
+    await vault.db.put(
+      "accounts",
+      accountRecord(account({ id: "a2", type: "ACCOUNT", balance: 100_000, isDefault: false })),
+    );
+    reportOnline(false);
+    const payment = await recordSettlement({
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 0,
+      paid: 30_000,
+      outsideApp: false,
+      accountId: "a1",
+      lines: [
+        {
+          expenseId: "e9",
+          date: "2026-08-14T20:00:00.000Z",
+          description: "Tickets",
+          amount: 30_000,
+          categoryId: "c1",
+        },
+      ],
+      refunded: 0,
+    });
+    await createTransaction(
+      {
+        type: "TRANSFER",
+        amount: 40_000,
+        date: "2026-09-21T12:00:00.000Z",
+        fromAccountId: "a2",
+        toAccountId: "a1",
+      },
+      "55555555-5555-7555-8555-555555555555",
+    );
+    const queued = await pendingOperations(vault.db);
+
+    await expect(deleteSettlement(payment.id)).rejects.toMatchObject({ code: "LOAN_OVERPAID" });
+
+    expect((await vault.db.get("settlements", payment.id))?.deleted).toBe(0);
+    expect(await pendingOperations(vault.db)).toEqual(queued);
   });
 
   it("leaves the payment undone once the server has taken it", async () => {

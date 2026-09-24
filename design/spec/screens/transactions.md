@@ -46,6 +46,15 @@ account or accounts, the long date, tags, note, source, currency), the actions E
 preloaded) and Delete (confirmed in a sheet; a soft `DELETE`; a toast without undo, because there is no
 restore), and a footer with created and edited.
 
+**When deleting it would leave a loan above zero** (T-156) — money it took out of a loan that has been
+paid off since — the delete is refused, by the device before it queues anything and by the server
+otherwise. The sheet closes and a `danger` toast says why and what to do first: _This loan was paid off
+after that was recorded, so taking it back would leave the loan above zero. Lower that payment first,
+then try again._ Nothing is deleted and the balance does not move. The same toast answers every gesture
+that takes something back — deleting from the edit form or an adjustment, undoing a payment
+([shared.md](shared.md)) — and editing it down or off the loan is refused in the form's own alert
+([add.md](add.md)).
+
 If `pendingDetails`, a `warning` alert on top offers "Complete", which opens the review inbox
 positioned on that item.
 

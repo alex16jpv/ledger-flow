@@ -1,4 +1,4 @@
-import { ApiError, type ErrorCode } from "@/lib/api/errors";
+import { ApiError } from "@/lib/api/errors";
 import { dayKey } from "@/lib/format/dates";
 import type {
   BatchUpdateFailure,
@@ -22,7 +22,9 @@ import {
   NotProjectableError,
   patch,
   projectionContext,
+  refused,
 } from "./projected";
+import { refuseLoanInCredit } from "./projection";
 import {
   dependenciesOf,
   type LocalChange,
@@ -52,6 +54,8 @@ async function projectTransaction(
 ): Promise<Projected> {
   const store = tx.objectStore("transactions");
   const previous = await store.get(id);
+  const effect = { before: previous ? balanceOf(previous.row) : null, after: balanceOf(next) };
+  await refuseLoanInCredit(tx, effect);
   await store.put(transactionRecord(next, previous ? (previous.server ?? previous.row) : next));
   const guarded = previous !== undefined && !(await unsent(tx, "transaction", id));
   const dependsOn = await dependenciesOf(tx, [
@@ -60,7 +64,7 @@ async function projectTransaction(
     { entity: "category", id: next.categoryId },
   ]);
   return {
-    effect: { before: previous ? balanceOf(previous.row) : null, after: balanceOf(next) },
+    effect,
     change: {
       ...(guarded ? { baseUpdatedAt: previous.updatedAt } : {}),
       dependsOn,
@@ -72,9 +76,6 @@ async function projectTransaction(
     },
   };
 }
-
-const refused = (code: ErrorCode, message: string): ApiError =>
-  new ApiError({ status: 400, code, message, requestId: "mirror" });
 
 const sameInstant = (left: string, right: string): boolean =>
   Date.parse(left) === Date.parse(right);

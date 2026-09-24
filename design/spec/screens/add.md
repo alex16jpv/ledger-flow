@@ -344,7 +344,9 @@ and that is the one thing offline is not allowed to do.
 older app — `INCOME_ON_CARD_OR_LOAN` and `LOAN_OVERPAID` are shown **as the form's own alert**, at the
 top, with the sentence that says what to record instead. Never a toast: the form is where the wrong
 choice was made. They are not placed on a single field because the server does not say which one is
-wrong, and a guessed field would point at the wrong half of a transfer.
+wrong, and a guessed field would point at the wrong half of a transfer. **An edit counts too**
+(T-156): lowering what was borrowed from a loan, or moving it to another account, once the loan has
+been paid off would leave it above zero, and the same alert refuses it.
 
 ### What was premise, and was not asked
 

@@ -792,6 +792,7 @@
     "ACCOUNT_FIELD_NOT_FOR_TYPE": "That amount doesn’t belong to this account type. Clear it or pick another type.",
     "INCOME_ON_CARD_OR_LOAN": "Money arriving at a card or a loan is a payment, not income. Record it as a transfer from the account it came from, or pay it from Somewhere else.",
     "LOAN_OVERPAID": "A loan cannot be paid more than it still owes.",
+    "LOAN_PAID_OFF_SINCE": "This loan was paid off after that was recorded, so taking it back would leave the loan above zero. Lower that payment first, then try again.",
     "CATEGORY_LIMIT_REACHED": "You’ve reached the limit of 200 categories.",
     "CATEGORY_ARCHIVED": "That category is archived. Restore it or pick another.",
     "CATEGORY_TYPE_MISMATCH": "That category doesn’t match this type of transaction.",

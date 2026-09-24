@@ -1,5 +1,5 @@
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { account, openTestVault, profile, wipeVaults } from "@/lib/testing/vault";
+import { account, openTestVault, profile, transaction, wipeVaults } from "@/lib/testing/vault";
 import type { SyncTransaction } from "@/types/api";
 
 import { deriveBalances } from "../derive";
@@ -182,5 +182,97 @@ describe("the balance projection", () => {
     const before = serverBalances(fixture).find((row) => row.id === untouched.id);
 
     expect(projected.find((row) => row.accountId === untouched.id)?.balance).toBe(before?.balance);
+  });
+});
+
+describe("a loan in the mirror (T-156)", () => {
+  const LOAN = "loan-1";
+  const BANK = "bank-1";
+
+  async function paidOffLoan(paid: number) {
+    const vault = await openTestVault("u1");
+    await vault.db.put("profile", profileRecord(profile({ id: "u1", currency: "USD" })));
+    await vault.db.put(
+      "accounts",
+      accountRecord(account({ id: BANK, type: "ACCOUNT", balance: 20_000, userId: "u1" })),
+    );
+    await vault.db.put(
+      "accounts",
+      accountRecord(account({ id: LOAN, type: "LOAN", balance: paid - 1200, userId: "u1" })),
+    );
+    await vault.db.put(
+      "transactions",
+      transactionRecord(
+        transaction({ id: "interest", type: "EXPENSE", amount: 200, fromAccountId: LOAN }),
+      ),
+    );
+    await vault.db.put(
+      "transactions",
+      transactionRecord(
+        transaction({
+          id: "payment",
+          type: "TRANSFER",
+          amount: paid,
+          fromAccountId: BANK,
+          toAccountId: LOAN,
+        }),
+      ),
+    );
+    await vault.db.put("meta", { key: "syncedAt", value: "2026-09-04T00:00:00.000Z" });
+    setCurrentVault(vault);
+    reportOnline(false);
+    return vault;
+  }
+
+  it("refuses to delete what was borrowed once the loan is paid off, and queues nothing", async () => {
+    const vault = await paidOffLoan(1200);
+
+    await expect(deleteTransaction("interest")).rejects.toMatchObject({ code: "LOAN_OVERPAID" });
+
+    expect(await pendingOperations(vault.db)).toEqual([]);
+    expect((await vault.db.get("transactions", "interest"))?.deleted).toBe(0);
+  });
+
+  it("refuses to lower it or move it off the loan", async () => {
+    const vault = await paidOffLoan(1200);
+
+    await expect(updateTransaction("interest", { amount: 100 })).rejects.toMatchObject({
+      code: "LOAN_OVERPAID",
+    });
+    await expect(updateTransaction("interest", { fromAccountId: BANK })).rejects.toMatchObject({
+      code: "LOAN_OVERPAID",
+    });
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+
+  it("counts what is still queued: lowering the payment first lets the interest go", async () => {
+    const vault = await paidOffLoan(1200);
+
+    await updateTransaction("payment", { amount: 1000 });
+    await deleteTransaction("interest");
+
+    const accounts = (await vault.db.getAll("accounts")).map((record) => record.row);
+    const projected = projectBalances(accounts, await pendingOperations(vault.db));
+    expect(projected.find((row) => row.accountId === LOAN)?.balance).toBe(0);
+  });
+
+  it("judges an edit by where the loan ends, and refuses a payment past zero", async () => {
+    const vault = await paidOffLoan(1100);
+
+    await updateTransaction("interest", { amount: 150 });
+    await expect(
+      createTransaction(
+        {
+          type: "TRANSFER",
+          amount: 50.01,
+          date: "2026-09-10T12:00:00.000Z",
+          fromAccountId: BANK,
+          toAccountId: LOAN,
+        },
+        "44444444-4444-7444-8444-444444444444",
+      ),
+    ).rejects.toMatchObject({ code: "LOAN_OVERPAID" });
+
+    expect(await pendingOperations(vault.db)).toHaveLength(1);
   });
 });

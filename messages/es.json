@@ -792,6 +792,7 @@
     "ACCOUNT_FIELD_NOT_FOR_TYPE": "Ese importe no es de este tipo de cuenta. Bórralo o elige otro tipo.",
     "INCOME_ON_CARD_OR_LOAN": "El dinero que llega a una tarjeta o un préstamo es un pago, no un ingreso. Regístralo como una transferencia desde la cuenta de la que salió, o como un pago desde «Otro sitio».",
     "LOAN_OVERPAID": "Un préstamo no se puede pagar por más de lo que aún debes.",
+    "LOAN_PAID_OFF_SINCE": "Este préstamo se saldó después de registrar eso, así que quitarlo lo dejaría por encima de cero. Rebaja primero ese pago y vuelve a intentarlo.",
     "CATEGORY_LIMIT_REACHED": "Llegaste al límite de 200 categorías.",
     "CATEGORY_ARCHIVED": "Esa categoría está archivada. Restáurala o elige otra.",
     "CATEGORY_TYPE_MISMATCH": "Esa categoría no corresponde a este tipo de movimiento.",

@@ -133,6 +133,13 @@ describe("the Needs your attention tray", () => {
     expect(screen.getByRole("button", { name: "Discard this change" })).toBeInTheDocument();
   });
 
+  it("says what to do when a queued delete would leave a loan above zero [T-156]", async () => {
+    await vaultWith([{ status: "failed", lastError: "LOAN_OVERPAID", action: "delete" }]);
+    render();
+
+    expect(await screen.findByText(/paid off after that was recorded/)).toBeVisible();
+  });
+
   it("says nothing needs the user when the queue holds nothing stuck", async () => {
     await vaultWith([{ status: "pending" }]);
     render();

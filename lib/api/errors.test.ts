@@ -35,6 +35,19 @@ describe("presentError", () => {
     });
   });
 
+  it("says what to do when taking something back trips a loan's cap, and only then [T-156]", () => {
+    const error = new ApiError({
+      status: 400,
+      code: "LOAN_OVERPAID",
+      message: "x",
+      requestId: "r",
+    });
+    expect(presentError(error, true).messageKey).toBe("errors.LOAN_PAID_OFF_SINCE");
+    expect(presentError(error).messageKey).toBe("errors.LOAN_OVERPAID");
+    const other = new ApiError({ status: 400, code: "FUTURE_DATE", message: "x", requestId: "r" });
+    expect(presentError(other, true)).toEqual(presentError(other));
+  });
+
   it("falls back to the status when the code is unknown", () => {
     expect(
       presentError(new ApiError({ status: 503, code: null, message: "x", requestId: "r" })).scope,
