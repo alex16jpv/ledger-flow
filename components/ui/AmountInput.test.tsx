@@ -47,6 +47,115 @@ describe("AmountInput", () => {
     expect(input).toHaveValue("1.284,50");
   });
 
+  it("takes the point of a keyboard in English as the decimal of an app in Spanish", async () => {
+    const onChange = vi.fn();
+    renderWithProviders(<AmountInput onChange={onChange} label="Importe" />, {
+      locale: "es",
+      currency: "USD",
+    });
+    const input = screen.getByRole("textbox", { name: "Importe" });
+    await userEvent.type(input, "1284.50");
+    expect(input).toHaveValue("1.284,50");
+    expect(onChange).toHaveBeenLastCalledWith(1284.5);
+  });
+
+  it("takes the comma of a keyboard in Spanish as the decimal of an app in English", async () => {
+    const onChange = vi.fn();
+    renderWithProviders(<AmountInput onChange={onChange} label="Amount" />, { currency: "USD" });
+    const input = screen.getByRole("textbox", { name: "Amount" });
+    await userEvent.type(input, "12,5");
+    expect(input).toHaveValue("12.5");
+    expect(onChange).toHaveBeenLastCalledWith(12.5);
+  });
+
+  it("reads a thousands separator typed by hand as one once three digits follow it", async () => {
+    const onChange = vi.fn();
+    renderWithProviders(<AmountInput onChange={onChange} label="Amount" />, { currency: "USD" });
+    const input = screen.getByRole<HTMLInputElement>("textbox", { name: "Amount" });
+    await userEvent.type(input, "1,250,000.75");
+    expect(input).toHaveValue("1,250,000.75");
+    expect(onChange).toHaveBeenLastCalledWith(1250000.75);
+    expect(input.selectionStart).toBe(12);
+  });
+
+  it("reads a pasted figure whichever separator it was written with", async () => {
+    const onChange = vi.fn();
+    renderWithProviders(<AmountInput onChange={onChange} label="Importe" />, {
+      locale: "es",
+      currency: "USD",
+    });
+    const input = screen.getByRole("textbox", { name: "Importe" });
+    await userEvent.click(input);
+    await userEvent.paste("$1,284.50");
+    expect(input).toHaveValue("1.284,5");
+    expect(onChange).toHaveBeenLastCalledWith(1284.5);
+    await userEvent.clear(input);
+    await userEvent.paste("1.250");
+    expect(input).toHaveValue("1.250");
+    expect(onChange).toHaveBeenLastCalledWith(1250);
+  });
+
+  it("reads a separator typed first as the decimal of zero", async () => {
+    const onChange = vi.fn();
+    renderWithProviders(<AmountInput onChange={onChange} label="Importe" />, {
+      locale: "es",
+      currency: "USD",
+    });
+    const input = screen.getByRole("textbox", { name: "Importe" });
+    await userEvent.type(input, ".50");
+    expect(input).toHaveValue("0,50");
+    expect(onChange).toHaveBeenLastCalledWith(0.5);
+  });
+
+  it("takes a separator typed over the selected cents", async () => {
+    const onChange = vi.fn();
+    renderWithProviders(<AmountInput onChange={onChange} label="Importe" />, {
+      locale: "es",
+      currency: "USD",
+    });
+    const input = screen.getByRole<HTMLInputElement>("textbox", { name: "Importe" });
+    await userEvent.type(input, "1234");
+    input.setSelectionRange(2, 5);
+    await userEvent.keyboard(".5");
+    expect(input).toHaveValue("1,5");
+    expect(onChange).toHaveBeenLastCalledWith(1.5);
+  });
+
+  it("reads a pasted figure with its symbol, and never a decimal the currency lacks", async () => {
+    const onChange = vi.fn();
+    renderWithProviders(<AmountInput onChange={onChange} label="Importe" />, { locale: "es" });
+    const input = screen.getByRole("textbox", { name: "Importe" });
+    await userEvent.click(input);
+    await userEvent.paste("COP 12,500");
+    expect(input).toHaveValue("12.500");
+    expect(onChange).toHaveBeenLastCalledWith(12500);
+  });
+
+  it("forgets the typed separator when the parent writes a figure", async () => {
+    function Host() {
+      const [value, setValue] = useState<number | null>(null);
+      return (
+        <>
+          <AmountInput value={value} onChange={setValue} label="Amount" />
+          <button
+            type="button"
+            onClick={() => {
+              setValue(2.5);
+            }}
+          >
+            Fill
+          </button>
+        </>
+      );
+    }
+    renderWithProviders(<Host />, { currency: "USD" });
+    const input = screen.getByRole("textbox", { name: "Amount" });
+    await userEvent.type(input, "1,5");
+    await userEvent.click(screen.getByRole("button", { name: "Fill" }));
+    await userEvent.type(input, "00");
+    expect(input).toHaveValue("2.50");
+  });
+
   it("keeps the caret next to the digit the user edited", async () => {
     const onChange = vi.fn();
     renderWithProviders(<AmountInput onChange={onChange} label="Amount" />);

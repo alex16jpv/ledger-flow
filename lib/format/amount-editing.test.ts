@@ -1,4 +1,10 @@
-import { caretAfterUnits, countUnits, formatEditableAmount } from "./amount-editing";
+import {
+  acceptDecimalKey,
+  caretAfterUnits,
+  countUnits,
+  formatEditableAmount,
+  padLeadingDecimal,
+} from "./amount-editing";
 
 describe("formatEditableAmount", () => {
   it("groups thousands live and keeps the clean number", () => {
@@ -43,5 +49,100 @@ describe("caret bookkeeping", () => {
     expect(caretAfterUnits("12,345", 3, ".")).toBe(4);
     expect(caretAfterUnits("1,234.5", 5, ".")).toBe(6);
     expect(caretAfterUnits("12,345", 0, ".")).toBe(0);
+  });
+});
+
+describe("acceptDecimalKey", () => {
+  const typed = (previous: string, key: string, loose = false) => ({
+    previous,
+    raw: previous + key,
+    caret: previous.length + key.length,
+    loose,
+  });
+
+  it("takes the other separator as the decimal point the locale uses", () => {
+    expect(acceptDecimalKey(typed("12", "."), ",", 2)).toEqual({
+      raw: "12,",
+      caret: 3,
+      loose: true,
+    });
+    expect(acceptDecimalKey(typed("1.284", "."), ",", 2)).toEqual({
+      raw: "1.284,",
+      caret: 6,
+      loose: true,
+    });
+    expect(acceptDecimalKey(typed("12", ","), ".", 2)).toEqual({
+      raw: "12.",
+      caret: 3,
+      loose: true,
+    });
+  });
+
+  it("gives it back as a thousands group once a third digit follows it", () => {
+    expect(acceptDecimalKey(typed("1.00", "0", true), ".", 2)).toEqual({
+      raw: "1000",
+      caret: 4,
+      loose: false,
+    });
+    expect(acceptDecimalKey(typed("1.00", "0"), ".", 2)).toEqual({
+      raw: "1.000",
+      caret: 5,
+      loose: false,
+    });
+  });
+
+  it("leaves the key alone under a zero-decimal currency or once there is a decimal", () => {
+    expect(acceptDecimalKey(typed("12", "."), ",", 0)).toEqual({
+      raw: "12.",
+      caret: 3,
+      loose: false,
+    });
+    expect(acceptDecimalKey(typed("12,5", "."), ",", 2)).toEqual({
+      raw: "12,5.",
+      caret: 5,
+      loose: false,
+    });
+  });
+
+  it("only rewrites a key that was typed, not a separator already in the text", () => {
+    expect(
+      acceptDecimalKey({ previous: "1.234", raw: "1.23", caret: 4, loose: false }, ",", 2),
+    ).toEqual({ raw: "1.23", caret: 4, loose: false });
+  });
+
+  it("takes a separator typed over a selection, but not a deletion that leaves one behind", () => {
+    expect(
+      acceptDecimalKey({ previous: "1.234", raw: "1.", caret: 2, loose: false }, ",", 2),
+    ).toEqual({ raw: "1.", caret: 2, loose: false });
+    expect(
+      acceptDecimalKey({ previous: "12.345", raw: "12,", caret: 3, loose: false }, ".", 2),
+    ).toEqual({ raw: "12.", caret: 3, loose: true });
+    expect(
+      acceptDecimalKey({ previous: "1.234", raw: "1.34", caret: 2, loose: false }, ",", 2),
+    ).toEqual({ raw: "1.34", caret: 2, loose: false });
+  });
+
+  it("keeps a decimal as one when a digit lands in the middle of its fraction", () => {
+    expect(
+      acceptDecimalKey({ previous: "12,55", raw: "12,055", caret: 4, loose: true }, ",", 2),
+    ).toEqual({ raw: "12,055", caret: 4, loose: false });
+  });
+
+  it("forgets where the decimal came from once it is deleted", () => {
+    expect(acceptDecimalKey({ previous: "1.5", raw: "15", caret: 1, loose: true }, ".", 2)).toEqual(
+      {
+        raw: "15",
+        caret: 1,
+        loose: false,
+      },
+    );
+  });
+});
+
+describe("padLeadingDecimal", () => {
+  it("puts the zero a leading decimal is shown with before the caret", () => {
+    expect(padLeadingDecimal(",", 1, ",", 2)).toEqual({ raw: "0,", caret: 2 });
+    expect(padLeadingDecimal("12,5", 4, ",", 2)).toEqual({ raw: "12,5", caret: 4 });
+    expect(padLeadingDecimal(".", 1, ".", 0)).toEqual({ raw: ".", caret: 1 });
   });
 });

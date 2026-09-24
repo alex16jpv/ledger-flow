@@ -42,7 +42,14 @@ const people = [
   { contactId: BETO, name: "Beto Cano", color: null },
 ];
 
-function open(onSave: (result: SplitResult) => void = vi.fn()) {
+function open(
+  onSave: (result: SplitResult) => void = vi.fn(),
+  {
+    total = 100_000,
+    currency = "COP",
+    locale = "en",
+  }: { total?: number; currency?: string; locale?: "en" | "es" } = {},
+) {
   renderWithProviders(
     <QueryProvider>
       <ToastProvider>
@@ -50,8 +57,8 @@ function open(onSave: (result: SplitResult) => void = vi.fn()) {
           open
           onClose={vi.fn()}
           title="Split $100,000 · Food"
-          total={100_000}
-          currency="COP"
+          total={total}
+          currency={currency}
           people={people}
           payerContactId={null}
           saveLabel="Save split"
@@ -59,6 +66,7 @@ function open(onSave: (result: SplitResult) => void = vi.fn()) {
         />
       </ToastProvider>
     </QueryProvider>,
+    { locale, currency },
   );
 }
 
@@ -91,6 +99,20 @@ describe("SplitSheet", () => {
 
     expect(screen.getByText("The shares add up to more than the expense.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save split" })).toBeDisabled();
+  });
+
+  it("reads a share typed with the point of a keyboard in English while the app is in Spanish", async () => {
+    const onSave = vi.fn();
+    open(onSave, { total: 100, currency: "USD", locale: "es" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Exact" }));
+    await userEvent.type(amountOf("You"), "50.50");
+    await userEvent.type(amountOf("Ana Ruiz"), "25,25");
+    await userEvent.type(amountOf("Beto Cano"), "24.25");
+
+    await userEvent.click(screen.getByRole("button", { name: "Save split" }));
+    const [result] = onSave.mock.calls[0] as [SplitResult];
+    expect(result.shares.map((share: SharedShare) => share.amount)).toEqual([50.5, 25.25, 24.25]);
   });
 
   // Decision 20: the guests weigh as many shares as there are of them, and pay as one row.

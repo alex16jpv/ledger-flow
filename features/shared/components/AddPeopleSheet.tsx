@@ -15,6 +15,7 @@ import { List, Row, RowBody, RowMeta, RowRight, RowTitle } from "@/components/ui
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { presentError } from "@/lib/api/errors";
+import { formatPlainNumber } from "@/lib/format/money";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { useOffline } from "@/lib/network/useOffline";
 import type { Contact, DefaultSplit } from "@/types/api";
@@ -56,7 +57,7 @@ export function AddPeopleSheet({ view, open, onClose }: AddPeopleSheetProps) {
     Object.fromEntries(
       view.group.defaultSplit.shares.map((share) => [
         share.contactId ?? USER_KEY,
-        String(share.percent),
+        formatPlainNumber(share.percent, money.locale),
       ]),
     ),
   );

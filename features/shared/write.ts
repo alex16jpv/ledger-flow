@@ -2,7 +2,7 @@ import type { NewSharedExpense } from "@/lib/local/outbox";
 import { newEntityId } from "@/lib/local/outbox/envelope";
 import type { DefaultSplit, SharedSplit, SyncSharedGroup, Transaction } from "@/types/api";
 
-import { partiesOf, resolveDraft, type SplitDraft, USER_KEY } from "./split";
+import { parsePercent, partiesOf, resolveDraft, type SplitDraft, USER_KEY } from "./split";
 
 // The group's default is only EQUAL or PERCENT: a default has no total to divide.
 export function groupDefaultSplit(
@@ -15,7 +15,7 @@ export function groupDefaultSplit(
     mode,
     shares: contactIds.map((contactId) => ({
       contactId,
-      percent: Number.parseFloat(percent[contactId ?? USER_KEY] ?? "") || 0,
+      percent: parsePercent(percent[contactId ?? USER_KEY] ?? ""),
     })),
   };
 }

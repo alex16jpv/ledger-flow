@@ -90,7 +90,9 @@ and it is offered only while they have no share and nothing paid.
 
 **One control for a default split.** `DefaultSplitFields` is `Equal` and `Percent` and the percentages
 they imply — the two modes that mean something without a total — and the new-group form, the edit sheet
-and `Add people` in a percentage group all render that one, not three.
+and `Add people` in a percentage group all render that one, not three. Its percentages, like the share
+rows of `SplitSheet`, are seeded in the app's locale (`33,33` in Spanish) and read with either `.` or
+`,`, because the keypad follows the device and not the app (T-160).
 
 **A payment is undone, never balanced with a second one.** `settlement:delete` is the ninth outbox
 action of the section: the mirror tombstones the payment and the movements it wrote, and the derivation

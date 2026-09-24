@@ -1,4 +1,4 @@
-import { decimalSeparators, MAX_AMOUNT } from "./money";
+import { DECIMAL_MARKS, decimalSeparators, MAX_AMOUNT, THOUSANDS_GROUP_DIGITS } from "./money";
 
 export interface EditableAmount {
   text: string;
@@ -33,6 +33,58 @@ export function formatEditableAmount(
     text: hasDecimal ? `${grouped}${decimal}${fraction}` : grouped,
     value: Number(`${integerDigits}.${fraction || "0"}`),
   };
+}
+
+export interface AmountEdit {
+  previous: string;
+  raw: string;
+  caret: number;
+  loose: boolean;
+}
+
+export type ReadAmountEdit = Omit<AmountEdit, "previous">;
+
+function typedMark({ previous, raw, caret }: AmountEdit): string {
+  const kept = raw.length - caret;
+  const key = raw.charAt(caret - 1);
+  if (caret < 1 || previous.length - kept < caret - 1 || !DECIMAL_MARKS.has(key)) return "";
+  if (previous.charAt(caret - 1) === key) return "";
+  const sameAround =
+    raw.slice(0, caret - 1) === previous.slice(0, caret - 1) &&
+    raw.slice(caret) === previous.slice(previous.length - kept);
+  return sameAround ? key : "";
+}
+
+export function acceptDecimalKey(
+  edit: AmountEdit,
+  decimal: string,
+  fractionDigits: number,
+): ReadAmountEdit {
+  const { caret } = edit;
+  if (fractionDigits === 0) return { raw: edit.raw, caret, loose: false };
+  const key = typedMark(edit);
+  const rest = edit.raw.slice(0, caret - 1) + edit.raw.slice(caret);
+  const foreign = key !== "" && key !== decimal && !rest.includes(decimal);
+  const raw = foreign ? edit.raw.slice(0, caret - 1) + decimal + edit.raw.slice(caret) : edit.raw;
+  const at = raw.indexOf(decimal);
+  const loose = at !== -1 && (foreign || edit.loose);
+  const fractionLength = raw.slice(at + 1).replace(/\D/g, "").length;
+  if (!loose || fractionLength <= fractionDigits) return { raw, caret, loose };
+  if (caret !== raw.length || fractionLength !== THOUSANDS_GROUP_DIGITS) {
+    return { raw, caret, loose: false };
+  }
+  return { raw: raw.slice(0, at) + raw.slice(at + 1), caret: caret - 1, loose: false };
+}
+
+export function padLeadingDecimal(
+  raw: string,
+  caret: number,
+  decimal: string,
+  fractionDigits: number,
+): { raw: string; caret: number } {
+  const at = raw.indexOf(decimal);
+  if (fractionDigits === 0 || at === -1 || /\d/.test(raw.slice(0, at))) return { raw, caret };
+  return { raw: `0${raw}`, caret: caret + 1 };
 }
 
 // Caret bookkeeping counts only the characters the user owns: digits and the decimal separator.

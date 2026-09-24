@@ -8,7 +8,7 @@ import { Segment } from "@/components/ui/Segment";
 import type { ColorToken } from "@/lib/theme/feature-color";
 import type { DefaultSplit } from "@/types/api";
 
-import { PERCENT_SCALE, percentLeft, USER_KEY } from "../split";
+import { parsePercent, PERCENT_SCALE, percentLeft, USER_KEY } from "../split";
 
 export interface DefaultSplitPerson {
   contactId: string | null;
@@ -18,9 +18,7 @@ export interface DefaultSplitPerson {
 
 // The server adds these as basis points, and so does the sheet: in floats three thirds miss 100.
 const leftOf = (people: DefaultSplitPerson[], percent: Record<string, string>): number =>
-  percentLeft(
-    people.map((person) => Number.parseFloat(percent[person.contactId ?? USER_KEY] ?? "") || 0),
-  );
+  percentLeft(people.map((person) => parsePercent(percent[person.contactId ?? USER_KEY] ?? "")));
 
 export interface DefaultSplitFieldsProps {
   mode: DefaultSplit["mode"];

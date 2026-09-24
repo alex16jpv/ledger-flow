@@ -88,6 +88,45 @@ test("a transaction is created, edited and deleted from the full form", async ({
   expect((await request.get(`/api/transactions/${created?.id}`)).status()).toBe(404);
 });
 
+// T-160: the app in Spanish on a browser in English, whose decimal keypad offers a point.
+test("a point typed in Spanish is the decimal, not a thousands group", async ({
+  page,
+  request,
+}) => {
+  const signedUp = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: {
+      name: "Decimal E2E",
+      email: uniqueEmail("decimal"),
+      password: "LedgerFlow!2026",
+      currency: "USD",
+    },
+  });
+  expect(signedUp.ok()).toBe(true);
+  await page.context().addCookies((await request.storageState()).cookies);
+  const made = await request.post("/api/accounts", {
+    headers: { origin: APP },
+    data: { name: "Efectivo E2E", type: "CASH", balance: 0 },
+  });
+  expect(made.status()).toBe(201);
+
+  await page.goto("/es/transactions/new");
+  await expect(page.getByRole("heading", { level: 1, name: "Nuevo movimiento" })).toBeVisible();
+  const amount = page.getByRole("textbox", { name: /^Importe/ });
+  await amount.click();
+  await page.keyboard.type("1284.50");
+  await expect(amount).toHaveValue("1.284,50");
+  await page.getByRole("button", { name: /^Cuenta/ }).click();
+  await page
+    .getByRole("dialog", { name: "Cuenta" })
+    .getByRole("option", { name: /Efectivo E2E/ })
+    .click();
+  await page.getByRole("button", { name: "Guardar movimiento" }).click();
+  await expect(page.getByText("Movimiento guardado")).toBeVisible();
+
+  expect((await rows(request)).map((row) => row.amount)).toEqual([1284.5]);
+});
+
 test("a transfer refuses the same account on both sides and swaps them", async ({
   page,
   request,

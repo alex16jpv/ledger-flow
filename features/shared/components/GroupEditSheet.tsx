@@ -9,6 +9,8 @@ import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { SwatchGrid } from "@/components/ui/Swatch";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
+import { formatPlainNumber } from "@/lib/format/money";
+import { useMoney } from "@/lib/i18n/useMoney";
 import { validationMessage } from "@/lib/i18n/validation";
 import type { ColorToken } from "@/lib/theme/feature-color";
 import type { DefaultSplit, SyncSharedGroup } from "@/types/api";
@@ -26,20 +28,24 @@ export interface GroupEditSheetProps {
   onClose: () => void;
 }
 
-const percentOf = (split: DefaultSplit): Record<string, string> =>
+const percentOf = (split: DefaultSplit, locale: string): Record<string, string> =>
   Object.fromEntries(
-    split.shares.map((share) => [share.contactId ?? USER_KEY, String(share.percent)]),
+    split.shares.map((share) => [
+      share.contactId ?? USER_KEY,
+      formatPlainNumber(share.percent, locale),
+    ]),
   );
 
 export function GroupEditSheet({ group, people, open, onClose }: GroupEditSheetProps) {
   const t = useTranslations();
+  const money = useMoney();
   const toast = useToast();
   const save = useUpdateSharedGroup();
   const [name, setName] = useState(group.name);
   const [color, setColor] = useState<ColorToken | null>(group.color ?? null);
   const [mode, setMode] = useState<DefaultSplit["mode"]>(group.defaultSplit.mode);
   const [percent, setPercent] = useState<Record<string, string>>(() =>
-    percentOf(group.defaultSplit),
+    percentOf(group.defaultSplit, money.locale),
   );
   const serverFields = fieldErrors(save.error);
   const duplicate = save.error instanceof ApiError && save.error.code === "DUPLICATE";
@@ -49,7 +55,7 @@ export function GroupEditSheet({ group, people, open, onClose }: GroupEditSheetP
     trimmed !== group.name ||
     color !== (group.color ?? null) ||
     mode !== group.defaultSplit.mode ||
-    JSON.stringify(percent) !== JSON.stringify(percentOf(group.defaultSplit));
+    JSON.stringify(percent) !== JSON.stringify(percentOf(group.defaultSplit, money.locale));
 
   async function submit() {
     if (!ready) return;
