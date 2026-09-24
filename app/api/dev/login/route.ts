@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authenticate } from "@/lib/auth/handlers";
+import { safeNextPath } from "@/lib/auth/routes";
 import { isEnabled } from "@/lib/flags";
 
 // Development-only helper so headless screenshots can open authenticated screens.
@@ -9,7 +10,6 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const email = url.searchParams.get("email");
   const password = url.searchParams.get("password");
-  const next = url.searchParams.get("next") ?? "/home";
   if (!email || !password)
     return NextResponse.json(
       { error: "BadRequest", message: "email and password required" },
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   );
   if (!login.ok) return login;
   const response = NextResponse.redirect(
-    new URL(next.startsWith("/") ? next : "/home", url.origin),
+    new URL(safeNextPath(url.searchParams.get("next")), url.origin),
     303,
   );
   login.headers.forEach((value, key) => {

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { DevFrame } from "@/components/dev/DevFrame";
+import { safeNextPath } from "@/lib/auth/routes";
 import { isEnabled } from "@/lib/flags";
 
 interface FramePageProps {
@@ -13,8 +14,7 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 export default async function DevFramePage({ searchParams }: FramePageProps) {
   if (!isEnabled("componentCatalog")) notFound();
   const params = await searchParams;
-  const url = first(params.url) ?? "/home";
-  const src = url.startsWith("/") && !url.startsWith("//") ? url : "/home";
+  const src = safeNextPath(first(params.url));
   return (
     <main className="grid min-h-dvh place-items-start bg-surface-3 p-4">
       <DevFrame

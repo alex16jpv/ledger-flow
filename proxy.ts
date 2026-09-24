@@ -59,10 +59,8 @@ export default function proxy(request: NextRequest) {
     return redirect;
   }
   if (hasMarker && !reauthenticating && isGuestOnlyPath(path)) {
-    const url = request.nextUrl.clone();
-    url.pathname = `${prefix}${safeNextPath(request.nextUrl.searchParams.get("next"), APP_HOME_PATH)}`;
-    url.search = "";
-    return NextResponse.redirect(url);
+    const next = safeNextPath(request.nextUrl.searchParams.get("next"), APP_HOME_PATH);
+    return NextResponse.redirect(new URL(`${prefix}${next}`, request.url));
   }
 
   // The address cannot name a row, so the group's layout answers 404 above its own streaming boundary.

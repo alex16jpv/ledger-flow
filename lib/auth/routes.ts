@@ -47,7 +47,24 @@ export function isGuestOnlyPath(pathname: string): boolean {
   return GUEST_ONLY.has(pathname);
 }
 
-export function safeNextPath(value: string | null, fallback = APP_HOME_PATH): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return fallback;
-  return value;
+const PARSE_ORIGIN = "http://next.invalid";
+
+const pathOf = (url: URL) => `${url.pathname}${url.search}${url.hash}`;
+
+export function safeNextPath(value: string | null | undefined, fallback = APP_HOME_PATH): string {
+  if (!value?.startsWith("/")) return fallback;
+  let url: URL;
+  try {
+    url = new URL(value, PARSE_ORIGIN);
+  } catch {
+    return fallback;
+  }
+  if (url.origin !== PARSE_ORIGIN || url.pathname.includes("//")) return fallback;
+  return pathOf(url);
+}
+
+export function withSearchParam(path: string, key: string, value: string): string {
+  const url = new URL(path, PARSE_ORIGIN);
+  url.searchParams.set(key, value);
+  return pathOf(url);
 }

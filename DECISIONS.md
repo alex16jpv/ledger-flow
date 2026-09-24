@@ -5,6 +5,26 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-23 · A `next` path is judged by what the browser would open, not by its text (T-154)
+
+- **Context:** `safeNextPath` refused only a leading `//`. The URL parser also reads `\` as `/` and
+  drops tabs and newlines, so `/\evil.example` and `/\t/evil.example` open another origin. Login and register hand the value to
+  `router.replace`, which with the default locale adds no prefix, so a crafted
+  `/login?reauth=1&next=…` sent a fresh sign-in to another site. `/api/dev/login` and `/dev/frame`
+  had their own weaker copies.
+- **Decision:** `safeNextPath` resolves the value against a placeholder origin (`next.invalid`),
+  refuses it unless the origin stays the same and the normalised path holds no `//`, and returns that
+  normalised path, never the raw text. Returning it is what makes the `//` check necessary:
+  `/.//evil.example` normalises to `//evil.example`, and `/en//evil.example` only stays home today
+  because next-intl's middleware squeezes repeated slashes. Every `next` in the app goes through it, the two
+  dev routes included. `withSearchParam` adds `reactivated=1` without breaking a query `next` already
+  carries, and the proxy builds its guest-only redirect with `new URL` instead of assigning the path,
+  which percent-encoded the `?`.
+- **Alternatives:** a denylist of characters (`\`, control characters). Rejected: it answers the
+  cases known today, while the parser is the one that decides where the browser goes.
+- **Consequence:** `routes.test.ts` holds the refused shapes; `login.spec.ts` signs in with
+  `next=/\evil.example` and fails on the old code (the browser left for `chrome-error://`).
+
 ## 2026-09-23 · A group shared with you is a read-only copy, and Add to my ledger is online (T-130)
 
 - **Context:** the owner decided on 2026-09-22 that somebody who joined a group reads it, and takes
