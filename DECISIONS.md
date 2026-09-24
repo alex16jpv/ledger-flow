@@ -5101,51 +5101,67 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
 - **Consequence:** deleting a movement is no longer always possible: this one case is refused until
   the payment is lowered. The form's edit keeps the ordinary `LOAN_OVERPAID` alert.
 
-## 2026-09-24 · Transactions are downloaded from the device's copy, as Excel or CSV (T-188)
+## 2026-09-24 · Transactions are downloaded from the device's copy, in a worker, as one global format (T-188)
 
 - **Context:** the Transactions header has carried a disabled download button since 2026-09-01. The
   owner decided on 2026-09-24 what it downloads — the list as filtered, with everything one tap away —
-  and in what — Excel and CSV, in the app's language, a shared expense with its full amount and its
-  share (`design/spec/screens/transactions.md`, "Download").
-- **Decision:** the file is built on the device, from the mirror (`lib/local`) whenever it can answer —
-  it holds the whole history with queued writes projected in — and from `/transactions`, paged at its
-  limit, only when it cannot and there is a network. The structure:
-  - `lib/local/repository/transactions.ts` gains a reader that takes the same `toMirrorFilter` as
-    `readTransactions`, with no page limit, and walks the `dateCursor` index (which is what leaves the
-    tombstones out) inside **one** IndexedDB transaction, collecting rows and awaiting nothing else,
-    because a foreign await auto-commits it. It reads through `ownVault()`, so a session switch
-    mid-walk can never hand it another user's rows, and answers `undefined` when the copy cannot
-    answer, which sends the caller to the server path.
-  - The search never reaches the mirror or the server: `features/transactions/export/` applies
-    `matchesSearch` after the rows arrive, and counts that way for the sheet when a search is in force.
-  - `lib/export/` holds the writers, pure and feature-agnostic so Stats and Settings can reuse them:
-    `csv.ts` (RFC 4180, UTF-8 BOM, CRLF, a `'` before text cells that start with `= + - @`, tab or CR),
-    `xlsx.ts` (a minimal SpreadsheetML workbook zipped with `fflate`: inline-string cells, XML-escaped
-    and stripped of the control characters XML forbids, date serials computed from the `YYYY-MM-DD`
-    text, a number format per row from `currencyFractionDigits`, frozen header, autofilter, the _About_
-    sheet) and `download.ts` (a `Blob` and an object URL revoked after a delay, since Safari and Firefox
-    can lose a download revoked at once; `navigator.share({ files })` where `canShare` allows it in an
-    installed iOS app). `xlsx.ts` and `fflate` load with a dynamic `import()` when Excel is chosen, so
-    they never count against the 220 kB screen budget.
-  - `features/transactions/export/` maps a row to its cells (`columns.ts`: the list's own
-    `transactionTitle`; the sign from the account the money left, `fromAccountId` negative and
-    `toAccountId` alone positive, a transfer unsigned; the API's amount written as it comes, never
-    rounded or parsed from formatted text; Sync from the outbox's `queuedRows`/`attentionRows` for the
-    row and its `sharedExpenseId`), names the file (`fileName.ts`), and holds the sheet
-    (`ExportSheet.tsx`) and its hook. Its lookups carry **archived** accounts and categories, and the
-    shared section is loaded for the build whenever an exported row carries a shared id — not only
-    when a scrolled page does — and its failure fails the build.
-  - Serializing yields to the UI every 2,000 rows so the spinner stays alive and Cancel is honoured;
-    50,000 rows is the size it is measured at.
-  - The `exportTransactions` flag goes: Transactions' button is simply live, and Stats' button moves to
-    a flag of its own, `exportStats`, off.
-- **Alternatives (not taken):** a server endpoint that streams the file — it would not work offline or
-  in _this device only_, it is the other repository's, and the device already holds the rows; the
-  server path for every export — a hundred rows a request for a whole history, when the copy can
-  answer at once; SheetJS or ExcelJS — hundreds of kilobytes to write one flat sheet, where a
-  hand-written workbook over `fflate` is a few; exporting only with a live session — _this device
-  only_ has none, and the file holds nothing the screen does not show.
+  and in what — Excel and CSV, a shared expense with its full amount and its share — and, the same day,
+  that the file must be **one format for every language that a future import reads back**, so a
+  download with its rows deleted is a template (`design/spec/screens/transactions.md`, "Download"). He
+  also asked that a long history weigh neither on the screen nor on the backend.
+- **Decision — the source is the mirror, and only the mirror.** It already holds the whole history with
+  queued writes projected in, so the file costs the backend nothing. Paging `/transactions` instead
+  would be a hundred rows a request — 480 requests for 48,000 rows, half the per-user
+  `RATE_LIMIT_MAX` of 1,000 per 15 minutes, while the app still needs its own — and a single export endpoint would meet the Function URL's 6 MB response limit, behind a BFF on Vercel that caps a response at 4.5 MB. With no copy that can
+  answer, the sheet says why and waits (still arriving, offline, storage refused).
+- **Decision — the file is built in a Web Worker, in batches, and never held as one string.**
+  - `features/transactions/export/export.worker.ts` (`new Worker(new URL(…, import.meta.url))`) opens
+    the user's vault by name read-only with the same `idb` schema, so the screen's thread only sends a
+    request and receives progress and a `Blob`. Cancel is `worker.terminate()`.
+  - Rows are read **1,000 at a time**, oldest first, by keyset over the `dateCursor` index (which is
+    what leaves the tombstones out), each batch in its own short IndexedDB transaction — a long one
+    would auto-commit across the serializer's awaits and block the pull. The filter is
+    `toMirrorFilter`'s predicate with no page limit, then `matchesSearch`; ids already written are kept
+    in a `Set`, so a row that moves while the walk runs is written once. The vault handle is checked
+    against the signed-in user before each batch (the rule of `ownVault()`, T-152).
+  - Everything a row needs is read from the same vault: accounts and categories **archived included**,
+    the shared expenses for `your_share` (through the pure `lib/shared` lookup), and the outbox for
+    `sync` (`queuedRows`/`attentionRows` for the row and its `sharedExpenseId`). The screen sends only
+    the time zone, the filters and the _About_ sheet's texts in the app's language.
+  - Each batch is serialized and appended as **one part of the output**: CSV text chunks, or for Excel
+    the worksheet XML pushed through `fflate`'s streaming `Zip`/`ZipDeflate`, whose compressed chunks
+    are the parts. The parts become one `Blob` at the end, which the browser may keep on disk. Peak
+    memory is a batch plus the compressed output — about 4 MB of `.xlsx` or 7 MB of CSV for 48,000 rows —
+    and the app never freezes. The target it is measured at is 100,000 rows.
+  - A progress message after each batch drives the bar and "12,000 of 48,000 transactions".
+- **Decision — the format is "Ledger Flow transactions v1".** Fixed column names in `snake_case`
+  (`date`, `time`, `type`, `amount`, `currency`, `account`, `to_account`, `category`, `description`,
+  `note`, `tags`, then the ignored-on-import `id`, `your_share`, `to_review`, `source`, `sync`), type,
+  source and sync as the API's codes, dates as `YYYY-MM-DD`, amounts as the API's number with a dot and
+  no thousands separator, written as it comes and never rounded or parsed from formatted text. Columns
+  are found by name, never renamed, only appended; an importer ignores the ones it does not know. The
+  one localized part is the Excel _About_ sheet. `description` is the stored description, not the
+  list's `transactionTitle`, because an import would store the made-up title.
+- **Decision — the writers are pure and feature-agnostic**, in `lib/export/`: `csv.ts` (RFC 4180, UTF-8
+  BOM, CRLF, a `'` before text cells that start with `= + - @`, tab or CR), `xlsx.ts` (a minimal
+  SpreadsheetML workbook: inline-string cells, XML-escaped and stripped of the control characters XML
+  forbids, date serials computed from the text, a number format per row from `currencyFractionDigits`,
+  frozen header, autofilter, a data-validation list on `type`, the _About_ sheet) and `download.ts` (an
+  object URL revoked after a delay, since Safari and Firefox can lose a download revoked at once;
+  `navigator.share({ files })` where `canShare` allows it in an installed iOS app). They and `fflate`
+  live only in the worker's chunk, so the 220 kB screen budget does not move. The column mapping and the
+  file name are `features/transactions/export/columns.ts` and `fileName.ts`, the sheet
+  `ExportSheet.tsx` and its hook.
+- **Decision — the flag.** `exportTransactions` goes: Transactions' button is simply live, and Stats'
+  button moves to a flag of its own, `exportStats`, off.
+- **Alternatives (not taken):** a server endpoint — it would not work offline or in _this device only_,
+  a synchronous one dies at the 4.5 MB the BFF lets through, and the asynchronous one (a job writing to S3 and a signed
+  link) is infrastructure for a copy the device already holds; paging `/transactions` — see above;
+  building on the screen's thread — tens of thousands of rows through one `await` loop freeze the list;
+  SheetJS or ExcelJS — hundreds of kilobytes to write one flat sheet, and neither streams in the browser
+  the way `fflate` does; localized headers — an import would have to guess the language of every file.
 - **Consequence:** the file is what the device holds — rows still waiting to sync included and marked —
-  and offline with no copy there is nothing to download from. A comma-separated CSV opens in one
-  column in Spanish-locale Excel; Excel is the default format for that reason, and the CSV's help line
-  says how to open it there.
+  and with no copy there is nothing to download from. A comma-separated CSV opens in one column in
+  Spanish-locale Excel; Excel is the default format for that reason, and the CSV's help line says how to
+  open it there. Tags are joined by `, `: the backend accepts a comma inside a tag today, and the import
+  task has to decide what such a tag becomes.

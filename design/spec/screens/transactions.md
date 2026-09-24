@@ -44,87 +44,107 @@ one.
 T-188. The header's `download` button opens a centred sheet, **Download transactions**, with two
 choices and one button. Decided with the owner on 2026-09-24: **Excel and CSV**, chosen in the sheet;
 **what the list is showing, with everything one tap away**; a shared expense carries **its full amount
-and its share**; the file is written **in the app's language**.
+and its share**; and — his second answer that day, replacing "in the app's language" — **one format for
+every language**, so the file downloaded today is the template a future import reads.
 
-- **What** — a radio group of two rows, each with a visible radio mark. _What you're viewing_ is
-  chosen by default and reads the count and the filters in force: "142 transactions · September ·
-  Bancolombia". It is exactly the list — every filter, the period **and the search**, over every page,
-  not only the ones scrolled. The count comes from `pagination.total`, which ignores the search, so
-  **with a search in force the device counts the matches first** (`#export-counting`): the line waits
-  on a skeleton and the button is disabled for that moment. _All transactions_ reads "1,284
-  transactions · since March 2024" and ignores filters and search. **When the list is empty**
-  (`#export-empty-view`) the first row is off, "Nothing matches these filters", and _All transactions_
-  is chosen. **When the two are the same** — period _All_, no filter, no search — the group collapses
-  to one line, "All transactions · 1,284".
+- **What** — a radio group of two rows, each with a visible radio mark and **its own count**. _What
+  you're viewing_ is chosen by default: "142 transactions · September · Bancolombia". It is exactly the
+  list — every filter, the period **and the search**, over every page, not only the ones scrolled. The
+  list's count ignores the search, so **with a search in force the device counts the matches first**
+  (`#export-counting`): the line waits on a skeleton and the button is disabled for that moment. _All
+  transactions_ reads "48,000 transactions · since March 2016" and ignores filters and search. **When
+  the list is empty** (`#export-empty-view`) the first row is off, "Nothing matches these filters", and
+  _All transactions_ is chosen. **When the two are the same** — period _All_, no filter, no search — the
+  group collapses to one line, "All transactions · 48,000".
 - **Format** — the app's segmented control (`Segment`), _Excel (.xlsx)_ by default and _CSV_, with a
   line under it that says what the chosen one is for: "Opens in Excel, Google Sheets and Numbers, with
   real dates and numbers." or "Plain text, comma-separated (UTF-8), for other apps. Excel in Spanish
   opens it from Data › From Text." (`#export-csv`).
-- One muted line: "Made on this device, from your copy when it has one. Anything still waiting to sync
-  is included and marked in the file."
-- Footer: `Cancel` and the primary "Download 142 transactions", whose count follows **What**.
+- One muted line: "Made on this device from your copy, so it works offline. Anything still waiting to
+  sync is included and marked in the file."
+- Footer: `Cancel` and the primary **Download**. The button carries no count: the count is in each
+  choice, and a label with a number in it overflowed a phone's width in a long language.
 
 **The header button** is disabled while the list has no first answer (loading or failed) and when
 there is nothing to download at all — no transactions, known from an unfiltered count of zero; the
 list's own state already says why in each case.
 
-**Where the rows come from.** From the device's copy whenever it can answer, so it is the same
-offline, with a dead session and in _this device only_ — a person with no account must be able to take
-their data out, and the file holds nothing the screen does not already show. When the copy cannot
-answer (its first download has not finished, or this browser cannot keep one) and there is a network,
-the rows come from the server, page by page, behind the same spinner. **Offline with no copy**
-(`#export-offline-no-copy`) is the one case with no source: a `warning` alert, "Needs a connection:
-this device doesn't have a copy of your transactions yet.", and the button disabled.
+**Where the rows come from: the device's copy, always.** It holds the whole history, so the file is
+the same offline, with a dead session and in _this device only_ — a person with no account must be able
+to take their data out, and the file holds nothing the screen does not already show. **It never reads
+the server page by page**: a long history would be hundreds of requests against the per-user limit.
+Without a copy that can answer, the sheet says why and the button stays disabled:
 
-**Preparing** (`#export-preparing`): the primary button spins in place, keeping the name "Preparing
-file…", announced politely; the choices freeze, and `Cancel` and the close button stay live and stop
-the build. **Handed over** (`#export-done`): the sheet closes, focus returns to the download button,
-and a toast names the file, "Downloading ledger-flow-transactions-2026-09.xlsx". It never says
-"Saved": the browser can still ask, block or cancel, and the app cannot know. On an iPhone's installed
-app, where a download opens a viewer, the file goes to the share sheet instead. **If building it
-fails**, a `danger` toast, "We couldn't create the file.", with its reference (the Sentry event id,
-since the failure is reported) and `Retry`; nothing is handed over. **If a shared row's figures cannot
-be read** (the shared section failed to load), that is the same failure: a file with holes is never
-produced.
+- **The copy is still arriving** (`#export-no-copy`), the account's first download running: "This
+  device is still getting your transactions. You can download them as soon as it finishes." The button
+  wakes up by itself when it ends.
+- **No copy and no connection** (`#export-no-copy-offline`): "Needs a connection first: this device
+  doesn't have your transactions yet."
+- **A browser that cannot keep a copy** (`#export-no-copy-unsupported`), storage blocked or refused:
+  "This browser can't keep a copy of your data, and the download is made from that copy. Try another
+  browser, or leave private browsing."
+
+**Preparing** (`#export-preparing`): the file is written away from the screen, in batches, so the app
+never freezes however long the history is. The primary button spins in place, keeping the name
+"Preparing file…"; a bar and a count, "12,000 of 48,000 transactions", say how far it is, announced
+politely; the choices freeze, and `Cancel` and the close button stay live and stop it. **Handed over**
+(`#export-done`): the sheet closes, focus returns to the download button, and a toast names the file,
+"Downloading ledger-flow-transactions-2026-09.xlsx". It never says "Saved": the browser can still ask,
+block or cancel, and the app cannot know. On an iPhone's installed app, where a download opens a
+viewer, the file goes to the share sheet instead. **If building it fails**, a `danger` toast, "We
+couldn't create the file.", with its reference (the Sentry event id, since the failure is reported)
+and `Retry`; nothing is handed over.
 
 ### The file (`#export-file`)
 
-One row per transaction, **oldest first**, and these columns, named in the app's language:
+**One format, "Ledger Flow transactions v1", for every language and both extensions.** The header row
+holds fixed column names, the values are codes and plain numbers, and nothing in it depends on the
+app's language, the device's locale or the person who wrote it — so the file one person downloads is a
+file anyone's import can read, and **deleting its rows and keeping the header makes it a template**. The
+Excel file adds a second sheet, _About_, **in the app's language**, that explains every column.
 
-| Column      | What it holds                                                                                                                                                                                                                                                                                              |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Date        | The day the row froze (`dayKey`), `2026-09-22`; when it has none, the day in the current time zone, as the list does                                                                                                                                                                                       |
-| Time        | The hour in the current time zone, `08:42`. After a change of zone, a row near midnight can read a Date that is not the day of its Time; the list has the same property, and _About_ names the zone                                                                                                        |
-| Type        | Expense, Income, Transfer, Adjustment or Payment                                                                                                                                                                                                                                                           |
-| Description | The row's title as the list shows it: the description, else the category, "Quick expense", the transfer's two accounts, the person of a payment                                                                                                                                                            |
-| Category    | The category's name, archived ones included; empty when there is none                                                                                                                                                                                                                                      |
-| Amount      | **Negative when money left an account, positive when it arrived**: an expense negative, an income positive, an adjustment and a payment by their direction, a transfer without a sign. For a shared expense, the full amount. The list draws a raised adjustment as `±`; the file cannot, and gives it `+` |
-| Currency    | The ISO code, `COP`; the amount's decimals follow it, row by row                                                                                                                                                                                                                                           |
-| Account     | The account the row touches first: the source, or the destination when there is only one (an income, a raised adjustment, a payment that arrived); archived ones included                                                                                                                                  |
-| To account  | The destination of a transfer, empty otherwise                                                                                                                                                                                                                                                             |
-| Your share  | A shared expense's share of yours, with the amount's sign; empty on every other row                                                                                                                                                                                                                        |
-| Tags        | `#coffee #latte`                                                                                                                                                                                                                                                                                           |
-| Note        | The note                                                                                                                                                                                                                                                                                                   |
-| To review   | "Yes" while it is still to review                                                                                                                                                                                                                                                                          |
-| Source      | Manual, Quick or Import                                                                                                                                                                                                                                                                                    |
-| Sync        | "Pending sync" or "Needs attention" while it, or the shared expense it carries, is only on this device — the same rule as the row's badge. A row that needs attention holds the server's version, not the change the server refused                                                                        |
-| ID          | The transaction's id, to tell two identical rows apart and to find one in the app                                                                                                                                                                                                                          |
+One row per transaction, **oldest first**. The first eleven columns are **what an import reads back**;
+the last five are **written for you and ignored by an import**.
 
-Summing **Amount** over a mix of types adds transfers and full shared amounts; the _Type_ column is
-there to filter by. **Excel**: one sheet, _Transactions_, with the header frozen and filters on, Date
-and Time as real date and time cells built from the text (never through the browser's clock), and the
-amount as a number with its currency's decimals; a second sheet, _About_, says what was downloaded,
-the filters and search in force, the time zone and when the file was made. **CSV**: UTF-8 with a BOM
-(so Excel reads accents), comma-separated, quoted where needed, CRLF line ends; dates and times as
-above, amounts with a dot for decimals and no thousands separator (`-12500`). In the CSV, a text cell
-that begins with `=`, `+`, `-`, `@`, a tab or a carriage return is written with a leading `'`, because a
-description can come from somebody else's group and must never run as a formula; the Excel file needs
-no such mark, because its text cells are never formulas.
+| Column        | What it holds                                                                                                                                                                                                                        | On import                                                                                                              |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `date`        | `2026-09-22`: the day the row froze (`dayKey`); when it has none, the day in the current time zone, as the list does                                                                                                                 | Required                                                                                                               |
+| `time`        | `08:42`, in the current time zone. After a change of zone a row near midnight can read a date that is not the day of its time, as in the list; _About_ names the zone                                                                | Optional, read in the importer's time zone                                                                             |
+| `type`        | `EXPENSE`, `INCOME`, `TRANSFER`, `ADJUSTMENT` or `SETTLEMENT`                                                                                                                                                                        | Required. A `SETTLEMENT` is never imported: a payment is recorded from Settle up                                       |
+| `amount`      | A plain number with a dot and the currency's decimals, no thousands separator: **negative when money left an account, positive when it arrived**; a transfer carries no sign. A shared expense: its full amount                      | Required. The type decides the direction, so a template can hold positive numbers; only an `ADJUSTMENT` reads the sign |
+| `currency`    | The ISO code, `COP`                                                                                                                                                                                                                  | Optional; when present it must be the account's                                                                        |
+| `account`     | The name of the account the row touches first: the source, or the destination when there is only one (an income, a raised adjustment, a payment that arrived); archived ones included                                                | Required, matched by name                                                                                              |
+| `to_account`  | The destination of a transfer, empty otherwise                                                                                                                                                                                       | Required for a transfer                                                                                                |
+| `category`    | The category's name, archived ones included; empty when there is none                                                                                                                                                                | Optional, matched by name within the type                                                                              |
+| `description` | The description as written; **empty when there is none** — not the title the list makes up, which would come back as a description                                                                                                   | Optional                                                                                                               |
+| `note`        | The note                                                                                                                                                                                                                             | Optional                                                                                                               |
+| `tags`        | The tags, lower case, joined by a comma and a space: `coffee, latte`                                                                                                                                                                 | Optional                                                                                                               |
+| `id`          | The transaction's id                                                                                                                                                                                                                 | A row whose id already exists is skipped, so importing a download twice duplicates nothing; empty = new                |
+| `your_share`  | A shared expense's share of yours, with the amount's sign; empty on every other row                                                                                                                                                  | Ignored                                                                                                                |
+| `to_review`   | `true` while it is still to review, else `false`                                                                                                                                                                                     | Ignored                                                                                                                |
+| `source`      | `MANUAL`, `QUICK` or `IMPORT`                                                                                                                                                                                                        | Ignored                                                                                                                |
+| `sync`        | `PENDING` or `ATTENTION` while it, or the shared expense it carries, is only on this device — the rule of the row's badge; empty otherwise. A row that needs attention holds the server's version, not the change the server refused | Ignored                                                                                                                |
 
-**The name** is always in English, like every file name the app writes, and says what is in it:
-`ledger-flow-transactions-2026-09` for a month (this month, last month), `…-2026` for this year,
-`…-2026-09-15_2026-09-21` for this week or a custom range, `…-all` for everything, and `-filtered` at the
-end when any other filter or a search was in force.
+**How the format stays readable for ever:** columns are found **by name**, not by position, and a
+name is never renamed or reused; a new column is only ever **added at the end**; an importer ignores a
+column it does not know and accepts the names in any case. A file from a later version therefore still
+imports the columns this one knows.
+
+**Excel**: the sheet _Transactions_ with this header frozen and filters on, `date` and `time` as real
+date and time cells built from the text (never through the browser's clock), `amount` and `your_share`
+as numbers with their currency's decimals, and a list to pick `type` from; the sheet _About_, in the
+app's language, with what every column means, which ones an import reads, the filters and search in
+force, the time zone and when the file was made. **CSV**: the same columns, UTF-8 with a BOM (so Excel
+reads accents), comma-separated, quoted where needed, CRLF line ends. A text cell that begins with `=`,
+`+`, `-`, `@`, a tab or a carriage return is written with a leading `'` in the CSV, because a
+description can come from somebody else's group and must never run as a formula; an import removes
+that `'` again, and the Excel file needs none, because its text cells are never formulas. Summing
+`amount` over a mix of types adds transfers and full shared amounts; `type` is there to filter by.
+
+**The name** is always in English and says what is in it: `ledger-flow-transactions-2026-09` for a
+month (this month, last month), `…-2026` for this year, `…-2026-09-15_2026-09-21` for this week or a
+custom range, `…-all` for everything, and `-filtered` at the end when any other filter or a search was
+in force.
 
 ## Detail (`#detail`)
 
