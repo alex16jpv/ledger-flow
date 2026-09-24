@@ -6,6 +6,7 @@ import {
   isPublicPath,
   safeNextPath,
   stripLocale,
+  withSearchParam,
 } from "./routes";
 
 // `dev/pickers` is switched off by the componentCatalog flag, not by a session.
@@ -50,5 +51,36 @@ describe("route rules", () => {
     expect(safeNextPath("//evil.example")).toBe("/home");
     expect(safeNextPath("https://evil.example")).toBe("/home");
     expect(safeNextPath(null)).toBe("/home");
+  });
+
+  it.each([
+    "/\\evil.example",
+    "\\\\evil.example",
+    "/\t/evil.example",
+    "/\n/evil.example",
+    "/\r/evil.example",
+    "/.//evil.example",
+    "/a/..//evil.example",
+    "/en//evil.example",
+    "/es//evil.example",
+    "javascript:alert(1)",
+    "",
+    undefined,
+  ])("refuses %j as a next path", (value) => {
+    expect(safeNextPath(value)).toBe("/home");
+  });
+
+  it("hands back the path the browser would open", () => {
+    expect(safeNextPath("/budgets/../stats?p=1#top")).toBe("/stats?p=1#top");
+    expect(safeNextPath("/%2F/evil.example")).toBe("/%2F/evil.example");
+    expect(safeNextPath("//evil.example", "/onboarding")).toBe("/onboarding");
+    expect(safeNextPath("/stats?from=//x#//y")).toBe("/stats?from=//x#//y");
+  });
+
+  it("adds a search param without breaking the query it already has", () => {
+    expect(withSearchParam("/home", "reactivated", "1")).toBe("/home?reactivated=1");
+    expect(withSearchParam("/home?tab=a#x", "reactivated", "1")).toBe(
+      "/home?tab=a&reactivated=1#x",
+    );
   });
 });
