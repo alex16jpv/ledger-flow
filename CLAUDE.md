@@ -63,8 +63,9 @@ A change is not done until all of these hold. If one does not apply, say so and 
 - **Never branch on the server's `message`**, only on `code`.
 - **Never silence an error.** If something fails it must be visible and the message must be true.
 - **Never claim work you did not do** in a commit, a summary or a doc.
-- **Never `git push` and never deploy.** The owner pushes and opens every pull request; say
-  which branch the work is on and stop there. Reading the remote (`fetch`, `pull`) is free.
+- **Push your branch and open the pull request once the work is finished**, and give the owner its
+  link. Never push to `main`, never merge a pull request (merging is the owner's) and never deploy.
+  Reading the remote (`fetch`, `pull`) is free.
 - **Do not delete the previous branch or force-push** without the owner's explicit approval.
 
 ---
