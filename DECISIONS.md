@@ -5,6 +5,25 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-24 · Accounts a movement moved are restamped too (T-146)
+
+- **Context:** every movement moves its account's balance, and with it the account's `updatedAt`.
+  An archive, a new default or any other account write queued after a movement made with no
+  network carried the stamp read before the movement and came back `STALE_UPDATE` against your own
+  write; the automatic merge only rescues text edits.
+- **Decision:** the backend names each account a movement moved in `restamped`, and the account a
+  new default was taken from (`lag-money-manager/docs/modules/sync.md`, "Accounts are rewritten by
+  every movement"). The front adds `account` to `STORE_OF` in `lib/local/outbox/restamp.ts`; the
+  rest of T-145 already consumes it. `Add to my ledger` is a direct, online-only call that the queue
+  never sees, so `keepAddedExpense` applies the list with `restampVault` and then asks for the pull
+  (`pullAfterDirectSend`) that brings the account's new balance, as a direct send already does.
+- **Alternatives:** not moving the account's `updatedAt` on a balance change, which the pull needs to
+  bring the new balance to other devices; leaving `Add to my ledger` out, which kept the stale
+  balance until an unrelated pull and let a stuck queued account write conflict with yourself.
+- **Consequence:** a create replayed by id after its answer was lost answers an empty list, so the
+  account guard queued behind it keeps the old stamp and conflicts; a batch resent under the same
+  `opId` does not, because the server keeps the list with it.
+
 ## 2026-09-23 · Deleting the account asks for its password, and only that password brings it back (T-153)
 
 - **Context:** with a 15-minute access token anyone could delete an account, register again with its
@@ -4892,9 +4911,9 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
 - **A direct send racing a batch:** if it restamps a row whose operation is already in flight, that
   operation left with the old guard and earns a real 409; the queue behind it is moved. Nothing on
   the device can move a guard that is already on the wire.
-- **Consequence:** accounts are not in the list yet, so a movement written with no network followed
-  by archiving its account still conflicts with yourself (T-146); when the backend adds them, the
-  front needs only the store in `STORE_OF`.
+- **Consequence:** accounts were not in the list yet, so a movement written with no network followed
+  by archiving its account still conflicted with yourself. **Closed by T-146** (entry below): the
+  backend names them and `STORE_OF` has their store.
 
 ## 2026-09-23 · A re-minted id moves by value, everywhere the device wrote it (T-144)
 
