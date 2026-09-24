@@ -1101,7 +1101,7 @@ const onboarding = (step) => {
   );
 };
 
-const transactions = ({ settlement = false } = {}) => {
+const transactions = ({ settlement = false, toast = "", sheet = "" } = {}) => {
   const body = `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span class="placeholder" style="flex:1">Search description, note or tag</span></div>
 <div class="chips"><button class="chip">${iconSvg("sliders-horizontal", "sm")}Filters <span class="badge brand" style="height:16px;padding:0 5px">2</span></button><button class="chip selected">September</button><button class="chip">Expenses</button><button class="chip">Income</button><button class="chip">Transfers</button><button class="chip">${iconSvg("inbox", "sm")}To review · 3</button><button class="chip">Uncategorized</button><button class="chip">#latte</button></div>
 <div class="card stat" style="flex-direction:row;justify-content:space-between;align-items:center;padding:12px 16px"><div><span class="k">Spent in September</span><div class="v amount" style="font-size:20px">${money(1284300)}</div></div><div style="text-align:right"><span class="k">Income</span><div class="amount income" style="font-size:15px">${money(4200000, "+")}</div></div><div style="text-align:right"><span class="k">Transactions</span><div style="font-weight:600;font-size:15px">48</div></div></div>
@@ -1120,12 +1120,13 @@ ${row("utensils", "ORANGE", "Carulla groceries", "Bancolombia", 78900, "expense"
 ${row("scale", "NONE", "Balance adjustment · Cash", "Reconciliation", 7500, "adjustment", { badges: '<span class="badge">Adjustment</span>' })}
 ${row("zap", "AMBER", "EPM electricity", "Bancolombia", 186200)}
 </div>
-<div class="hstack" style="justify-content:center;padding:4px 0"><span class="skeleton" style="width:120px;height:12px"></span></div>`;
+<div class="hstack" style="justify-content:center;padding:4px 0"><span class="skeleton" style="width:120px;height:12px"></span></div>${toast}`;
   return screen(body, {
     tab: "mov",
     side: "mov",
     title: "Transactions",
-    actions: `<button class="btn ghost icon-only round" aria-label="Export" disabled>${iconSvg("download")}</button><button class="btn primary desktop-only">${iconSvg("plus", "sm")}Add</button>`,
+    actions: `<button class="btn ghost icon-only round" aria-label="Download transactions">${iconSvg("download")}</button><button class="btn primary desktop-only">${iconSvg("plus", "sm")}Add</button>`,
+    sheet,
   });
 };
 
@@ -2873,6 +2874,123 @@ const languageSheet = ({ offline = false } = {}) => {
     narrow: true,
     sheet: sheetWrap(inner, "Language"),
   });
+};
+
+const exportSheet = ({ state = "ready", format = "xlsx" } = {}) => {
+  const preparing = state == "preparing";
+  const noCopy = state.startsWith("no-copy");
+  const emptyView = state == "empty-view";
+  const counting = state == "counting";
+  const radio = (sel) =>
+    `<span aria-hidden="true" style="flex:none;width:20px;height:20px;border-radius:50%;box-sizing:border-box;border:${sel ? "6px solid var(--brand)" : "2px solid var(--border-strong)"}"></span>`;
+  const scope = (title, meta, sel, off = false) =>
+    `<button class="row" role="radio" aria-checked="${sel}"${off ? ' aria-disabled="true"' : ""} style="border-top:1px solid var(--border)${off ? ";opacity:.5" : ""}">${radio(sel)}<span class="body"><span class="title">${title}</span><span class="meta">${meta}</span></span></button>`;
+  const viewMeta = emptyView
+    ? "Nothing matches these filters"
+    : counting
+      ? '<span class="skeleton" style="display:inline-block;width:150px;height:10px"></span>'
+      : "142 transactions · September · Bancolombia";
+  const help =
+    format == "xlsx"
+      ? "Opens in Excel, Google Sheets and Numbers, with real dates and numbers."
+      : "Plain text, comma-separated (UTF-8), for other apps. Excel in Spanish opens it from Data › From Text.";
+  const NO_COPY = {
+    "no-copy": [
+      "cloud-download",
+      "This device is still getting your transactions. You can download them as soon as it finishes.",
+    ],
+    "no-copy-offline": [
+      "wifi-off",
+      "Needs a connection first: this device doesn’t have your transactions yet.",
+    ],
+    "no-copy-failing": [
+      "cloud-alert",
+      "This device couldn’t get your transactions from the server, so there is nothing to download from yet.",
+      "Try again",
+    ],
+    "no-copy-broken": [
+      "circle-alert",
+      "This device couldn’t open its copy of your data. Reloading the app usually fixes it.",
+      "Reload",
+    ],
+    "no-copy-unsupported": [
+      "circle-alert",
+      "This browser can’t keep a copy of your data, and the download is made from that copy. Try another browser, or leave private browsing.",
+    ],
+  };
+  const notice = noCopy
+    ? `<div class="alert warning">${iconSvg(NO_COPY[state][0])}<span>${NO_COPY[state][1]}${NO_COPY[state][2] ? ` <a href="#" style="color:inherit;font-weight:600">${NO_COPY[state][2]}</a>` : ""}</span></div>`
+    : "";
+  const dim = noCopy || preparing ? ";opacity:.5;pointer-events:none" : "";
+  const footnote = preparing
+    ? `<div class="stack-sm" role="status"><div class="progress"><span class="fill" style="width:25%"></span></div><span class="small muted">12,000 of 48,000 transactions</span></div>`
+    : `<p class="small muted" style="margin:0">Made on this device from your copy, so it works offline. Anything still waiting to sync is included and marked in the file.</p>`;
+  const primary = preparing
+    ? `<button class="btn primary lg loading" style="flex:1.4" aria-disabled="true">Preparing file…</button>`
+    : `<button class="btn primary lg" style="flex:1.4"${noCopy || counting ? " disabled" : ""}>${iconSvg("download", "sm")}Download</button>`;
+  const inner = `${notice}<div class="stack" style="gap:16px${dim}">
+<div class="field"><span class="label">What</span><div class="list" role="radiogroup" aria-label="What" style="margin:0 -16px">${scope("What you’re viewing", viewMeta, !emptyView, emptyView)}${scope("All transactions", "48,000 transactions · since March 2016", emptyView)}</div></div>
+<div class="field"><span class="label">Format</span><div class="segment" role="group" aria-label="Format"><button aria-pressed="${format == "xlsx"}">${iconSvg("layout-grid", "sm")}Excel (.xlsx)</button><button aria-pressed="${format == "csv"}">${iconSvg("file-text", "sm")}CSV</button></div><span class="help">${help}</span></div></div>
+${footnote}
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button>${primary}</div>`;
+  return transactions({ sheet: sheetWrap(inner, "Download transactions") });
+};
+
+const EXPORT_COLUMNS = [
+  ["date", "in"],
+  ["time", "in"],
+  ["type", "in"],
+  ["amount", "in"],
+  ["currency", "in"],
+  ["account", "in"],
+  ["to_account", "in"],
+  ["category", "in"],
+  ["description", "in"],
+  ["note", "in"],
+  ["tags", "in"],
+  ["instant", "app"],
+  ["id", "app"],
+  ["account_id", "app"],
+  ["to_account_id", "app"],
+  ["category_id", "app"],
+  ["your_share", "out"],
+  ["to_review", "out"],
+  ["source", "out"],
+  ["sync", "out"],
+];
+// prettier-ignore
+const EXPORT_ROWS = [
+  ["2026-09-20", "11:05", "EXPENSE", "-78900", "COP", "Bancolombia", "", "Food", "Carulla groceries", "", "", "2026-09-20T16:05:00Z", "3f2a9c1e-…", "a61c…", "", "c902…", "-26300", "false", "MANUAL", ""],
+  ["2026-09-21", "09:00", "INCOME", "4200000", "COP", "Bancolombia", "", "Salary", "August salary", "", "", "2026-09-21T14:00:00Z", "8b41d0f7-…", "a61c…", "", "c1f7…", "", "false", "MANUAL", ""],
+  ["2026-09-21", "12:30", "TRANSFER", "1000000", "COP", "Bancolombia", "Savings", "", "", "", "", "2026-09-21T17:30:00Z", "c07e5a92-…", "a61c…", "b3d0…", "", "", "false", "MANUAL", ""],
+  ["2026-09-21", "18:10", "EXPENSE", "-18400", "COP", "Visa Gold", "", "Transport", "Uber to work", "", "", "2026-09-21T23:10:00Z", "1d9f3b68-…", "e72b…", "", "c4a8…", "", "false", "MANUAL", ""],
+  ["2026-09-22", "07:55", "EXPENSE", "-9800", "COP", "Cash", "", "Coffee", "Pergamino Coffee", "Oat milk", "coffee, latte", "2026-09-22T12:55:00Z", "e5a2c4d0-…", "f09d…", "", "c7e3…", "", "false", "MANUAL", ""],
+  ["2026-09-22", "08:42", "EXPENSE", "-12500", "COP", "Bancolombia", "", "", "", "", "", "2026-09-22T13:42:00Z", "7c3b81fa-…", "a61c…", "", "", "", "true", "QUICK", "PENDING"],
+];
+
+const exportFile = () => {
+  const cell =
+    "padding:6px 10px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);white-space:nowrap";
+  const shade = (kind) =>
+    kind == "out" ? ";color:var(--text-3)" : kind == "app" ? ";color:var(--text-2)" : "";
+  const group = (n, label, kind) =>
+    `<th colspan="${n}" style="${cell};text-align:left;font-weight:500;background:var(--surface-2)${shade(kind)}">${label}</th>`;
+  const groups = `<tr>${group(11, "What you write · a template needs only these", "in")}${group(5, "Written by the app · an import uses them when present", "app")}${group(4, "Written for you · ignored by an import", "out")}</tr>`;
+  const head = EXPORT_COLUMNS.map(
+    ([c, kind]) =>
+      `<th class="mono" style="${cell};text-align:left;font-weight:600${shade(kind)}">${c}</th>`,
+  ).join("");
+  const rows = EXPORT_ROWS.map(
+    (r) =>
+      `<tr>${r.map((v, i) => `<td class="${i == 3 || i == 16 ? "amount" : ""}" style="${cell}${i == 3 || i == 16 ? ";text-align:right" : ""}${shade(EXPORT_COLUMNS[i][1])}">${v}</td>`).join("")}</tr>`,
+  ).join("");
+  const body = `<div class="card flush" style="overflow:auto"><table class="small" style="border-collapse:collapse;min-width:100%"><thead>${groups}<tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>
+<div class="list card flush">
+<div class="row"><span class="body"><span class="title">ledger-flow-transactions-2026-09.xlsx</span><span class="meta">Sheet “Transactions”: these columns, header frozen, filters on, a list to pick the type from in the whole column. Sheet “About”, in your language: what every column means, which ones an import reads, the filters and search in force, the time zone and when.</span></span></div>
+<div class="row"><span class="body"><span class="title">ledger-flow-transactions-2026-09.csv</span><span class="meta">The same columns. UTF-8 with BOM, comma-separated, quoted where needed, CRLF; a dot for decimals and no thousands separator.</span></span></div>
+<div class="row"><span class="body"><span class="title">Use it as a template</span><span class="meta">Delete the rows, keep the header, write your own in the first eleven columns: a row with no id is a new transaction. A download is not a backup: a shared expense comes back as a plain expense, and payments between people are not imported.</span></span></div>
+</div>`;
+  return `<div class="page" style="padding:16px;display:flex;flex-direction:column;gap:12px">${body}</div>`;
 };
 
 const filtersSheet = () => {
@@ -5528,9 +5646,9 @@ const PAGES = [
       plate(
         "list",
         "List",
-        "Search, filters and infinite scroll. A shared expense keeps the full amount on the right \u2014 that is what left the account \u2014 and says your share underneath.",
+        "Search, filters and infinite scroll. A shared expense keeps the full amount on the right \u2014 that is what left the account \u2014 and says your share underneath. The download button in the header is live (T-188).",
         transactions(),
-        { added: "2026-09-01", updated: "2026-09-20" },
+        { added: "2026-09-01", updated: "2026-09-24" },
       ),
       plate("detail", "Detail", "", transactionDetail(), { added: "2026-09-01" }),
       plate(
@@ -5546,6 +5664,101 @@ const PAGES = [
         "Period with presets and a range, type \u2014 now including payments between people \u2014 account, category, tag, only what is still to review, only quick entries. The main button says how many results are waiting.",
         filtersSheet(),
         { added: "2026-09-01", updated: "2026-09-20" },
+      ),
+      plate(
+        "export",
+        "Download",
+        "T-188. The header’s download button opens this sheet. <b>What</b> defaults to what the list is showing — period, filters and search, every page — and offers everything; <b>Format</b> is Excel or CSV. The count lives in each choice, so the button is only <i>Download</i> and fits any width and language. The file is built on this device from its copy and never asks the server.",
+        exportSheet(),
+        { added: "2026-09-24", updated: "2026-09-24" },
+      ),
+      plate(
+        "export-csv",
+        "Download · CSV",
+        "The same sheet with CSV chosen: the line under the control says what CSV is for, and how Excel in Spanish opens it.",
+        exportSheet({ format: "csv" }),
+        { added: "2026-09-24" },
+      ),
+      plate(
+        "export-counting",
+        "Download · counting a search",
+        "The list’s count ignores the search, so with a search in force the device counts the matches first: the line waits and the button is disabled for that moment.",
+        exportSheet({ state: "counting" }),
+        { added: "2026-09-24" },
+      ),
+      plate(
+        "export-empty-view",
+        "Download · nothing matches the filters",
+        "When the list is empty, <i>What you’re viewing</i> is off and <i>All transactions</i> is chosen. With no transactions at all the header button is disabled: the list’s own empty state already says why.",
+        exportSheet({ state: "empty-view" }),
+        { added: "2026-09-24" },
+      ),
+      plate(
+        "export-no-copy",
+        "Download · the copy is still arriving",
+        "The download is made from the device’s copy, never page by page from the server. While the account’s first download runs, the sheet says so and the button wakes up by itself when the copy can answer.",
+        exportSheet({ state: "no-copy" }),
+        { added: "2026-09-24", updated: "2026-09-24" },
+      ),
+      plate(
+        "export-no-copy-offline",
+        "Download · no copy and no connection",
+        "The first download could not even start: it needs the network first.",
+        exportSheet({ state: "no-copy-offline" }),
+        { added: "2026-09-24" },
+      ),
+      plate(
+        "export-no-copy-failing",
+        "Download · the first download keeps failing",
+        "Online, but the copy never arrived — a server error or a session that died. “Still arriving” would be untrue, so it says what happened and offers to try again.",
+        exportSheet({ state: "no-copy-failing" }),
+        { added: "2026-09-24" },
+      ),
+      plate(
+        "export-no-copy-broken",
+        "Download · the copy could not be opened",
+        "Storage exists but refused to open (a blocked upgrade, a full disk). Changing browsers is the wrong advice here; reloading is the right one.",
+        exportSheet({ state: "no-copy-broken" }),
+        { added: "2026-09-24" },
+      ),
+      plate(
+        "export-no-copy-unsupported",
+        "Download · a browser that cannot keep a copy",
+        "Rare — storage blocked or refused — and it says so plainly instead of hammering the server with hundreds of requests.",
+        exportSheet({ state: "no-copy-unsupported" }),
+        { added: "2026-09-24" },
+      ),
+      plate(
+        "export-preparing",
+        "Download · preparing the file",
+        "The file is written away from the screen, in batches, so the app never freezes however long the history is. The button spins in place (its name stays “Preparing file…”), a bar and a count say how far it is, and Cancel and the close button stay live and stop it.",
+        exportSheet({ state: "preparing" }),
+        { added: "2026-09-24", updated: "2026-09-24" },
+      ),
+      plate(
+        "export-done",
+        "Download · handed to the browser",
+        "The sheet closes, focus goes back to the download button and a toast names the file. It says <i>Downloading</i>, not <i>Saved</i>: the browser can still ask, block or cancel, and the app cannot know. If building it fails, a <code>danger</code> toast says so with its reference and a Retry, and nothing is handed over.",
+        transactions({
+          toast: `<div class="toast">${iconSvg("download")}Downloading ledger-flow-transactions-2026-09.xlsx</div>`,
+        }),
+        { added: "2026-09-24" },
+      ),
+      plate(
+        "export-done-share",
+        "Download · on an iPhone’s installed app",
+        "There a download opens a viewer, so the file goes to the share sheet — and the share sheet needs a tap of its own, which a long build has long since used up. The toast offers it instead of opening it.",
+        transactions({
+          toast: `<div class="toast">${iconSvg("check")}Your file is ready<button class="action">Share file</button></div>`,
+        }),
+        { added: "2026-09-24" },
+      ),
+      plate(
+        "export-file",
+        "The file, and the template for an import",
+        "One format for every language, so the file you download is the file a future import reads: fixed column names, types as codes, dates as <code>2026-09-22</code>, amounts with a dot. The first eleven are what a person writes, and all a template needs; the next five are written by the app and let an import rebuild a download exactly; the last four are for reading and an import ignores them. Oldest first. <b>amount</b> is negative when money left an account and positive when it arrived — a transfer carries no sign — and a shared expense keeps its full amount there with <b>your_share</b> beside it.",
+        exportFile(),
+        { added: "2026-09-24", updated: "2026-09-24" },
       ),
       plate(
         "detail-with-unsynced-change",

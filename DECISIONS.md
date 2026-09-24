@@ -5121,3 +5121,106 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   changes the sentence, not the rule.
 - **Consequence:** deleting a movement is no longer always possible: this one case is refused until
   the payment is lowered. The form's edit keeps the ordinary `LOAN_OVERPAID` alert.
+
+## 2026-09-24 · Transactions are downloaded from the device's copy, in a worker, as one global format (T-188)
+
+- **Context:** the Transactions header has carried a disabled download button since 2026-09-01. The
+  owner decided on 2026-09-24 what it downloads — the list as filtered, with everything one tap away —
+  and in what — Excel and CSV, a shared expense with its full amount and its share — and, the same day,
+  that the file must be **one format for every language that a future import reads back**, so a
+  download with its rows deleted is a template (`design/spec/screens/transactions.md`, "Download"). He
+  also asked that a long history weigh neither on the screen nor on the backend.
+- **Decision — the source is the mirror, and only the mirror.** It already holds the whole history with
+  queued writes projected in, so the file costs the backend nothing. Paging `/transactions` instead
+  would be a hundred rows a request — 480 requests for 48,000 rows, half the per-user
+  `RATE_LIMIT_MAX` of 1,000 per 15 minutes, while the app still needs its own — and a single export endpoint would meet the Function URL's 6 MB response limit, behind a BFF on Vercel that caps a response at 4.5 MB. With no copy that can
+  answer, the sheet says why and waits (still arriving, offline, storage refused).
+- **Decision — the file is built in a Web Worker, in batches, and never held as one string.**
+  - `features/transactions/export/export.worker.ts`, loaded with
+    `new Worker(new URL("./export.worker.ts", import.meta.url), { type: "module" })` (Turbopack supports
+    it, and `csp.ts` already sends `worker-src 'self'`). Its chunk must fall inside Serwist's precache
+    glob (`serwist.config.mjs`) or the download stops working offline; the implementation checks both.
+    The same worker has a **count-only mode**, which answers the sheet's count under a search and the
+    oldest date of _All transactions_ without the screen's thread walking anything.
+  - **It never opens the vault the way `openVault` does**, because `openVault` writes `meta.userId`,
+    may reset the mirror and migrates the outbox. It calls `openDB(name)` with no version: if `upgrade`
+    runs, the database did not exist, so it aborts that transaction (no vault is created after a purge
+    or an eviction, D-20) and answers "no copy". It then requires `db.version === VAULT_SCHEMA_VERSION`,
+    `meta.mirrorVersion === MIRROR_VERSION` and `meta.syncedAt`, and handles `versionchange` by closing
+    and posting "aborted", so another tab's upgrade and a wipe's `deleteDatabase` are never blocked by
+    an export. `wipeThisDevice()` terminates a running export worker before it drops the database.
+  - **The session is checked on the screen's thread**, since `sessionIsFor` reads `document.cookie`,
+    which a worker has not: the screen sends the `userId`, checks `sessionIsFor(userId)` before posting
+    and again when the `Blob` comes back (and throws it away if it fails), and terminates the worker
+    when the session changes.
+  - **The filter is made pure first.** `toMirrorFilter` is not exported and its module imports the API
+    client, Sentry and the auth marker; its predicate half (bounds, `oneOf`, the day window, `matches`)
+    moves to `lib/local/repository/filter.ts`, importing only `derive` and `params`, and both
+    `readTransactions` and the worker use it. `matchesSearch` moves out of
+    `features/transactions/filters.ts` (which pulls zod and money in) into a leaf module. The screen
+    sends the exact query the list used (`toListQuery`, same `now`), and the worker reads the day-cut
+    zone from the vault's profile as `readTransactions` does, answering "cannot" for a window without
+    one.
+  - **Rows are read 1,000 at a time**, oldest first: `index.getAll(IDBKeyRange.lowerBound([liveDate,
+id], true), 1000)` on `dateCursor` (which leaves the tombstones out), one short transaction per
+    batch, bounded with `widenedBound` for a window as `queryMirror` does. Each batch's transaction also
+    reads `meta.syncedAt`: if it vanished or changed (a full resync, a purge), the build fails instead of
+    handing over half a history. The walk is not a snapshot: a `Set` of written ids (about 10 MB at
+    100,000) keeps a row that moved forward from appearing twice, and a row whose date moved backward
+    past the cursor during the build is missed.
+  - Everything a row needs is read from the same vault: accounts and categories **archived included**;
+    `your_share` from the `sharedExpenses` record through a new pure helper in `lib/local/derive`
+    (the split's share of yours, `split.shares.find(isYours)` — the figure the row shows, not
+    `countsAsYours`, which nets what came back) because `features/shared/ledger.ts` belongs to another
+    feature; and `sync` from the outbox store through the ids logic of `outbox/status.ts`, exported for
+    it. The screen sends only the query, the `userId` and the _About_ sheet's texts in the app's
+    language.
+  - **Output**: CSV text chunks, or for Excel `fflate`'s synchronous `Zip` + `ZipDeflate` (the `Async`
+    variants spawn workers of their own) with the worksheet XML pushed batch by batch — which works in
+    one pass because `<dimension>` is omitted and `autoFilter` and `dataValidations` follow
+    `sheetData`, as the schema's element order allows; the 0- and 2-decimal number styles are declared
+    in `styles.xml` up front (the only two either repository knows), inline `<t>` carries
+    `xml:space="preserve"`, and the _About_ entry is written last because its counts are only known at
+    the end. The output is folded into one `Blob` as it goes (`new Blob([blob, chunk])`), since building
+    it from a list of parts at the end copies them: the peak is then the output once, about 4 MB of
+    `.xlsx` or 7 MB of CSV for 48,000 rows, plus a batch. Tests open a generated workbook in Excel,
+    Numbers and Google Sheets, because streamed zip entries carry data descriptors.
+  - A progress message after each batch drives the bar. On an installed iOS app the finished file is
+    offered through a `Share file` action, because `navigator.share` needs a tap of its own.
+  - **Readiness is reactive**: the sheet subscribes to the mirror (`startMirror`'s change signal, or a
+    small readiness store) so "still arriving" turns into a live button by itself, and it tells apart
+    the states the spec draws — pull running, pull failing (`pullNow()` behind Try again), offline,
+    `openVault` failed although storage is supported (Reload), storage unsupported, and a copy with no
+    profile zone (_All transactions_ only).
+- **Decision — the format is "Ledger Flow transactions v1".** Fixed column names in `snake_case`
+  (`date`, `time`, `type`, `amount`, `currency`, `account`, `to_account`, `category`, `description`,
+  `note`, `tags`; then `instant`, `id`, `account_id`, `to_account_id`, `category_id`, which an import
+  uses when present; then `your_share`, `to_review`, `source`, `sync`, which it ignores), type,
+  source and sync as the API's codes, dates as `YYYY-MM-DD`, amounts as the API's number with a dot and
+  no thousands separator, written as it comes and never rounded or parsed from formatted text. Columns
+  are found by name, never renamed, only appended; an importer ignores the ones it does not know. The
+  one localized part is the Excel _About_ sheet. `description` is the stored description, not the
+  list's `transactionTitle`, because an import would store the made-up title.
+- **Decision — the writers are pure and feature-agnostic**, in `lib/export/`: `csv.ts` (RFC 4180, UTF-8
+  BOM, CRLF, a `'` before text cells — never `amount` or `your_share` — that start with `= + - @`, tab or CR), `xlsx.ts` (a minimal
+  SpreadsheetML workbook: inline-string cells, XML-escaped and stripped of the control characters XML
+  forbids, date serials computed from the text, a number format per row from `currencyFractionDigits`,
+  frozen header, autofilter, a data-validation list on `type`, the _About_ sheet) and `download.ts` (an
+  object URL revoked after a delay, since Safari and Firefox can lose a download revoked at once;
+  `navigator.share({ files })` where `canShare` allows it in an installed iOS app). They and `fflate`
+  live only in the worker's chunk, so the 220 kB screen budget does not move. The column mapping and the
+  file name are `features/transactions/export/columns.ts` and `fileName.ts`, the sheet
+  `ExportSheet.tsx` and its hook.
+- **Decision — the flag.** `exportTransactions` goes: Transactions' button is simply live, and Stats'
+  button moves to a flag of its own, `exportStats`, off.
+- **Alternatives (not taken):** a server endpoint — it would not work offline or in _this device only_,
+  a synchronous one dies at the 4.5 MB the BFF lets through, and the asynchronous one (a job writing to S3 and a signed
+  link) is infrastructure for a copy the device already holds; paging `/transactions` — see above;
+  building on the screen's thread — tens of thousands of rows through one `await` loop freeze the list;
+  SheetJS or ExcelJS — hundreds of kilobytes to write one flat sheet, and neither streams in the browser
+  the way `fflate` does; localized headers — an import would have to guess the language of every file.
+- **Consequence:** the file is what the device holds — rows still waiting to sync included and marked —
+  and with no copy there is nothing to download from. A comma-separated CSV opens in one column in
+  Spanish-locale Excel; Excel is the default format for that reason, and the CSV's help line says how to
+  open it there. Tags are joined by `, `: the backend accepts a comma inside a tag today, and the import
+  task has to decide what such a tag becomes.
