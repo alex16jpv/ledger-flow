@@ -56,16 +56,19 @@ export async function refuseLoanInCredit(tx: WriteTransaction, effect: MoneyEffe
     if (side?.fromAccountId) touched.add(side.fromAccountId);
     if (side?.toAccountId) touched.add(side.toAccountId);
   }
-  if (touched.size === 0) return;
-  const queued = (await tx.objectStore("outbox").getAll()).filter(willBeSent);
+  const loans = [];
   for (const id of touched) {
     const record = await tx.objectStore("accounts").get(id);
-    if (record?.row.type !== "LOAN") continue;
-    const [now] = projectBalances([{ id, balance: record.row.balance }], queued);
-    const [next] = applyEffects([{ id, balance: now?.balance ?? record.row.balance }], [effect]);
-    const from = toCents(now?.balance ?? record.row.balance);
-    const to = toCents(next?.balance ?? 0);
-    if (to > from && to > 0) {
+    if (record?.row.type === "LOAN") loans.push(record.row);
+  }
+  if (loans.length === 0) return;
+  const queued = (await tx.objectStore("outbox").getAll()).filter(willBeSent);
+  for (const loan of loans) {
+    const [now] = projectBalances([{ id: loan.id, balance: loan.balance }], queued);
+    const from = now?.balance ?? loan.balance;
+    const [next] = applyEffects([{ id: loan.id, balance: from }], [effect]);
+    const to = toCents(next?.balance ?? from);
+    if (to > toCents(from) && to > 0) {
       throw refused(
         "LOAN_OVERPAID",
         "A loan cannot end above zero: it cannot be paid more than it still owes",

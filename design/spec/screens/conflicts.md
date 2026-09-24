@@ -20,7 +20,9 @@ empty ones are shown as "—".
   refused this change. It was never applied, here or there. Reason: {code}. Discarding it puts this
   {what} back to what the server has.", this device's card (and the server's when it answered with a
   row, for instance whoever holds the name in a `DUPLICATE`), with "Discard this change" first and "Try
-  again" after.
+  again" after. The reason is the code's own sentence, and a queued delete — a movement, or undoing a
+  payment — refused with `LOAN_OVERPAID` reads the sentence of taking something back (T-156): the loan
+  was paid off on another device while this one was offline, which no device can see coming.
 - **The name is taken** (`#name-taken`, an `account:restore` or `category:restore` refused with
   `DUPLICATE`): a `danger` alert, "**The name is taken.** An active {account|category} is already named
   “Cash”, so the server won't take this one back. Restore it with another name, or discard the change.",

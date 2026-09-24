@@ -201,13 +201,16 @@ const TAKING_BACK: Partial<Record<ErrorCode, ErrorPresentation>> = {
   LOAN_OVERPAID: { scope: "form", messageKey: "errors.LOAN_PAID_OFF_SINCE" },
 };
 
+export function presentCode(code: ErrorCode, takesBack = false): ErrorPresentation {
+  return (takesBack ? TAKING_BACK[code] : undefined) ?? ERROR_TABLE[code];
+}
+
 export function presentError(error: unknown, takesBack = false): ErrorPresentation {
   if (error instanceof NetworkError) {
     return { scope: "screen", messageKey: error.timedOut ? "errors.TIMEOUT" : "errors.NETWORK" };
   }
   if (error instanceof ApiError) {
-    if (error.code)
-      return (takesBack ? TAKING_BACK[error.code] : undefined) ?? ERROR_TABLE[error.code];
+    if (error.code) return presentCode(error.code, takesBack);
     return STATUS_FALLBACK[error.status] ?? { scope: "screen", messageKey: "errors.INTERNAL" };
   }
   return { scope: "screen", messageKey: "errors.UNKNOWN" };

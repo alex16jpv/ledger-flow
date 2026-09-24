@@ -5091,7 +5091,9 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   balance as the queue projects it, for every movement write and for recording and undoing a payment.
   A gesture that takes something back — deleting a movement or an adjustment, undoing a payment —
   presents the code with its own sentence (`presentError(error, true)` → `errors.LOAN_PAID_OFF_SINCE`),
-  because "a loan cannot be paid more than it still owes" does not say what to do about a delete.
+  because "a loan cannot be paid more than it still owes" does not say what to do about a delete. The
+  sync attention screen does the same for a queued delete the server refused (`presentCode`): another
+  device can pay the loan off while this one is offline, and only the server sees that.
 - **Alternatives (not taken):** warning inside the delete sheet before the tap — it needs the projected
   balance of the loan in the screen, which is money arithmetic outside `lib/local/derive` for a case
   this rare; a new error code — the backend already has the one that means it, and the gesture is what

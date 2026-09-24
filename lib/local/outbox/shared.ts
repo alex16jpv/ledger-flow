@@ -645,14 +645,16 @@ export function deleteSettlement(id: string): Promise<unknown> {
         if (!previous) {
           throw new NotProjectableError(`payment ${id}, which the mirror does not hold`);
         }
+        // Its money belongs to the payment: what it wrote goes when it goes.
+        const written = await movementsOf(tx, id);
+        const effect = undoEffect(written);
+        if (effect) await refuseLoanInCredit(tx, effect);
         await store.put(
           settlementRecord(
             { ...previous.row, deletedAt: occurredAt, updatedAt: occurredAt },
             previous.server,
           ),
         );
-        // Its money belongs to the payment: what it wrote goes when it goes.
-        const written = await movementsOf(tx, id);
         removed.push(...written.map((row) => row.id));
         for (const row of written) {
           const record = await tx.objectStore("transactions").get(row.id);
@@ -660,8 +662,6 @@ export function deleteSettlement(id: string): Promise<unknown> {
             .objectStore("transactions")
             .put(transactionRecord({ ...row, deletedAt: occurredAt }, record?.server));
         }
-        const effect = undoEffect(written);
-        if (effect) await refuseLoanInCredit(tx, effect);
         return {
           ...(effect ? { effect } : {}),
           dependsOn: [],

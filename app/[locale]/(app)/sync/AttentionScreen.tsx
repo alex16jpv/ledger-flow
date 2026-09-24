@@ -15,7 +15,7 @@ import { Empty } from "@/components/ui/Empty";
 import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
-import { ERROR_TABLE, isErrorCode } from "@/lib/api/errors";
+import { isErrorCode, presentCode } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
@@ -255,7 +255,7 @@ export function AttentionScreen() {
       what,
       reason:
         code && isErrorCode(code)
-          ? t(ERROR_TABLE[code].messageKey)
+          ? t(presentCode(code, operation.action === "delete").messageKey)
           : (code ?? t("states.conflict.failed.unknown")),
     });
   }
