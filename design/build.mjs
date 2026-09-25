@@ -539,6 +539,8 @@ const quickSheet = ({
   full = false,
   keyboard: kb = null,
   chips: chipsOverride = null,
+  note = null,
+  again = "",
 } = {}) => {
   const title = "Add";
   const bar = {
@@ -590,7 +592,7 @@ ${quickPicker("To", "Savings · $8,900,000", "piggy-bank", "GREEN")}</div>`
   if (full)
     return fullScreen({
       title,
-      body: `${seg}${hint}${amount}${cats}${accounts}${QUICK_NOTE}${extra}`,
+      body: `${seg}${hint}${amount}${again}${cats}${accounts}${note ?? QUICK_NOTE}${extra}`,
       action: "Save",
       secondary: '<button class="btn ghost lg block">More details</button>',
       footer: QUICK_BUTTONS,
@@ -598,9 +600,11 @@ ${quickPicker("To", "Savings · $8,900,000", "piggy-bank", "GREEN")}</div>`
       over,
     });
   return `<div class="scrim"><div class="sheet" role="dialog" aria-label="${title}">
-${bar}${sheetHead}${seg}${hint}${amount}${cats}${accounts}${QUICK_NOTE}${extra}${QUICK_BUTTONS}
+${bar}${sheetHead}${seg}${hint}${amount}${again}${cats}${accounts}${note ?? QUICK_NOTE}${extra}${QUICK_BUTTONS}
 </div>${over}</div>`;
 };
+
+const NOTE_FIELD = `<div class="field"><span class="label">Note <span class="opt">optional</span></span><div class="input textarea"><span class="placeholder">Anything you want to remember about this one</span></div></div>`;
 
 const transactionForm = (
   kind = "EXPENSE",
@@ -618,6 +622,7 @@ const transactionForm = (
     notice = "",
     segment = true,
     save = "Save transaction",
+    details = null,
   } = {},
 ) => {
   const seg = [
@@ -661,10 +666,13 @@ ${accounts}${readback}
 <div class="input-group">
 <div class="field"><span class="label">Date</span><div class="input">${iconSvg("calendar", "sm")}<span class="value">Today</span></div></div>
 <div class="field"><span class="label">Time</span><div class="input">${iconSvg("clock", "sm")}<span class="value">18:10</span></div></div></div>
-<div class="field"><span class="label">Description <span class="opt">optional</span></span><div class="input${description === null ? " focus" : ""}"><span class="value">${description ?? (kind == "TRANSFER" ? "Visa Gold payment" : "Uber to work")}</span></div></div>
+${
+  details ??
+  `<div class="field"><span class="label">Description <span class="opt">optional</span></span><div class="input${description === null ? " focus" : ""}"><span class="value">${description ?? (kind == "TRANSFER" ? "Visa Gold payment" : "Uber to work")}</span></div></div>
 <div class="field"><span class="label">Tags <span class="opt">optional</span></span><div class="input" style="height:auto;min-height:48px;padding:8px 12px;flex-wrap:wrap"><span class="tag">work</span><span class="placeholder">Add…</span></div>
 <div class="chips" style="margin-top:2px"><button class="chip" style="height:28px">#travel</button><button class="chip" style="height:28px">#monthly</button><button class="chip" style="height:28px">#latte</button></div></div>
-<div class="field"><span class="label">Note <span class="opt">optional</span></span><div class="input textarea"><span class="placeholder">Anything you want to remember about this one</span></div></div>
+${NOTE_FIELD}`
+}
 <div class="hstack" style="gap:10px;padding:8px 0 12px"><button class="btn primary lg block">${save}</button></div>
 </div></main></div>${sheet}`;
 };
@@ -4298,6 +4306,140 @@ const pickerFullScreen = () => {
   });
 };
 
+// What a field shows while you type (T-193): the list (component 36), the greyed rest, or chips.
+const typedText = (text) =>
+  `<span class="value" style="flex:none">${text}</span><span class="caret"></span>`;
+const acceptHint = (label) =>
+  `<span class="accept key-hint" aria-hidden="true">→</span><button class="btn ghost icon-only round accept" aria-label="${label}">${iconSvg("check", "sm")}</button>`;
+const suggestRow = (title, { meta = "", count = "", tile: t = "", active = false } = {}) =>
+  `<button class="row" role="option" aria-selected="${String(active)}">${t}<span class="body"><span class="title"><span>${title}</span></span>${meta ? `<span class="meta">${meta}</span>` : ""}</span>${count ? `<span class="count">${count}</span>` : ""}</button>`;
+const suggestList = (rows, label = "Suggestions") =>
+  `<div class="suggest" role="listbox" aria-label="${label}">${rows.join("")}</div>`;
+const hashChips = (tags, fit = true) =>
+  `<div class="chips${fit ? " fit" : ""}" style="margin-top:2px">${tags.map((tag) => `<button class="chip" style="height:28px">#${tag}</button>`).join("")}</div>`;
+const descriptionField = ({ typed = "Ub", after = "", below = "", focus = true } = {}) =>
+  `<div class="field"><span class="label">Description <span class="opt">optional</span></span><div class="input${focus ? " focus" : ""}">${focus ? typedText(typed) : `<span class="value">${typed}</span>`}${after}</div>${below}</div>`;
+const tagsField = ({ tags = ["work"], typed = null, after = "", below = "" } = {}) =>
+  `<div class="field"><span class="label">Tags <span class="opt">optional</span></span><div class="input${typed === null ? "" : " focus"}" style="height:auto;min-height:48px;padding:8px 12px;flex-wrap:wrap">${tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}${typed === null ? '<span class="placeholder">Add…</span>' : `${typedText(typed)}${after}`}</div>${below}</div>`;
+const UBER_ROWS = [
+  [
+    "<b>Ub</b>er to work",
+    { meta: "Transport · $18,400 · #work · Tuesday", count: "41×", cat: "Transport" },
+  ],
+  [
+    "<b>Ub</b>er to the airport",
+    { meta: "Transport · $64,000 · #travel · Sep 2", count: "6×", cat: "Transport" },
+  ],
+  ["<b>Ub</b>er Eats · lunch", { meta: "Food · $32,500 · Aug 28", count: "12×", cat: "Food" }],
+  [
+    "<b>Ub</b>er home",
+    { meta: "Transport · $21,000 · #work · Aug 20", count: "9×", cat: "Transport" },
+  ],
+];
+const uberList = (rich) =>
+  suggestList(
+    UBER_ROWS.map(([title, o], i) => {
+      if (!rich) return suggestRow(title, { active: i === 0 });
+      const [ic, col] = CATS[o.cat];
+      return suggestRow(title, {
+        meta: o.meta,
+        count: o.count,
+        tile: tile(ic, col, "sm"),
+        active: i === 0,
+      });
+    }),
+  );
+const quickNoteField = (inner, below = "") =>
+  `<div class="field"><div class="input focus">${iconSvg("notebook-pen", "sm")}${inner}</div>${below}</div>`;
+const quickWithNote = (inner, below = "", o = {}) =>
+  quickFullScreen({ keyboard: "text", note: quickNoteField(inner, below), ...o });
+const TAG_ROWS = [
+  ["<b>co</b>mmute", "23× · usually with Transport"],
+  ["<b>co</b>ffee", "9×"],
+  ["<b>co</b>nference", "2×"],
+];
+const suggestionsForm = (details, cat = null, { keyboard: kind = null } = {}) => {
+  const form = transactionForm("EXPENSE", {
+    amount: "18,400",
+    details,
+    cat:
+      cat ??
+      `<div class="stack-sm"><span class="label">Category</span>
+<div class="chips">${catChip("Food")}${catChip("Coffee")}${catChip("Transport")}${catChip("Bills")}${catChip("Health")}<button class="chip">${iconSvg("search", "sm")}Search</button></div></div>`,
+  });
+  if (!kind) return form;
+  return (
+    form.replace(
+      '<div class="page" style="max-width:640px">',
+      '<div class="page under-keyboard" style="max-width:640px">',
+    ) + keyboard(kind)
+  );
+};
+const FILLED_LINE = `<span class="help">Category and tags from the last one</span>`;
+const TRANSPORT_CHOSEN = `<div class="stack-sm"><span class="label">Category</span>
+<div class="chips">${catChip("Food")}${catChip("Coffee")}${catChip("Transport", true)}${catChip("Bills")}${catChip("Health")}<button class="chip">${iconSvg("search", "sm")}Search</button></div></div>`;
+const SUGGEST = {
+  "quick-list": () => quickWithNote(typedText("Ub"), uberList(false)),
+  "quick-ghost": () =>
+    quickWithNote(
+      `${typedText("Ub")}<span class="ghost">er to work</span>${acceptHint("Use “Uber to work”")}`,
+    ),
+  "quick-chips": () =>
+    quickWithNote(
+      typedText("Ub"),
+      `<div class="chips fit"><button class="chip">Uber to work</button><button class="chip">Uber Eats · lunch</button></div>`,
+    ),
+  "form-text": () =>
+    suggestionsForm(`${descriptionField({ below: uberList(false) })}${tagsField()}${NOTE_FIELD}`),
+  "form-entry": () =>
+    suggestionsForm(
+      `${descriptionField({ below: uberList(true) })}${tagsField({ tags: [] })}${NOTE_FIELD}`,
+    ),
+  "form-entry-keyboard": () =>
+    suggestionsForm(
+      `${descriptionField({ below: uberList(true) })}${tagsField({ tags: [] })}${NOTE_FIELD}`,
+      null,
+      { keyboard: "text" },
+    ),
+  "form-after-pick": () =>
+    suggestionsForm(
+      `${descriptionField({ typed: "Uber to work", focus: false, below: FILLED_LINE })}${tagsField({ tags: ["work"] })}${NOTE_FIELD}`,
+      TRANSPORT_CHOSEN,
+    ),
+  "tags-chips": () =>
+    suggestionsForm(
+      `${descriptionField({ typed: "Uber to work", focus: false })}${tagsField({ tags: [], typed: "", below: hashChips(["work", "commute", "monthly", "travel"]) })}${NOTE_FIELD}`,
+      TRANSPORT_CHOSEN,
+    ),
+  "tags-list": () =>
+    suggestionsForm(
+      `${descriptionField({ typed: "Uber to work", focus: false })}${tagsField({ typed: "co", below: suggestList(TAG_ROWS.map(([t, meta], i) => suggestRow(`#${t}`, { meta, active: i === 0 }))) })}${NOTE_FIELD}`,
+      TRANSPORT_CHOSEN,
+    ),
+  "tags-ghost": () =>
+    suggestionsForm(
+      `${descriptionField({ typed: "Uber to work", focus: false })}${tagsField({ typed: "co", after: `<span class="ghost">mmute</span>${acceptHint("Add #commute")}`, below: hashChips(["commute", "coffee", "conference"]) })}${NOTE_FIELD}`,
+      TRANSPORT_CHOSEN,
+    ),
+  "quick-plain": () => quickFullScreen({ keyboard: "numeric" }),
+  "quick-again": () =>
+    quickFullScreen({
+      keyboard: "numeric",
+      again: `<div class="stack-sm"><span class="label">Again <span class="opt">what you record most</span></span>
+<div class="chips fit">${[
+        ["Transport", "Uber to work · $18,400"],
+        ["Coffee", "Pergamino · $9,800"],
+        ["Food", "Lunch · $24,000"],
+      ]
+        .map(([cat, label]) => {
+          const [ic, col] = CATS[cat];
+          return `<button class="chip cat color-${col}"><span class="dot">${iconSvg(ic)}</span><span class="name">${label}</span></button>`;
+        })
+        .join("")}</div></div>`,
+    }),
+};
+const suggestVariant = (kind) => SUGGEST[kind]();
+
 // ── Shared expenses · T-110 and T-111 ───────────────────────────────────────
 const PEOPLE = {
   You: ["JD", "GRAY"],
@@ -5421,6 +5563,13 @@ const PAGES = [
         "What the centre button opens. The three-way segment on top records all three types (T-73). On a phone it fills the screen with Save in the bar on top, and More details, at the end, opens the full form (T-150); from 600px up it is the centred modal with both buttons in its footer.",
         home({ sheet: quickSheet({ type: "expense", hint: typeLine("EXPENSE"), full: true }) }),
         { added: "2026-09-01", updated: "2026-09-23" },
+      ),
+      plate(
+        "suggest-after-choosing-the-whole-entry",
+        "After choosing a suggested description",
+        "T-193, drawn for the second question’s recommended answer and waiting on it. <i>Uber to work</i> was chosen from the list: the description is written, Transport is selected because no category had been chosen, #work is added because no tag had been, and the amount stays the 18,400 typed before. One quiet line under the field says what was filled, and it goes the moment anything is touched — the chip, the tag or the text. Nothing else on the form moved.",
+        suggestVariant("form-after-pick"),
+        { added: "2026-09-24", review: true },
       ),
       plate(
         "quick-capture-income",
@@ -7691,6 +7840,107 @@ const PAGES = [
           verdict: "discarded",
           asks: "What happens to the categories of type Transfer",
         },
+      ),
+      plate(
+        "suggest-quick-a-list-under-the-note",
+        "Suggestions · a list under the field",
+        "<b>T-193, the session’s recommendation.</b> Nothing until you type; from the first letter, <b>up to five rows under the field</b>, the letters you typed in bold, the most repeated first — what a search engine does. Tap a row and the field takes it; keep typing and the list narrows or disappears; Escape, tapping elsewhere or finishing the word without picking anything leaves exactly what you typed. On a phone the list sits <b>between the field and the keyboard</b>, never over the field, and the sheet scrolls to keep both in sight. On a keyboard, ↓ and ↑ walk it and Enter takes the highlighted row; Enter with nothing highlighted does what it does today. Drawn on Quick add, the surface with the least room; the full form gets the same list under Description. <b>Why this one:</b> it is the only shape that can carry more than the text (the next question), it is read out by a screen reader as a list of options, and it costs nothing until you type. <b>What it costs:</b> five rows of height under a field that had none, and a new component (36).",
+        suggestVariant("quick-list"),
+        {
+          added: "2026-09-24",
+          verdict: "open",
+          asks: "How a description is suggested while you type",
+        },
+      ),
+      plate(
+        "suggest-quick-the-rest-of-the-word-greyed",
+        "Suggestions · the rest of the text, greyed, inside the field",
+        "The best match completed <b>inside the field</b> in the placeholder colour, the way a browser completes an address: type <i>Ub</i> and <i>er to work</i> appears after the caret. Accepting it is → on a keyboard (Tab keeps moving the focus, as everywhere) and <b>the check button</b> on a phone, 44px, the product’s tap size; anything else you type replaces it. <b>The least visible help there is</b> — nothing opens, nothing moves. <b>What it costs, and why not recommended:</b> it can only ever offer <b>one</b> answer, so <i>Uber to the airport</i> is unreachable while <i>Uber to work</i> is more frequent; a screen reader cannot tell the grey text from the typed one without extra work; on a phone accepting means leaving the keys for a button at the other end of the field; and it can carry nothing but the text.",
+        suggestVariant("quick-ghost"),
+        {
+          added: "2026-09-24",
+          verdict: "open",
+          asks: "How a description is suggested while you type",
+        },
+      ),
+      plate(
+        "suggest-quick-chips-under-the-note",
+        "Suggestions · chips under the field, like the tags",
+        "The shape Tags already has: <b>chips under the field</b>, filtered as you type, one tap adds. Nothing new to learn — the category row above it is the same control. <b>What it costs, and why not recommended:</b> a chip holds a word or two, and a description is a sentence — <i>Uber Eats · lunch</i> already fills half a line, so two lines hold three or four and the rest are not offered; a chip cannot carry the category, the amount or the tags a row can; and a row of chips that appears the moment the field is focused is the most visible of the three, on a sheet the category chips already fill.",
+        suggestVariant("quick-chips"),
+        {
+          added: "2026-09-24",
+          verdict: "open",
+          asks: "How a description is suggested while you type",
+        },
+      ),
+      plate(
+        "suggest-a-row-carries-only-the-text",
+        "A suggestion · only the text",
+        "Each row is the description and nothing else, and choosing it writes <b>only the description</b>. The category, the amount and the tags stay as they are, empty or not. <b>What it buys:</b> nothing is ever filled that you did not type or tap yourself. <b>What it costs, and why not recommended:</b> for the case this task is about — the same purchase every day — it saves the sentence and leaves the category and the tags to be picked again, so the entry is three taps shorter, not one.",
+        suggestVariant("form-text"),
+        {
+          added: "2026-09-24",
+          verdict: "open",
+          asks: "What choosing a suggested description fills in",
+        },
+      ),
+      plate(
+        "suggest-a-row-carries-the-last-entry",
+        "A suggestion · the whole entry, filling only what is empty",
+        "<b>The session’s recommendation.</b> Each row is <b>the last time you recorded it</b>: the category’s tile, the description, and under it the category, the amount, the tags and when — <i>Transport · $18,400 · #work · Tuesday</i> — with how many times on the right. Choosing it writes the description and <b>fills only what is still empty</b>: a category not chosen, tags not added, and the amount only if it is still zero. Anything already typed or picked is never touched, so in Quick add — where the amount comes first — the amount is yours and the row’s figure is just there to compare. Under the field, one quiet line says what it filled — <i>Category and tags from the last one</i> — until you touch anything (drawn in <i>After choosing a suggested description</i>, in review until this is answered). <b>In Quick add it fills the description and the category, never tags</b>: the sheet has no field to show them, and nothing is written without a word. <b>What it costs:</b> a row is two lines tall, so five rows are ~280px, and from 600px up the list floats over what is under the field rather than pushing it; and the sentence under the field is one more thing on the form, there so nothing is filled without a word.",
+        suggestVariant("form-entry"),
+        {
+          added: "2026-09-24",
+          verdict: "open",
+          asks: "What choosing a suggested description fills in",
+        },
+      ),
+      plate(
+        "suggest-the-whole-entry-with-the-keyboard-up",
+        "A suggestion · the whole entry, on a phone with the keyboard up",
+        "The same answer where it is hardest: a phone, the text keyboard open, five two-line rows. The form scrolls so the field sits at the top and the list ends above the keyboard — 48px of field and ~280px of rows in the ~610px a keyboard leaves on an 844px screen — and Tags, Note and Save wait under it, exactly as they wait under the keyboard today. Not an answer of its own: the proof that the recommended one fits.",
+        suggestVariant("form-entry-keyboard"),
+        {
+          added: "2026-09-24",
+          verdict: "open",
+          asks: "What choosing a suggested description fills in",
+        },
+      ),
+      plate(
+        "suggest-tags-the-chips-ranked",
+        "Tags · the chips it has today, ranked and capped",
+        "<b>The session’s recommendation.</b> Tags already show chips under the field, from your own tags, filtered as you type — this keeps the shape and fixes what it shows. <b>Ranked</b>: the tags that usually go with this description and with the chosen category first (after <i>Uber to work</i>, #work and #commute before #latte), then the most used, then the most recent, instead of the alphabetical first eight. <b>Capped to what fits in two lines</b>, the rule Quick add’s category chips already follow (T-151), so the row never scrolls and never pushes the note away. One tap adds a tag; typing narrows the chips to the tags that start with what you typed (today any part of the tag matches, and that goes), and Enter still adds exactly what you typed. <b>Why this one:</b> a tag is a word, which is what a chip holds; you often add two or three, and chips are one tap each with no typing; and it is the component the field already has, so nothing new is learned or built. <b>What it costs:</b> the chips appear on focus, before you type — the one place this design shows help unasked — because a tag you have not thought of is the one you need reminding of.",
+        suggestVariant("tags-chips"),
+        { added: "2026-09-24", verdict: "open", asks: "How a tag is suggested" },
+      ),
+      plate(
+        "suggest-tags-a-list-like-the-description",
+        "Tags · a list under the field, like the description",
+        "The same list Description opens, under the tags field: nothing before you type, then the matching tags with how often and with which category, ↓ ↑ Enter on a keyboard, a tap on a phone. <b>What it buys:</b> one shape for both fields, one component. <b>What it costs, and why not recommended:</b> a list needs a letter before it offers anything, so the tag you forgot is never suggested; adding three tags is type-pick-type-pick-type-pick where chips are tap-tap-tap; and a list under a field that wraps its chips moves down every time a tag is added.",
+        suggestVariant("tags-list"),
+        { added: "2026-09-24", verdict: "open", asks: "How a tag is suggested" },
+      ),
+      plate(
+        "suggest-tags-the-rest-greyed-plus-chips",
+        "Tags · the rest of the tag greyed, chips before you type",
+        "Both at once: the ranked chips while the field is empty, and once you type, the best match completed in grey inside the field — <i>co</i> → <i>mmute</i> — accepted with Enter, → or the check, while the chips narrow to the matches. <b>What it buys:</b> the fastest keyboard path there is — type two letters, Enter. <b>What it costs, and why not recommended:</b> it is two mechanisms on one field, with the same answer in two places (#commute in grey and as the first chip); Enter has to mean <i>accept the grey</i> and <i>add what I typed</i> at the same time, which is only unambiguous while the grey is on screen; and a screen reader gets the chips and not the grey.",
+        suggestVariant("tags-ghost"),
+        { added: "2026-09-24", verdict: "open", asks: "How a tag is suggested" },
+      ),
+      plate(
+        "suggest-quick-nothing-until-you-type",
+        "Quick add · nothing until you type",
+        "<b>The session’s recommendation.</b> The sheet opens exactly as it does today — the amount with the keyboard, the chips, the account, the empty note — and help exists only inside the note, once you type, in whatever shape the first question settles. Nothing is added to the sheet, so a person who never uses it never sees it. <b>What it costs:</b> the fastest possible repeat is still amount → note → pick, three actions; the row on the right makes it one.",
+        suggestVariant("quick-plain"),
+        { added: "2026-09-24", verdict: "open", asks: "What Quick add offers before you type" },
+      ),
+      plate(
+        "suggest-quick-a-row-of-what-you-repeat",
+        "Quick add · a row of what you repeat, before typing",
+        "Under the amount, a row named <b>Again</b> with the three entries you record most — <i>Uber to work · $18,400</i> — each with its category’s tile. One tap fills the amount, the category and the note, and Save is next: the whole daily coffee in two taps. <b>What it buys:</b> the shortest path this task could have. <b>What it costs, and why not recommended:</b> it is a row on every opening of the sheet, for everyone, whether or not they repeat anything — the opposite of help that stays out of the way; it fills an amount, which is the one field this design otherwise never touches; the sheet gets ~70px taller on a phone where the category chips already take two lines; and it is what <b>T-32 (Recurring)</b> is for — detecting what repeats and offering it — which would then have two doors. If you want it, it belongs to that task, not to this one.",
+        suggestVariant("quick-again"),
+        { added: "2026-09-24", verdict: "open", asks: "What Quick add offers before you type" },
       ),
     ],
   },

@@ -476,3 +476,147 @@ expense, and the group's own `Add expense` lists it again like any other.
 with its shares, and a refusal surfaces where every refused change does, in the attention tray of
 [attention-tray.md](attention-tray.md). The queue sends them **in order**: the expense names the
 movement, so it waits for it the way an expense already waits for the group it is posted under.
+
+## Suggestions while you type (T-193) — four questions, waiting on him
+
+His words, 2026-09-24: «que cuando esté registrando una transacción ya sea por quick add o por el
+flujo normal tanto el description como los tags den sugerencias basados en las transacciones que tengo
+[…] para transacciones similares que repito diariamente o recurrentes. […] que se tenga la ayuda pero
+que no sea invasiva, puede ser algo así como lo que muestra Google en su motor de búsqueda […] no debe
+afectar el rendimiento de la app por ningún motivo». Every question below is drawn more than one way
+on [`preview/variants.html`](../../preview/variants.html) and listed on `in-review.html`; **nothing
+here is decided or built**, and the plates say which answer the session recommends and why.
+
+**What exists today.** Tags already have suggestions: up to eight chips under the field, from
+`GET /transactions/tags` — which the mirror answers by walking every live movement, once every five
+minutes at most — alphabetical, and filtered as you type by any part of the tag. Description has none
+on either surface. Quick add's note **is** the description (it travels in the `PUT` that completes
+the entry, and a lost `PUT` is what _Saved, but the note couldn't be added_ reports), and Quick add
+has no Tags field.
+
+### What binds every answer
+
+These hold whichever shapes he picks; they are what «not invasive» and «never the performance» mean
+here.
+
+- **Nothing comes from the server.** Every suggestion is read from the device's copy — the mirror,
+  the same source the download uses (T-188) — so typing never sends a request, it works offline, and
+  it costs the backend nothing. With no copy that can answer (a private window, a first pull not
+  drained), Description has no suggestions and Tags keep what they have today; nothing says so,
+  because nothing a person asked for is missing.
+- **Nothing appears until you type**, with one deliberate exception — the tags' chips, below, which
+  exist to remind you of a tag you have not thought of. Nothing is ever written that you did not
+  type or tap: leaving the field, Escape, or finishing the word saves exactly what you typed.
+- **What already has a value is never touched.** A suggestion can fill what is empty (second
+  question); it never replaces an amount, a category or a tag already there. **In Quick add it
+  fills the description and the category, never tags**: the sheet has no field to show them, and
+  what is written travels in the same `PUT` as the note, whose loss the sheet already reports.
+- **Scoped by the type of the movement**: an expense form suggests from expenses, an income from
+  incomes, a transfer from transfers. Tombstones, adjustments and settlements never feed it.
+- **Ranked by what you record most, then most recently**; a match is the start of any word, without
+  case or accents, so `ub` finds _Uber to work_ and `work` finds it too. A tag matches at its start
+  or after a hyphen, so today's any-part match (`ork` finding `#work`) goes, and the chips narrow
+  the same way the list does. Five rows at most. There is no _no results_: the list simply is not
+  there.
+- **It reads as a list to everyone.** The field is a `combobox` that owns a `listbox`
+  ([components.md](../components.md) 36): ↓ ↑ walk it, Enter takes the highlighted row, Escape
+  closes it, and Enter with nothing highlighted does what the field does today — nothing on
+  Description, add the typed tag on Tags. A polite live region says how many suggestions there are,
+  once per opening. **On a phone the list is in the flow**, between the field and the keyboard, and
+  the sheet or the page scrolls to keep both in view; **from 600px up it floats over what is under
+  the field** (the T-150 breakpoint), so a form never jumps while you type. It never covers the
+  field.
+- **The cost is paid once, off the typing path.** The copy is indexed once per session — in idle
+  time, in slices of 1,000 rows, capped at the newest 20,000 live movements (fifty-five a day for a
+  year) so a long history bounds the work instead of growing it — kept in memory, marked stale by a
+  write or a pull and rebuilt on the next idle moment. A keystroke is a binary search over that
+  index. Measured on the pure part: 50,000 rows index in 16 ms and a lookup takes a hundredth of a
+  millisecond; the structure, the numbers and what was rejected are in `DECISIONS.md` (T-193).
+
+### How a description is suggested while you type (`#suggest-quick-a-list-under-the-note`, `#suggest-quick-the-rest-of-the-word-greyed`, `#suggest-quick-chips-under-the-note`)
+
+Drawn on Quick add, the surface with the least room; the full form gets the same under Description.
+
+- **A list under the field** — the session's recommendation. From the first letter, up to five rows
+  with the typed letters in bold, the most repeated first; a tap or Enter takes one; keep typing and
+  it narrows or goes away. The only shape that can carry more than the text, and the only one a
+  screen reader reads as options.
+- **The rest of the text, greyed, inside the field** — the least visible help there is, accepted
+  with Tab or → on a keyboard and a check button on a phone. It can only ever offer one answer, and
+  a phone has neither key.
+- **Chips under the field, like the tags** — nothing new to learn, but a description is a sentence
+  and a chip holds a word or two: two lines hold three or four and the rest are never offered.
+
+### What choosing a suggested description fills in (`#suggest-a-row-carries-only-the-text`, `#suggest-a-row-carries-the-last-entry`)
+
+- **Only the text.** Nothing is filled that you did not type or tap yourself — and the daily
+  purchase is three taps shorter, not one.
+- **The whole entry, filling only what is empty** — the session's recommendation. Each row is the
+  last time you recorded it — the category's tile, the description, then _Transport · $18,400 ·
+  #work · Tuesday_ and how many times. Choosing it writes the description and fills a category not
+  chosen, tags not added, and the amount only while it is still zero. Under the field one quiet line
+  says what it filled — _Category and tags from the last one_ — until you touch anything
+  (`#suggest-after-choosing-the-whole-entry`, in review with this question). In Quick add the
+  amount comes first, so the amount is always yours and the row's figure is there to compare; and
+  there it fills the category and not the tags. `#suggest-the-whole-entry-with-the-keyboard-up`
+  shows it fits a phone: five two-line rows are ~280px, under a 48px field, in the ~610px a keyboard
+  leaves.
+
+### How a tag is suggested (`#suggest-tags-the-chips-ranked`, `#suggest-tags-a-list-like-the-description`, `#suggest-tags-the-rest-greyed-plus-chips`)
+
+Tags are a different field — several short words, most of them repeated — so their answer need not
+be the description's.
+
+- **The chips it has today, ranked and capped** — the session's recommendation. Same shape, fixed
+  ranking: the tags that usually go with the chosen category and this description first, then the
+  most used, then the most recent, never the alphabetical first eight; capped to what fits in two
+  lines, the rule Quick add's category chips follow (T-151), so the row never scrolls. Typing
+  narrows the chips; Enter still adds exactly what you typed. It is the one place help shows before
+  you type, on purpose.
+- **A list under the field, like the description** — one component for both fields, but a list
+  needs a letter before it offers anything, and adding three tags is type-pick three times where
+  chips are tap-tap-tap.
+- **The rest of the tag greyed, chips before you type** — the fastest keyboard path, and two
+  mechanisms on one field with the same answer in two places.
+
+### What Quick add offers before you type (`#suggest-quick-nothing-until-you-type`, `#suggest-quick-a-row-of-what-you-repeat`)
+
+- **Nothing until you type** — the session's recommendation. The sheet opens exactly as today and
+  help exists only inside the note once you type. A person who never uses it never sees it.
+- **A row of what you repeat, before typing** — _Again_, under the amount, with the three entries you
+  record most; one tap fills amount, category and note. The shortest path there is, and a row on
+  every opening for everyone, filling an amount, ~70px taller on a phone — and the door **T-32
+  (Recurring)** is for. If he wants it, it belongs to that task.
+
+### Where else a description is typed
+
+- **The edit form** is the same form, so it takes the same suggestions; the rows come from every
+  movement but the one being edited.
+- **The review inbox's card** (`transactions.md`, _Done_) types a description for a quick entry —
+  the most repeated purchases of all — so it takes the list too, scoped to the entry's type.
+- **The Pay sheet** writes its own description and offers no field for it; nothing changes there.
+- **A group's expense form** names an outing for the people in it, rarely twice the same way, and
+  its description is required: it stays as it is until he asks for it there.
+
+### Strings, in both languages
+
+| Key                             | English                             | Spanish                           |
+| ------------------------------- | ----------------------------------- | --------------------------------- |
+| `common.suggestions` (exists)   | Suggestions                         | Sugerencias                       |
+| `common.suggestionsCount`       | {count} suggestions                 | {count} sugerencias               |
+| `common.useSuggestion`          | Use “{text}”                        | Usar «{text}»                     |
+| `common.addTag`                 | Add #{tag}                          | Añadir #{tag}                     |
+| `transactions.form.filledFrom`  | Category and tags from the last one | Categoría y tags de la última vez |
+| `transactions.form.usuallyWith` | usually with {category}             | suele ir con {category}           |
+| `transactions.quick.again`      | Again · what you record most        | Otra vez · lo que más registras   |
+
+The last two exist only if their answers are chosen.
+
+### What was premise, and was not asked
+
+- **Quick add keeps no Tags field.** Adding one is a different question; until then a suggestion
+  taken there fills what the sheet can show, the description and the category.
+- **The tags endpoint stays.** `GET /transactions/tags` remains the fallback when the copy cannot
+  answer; nothing new is asked of the backend, so this is front-only whichever answers he gives.
+- **The description is still free text**, limited to 255 characters as today; a suggestion is one
+  more way to fill it, never a constraint on it.

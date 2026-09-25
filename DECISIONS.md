@@ -5,6 +5,89 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-24 · Suggestions while typing a description or a tag come from the mirror, indexed once, never from a request (T-193)
+
+- **Context:** the owner asked on 2026-09-24 that Description and Tags suggest, while you type, from
+  the movements you already have — the ones repeated daily — on Quick add and on the full form, «como
+  el buscador de Google», without being invasive and «sin afectar el rendimiento de la app por ningún
+  motivo». The shape is his to choose and is drawn four ways in `design/spec/screens/add.md`
+  ("Suggestions while you type"); the structure below holds for every answer, and it is what says the
+  feature is feasible on the terms he set. Today Tags get up to eight alphabetical chips from
+  `GET /transactions/tags`, which `readTransactionTags` answers through `read()` — the mirror once
+  its first pull has drained, `getAll` over every live movement, at most once every five minutes
+  (`useTagsQuery`'s `staleTime`) — matched by any part of the tag; Description has nothing.
+- **Decision — the source is the mirror and only the mirror**, through `ownVault()`, the way the
+  download reads it (T-188). No endpoint is added and no request is ever sent by a keystroke: a
+  request per keystroke is the one thing the constraint forbids, `/transactions` has no search
+  parameter on the server, and the whole history is already on the device with the queued writes
+  projected in, so the copy knows what was recorded a minute ago offline. With no copy that can
+  answer, Description has no suggestions and Tags keep the single `GET /transactions/tags` they have.
+- **Decision — one in-memory index per user, built once, off the typing path.**
+  - `lib/local/suggest/index.ts` is pure: `buildSuggestIndex(rows)` folds live rows into
+    `Map<normalizedDescription, { text, count, lastAt, type, categoryId, amount, tags }>` (the latest
+    row wins the category, amount and tags) and `Map<tag, { count, lastAt, byCategory }>`, then sorts
+    every **word start** of every description into one array, so `suggestDescriptions(index, type,
+query, 5)` is a binary search plus a scan of the matching run, and `suggestTags(index, { categoryId,
+description }, query, limit)` ranks by co-occurrence with the description and the category, then
+    count, then recency, matching a tag at its start or after a hyphen — which retires `TagsInput`'s
+    any-part `includes` match, a change to a field that ships today and is said in the spec.
+    Normalisation is NFD without combining marks, lower-cased, trimmed. The names are the shape, not
+    a contract: the implementation is free to rename them.
+  - `lib/local/suggest/store.ts` holds one index per `userId`, built the first time a field that
+    suggests mounts and the mirror can answer: `requestIdleCallback` (`setTimeout` where absent),
+    reading the `dateCursor` index newest first in the 1,000-row keyset batches T-188 specified, one
+    short IndexedDB transaction per batch, yielding between them, **stopping at 20,000 live rows** —
+    fifty-five a day for a year, and a bound that keeps a ten-year history from costing more than a
+    one-year one. A write to the outbox, a pull page or a mirror reset marks the index stale; it is
+    rebuilt on the next idle moment, not on the write, because bookkeeping every projected row is more
+    machinery than a rebuild that costs what is measured below. `wipe`, logout and a mirror reset drop
+    it. **Two pieces are new machinery**, named so they are not mistaken for something that exists:
+    nothing in the app uses `requestIdleCallback` today, and `lib/local` has no "the mirror changed"
+    signal — only the clock, the outbox status and the `synced` listeners — so the stale mark hangs off
+    the outbox status listener and the end of `applyPage` in `pull.ts`, one line each.
+  - **Estimated on synthetic data, pure part, Node 24 on the development machine** — rows already in
+    memory, descriptions drawn from a 30-word vocabulary (so far fewer distinct descriptions than real
+    use, and the word-start array grows with distinct × words; the 100,000-row line, with 5,484
+    distinct, is the closest to a real ledger), lookups averaged over 10,000. The script is not kept:
+    the implementation's own test fixture measures the real thing, and these figures only say the
+    approach is not in the wrong order of magnitude.
+
+    | Rows    | Distinct descriptions | Build | Lookup  | Memory |
+    | ------- | --------------------- | ----- | ------- | ------ |
+    | 20,000  | 1,380                 | 9 ms  | 0.01 ms | 0.3 MB |
+    | 50,000  | 1,990                 | 16 ms | 0.01 ms | 0.5 MB |
+    | 100,000 | 5,484                 | 36 ms | 0.04 ms | 1.3 MB |
+
+    The IndexedDB read is the larger cost and is the one sliced and capped; it is the same read the
+    tags already pay whole every five minutes, paid once per session here instead. A phone is slower than this
+    machine by a small factor, which is why the build is in slices and idle and never awaited by a
+    render: a keystroke before the index exists shows nothing, with no spinner.
+
+  - **On the screen:** `components/ui/Suggestions` (design component 36) is a `listbox` owned by the
+    field's `combobox`; the query goes through `useDeferredValue`, so a fast typist never queues
+    renders behind lookups that cost a hundredth of a millisecond anyway; no debounce, no timer.
+    `TagsInput` keeps its chips and takes a ranked, capped list instead of the alphabetical eight;
+    which of the drawn shapes each field gets is the owner's answer.
+  - **Size:** `QuickAddSheet` is mounted by the app frame, so anything it imports lands on **every**
+    app screen, and the route the 220 kB gz budget bites is the heaviest one — `shared/groups/[id]`
+    at 217.0 kB on the build on disk (`node tools/size-limit.mjs`, 2026-09-24; `/transactions/new`
+    is 206.5). So the component and the index module load lazily, on the first focus of a field that
+    suggests (`next/dynamic`, the way the sheets already defer what only opens on demand), and the
+    frame's weight does not move. The lazy chunk is estimated at 2–3 kB gz and measured at
+    implementation; if the gate still says no, T-184 (translations per page) goes first.
+- **Alternatives rejected:** a server endpoint queried as you type (a request per keystroke, a
+  backend task, dead offline, and exactly the cost he ruled out); reading `getAll` into React Query
+  as the tags do today (48,000 rows read again every five minutes, with nothing kept between reads,
+  which is what this replaces); a Web Worker like the export's (the pure work is 36 ms sliced in idle time — kept as the
+  fallback if a low-end phone measures otherwise, since the batch reader is the worker's already);
+  `<datalist>` (no ranking, no meta rows, no control of when it opens, inconsistent across browsers,
+  invisible to the design).
+- **Consequence:** front only, whichever shapes he picks. No new data leaves the device. Every field
+  that suggests keeps working with the index absent, so a failure to build it is invisible by design
+  and must be reported to Sentry rather than shown. The implementation lands under T-193 once he has
+  chosen; it starts with the failing tests for the pure index (ranking, scoping by type, word-start
+  matching without accents, the 20,000-row cap) and a `size-limit` run.
+
 ## 2026-09-24 · The BFF keeps a device cookie so nobody can lock you out of Sign in (T-176)
 
 - **Context:** the backend counted failed sign-ins per email alone, so ten wrong passwords typed by

@@ -197,6 +197,16 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     never as a stripped-down copy. The box is a real `input[type=checkbox]` visually replaced by the 20px square, the whole
     row is its `<label>`, and its accessible name is the row's own title and metadata. The footer button
     counts what is selected and adds up their amounts, and nothing is selected by a scroll.
+36. **Suggestions (`suggest`)** — a list attached under a text field, opened by typing and never before
+    (drawn for T-193; which fields take it is waiting on the owner). Up to five 44px rows — 56px when a
+    row carries a category tile and a meta line — with the typed letters in bold, the first row
+    highlighted in `--surface-2`, and a count in `--text-3` on the right. It is a `listbox` owned by the
+    field, which becomes a `combobox` with `aria-autocomplete="list"`, `aria-expanded` and
+    `aria-activedescendant`: ↓ ↑ move, Enter takes the highlighted row, Escape closes, and Enter with
+    nothing highlighted does what the field does without a list. On a phone it is in the flow, between the field and the keyboard, and the sheet or the page scrolls to keep both in view; from 600px up it floats over what is under the field, so a form never jumps while you type; it never covers the field, and it
+    never says _no results_ — it is simply not there. Two shapes drawn beside it and not recommended: the
+    rest of the text greyed inside the field (`ghost`, accepted with Tab, → or a check button), and
+    chips under the field, which Tags already use.
 
 **Every chart obeys the same contract**, and every shape has exactly one implementation: a slot — a
 bar, a cell, a column, a pair — carries its name and its amount as its accessible name (a position on
