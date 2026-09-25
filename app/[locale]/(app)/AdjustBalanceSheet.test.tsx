@@ -343,7 +343,7 @@ function routeEditing(write: () => Response) {
 
 const writes = () => fetchMock.mock.calls.filter(([, init]) => (init?.method ?? "GET") !== "GET");
 
-async function renderEditing(row: Transaction = adjustment) {
+async function renderEditing(row: Transaction = adjustment, currency = "COP") {
   const onClose = vi.fn();
   renderWithProviders(
     <QueryProvider>
@@ -351,6 +351,7 @@ async function renderEditing(row: Transaction = adjustment) {
         <EditAdjustmentSheet adjustment={row} open onClose={onClose} />
       </ToastProvider>
     </QueryProvider>,
+    { currency },
   );
   await screen.findByText(/Recorded on/);
   return { onClose };
@@ -439,6 +440,45 @@ describe("AdjustBalanceSheet, editing one", () => {
     await userEvent.type(amount, "150000");
     expect(screen.queryByText(/cannot be paid more than/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled();
+  });
+
+  it("lets a loan with cents be paid off to the cent from the editing sheet [T-158]", async () => {
+    const loan: Account = {
+      ...account,
+      id: "loan",
+      name: "Car loan",
+      type: "LOAN",
+      balance: -0.36,
+      borrowedAmount: 1_000,
+      currency: "USD",
+    };
+    const paid: Transaction = {
+      ...adjustment,
+      id: "t9",
+      amount: 0.1,
+      currency: "USD",
+      countsAsYours: 0.1,
+      fromAccountId: null,
+      toAccountId: "loan",
+    };
+    fetchMock.mockImplementation((input, init) =>
+      Promise.resolve(
+        (init?.method ?? "GET") === "GET" && urlOf(input).includes("/api/accounts/")
+          ? json(loan)
+          : json(paid),
+      ),
+    );
+    await renderEditing(paid, "USD");
+
+    const amount = screen.getByRole("textbox", { name: "Amount" });
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "0.46");
+    expect(screen.queryByText(/cannot be paid more than/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled();
+
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "0.47");
+    expect(screen.getByText(/cannot be paid more than/)).toBeVisible();
   });
 
   it("turns a decrease into an increase by moving the side, not the amount", async () => {

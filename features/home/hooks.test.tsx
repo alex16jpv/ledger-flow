@@ -100,4 +100,17 @@ describe("home", () => {
     expect(budgetStatus(budgets[2]!, now)).toEqual({ kind: "warn", percent: 93, daysLeft: 8 });
     expect(budgetStatus(budgets[3]!, now)).toEqual({ kind: "over", by: 56_000 });
   });
+
+  it("says what is left or over in cents, so a budget with cents leaves no residue [T-158]", () => {
+    const now = new Date("2026-09-22T15:00:00Z");
+    const periodTo = "2026-09-30T05:00:00.000Z";
+    expect(budgetStatus({ amount: 0.3, spent: 0.1, periodTo }, now)).toEqual({
+      kind: "ok",
+      left: 0.2,
+    });
+    expect(budgetStatus({ amount: 0.1, spent: 0.3, periodTo }, now)).toEqual({
+      kind: "over",
+      by: 0.2,
+    });
+  });
 });

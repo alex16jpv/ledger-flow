@@ -5,6 +5,27 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-24 · Shared figures on the screens are added in cents where they are, not moved into `lib/local/derive` (T-158)
+
+- **Decision:** the auditor's fix for T-158 was «everything in cents and, whatever is a derived figure,
+  into `derive`». The first half is done everywhere: `sectionOf` (`features/shared/ledger.ts`) adds
+  every share, payment and guest block in minor units, each party of a group carries its own `net`,
+  and the three totals of the transactions picked for a group use `sumAmounts`. The second half is
+  not: `sectionOf` and the screens that read it stay where they are.
+- **Alternatives:** moving `net` and the tallies into `deriveShared`'s `SharedPerson`. Refused because
+  `parity.test.ts` compares `deriveShared`'s groups with `toEqual` against the backend's own fixtures,
+  and the backend answers no `net` and no per-person tallies: adding them there would either break
+  the parity check or make the fixtures carry figures the server never computes. `deriveShared` stays
+  the projection of what the server would answer (invariant 2); `sectionOf` is what a screen draws
+  from it.
+- **Consequence:** there are two places where Shared money is added, both in minor units: `deriveShared`
+  (checked against the server) and `sectionOf` with `settle.ts` (checked by their own tests). The same
+  sweep put what is left or over of a budget, the day net of Transactions, the savings tile of Home
+  and the loan guard of the editing adjustment sheet in cents too; the last one was a visible bug: a
+  loan left at -0.36 by a 0.10 payment could not have that payment edited to 0.46, which pays it off
+  to the cent, because the sheet said it was more than the loan owed. The same sweep made the picker
+  that asks who to settle with show what its sheet settles, surplus included, as the design says.
+
 ## 2026-09-24 · Suggestions while typing a description or a tag come from the mirror, indexed once, never from a request (T-193)
 
 - **Context:** the owner asked on 2026-09-24 that Description and Tags suggest, while you type, from

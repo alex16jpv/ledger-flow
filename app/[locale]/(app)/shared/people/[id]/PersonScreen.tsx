@@ -133,13 +133,11 @@ function PersonBody({
                   </RowBody>
                   <RowRight
                     sub={t(
-                      person.owesYou >= person.youOwe
-                        ? "shared.people.owesYouWord"
-                        : "shared.people.youOweWord",
+                      person.net >= 0 ? "shared.people.owesYouWord" : "shared.people.youOweWord",
                     )}
                   >
                     <Projected when={partyPending(pending, group.group.id, person.key)}>
-                      <Amount value={Math.abs(person.owesYou - person.youOwe)} signed={false} />
+                      <Amount value={Math.abs(person.net)} signed={false} />
                     </Projected>
                   </RowRight>
                 </Link>

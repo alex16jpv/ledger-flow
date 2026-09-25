@@ -6,6 +6,7 @@ import { Amount } from "@/components/ui/Amount";
 import { Card } from "@/components/ui/Card";
 import { Projected } from "@/components/ui/Projected";
 import { Stat } from "@/components/ui/Stat";
+import { fromCents, toCents } from "@/lib/local/derive/money";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 
 interface StatsRowProps {
@@ -58,7 +59,11 @@ export function StatsRow({ have, owe, accountCount, income, spent }: StatsRowPro
           label={t("estimatedSavings")}
           value={
             <Projected when={outbox.projected.spending}>
-              <Amount value={income - spent} signed={false} size="lg" />
+              <Amount
+                value={fromCents(toCents(income) - toCents(spent))}
+                signed={false}
+                size="lg"
+              />
             </Projected>
           }
           delta={{ direction: "flat", label: t("incomeMinusSpending") }}

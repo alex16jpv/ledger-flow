@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { List, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Sheet } from "@/components/ui/Sheet";
 import type { GroupView, PartyView, SharedSection } from "@/features/shared/ledger";
-import { settleParty } from "@/features/shared/settle";
+import { settleableAmount, settleParty } from "@/features/shared/settle";
 
 import { SettleUpSheet } from "./SettleUpSheet";
 
@@ -42,29 +42,30 @@ export function SettleUpFlow({
       <Sheet layout="full" open onClose={onClose} title={t("group.whoToSettle")}>
         <Card flush>
           <List>
-            {parties.map((one) => (
-              <RowButton
-                key={one.key}
-                onClick={() => {
-                  setChosen(one);
-                }}
-              >
-                <Avatar name={one.name} color={one.color} />
-                <RowBody>
-                  <RowTitle>
-                    <span>{one.name}</span>
-                  </RowTitle>
-                  <RowMeta
-                    items={[
-                      t(one.owesYou >= one.youOwe ? "people.owesYouWord" : "people.youOweWord"),
-                    ]}
-                  />
-                </RowBody>
-                <RowRight>
-                  <Amount value={Math.abs(one.owesYou - one.youOwe)} signed={false} />
-                </RowRight>
-              </RowButton>
-            ))}
+            {parties.map((one) => {
+              const party = settleParty(section, view, one);
+              return (
+                <RowButton
+                  key={one.key}
+                  onClick={() => {
+                    setChosen(one);
+                  }}
+                >
+                  <Avatar name={one.name} color={one.color} />
+                  <RowBody>
+                    <RowTitle>
+                      <span>{one.name}</span>
+                    </RowTitle>
+                    <RowMeta
+                      items={[t(party.net >= 0 ? "people.owesYouWord" : "people.youOweWord")]}
+                    />
+                  </RowBody>
+                  <RowRight>
+                    <Amount value={settleableAmount(party)} signed={false} />
+                  </RowRight>
+                </RowButton>
+              );
+            })}
           </List>
         </Card>
       </Sheet>
