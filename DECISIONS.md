@@ -5,6 +5,53 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-25 · The currency and time-zone lists are built only in the browser (found in T-184)
+
+- **What broke:** `CurrencyPicker` and `TimeZonePicker` rendered their whole option list into the
+  server HTML, inside the closed sheet, from `Intl.supportedValuesOf` and the zone offsets of the
+  runtime. The server's Node and the browser do not share that data (Node listed SLE, XCG and ZWG,
+  which Chromium does not, and gave Casablanca GMT+0 where Chromium gives GMT+1), so `/register`
+  failed hydration (React #418) and was rendered again on the client; Settings uses the same two
+  pickers. For a moment the page held both copies of the form, which is how an e2e test that
+  filled Email caught it.
+- **Decision:** both lists are empty until `useMounted()` says the component runs in the browser,
+  the way `useDeviceDefaults` already treats the device's data. The sheet only opens on a press,
+  so nothing visible changes, and the server HTML no longer carries a few hundred options.
+
+## 2026-09-25 · Each segment sends the client only the message namespaces its client code reads (T-184)
+
+- **What was wrong:** the root layout rendered `NextIntlClientProvider` without `messages`, so every
+  document carried the whole catalogue (28.0 kB gz in English, 29.7 in Spanish) in its flight data:
+  the landing, the legal pages and the access flow too, whose client code reads almost none of it.
+- **Decision:** `ScopedIntlProvider` (`lib/i18n`) wraps each layout that owns a client tree — the
+  `[locale]` root, `(auth)`, `(auth)/onboarding`, `(app)` and `dev` — and hands the client
+  `pickMessages` of the catalogue for its entry in `MESSAGE_SCOPES`. A nested provider replaces
+  its parent's messages. Server Components still read the whole catalogue through
+  `getRequestConfig`. The root sends only `public.error` (its `error.tsx`); sign-in and sign-up send
+  5 namespaces, onboarding 12 and the app 23 of the 25. `lib/i18n/scopes.test.ts` parses every
+  source with the TypeScript compiler, follows the imports (dynamic ones included) from each
+  segment's files into the `"use client"` graph, and requires each scope to be exactly what that
+  graph reads: a `useTranslations("x.y")` argument, or any `"<namespace>.…"` literal in the segment
+  (server files included, `getTranslations` arguments excluded) once a client file calls
+  `useTranslations()` without a namespace. A namespace passed as a variable, an aliased or namespace
+  import of `next-intl`, `useMessages`, `useExtracted`, and an import it cannot follow all fail it.
+  What it cannot see is a key assembled with no literal `"<namespace>."` in it; the e2e `context`
+  fixture fails any test whose browser logs `MISSING_MESSAGE` (pages from a `browser.newContext()`
+  are not watched).
+- **Measured** (HTML of a local production build, gz): `/` 43.1 → 13.3 kB, `/es` 44.9 → 13.4,
+  `/login` 36.1 → 13.7, `/register` 45.6 → 15.3 (with the pickers' lists out, entry above),
+  `/privacy` 36.1 → 6.3, `/onboarding` 20.8; the app screens 39.9 → 38.1. **The JS budget does not
+  move** (the heaviest app screen stays at 220.0 kB gz): the catalogue never was in a client chunk,
+  and `size-limit` measures chunks.
+- **Alternatives:** one provider per app module (`/shared`, `/transactions`…) would cut an app
+  document to 17–24 kB, but since a nested provider replaces the messages, every module would repeat
+  what the frame already sends, and a soft navigation into another module would download its slice
+  again, where today it downloads none; the installed app serves its documents from the worker's
+  cache, so the saving would land where it matters least. Onboarding does get its own segment: it is
+  visited once, and without it sign-in would carry its 12 namespaces. A client provider merging over
+  its parent's messages would avoid the repetition but has to re-pass every other part of the config
+  by hand. Hand-kept lists with no check were rejected: a missing namespace only shows as a raw key.
+
 ## 2026-09-25 · A waiting version is a stripe that stays, comes back, and is looked for on every return (T-196)
 
 - **What broke:** the new-version notice was a toast with the default five seconds, a Saved replaced
@@ -128,7 +175,8 @@ description }, query, limit)` ranks by co-occurrence with the description and th
     is 206.5). So the component and the index module load lazily, on the first focus of a field that
     suggests (`next/dynamic`, the way the sheets already defer what only opens on demand), and the
     frame's weight does not move. The lazy chunk is estimated at 2–3 kB gz and measured at
-    implementation; if the gate still says no, T-184 (translations per page) goes first.
+    implementation; if the gate still says no, T-184 (translations per page) goes first. (T-184 later
+    showed the catalogue is not in the JS this budget measures: scoping it frees nothing here.)
 - **Alternatives rejected:** a server endpoint queried as you type (a request per keystroke, a
   backend task, dead offline, and exactly the cost he ruled out); reading `getAll` into React Query
   as the tags do today (48,000 rows read again every five minutes, with nothing kept between reads,

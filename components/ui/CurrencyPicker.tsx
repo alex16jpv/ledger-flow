@@ -10,6 +10,7 @@ import { Tile } from "@/components/ui/Tile";
 import { currencyName, listCurrencies } from "@/lib/format/currency";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { iconProps } from "@/lib/icons/sizes";
+import { useMounted } from "@/lib/react/useMounted";
 
 interface CurrencyPickerProps {
   value: string | null;
@@ -29,13 +30,16 @@ export function CurrencyPicker({
   const t = useTranslations("auth.register");
   const { formatLocale } = useFormatSettings();
   const [open, setOpen] = useState(false);
+  const mounted = useMounted();
   const options = useMemo<PickerOption<string>[]>(
     () =>
-      listCurrencies().map((code) => ({
-        value: code,
-        label: `${code} · ${currencyName(code, formatLocale)}`,
-      })),
-    [formatLocale],
+      mounted
+        ? listCurrencies().map((code) => ({
+            value: code,
+            label: `${code} · ${currencyName(code, formatLocale)}`,
+          }))
+        : [],
+    [mounted, formatLocale],
   );
   return (
     <>

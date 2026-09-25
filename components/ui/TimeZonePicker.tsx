@@ -10,6 +10,7 @@ import { Tile } from "@/components/ui/Tile";
 import { listTimeZones, timeZoneCity, timeZoneOffsetLabel } from "@/lib/format/timezone";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { iconProps } from "@/lib/icons/sizes";
+import { useMounted } from "@/lib/react/useMounted";
 
 interface TimeZonePickerProps {
   value: string | null;
@@ -22,14 +23,17 @@ export function TimeZonePicker({ value, onChange, label, hint }: TimeZonePickerP
   const t = useTranslations("auth.register");
   const { formatLocale } = useFormatSettings();
   const [open, setOpen] = useState(false);
+  const mounted = useMounted();
   const options = useMemo<PickerOption<string>[]>(
     () =>
-      listTimeZones().map((zone) => ({
-        value: zone,
-        label: zone,
-        description: `${timeZoneCity(zone)} · ${timeZoneOffsetLabel(zone, formatLocale)}`,
-      })),
-    [formatLocale],
+      mounted
+        ? listTimeZones().map((zone) => ({
+            value: zone,
+            label: zone,
+            description: `${timeZoneCity(zone)} · ${timeZoneOffsetLabel(zone, formatLocale)}`,
+          }))
+        : [],
+    [mounted, formatLocale],
   );
   return (
     <>

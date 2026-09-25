@@ -3,7 +3,7 @@ import "../globals.css";
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { hasLocale, NextIntlClientProvider } from "next-intl";
+import { hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
@@ -11,6 +11,7 @@ import { geistMono, geistSans } from "@/app/fonts";
 import { Analytics } from "@/lib/analytics/Analytics";
 import { env } from "@/lib/env";
 import { routing } from "@/lib/i18n";
+import { ScopedIntlProvider } from "@/lib/i18n/ScopedIntlProvider";
 import { DEFAULT_PALETTE } from "@/lib/theme";
 
 interface LocaleLayoutProps {
@@ -60,7 +61,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
         <script async src="/viewport-init.js" nonce={nonce} />
       </head>
       <body>
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <ScopedIntlProvider scope="root">{children}</ScopedIntlProvider>
         <Analytics />
       </body>
     </html>

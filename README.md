@@ -247,7 +247,8 @@ answers 404 before anything renders — `npm run check-dev-routes` proves it on 
   the heartbeat confirms the network is there, so an offline device files nothing.
 - **Add copy:** every user-visible string is a key in `messages/en.json` and `messages/es.json`,
   nested by feature (`transactions.list.empty.title`). Use ICU plurals and rich tags; never
-  concatenate fragments.
+  concatenate fragments. Client code gets only the namespaces its segment lists in
+  `MESSAGE_SCOPES` (`lib/i18n/scopes.ts`); `lib/i18n/scopes.test.ts` says what to add or remove.
 
 ## Working rules
 
