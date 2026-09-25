@@ -5,6 +5,39 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-25 · A waiting version is a stripe that stays, comes back, and is looked for on every return (T-196)
+
+- **What broke:** the new-version notice was a toast with the default five seconds, a Saved replaced
+  it, and it was raised only when a worker reached `installed` while the page watched. A worker that
+  was already waiting when the app opened was never announced, and nothing asked for a new one: the
+  browser checks on full loads or once a day, and an installed app coming back from the background
+  does neither. The app stayed on the old version, silent, until the phone killed it.
+- **Decision:** the owner chose the stripe and a notice that can be closed and comes back
+  (`design/spec/decisions.md`, 2026-09-25). `lib/pwa/update.ts` holds `none | shown | dismissed`
+  with the same `useSyncExternalStore` shape as the other stores; `ConnectionBanner` paints it between `error` and `pending`, and before `localOnly` (a mode that lasts until the user leaves it would hide it for good; ✕ gives the slot back and moves the focus to `main`), and Settings › Version reads it too. `registerServiceWorker` also
+  reports `registration.waiting` at start, so every launch with a waiting version shows it again.
+  `checkForUpdatesOnReturn` listens to `visibilitychange`: every return to `visible` brings a closed
+  notice back, and at most once every `UPDATE_CHECK_INTERVAL_MS` (five minutes) calls `registration.update()`; a failure is reported under the `worker` scope unless the device is offline, where the check can only fail and the next return asks again. A notice that comes back is not re-checked against `registration.waiting`: a tab whose worker another tab already activated still runs the old code and still needs its Reload. If the lazy module cannot load, `applyUpdate()` reports it and reloads rather than leave a dead button.
+  The three live in `lib/pwa/registration.ts`, which nothing imports statically: `ServiceWorkerUpdates`
+  loads it inside its effect and `applyUpdate()` (the stripe's and Settings' Reload) loads it on the
+  press, because the app screens were at 219.7 of 220 kB gz (T-184) and registering a worker is never
+  needed to paint one; with it split out the heaviest is 219.9. `activateWaitingWorker` reloads
+  straight away when there is no waiting worker any more (another tab
+  pressed Reload first and the new one already controls this page), where it used to wait for a
+  `controllerchange` that had already happened; the listener is attached before `SKIP_WAITING` is sent.
+- **Alternatives:** a periodic timer (it wakes a phone in the background for nothing, rule 24); a
+  check on every return with no interval (one request per app switch); `focus` as well as
+  `visibilitychange` (on a desktop, clicking back into the window would bring a closed notice back
+  every time). Reloading the other tabs on `controllerchange` was not done: the app never reloads on
+  its own, and those tabs keep their stripe, whose Reload now works.
+- **Consequence:** the e2e build still installs no worker, so the flow is covered by unit tests of
+  the store, of `registration.ts` against a fake container, of the stripe and of the Settings row.
+  It was also run once for real on a local production build: a changed `sw-gate.js` raised the stripe,
+  it outlived six seconds, ✕ and a return brought it back, a second tab showed it at start with the
+  Settings row, Reload there activated the worker, and Reload in the first tab reloaded with nothing
+  left waiting. The `pwa` message namespace is gone with the
+  toast.
+
 ## 2026-09-24 · Shared figures on the screens are added in cents where they are, not moved into `lib/local/derive` (T-158)
 
 - **Decision:** the auditor's fix for T-158 was «everything in cents and, whatever is a derived figure,
@@ -2039,7 +2072,8 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   as network-only, since data lives in React Query's cache. No inline registration script (it could
   not carry the CSP nonce): `ServiceWorkerUpdates`, inside the authenticated frame and only in
   production, registers `/sw.js`, watches for a waiting worker and shows the "New version available ·
-  Reload" toast, which activates it and reloads.
+  Reload" toast, which activates it and reloads. _(The toast became a stripe that does not expire on
+  2026-09-25, T-196.)_
 - **Icons are generated, not drawn by hand.** `lib/pwa/brand-icon.tsx` renders the mark with `next/og`
   for the favicon, the Apple touch icon and the 192/512 manifest icons; `?maskable=1` pads the mark
   into the safe zone. The manifest and the icon renderer carry literal brand colors (manifests and

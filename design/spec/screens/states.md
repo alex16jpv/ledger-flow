@@ -46,8 +46,15 @@ server fails and when something has to be confirmed.
   not reachable without moving that boundary, and the public 404 is what answers. **A well-formed id
   the app does not know is not this state:** it renders its screen and its own error, which is what
   lets the copy on the device answer with no network.
-- **New version available** (`#new-version`): when a new service worker is waiting, a toast, "New
-  version available", with the action "Reload". It never reloads on its own.
+- **New version available** (`#new-version`, T-196, owner's choice of 2026-09-25): when a new service
+  worker is waiting, a **blue stripe** in the slot of the sync stripes ([sync-stripes.md](sync-stripes.md),
+  state `update`): `cloud-download`, "**A new version of Ledger Flow is ready.**" and "Reloading takes a
+  second. Nothing you saved is lost.", with **Reload** and a **✕** ("Not now"). It does not expire and no toast replaces it. On a device working on this device only it goes before that stripe, which never goes away on its own. The ✕ puts it away until the app is next opened or comes back to the screen (from
+  another app, another tab, the lock screen) for as long as that screen still runs the older version; meanwhile Settings ›
+  Version says so and has its own Reload ([settings.md](settings.md)). Coming back also looks for a new
+  version, so a phone that never reloads the app still finds one. It never reloads on its own. Until
+  T-196 it was a five-second toast, which a Saved replaced and which was never shown again: the
+  alternatives are on `variants.html`.
 - **Toast:** confirms every save, five seconds, with "Undo" where the backend can revert it (create →
   `DELETE`; make main → back to the previous one); no undo on deletions.
 - **429:** a `warning` alert with a countdown; in sign-in and sign-up it disables the button.

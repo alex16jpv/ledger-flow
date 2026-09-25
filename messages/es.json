@@ -323,6 +323,8 @@
     "import": "Importar desde tu banco",
     "about": "Acerca de",
     "version": "Ledger Flow · {version}",
+    "versionTitle": "Versión",
+    "versionUpdate": "Ledger Flow · {version} · hay una versión nueva",
     "signOut": "Cerrar sesión",
     "deleteAccount": "Eliminar mi cuenta",
     "yourData": {
@@ -692,6 +694,12 @@
       "title": "Estás trabajando solo en este dispositivo.",
       "body": "{count, plural, =0 {No se está enviando nada al servidor.} =1 {# cambio guardado aquí.} other {# cambios guardados aquí.}}",
       "action": "Iniciar sesión para sincronizar"
+    },
+    "update": {
+      "title": "Hay una versión nueva de Ledger Flow.",
+      "body": "Recargar tarda un segundo. No se pierde nada de lo que guardaste.",
+      "reload": "Recargar",
+      "dismiss": "Ahora no"
     }
   },
   "dev": {
@@ -2290,9 +2298,5 @@
       "body": "La página no pudo cargar. Tus datos están a salvo; inténtalo en un momento.",
       "retry": "Reintentar"
     }
-  },
-  "pwa": {
-    "updateAvailable": "Hay una versión nueva",
-    "reload": "Recargar"
   }
 }

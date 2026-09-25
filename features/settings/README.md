@@ -11,7 +11,9 @@ password; a credential change asks for the current password and signs this devic
 new pair, because the API revokes every refresh token), `SessionsView` (`/settings/sessions`: one row
 per device from the user agent, sign out one, or every device with a confirmation that warns this one
 goes too), the "Your data" section (rights under Law 1581, contact mailbox, policy link), the
-"Install app" row (`beforeinstallprompt`), About with the version, and `DeleteAccountSheet` (the current
+"Install app" row (`beforeinstallprompt`), About with the Version row — which, while a new version is
+waiting (`lib/pwa/update.ts`), says so and carries its own Reload, so closing the stripe never hides it
+(T-196) — and `DeleteAccountSheet` (the current
 password is the confirmation and goes as `currentPassword` in `DELETE /users/:id`, so a stolen session
 cannot delete the account; a wrong one is an error under the field; then sign out to
 `/login?deleted=1`).

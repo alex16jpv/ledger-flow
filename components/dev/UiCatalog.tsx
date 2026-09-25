@@ -159,6 +159,7 @@ const SEGMENT_OPTIONS = [
 export function UiCatalog() {
   const t = useTranslations("dev");
   const tc = useTranslations("common");
+  const tStates = useTranslations("states");
   const tColors = useTranslations("colors");
   const charts = useTranslations("charts");
   const dates = useDates();
@@ -530,6 +531,13 @@ export function UiCatalog() {
               variant="error"
               title={t("sample.offline")}
               action={{ label: tc("retry"), onClick: () => undefined }}
+            />
+            <Banner
+              variant="update"
+              title={tStates("update.title")}
+              body={tStates("update.body")}
+              action={{ label: tStates("update.reload"), onClick: () => undefined }}
+              dismiss={{ label: tStates("update.dismiss"), onClick: () => undefined }}
             />
           </div>
         </Section>

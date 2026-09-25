@@ -323,6 +323,8 @@
     "import": "Import from your bank",
     "about": "About",
     "version": "Ledger Flow · {version}",
+    "versionTitle": "Version",
+    "versionUpdate": "Ledger Flow · {version} · a new version is ready",
     "signOut": "Sign out",
     "deleteAccount": "Delete my account",
     "yourData": {
@@ -692,6 +694,12 @@
       "title": "You’re working on this device only.",
       "body": "{count, plural, =0 {Nothing is being sent to the server.} =1 {# change is saved here.} other {# changes are saved here.}}",
       "action": "Sign in to sync"
+    },
+    "update": {
+      "title": "A new version of Ledger Flow is ready.",
+      "body": "Reloading takes a second. Nothing you saved is lost.",
+      "reload": "Reload",
+      "dismiss": "Not now"
     }
   },
   "dev": {
@@ -2290,9 +2298,5 @@
       "body": "The page could not load. Your data is safe; try again in a moment.",
       "retry": "Try again"
     }
-  },
-  "pwa": {
-    "updateAvailable": "New version available",
-    "reload": "Reload"
   }
 }

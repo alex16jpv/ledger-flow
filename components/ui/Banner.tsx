@@ -1,11 +1,19 @@
-import { CircleAlert, CloudAlert, CloudCheck, LogIn, WifiOff } from "lucide-react";
+import {
+  CircleAlert,
+  CloudAlert,
+  CloudCheck,
+  CloudDownload,
+  LogIn,
+  WifiOff,
+  X,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 import { iconProps } from "@/lib/icons/sizes";
 
 import { cn } from "./cn";
 
-export type BannerVariant = "offline" | "online" | "error" | "signedout" | "blocked";
+export type BannerVariant = "offline" | "online" | "error" | "signedout" | "blocked" | "update";
 
 const VARIANT: Record<BannerVariant, string> = {
   offline:
@@ -15,6 +23,7 @@ const VARIANT: Record<BannerVariant, string> = {
   signedout:
     "bg-warning-soft text-warning border-b-[color-mix(in_oklab,var(--warning)_25%,transparent)]",
   blocked: "bg-danger-soft text-danger",
+  update: "bg-info-soft text-info",
 };
 
 const ICON: Record<BannerVariant, typeof WifiOff> = {
@@ -23,6 +32,7 @@ const ICON: Record<BannerVariant, typeof WifiOff> = {
   error: CircleAlert,
   signedout: LogIn,
   blocked: CloudAlert,
+  update: CloudDownload,
 };
 
 export interface BannerAction {
@@ -35,10 +45,11 @@ export interface BannerProps {
   title: ReactNode;
   body?: ReactNode;
   action?: BannerAction | readonly BannerAction[];
+  dismiss?: { label: string; onClick: () => void };
   className?: string;
 }
 
-export function Banner({ variant, title, body, action, className }: BannerProps) {
+export function Banner({ variant, title, body, action, dismiss, className }: BannerProps) {
   const Icon = ICON[variant];
   // What needs the user, not what is merely true: a refusal and a queue an update left behind.
   const alerting = variant === "error" || variant === "blocked";
@@ -68,6 +79,16 @@ export function Banner({ variant, title, body, action, className }: BannerProps)
           {entry.label}
         </button>
       ))}
+      {dismiss && (
+        <button
+          type="button"
+          onClick={dismiss.onClick}
+          aria-label={dismiss.label}
+          className="-my-2 -mr-2.5 inline-flex size-(--tap) shrink-0 items-center justify-center rounded-full opacity-85 hover:opacity-100"
+        >
+          <X {...iconProps("sm")} />
+        </button>
+      )}
     </div>
   );
 }

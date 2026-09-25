@@ -1,6 +1,6 @@
 import { ApiError, NetworkError } from "@/lib/api/errors";
 
-export type ReportScope = "api" | "network" | "boundary" | "vault" | "session";
+export type ReportScope = "api" | "network" | "boundary" | "vault" | "session" | "worker";
 
 export interface ErrorReport {
   scope: ReportScope;

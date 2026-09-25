@@ -10,6 +10,9 @@ import { syncedStore } from "@/lib/local/outbox/synced";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { connectivityStore } from "@/lib/network/connectivity";
 import { localOnlyStore } from "@/lib/network/local-only";
+import { applyUpdate, dismissUpdate, updateStore } from "@/lib/pwa/update";
+
+import { MAIN_ID } from "./AppShell";
 
 const SyncConflictSheet = dynamic(() =>
   import("./SyncConflictSheet").then((module) => module.SyncConflictSheet),
@@ -61,10 +64,33 @@ export function ConnectionBanner({ signedOut = false, onSignIn }: ConnectionBann
     localOnlyStore.getSnapshot,
     localOnlyStore.getServerSnapshot,
   );
+  const update = useSyncExternalStore(
+    updateStore.subscribe,
+    updateStore.getSnapshot,
+    updateStore.getServerSnapshot,
+  );
   const waitedForIt = useWaitedForIt(outbox.pending > 0, PENDING_GRACE_MS);
+
+  const updateStripe = (
+    <Banner
+      variant="update"
+      title={t("update.title")}
+      body={t("update.body")}
+      action={{ label: t("update.reload"), onClick: applyUpdate }}
+      dismiss={{
+        label: t("update.dismiss"),
+        onClick: () => {
+          dismissUpdate();
+          document.getElementById(MAIN_ID)?.focus();
+        },
+      }}
+    />
+  );
 
   // DESIGN §8.12 orders the stripes and only one is painted; P-32 says `localOnly` is a choice.
   if (localOnly) {
+    // T-196: this mode lasts until the user leaves it, so behind it the notice would never show.
+    if (update === "shown") return updateStripe;
     return (
       <Banner
         variant="offline"
@@ -149,6 +175,7 @@ export function ConnectionBanner({ signedOut = false, onSignIn }: ConnectionBann
       </>
     );
   }
+  if (update === "shown") return updateStripe;
   // F-72: under the grace this is the round trip of the write just made, not a wait.
   if (outbox.pending > 0 && (waitedForIt || outbox.lastError !== null)) {
     return (
