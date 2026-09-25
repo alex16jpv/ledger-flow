@@ -23,7 +23,10 @@ eyebrows:
   follows the device** (owner, 2026-09-11): on a phone or tablet, "Add Ledger Flow to your home screen
   so the browser doesn't delete what you record offline"; on a desktop, "Install Ledger Flow so the
   browser doesn't delete what you record offline" — a desktop has no home screen, and the app may not
-  call it one. Then the app's version.
+  call it one. Then **Version**, "Ledger Flow · {version}". **While a new version is waiting**
+  (`#settings-with-a-new-version`) its line reads "Ledger Flow · {version} · a new version is ready" and
+  the row carries a small primary **Reload**: the notice stripe can be closed ([states.md](states.md)
+  `#new-version`), and this row is where it is never hidden.
 
 "Sign out" (`POST /auth/logout` with the device's refresh token) and "Delete my account" in red close
 the page, with a footer carrying the version and the zone.

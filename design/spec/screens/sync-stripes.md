@@ -11,7 +11,7 @@ device and will sync when you're back online." and the counter "n changes waitin
 Amber was chosen because it already means "incomplete" everywhere in the app; red is kept for what needs
 the user.
 
-## The seven states
+## The eight states
 
 1. **`offline`** (`#offline`) — no connection. A badge on each transaction saved locally, and a toast.
 2. **`pending`** (`#waiting-with-a-connection`) — with a connection and a queue that has not drained:
@@ -42,16 +42,23 @@ the user.
    are saved here" plus the action **"Sign in to sync"**. It never says "signed out" or "nothing is
    syncing": that is `signedout`, which describes a session that died on its own.
 
+8. **`update`** (`#new-version` on [states.md](states.md)) — **blue** (`--info-soft` / `--info`), the one
+   stripe that is good news: a new version of the app is waiting. "**A new version of Ledger Flow is
+   ready.**" plus "Reloading takes a second. Nothing you saved is lost.", with **"Reload"** and a ✕ that
+   puts it away until the app is next opened or comes back to the screen. ES «**Hay una versión nueva de
+   Ledger Flow.**» + «Recargar tarda un segundo. No se pierde nada de lo que guardaste.» + «Recargar».
+
 **Priority when several apply** — only one is painted:
 
 ```
-offline → blocked → localonly → signedout → error → pending → online
+localonly → offline → blocked → signedout → error → update → pending → online
 ```
 
-With no connection nothing can even be attempted, so `offline` always wins. A queue blocked by an update
-is not fixed by signing in, so it comes next. `localonly` goes before `signedout` because it describes a
-decision the user made rather than an accident, and the two cannot coincide. With a dead session or a
-blocked queue, resolving conflicts achieves nothing yet, so both go before `error`.
+`localonly` comes first because the app then behaves exactly as it does with no network (P-32): saying
+"offline" would describe the effect and hide the decision behind it. Otherwise, with no connection
+nothing can even be attempted, so `offline` wins. A queue blocked by an update is not fixed by signing
+in, so it comes next. `localonly` and `signedout` cannot coincide. With a dead session or a
+blocked queue, resolving conflicts achieves nothing yet, so both go before `error`. `update` waits behind everything the user has to act on, and goes before `pending` and `online`, which only describe something that is resolving itself. **The one exception is `localonly`**: it lasts until the user leaves the mode, so `update` goes before it, and once closed with ✕ the slot goes back to `localonly`.
 
 ## What travels with the stripe
 

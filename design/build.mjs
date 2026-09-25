@@ -2641,22 +2641,23 @@ const settingsRow = (icon, title, meta, right = "", color = "NONE") => {
   return `<a class="row" href="#">${tile(icon, color, "sm")}<span class="body"><span class="title">${title}</span>${m}</span><span class="right" style="flex-direction:row;align-items:center;gap:8px">${right}${iconSvg("chevron-right", "sm")}</span></a>`;
 };
 
-const settings = ({ offline = false } = {}) => {
+const settings = ({ offline = false, update = false, scrolled = false } = {}) => {
   const signout = offline
     ? `<button class="btn secondary block" disabled>${iconSvg("log-out", "sm")}Sign out</button><p class="xs muted" role="status" style="text-align:center;margin:0">Signing out needs a connection: your session lives on the server.</p>`
     : `<button class="btn secondary block">${iconSvg("log-out", "sm")}Sign out</button>`;
   const banner = offline
     ? `<div class="banner offline" role="status">${iconSvg("wifi-off")}<span class="txt"><b>You’re offline.</b> Changes are saved on this device and will sync when you’re back online.<span class="sub">2 changes waiting</span></span></div>`
     : "";
-  const body = `<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px;font-size:17px">JD</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">John Doe</span><span class="small muted">john@example.com</span><span class="xs faint">Last sign-in today 8:40</span></span>${iconSvg("chevron-right", "sm")}</div>
+  const top = `<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px;font-size:17px">JD</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">John Doe</span><span class="small muted">john@example.com</span><span class="xs faint">Last sign-in today 8:40</span></span>${iconSvg("chevron-right", "sm")}</div>
 <span class="eyebrow">Preferences</span>
 <div class="list card flush">${settingsRow("globe", "Language", "App language", '<span class="small muted">English</span>', "TEAL")}${settingsRow("coins", "Currency", "Locked: you already have accounts", '<span class="badge">COP</span>', "GREEN")}${settingsRow("clock", "Time zone", "Defines your days and periods", '<span class="small muted">Bogotá</span>', "BLUE")}${settingsRow("palette", "Appearance", "Palette and mode", '<span class="small muted">Tinta · System</span>', "PURPLE")}${settingsRow("bell", "Notifications", "What reaches you, and where", "", "INDIGO")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}</div>
 <span class="eyebrow">Security</span>
-<div class="list card flush">${settingsRow("lock", "Password & email", "Requires your current password", "", "GRAY")}${settingsRow("smartphone", "Active sessions", "Sign out devices you don’t recognize", '<span class="badge">3</span>', "GRAY")}</div>
+<div class="list card flush">${settingsRow("lock", "Password & email", "Requires your current password", "", "GRAY")}${settingsRow("smartphone", "Active sessions", "Sign out devices you don’t recognize", '<span class="badge">3</span>', "GRAY")}</div>`;
+  const body = `${scrolled ? "" : top}
 <span class="eyebrow">Data</span>
 <div class="list card flush">${settingsRow("refresh-cw", "Sync status", "What this device has, and what it still owes the server", '<span class="badge warning">2</span>', "TEAL")}${settingsRow("download", "Export transactions", "Coming soon", '<span class="badge outline">soon</span>')}${settingsRow("upload", "Import from your bank", "Coming soon", '<span class="badge outline">soon</span>')}</div>
 <span class="eyebrow">About</span>
-<div class="list card flush">${settingsRow("monitor-smartphone", "Install app", "Add Ledger Flow to your home screen so the browser doesn’t delete what you record offline", "", "INDIGO")}${settingsRow("info", "Version", "Ledger Flow v0.2", "", "GRAY")}</div>
+<div class="list card flush">${settingsRow("monitor-smartphone", "Install app", "Add Ledger Flow to your home screen so the browser doesn’t delete what you record offline", "", "INDIGO")}${update ? `<div class="row" style="cursor:default">${tile("info", "GRAY", "sm")}<span class="body"><span class="title">Version</span><span class="meta">Ledger Flow v0.2 · a new version is ready</span></span><span class="right" style="flex-direction:row"><button class="btn primary sm">Reload</button></span></div>` : settingsRow("info", "Version", "Ledger Flow v0.2", "", "GRAY")}</div>
 <div class="stack-sm">${signout}<button class="btn ghost block" style="color:var(--danger)">Delete my account</button></div>
 <p class="xs faint" style="text-align:center;margin:0">Ledger Flow · v0.2 · <span class="mono">America/Bogota</span></p>`;
   return screen(body, { tab: "", side: "ajustes", title: "Settings", narrow: true, banner });
@@ -2854,10 +2855,6 @@ const state = (kind) => {
   }
   if (kind == "offline-doc") {
     return '<div class="offline-doc"><div><h1>You’re offline.</h1><p>This screen has not been opened on this device yet, so there is nothing saved to show.</p><a href="#">Try again</a></div></div>';
-  }
-  if (kind == "sw-update") {
-    const toast = `<div class="toast">${iconSvg("cloud-download")}New version available<button class="action">Reload</button></div>`;
-    return screen(settingsBodyDim() + toast, { tab: "inicio", side: "inicio", title: "Home" });
   }
   if (kind == "mov-offline") {
     const body = `<div class="empty" style="padding-top:64px">${tile("wifi-off", "NONE", "lg")}<span class="h3">You’re offline</span><p class="small muted" style="margin:0;max-width:260px">The list will load when you’re back online.</p></div>`;
@@ -4439,6 +4436,34 @@ const SUGGEST = {
     }),
 };
 const suggestVariant = (kind) => SUGGEST[kind]();
+
+// T-196 · the new-version notice, drawn over the Transactions list so what it covers is visible.
+const newVersionVariant = (kind) => {
+  if (kind === "about") return settings({ update: true, scrolled: true });
+  const close = `<button class="btn ghost icon-only sm round" aria-label="Close" style="color:inherit">${iconSvg("x", "sm")}</button>`;
+  const closable = kind !== "stripe-fixed";
+  const banner = kind.startsWith("stripe")
+    ? `<div class="banner info" role="status">${iconSvg("cloud-download")}<span class="txt"><b>A new version of Ledger Flow is ready.</b><span class="sub">Reloading takes a second. Nothing you saved is lost.</span></span><span class="actions"><button class="action">Reload</button>${closable ? close : ""}</span></div>`
+    : "";
+  const toast =
+    kind === "toast"
+      ? `<div class="toast">${iconSvg("cloud-download")}New version available<button class="action">Reload</button>${close}</div>`
+      : "";
+  const body = `<div class="list card flush"><div class="day-head"><span>Today · Tuesday 22</span><span class="amount">${money(40700, "−")}</span></div>
+${row("coffee", "BROWN", "Pergamino Coffee", "7:55 · Cash", 9800)}
+${row("utensils", "ORANGE", "Lunch", "13:05 · Bancolombia", 12500)}
+${row("car", "BLUE", "Uber to work", "18:10 · Visa Gold", 18400)}
+<div class="day-head"><span>Yesterday · Monday 21</span><span class="amount">${money(4200000, "+")}</span></div>
+${row("briefcase", "GREEN", "August salary", "Bancolombia", 4200000, "income")}
+${row("repeat", "GRAY", "Bancolombia → Savings", "Transfer", 1000000, "transfer")}
+<div class="day-head"><span>Sunday 20</span><span class="amount">${money(475000, "−")}</span></div>
+${row("utensils", "ORANGE", "Carulla groceries", "Bancolombia", 78900)}
+${row("zap", "AMBER", "EPM electricity", "Bancolombia", 186200)}
+${row("fuel", "GRAY", "Terpel gas station", "Visa Gold", 120000)}
+${row("shopping-bag", "PINK", "Falabella", "Visa Gold", 89900)}
+</div>${toast}`;
+  return screen(body, { tab: "mov", side: "mov", title: "Transactions", banner });
+};
 
 // ── Shared expenses · T-110 and T-111 ───────────────────────────────────────
 const PEOPLE = {
@@ -6874,6 +6899,13 @@ const PAGES = [
         updated: "2026-09-22",
       }),
       plate(
+        "settings-with-a-new-version",
+        "Settings · a new version is waiting",
+        "While a new version is waiting, the Version row says so and carries its own Reload, so a notice closed with ✕ is never the only way to it (T-196). Drawn scrolled to the end, where the row is.",
+        newVersionVariant("about"),
+        { added: "2026-09-25" },
+      ),
+      plate(
         "notification-settings",
         "Notifications",
         "One switch per topic and per channel that exists — only In the app until email and push are built. Invitations have no switch in the app: one you never see can never be answered, and a control with one answer is not drawn.",
@@ -7078,9 +7110,13 @@ const PAGES = [
         state("confirmar"),
         { added: "2026-09-01" },
       ),
-      plate("new-version", "New version available", "", state("sw-update"), {
-        added: "2026-09-06",
-      }),
+      plate(
+        "new-version",
+        "New version available",
+        "The stripe at the top of the content column, in blue, with Reload and ✕ (T-196, his choice of 2026-09-25). It shares the one slot of the sync stripes, after the ones you have to act on. The ✕ puts it away until you next open the app or come back to it; Settings › Version keeps saying it meanwhile. It never reloads on its own.",
+        newVersionVariant("stripe"),
+        { added: "2026-09-06", updated: "2026-09-25" },
+      ),
     ],
   },
   {
@@ -7969,6 +8005,50 @@ const PAGES = [
           added: "2026-09-24",
           verdict: "discarded",
           asks: "What choosing a suggested description fills in",
+        },
+      ),
+      plate(
+        "new-version-a-toast-that-stays",
+        "New version · the toast it has today, staying",
+        "<b>Not chosen.</b> The shape the notice had until T-196 — “New version available · Reload” at the bottom, over the tab bar — with the one thing that makes it disappear taken away: <b>it no longer closes on its own after five seconds</b>. A <b>Saved</b> or any other toast still gets its five seconds, and the notice comes back when it goes, so neither is lost. <b>What it buys:</b> nothing new to learn or build. <b>What it costs:</b> for as long as you do not reload it sits over the last row of every list on a phone, and it takes turns with every confirmation — a toast is meant to say something and leave, and this one has to stay.",
+        newVersionVariant("toast"),
+        {
+          added: "2026-09-25",
+          verdict: "discarded",
+          asks: "How the app says there is a new version",
+        },
+      ),
+      plate(
+        "new-version-a-stripe-at-the-top",
+        "New version · a stripe at the top, like the sync stripes",
+        "<b>Chosen, 2026-09-25</b>, the session’s recommendation. The same place and shape as the sync stripes — the top of the content column, pushing the page down instead of covering it — in <b>blue</b>, the colour that is neither a warning nor a failure, because a new version is good news: “<b>A new version of Ledger Flow is ready.</b> Reloading takes a second. Nothing you saved is lost.” with <b>Reload</b>. <b>What it buys:</b> it covers nothing, never takes turns with a toast, and it lives where you already look for what the app has to tell you. <b>What it costs:</b> the stripe is one slot, so while you are offline, signed out or have changes that need you, those win and this one waits its turn behind them — they are what you have to act on first; it does come before a plain “Changes waiting to sync” and “Back online”, and before “You’re working on this device only”, a mode that never goes away on its own.",
+        newVersionVariant("stripe"),
+        {
+          added: "2026-09-25",
+          verdict: "chosen",
+          asks: "How the app says there is a new version",
+        },
+      ),
+      plate(
+        "new-version-stays-until-you-reload",
+        "New version · it stays until you reload",
+        "<b>Not chosen.</b> No close button: the notice is on screen until you press Reload, on every screen and every visit. <b>What it buys:</b> nobody stays on an old version by accident. <b>What it costs:</b> a person in the middle of something — a month of reconciling, a form — cannot put it away, and it keeps pushing every page down until they give in. Drawn on the stripe; on the toast it is the same without the ✕.",
+        newVersionVariant("stripe-fixed"),
+        {
+          added: "2026-09-25",
+          verdict: "discarded",
+          asks: "Whether the new-version notice can be closed, and when it comes back",
+        },
+      ),
+      plate(
+        "new-version-closes-and-comes-back",
+        "New version · you can close it, and it comes back",
+        "<b>Chosen, 2026-09-25</b>, the session’s recommendation. The ✕ puts it away <b>for now</b>: it comes back the next time you open the app or come back to it — from another app, another tab, the phone’s lock screen — for as long as that screen is still on the older version. Meanwhile <b>Settings › Version</b>, at the end of Settings as drawn here, says so and has its own Reload, so it is never hidden with no way back. <b>What it buys:</b> you choose the moment, and the notice cannot be lost, which is today’s fault. <b>What it costs:</b> someone who closes it every time stays on the old version until the phone closes the app, which also brings the new one.",
+        newVersionVariant("about"),
+        {
+          added: "2026-09-25",
+          verdict: "chosen",
+          asks: "Whether the new-version notice can be closed, and when it comes back",
         },
       ),
     ],

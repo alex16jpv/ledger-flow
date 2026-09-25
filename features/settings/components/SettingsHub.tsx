@@ -19,7 +19,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useState, useSyncExternalStore } from "react";
 
 import { InstallSheet } from "@/components/pwa/InstallSheet";
 import { Avatar } from "@/components/shell/Avatar";
@@ -42,6 +42,7 @@ import { useOffline } from "@/lib/network/useOffline";
 import { shortRelease } from "@/lib/observability/release";
 import { useInstallPrompt } from "@/lib/pwa/install";
 import { devicePlatform } from "@/lib/pwa/platform";
+import { applyUpdate, updateStore } from "@/lib/pwa/update";
 import { useMounted } from "@/lib/react/useMounted";
 import { useSession } from "@/lib/session/SessionProvider";
 import { useAppUser } from "@/lib/session/useAppUser";
@@ -134,6 +135,11 @@ export function SettingsHub() {
   const updateCurrency = useUpdateCurrency();
   const updateTimeZone = useUpdateTimeZone();
   const deleteAccount = useDeleteAccount();
+  const update = useSyncExternalStore(
+    updateStore.subscribe,
+    updateStore.getSnapshot,
+    updateStore.getServerSnapshot,
+  );
   const install = useInstallPrompt();
   const [installing, setInstalling] = useState(false);
   // A desktop has no home screen, so the row may not tell its user to add the app to one.
@@ -321,8 +327,17 @@ export function SettingsHub() {
         <SettingsRow
           icon={<Info {...iconProps("sm")} />}
           color="GRAY"
-          title={t("settings.about")}
-          meta={t("settings.version", { version: shortRelease(env.NEXT_PUBLIC_APP_VERSION) })}
+          title={t("settings.versionTitle")}
+          meta={t(update === "none" ? "settings.version" : "settings.versionUpdate", {
+            version: shortRelease(env.NEXT_PUBLIC_APP_VERSION),
+          })}
+          right={
+            update !== "none" && (
+              <Button size="sm" onClick={applyUpdate}>
+                {t("states.update.reload")}
+              </Button>
+            )
+          }
         />
       </Section>
 

@@ -12,6 +12,9 @@ import { reportSynced } from "@/lib/local/outbox/synced";
 import { setCurrentVault } from "@/lib/local/repository/read";
 import type { OutboxOperation } from "@/lib/local/schema";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
+import { setLocalOnly } from "@/lib/network/local-only";
+import { activateWaitingWorker } from "@/lib/pwa/registration";
+import { reportUpdateWaiting, resurfaceUpdate, updateStore } from "@/lib/pwa/update";
 import { renderWithProviders } from "@/lib/testing/render";
 import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 
@@ -22,6 +25,7 @@ vi.mock("@/lib/i18n/navigation", () => ({
   useRouter: () => ({ push, back: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/home",
 }));
+vi.mock("@/lib/pwa/registration", () => ({ activateWaitingWorker: vi.fn() }));
 
 function operation(seq: number, overrides: Partial<OutboxOperation> = {}): OutboxOperation {
   return {
@@ -53,6 +57,9 @@ afterEach(async () => {
   resetOutboxStatus();
   resetSynced();
   connectivityStore.reset();
+  updateStore.reset();
+  setLocalOnly(false);
+  vi.mocked(activateWaitingWorker).mockReset();
   setCurrentVault(null);
   await wipeVaults();
 });
@@ -205,6 +212,79 @@ describe("ConnectionBanner", () => {
     const stripe = await screen.findByRole("status");
     expect(stripe).toHaveTextContent("Back online.");
     expect(stripe).not.toHaveTextContent("synced");
+  });
+
+  // T-196: a five-second toast that a Saved replaced left the app on an old version for days.
+  it("says a new version is ready until it is reloaded or put away, and brings it back", async () => {
+    render();
+    act(() => {
+      reportUpdateWaiting();
+    });
+
+    const stripe = screen.getByRole("status");
+    expect(stripe).toHaveTextContent("A new version of Ledger Flow is ready.");
+    expect(stripe).toHaveTextContent("Reloading takes a second. Nothing you saved is lost.");
+
+    await userEvent.click(screen.getByRole("button", { name: "Reload" }));
+    await waitFor(() => {
+      expect(activateWaitingWorker).toHaveBeenCalledTimes(1);
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Not now" }));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+    act(() => {
+      resurfaceUpdate();
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("A new version of Ledger Flow is ready.");
+  });
+
+  it("waits behind what the user must act on, and goes before a queue still draining", async () => {
+    await queueOf([operation(1, { lastError: "NETWORK" })]);
+    reportUpdateWaiting();
+    render();
+    expect(screen.getByRole("status")).toHaveTextContent("A new version of Ledger Flow is ready.");
+
+    await queueOf([operation(2, { status: "conflict" })]);
+    expect(screen.getByRole("alert")).toHaveTextContent("1 change could not sync");
+    expect(screen.queryByText("A new version of Ledger Flow is ready.")).not.toBeInTheDocument();
+
+    reportOnline(false);
+    expect(await screen.findByRole("status")).toHaveTextContent("You’re offline.");
+  });
+
+  it("goes before an app update's blocked queue and never before back online", async () => {
+    await queueOf([operation(1)]);
+    setBlockedOperations([1]);
+    reportUpdateWaiting();
+    render();
+    expect(screen.getByRole("alert")).toHaveTextContent("An app update stopped 1 change");
+
+    act(() => {
+      setBlockedOperations([]);
+      resetOutboxStatus();
+    });
+    reportOnline(false);
+    reportOnline(true);
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "A new version of Ledger Flow is ready.",
+    );
+  });
+
+  // T-196: this device only lasts until the user leaves it, so the notice cannot wait behind it.
+  it("shows on a device working on its own, and gives the slot back when put away", async () => {
+    setLocalOnly(true);
+    reportUpdateWaiting();
+    renderWithProviders(
+      <main id="main" tabIndex={-1}>
+        <ConnectionBanner />
+      </main>,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("A new version of Ledger Flow is ready.");
+
+    await userEvent.click(screen.getByRole("button", { name: "Not now" }));
+    expect(screen.getByRole("status")).toHaveTextContent("You’re working on this device only.");
+    expect(screen.getByRole("main")).toHaveFocus();
   });
 
   it("also leads to the tray that lists every stuck operation", async () => {

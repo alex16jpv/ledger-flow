@@ -412,6 +412,7 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .banner.offline { background: var(--warning-soft); color: var(--warning); border-bottom-color: color-mix(in oklab, var(--warning) 25%, transparent); }
 .banner.online { background: var(--success-soft); color: var(--success); }
 .banner.error { background: var(--danger-soft); color: var(--danger); }
+.banner.info { background: var(--info-soft); color: var(--info); }
 @container app (min-width: 900px) { .banner { padding: 10px var(--sp-8); } }
 .row.local { background: repeating-linear-gradient(135deg, transparent 0 8px, color-mix(in oklab, var(--warning-soft) 55%, transparent) 8px 9px); }
 
