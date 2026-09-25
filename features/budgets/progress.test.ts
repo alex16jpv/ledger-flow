@@ -27,6 +27,11 @@ describe("budgetProgress", () => {
     expect(budgetProgress({ ...base, spent: 0, amount: 350_000 }, now).status).toBe("untouched");
   });
 
+  it("works out what is left in cents, so a budget with cents leaves no residue [T-158]", () => {
+    expect(budgetProgress({ ...base, spent: 0.2, amount: 0.3 }, now).remaining).toBe(0.1);
+    expect(budgetProgress({ ...base, spent: 0.3, amount: 0.2 }, now).remaining).toBe(-0.1);
+  });
+
   it("marks a period that already closed as ended, with no days left", () => {
     const past = budgetProgress(
       { ...base, spent: 100, amount: 500 },

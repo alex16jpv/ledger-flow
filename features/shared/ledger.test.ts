@@ -268,4 +268,71 @@ describe("the section a screen reads", () => {
     expect(section.youOwe).toBe(40_000);
     expect(section.groups[0]?.people.find((one) => one.contactId === BETO)?.surplus).toBe(40_000);
   });
+
+  it("adds every figure in cents, so a currency with cents leaves no residue [T-158]", () => {
+    const shareOf = (party: string | null, amount: number) =>
+      share({ party: party === null ? "USER" : "CONTACT", contactId: party, amount });
+    const guests = (amount: number) => share({ party: "GUESTS", amount });
+    const exact = (shares: SharedShare[], count: number | null = null) => ({
+      mode: "EXACT" as const,
+      guests: count === null ? null : { count, name: null },
+      shares,
+    });
+    const rows: SharedLedgerRows = {
+      groups: [withTotals(sharedGroup({ id: "g1", name: "Trip", currency: "USD" }))],
+      expenses: [
+        sharedExpense({
+          id: "s1",
+          currency: "USD",
+          date: "2026-08-10T20:00:00.000Z",
+          amount: 0.7,
+          split: exact([shareOf(null, 0.1), shareOf(ANA, 0.2), shareOf(BETO, 0.3), guests(0.1)], 1),
+        }),
+        sharedExpense({
+          id: "s2",
+          currency: "USD",
+          date: "2026-08-11T20:00:00.000Z",
+          amount: 0.5,
+          split: exact([shareOf(null, 0.2), shareOf(ANA, 0.1), guests(0.2)], 1),
+        }),
+        sharedExpense({
+          id: "s3",
+          currency: "USD",
+          date: "2026-08-12T20:00:00.000Z",
+          amount: 0.8,
+          paidByContactId: BETO,
+          split: exact([shareOf(null, 0.4), shareOf(BETO, 0.4)]),
+        }),
+      ],
+      settlements: [
+        settlement({
+          id: "p1",
+          currency: "USD",
+          counterparty: { kind: "CONTACT", contactId: ANA, expenseId: null },
+          collected: 0.3,
+        }),
+      ],
+      undone: [],
+      dropped: [],
+    };
+    const section = sectionOf(rows, contacts);
+    const [view] = section.groups;
+
+    expect(view?.you.share).toBe(0.7);
+    expect(view?.people.find((one) => one.contactId === ANA)).toMatchObject({
+      share: 0.3,
+      paid: 0.3,
+      owesYou: 0,
+      net: 0,
+      state: "PAID",
+    });
+    expect(view?.people.find((one) => one.contactId === BETO)).toMatchObject({
+      owesYou: 0.3,
+      youOwe: 0.4,
+      net: -0.1,
+    });
+    expect(section.guests).toEqual({ owed: 0.3, groupCount: 1 });
+    expect(section.owedToYou).toBe(0.3);
+    expect(section.youOwe).toBe(0.1);
+  });
 });

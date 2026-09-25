@@ -13,6 +13,7 @@ import { useCategoriesQuery } from "@/features/categories/hooks";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
+import { sumAmounts } from "@/lib/local/derive/money";
 import type { Transaction } from "@/types/api";
 
 export interface WhatChangesSheetProps {
@@ -37,7 +38,7 @@ export function WhatChangesSheet({
   const dates = useDates();
   const categories = useCategoriesQuery(undefined, open);
   const byId = new Map((categories.data ?? []).map((row) => [row.id, row]));
-  const total = transactions.reduce((sum, row) => sum + row.amount, 0);
+  const total = sumAmounts(transactions.map((row) => row.amount));
   const names = [
     ...new Set(transactions.map((row) => byId.get(row.categoryId ?? "")?.name).filter(Boolean)),
   ].join(", ");

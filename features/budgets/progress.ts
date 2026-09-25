@@ -1,3 +1,4 @@
+import { fromCents, toCents } from "@/lib/local/derive/money";
 import type { Budget } from "@/types/api";
 
 export const BUDGET_PERIOD_TYPES = [
@@ -44,7 +45,7 @@ export function budgetProgress(
   const from = new Date(budget.periodFrom).getTime();
   const to = new Date(budget.periodTo).getTime();
   const ratio = budget.amount > 0 ? budget.spent / budget.amount : budget.spent > 0 ? Infinity : 0;
-  const remaining = budget.amount - budget.spent;
+  const remaining = fromCents(toCents(budget.amount) - toCents(budget.spent));
   const elapsed = to > from ? Math.min(1, Math.max(0, (now.getTime() - from) / (to - from))) : 1;
   const days = Math.max(1, Math.round((to - from) / DAY_MS));
   const day = Math.min(days, Math.max(1, Math.ceil((now.getTime() - from) / DAY_MS)));

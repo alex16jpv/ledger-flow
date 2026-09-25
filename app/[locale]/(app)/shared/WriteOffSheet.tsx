@@ -30,7 +30,7 @@ export function WriteOffSheet({
   const money = useMoney();
   const left = view.people
     .filter((one) => one.key !== person.key)
-    .reduce((cents, one) => cents + Math.max(0, toCents(one.owesYou) - toCents(one.youOwe)), 0);
+    .reduce((cents, one) => cents + Math.max(0, toCents(one.net)), 0);
   return (
     <Sheet
       layout="dialog"

@@ -15,6 +15,8 @@ export interface PartyView {
   paid: number;
   owesYou: number;
   youOwe: number;
+  // Within this group and without the surplus; what a settle-up moves is `settleParty`.
+  net: number;
   // Their money in your account, once a share falls under what they already paid.
   surplus: number;
   state: PersonState;
@@ -77,6 +79,7 @@ const keyOf = (expense: SharedExpense, share: SharedShare): string | null =>
       ? partyKey({ contactId: share.contactId, expenseId: null })
       : null;
 
+// Whole minor units.
 interface Tally {
   share: number;
   // What has come back from them, which is never what you handed over on a line they fronted.
@@ -96,15 +99,15 @@ function tallies(expenses: readonly SharedExpense[], collected: ReadonlyMap<stri
   for (const expense of expenses) {
     for (const share of expense.split.shares) {
       if (isYours(share)) {
-        yours += share.amount;
+        yours += toCents(share.amount);
         continue;
       }
       const key = keyOf(expense, share);
       if (key === null) continue;
       const tally = of(key);
-      tally.share += share.amount;
+      tally.share += toCents(share.amount);
       if (expense.paidByContactId === null)
-        tally.paid += collected.get(`${expense.id}|${key}`) ?? 0;
+        tally.paid += toCents(collected.get(`${expense.id}|${key}`) ?? 0);
     }
   }
   return { rows, yours };
@@ -150,18 +153,16 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
         name:
           person.expenseId === null ? (contact?.name ?? "") : guestName(expenses, person.expenseId),
         color: person.expenseId === null ? (contact?.color ?? null) : GUESTS_COLOR,
-        share: held.share,
-        paid: held.paid,
+        share: fromCents(held.share),
+        paid: fromCents(held.paid),
         owesYou: person.owesYou,
         youOwe: person.youOwe,
+        net: fromCents(toCents(person.owesYou) - toCents(person.youOwe)),
         surplus: person.surplus,
         state: person.state,
       };
     });
-    const owed = people.reduce(
-      (cents, person) => cents + Math.max(0, toCents(person.owesYou) - toCents(person.youOwe)),
-      0,
-    );
+    const owed = people.reduce((cents, person) => cents + Math.max(0, toCents(person.net)), 0);
     groups.push({
       group,
       expenses: [...expenses].sort(newestFirst),
@@ -172,7 +173,7 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
       youOwe: view.youOwe,
       barTotal: fromCents(toCents(view.collected) + owed + toCents(view.writtenOff)),
       people,
-      you: { share: yours },
+      you: { share: fromCents(yours) },
     });
   }
 
@@ -182,7 +183,7 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
   for (const view of groups) {
     for (const person of view.people) {
       if (person.contactId === null) {
-        const open = Math.max(0, person.owesYou - person.youOwe);
+        const open = Math.max(0, toCents(person.net));
         if (open > 0) {
           guestsOwed += open;
           guestGroups.add(view.group.id);
@@ -241,10 +242,9 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     undone: rows.undone,
     dropped: rows.dropped,
     people,
-    guests: { owed: guestsOwed, groupCount: guestGroups.size },
+    guests: { owed: fromCents(guestsOwed), groupCount: guestGroups.size },
     owedToYou: fromCents(
-      people.reduce((cents, person) => cents + Math.max(0, toCents(person.net)), 0) +
-        toCents(guestsOwed),
+      people.reduce((cents, person) => cents + Math.max(0, toCents(person.net)), 0) + guestsOwed,
     ),
     youOwe: fromCents(
       people.reduce((cents, person) => cents + Math.max(0, -toCents(person.net)), 0),

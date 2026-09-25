@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import type { DaySlot } from "@/lib/charts/days";
 import { dayKey, toIsoWindow } from "@/lib/format/dates";
 import { useDates } from "@/lib/i18n/useDates";
+import { fromCents, toCents } from "@/lib/local/derive/money";
 import type { Budget, StatsBucket } from "@/types/api";
 
 import {
@@ -89,7 +90,8 @@ export function budgetStatus(
   now: Date,
 ): BudgetStatus {
   const ratio = budget.spent / budget.amount;
-  if (ratio > 1) return { kind: "over", by: budget.spent - budget.amount };
+  if (ratio > 1)
+    return { kind: "over", by: fromCents(toCents(budget.spent) - toCents(budget.amount)) };
   if (ratio >= 0.8) {
     const daysLeft = Math.max(
       0,
@@ -97,7 +99,7 @@ export function budgetStatus(
     );
     return { kind: "warn", percent: Math.round(ratio * 100), daysLeft };
   }
-  return { kind: "ok", left: budget.amount - budget.spent };
+  return { kind: "ok", left: fromCents(toCents(budget.amount) - toCents(budget.spent)) };
 }
 
 export function useHomeData(month: MonthContext) {

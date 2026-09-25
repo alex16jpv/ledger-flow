@@ -32,6 +32,7 @@ import { nothingChanged } from "@/lib/form/changes";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
+import { fromCents, toCents } from "@/lib/local/derive/money";
 import type {
   Account,
   CreateTransactionInput,
@@ -254,9 +255,12 @@ export function EditAdjustmentSheet({ adjustment, open, onClose }: EditAdjustmen
       ? null
       : loanOwed({
           type: account.type,
-          balance:
-            account.balance -
-            (directionOf(adjustment) === "increase" ? adjustment.amount : -adjustment.amount),
+          balance: fromCents(
+            toCents(account.balance) -
+              toCents(
+                directionOf(adjustment) === "increase" ? adjustment.amount : -adjustment.amount,
+              ),
+          ),
         });
   const overLoan =
     owedWithout !== null && amount !== null && direction === "increase" && amount > owedWithout

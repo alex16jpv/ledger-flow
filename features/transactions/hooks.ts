@@ -3,6 +3,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import { fromCents, toCents } from "@/lib/local/derive/money";
 import { invalidateMoneyMovement } from "@/lib/query/domains";
 import type {
   BatchUpdateTransactionsInput,
@@ -171,10 +172,11 @@ export function usePeriodTotals(window: { from: string; to: string } | null) {
   const incomeData = income.data;
   return useMemo<PeriodTotals | null>(() => {
     if (!expenseData || !incomeData) return null;
-    const byDay = new Map<string, number>();
-    for (const bucket of incomeData.buckets) byDay.set(bucket.key, bucket.total);
+    const cents = new Map<string, number>();
+    for (const bucket of incomeData.buckets) cents.set(bucket.key, toCents(bucket.total));
     for (const bucket of expenseData.buckets)
-      byDay.set(bucket.key, (byDay.get(bucket.key) ?? 0) - bucket.total);
+      cents.set(bucket.key, (cents.get(bucket.key) ?? 0) - toCents(bucket.total));
+    const byDay = new Map([...cents].map(([key, net]) => [key, fromCents(net)]));
     return { spent: expenseData.total, income: incomeData.total, byDay };
   }, [expenseData, incomeData]);
 }

@@ -30,6 +30,7 @@ import { useRouter } from "@/lib/i18n/navigation";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
+import { sumAmounts } from "@/lib/local/derive/money";
 import { newEntityId } from "@/lib/local/outbox/envelope";
 import { useBackNavigation } from "@/lib/navigation/history";
 import { randomColorToken } from "@/lib/theme/feature-color";
@@ -69,7 +70,7 @@ export function GroupFormScreen() {
     { contactId: null, name: t("shared.group.you"), color: null },
     ...people.map((one) => ({ contactId: one.id, name: one.name, color: one.color ?? null })),
   ];
-  const pickedTotal = picked.reduce((sum, row) => sum + row.amount, 0);
+  const pickedTotal = sumAmounts(picked.map((row) => row.amount));
 
   function fail(error: unknown) {
     if (!(error instanceof ApiError) || error.code !== "DUPLICATE") {
