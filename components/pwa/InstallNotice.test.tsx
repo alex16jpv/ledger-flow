@@ -2,6 +2,7 @@ import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type * as Platform from "@/lib/pwa/platform";
 import { renderWithProviders } from "@/lib/testing/render";
 
 import { InstallNotice } from "./InstallNotice";
@@ -13,18 +14,25 @@ const copy = {
   how: "How",
   dismiss: "Not now",
   sheet: "Install this app",
+  chrome: "Install with Chrome",
+  here: "Install it here",
+  samsungStep: "Tap the install icon in the address bar",
 };
 
 const prompt = vi.hoisted(() => ({ state: "unavailable", install: vi.fn() }));
 const mode = vi.hoisted(() => ({ value: "browser" }));
-const device = vi.hoisted(() => ({ value: "ios" }));
+const device = vi.hoisted(() => ({ value: "ios", guide: "ios-safari" }));
 const durability = vi.hoisted(() => ({ supported: true, persisted: false }));
 
 vi.mock("@/lib/pwa/install", () => ({
   useInstallPrompt: () => ({ state: prompt.state, install: prompt.install }),
 }));
 vi.mock("@/lib/pwa/mode", () => ({ displayMode: () => mode.value }));
-vi.mock("@/lib/pwa/platform", () => ({ devicePlatform: () => device.value }));
+vi.mock("@/lib/pwa/platform", async (importOriginal) => ({
+  ...(await importOriginal<typeof Platform>()),
+  devicePlatform: () => device.value,
+  installGuide: () => device.guide,
+}));
 vi.mock("@/lib/local/persist", () => ({
   readStorageDurability: () =>
     Promise.resolve({ ...durability, usageBytes: null, quotaBytes: null }),
@@ -61,6 +69,7 @@ describe("InstallNotice", () => {
     prompt.install.mockResolvedValue(undefined);
     mode.value = "browser";
     device.value = "ios";
+    device.guide = "ios-safari";
     durability.supported = true;
     durability.persisted = false;
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -152,5 +161,42 @@ describe("InstallNotice", () => {
     view();
 
     await noCard();
+  });
+
+  // T-197: installed from Samsung Internet, Android blocks the app as dangerous; from Chrome it does not.
+  describe("in Samsung Internet", () => {
+    beforeEach(() => {
+      device.value = "android";
+      device.guide = "samsung";
+    });
+
+    it("sends the user to Chrome instead of Samsung's own install", async () => {
+      prompt.state = "available";
+      view();
+
+      const chrome = await screen.findByRole("link", { name: copy.chrome });
+
+      expect(chrome.getAttribute("href")).toMatch(/^intent:\/\/.+;package=com\.android\.chrome;/);
+      expect(screen.queryByRole("button", { name: copy.install })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: copy.how })).not.toBeInTheDocument();
+    });
+
+    it("keeps Samsung's prompt one tap away for whoever has no Chrome", async () => {
+      prompt.state = "available";
+      view();
+
+      await userEvent.click(await screen.findByRole("button", { name: copy.here }));
+
+      expect(prompt.install).toHaveBeenCalledOnce();
+    });
+
+    it("gives Samsung's own steps where it offered no prompt", async () => {
+      view();
+
+      await userEvent.click(await screen.findByRole("button", { name: copy.here }));
+
+      expect(prompt.install).not.toHaveBeenCalled();
+      expect(await screen.findByText(copy.samsungStep)).toBeInTheDocument();
+    });
   });
 });

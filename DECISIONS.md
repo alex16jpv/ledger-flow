@@ -5,6 +5,50 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-25 · In Samsung Internet the install goes through Chrome, and every install path has its own steps (T-197)
+
+- **What was wrong:** on a Samsung tablet the app could not be installed normally. The app downloads
+  nothing: it installs through `beforeinstallprompt` and a valid manifest, and the Android package (a
+  WebAPK) is built by the **browser's** server. Samsung Internet's builds a package that targets an old
+  Android, and Android 14 and later block it as a **dangerous app** whose main button only closes; it
+  installs through "More details" › "Install anyway". Chrome's server builds a current package, so
+  Chrome on the same device installs with no warning. Reported as SamsungInternet/support#123, open
+  and unanswered since 2026-04-10; Progressier has sent Samsung Internet users to Chrome since
+  2026-03-09 for the same reason.
+- **Decision (the owner's, 2026-09-24):** in Samsung Internet the Home card and the install sheet
+  lead with **Install with Chrome**, which opens the same page in Chrome, and keep **Install it
+  here**, Samsung's own install, with how to get past the warning.
+- **How (the session's choices):**
+  - `installGuide()` says `samsung` for the `SamsungBrowser` token on an Android only (Samsung also
+    says Chrome, and Samsung Internet on a computer has no Chrome to hand over to).
+  - The link is `intent://<host><path>#Intent;scheme=…;package=com.android.chrome;…`. Its
+    `S.browser_fallback_url` is **the same page**, not Chrome's Play Store listing: without Chrome the
+    user stays where the "No Chrome, or it didn't open?" line is, which is the way the owner's decision
+    reads. Whether Samsung Internet honours the fallback is not documented (SamsungInternet/support#74);
+    the line covers it either way. Sign-in in Chrome returns to that path (`?next=`).
+  - The warning is said as a condition ("If Android warns…"): Android 13 and earlier do not block the
+    package, and the Android version in a Chromium user agent is frozen, so the page cannot tell.
+  - "Install it here" fires Samsung's prompt where it offered one and opens Samsung's steps where it
+    did not. `useInstallPrompt().install()` now spends the event on any answer, not only on
+    acceptance: a dismissed event rejects a second `prompt()`, so the button used to do nothing, and
+    silently. And every mounted listener hears a late offer; only the last one to subscribe used to,
+    so the sheet opened from the Home card never learnt of it.
+  - An Android tablet that asks for desktop sites (Chrome's default on large tablets) drops `Android`
+    from its user agent; `devicePlatform()` reads a Linux user agent with touch points as Android, so
+    it keeps the card and the Android steps. A Linux computer with a touch screen is read as a tablet
+    too, and is rare enough to accept.
+  - The manifest gains `id: "/"`, the id browsers already derived from `start_url`, so an installed app
+    keeps its identity.
+- **Alternatives rejected:** anything in the manifest or the worker (the package is signed by
+  Samsung's server, not by the app); Progressier (a paid third party that replaces the service worker,
+  needs the CSP opened to it, sees the visits of a finance app and weighs on every screen, to buy a
+  redirect that is a few lines); telling whether Chrome is installed first (`getInstalledRelatedApps`
+  only sees the site's own declared apps).
+- **Consequence:** nothing breaks when Samsung fixes it — Chrome still installs, and so does Samsung's
+  link — only the detour becomes unnecessary. A page cannot see when that happens, so **the condition
+  to remove it, or to limit it by Samsung Internet version, is #123 closed with a fix.** A user sent to
+  Chrome starts there signed out: it is another browser, with its own copy.
+
 ## 2026-09-25 · The worker answers a navigation with the warmed payload first, network or not (T-195)
 
 - **What was wrong:** every route of `(app)` is dynamic (the CSP nonce), Next 16 keeps no dynamic

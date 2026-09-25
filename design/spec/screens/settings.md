@@ -23,7 +23,8 @@ eyebrows:
   follows the device** (owner, 2026-09-11): on a phone or tablet, "Add Ledger Flow to your home screen
   so the browser doesn't delete what you record offline"; on a desktop, "Install Ledger Flow so the
   browser doesn't delete what you record offline" — a desktop has no home screen, and the app may not
-  call it one. Then **Version**, "Ledger Flow · {version}". **While a new version is waiting**
+  call it one. **Installed** (`#settings-installed`), the row reads "Installed" and opens nothing. Then
+  **Version**, "Ledger Flow · {version}". **While a new version is waiting**
   (`#settings-with-a-new-version`) its line reads "Ledger Flow · {version} · a new version is ready" and
   the row carries a small primary **Reload**: the notice stripe can be closed ([states.md](states.md)
   `#new-version`), and this row is where it is never hidden.
@@ -128,30 +129,71 @@ you record from now on syncs normally.", with the button "See the n changes" lea
 tray. **The app keeps writing normally**: blocking new entries would be worse than not sending the old
 ones, and nothing new waits behind what is blocked.
 
-## Install this app (`#install-sheet`, `#install-sheet-steps`)
+## Install this app (`#install-sheet`, `#install-sheet-samsung`, `#install-sheet-steps…`)
 
-Opened by the **Install app** row in About and by "How to get it" in Persistent storage. It has **two
-shapes, and the browser decides which**:
+Opened by the **Install app** row in About, by "How to get it" in Persistent storage and by the Home
+card's **How** and **Install it here**. It always opens with the `info` alert, "Installing keeps your
+offline data safe: the browser stops treating it as something it can delete.", and, **only where the
+browser has not granted durable storage**, the line "The app already asked this browser to keep your
+data and it said no — browsers don't ask you, they decide, and installing is what changes that."
+Where it was granted that line would be false, so it is absent (T-197). Then **three shapes, and the
+browser decides which**:
 
-1. **Where the browser offers to install** (Chrome, Edge, Android): an `info` alert, "Installing keeps
-   your offline data safe: the browser stops treating it as something it can delete.", and the primary
-   call to action **"Install"**, which fires the browser's prompt. On acceptance the sheet closes and the
-   row turns to "Installed".
-2. **Where it does not** (iOS/Safari, and any browser that never fires the event): the same alert and,
-   instead of the button, **the steps with the real name of each thing**, in a short numbered list —
-   **one set per platform, and never another platform's** (owner, 2026-09-11):
-   - **iOS:** "1. Tap Share. 2. Choose “Add to Home Screen”. 3. Confirm with “Add”."
-   - **Android:** "1. Open the browser menu. 2. Choose “Install app” or “Add to Home screen”."
-   - **Desktop:** "1. Look for the install icon in the address bar. 2. Or open the browser menu and
-     choose “Install Ledger Flow”."
+1. **Where the browser offers to install** (`#install-sheet` — Chrome and Edge, on Android and on a
+   desktop): the primary call to action **"Install"**, which fires the browser's prompt. On acceptance
+   the sheet closes and the row turns to "Installed".
+2. **In Samsung Internet** (`#install-sheet-samsung`, T-197): one line saying why — "From Samsung
+   Internet, Android flags the app as dangerous: it objects to the way Samsung packages it, not to the
+   app. Chrome installs it with no warning." —, the primary **"Install with Chrome"**, which opens this
+   page in Chrome, and under it the same fallback as the Home card: "No Chrome, or it didn't open?
+   **Install it here**. If Android warns…". Where Samsung has not offered its prompt
+   (`#install-sheet-samsung-steps`) the link would do nothing, so the fallback gives Samsung's own
+   steps instead: "1. Tap the install icon in the address bar. 2. Or open the menu and choose “Add page
+   to”, then “Home screen”.", followed by the warning line.
+3. **Where there is no prompt** (every iPhone and iPad, and any browser that never fires the event):
+   **the steps with the real name of each thing**, in a short numbered list — **one set per browser,
+   and never another's** (owner, 2026-09-11):
+   - **iPhone and iPad, Safari** (`#install-sheet-steps`): "1. Tap Share. 2. Choose “Add to Home
+     Screen”. 3. Confirm with “Add”."
+   - **iPhone and iPad, another browser** (`#install-sheet-steps-ios-other` — Chrome, Firefox, Edge, an
+     in-app browser): "1. Tap Share, in the address bar or in the browser menu. 2. Choose “Add to Home
+     Screen”. 3. Confirm with “Add”." They all add through the same Share sheet since iOS 16.4, but
+     none keeps Share where Safari does.
+   - **Android** (`#install-sheet-steps-android` — Firefox, or Chrome before it fires the event): "1.
+     Open the browser menu. 2. Choose “Install app” or “Add to Home screen”."
+   - **Safari on a Mac** (`#install-sheet-steps-mac-safari`): "1. Open the File menu, or Share. 2.
+     Choose “Add to Dock”." It has no address-bar icon, which is what the desktop set would send it
+     to look for.
+   - **Any other desktop** (`#install-sheet-steps-desktop`): "1. Look for the install icon in the
+     address bar. 2. Or open the browser menu and choose “Install Ledger Flow”." Firefox on Windows has
+     its own button there; Firefox on a Mac has none, and the closing line is for it.
 
-   And one honest closing line: **"Some browsers don't offer this. If yours doesn't, keep a connection
-   when you record and nothing will be waiting here."**
+   And one honest closing line: **"Some browsers don't offer this at all. If yours doesn't, keep a
+   connection when you record and nothing will be waiting here."** On iOS with another browser it reads
+   instead **"If your browser doesn't offer it, open this page in Safari and add it from there."**,
+   because Safari always does.
 
 **What the sheet does not do:** guess the browser to show off. Shape 1 is chosen **only** when the
-browser already said it can install — the event arrived. In every other case, shape 2. **Which set of
-steps is decided by the platform, not by whether the screen is touched:** a Windows laptop with a touch
-screen used to be given the iPhone's steps, and an Android without the event was given them too.
+browser already said it can install — the event arrived —, and outside Samsung Internet. **Which set
+of steps is decided by the device and the browser, not by whether the screen is touched:** a Windows
+laptop with a touch screen used to be given the iPhone's steps, and an Android without the event was
+given them too. **An Android tablet that asks for desktop sites** — Chrome's default on large tablets, which
+drops `Android` from the user agent — is still an Android: a Linux user agent with touch points.
+
+**Every path, and where it is drawn** (T-197):
+
+| Device and browser                           | Home card                                            | Sheet                                          |
+| -------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
+| Android, Chrome                              | Install (`#install-card-safe`)                       | `#install-sheet`                               |
+| Android, Samsung Internet                    | Install with Chrome (`#install-card-samsung`)        | `#install-sheet-samsung`, `-steps`             |
+| Android, a browser without the event         | How (as `#install-card`)                             | `#install-sheet-steps-android`                 |
+| Android tablet asking for desktop sites      | as its browser above: told apart by its touch points | as its browser above                           |
+| iPhone and iPad, Safari                      | How (`#install-card`)                                | `#install-sheet-steps`                         |
+| iPhone and iPad, another browser             | How (as `#install-card`)                             | `#install-sheet-steps-ios-other`               |
+| Desktop, Chrome or Edge                      | never                                                | `#install-sheet`                               |
+| Desktop, no event (Firefox, Safari on a Mac) | never                                                | `-steps-desktop`, `-steps-mac-safari`          |
+| Already installed                            | never                                                | the row says Installed (`#settings-installed`) |
+| Dismissed                                    | hidden by the P-46 pauses ([home.md](home.md))       | unchanged: the row is always there             |
 
 ## The rest of the screens
 

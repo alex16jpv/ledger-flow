@@ -51,7 +51,8 @@
 
 ## The install card, which is also the storage notice
 
-`preview/home.html#install-card` · `preview/home.html#install-card-safe`
+`preview/home.html#install-card` · `preview/home.html#install-card-safe` ·
+`preview/home.html#install-card-samsung`
 
 > The browser's half is already in the code: the app does not cancel `beforeinstallprompt`, so Chrome
 > shows its own invitation, and the card's **Install** fires that same native dialog rather than one of
@@ -67,7 +68,10 @@
 - **When it appears:** when the device **already has something to lose** — a first full copy
   (`syncedAt`) or something in the queue —, the app is running in a **browser tab**, and the device is
   **not a desktop**. Never when installed, never before the first copy.
-- **Never on a desktop.** There the browser puts its own install button in the address bar and
+- **Never on a desktop — a computer, not a width.** A tablet held sideways gets the two-column layout
+  and keeps the card above it, and an Android tablet that asks for desktop sites (Chrome does by
+  default on large ones, dropping `Android` from its user agent) is still told apart by its touch
+  points. On a computer the browser puts its own install button in the address bar and
   **Settings › About** carries the row that explains the rest. A card on top of that is insistence
   without a reason: nothing is being deleted on a machine whose browser granted durable storage, and
   the user who wants the app finds it where it is.
@@ -99,9 +103,32 @@
   every iPhone, and any Android whose browser said no. Where the browser already granted it — most
   Android Chrome — the sentence is **absent**: the app asked and was told yes, so claiming the data can
   be deleted would be a lie, and a warning that is not true is worse than no warning.
-- **Actions:** **"Install"** (primary) where the browser offered to, which fires its prompt, and
-  **"How"** (secondary) where it did not, which opens the "Install this app" sheet with the steps for
-  the platform in use. Dismissed with **"Not now"** (ghost).
+- **Actions: one, and the browser in use decides which** — the card never shows two ways to do the
+  same thing:
+  - **"Install"** (primary) where the browser offered to — Chrome on Android —, which fires its prompt.
+  - **"How"** (primary) where it did not — every iPhone and iPad, and an Android browser without the
+    event —, which opens the "Install this app" sheet with the steps for the browser in use
+    ([settings.md](settings.md)).
+  - **"Install with Chrome"** (primary, `external-link`) in **Samsung Internet**, which opens this same
+    page in Chrome (T-197, below).
+
+  Dismissed with **"Not now"** (ghost).
+
+- **In Samsung Internet (T-197, owner, 2026-09-24).** Samsung Internet does offer to install, but the
+  Android package its server builds for the app is made for an older Android, and Android 14 and later
+  block it as a **dangerous app** whose first button only closes; it installs through "More details" ›
+  "Install anyway". Chrome, on the same device, installs with no warning. Nothing in the app can change
+  the package Samsung builds, so the card sends the user to Chrome, and keeps Samsung's own install for
+  whoever has no Chrome: under the buttons, one `xs` line, **"No Chrome, or it didn't open? Install it
+  here. If Android warns that it may be dangerous, tap “More details”, then “Install anyway”."** (ES
+  «¿No tienes Chrome o no se abrió? Instálala aquí. Si Android avisa de que puede ser peligrosa, toca
+  «Más detalles» y después «Instalar de todas formas».») The warning is said as a condition because
+  Android 13 and earlier do not show it, and the page cannot trust the version the browser reports.
+  **"Install it here"** is an inline link: it fires Samsung's prompt where the browser offered one, and
+  opens the sheet with Samsung's own steps where it did not; a prompt that was dismissed is spent, so
+  the next tap gets the steps rather than a button that does nothing. Where Chrome is missing, the link
+  to it comes back to this same page, where that line is. In Chrome the app starts signed out — it is
+  another browser —, sign-in returns to the same screen, and the card there offers Chrome's own Install.
 - **What it does not do:** it never promises the permission will be granted — the browser decides —
   and it never says "accept the permission", because **there is no permission to accept**: no
   persistent-storage dialog exists.
