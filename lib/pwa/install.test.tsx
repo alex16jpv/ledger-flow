@@ -9,14 +9,16 @@ function runHeadScript(): void {
   new Function(INSTALL_INIT_SCRIPT)();
 }
 
-function fireInstallPrompt(): Event & { prompt: () => Promise<void> } {
+function fireInstallPrompt(
+  outcome: "accepted" | "dismissed" = "accepted",
+): Event & { prompt: () => Promise<void> } {
   // The real event is cancelable; without it `preventDefault()` is a no-op and proves nothing.
   const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
     prompt: () => Promise<void>;
     userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
   };
   event.prompt = vi.fn(() => Promise.resolve());
-  event.userChoice = Promise.resolve({ outcome: "accepted" });
+  event.userChoice = Promise.resolve({ outcome });
   window.dispatchEvent(event);
   return event;
 }
@@ -74,6 +76,37 @@ describe("useInstallPrompt", () => {
 
     expect(event.prompt).toHaveBeenCalledOnce();
     expect(result.current.state).toBe("unavailable");
+  });
+
+  // T-197: a second tap on a dismissed prompt used to call it again, which the browser rejects.
+  it("spends the event on a dismissal too, so nothing offers a prompt that can no longer open", async () => {
+    runHeadScript();
+    const event = fireInstallPrompt("dismissed");
+    const { result } = renderHook(() => useInstallPrompt());
+
+    await act(async () => {
+      await result.current.install();
+    });
+    await act(async () => {
+      await result.current.install();
+    });
+
+    expect(event.prompt).toHaveBeenCalledOnce();
+    expect(result.current.state).toBe("unavailable");
+  });
+
+  // The Home card and the sheet it opens both listen; only the last one to mount used to hear.
+  it("tells every mounted listener about an offer that arrives late", () => {
+    runHeadScript();
+    const card = renderHook(() => useInstallPrompt());
+    const sheet = renderHook(() => useInstallPrompt());
+
+    act(() => {
+      fireInstallPrompt();
+    });
+
+    expect(card.result.current.state).toBe("available");
+    expect(sheet.result.current.state).toBe("available");
   });
 
   it("says installed once the app runs standalone", () => {

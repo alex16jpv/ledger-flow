@@ -7,11 +7,13 @@ test("the app is installable: manifest, icons and the service worker are served"
   const manifest = await request.get("/manifest.webmanifest");
   expect(manifest.status()).toBe(200);
   const body = (await manifest.json()) as {
+    id: string;
     name: string;
     display: string;
     icons: { src: string; purpose: string }[];
     shortcuts: { url: string }[];
   };
+  expect(body.id).toBe("/");
   expect(body.name).toBe("Ledger Flow");
   expect(body.display).toBe("standalone");
   expect(body.icons.some((icon) => icon.purpose === "maskable")).toBe(true);
@@ -64,6 +66,72 @@ test("an install offer made before Settings opens is still there when it does", 
   await page.getByRole("link", { name: "Settings" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
   await expect(page.getByText("Install app", { exact: true })).toBeVisible();
+});
+
+// T-197: from Samsung Internet, Android blocks the installed app as dangerous; from Chrome it does not.
+test.describe("in Samsung Internet", () => {
+  const offer = () => {
+    const counter = window as unknown as { prompts?: number };
+    const event = new Event("beforeinstallprompt") as Event & {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: string }>;
+    };
+    event.prompt = () => {
+      counter.prompts = (counter.prompts ?? 0) + 1;
+      return Promise.resolve();
+    };
+    event.userChoice = Promise.resolve({ outcome: "dismissed" });
+    window.dispatchEvent(event);
+  };
+
+  test.use({
+    userAgent:
+      "Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/27.0 Chrome/125.0.0.0 Safari/537.36",
+  });
+
+  test("the install goes through Chrome, and Samsung's own prompt stays one tap away", async ({
+    page,
+    request,
+  }) => {
+    const email = uniqueEmail("samsung");
+    const registered = await request.post("/api/auth/register", {
+      headers: { origin: process.env.E2E_APP_URL ?? "http://localhost:3002" },
+      data: { name: "Samsung E2E", email, password: "LedgerFlow!2026", locale: "en" },
+    });
+    expect(registered.ok(), await registered.text()).toBe(true);
+    await page.context().addCookies((await request.storageState()).cookies);
+
+    const chrome = page.getByRole("link", { name: "Install with Chrome" });
+    await page.goto("/home");
+    // The card waits for the device's first full copy, which Home reads once as it mounts.
+    await expect(async () => {
+      await page.reload();
+      await expect(chrome).toBeVisible({ timeout: 2_000 });
+    }).toPass();
+    await page.evaluate(offer);
+
+    const here = new URL(page.url());
+    const scheme = here.protocol.replace(":", "");
+    expect(await chrome.getAttribute("href")).toBe(
+      `intent://${here.host}${here.pathname}#Intent;scheme=${scheme};package=com.android.chrome;` +
+        `S.browser_fallback_url=${encodeURIComponent(`${scheme}://${here.host}${here.pathname}`)};end`,
+    );
+    await expect(page.getByRole("button", { name: "Install", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Install it here" }).click();
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { prompts?: number }).prompts))
+      .toBe(1);
+    await page.evaluate(offer);
+
+    await page.getByRole("link", { name: "Settings" }).first().click();
+    await page.getByText("Install app", { exact: true }).click();
+    const sheet = page.getByRole("dialog", { name: "Install this app" });
+    await expect(sheet.getByRole("link", { name: "Install with Chrome" })).toBeVisible();
+    await sheet.getByRole("button", { name: "Install it here" }).click();
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { prompts?: number }).prompts))
+      .toBe(2);
+  });
 });
 
 // Fixing the scale in the served HTML fails WCAG 1.4.4, and iOS ignores it in Safari anyway.

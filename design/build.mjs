@@ -448,13 +448,24 @@ ${heroChart}
     notice === "risk"
       ? `<span class="small muted">This browser can also delete what you record offline after a few days without opening the site. Installing the app stops that.</span>`
       : "";
+  // T-197 · one action per path: the browser's prompt, the steps, or Chrome where Samsung Internet runs.
+  const installActions = {
+    risk: `<button class="btn primary sm">How</button>`,
+    safe: `<button class="btn primary sm">${iconSvg("download", "sm")}Install</button>`,
+    samsung: `<a class="btn primary sm" href="#">${iconSvg("external-link", "sm")}Install with Chrome</a>`,
+  };
+  const samsungLine =
+    notice === "samsung"
+      ? `<span class="xs muted">No Chrome, or it didn’t open? <a href="#" style="color:var(--brand-text);font-weight:500;text-decoration:underline;text-underline-offset:2px">Install it here</a>. If Android warns that it may be dangerous, tap “More details”, then “Install anyway”.</span>`
+      : "";
   const installCard = notice
     ? `<section class="card hstack" style="gap:12px;align-items:flex-start">${tile("monitor-smartphone", "AMBER")}
 <span class="body" style="flex:1;display:flex;flex-direction:column;gap:6px">
 <span class="h3">For when there's no connection</span>
 <span class="small muted">Ledger Flow already keeps a copy on this device, so it works with no signal. Installed, it opens on its own, outside the browser.</span>
 ${installRisk}
-<span class="hstack" style="gap:8px;margin-top:4px"><button class="btn primary sm">${iconSvg("download", "sm")}Install</button><button class="btn secondary sm">How</button><button class="btn ghost sm">Not now</button></span>
+<span class="hstack" style="gap:8px;margin-top:4px;flex-wrap:wrap">${installActions[notice]}<button class="btn ghost sm">Not now</button></span>
+${samsungLine}
 </span></section>`
     : "";
   const statsHead = statsLink
@@ -2641,7 +2652,12 @@ const settingsRow = (icon, title, meta, right = "", color = "NONE") => {
   return `<a class="row" href="#">${tile(icon, color, "sm")}<span class="body"><span class="title">${title}</span>${m}</span><span class="right" style="flex-direction:row;align-items:center;gap:8px">${right}${iconSvg("chevron-right", "sm")}</span></a>`;
 };
 
-const settings = ({ offline = false, update = false, scrolled = false } = {}) => {
+const settings = ({
+  offline = false,
+  update = false,
+  scrolled = false,
+  installed = false,
+} = {}) => {
   const signout = offline
     ? `<button class="btn secondary block" disabled>${iconSvg("log-out", "sm")}Sign out</button><p class="xs muted" role="status" style="text-align:center;margin:0">Signing out needs a connection: your session lives on the server.</p>`
     : `<button class="btn secondary block">${iconSvg("log-out", "sm")}Sign out</button>`;
@@ -2657,7 +2673,7 @@ const settings = ({ offline = false, update = false, scrolled = false } = {}) =>
 <span class="eyebrow">Data</span>
 <div class="list card flush">${settingsRow("refresh-cw", "Sync status", "What this device has, and what it still owes the server", '<span class="badge warning">2</span>', "TEAL")}${settingsRow("download", "Export transactions", "Coming soon", '<span class="badge outline">soon</span>')}${settingsRow("upload", "Import from your bank", "Coming soon", '<span class="badge outline">soon</span>')}</div>
 <span class="eyebrow">About</span>
-<div class="list card flush">${settingsRow("monitor-smartphone", "Install app", "Add Ledger Flow to your home screen so the browser doesn’t delete what you record offline", "", "INDIGO")}${update ? `<div class="row" style="cursor:default">${tile("info", "GRAY", "sm")}<span class="body"><span class="title">Version</span><span class="meta">Ledger Flow v0.2 · a new version is ready</span></span><span class="right" style="flex-direction:row"><button class="btn primary sm">Reload</button></span></div>` : settingsRow("info", "Version", "Ledger Flow v0.2", "", "GRAY")}</div>
+<div class="list card flush">${installed ? `<div class="row" style="cursor:default">${tile("monitor-smartphone", "INDIGO", "sm")}<span class="body"><span class="title">Install app</span><span class="meta">Installed</span></span></div>` : settingsRow("monitor-smartphone", "Install app", `<span class="mobile-only">Add Ledger Flow to your home screen so the browser doesn’t delete what you record offline</span><span class="desktop-only">Install Ledger Flow so the browser doesn’t delete what you record offline</span>`, "", "INDIGO")}${update ? `<div class="row" style="cursor:default">${tile("info", "GRAY", "sm")}<span class="body"><span class="title">Version</span><span class="meta">Ledger Flow v0.2 · a new version is ready</span></span><span class="right" style="flex-direction:row"><button class="btn primary sm">Reload</button></span></div>` : settingsRow("info", "Version", "Ledger Flow v0.2", "", "GRAY")}</div>
 <div class="stack-sm">${signout}<button class="btn ghost block" style="color:var(--danger)">Delete my account</button></div>
 <p class="xs faint" style="text-align:center;margin:0">Ledger Flow · v0.2 · <span class="mono">America/Bogota</span></p>`;
   return screen(body, { tab: "", side: "ajustes", title: "Settings", narrow: true, banner });
@@ -3717,37 +3733,71 @@ const deleteLocalCopy = () => {
   });
 };
 
-const installSheet = (prompt = true) => {
-  let inner;
-  if (prompt) {
-    inner =
-      `<div class="alert info">${iconSvg("monitor-smartphone")}<span>Installing keeps your offline data safe: the ` +
-      `browser stops treating it as something it can delete.</span></div>` +
-      `<p class="small muted" style="margin:0">The app already asked this browser to keep your data, and it ` +
-      `said no — browsers don’t ask you, they decide, and installing is what changes their mind.</p>` +
-      `<button class="btn primary lg block">${iconSvg("download", "sm")}Install</button>`;
+const INSTALL_STEPS = {
+  "ios-safari": [
+    `Tap Share ${iconSvg("share", "sm")}`,
+    "Choose “Add to Home Screen”",
+    "Confirm with “Add”",
+  ],
+  "ios-other": [
+    `Tap Share, in the address bar or in the browser menu ${iconSvg("share", "sm")}`,
+    "Choose “Add to Home Screen”",
+    "Confirm with “Add”",
+  ],
+  android: ["Open the browser menu", "Choose “Install app” or “Add to Home screen”"],
+  desktop: [
+    "Look for the install icon in the address bar",
+    "Or open the browser menu and choose “Install Ledger Flow”",
+  ],
+  "mac-safari": [`Open the File menu, or Share ${iconSvg("share", "sm")}`, "Choose “Add to Dock”"],
+  samsung: [
+    "Tap the install icon in the address bar",
+    "Or open the menu and choose “Add page to”, then “Home screen”",
+  ],
+};
+
+const installLink = (text) =>
+  `<a href="#" style="color:var(--brand-text);font-weight:500;text-decoration:underline;text-underline-offset:2px">${text}</a>`;
+
+// T-197 · the sheet follows the browser in use: its prompt where it offers one, its own steps where not.
+const installSheet = (kind = "prompt", { granted = false } = {}) => {
+  const list = (steps) =>
+    `<ol class="small" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">${steps.map((t) => `<li>${t}</li>`).join("")}</ol>`;
+  const intro =
+    `<div class="alert info">${iconSvg("monitor-smartphone")}<span>Installing keeps your offline data safe: the ` +
+    `browser stops treating it as something it can delete.</span></div>`;
+  const asked = granted
+    ? ""
+    : `<p class="small muted" style="margin:0">The app already asked this browser to keep your data and it said ` +
+      `no — browsers don’t ask you, they decide, and installing is what changes that.</p>`;
+  const warning =
+    "If Android warns that it may be dangerous, tap “More details”, then “Install anyway”.";
+  let tail;
+  if (kind === "prompt") {
+    tail = `<button class="btn primary lg block">${iconSvg("download", "sm")}Install</button>`;
+  } else if (kind === "samsung" || kind === "samsung-steps") {
+    tail =
+      `<p class="small muted" style="margin:0">From Samsung Internet, Android flags the app as dangerous: it objects ` +
+      `to the way Samsung packages it, not to the app. Chrome installs it with no warning.</p>` +
+      `<a class="btn primary lg block" href="#">${iconSvg("external-link", "sm")}Install with Chrome</a>` +
+      (kind === "samsung"
+        ? `<p class="xs muted" style="margin:0">No Chrome, or it didn’t open? ${installLink("Install it here")}. ${warning}</p>`
+        : `<p class="xs muted" style="margin:0">No Chrome, or it didn’t open? Install it from Samsung Internet:</p>` +
+          list(INSTALL_STEPS.samsung) +
+          `<p class="xs muted" style="margin:0">${warning}</p>`);
   } else {
-    const steps = [
-      `Tap Share ${iconSvg("upload", "sm")}`,
-      "Choose “Add to Home Screen”",
-      "Confirm with “Add”",
-    ]
-      .map((t) => `<li>${t}</li>`)
-      .join("");
-    inner =
-      `<div class="alert info">${iconSvg("monitor-smartphone")}<span>Installing keeps your offline data safe: the ` +
-      `browser stops treating it as something it can delete.</span></div>` +
-      `<ol class="small" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">${steps}</ol>` +
-      `<p class="xs muted" style="margin:0">The app already asked this browser to keep your data and it said no; ` +
-      "installing is what changes that. Some browsers don’t offer installing at all — if yours doesn’t, keep a " +
-      "connection when you record and nothing will be waiting here.</p>";
+    const closing =
+      kind === "ios-other"
+        ? "If your browser doesn’t offer it, open this page in Safari and add it from there."
+        : "Some browsers don’t offer this at all. If yours doesn’t, keep a connection when you record and nothing will be waiting here.";
+    tail = list(INSTALL_STEPS[kind]) + `<p class="xs muted" style="margin:0">${closing}</p>`;
   }
   return screen(settingsBodyDim(), {
     tab: "",
     side: "ajustes",
     title: "Settings",
     narrow: true,
-    sheet: sheetWrap(inner, "Install this app"),
+    sheet: sheetWrap(intro + asked + tail, "Install this app"),
   });
 };
 
@@ -5542,16 +5592,23 @@ const PAGES = [
       plate(
         "install-card",
         "Install card · data at risk",
-        "On a phone or tablet whose browser has not protected the offline copy — every iPhone, and any Android Chrome that said no. Install where the browser offers it, How where it does not. Never on a desktop.",
+        "On an iPhone or iPad, and on any Android whose browser has not protected the offline copy. Where the browser never offers to install — every iPhone — the one action is How, which opens the steps. The wide frame is a tablet held sideways: the card follows the device, not the width, and never appears on a computer.",
         home({ notice: "risk" }),
-        { added: "2026-09-08" },
+        { added: "2026-09-08", updated: "2026-09-25" },
       ),
       plate(
         "install-card-safe",
         "Install card · data already safe",
-        "Same card on an Android whose browser already granted durable storage: the deletion sentence is gone, because it would not be true, and what is left is the reason that still holds.",
+        "Android Chrome, which offers to install and already granted durable storage: the deletion sentence is gone, because it would not be true, and Install fires the browser’s own prompt.",
         home({ notice: "safe" }),
-        { added: "2026-09-11" },
+        { added: "2026-09-11", updated: "2026-09-25" },
+      ),
+      plate(
+        "install-card-samsung",
+        "Install card · Samsung Internet",
+        "Installed from Samsung Internet, Android now blocks the app as dangerous: the package Samsung builds for it targets an old Android, and the first button only closes. So here the card sends you to Chrome, which installs it without a warning, and keeps Samsung’s own install one tap away — with the way past the warning — for whoever has no Chrome. The deletion sentence follows the same rule as everywhere else.",
+        home({ notice: "samsung" }),
+        { added: "2026-09-25" },
       ),
       plate(
         "hero-day-tooltip",
@@ -6894,10 +6951,20 @@ const PAGES = [
     group: "Screens",
     note: "A hub with profile, preferences, security and data. Anything written on the server says so when there is no connection. Sync status is the page that answers what this device has and what it still owes the server.",
     plates: [
-      plate("settings-hub", "Settings", "", settings(), {
-        added: "2026-09-01",
-        updated: "2026-09-22",
-      }),
+      plate(
+        "settings-hub",
+        "Settings",
+        "The Install app row says home screen on a phone or tablet and install on a desktop, which has no home screen.",
+        settings(),
+        { added: "2026-09-01", updated: "2026-09-25" },
+      ),
+      plate(
+        "settings-installed",
+        "Settings · in the installed app",
+        "Once installed, the row says Installed and opens nothing: there is nothing left to do. Drawn scrolled to the end, where the row is.",
+        settings({ scrolled: true, installed: true }),
+        { added: "2026-09-25" },
+      ),
       plate(
         "settings-with-a-new-version",
         "Settings · a new version is waiting",
@@ -7038,16 +7105,58 @@ const PAGES = [
       plate(
         "install-sheet",
         "Install this app",
-        "Where the browser offers to install.",
-        installSheet(true),
-        { added: "2026-09-08" },
+        "Where the browser offers to install — Chrome and Edge, on Android and on a desktop. The line about the browser saying no is there only when it did: where it already granted durable storage the sheet does not claim otherwise.",
+        installSheet("prompt"),
+        { added: "2026-09-08", updated: "2026-09-25" },
+      ),
+      plate(
+        "install-sheet-samsung",
+        "Install this app · Samsung Internet",
+        "The same sheet in Samsung Internet, where installing from Samsung ends in Android’s dangerous-app block. The call to action opens this page in Chrome; below it, Samsung’s own install and how to get past the warning.",
+        installSheet("samsung"),
+        { added: "2026-09-25" },
+      ),
+      plate(
+        "install-sheet-samsung-steps",
+        "Install this app · Samsung Internet, no prompt",
+        "Where Samsung Internet has not offered its prompt, the fallback gives Samsung’s own steps instead of a link that could do nothing.",
+        installSheet("samsung-steps"),
+        { added: "2026-09-25" },
       ),
       plate(
         "install-sheet-steps",
-        "Install this app · by hand",
-        "Where the browser does not offer it, iOS among them: the steps, and what happens if it is never installed.",
-        installSheet(false),
-        { added: "2026-09-08" },
+        "Install this app · iPhone and iPad, Safari",
+        "iOS never offers a prompt, so the sheet gives the steps, with the real name of each thing, and what happens if it is never installed.",
+        installSheet("ios-safari"),
+        { added: "2026-09-08", updated: "2026-09-25" },
+      ),
+      plate(
+        "install-sheet-steps-ios-other",
+        "Install this app · iPhone and iPad, another browser",
+        "Chrome, Firefox and Edge on iOS add to the home screen through the same Share sheet, but keep Share in the address bar or in their menu. And an in-app browser may have none, so the last line sends you to Safari.",
+        installSheet("ios-other"),
+        { added: "2026-09-25" },
+      ),
+      plate(
+        "install-sheet-steps-android",
+        "Install this app · Android, no prompt",
+        "An Android browser that never fires the install event — Firefox among them — or Chrome before it does.",
+        installSheet("android"),
+        { added: "2026-09-25" },
+      ),
+      plate(
+        "install-sheet-steps-desktop",
+        "Install this app · desktop, no prompt",
+        "A desktop browser without the event: Firefox on Windows keeps its own button in the address bar, and a browser with none is what the last line is for.",
+        installSheet("desktop"),
+        { added: "2026-09-25" },
+      ),
+      plate(
+        "install-sheet-steps-mac-safari",
+        "Install this app · Safari on a Mac",
+        "Safari on a Mac installs with Add to Dock, from the File menu or Share: the steps an address-bar icon would get wrong.",
+        installSheet("mac-safari"),
+        { added: "2026-09-25" },
       ),
     ],
   },

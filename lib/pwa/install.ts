@@ -27,15 +27,23 @@ function store(): InstallState | null {
   );
 }
 
+const listeners = new Set<() => void>();
+
+function notifyAll(): void {
+  for (const listener of listeners) listener();
+}
+
 // The head script owns the capture; this only relays its changes to React.
 function subscribe(onChange: () => void): () => void {
   const state = store();
-  if (state) state.notify = onChange;
+  listeners.add(onChange);
+  if (state) state.notify = notifyAll;
   const media = window.matchMedia(STANDALONE);
   media.addEventListener("change", onChange);
   window.addEventListener("appinstalled", onChange);
   return () => {
-    if (state?.notify === onChange) state.notify = null;
+    listeners.delete(onChange);
+    if (state && listeners.size === 0) state.notify = null;
     media.removeEventListener("change", onChange);
     window.removeEventListener("appinstalled", onChange);
   };
@@ -57,12 +65,11 @@ export function useInstallPrompt(): {
     const captured = store();
     const event = captured?.event;
     if (!captured || !event) return;
+    // An event prompts once: calling it again after a dismissal throws.
+    captured.event = null;
+    captured.notify?.();
     await event.prompt();
-    const choice = await event.userChoice;
-    if (choice.outcome === "accepted") {
-      captured.event = null;
-      captured.notify?.();
-    }
+    await event.userChoice;
   }, []);
 
   return { state, install };

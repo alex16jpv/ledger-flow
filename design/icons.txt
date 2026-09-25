@@ -1,5 +1,5 @@
 bath washing-machine trees mountain tent ship glasses watch gem crown medal paintbrush footprints cookie martini church store
-calculator scale sliders-horizontal circle-dollar-sign hash notebook-pen wallet-cards building-2 refresh-cw rotate-ccw download upload copy
+calculator scale sliders-horizontal circle-dollar-sign hash notebook-pen wallet-cards building-2 refresh-cw rotate-ccw download upload copy share external-link
 cloud-check
 cloud-off
 cloud-upload

@@ -1,6 +1,6 @@
 "use client";
 
-import { MonitorSmartphone } from "lucide-react";
+import { Download, MonitorSmartphone } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
@@ -16,10 +16,11 @@ import {
   snoozeInstallNotice,
 } from "@/lib/pwa/install-notice";
 import { displayMode } from "@/lib/pwa/mode";
-import { devicePlatform } from "@/lib/pwa/platform";
+import { devicePlatform, installGuide } from "@/lib/pwa/platform";
 import { useMounted } from "@/lib/react/useMounted";
 
 import { InstallSheet } from "./InstallSheet";
+import { InstallWithChrome, SamsungFallback } from "./SamsungInstall";
 
 export function InstallNotice({ hasSomethingToLose }: { hasSomethingToLose: boolean }) {
   const t = useTranslations("home.installNotice");
@@ -29,6 +30,7 @@ export function InstallNotice({ hasSomethingToLose }: { hasSomethingToLose: bool
   const [snoozed, setSnoozed] = useState(false);
   const [durable, setDurable] = useState<boolean | null>(null);
   const policy = mounted ? NOTICE_POLICY[devicePlatform()] : null;
+  const samsung = mounted && installGuide() === "samsung";
   const silenced = policy === null || snoozed || installNoticeSilenced(policy);
 
   useEffect(() => {
@@ -63,13 +65,16 @@ export function InstallNotice({ hasSomethingToLose }: { hasSomethingToLose: bool
           <span className="text-sm text-text-2">{t("body")}</span>
           {durable ? null : <span className="text-sm text-text-2">{t("risk")}</span>}
           <div className="mt-1 flex flex-wrap gap-2">
-            {install.state === "available" ? (
+            {samsung ? (
+              <InstallWithChrome size="sm" />
+            ) : install.state === "available" ? (
               <Button
                 size="sm"
                 onClick={() => {
                   void install.install();
                 }}
               >
+                <Download {...iconProps("sm")} />
                 {t("install")}
               </Button>
             ) : (
@@ -93,6 +98,14 @@ export function InstallNotice({ hasSomethingToLose }: { hasSomethingToLose: bool
               {t("dismiss")}
             </Button>
           </div>
+          {samsung ? (
+            <SamsungFallback
+              onInstallHere={() => {
+                if (install.state === "available") void install.install();
+                else setSheet(true);
+              }}
+            />
+          ) : null}
         </div>
       </Card>
       <InstallSheet

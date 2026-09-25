@@ -352,7 +352,20 @@
         "androidStep2": "Choose “Install app” or “Add to Home screen”",
         "desktopStep1": "Look for the install icon in the address bar",
         "desktopStep2": "Or open the browser menu and choose “Install Ledger Flow”",
-        "fallback": "Some browsers don’t offer this at all. If yours doesn’t, keep a connection when you record and nothing will be waiting here."
+        "fallback": "Some browsers don’t offer this at all. If yours doesn’t, keep a connection when you record and nothing will be waiting here.",
+        "iosOtherStep1": "Tap Share, in the address bar or in the browser menu",
+        "macStep1": "Open the File menu, or Share",
+        "macStep2": "Choose “Add to Dock”",
+        "fallbackIosOther": "If your browser doesn’t offer it, open this page in Safari and add it from there.",
+        "samsungWhy": "From Samsung Internet, Android flags the app as dangerous: it objects to the way Samsung packages it, not to the app. Chrome installs it with no warning."
+      },
+      "samsung": {
+        "chrome": "Install with Chrome",
+        "fallback": "No Chrome, or it didn’t open? <here>Install it here</here>. {warning}",
+        "stepsLead": "No Chrome, or it didn’t open? Install it from Samsung Internet:",
+        "step1": "Tap the install icon in the address bar",
+        "step2": "Or open the menu and choose “Add page to”, then “Home screen”",
+        "warning": "If Android warns that it may be dangerous, tap “More details”, then “Install anyway”."
       }
     },
     "delete": {

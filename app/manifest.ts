@@ -6,6 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Ledger Flow",
     short_name: "Ledger Flow",
     description: "Catch your small daily spending in three seconds and see where the month goes.",
+    id: "/",
     start_url: "/",
     scope: "/",
     display: "standalone",
