@@ -15,6 +15,9 @@ const revisionOf = (url) =>
 // F-56: the e2e build writes its worker beside this one so `public/sw.js` stays the app's.
 const swDest = process.env.SERWIST_SW_DEST ?? "public/sw.js";
 
+// T-195: each build stages its shell under its own name, so two installs never share one.
+const buildId = readFileSync(`${process.env.NEXT_DIST_DIR ?? ".next"}/BUILD_ID`, "utf8").trim();
+
 export default await serwist({
   swSrc: "app/sw.ts",
   swDest,
@@ -30,4 +33,5 @@ export default await serwist({
     }),
   ],
   additionalPrecacheEntries: OFFLINE_DOCUMENTS.map((url) => ({ url, revision: revisionOf(url) })),
+  esbuildOptions: { define: { "self.__BUILD_ID": JSON.stringify(buildId) } },
 });

@@ -4,8 +4,8 @@ import { useDetailRouteId } from "@/lib/navigation/detail";
 
 import { JoinedGroupScreen } from "./JoinedGroupScreen";
 
-// F-48: the id comes from the URL, not `params`: the worker serves one entry per template.
+// F-48: the id comes from the URL and keys the screen: one cached payload serves every row.
 export function JoinedGroupRoute() {
   const id = useDetailRouteId();
-  return id ? <JoinedGroupScreen id={id} /> : null;
+  return id ? <JoinedGroupScreen key={id} id={id} /> : null;
 }
