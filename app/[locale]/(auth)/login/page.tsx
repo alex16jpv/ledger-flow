@@ -11,11 +11,12 @@ export async function generateMetadata({
 }: PageProps<"/[locale]/login">): Promise<Metadata> {
   const { locale: raw } = await params;
   const locale = isAppLocale(raw) ? raw : "en";
-  const t = await getTranslations({ locale, namespace: "auth.login" });
-  const meta = await getTranslations({ locale, namespace: "public.landing" });
+  const nav = await getTranslations({ locale, namespace: "public.nav" });
+  const meta = await getTranslations({ locale, namespace: "public.seo" });
   return publicMetadata("/login", locale, {
-    title: t("submit"),
-    description: meta("metaDescription"),
+    title: nav("signIn"),
+    description: meta("loginDescription"),
+    imageAlt: meta("ogAlt"),
   });
 }
 

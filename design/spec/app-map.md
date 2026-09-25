@@ -5,8 +5,8 @@ with the space reserved.
 
 ## Public (indexable; the whole of the SEO surface)
 
-✅ Landing (`/`): value proposition, three benefits, three steps, a call to action to sign up, the
-language switch and the legal footer · ✅ Privacy and data processing policy (Ley 1581) · ⬜ Terms
+✅ Landing (`/`): value proposition, six benefits, a section on shared expenses, three steps, a call
+to action to sign up, the questions a visitor asks, the language switch and the legal footer · ✅ Privacy and data processing policy (Ley 1581) · ⬜ Terms
 (same layout as privacy) · ✅ 404 · ⬜ 500 and the landing's offline page (the same `Empty`). Every
 public page exists in `en` and `es` with its own URL (`/es/...`) and `hreflang`. Everything signed-in
 is `noindex`.

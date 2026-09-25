@@ -5,7 +5,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Ledger Flow",
     short_name: "Ledger Flow",
-    description: "Catch your small daily spending in three seconds and see where the month goes.",
+    description:
+      "Free expense tracker and budget app: log expenses in seconds, set budgets, split bills and see where your money goes.",
     id: "/",
     start_url: "/",
     scope: "/",

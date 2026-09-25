@@ -17,7 +17,6 @@ export {
   APP_HOME_PATH,
   HOME_PATH,
   isGuestOnlyPath,
-  isPublicPath,
   LOGIN_PATH,
   ONBOARDING_PATH,
   REGISTER_PATH,

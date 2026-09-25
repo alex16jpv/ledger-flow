@@ -10,7 +10,7 @@ const EXEMPT_PREFIXES = [
   ["design", "preview", "assets"].join(sep) + sep,
 ];
 // next/og renders with satori, which cannot read CSS variables: the card carries literal brand colors.
-const EXEMPT_FILES = ["opengraph-image.tsx", "manifest.ts", "brand-icon.tsx"];
+const EXEMPT_FILES = ["opengraph-image.tsx", "manifest.ts", "brand-icon.tsx", "brand-mark.ts"];
 
 const TAILWIND_PREFIXES =
   "bg|text|border|ring|fill|stroke|from|to|via|outline|decoration|accent|caret|shadow|divide|placeholder|inset-ring";

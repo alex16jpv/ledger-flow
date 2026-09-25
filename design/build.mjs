@@ -3206,7 +3206,7 @@ const accountPicker = (kind = "all") => {
 
 const publicShell = (inner) => {
   const logo = '<span class="logo">' + iconSvg("layers", "sm") + "</span>";
-  const nav = `<header class="public-nav"><a class="brand" href="#" style="padding:0">${logo}Ledger Flow</a>
+  const nav = `<header class="public-nav"><a class="brand" href="#" style="padding:0">${logo}<span class="brand-name">Ledger Flow</span></a>
 <nav class="links"><a href="#">Features</a><a href="#">How it works</a><a href="#">Privacy</a></nav>
 <div class="hstack"><button class="chip" style="height:32px">${iconSvg("globe", "sm")}EN</button><a class="btn ghost" href="#">Sign in</a><a class="btn primary" href="#">Get started</a></div></header>`;
   const foot = `<footer class="public-footer"><div class="inner"><span>&copy; 2026 Ledger Flow</span><span class="hstack" style="gap:16px"><a href="#">Privacy policy</a><a href="#">Terms</a><a href="#">Data processing (Ley 1581)</a><a href="#">Contact</a></span><span class="hstack" style="gap:8px">${iconSvg("globe", "sm")}English &middot; <a href="#">Espa&ntilde;ol</a></span></div></footer>`;
@@ -3216,22 +3216,48 @@ const publicShell = (inner) => {
 const landing = () => {
   const hero = `<section class="hero"><div class="stack" style="gap:20px"><span class="badge brand" style="align-self:flex-start">${iconSvg("sparkles")}Free &middot; no card needed</span>
 <h1>See where your money actually goes.</h1>
-<p>Log an expense in three seconds, put a ceiling on the month and catch the small daily spending that adds up before it does.</p>
+<p>Log an expense in three seconds, put a ceiling on the month, and split the bills you share with friends, family or roommates &mdash; then see exactly where your money went.</p>
 <div class="cta"><a class="btn primary lg" href="#">Create your free account</a><a class="btn secondary lg" href="#">Sign in</a></div>
-<span class="small faint">Works offline &middot; English &amp; Espa&ntilde;ol &middot; Your data stays yours</span></div>
+<span class="small faint">Works offline &middot; Installs like an app &middot; English &amp; Espa&ntilde;ol &middot; Your data stays yours</span></div>
 <div class="phone"><div class="app">${home()}</div></div></section>`;
-  const feats = `<section class="stack" style="gap:24px"><div class="stack-sm" style="text-align:center"><span class="eyebrow">Why Ledger Flow</span><h2 class="h1" style="font-size:28px">Built for the small stuff</h2>
-<p class="muted" style="max-width:62ch;margin:8px auto 0">Ledger Flow is a free expense tracker and budget app for everyday personal finance. You log what you spend, it keeps your account balances right, and it shows you where your money goes &mdash; by category, by month, and against the ceiling you set.</p></div>
+  const head = (eyebrow, title) =>
+    `<div class="stack-sm" style="text-align:center"><span class="eyebrow">${eyebrow}</span><h2 class="h1" style="font-size:28px">${title}</h2>`;
+  const feature = (icon, color, title, body) =>
+    `<div class="card feature">${tile(icon, color, "lg")}<span class="h3">${title}</span><p>${body}</p></div>`;
+  const feats = `<section class="stack" style="gap:24px">${head("Why Ledger Flow", "All your money, in one app")}
+<p class="muted" style="max-width:62ch;margin:8px auto 0">Ledger Flow is a free expense tracker and budget app for everyday personal finance. You log what you spend, it keeps every account balance right, it splits the bills you share with other people, and it shows you where your money goes &mdash; by category, by month, and against the budgets you set.</p></div>
 <div class="feature-grid">
-<div class="card feature">${tile("zap", "AMBER", "lg")}<span class="h3">Three-second capture</span><p>Tap, type the amount, done. Add the category later from your review inbox: the expense already counts.</p></div>
-<div class="card feature">${tile("chart-pie", "INDIGO", "lg")}<span class="h3">Budgets that talk back</span><p>A ceiling for the month plus per-category limits, with pace and days left in plain language, not just a bar.</p></div>
-<div class="card feature">${tile("wifi-off", "TEAL", "lg")}<span class="h3">Works without signal</span><p>Log on the bus or abroad. Everything syncs when you are back online, and nothing gets duplicated.</p></div></div></section>`;
-  const steps = `<section class="stack" style="gap:24px"><div class="stack-sm" style="text-align:center"><span class="eyebrow">How it works</span><h2 class="h1" style="font-size:28px">Up and running in a minute</h2></div>
+${feature("zap", "AMBER", "Three-second capture", "Tap, type the amount, done. It suggests what you wrote before, and the category can wait in your review inbox: the expense already counts.")}
+${feature("chart-pie", "INDIGO", "Budgets that talk back", "Weekly, monthly, yearly or your own dates, for everything or per category, with pace and days left in plain language &mdash; not just a bar.")}
+${feature("users", "TEAL", "Shared expenses", "Trips, rent, dinners out: split each bill your way and always know who owes you and how much, across every group.")}
+${feature("chart-column", "GREEN", "Stats and trends", "Where the money went by category, day, tag or account, and up to a year of income against spending with your savings rate.")}
+${feature("wallet", "BLUE", "Every account you have", "Cash, bank accounts, credit and debit cards, savings, investments and loans. Every movement keeps the balance right.")}
+${feature("wifi-off", "PURPLE", "Works without signal", "Log on the bus or abroad, and install it on your phone or computer. Everything syncs when you are back online, with nothing duplicated.")}</div></section>`;
+  const check = (text) => `<li>${iconSvg("circle-check", "sm")}<span>${text}</span></li>`;
+  const sharedCard = `<div class="spotlight-mock stack" style="gap:12px">${sharedSeg("people")}${sharedSummary()}
+<div class="list card flush">
+${personRow("Beto Cano", "Cartagena trip · Night out", 526300, "owes you")}
+${personRow("Ana Ruiz", "Cartagena trip · Night out", 26300, "owes you")}
+${personRow("Diego Pardo", "Rent · September", 60000, "you owe")}
+</div></div>`;
+  const shared = `<section class="spotlight"><div class="stack" style="gap:16px"><span class="eyebrow">Shared expenses</span><h2 class="h1" style="font-size:28px;margin:0">Split bills with friends, family and roommates</h2>
+<p class="muted" style="margin:0">A trip, the rent, a night out: put the bill in a shared group, say how it splits, and Ledger Flow keeps the tally for everyone &mdash; what each person owes, what they have paid and what is left.</p>
+<ul class="checks">${check("Split equally, by percent, by exact amounts, or a fixed part and the rest.")}${check("See what each person owes you across every group, and what you owe them.")}${check("Get paid in parts or in cash: money paid back is not counted as income.")}${check("Add anyone by name: nobody needs an account. If they use Ledger Flow too, invite them with their email and they can see the group.")}</ul></div>
+${sharedCard}</section>`;
+  const steps = `<section class="stack" style="gap:24px">${head("How it works", "Up and running in a minute")}</div>
 <div class="steps"><div class="step"><span class="n">1</span><div><span class="h3">Create your account</span><p class="small muted" style="margin:4px 0 0">Pick your currency once. Email and password, nothing else.</p></div></div>
 <div class="step"><span class="n">2</span><div><span class="h3">Add your first account</span><p class="small muted" style="margin:4px 0 0">Cash, bank or card, with today&rsquo;s balance.</p></div></div>
 <div class="step"><span class="n">3</span><div><span class="h3">Set a monthly ceiling</span><p class="small muted" style="margin:4px 0 0">Then log expenses as they happen. That is the whole habit.</p></div></div></div>
 <div class="hstack" style="justify-content:center"><a class="btn primary lg" href="#">Start now &mdash; it&rsquo;s free</a></div></section>`;
-  return publicShell(hero + feats + steps);
+  const qa = (q, a) => `<div class="qa"><h3 class="h3">${q}</h3><p>${a}</p></div>`;
+  const faq = `<section class="faq">${head("Questions", "Frequently asked questions")}</div>
+${qa("Is Ledger Flow free?", "Yes. Creating an account costs nothing and asks for no card.")}
+${qa("Does it connect to my bank?", "No. You record your own movements, so Ledger Flow never asks for your bank details or passwords.")}
+${qa("Does it work without internet?", "Yes. What you record offline is saved on your device and syncs when the connection comes back. Installing the app keeps that copy safe from the browser&rsquo;s clean-ups.")}
+${qa("Do the people I split with need an account?", "No. Add anyone to a shared group by name. If they also use Ledger Flow, invite them with the email of their account: the group appears in their Shared, and once you mark their part paid they can add it to their own ledger. Nothing is emailed, so let them know.")}
+${qa("Can I use it on my phone and my computer?", "Yes. It runs in the browser of any phone, tablet or computer, installs like an app on Android, iPhone and desktop, and keeps your data in sync across all of them.")}
+${qa("Who can see my data?", "Only you, and the people you invite to see a shared group. We don&rsquo;t sell data or use it for advertising, and you can delete your account from Settings.")}</section>`;
+  return publicShell(hero + feats + shared + steps + faq);
 };
 
 const notFound = () => {
@@ -3240,9 +3266,9 @@ const notFound = () => {
 };
 
 const legal = () => {
-  const inner = `<article class="legal"><span class="eyebrow">Legal &middot; updated Sep 1, 2026</span><h1 class="h1">Privacy policy</h1>
+  const inner = `<article class="legal"><span class="eyebrow">Legal &middot; updated Sep 25, 2026</span><h1 class="h1">Privacy policy</h1>
 <p>Ledger Flow stores the financial records you enter so you can see them on any device. This page explains what we keep, why, and how you control it. It also serves as our data processing policy under Colombia&rsquo;s Ley 1581 de 2012.</p>
-<h2>What we store</h2><ul><li>Your name, email, language, time zone and currency.</li><li>Accounts, categories, transactions and budgets you create, including notes and tags.</li><li>Device sessions (browser type, time of sign-in) so you can review and revoke them.</li></ul>
+<h2>What we store</h2><ul><li>Your name, email, language, time zone and currency.</li><li>Accounts, categories, transactions and budgets you create, including notes and tags.</li><li>Device sessions (browser type, time of sign-in) so you can review and revoke them.</li><li>People you add (a name, a colour and, if you give one, an email) and the shared groups you create, with their expenses and payments.</li><li>If you join a group someone shares with you, its owner and the others in it see the name on your profile.</li></ul>
 <h2>Why</h2><p>Only to run the service: showing your data back to you, keeping balances right and securing your account. We do not sell data and we do not use it for advertising.</p>
 <h2>Your rights</h2><p>You can read, correct and delete your data from Settings at any time. Deleting your account keeps the records so you can reactivate later; ask us for permanent removal and we will do it within 15 business days.</p>
 <h2>Contact</h2><p>ledgerflow@alexpiral.com</p></article>`;
@@ -7169,16 +7195,16 @@ const PAGES = [
       plate(
         "landing",
         "Landing",
-        "Value proposition, three benefits, three steps and a call to action.",
+        "Value proposition, six benefits, shared expenses, three steps, a call to action and the questions a visitor asks.",
         landing(),
-        { added: "2026-09-01" },
+        { added: "2026-09-01", updated: "2026-09-25" },
       ),
       plate(
         "privacy-policy",
         "Privacy policy",
         "Doubles as the data processing policy under Ley 1581.",
         legal(),
-        { added: "2026-09-01" },
+        { added: "2026-09-01", updated: "2026-09-25" },
       ),
       plate("not-found", "404", "", notFound(), { added: "2026-09-01" }),
     ],

@@ -81,9 +81,13 @@ export default function proxy(request: NextRequest) {
   const response = intl(request);
   response.headers.set(headerName, csp);
   if (noindex) response.headers.set("x-robots-tag", "noindex, nofollow");
+  // An unprefixed address answers by the locale cookie and Accept-Language, so a cache must key on both.
+  if (!prefix) response.headers.append("vary", "Accept-Language, Cookie");
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!api|_next|_vercel|monitoring|icon|apple-icon|.*\\..*).*)"],
+  matcher: [
+    "/((?!api|_next|_vercel|monitoring|icon|apple-icon|(?:en|es)/opengraph-image$|.*\\..*).*)",
+  ],
 };

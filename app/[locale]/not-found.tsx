@@ -19,7 +19,7 @@ export default async function NotFound() {
           titleSize="page"
           body={t("body")}
           action={
-            <Link href="/home" className={buttonClasses()}>
+            <Link href="/" className={buttonClasses()}>
               {t("home")}
             </Link>
           }
