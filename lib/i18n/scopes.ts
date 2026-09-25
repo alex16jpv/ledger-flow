@@ -1,6 +1,7 @@
 export const MESSAGE_SCOPES = {
   root: ["public.error"],
-  auth: [
+  auth: ["auth", "common", "errors", "settings", "validation"],
+  onboarding: [
     "accountTypeDescriptions",
     "accountTypes",
     "accounts",
@@ -54,27 +55,27 @@ export const MESSAGE_SCOPES = {
 
 export type MessageScope = keyof typeof MESSAGE_SCOPES;
 
-export interface MessageTree {
+interface MessageTree {
   [key: string]: string | MessageTree;
 }
 
 export function pickMessages(messages: MessageTree, paths: readonly string[]): MessageTree {
   const picked: MessageTree = {};
-  paths: for (const path of paths) {
+  for (const path of paths) {
+    const outer = paths.find((other) => path.startsWith(`${other}.`));
+    if (outer) throw new Error(`pickMessages: "${path}" is already inside "${outer}"`);
     const parts = path.split(".");
+    const leaf = parts.pop() ?? path;
     let from: string | MessageTree | undefined = messages;
     let into = picked;
-    for (const [index, part] of parts.entries()) {
+    for (const part of parts) {
       from = typeof from === "object" ? from[part] : undefined;
-      if (from === undefined) throw new Error(`pickMessages: no messages at "${path}"`);
-      if (index === parts.length - 1) {
-        into[part] = from;
-        continue paths;
-      }
       const next = into[part];
-      if (next === from) continue paths;
       into = typeof next === "object" ? next : (into[part] = {});
     }
+    const value = typeof from === "object" ? from[leaf] : undefined;
+    if (value === undefined) throw new Error(`pickMessages: no messages at "${path}"`);
+    into[leaf] = value;
   }
   return picked;
 }

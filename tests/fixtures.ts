@@ -25,14 +25,14 @@ export const test = base.extend({
   request: async ({ request }, runTest) => {
     await runTest(tolerateReset(request));
   },
-  page: async ({ page }, runTest) => {
+  context: async ({ context }, runTest) => {
     const missing: string[] = [];
-    page.on("console", (message) => {
+    context.on("console", (message) => {
       if (message.type() === "error" && message.text().includes("MISSING_MESSAGE")) {
         missing.push(message.text());
       }
     });
-    await runTest(page);
+    await runTest(context);
     expect(missing, "a key its segment's MESSAGE_SCOPES entry does not send").toEqual([]);
   },
 });

@@ -5,34 +5,52 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-25 · The currency and time-zone lists are built only in the browser (found in T-184)
+
+- **What broke:** `CurrencyPicker` and `TimeZonePicker` rendered their whole option list into the
+  server HTML, inside the closed sheet, from `Intl.supportedValuesOf` and the zone offsets of the
+  runtime. The server's Node and the browser do not share that data (Node listed SLE, XCG and ZWG,
+  which Chromium does not, and gave Casablanca GMT+0 where Chromium gives GMT+1), so `/register`
+  failed hydration (React #418) and was rendered again on the client; Settings uses the same two
+  pickers. For a moment the page held both copies of the form, which is how an e2e test that
+  filled Email caught it.
+- **Decision:** both lists are empty until `useMounted()` says the component runs in the browser,
+  the way `useDeviceDefaults` already treats the device's data. The sheet only opens on a press,
+  so nothing visible changes, and the server HTML no longer carries a few hundred options.
+
 ## 2026-09-25 · Each segment sends the client only the message namespaces its client code reads (T-184)
 
 - **What was wrong:** the root layout rendered `NextIntlClientProvider` without `messages`, so every
   document carried the whole catalogue (28.0 kB gz in English, 29.7 in Spanish) in its flight data:
   the landing, the legal pages and the access flow too, whose client code reads almost none of it.
 - **Decision:** `ScopedIntlProvider` (`lib/i18n`) wraps each layout that owns a client tree — the
-  `[locale]` root, `(auth)`, `(app)` and `dev` — and passes `pickMessages(getMessages(),
-MESSAGE_SCOPES[scope])`. Server Components still read the whole catalogue through
-  `getRequestConfig`. The root sends only `public.error` (its `error.tsx`); the other three send the
-  namespaces their client graphs read. `lib/i18n/scopes.test.ts` parses every source with the
-  TypeScript compiler, follows the imports (dynamic ones included) from each segment's files into the
-  `"use client"` graph, and requires each scope to be exactly what that graph reads: a
-  `useTranslations("x.y")` argument, or any `"<namespace>.…"` literal once some file in the graph
-  calls `useTranslations()` without a namespace. A namespace passed as a variable fails it. The e2e
-  `page` fixture fails any test whose browser logs `MISSING_MESSAGE`.
+  `[locale]` root, `(auth)`, `(auth)/onboarding`, `(app)` and `dev` — and hands the client
+  `pickMessages` of the catalogue for its entry in `MESSAGE_SCOPES`. A nested provider replaces
+  its parent's messages. Server Components still read the whole catalogue through
+  `getRequestConfig`. The root sends only `public.error` (its `error.tsx`); sign-in and sign-up send
+  5 namespaces, onboarding 12 and the app 23 of the 25. `lib/i18n/scopes.test.ts` parses every
+  source with the TypeScript compiler, follows the imports (dynamic ones included) from each
+  segment's files into the `"use client"` graph, and requires each scope to be exactly what that
+  graph reads: a `useTranslations("x.y")` argument, or any `"<namespace>.…"` literal in the segment
+  (server files included, `getTranslations` arguments excluded) once a client file calls
+  `useTranslations()` without a namespace. A namespace passed as a variable, an aliased or namespace
+  import of `next-intl`, `useMessages`, `useExtracted`, and an import it cannot follow all fail it.
+  What it cannot see is a key assembled with no literal `"<namespace>."` in it; the e2e `context`
+  fixture fails any test whose browser logs `MISSING_MESSAGE` (pages from a `browser.newContext()`
+  are not watched).
 - **Measured** (HTML of a local production build, gz): `/` 43.1 → 13.3 kB, `/es` 44.9 → 13.4,
-  `/login` 36.1 → 21.2, `/register` 45.6 → 30.8, `/privacy` 36.1 → 6.3; the app screens 39.9 →
-  38.1, because the app reads 23 of the 25 namespaces. **The JS budget does not move** (the heaviest
-  app screen stays at 220.0 kB gz): the catalogue never was in a client chunk, and `size-limit`
-  measures chunks.
+  `/login` 36.1 → 13.7, `/register` 45.6 → 15.3 (with the pickers' lists out, entry above),
+  `/privacy` 36.1 → 6.3, `/onboarding` 20.8; the app screens 39.9 → 38.1. **The JS budget does not
+  move** (the heaviest app screen stays at 220.0 kB gz): the catalogue never was in a client chunk,
+  and `size-limit` measures chunks.
 - **Alternatives:** one provider per app module (`/shared`, `/transactions`…) would cut an app
-  document to 17–24 kB, but a nested provider replaces the messages rather than adding to them, so
-  every module would repeat what the frame already sends, and a soft navigation into another module
-  would download its slice again, where today it downloads none; the installed app serves its
-  documents from the worker's cache, so the saving would land where it matters least. A client
-  provider merging over its parent's messages would avoid the repetition but has to re-pass every
-  other part of the config by hand. Hand-kept lists with no check were rejected: a missing
-  namespace only shows as a raw key in the browser.
+  document to 17–24 kB, but since a nested provider replaces the messages, every module would repeat
+  what the frame already sends, and a soft navigation into another module would download its slice
+  again, where today it downloads none; the installed app serves its documents from the worker's
+  cache, so the saving would land where it matters least. Onboarding does get its own segment: it is
+  visited once, and without it sign-in would carry its 12 namespaces. A client provider merging over
+  its parent's messages would avoid the repetition but has to re-pass every other part of the config
+  by hand. Hand-kept lists with no check were rejected: a missing namespace only shows as a raw key.
 
 ## 2026-09-25 · A waiting version is a stripe that stays, comes back, and is looked for on every return (T-196)
 
