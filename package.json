@@ -31,6 +31,7 @@
     "lighthouse": "node tools/lighthouse.mjs",
     "lighthouse:app": "node tools/lighthouse.mjs --app",
     "gen:api-types": "node tools/gen-api-types.mjs",
+    "build:favicon": "node tools/build-favicon.mjs",
     "fixtures:sync": "node tools/sync-fixtures.mjs",
     "gen:feature": "plop feature",
     "build:gate": "NEXT_DIST_DIR=.next-gate SERWIST_SW_DEST=public/sw-gate.js npm run build && NEXT_DIST_DIR=.next-gate npm run size-limit && NEXT_DIST_DIR=.next-gate npm run check-dev-routes",

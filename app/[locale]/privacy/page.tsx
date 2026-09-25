@@ -12,17 +12,18 @@ export async function generateMetadata({
 }: PageProps<"/[locale]/privacy">): Promise<Metadata> {
   const { locale: raw } = await params;
   const locale = isAppLocale(raw) ? raw : "en";
-  const t = await getTranslations({ locale, namespace: "public.privacy" });
+  const t = await getTranslations({ locale, namespace: "public" });
   return publicMetadata("/privacy", locale, {
-    title: t("metaTitle"),
-    description: t("metaDescription"),
+    title: t("privacy.metaTitle"),
+    description: t("privacy.metaDescription"),
+    imageAlt: t("seo.ogAlt"),
   });
 }
 
 export default async function PrivacyPage() {
   const t = await getTranslations("public.privacy");
   return (
-    <PublicFrame>
+    <PublicFrame path="/privacy">
       <LegalPage
         title={t("title")}
         intro={t("intro")}
@@ -34,6 +35,8 @@ export default async function PrivacyPage() {
                 <li>{t("store1")}</li>
                 <li>{t("store2")}</li>
                 <li>{t("store3")}</li>
+                <li>{t("store4")}</li>
+                <li>{t("store5")}</li>
               </ul>
             ),
           },

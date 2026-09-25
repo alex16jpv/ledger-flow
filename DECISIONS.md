@@ -5,6 +5,63 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-25 · The landing says everything the app does, and the SEO audit's fixes (T-199)
+
+- **What was wrong:** the landing still described the app of 2026-09-01: three cards (capture,
+  budgets, offline) and nothing about Shared, Stats and Trends, the account types or installing it.
+  The privacy policy's "What we store" left out shared groups and the emails of the people invited to
+  them, and the terms described the service without them. An independent SEO audit of the public
+  surface (read-only, against the code and production) found no indexing blocker and 22 smaller
+  findings; this entry covers what was done with each.
+- **Landing (owner's request; the content choices are the session's):** six cards, a Shared section
+  with a static mock of the People face, and six visible questions (`design/spec/screens/public.md`).
+  The mock is a server component with fixed sample people, like `PhoneMock`: no client JavaScript, so
+  the landing's 60 kB budget is untouched. Nothing promises what is not built (export, import,
+  notifications, recurring), and the copy never says "by email" about an invitation: nothing is emailed,
+  it waits in the other person's Shared. The mock reads its words from `shared.*`, the screen it
+  shows; only the sample group names are its own. The Spanish copy keeps the app's own words (`importe`, `añade`) over the
+  audit's regional suggestions (`monto`, `agrega`): the landing should read like the app it sells.
+- **Titles and descriptions carry the search terms** (≤ 60 and ≤ 155 characters), the `h1` stays
+  the brand promise. JSON-LD no longer derives the brand from the title (`BRAND` in `lib/seo.ts`).
+- **Social cards:** every public page declares its image (`/{locale}/opengraph-image`, 1200×630,
+  localized alt) because a child segment's `openGraph` replaces the parent's whole object, so privacy,
+  terms, login and register had no image. The image route is always prefixed and the proxy matcher
+  skips `en|es/opengraph-image` (anchored): `/en/…` used to answer a 307 that rewrote the cache-busting
+  query. Any other locale in that route is a 404, not the English card.
+  Social titles carry `· Ledger Flow`. The card draws the real mark (`BrandMark`, shared with the icons).
+- **Sitemap and robots come from the same lists as the app:** one `<url>` per locale with en, es and
+  x-default (`publicLanguages`, shared with the head), no `lastmod` (it was the build time, which
+  Google learns to ignore), and no `/login`. `robots.ts` builds its disallow list from `APP_PREFIXES`,
+  which `routes.test.ts` already keeps complete: `/shared` and `/sync` had drifted out of it.
+- **`/login` is `noindex, follow`** (`NOINDEX_PATHS` in `lib/seo.ts`, which the head and the sitemap
+  both read) and stays allowed in robots so the tag is seen, with no hreflang alternates claimed;
+  `/register` stays indexable with its own title and description. Both had the landing's description.
+- **JSON-LD:** `WebApplication` (was `SoftwareApplication`) with an `@id`, the locale's URL,
+  `isAccessibleForFree` and a feature list; `WebSite.inLanguage` is both languages on both pages; the
+  `Organization` has a logo; and a `FAQPage` built from the same messages as the visible questions. The
+  graph is a pure function (`landingGraph`), tested like the robots and the sitemap.
+  Google shows no FAQ snippet for this kind of site since 2023; the markup is kept for other engines.
+- **Kept on purpose:** automatic locale detection on unprefixed paths (W-04), because the signed-in
+  app relies on the `lf_locale` cookie the BFF sets; instead those responses send
+  `Vary: Accept-Language, Cookie` (Next overrides `Vary` on the 200, which is `no-store`, so it only
+  lands on the redirect, the one response a cache could keep). Links to `/en` stay: with detection on,
+  that trip is what resets the cookie. Previews keep `Disallow: /`.
+- **Privacy and terms:** What we store now names the people you add (with an email if you give one),
+  the shared groups, and that joining someone's group shows them your profile name. The legal texts
+  are still drafts for the owner's review, so the change is in his list to read.
+- **Smaller fixes:** next-intl's `Link` header off (`alternateLinks: false`), leaving hreflang to
+  `lib/seo.ts` alone; `noindex` on the two offline documents; a real `favicon.ico` (16, 32, 48) and the
+  PNG icon at 96 px, a multiple of 48; the 404's call to action goes to `/`; the header's section links
+  work from the legal pages (`/#features`); the language switch leads to the same page in the other
+  language, and the chip's accessible name contains its visible code; below 600px the header shows the logo without the name (sr-only), because Spanish needed
+  422px and overflowed every public page at 390px; the manifest's description matches the landing; `isPublicPath`, which only tests read, is gone, and
+  with it the `/contact` it listed for a page that never existed.
+- **Not fixed here:** a 404 is server-rendered as Next's error shell, and the not-found screen is
+  painted by the client. With the root layout under `[locale]`, Next cannot compose the not-found
+  boundary on the server; its answer is `global-not-found` (experimental), which means resolving the
+  locale for every unknown URL outside the layout. Status and `noindex` are already right, so it costs
+  no ranking; it stays as a task in the owner's list.
+
 ## 2026-09-25 · In Samsung Internet the install goes through Chrome, and every install path has its own steps (T-197)
 
 - **What was wrong:** on a Samsung tablet the app could not be installed normally. The app downloads
@@ -2220,7 +2277,10 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 - **Icons are generated, not drawn by hand.** `lib/pwa/brand-icon.tsx` renders the mark with `next/og`
   for the favicon, the Apple touch icon and the 192/512 manifest icons; `?maskable=1` pads the mark
   into the safe zone. The manifest and the icon renderer carry literal brand colors (manifests and
-  satori cannot read CSS variables) and join the `check-tokens` exemptions.
+  satori cannot read CSS variables) and join the `check-tokens` exemptions. _Amended 2026-09-25
+  (T-199):_ `/favicon.ico` is a committed file, because crawlers ask for that path blindly, but it is
+  still generated: `npm run build:favicon` renders the mark from `lib/pwa/brand-mark.ts` at 16, 32 and
+  48 px; the PNG icon moved to 96 px, a multiple of 48 as Google asks.
 - **`theme-color` stays dynamic**: the theme script mirrors the live `--bg`, so no static meta is
   added; the manifest's `theme_color`/`background_color` are the Brisa light values. `viewport-fit:
 cover` is set once in the root layout for the standalone display.

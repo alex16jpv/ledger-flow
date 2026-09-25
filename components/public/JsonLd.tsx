@@ -1,48 +1,12 @@
 import { headers } from "next/headers";
 
-import { env } from "@/lib/env";
+import { landingGraph, type LandingGraphInput } from "@/lib/seo";
 
-export interface JsonLdProps {
-  locale: string;
-  name: string;
-  description: string;
-}
+export type JsonLdProps = LandingGraphInput;
 
-// Structured data for the landing only: Organization + WebSite + SoftwareApplication (free, FinanceApplication).
-export async function JsonLd({ locale, name, description }: JsonLdProps) {
+export async function JsonLd({ locale, description, features, questions }: JsonLdProps) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
-  const base = env.NEXT_PUBLIC_APP_URL;
-  const graph = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Organization",
-        "@id": `${base}#organization`,
-        name,
-        url: base,
-        email: env.NEXT_PUBLIC_CONTACT_EMAIL,
-      },
-      {
-        "@type": "WebSite",
-        "@id": `${base}#website`,
-        url: base,
-        name,
-        inLanguage: locale,
-        publisher: { "@id": `${base}#organization` },
-      },
-      {
-        "@type": "SoftwareApplication",
-        name,
-        description,
-        url: base,
-        applicationCategory: "FinanceApplication",
-        operatingSystem: "Web",
-        inLanguage: ["en", "es"],
-        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-        publisher: { "@id": `${base}#organization` },
-      },
-    ],
-  };
+  const graph = landingGraph({ locale, description, features, questions });
   return (
     <script
       type="application/ld+json"

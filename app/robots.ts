@@ -1,6 +1,16 @@
 import type { MetadataRoute } from "next";
 
+import { APP_PREFIXES } from "@/lib/auth/routes";
 import { env } from "@/lib/env";
+import { localePrefix, LOCALES } from "@/lib/i18n/routing";
+import { PUBLIC_PATHS } from "@/lib/seo";
+
+const inEveryLocale = (paths: readonly string[]) =>
+  LOCALES.flatMap((locale) =>
+    paths.map((path) =>
+      path === "/" ? localePrefix(locale) || "/" : `${localePrefix(locale)}${path}`,
+    ),
+  );
 
 // Only the public surface is indexable; the app, the BFF and the dev screens never are.
 export default function robots(): MetadataRoute.Robots {
@@ -10,37 +20,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: [
-          "/",
-          "/es",
-          "/privacy",
-          "/es/privacy",
-          "/terms",
-          "/es/terms",
-          "/login",
-          "/register",
-        ],
-        disallow: [
-          "/api/",
-          "/home",
-          "/transactions",
-          "/accounts",
-          "/categories",
-          "/budgets",
-          "/stats",
-          "/settings",
-          "/onboarding",
-          "/dev/",
-          "/es/home",
-          "/es/transactions",
-          "/es/accounts",
-          "/es/categories",
-          "/es/budgets",
-          "/es/stats",
-          "/es/settings",
-          "/es/onboarding",
-          "/es/dev/",
-        ],
+        allow: inEveryLocale(PUBLIC_PATHS),
+        disallow: ["/api/", ...inEveryLocale(["/dev/", ...APP_PREFIXES])],
       },
     ],
     sitemap: new URL("/sitemap.xml", env.NEXT_PUBLIC_APP_URL).toString(),

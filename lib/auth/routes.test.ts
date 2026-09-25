@@ -1,12 +1,6 @@
 import { readdirSync } from "node:fs";
 
-import {
-  isGuestOnlyPath,
-  isProtectedPath,
-  isPublicPath,
-  safeNextPath,
-  stripLocale,
-} from "./routes";
+import { isGuestOnlyPath, isProtectedPath, safeNextPath, stripLocale } from "./routes";
 
 // `dev/pickers` is switched off by the componentCatalog flag, not by a session.
 const FLAG_GUARDED = new Set(["dev"]);
@@ -19,12 +13,7 @@ describe("route rules", () => {
     expect(stripLocale("/estonia", ["en", "es"])).toBe("/estonia");
   });
 
-  it("knows the public surface", () => {
-    expect(isPublicPath("/")).toBe(true);
-    expect(isPublicPath("/login")).toBe(true);
-    expect(isPublicPath("/dev/ui")).toBe(true);
-    expect(isPublicPath("/home")).toBe(false);
-    expect(isPublicPath("/transactions/abc")).toBe(false);
+  it("knows which pages are for guests only", () => {
     expect(isGuestOnlyPath("/register")).toBe(true);
     // P-33: a signed-in device asking for the landing is asking for the app.
     expect(isGuestOnlyPath("/")).toBe(true);

@@ -19,9 +19,18 @@ test("the landing is static, bilingual and links to sign-up, sign-in and the leg
   );
   await expect(page.getByRole("img", { name: "Preview of the home screen" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { level: 2, name: "Built for the small stuff" }),
+    page.getByRole("heading", { level: 2, name: "All your money, in one app" }),
   ).toBeVisible();
   await expect(page.getByText(/free expense tracker and budget app/)).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3, name: "Shared expenses" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Split bills with friends, family and roommates" }),
+  ).toBeVisible();
+  await expect(page.getByRole("img", { name: "Preview of the Shared screen" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Frequently asked questions" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3 })).toHaveCount(12);
   await expect(
     page.getByRole("heading", { level: 2, name: "Up and running in a minute" }),
   ).toBeVisible();
@@ -61,6 +70,29 @@ test("the landing is static, bilingual and links to sign-up, sign-in and the leg
   await expectNoAxeViolations(page);
 });
 
+test("the public header fits a 390px phone and its links work from every public page", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const path of ["/", "/es", "/es/privacy", "/es/terms"]) {
+    await page.goto(path);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(overflow, path).toBeLessThanOrEqual(0);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/es/privacy");
+  await expect(page.getByRole("link", { name: "Funciones" })).toHaveAttribute(
+    "href",
+    "/es#features",
+  );
+  const chip = page.getByRole("link", { name: "Idioma: EN" });
+  await expect(chip).toHaveAttribute("href", "/en/privacy");
+  await expect(page.getByRole("link", { name: "English" })).toHaveAttribute("href", "/en/privacy");
+});
+
 test("an unknown public address answers a real 404 inside the public frame", async ({
   page,
   request,
@@ -68,7 +100,7 @@ test("an unknown public address answers a real 404 inside the public frame", asy
   expect((await request.get("/this-page-does-not-exist")).status()).toBe(404);
   await page.goto("/this-page-does-not-exist");
   await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Go to Home" })).toHaveAttribute("href", /\/home$/);
+  await expect(page.getByRole("link", { name: "Go to Home" })).toHaveAttribute("href", "/");
   await expect(page.getByRole("link", { name: "Get started" })).toBeVisible();
   await expectNoAxeViolations(page);
 });

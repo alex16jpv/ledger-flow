@@ -180,7 +180,7 @@ Accounts, Stats, Categories, Settings and the user (T-72). From 900px up the sid
 
 | Route                                                          | Screen                                                                                                                                        |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                                                            | Public landing (static)                                                                                                                       |
+| `/`                                                            | Public landing (server-rendered per request, P-41)                                                                                            |
 | `/login`, `/register`, `/onboarding`                           | Access and first-run flow                                                                                                                     |
 | `/home`                                                        | Authenticated home                                                                                                                            |
 | `/settings`, `/settings/appearance`                            | Settings hub (language, currency, time zone, your data, install, about, delete) and appearance                                                |

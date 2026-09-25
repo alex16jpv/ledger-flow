@@ -6,28 +6,42 @@ test("robots, sitemap, canonical, hreflang, JSON-LD and the OG image are served"
   const robots = await (await request.get("/robots.txt")).text();
   expect(robots).toContain("Disallow: /api/");
   expect(robots).toContain("Allow: /privacy");
+  expect(robots).toContain("Disallow: /shared");
+  expect(robots).toContain("Disallow: /es/sync");
   expect(robots).toMatch(/Sitemap: .*\/sitemap\.xml/);
 
   const sitemap = await (await request.get("/sitemap.xml")).text();
   expect(sitemap).toContain("/es/privacy");
   expect(sitemap).toContain("/terms");
   expect(sitemap).not.toContain("/home");
+  expect(sitemap).not.toContain("/login");
+  expect(sitemap).toMatch(/<loc>[^<]+\/es\/terms<\/loc>/);
+  expect(sitemap).toContain('hreflang="x-default"');
 
   const html = await (await request.get("/")).text();
   expect(html).toMatch(/<link rel="canonical" href="[^"]+"/);
   expect(html).toMatch(/hreflang="es" href="[^"]+\/es"/i);
   expect(html).toMatch(/hreflang="x-default"/i);
   expect(html).toContain("application/ld+json");
-  expect(html).toContain('"SoftwareApplication"');
-  expect(html).toMatch(/property="og:title" content="Ledger Flow/);
+  expect(html).toContain('"WebApplication"');
+  expect(html).toContain('"FAQPage"');
+  expect(html).toMatch(/property="og:title" content="[^"]*Ledger Flow"/);
+  expect(html).toMatch(/property="og:image" content="[^"]+\/en\/opengraph-image"/);
 
   const es = await (await request.get("/es/privacy")).text();
   expect(es).toMatch(/<link rel="canonical" href="[^"]+\/es\/privacy"/);
   expect(es).toContain('<html lang="es"');
+  expect(es).toMatch(/property="og:image" content="[^"]+\/es\/opengraph-image"/);
+  expect(es).toMatch(/property="og:title" content="Política de privacidad · Ledger Flow"/);
 
-  const og = await request.get("/opengraph-image");
-  expect(og.status()).toBe(200);
-  expect(og.headers()["content-type"]).toContain("image/png");
+  const login = await (await request.get("/login")).text();
+  expect(login).toMatch(/<meta name="robots" content="noindex, follow"/);
+
+  for (const path of ["/en/opengraph-image", "/es/opengraph-image"]) {
+    const og = await request.get(path, { maxRedirects: 0 });
+    expect(og.status(), path).toBe(200);
+    expect(og.headers()["content-type"]).toContain("image/png");
+  }
 });
 
 test("authenticated routes carry X-Robots-Tag noindex", async ({ request }) => {

@@ -12,10 +12,11 @@ export async function generateMetadata({
 }: PageProps<"/[locale]/terms">): Promise<Metadata> {
   const { locale: raw } = await params;
   const locale = isAppLocale(raw) ? raw : "en";
-  const t = await getTranslations({ locale, namespace: "public.terms" });
+  const t = await getTranslations({ locale, namespace: "public" });
   return publicMetadata("/terms", locale, {
-    title: t("metaTitle"),
-    description: t("metaDescription"),
+    title: t("terms.metaTitle"),
+    description: t("terms.metaDescription"),
+    imageAlt: t("seo.ogAlt"),
   });
 }
 
@@ -25,7 +26,7 @@ export default async function TermsPage() {
     key: "serviceBody" | "accountBody" | "useBody" | "availabilityBody" | "changesBody",
   ) => <p>{t(key)}</p>;
   return (
-    <PublicFrame>
+    <PublicFrame path="/terms">
       <LegalPage
         title={t("title")}
         intro={t("intro")}

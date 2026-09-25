@@ -17,4 +17,5 @@ export const routing = defineRouting({
   defaultLocale: DEFAULT_LOCALE,
   localePrefix: "as-needed",
   localeCookie: { name: LOCALE_COOKIE, sameSite: "lax" },
+  alternateLinks: false,
 });

@@ -419,6 +419,7 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 /* ── Superficie pública (landing, legal, 404): sin sidebar ni tabbar ── */
 .public { display: flex; flex-direction: column; min-height: 100%; }
 .public-nav .brand { white-space: nowrap; }
+.public-nav .brand-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .public-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); padding: var(--sp-4); max-width: var(--content-max); width: 100%; margin: 0 auto; }
 .public-nav .links { display: none; gap: var(--sp-5); font-weight: var(--fw-medium); color: var(--text-2); }
 .public-main { flex: 1; width: 100%; max-width: var(--content-max); margin: 0 auto; padding: 0 var(--sp-4) var(--sp-10); display: flex; flex-direction: column; gap: var(--sp-12); }
@@ -434,6 +435,14 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .steps { display: grid; grid-template-columns: 1fr; gap: var(--sp-4); counter-reset: step; }
 .step { display: flex; gap: var(--sp-3); align-items: flex-start; }
 .step .n { width: 28px; height: 28px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-text); display: grid; place-items: center; font-weight: var(--fw-semibold); font-size: var(--fs-sm); flex: none; }
+.spotlight { display: grid; grid-template-columns: 1fr; gap: var(--sp-8); align-items: center; }
+.spotlight-mock { width: 100%; max-width: 440px; margin: 0 auto; padding: var(--sp-4); border-radius: 28px; border: 1px solid var(--border-strong); background: var(--bg); box-shadow: var(--shadow-3); }
+.checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.checks li { display: flex; gap: var(--sp-3); align-items: flex-start; color: var(--text-2); }
+.checks li svg { color: var(--brand-text); flex: none; margin-top: 2px; }
+.faq { width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--sp-5); }
+.faq .qa { display: flex; flex-direction: column; gap: var(--sp-1); }
+.faq .qa p { margin: 0; color: var(--text-2); }
 .public-footer { border-top: 1px solid var(--border); padding: var(--sp-6) var(--sp-4); }
 .public-footer .inner { max-width: var(--content-max); margin: 0 auto; display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-6); justify-content: space-between; color: var(--text-3); font-size: var(--fs-sm); }
 .public-footer a { color: var(--text-2); }
@@ -444,8 +453,8 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .check .box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border-strong); background: var(--surface); display: grid; place-items: center; flex: none; margin-top: 1px; }
 .check .box.on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 .check a { color: var(--brand-text); font-weight: var(--fw-medium); }
-@container app (min-width: 600px) { .public-nav .links { display: flex; } .feature-grid { grid-template-columns: repeat(3, 1fr); } .steps { grid-template-columns: repeat(3, 1fr); } .hero h1 { font-size: 44px; } }
-@container app (min-width: 900px) { .hero { grid-template-columns: 1.1fr 0.9fr; padding-top: var(--sp-12); } .hero h1 { font-size: 52px; } .public-main { padding: 0 var(--sp-8) var(--sp-16); } }
+@container app (min-width: 600px) { .public-nav .links { display: flex; } .public-nav .brand-name { position: static; width: auto; height: auto; overflow: visible; clip-path: none; } .feature-grid { grid-template-columns: repeat(2, 1fr); } .steps { grid-template-columns: repeat(3, 1fr); } .hero h1 { font-size: 44px; } }
+@container app (min-width: 900px) { .hero { grid-template-columns: 1.1fr 0.9fr; padding-top: var(--sp-12); } .hero h1 { font-size: 52px; } .feature-grid { grid-template-columns: repeat(3, 1fr); } .spotlight { grid-template-columns: 1fr 1fr; } .public-main { padding: 0 var(--sp-8) var(--sp-16); } }
 
 /* ── Añadido 2026-09-06 (piezas que la fase offline llevó al front antes que al diseño) ── */
 .alert.success { background: var(--success-soft); color: var(--success); }
