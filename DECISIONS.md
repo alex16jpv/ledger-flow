@@ -5,6 +5,57 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-25 · The worker answers a navigation with the warmed payload first, network or not (T-195)
+
+- **What was wrong:** every route of `(app)` is dynamic (the CSP nonce), Next 16 keeps no dynamic
+  route on the client and prefetches only its `loading.tsx`, and `rscNavigation` went to the network
+  first, using `app-shell-rsc` only when that failed (2026-09-10, T-01). So with a connection every
+  change of screen painted the route skeleton for as long as the server took, even though that
+  payload never changes within a build (the screens render on the client, D-29), and each one was
+  a function invocation. Measured on the e2e build with 400 ms added to the payload: the skeleton
+  lasted 367–384 ms on all seven modules, and all seven went to the server.
+- **Decision:** `rscNavigation` answers from `app-shell-rsc` first, rebuilt as before, and goes to
+  the network only when there is no entry. Nothing refreshes it in the background: the install
+  stages it again for every build. It does not do this while **a new build is installing or
+  waiting**: a page opened after a deploy runs the new build under the old worker, Next compares the
+  build id in the body with its own and loads the whole document on a mismatch, so serving the old
+  payloads would reload the page on every change of screen until the new worker took over. In that
+  window the server answers, as before this change. Measured with the same 400 ms: no skeleton frame
+  on any module and no request to the server; changing the Transactions filter took 66–82 ms (811
+  through the server) and the Budgets month 142–157 ms (879–881).
+- **Where the guard does not reach** (a full document load on each change of screen, until it
+  closes): between a document loaded after a deploy and the moment the browser has fetched the new
+  worker (under a second, and the reload itself starts the next check), and after an install that
+  failed, until the next check installs it. The exact fix is Next's `deploymentId`: the router would
+  send the page's build on every payload request and the worker could compare. It was left out
+  because it adds `?dpl=` to every asset URL (the precache and Vercel's skew handling with it), which
+  nothing here can test.
+- **What makes the cache safe to answer with a connection**, found on the way:
+  - **Only the screen's own answer is kept.** Without the session marker the proxy redirects every
+    screen to the login, and the worker followed the redirect and kept the login document and
+    payload under that screen's key (31 of each, measured) until the next build. Now it keeps a
+    `200` that was not redirected, and a payload only if it is `text/x-component`.
+  - **A body the worker drops is cancelled:** six unread ones held every connection and the install
+    never ended (measured: more than 200 s, now 2 s).
+  - **Each build stages under its own name** (`app-shell-next-<build id>`, the id written into the
+    worker by `serwist.config.mjs`), and the activation deletes every other staging. Before, a
+    second install while one waited wrote into the same staging, and the swap took both builds.
+  - **The warm asks with the empty `_rsc`** Next expects when no router headers are sent, instead
+    of taking a redirect for each of the 31 payloads.
+  - **Each row screen is keyed by its id** (`DetailRoute`). One payload serves every row of a
+    template, so without the key moving from one row to another kept the same form and its values.
+- **Alternatives:** refreshing the payload in the background (the cache would hold another build's
+  answer halfway through a deploy, for nothing: it does not change within a build);
+  `staleTimes.dynamic` (only a screen already visited, and only for a while); dropping `loading.tsx`
+  (a screen that does not respond instead of a skeleton); static routes (no nonce, so no CSP);
+  telling each page's build to the worker (a message from every page and a record per client).
+- **Consequence:** outside the waiting window a new build no longer arrives by the hard reload a
+  navigation used to trigger; it arrives through the stripe of T-196 (entry below), which is why
+  that went first. **While a new version waits, it is as before this change:** changes of screen
+  wait for the server, and the first one on a page of the old build loads the new build's document.
+  That window ends with Reload, or when every window of the app is closed. The navigation's own
+  answer is still never kept, and a prefetch is still never served.
+
 ## 2026-09-25 · The currency and time-zone lists are built only in the browser (found in T-184)
 
 - **What broke:** `CurrencyPicker` and `TimeZonePicker` rendered their whole option list into the
@@ -4019,6 +4070,9 @@ cover` is set once in the root layout for the standalone display.
   the field is empty, which `design/spec/screens/access.md` now says.
 
 ## 2026-09-10 · The worker serves RSC payloads again, rebuilt around the path asked for (T-01)
+
+> **Reversed in part on 2026-09-25 (T-195):** the warmed payload no longer waits for the network to
+> fail. It answers first, network or not, except while a new build is installing or waiting.
 
 - **Supersedes** the 2026-09-05 decision (R-3b, F-51), which made the RSC hop network-only. Its
   consequence was the whole of T-01: with no network every navigation was a full document load.

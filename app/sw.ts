@@ -29,6 +29,8 @@ import {
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
+    // Next's build id, written in by `serwist.config.mjs`.
+    __BUILD_ID: string;
   }
   // Background Sync is not in TypeScript's worker lib yet.
   interface SyncEvent extends ExtendableEvent {
@@ -46,10 +48,25 @@ const byRoute: SerwistPlugin = {
   cacheKeyWillBeUsed: ({ request }) => Promise.resolve(shellCacheKey(request.url)),
 };
 
+// Without the session marker the proxy answers every screen with the login, which no screen may keep.
+function isOwnAnswer(response: Response): boolean {
+  return response.status === 200 && !response.redirected;
+}
+
+const ownAnswerOnly: SerwistPlugin = {
+  cacheWillUpdate: ({ response }) => Promise.resolve(isOwnAnswer(response) ? response : null),
+};
+
+// An unread body holds its connection, and six of them stall every later fetch of the worker.
+async function release(response: Response | null | undefined): Promise<void> {
+  if (response?.body && !response.bodyUsed) await response.body.cancel();
+}
+
 const shellPages: NetworkFirst = new NetworkFirst({
   cacheName: SHELL_CACHE,
   plugins: [
     byRoute,
+    ownAnswerOnly,
     {
       // §6 O-F6: with neither network nor cache for this route, the app answers its own document.
       handlerDidError: ({ request }): Promise<Response | undefined> =>
@@ -121,6 +138,8 @@ const network: NetworkOnly = new NetworkOnly();
 
 // Next's own header names, which it does not export from anywhere public.
 const RSC_HEADER = "RSC";
+const RSC_QUERY = "_rsc";
+const RSC_CONTENT_TYPE = "text/x-component";
 const PREFETCH_HEADERS = ["Next-Router-Prefetch", "Next-Router-Segment-Prefetch"] as const;
 const REWRITTEN_PATH_HEADER = "x-nextjs-rewritten-path";
 
@@ -131,8 +150,11 @@ function isNavigationPayload(request: Request): boolean {
   );
 }
 
+// With no router headers Next expects an empty `_rsc`, and redirects any request without one to it.
 function payloadRequest(url: string): Request {
-  return new Request(url, { credentials: "same-origin", headers: { [RSC_HEADER]: "1" } });
+  const target = new URL(url);
+  target.searchParams.set(RSC_QUERY, "");
+  return new Request(target, { credentials: "same-origin", headers: { [RSC_HEADER]: "1" } });
 }
 
 // Built again, not handed over: a fresh `Response` has no URL, so the router resolves the one it asked for.
@@ -148,7 +170,18 @@ function rebase(cached: Response, pathname: string): Response {
   });
 }
 
-// A navigation's own answer is never cached: it is only the part of the tree that changed (T-01).
+async function warmedPayload(url: string): Promise<Response | undefined> {
+  const cache = await caches.open(SHELL_RSC_CACHE);
+  const cached = await cache.match(shellCacheKey(url), { ignoreVary: true });
+  return cached && rebase(cached, new URL(url).pathname);
+}
+
+// A page opened after a deploy can be newer than these payloads, and Next reloads on a build mismatch.
+function newBuildPending(): boolean {
+  return self.registration.installing !== null || self.registration.waiting !== null;
+}
+
+// T-195: only the warm fills the cache, and it answers first; a navigation's own answer is never kept.
 async function rscNavigation({
   request,
   event,
@@ -156,19 +189,31 @@ async function rscNavigation({
   request: Request;
   event: ExtendableEvent;
 }): Promise<Response> {
+  const warmed = newBuildPending() ? undefined : await warmedPayload(request.url);
+  if (warmed) return warmed;
   try {
     return await network.handle({ request, event });
   } catch (error) {
-    const cache = await caches.open(SHELL_RSC_CACHE);
-    const cached = await cache.match(shellCacheKey(request.url), { ignoreVary: true });
-    if (!cached) throw error;
-    return rebase(cached, new URL(request.url).pathname);
+    const fallback = await warmedPayload(request.url);
+    if (!fallback) throw error;
+    return fallback;
   }
 }
 
 async function storePayload(cacheName: string, url: string, event: ExtendableEvent): Promise<void> {
   const response = await network.handle({ request: payloadRequest(url), event }).catch(() => null);
-  if (response?.ok) await (await caches.open(cacheName)).put(shellCacheKey(url), response);
+  const payload = response?.headers.get("content-type")?.startsWith(RSC_CONTENT_TYPE) ?? false;
+  if (response && payload && isOwnAnswer(response)) {
+    await (await caches.open(cacheName)).put(shellCacheKey(url), response);
+    return;
+  }
+  await release(response);
+}
+
+function fetchDocument(strategy: NetworkFirst, url: string, event: ExtendableEvent): Promise<void> {
+  return strategy
+    .handle({ request: new Request(url, { credentials: "same-origin" }), event })
+    .then(release, () => undefined);
 }
 
 async function rootNavigation({
@@ -195,9 +240,7 @@ async function warmRoute(url: string, event: ExtendableEvent) {
   const documents = await caches.open(SHELL_CACHE);
   const key = shellCacheKey(url);
   if (!(await documents.match(key, { ignoreVary: true }))) {
-    await shellPages
-      .handle({ request: new Request(url, { credentials: "same-origin" }), event })
-      .catch(() => undefined);
+    await fetchDocument(shellPages, url, event);
   }
   const payloads = await caches.open(SHELL_RSC_CACHE);
   if (await payloads.match(key, { ignoreVary: true })) return;
@@ -224,33 +267,41 @@ self.addEventListener("message", (event) => {
 
 const STAGED = "-next";
 
+// A worker still waiting keeps its own staging while a newer build installs beside it.
+function stagingOf(cacheName: string): string {
+  return `${cacheName}${STAGED}-${self.__BUILD_ID}`;
+}
+
 // A new build's chunks replace the old, so the shell is refetched on install and staged, not kept.
 async function stageShell(event: ExtendableEvent): Promise<void> {
+  await Promise.all([SHELL_CACHE, SHELL_RSC_CACHE].map((name) => caches.delete(stagingOf(name))));
   const live = await caches.open(SHELL_CACHE);
   const staging = new NetworkFirst({
-    cacheName: `${SHELL_CACHE}${STAGED}`,
-    plugins: [byRoute],
+    cacheName: stagingOf(SHELL_CACHE),
+    plugins: [byRoute, ownAnswerOnly],
     matchOptions: { ignoreVary: true },
   });
   for (const key of await live.keys()) {
-    const request = new Request(warmUrlFor(key.url), { credentials: "same-origin" });
-    await staging.handle({ request, event }).catch(() => undefined);
+    await fetchDocument(staging, warmUrlFor(key.url), event);
   }
   const payloads = await caches.open(SHELL_RSC_CACHE);
   for (const key of await payloads.keys()) {
-    await storePayload(`${SHELL_RSC_CACHE}${STAGED}`, warmUrlFor(key.url), event);
+    await storePayload(stagingOf(SHELL_RSC_CACHE), warmUrlFor(key.url), event);
   }
 }
 
 async function swapShell(cacheName: string): Promise<void> {
   await caches.delete(cacheName);
-  const staged = await caches.open(`${cacheName}${STAGED}`);
+  const staged = await caches.open(stagingOf(cacheName));
   const live = await caches.open(cacheName);
   for (const key of await staged.keys()) {
     const response = await staged.match(key);
     if (response) await live.put(key, response);
   }
-  await caches.delete(`${cacheName}${STAGED}`);
+  const leftovers = (await caches.keys()).filter((name) =>
+    name.startsWith(`${cacheName}${STAGED}`),
+  );
+  await Promise.all(leftovers.map((name) => caches.delete(name)));
 }
 
 self.addEventListener("install", (event) => {

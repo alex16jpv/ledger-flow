@@ -203,3 +203,94 @@ test("with no network a navigation stays inside the app instead of reloading it"
   ).toBeVisible({ timeout: 20_000 });
   expect(await keptDocument(page)).toBe(true);
 });
+
+// T-195: with network a hop between screens is answered by the warmed payload, not by the server.
+test("online, a navigation is answered by the worker unless a new build is waiting", async ({
+  page,
+  request,
+  context,
+}) => {
+  test.setTimeout(180_000);
+  const user = await freshUser(request, "shell-first");
+  await signInAs(context, request, user);
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+  await expect
+    .poll(async () => (await warmedRoutes(page, "app-shell-rsc")).length, { timeout: 60_000 })
+    .toBeGreaterThanOrEqual(25);
+
+  const hops: string[] = [];
+  await context.route("**/*", async (route) => {
+    const headers = route.request().headers();
+    if (
+      headers.rsc === "1" &&
+      headers["next-router-state-tree"] &&
+      !headers["next-router-prefetch"]
+    ) {
+      hops.push(new URL(route.request().url()).pathname);
+    }
+    await route.fallback();
+  });
+  await markDocument(page);
+
+  await page.getByRole("link", { name: "Transactions" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Transactions" })).toBeVisible();
+  await page.getByRole("button", { name: "Expenses" }).click();
+  await expect(page).toHaveURL(/type=EXPENSE/);
+  await page.getByRole("link", { name: "Budgets" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Budgets" })).toBeVisible();
+  expect(hops).toEqual([]);
+  expect(await keptDocument(page)).toBe(true);
+
+  // A page opened after a deploy may be newer than the payloads kept, so the server answers again.
+  await page.evaluate((path) => navigator.serviceWorker.register(`${path}?build=next`), SW_PATH);
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const registration = await navigator.serviceWorker.getRegistration();
+        return Boolean(registration?.installing ?? registration?.waiting);
+      }),
+    )
+    .toBe(true);
+  await goToSection(page, "Accounts");
+  await expect(page.getByRole("heading", { level: 1, name: "Accounts" })).toBeVisible();
+  expect(hops.length).toBeGreaterThan(0);
+  expect(await keptDocument(page)).toBe(true);
+});
+
+// T-195: with no session marker every screen redirects to the login, which no screen may keep.
+test("an install with no session marker ends and stages nothing from the login", async ({
+  page,
+  request,
+  context,
+}) => {
+  test.setTimeout(180_000);
+  const user = await freshUser(request, "stage-signed-out");
+  await signInAs(context, request, user);
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+  await expect
+    .poll(async () => (await warmedRoutes(page, "app-shell-rsc")).length, { timeout: 60_000 })
+    .toBeGreaterThanOrEqual(25);
+
+  await context.clearCookies();
+  await page.evaluate((path) => navigator.serviceWorker.register(`${path}?build=next`), SW_PATH);
+  // Six dropped bodies left unread used to hold every connection, and the install never ended.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          async () => (await navigator.serviceWorker.getRegistration())?.waiting?.scriptURL,
+        ),
+      { timeout: 30_000 },
+    )
+    .toContain("build=next");
+  const staged = await page.evaluate(async () => {
+    const names = (await caches.keys()).filter((name) => /^app-shell(-rsc)?-next/.test(name));
+    const sizes = await Promise.all(names.map(async (name) => (await caches.open(name)).keys()));
+    return sizes.reduce((sum, keys) => sum + keys.length, 0);
+  });
+  expect(staged).toBe(0);
+});
