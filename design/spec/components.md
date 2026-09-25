@@ -197,6 +197,21 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     never as a stripped-down copy. The box is a real `input[type=checkbox]` visually replaced by the 20px square, the whole
     row is its `<label>`, and its accessible name is the row's own title and metadata. The footer button
     counts what is selected and adds up their amounts, and nothing is selected by a scroll.
+36. **Suggestions (`suggest`)** — a list attached under a text field, opened by typing and never before
+    (T-193; his answers of 2026-09-24 give it to Description on Quick add, the full form and the review
+    inbox's card, and to Tags on the full form). Up to five 44px rows with the typed letters in bold, a
+    row highlighted in `--surface-2` only once ↓ has moved onto it, and, on a tag row, a meta line with
+    how often and the category it usually goes with. It is a `listbox` owned by the field, which becomes
+    a `combobox` with `aria-autocomplete="list"`, `aria-expanded` and `aria-activedescendant`: ↓ ↑ move,
+    Enter takes the highlighted row, Escape closes until the text changes, and Enter with nothing
+    highlighted does what the field does without a list; a polite live region says how many rows there
+    are, once per opening. On a phone it is in the flow, between the field and the keyboard, and the
+    sheet or the page scrolls to keep both in view; on a page, from 600px up it floats over what is
+    under the field, so a form never jumps while you type, while inside a sheet it stays in the flow
+    at every width so the sheet keeps its scroll; it never covers the field,
+    and it never says _no results_ — it is simply not there. A row writes the text of its field and
+    nothing else. Two shapes drawn beside it and not chosen: the rest of the text greyed inside the
+    field (`ghost`, accepted with Tab, → or a check button), and chips under the field, which Tags had.
 
 **Every chart obeys the same contract**, and every shape has exactly one implementation: a slot — a
 bar, a cell, a column, a pair — carries its name and its amount as its accessible name (a position on

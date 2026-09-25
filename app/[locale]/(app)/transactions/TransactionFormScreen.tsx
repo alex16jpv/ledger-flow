@@ -160,6 +160,7 @@ export function EditTransactionScreen({ id }: { id: string }) {
         <FormSkeleton />
       ) : (
         <TransactionForm
+          editing={row}
           defaultValues={fromTransaction(row, timeZone)}
           submitLabel={t("common.saveChanges")}
           pending={update.isPending}

@@ -107,7 +107,7 @@ test("a row opens its detail, which edits and deletes the transaction", async ({
 
   await page.getByRole("link", { name: "Edit" }).click();
   await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}/edit$`));
-  await page.getByRole("textbox", { name: /^Description/ }).fill("E2E detailed");
+  await page.getByRole("combobox", { name: /^Description/ }).fill("E2E detailed");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page).toHaveURL(/\/transactions$/);
 

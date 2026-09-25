@@ -83,7 +83,7 @@ test("compatible edits from two devices combine, with no warning", async ({
 
   const tablet = await device(browser, request, user);
   await editTransaction(tablet.page, id, async (screen) => {
-    await screen.getByRole("textbox", { name: /^Description/ }).fill("Taxi to the airport");
+    await screen.getByRole("combobox", { name: /^Description/ }).fill("Taxi to the airport");
   });
   await expect
     .poll(async () => (await listTransactions(request))[0]?.description, { timeout: 15_000 })

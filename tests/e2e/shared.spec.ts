@@ -227,7 +227,7 @@ test("recording a new expense from inside the group writes the movement and the 
   await page.getByRole("textbox", { name: "Amount" }).fill("120000");
   await page.getByRole("button", { name: /^Account/ }).click();
   await page.getByRole("option", { name: /Bancolombia Coffee/ }).click();
-  await page.getByRole("textbox", { name: /^Description/ }).fill("Beach club");
+  await page.getByRole("combobox", { name: /^Description/ }).fill("Beach club");
   await expectNoAxeViolations(page);
   await page.getByRole("button", { name: "Save and add to the group" }).click();
 

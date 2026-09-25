@@ -314,6 +314,26 @@ its own envelope:
   states. A filtered query still looks at every row, which is the price of not inventing an index
   per combination of filters.
 
+## Suggesting while you type: `suggest/`
+
+T-193. `index.ts` is pure: a builder folds live rows of the three types into, per type, a map of
+descriptions (folded key, the newest text, count, newest date), a sorted array of every word start of
+every description for a binary search, and a map of tags with their counts by category and by
+description. `suggestDescriptions` and `suggestTags` rank what matches — the start of a word without
+case or accents; a tag at its start or after a hyphen — by co-occurrence (tags only), count and
+recency, never offer what was typed, and take the row being edited back out of the counts. `store.ts`
+keeps one index per open vault: built on the first subscription and only once `syncedAt` exists,
+reading the `dateCursor` index newest first in batches of 1,000 with one short transaction each and
+an idle wait between them, stopping at 20,000 live rows. It is marked stale by `stale.ts` — one line
+in `pullChanges` when a page brought news or made the mirror readable, one in `purgeVault`, one in
+`setCurrentVault` when the handle changes, and the outbox status listener — and rebuilt on the next
+idle moment while the old index keeps answering. One build runs at a time; a mark that lands during
+it is honoured by one more build once it ends, and nothing else ever retries: a mirror that is not
+ready is looked at once per mark, never polled. A handle that changed drops the index and silences
+the build in flight; a build that fails on the live vault is reported to Sentry and leaves nothing on
+screen, because the absence of suggestions is invisible by design. `useSuggestions.ts` loads
+`store.ts` behind an `import()` on demand, so the frame never carries it.
+
 ## Deriving money: `derive/`
 
 Pure functions: they take arrays and return figures, and none of them opens IndexedDB. That is what

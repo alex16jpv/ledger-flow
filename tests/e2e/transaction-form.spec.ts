@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "../fixtures";
+import { freshUser, signInAs, vaultState } from "../offline";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -53,7 +54,7 @@ test("a transaction is created, edited and deleted from the full form", async ({
   const amount = uniqueAmount();
   await page.goto(`/transactions/new?amount=${amount}&description=E2E%20taxi`);
   await expect(page.getByRole("heading", { level: 1, name: "New transaction" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: /^Description/ })).toHaveValue("E2E taxi");
+  await expect(page.getByRole("combobox", { name: /^Description/ })).toHaveValue("E2E taxi");
   await page.getByRole("button", { name: /^Category/ }).click();
   await page
     .getByRole("dialog", { name: "Category" })
@@ -61,7 +62,7 @@ test("a transaction is created, edited and deleted from the full form", async ({
     .click();
   await page.getByRole("button", { name: /^Account/ }).click();
   await page.getByRole("dialog", { name: "Account" }).getByRole("option", { name: /Cash/ }).click();
-  await page.getByRole("textbox", { name: /^Tags/ }).fill("e2e");
+  await page.getByRole("combobox", { name: /^Tags/ }).fill("e2e");
   await page.keyboard.press("Enter");
   await expectNoAxeViolations(page);
   await page.getByRole("button", { name: "Save transaction" }).click();
@@ -73,9 +74,9 @@ test("a transaction is created, edited and deleted from the full form", async ({
 
   await page.goto(`/transactions/${created?.id}/edit`);
   await expect(page.getByRole("heading", { level: 1, name: "Edit transaction" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: /^Description/ })).toHaveValue("E2E taxi");
+  await expect(page.getByRole("combobox", { name: /^Description/ })).toHaveValue("E2E taxi");
   await expect(page.getByRole("button", { name: "Remove tag e2e" })).toBeVisible();
-  await page.getByRole("textbox", { name: /^Description/ }).fill("E2E taxi home");
+  await page.getByRole("combobox", { name: /^Description/ }).fill("E2E taxi home");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Changes saved")).toBeVisible();
   expect((await findByAmount(request, amount))?.description).toBe("E2E taxi home");
@@ -86,6 +87,80 @@ test("a transaction is created, edited and deleted from the full form", async ({
   await dialog.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Transaction deleted")).toBeVisible();
   expect((await request.get(`/api/transactions/${created?.id}`)).status()).toBe(404);
+});
+
+// T-193: the list under Description and Tags comes from the device's copy, built once it has drained.
+test("Description and Tags suggest from your own movements while you type", async ({
+  page,
+  request,
+  context,
+}) => {
+  const user = await freshUser(request, "suggest");
+  const token = Math.random().toString(36).slice(2, 7);
+  const tag = `sg-${token}`;
+  for (const description of [
+    `Suggest ride ${token}`,
+    `Suggest ride ${token}`,
+    `Suggest lunch ${token}`,
+  ]) {
+    const created = await request.post("/api/transactions", {
+      headers: { origin: APP },
+      data: {
+        type: "EXPENSE",
+        amount: uniqueAmount(),
+        fromAccountId: user.accountId,
+        description,
+        tags: [tag],
+        date: new Date().toISOString(),
+      },
+    });
+    expect(created.ok(), await created.text()).toBe(true);
+  }
+  await signInAs(context, request, user);
+  await page.goto("/transactions/new");
+  await expect(page.getByRole("heading", { level: 1, name: "New transaction" })).toBeVisible();
+  await expect
+    .poll(async () => (await vaultState(page))?.syncedAt, { timeout: 60_000 })
+    .toEqual(expect.any(String));
+
+  const description = page.getByRole("combobox", { name: /^Description/ });
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await description.fill("sugg");
+  const list = page.getByRole("listbox", { name: "Suggestions" });
+  await expect(list.getByRole("option")).toHaveText(
+    [`Suggest ride ${token}`, `Suggest lunch ${token}`],
+    { timeout: 15_000 },
+  );
+  await expectNoAxeViolations(page);
+  await description.press("Enter");
+  await expect(description).toHaveValue("sugg");
+  await description.press("ArrowDown");
+  await description.press("Enter");
+  await expect(description).toHaveValue(`Suggest ride ${token}`);
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+
+  const tags = page.getByRole("combobox", { name: /^Tags/ });
+  await tags.fill("sg-");
+  await expect(list.getByRole("option", { name: `Add #${tag}` })).toBeVisible();
+  await tags.press("Enter");
+  await expect(page.getByRole("button", { name: "Remove tag sg-" })).toBeVisible();
+  await tags.fill("sg-");
+  await list.getByRole("option", { name: `Add #${tag}` }).click();
+  await expect(page.getByRole("button", { name: `Remove tag ${tag}` })).toBeVisible();
+  await expect(tags).toHaveValue("");
+
+  await page.goto("/home");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  const sheet = page.getByRole("dialog", { name: "Add" });
+  const note = sheet.getByRole("combobox", { name: /Quick note/ });
+  await note.fill("sugg");
+  await expect(sheet.getByRole("listbox").getByRole("option")).toHaveCount(2, { timeout: 15_000 });
+  await note.press("Escape");
+  await expect(sheet.getByRole("listbox")).toHaveCount(0);
+  await expect(sheet).toBeVisible();
+  await expect(note).toHaveValue("sugg");
+  await note.press("Escape");
+  await expect(page.getByRole("alertdialog")).toContainText("Are you sure you want to leave?");
 });
 
 // T-160: the app in Spanish on a browser in English, whose decimal keypad offers a point.

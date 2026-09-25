@@ -54,6 +54,7 @@ export { Segment, type SegmentOption } from "./Segment";
 export { Sheet } from "./Sheet";
 export { Skeleton, SkeletonRow } from "./Skeleton";
 export { Stat } from "./Stat";
+export { type SuggestionRow, Suggestions } from "./Suggestions";
 export { Swatch, SwatchGrid } from "./Swatch";
 export { Tag } from "./Tag";
 export { normalizeTag, TAG_MAX_LENGTH, TAGS_MAX, TagsInput } from "./TagsInput";

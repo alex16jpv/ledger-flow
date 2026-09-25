@@ -1,9 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowUpDown, PencilLine } from "lucide-react";
+import { ArrowUpDown } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { Alert } from "@/components/ui/Alert";
@@ -11,12 +11,14 @@ import { AmountInput } from "@/components/ui/AmountInput";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { DateTimeField } from "@/components/ui/DateTimeField";
-import { Field, Input, Textarea } from "@/components/ui/Field";
+import { Field, Textarea } from "@/components/ui/Field";
 import { Segment, type SegmentOption } from "@/components/ui/Segment";
 import { TagsInput } from "@/components/ui/TagsInput";
 import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
+import { useCategoriesQuery } from "@/features/categories/hooks";
+import { DescriptionInput } from "@/features/transactions/components/DescriptionInput";
 import { TransferReadback } from "@/features/transactions/components/TransferReadback";
 import { TypeLine } from "@/features/transactions/components/TypeLine";
 import {
@@ -28,7 +30,7 @@ import {
   transactionFormSchema,
   type TransactionFormValues,
 } from "@/features/transactions/form";
-import { useTagsQuery } from "@/features/transactions/hooks";
+import { type ExcludedRow, useTagSuggest } from "@/features/transactions/suggest";
 import { INCOME_REFUSED_TYPES, loanOwed, owesMoney } from "@/lib/accounts/debt";
 import { fieldErrors, presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
@@ -38,7 +40,7 @@ import { useMoney } from "@/lib/i18n/useMoney";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
 import { aheadOfServer, clockStore } from "@/lib/local/clock";
-import type { CreateTransactionInput, UpdateTransactionInput } from "@/types/api";
+import type { CreateTransactionInput, Transaction, UpdateTransactionInput } from "@/types/api";
 
 import { IntentChips } from "./IntentChips";
 
@@ -64,6 +66,10 @@ export interface TransactionFormProps {
   notice?: React.ReactNode;
   // Only an expense can be shared in v1, so the control with one answer is not drawn.
   fixedType?: boolean;
+  // The row being edited: its own description and tags are taken out of what is suggested.
+  editing?: Transaction;
+  // A group's expense names an outing, rarely twice the same way: it takes no suggestions (T-193).
+  suggest?: boolean;
 }
 
 export function TransactionForm({
@@ -75,6 +81,8 @@ export function TransactionForm({
   secondaryAction,
   notice,
   fixedType = false,
+  editing,
+  suggest = true,
 }: TransactionFormProps) {
   const t = useTranslations();
   const money = useMoney();
@@ -88,7 +96,6 @@ export function TransactionForm({
       clockStore.getServerSnapshot,
     ),
   );
-  const tags = useTagsQuery();
   const keyring = useRef(new IdempotencyKeyring());
   const chosenPerType = useRef<Partial<Record<FormTransactionType, string | null>>>({});
   const amountInput = useRef<HTMLInputElement>(null);
@@ -111,6 +118,36 @@ export function TransactionForm({
   const fromOutside = useWatch({ control: form.control, name: "fromOutside" });
   const income = type === "INCOME";
   const accounts = useAccountsQuery(false, transfer || income);
+  const [suggestWanted, setSuggestWanted] = useState(false);
+  const wantSuggestions = useCallback(() => {
+    setSuggestWanted(true);
+  }, []);
+  const categories = useCategoriesQuery(type, suggestWanted);
+  const categoryName = useCallback(
+    (id: string) => categories.data?.find((category) => category.id === id)?.name,
+    [categories.data],
+  );
+  const exclude = useMemo<ExcludedRow | undefined>(
+    () =>
+      editing && {
+        type: editing.type,
+        description: editing.description,
+        tags: editing.tags,
+        categoryId: editing.categoryId,
+      },
+    [editing],
+  );
+  const categoryId = useWatch({ control: form.control, name: "categoryId" });
+  const chosenTags = useWatch({ control: form.control, name: "tags" });
+  const suggestTags = useTagSuggest({
+    type: suggest ? type : null,
+    categoryId,
+    description: () => form.getValues("description"),
+    chosen: chosenTags,
+    wanted: suggestWanted,
+    exclude,
+    categoryName,
+  });
   const known = accounts.data ?? [];
   const accountOf = (id: string | null) => known.find((account) => account.id === id) ?? null;
   const serverFields = fieldErrors(error);
@@ -417,19 +454,28 @@ export function TransactionForm({
           />
         )}
       />
-      <Field
-        label={t("transactions.form.description")}
-        optional
-        error={validationMessage(t, errors.description?.message ?? serverFields.description)}
-      >
-        <Input
-          placeholder={t("transactions.form.descriptionPlaceholder")}
-          autoComplete="off"
-          maxLength={255}
-          leading={<PencilLine {...iconProps("sm")} />}
-          {...form.register("description")}
-        />
-      </Field>
+      <Controller
+        control={form.control}
+        name="description"
+        render={({ field }) => (
+          <Field
+            label={t("transactions.form.description")}
+            optional
+            error={validationMessage(t, errors.description?.message ?? serverFields.description)}
+          >
+            <DescriptionInput
+              ref={field.ref}
+              name={field.name}
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              type={suggest ? type : null}
+              exclude={exclude}
+              placeholder={t("transactions.form.descriptionPlaceholder")}
+            />
+          </Field>
+        )}
+      />
       <Controller
         control={form.control}
         name="tags"
@@ -438,7 +484,8 @@ export function TransactionForm({
             <TagsInput
               value={field.value}
               onChange={field.onChange}
-              suggestions={tags.data ?? []}
+              suggest={suggestTags}
+              onFocus={wantSuggestions}
               placeholder={t("transactions.form.tagsPlaceholder")}
             />
           </Field>

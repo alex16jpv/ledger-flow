@@ -29,7 +29,7 @@ test("the inbox completes a quick expense in place and the pending counter drops
   await expectNoAxeViolations(page);
 
   await card.getByRole("button", { name: "Coffee" }).click();
-  await card.getByRole("textbox", { name: "Description" }).fill("E2E latte");
+  await card.getByRole("combobox", { name: "Description" }).fill("E2E latte");
   await card.getByRole("button", { name: "Done" }).click();
   await expect(page.getByText("Details saved")).toBeVisible();
   await expect(card).toHaveCount(0);
@@ -136,7 +136,7 @@ test("Save all completes the categorized cards, one guarded operation per row", 
     await cards[index]!.getByRole("button", { name: "Other" }).click();
     await page.getByRole("dialog", { name: "Category" }).getByRole("option", { name }).click();
   }
-  await cards[1]!.getByRole("textbox", { name: "Description" }).fill("E2E batch");
+  await cards[1]!.getByRole("combobox", { name: "Description" }).fill("E2E batch");
 
   // F-20 with O-F5b: one operation per row, travelling as one `POST /sync`, never the API's batch.
   const sentUrls: string[] = [];
