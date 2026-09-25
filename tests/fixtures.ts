@@ -1,4 +1,4 @@
-import { type APIRequestContext, test as base } from "@playwright/test";
+import { type APIRequestContext, expect, test as base } from "@playwright/test";
 
 const RETRIED = new Set(["fetch", "get", "post", "put", "patch", "delete", "head"]);
 
@@ -24,6 +24,16 @@ function tolerateReset(request: APIRequestContext): APIRequestContext {
 export const test = base.extend({
   request: async ({ request }, runTest) => {
     await runTest(tolerateReset(request));
+  },
+  page: async ({ page }, runTest) => {
+    const missing: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error" && message.text().includes("MISSING_MESSAGE")) {
+        missing.push(message.text());
+      }
+    });
+    await runTest(page);
+    expect(missing, "a key its segment's MESSAGE_SCOPES entry does not send").toEqual([]);
   },
 });
 
