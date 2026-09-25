@@ -27,6 +27,21 @@ account side rules live in `superRefine`), `toTransactionInput` maps the form to
 `draftFromSearchParams` reads the quick-add hand-off. `useCreateTransaction`, `useUpdateTransaction`, `useTransactionQuery`
 and `useTagsQuery` back the screens in `app/[locale]/(app)/transactions/`.
 
+T-193 adds the suggestions while you type. `suggest.tsx` owns them: `useDescriptionSuggestions` and
+`useTagSuggest` load `lib/local/suggest` behind an `import()` on the first focus of a field that
+suggests, read the index the store keeps per vault, and turn what it answers into the rows
+`components/ui/Suggestions` draws — the typed span in bold through `splitMatch`, a tag row with its
+count and the category it usually goes with. `components/DescriptionInput.tsx` is the description
+field with the list under it, used by the full form, Quick add and the review inbox's card; the full
+form gives `TagsInput` a `suggest` function instead of the alphabetical chips, and `useTagsQuery` now
+runs only for a focused Tags field whose engine is loaded and has no index yet — a copy that cannot
+answer, or one still being read — feeding the same list from `GET /transactions/tags`. The edit
+form passes the row it edits so its own description and tags are taken out of the counts, and the
+group's expense form passes `suggest={false}`, and a field with no type (an adjustment in the review
+inbox) loads nothing. Inside Quick add the list stays in the flow of the sheet at every width
+(`float={false}`), so the sheet keeps its scroll; on a page it floats from 600px up. Nothing is
+written that was not typed or tapped: a row fills the text of its field and no other field.
+
 W-19 adds the list: `filters.ts` parses and serializes the URL filters (period presets, type,
 account, category, tag, pending, quick-only, search) and maps them to the API query;
 `useTransactionsInfinite` pages by cursor, `usePeriodTotals` turns the server's day buckets into

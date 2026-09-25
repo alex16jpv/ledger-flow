@@ -134,6 +134,7 @@ function GroupExpenseBody({ view }: { view: GroupView }) {
 
   return (
     <TransactionForm
+      suggest={false}
       defaultValues={defaults}
       fixedType
       notice={

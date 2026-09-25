@@ -162,7 +162,7 @@ describe("QuickAddSheet", () => {
       }),
     );
     await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "12500");
-    await userEvent.type(screen.getByRole("textbox", { name: "Quick note (optional)" }), "Latte");
+    await userEvent.type(screen.getByRole("combobox", { name: "Quick note (optional)" }), "Latte");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
@@ -229,7 +229,7 @@ describe("QuickAddSheet", () => {
     expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("");
 
     await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "4500");
-    await userEvent.type(screen.getByRole("textbox", { name: "Quick note (optional)" }), "Bus");
+    await userEvent.type(screen.getByRole("combobox", { name: "Quick note (optional)" }), "Bus");
     await userEvent.click(screen.getByRole("button", { name: "More details" }));
     const draft = onMoreDetails.mock.calls[0]?.[0] as URLSearchParams | undefined;
     expect(draft?.toString()).toBe("type=EXPENSE&amount=4500&accountId=a1&description=Bus");

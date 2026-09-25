@@ -1,8 +1,8 @@
 "use client";
 
-import { Hash, PencilLine } from "lucide-react";
+import { Hash } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
@@ -11,12 +11,12 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CategoryChip, Chip, ChipRow } from "@/components/ui/Chip";
 import { cn } from "@/components/ui/cn";
-import { Input } from "@/components/ui/Field";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import type { CategoryType } from "@/features/categories/api";
 import { CategoryPickerSheet } from "@/features/categories/components/CategoryPickerSheet";
 import { useCategoriesQuery, useRecentCategories } from "@/features/categories/hooks";
+import { DescriptionInput } from "@/features/transactions/components/DescriptionInput";
 import type { TransactionLookups } from "@/features/transactions/components/TransactionRow";
 import { amountKind } from "@/features/transactions/groups";
 import { useUpdateTransaction } from "@/features/transactions/hooks";
@@ -71,6 +71,15 @@ export function ReviewCard({
 
   const account = lookups.accounts.get(transaction.fromAccountId ?? transaction.toAccountId ?? "");
   const categoryType = reviewCategoryType(transaction.type);
+  const excluded = useMemo(
+    () => ({
+      type: transaction.type,
+      description: transaction.description,
+      tags: transaction.tags,
+      categoryId: transaction.categoryId,
+    }),
+    [transaction],
+  );
   const categories = useCategoriesQuery(categoryType ?? undefined, categoryType !== null);
   const recent = useRecentCategories(categoryType ?? undefined, categories.data, 4);
   const selected = lookups.categories.get(draft.categoryId ?? "");
@@ -157,16 +166,15 @@ export function ReviewCard({
           </Chip>
         </ChipRow>
       )}
-      <Input
+      <DescriptionInput
         value={draft.description}
-        onChange={(event) => {
-          onDraftChange({ ...draft, description: event.target.value });
+        onChange={(text) => {
+          onDraftChange({ ...draft, description: text });
         }}
+        type={categoryType}
+        exclude={excluded}
         placeholder={t("transactions.review.descriptionPlaceholder")}
         aria-label={t("transactions.form.description")}
-        autoComplete="off"
-        maxLength={255}
-        leading={<PencilLine {...iconProps("sm")} />}
         className="h-10"
       />
       <div className="flex items-center justify-end gap-2">

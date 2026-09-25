@@ -166,8 +166,8 @@ describe("NewTransactionScreen", () => {
     render(<NewTransactionScreen />);
     expect(await screen.findByRole("button", { name: /Account.*Bancolombia/ })).toBeVisible();
     expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("4,500");
-    expect(screen.getByRole("textbox", { name: /^Description/ })).toHaveValue("Bus");
-    await userEvent.type(screen.getByRole("textbox", { name: /^Tags/ }), "Travel{Enter}");
+    expect(screen.getByRole("combobox", { name: /^Description/ })).toHaveValue("Bus");
+    await userEvent.type(screen.getByRole("combobox", { name: /^Tags/ }), "Travel{Enter}");
     await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
 
     await waitFor(() => {
@@ -532,7 +532,7 @@ describe("NewTransactionScreen", () => {
       within(await openAccountSheet()).getByRole("option", { name: /Somewhere else/ }),
     );
     await userEvent.type(
-      screen.getByRole("textbox", { name: /^Description/ }),
+      screen.getByRole("combobox", { name: /^Description/ }),
       "My mother paid it",
     );
     await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
@@ -600,7 +600,7 @@ describe("NewTransactionScreen", () => {
 describe("EditTransactionScreen", () => {
   it("loads the transaction, saves changes with a PUT and deletes after confirming", async () => {
     render(<EditTransactionScreen id="t1" />);
-    expect(await screen.findByRole("textbox", { name: /^Description/ })).toHaveValue(
+    expect(await screen.findByRole("combobox", { name: /^Description/ })).toHaveValue(
       "Uber to work",
     );
     expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("18,400");
@@ -608,8 +608,8 @@ describe("EditTransactionScreen", () => {
     expect(await screen.findByRole("button", { name: /Category.*Food/ })).toBeVisible();
     expect(await screen.findByRole("button", { name: /Account.*Bancolombia/ })).toBeVisible();
 
-    await userEvent.clear(screen.getByRole("textbox", { name: /^Description/ }));
-    await userEvent.type(screen.getByRole("textbox", { name: /^Description/ }), "Taxi");
+    await userEvent.clear(screen.getByRole("combobox", { name: /^Description/ }));
+    await userEvent.type(screen.getByRole("combobox", { name: /^Description/ }), "Taxi");
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => {
       expect(calls("PUT")).toHaveLength(1);
@@ -646,11 +646,11 @@ describe("EditTransactionScreen", () => {
       return Promise.resolve(json({ code: "INTERNAL", message: url }, { status: 500 }));
     });
     render(<EditTransactionScreen id="t1" />);
-    expect(await screen.findByRole("textbox", { name: /^Description/ })).toHaveValue(
+    expect(await screen.findByRole("combobox", { name: /^Description/ })).toHaveValue(
       "Uber to work",
     );
-    await userEvent.clear(screen.getByRole("textbox", { name: /^Description/ }));
-    await userEvent.type(screen.getByRole("textbox", { name: /^Description/ }), "Latte");
+    await userEvent.clear(screen.getByRole("combobox", { name: /^Description/ }));
+    await userEvent.type(screen.getByRole("combobox", { name: /^Description/ }), "Latte");
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => {
       expect(calls("PUT")).toHaveLength(1);
@@ -679,17 +679,17 @@ describe("EditTransactionScreen", () => {
       );
     });
     expect(screen.getByRole("status", { name: "Loading" })).toBeVisible();
-    expect(screen.queryByRole("textbox", { name: /^Description/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: /^Description/ })).not.toBeInTheDocument();
 
     rerender(screenIn(true));
-    expect(await screen.findByRole("textbox", { name: /^Description/ })).toHaveValue(
+    expect(await screen.findByRole("combobox", { name: /^Description/ })).toHaveValue(
       "Uber to work",
     );
   });
 
   it("saving an untouched edit sends nothing and leaves the form", async () => {
     render(<EditTransactionScreen id="t1" />);
-    expect(await screen.findByRole("textbox", { name: /^Description/ })).toHaveValue(
+    expect(await screen.findByRole("combobox", { name: /^Description/ })).toHaveValue(
       "Uber to work",
     );
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));

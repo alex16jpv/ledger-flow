@@ -183,12 +183,13 @@ export function useTransactionQuery(id: string) {
   return useQuery({ queryKey: transactionKeys.detail(id), queryFn: () => fetchTransaction(id) });
 }
 
-export function useTagsQuery() {
+export function useTagsQuery(enabled = true) {
   return useQuery({
     queryKey: transactionKeys.tags(),
     queryFn: fetchTags,
     select: (list) => list.data,
     staleTime: 5 * 60 * 1000,
+    enabled,
   });
 }
 

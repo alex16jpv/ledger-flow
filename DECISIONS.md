@@ -87,6 +87,31 @@ description }, query, limit)` ranks by co-occurrence with the description and th
   and must be reported to Sentry rather than shown. The implementation lands under T-193 once he has
   chosen; it starts with the failing tests for the pure index (ranking, scoping by type, word-start
   matching without accents, the 20,000-row cap) and a `size-limit` run.
+- **Outcome (2026-09-24, same day):** he chose the list under the field for Description, only the
+  text when a row is taken, the same list for Tags and nothing on Quick add before typing
+  (`design/spec/decisions.md`, four rows). Built as planned, with these differences from the shape
+  above: the index is scoped by type for tags as well as descriptions; a row never carries the
+  category, the amount or the tags, so the description entry keeps only the text, the count and the
+  newest date; and Tags keep their one request as the source of the **same list** when the index
+  is absent — enabled only then — rather than a second shape. The stale mark lives in
+  `lib/local/suggest/stale.ts`, one line each in `pullChanges` (a page with news), `purgeVault` (a
+  resync), `setCurrentVault` (a handle that changes) and the outbox status listener; a page that
+  makes the mirror readable marks too, so a first pull with no news still ends with an index. One
+  build at a time, one look at readiness per mark, one more build after a mark that landed mid-read,
+  no other retry. The group's expense form passes `suggest={false}`, as the spec says. **Reviewed
+  and changed the same day:** inside a sheet the list stays in the flow at every width — a floating
+  list needs the sheet body to stop clipping, and `overflow: visible` on a scrollable body resets its
+  scroll — so Quick add's list pushes the footer and the centred modal re-centres, which was judged
+  the smaller cost; on a page it floats from 600px up as drawn. A tag typed with its `#` is
+  normalised before the index is asked, as the field already normalises what it adds. **Measured on the pure part** (Node 24, `tsx`, 30-word
+  vocabulary, 1,500 distinct descriptions, lookups averaged over 10,000): 20,000 rows build in
+  23 ms, 50,000 in 53 ms, 100,000 in 91 ms; a description lookup costs 0.012 ms and a tag lookup
+  0.005 ms. `lib/local/suggest/index.test.ts` keeps a 50,000-row case under a two-second bound so a
+  regression of an order of magnitude fails the gate. The IndexedDB read is the part `store.test.ts`
+  covers against `fake-indexeddb` (batches, the cap, the stale rebuild, the queue as a trigger, the
+  vault going away). Size: the frame's weight did not move — `Suggestions` and the feature hooks are
+  static in the sheet and the form chunks, the store and the index behind one `import()` — and the
+  gate's `size-limit` line is in the T-193 diary entry.
 
 ## 2026-09-24 · The BFF keeps a device cookie so nobody can lock you out of Sign in (T-176)
 

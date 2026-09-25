@@ -7,6 +7,7 @@ import type { Pagination } from "@/types/api";
 
 import type { VaultHandle } from "../db";
 import type { VaultSchema } from "../schema";
+import { markSuggestionsStale } from "../suggest/stale";
 import { mirrorTimeZone } from "./window";
 
 type ReadSource = "server" | "mirror";
@@ -39,9 +40,11 @@ export function expectVault(): void {
 }
 
 export function setCurrentVault(handle: VaultHandle | null): void {
+  const changed = handle !== current;
   current = handle;
   opened?.(handle);
   opened = null;
+  if (changed) markSuggestionsStale();
 }
 
 export function currentVault(): VaultHandle | null {
@@ -66,7 +69,7 @@ export function resetVaultGate(): void {
 }
 
 // `syncedAt` is written only by a drained pull; a fraction of the data looks like an empty account.
-async function mirrorReady(vault: VaultHandle): Promise<boolean> {
+export async function mirrorReady(vault: VaultHandle): Promise<boolean> {
   const record = await vault.db.get("meta", "syncedAt");
   return typeof record?.value === "string";
 }

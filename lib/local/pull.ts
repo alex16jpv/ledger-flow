@@ -15,6 +15,7 @@ import {
   receivedInvitationRecord,
   sentInvitationRecord,
 } from "./schema";
+import { markSuggestionsStale } from "./suggest/stale";
 
 export const PULL_PAGE_LIMIT = 500;
 
@@ -81,6 +82,8 @@ async function isNews(store: StampedStore, id: string, updatedAt: string): Promi
 
 interface Applied {
   news: boolean;
+  // The page that wrote `syncedAt` for the first time: the mirror can answer from here on.
+  ready: boolean;
   // The invitations to the new address are older than the cursor, so only a snapshot brings them.
   readdressed: boolean;
 }
@@ -188,9 +191,10 @@ async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promis
   if (readdressed) await meta.delete("syncCursor");
   else await meta.put({ key: "syncCursor", value: pagination.nextCursor });
   // Only a drained feed marks the mirror readable; a half-applied snapshot must not answer reads.
+  const ready = !pagination.hasMore && (await meta.get("syncedAt")) === undefined;
   if (!pagination.hasMore) await meta.put({ key: "syncedAt", value: page.serverTime });
   await tx.done;
-  return { news: news || readdressed, readdressed };
+  return { news: news || readdressed, readdressed, ready };
 }
 
 export async function pullChanges(
@@ -211,6 +215,7 @@ export async function pullChanges(
     await rememberServerTime(handle.db, page.serverTime);
     // Rows are applied by id with put, so the deliberate 60-second overlap of D-14 costs nothing.
     const applied = await applyPage(handle, page);
+    if (applied.news || applied.ready) markSuggestionsStale();
     changed = applied.news || changed;
     pages += 1;
     rows += page.pagination.count;

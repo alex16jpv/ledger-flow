@@ -172,7 +172,7 @@ describe("ReviewScreen", () => {
     expect(scrollSpy).toHaveBeenCalled();
 
     await userEvent.click(within(first).getByRole("button", { name: "Coffee" }));
-    await userEvent.type(within(first).getByRole("textbox", { name: "Description" }), "Latte");
+    await userEvent.type(within(first).getByRole("combobox", { name: "Description" }), "Latte");
     await userEvent.click(within(first).getByRole("button", { name: "Done" }));
 
     const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
@@ -258,7 +258,7 @@ describe("ReviewScreen", () => {
     const second = document.querySelector<HTMLElement>('[data-transaction-id="q2"]');
     if (!first || !second) throw new Error("cards not rendered");
     await userEvent.click(await within(first).findByRole("button", { name: "Coffee" }));
-    await userEvent.type(within(first).getByRole("textbox", { name: "Description" }), "Latte");
+    await userEvent.type(within(first).getByRole("combobox", { name: "Description" }), "Latte");
     expect(screen.getByRole("button", { name: "Save all · 1" })).toBeVisible();
     await userEvent.click(within(second).getByRole("button", { name: "Food" }));
     await userEvent.click(screen.getByRole("button", { name: "Save all · 2" }));

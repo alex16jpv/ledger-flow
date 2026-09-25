@@ -120,7 +120,7 @@ test("a chosen category and a note complete the details, and More details carrie
     .getByRole("group", { name: "Category" })
     .getByRole("button", { name: "Coffee" })
     .click();
-  await sheet.getByRole("textbox", { name: "Quick note (optional)" }).fill("E2E latte");
+  await sheet.getByRole("combobox", { name: "Quick note (optional)" }).fill("E2E latte");
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(sheet).toBeHidden({ timeout: 15_000 });
   await expect(page.getByText("Transaction saved")).toBeVisible();
@@ -153,7 +153,7 @@ test("a chosen category and a note complete the details, and More details carrie
   await page.getByRole("dialog", { name: "Account" }).getByRole("option", { name: /Cash/ }).click();
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole("button", { name: /^Account.*Cash/ })).toBeVisible();
-  await sheet.getByRole("textbox", { name: "Quick note (optional)" }).fill("Bus");
+  await sheet.getByRole("combobox", { name: "Quick note (optional)" }).fill("Bus");
   await sheet.getByRole("button", { name: "More details" }).click();
   await expect(page).toHaveURL(
     /\/transactions\/new\?type=EXPENSE&amount=4500&accountId=[^&]+&description=Bus$/,

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpDown, MoreHorizontal, PencilLine } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
@@ -8,7 +8,6 @@ import { Alert } from "@/components/ui/Alert";
 import { AmountInput } from "@/components/ui/AmountInput";
 import { Button } from "@/components/ui/Button";
 import { CategoryChip, Chip } from "@/components/ui/Chip";
-import { Input } from "@/components/ui/Field";
 import { FittedChips } from "@/components/ui/FittedChips";
 import { Segment, type SegmentOption } from "@/components/ui/Segment";
 import { Sheet, SheetAction } from "@/components/ui/Sheet";
@@ -17,6 +16,7 @@ import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { useAccountsQuery } from "@/features/accounts/hooks";
 import { CategoryPickerSheet } from "@/features/categories/components/CategoryPickerSheet";
 import { useCategoriesQuery, useRecentCategories } from "@/features/categories/hooks";
+import { DescriptionInput } from "@/features/transactions/components/DescriptionInput";
 import { TypeLine } from "@/features/transactions/components/TypeLine";
 import { useDeleteTransaction, useQuickAdd } from "@/features/transactions/hooks";
 import {
@@ -366,16 +366,13 @@ export function QuickAddSheet({ open, chain, onClose, onMoreDetails }: QuickAddS
               </div>
             </>
           )}
-          <Input
+          <DescriptionInput
             value={description}
-            onChange={(event) => {
-              setDescription(event.target.value);
-            }}
+            onChange={setDescription}
+            type={type}
+            float={false}
             placeholder={t("transactions.quick.note")}
             aria-label={t("transactions.quick.note")}
-            autoComplete="off"
-            maxLength={255}
-            leading={<PencilLine {...iconProps("sm")} />}
           />
         </form>
       </Sheet>
