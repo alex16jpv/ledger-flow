@@ -5,6 +5,30 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-26 · A purge moves an epoch that every pulled page checks (T-164)
+
+- **What was wrong:** `forceFullResync` and the logout's `purgeVault` emptied the mirror without
+  stopping the pull that was downloading into it. The page in flight landed after the purge, stored
+  its cursor and marked the copy readable, and the next pass went on from there: the copy kept only
+  what came after that cursor, and accounts and movements vanished offline until another resync.
+- **Decision:** `meta.mirrorEpoch`, moved by whatever empties the mirror (`purgeVault`, the
+  `MIRROR_VERSION` reset), in the same transaction. `pullChanges` reads it with the cursor and each
+  page compares it as the first request of its write transaction; a mismatch writes nothing and ends
+  the pass with `PullSupersededError`. The mirror does not report it as a failure, and everyone
+  waiting on that pass waits on a fresh one instead: it served nobody, and the purge that cut it may
+  be another tab's, whose own pass this tab cannot see. The profile fetched after a pass goes through
+  the same check.
+- **Alternatives:** stopping or awaiting the pull before purging. It only sees this tab's pull —
+  another tab purges the same vault on `session:logout` — and it cannot unsend a page already on its
+  way, so it would still need a check at write time; the epoch is that check, and needs nothing else.
+- **What it leaves alone:** the engine. What it writes into the mirror after a purge — the server's
+  row for an accepted operation, a conflict's baseline, a rollback's before-image — lands in a copy
+  with no cursor and no `syncedAt`, which no screen reads and the snapshot overwrites. It never moves
+  the cursor, so nothing is lost. What stays is those few rows on the device after a logout until the
+  same user signs in again (T-202).
+- **Consequence:** a pass cut by a purge counts as neither done nor failed, and its waiters get the
+  snapshot from an empty cursor.
+
 ## 2026-09-25 · The landing says everything the app does, and the SEO audit's fixes (T-199)
 
 - **What was wrong:** the landing still described the app of 2026-09-01: three cards (capture,

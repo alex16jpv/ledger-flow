@@ -70,6 +70,7 @@ describe("mirror migrations", () => {
 
     const upgraded = await openTestVault("u1", definition({ mirrorVersion: MIRROR_VERSION + 1 }));
     expect(upgraded.mirrorReset).toBe(true);
+    expect((await upgraded.db.get("meta", "mirrorEpoch"))?.value).toBe(2);
     expect(await upgraded.db.count("accounts")).toBe(0);
     expect(await upgraded.db.count("transactions")).toBe(0);
     expect(await upgraded.db.get("meta", "syncCursor")).toBeUndefined();

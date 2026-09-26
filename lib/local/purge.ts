@@ -3,7 +3,7 @@ import { openDB } from "idb";
 import { forgetOfflineReadyAnnouncement } from "@/lib/pwa/readiness";
 
 import { isVaultSupported, vaultExists } from "./db";
-import { MIRROR_STORES, vaultDatabaseName, type VaultSchema } from "./schema";
+import { advanceMirrorEpoch, MIRROR_STORES, vaultDatabaseName, type VaultSchema } from "./schema";
 import { markSuggestionsStale } from "./suggest/stale";
 
 type VaultStore = (typeof MIRROR_STORES)[number] | "meta" | "outbox";
@@ -49,6 +49,7 @@ export async function purgeVault(
       const meta = tx.objectStore("meta");
       await meta.delete("syncCursor");
       await meta.delete("syncedAt");
+      await advanceMirrorEpoch(meta);
       if (discard) await meta.delete("outboxSeq");
     }
     if (discard && names.includes("outbox")) await tx.objectStore("outbox").clear();

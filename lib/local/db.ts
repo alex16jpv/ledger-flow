@@ -3,6 +3,7 @@ import { type IDBPDatabase, type IDBPTransaction, openDB, type StoreNames } from
 import type { User } from "@/types/api";
 
 import {
+  advanceMirrorEpoch,
   MIRROR_STORES,
   type OutboxOperation,
   PROFILE_KEY,
@@ -143,6 +144,7 @@ async function resetMirror(db: IDBPDatabase<VaultSchema>, mirrorVersion: number)
   // The cursor goes with the rows it describes; the outbox store is deliberately not in this tx.
   await meta.delete("syncCursor");
   await meta.delete("syncedAt");
+  await advanceMirrorEpoch(meta);
   await meta.put({ key: "mirrorVersion", value: mirrorVersion });
   await tx.done;
 }

@@ -14,10 +14,10 @@ import {
   startSyncEngine,
 } from "./outbox";
 import { requestPersistentStorage } from "./persist";
-import { pullChanges, type PullOptions, SessionChangedError } from "./pull";
+import { pullChanges, type PullOptions, PullSupersededError, SessionChangedError } from "./pull";
 import { purgeVault } from "./purge";
 import { setCurrentVault } from "./repository";
-import { PROFILE_KEY, profileRecord } from "./schema";
+import { PROFILE_KEY, profileRecord, readMirrorEpoch } from "./schema";
 
 // Plan §4.2: on open, on focus if stale, and after a push — never on a background timer.
 export const PULL_STALE_MS = 5 * 60_000;
@@ -78,7 +78,7 @@ export async function forceFullResync(userId: string): Promise<void> {
 export function startMirror(userId: string, options: MirrorOptions = {}): () => void {
   const now = options.now ?? Date.now;
   let handle: VaultHandle | null = null;
-  let running: Promise<void> | null = null;
+  let running: Promise<boolean> | null = null;
   let wanted = 0;
   let served = 0;
   let lastPullAt = 0;
@@ -86,15 +86,19 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   const state = { stopped: false };
 
   // H-14: the feed carries the profile only when it changed, so a mirror can end with no zone.
-  const ensureProfile = async (vault: VaultHandle): Promise<boolean> => {
+  const ensureProfile = async (vault: VaultHandle, epoch: number): Promise<boolean> => {
     if (await vault.db.get("profile", PROFILE_KEY)) return false;
     const { user } = await fetchCurrentUser();
     if (user.id !== vault.userId) throw new SessionChangedError(vault.userId);
-    await vault.db.put("profile", profileRecord(user));
+    const tx = vault.db.transaction(["profile", "meta"], "readwrite");
+    // T-164: a purge while the server answered leaves the copy empty, profile included.
+    if ((await readMirrorEpoch(tx.objectStore("meta"))) !== epoch) return false;
+    await tx.objectStore("profile").put(profileRecord(user));
+    await tx.done;
     return true;
   };
 
-  const pullOnce = (vault: VaultHandle): Promise<void> => {
+  const pullOnce = (vault: VaultHandle): Promise<boolean> => {
     served = wanted;
     const forced = restamped;
     restamped = false;
@@ -105,23 +109,25 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
         // A profile that cannot be fetched must not cost the screens what this pass did bring.
         let stored = false;
         try {
-          stored = await ensureProfile(vault);
+          stored = await ensureProfile(vault, result.epoch);
         } catch (error: unknown) {
           lastPullError = error instanceof Error ? error : new Error(String(error));
           console.warn("ledger-flow: the mirror could not fetch the profile it lacks", error);
         }
         if (result.changed || stored || forced) options.onChanged?.();
+        return false;
       })
       .catch((error: unknown) => {
         restamped ||= forced;
+        if (error instanceof PullSupersededError) return true;
         // lib/api already reported it; the mirror keeps serving whatever the last pull left.
         lastPullError = error instanceof Error ? error : new Error(String(error));
         console.warn("ledger-flow: pulling the offline mirror failed", error);
+        return false;
       });
   };
 
-  // F-32: a request arriving mid-pull joins the one in flight, so it asks for a pass of its own.
-  const pull = (): Promise<void> => {
+  const join = (mine: number): Promise<void> => {
     const vault = handle;
     if (!vault || state.stopped) return Promise.resolve();
     // P-32: in this-device-only nothing goes out, and a pull is a request like any other.
@@ -130,12 +136,20 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
       lastPullError = new SessionChangedError(vault.userId);
       return Promise.resolve();
     }
-    wanted += 1;
-    const mine = wanted;
     running ??= pullOnce(vault).finally(() => {
       running = null;
     });
-    return running.then(() => (mine > served ? pull() : undefined));
+    return running.then((superseded) => {
+      // T-164: a pass a purge cut short served nobody, whichever tab purged.
+      if (superseded) return join(mine);
+      return mine > served ? pull() : undefined;
+    });
+  };
+
+  // F-32: a request arriving mid-pull joins the one in flight, so it asks for a pass of its own.
+  const pull = (): Promise<void> => {
+    wanted += 1;
+    return join(wanted);
   };
 
   const pullIfStale = (): void => {

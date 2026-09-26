@@ -7,6 +7,7 @@ import { forceFullResync, PULL_STALE_MS, pullNow, startMirror } from "./mirror";
 import type * as Outbox from "./outbox";
 import type { SyncEngineOptions } from "./outbox/engine";
 import { type PullPageQuery, SessionChangedError } from "./pull";
+import { purgeVault } from "./purge";
 import { currentVault, expectVault, read, resetVaultGate, setCurrentVault } from "./repository";
 import { PROFILE_KEY, vaultDatabaseName } from "./schema";
 
@@ -268,6 +269,117 @@ describe("startMirror", () => {
     });
 
     await expect(forceFullResync("u1")).rejects.toThrow("no network");
+    stop();
+  });
+
+  // T-164: before this, the page in flight landed after the purge and the copy kept only what followed.
+  it("downloads everything again when the resync lands while a pull is paging", async () => {
+    const asked: PullPageQuery[] = [];
+    const answers: ((page: SyncChangesResponse) => void)[] = [];
+    const pageOf = (ids: string[], hasMore: boolean, nextCursor: string): SyncChangesResponse => ({
+      serverTime: feed.serverTime,
+      changes: feedChanges({ accounts: ids.map((id) => account({ id })) }),
+      pagination: { limit: 500, count: ids.length, hasMore, nextCursor },
+    });
+    const stop = startMirror("u1", {
+      now: () => clock,
+      pull: {
+        fetchPage: (query) => {
+          asked.push(query);
+          return new Promise<SyncChangesResponse>((resolve) => answers.push(resolve));
+        },
+      },
+    });
+    await vi.waitFor(() => {
+      expect(answers).toHaveLength(1);
+    });
+    answers[0]?.(pageOf(["a1"], true, "c1"));
+    await vi.waitFor(() => {
+      expect(answers).toHaveLength(2);
+    });
+
+    const resynced = forceFullResync("u1");
+    await vi.waitFor(async () => {
+      expect(await currentVault()?.db.count("accounts")).toBe(0);
+    });
+    answers[1]?.(pageOf(["a2"], true, "c2"));
+    await vi.waitFor(() => {
+      expect(answers).toHaveLength(3);
+    });
+    expect(asked[2]?.cursor).toBeUndefined();
+    answers[2]?.(pageOf(["a1", "a2", "a3"], false, "v1|done|"));
+
+    await expect(resynced).resolves.toBeUndefined();
+    expect(await currentVault()?.db.count("accounts")).toBe(3);
+    stop();
+  });
+
+  it("downloads again when another tab purges the copy during the resync's own pass", async () => {
+    const asked: PullPageQuery[] = [];
+    const answers: ((page: SyncChangesResponse) => void)[] = [];
+    const pageOf = (ids: string[], hasMore: boolean, nextCursor: string): SyncChangesResponse => ({
+      serverTime: feed.serverTime,
+      changes: feedChanges({ accounts: ids.map((id) => account({ id })) }),
+      pagination: { limit: 500, count: ids.length, hasMore, nextCursor },
+    });
+    const stop = startMirror("u1", {
+      now: () => clock,
+      pull: {
+        fetchPage: (query) => {
+          asked.push(query);
+          return new Promise<SyncChangesResponse>((resolve) => answers.push(resolve));
+        },
+      },
+    });
+    await vi.waitFor(() => {
+      expect(answers).toHaveLength(1);
+    });
+    answers[0]?.(pageOf(["a1"], false, "v1|first|"));
+    await vi.waitFor(async () => {
+      expect(await currentVault()?.db.count("accounts")).toBe(1);
+    });
+
+    const resynced = forceFullResync("u1");
+    await vi.waitFor(() => {
+      expect(answers).toHaveLength(2);
+    });
+    answers[1]?.(pageOf(["a1"], true, "c1"));
+    await vi.waitFor(() => {
+      expect(answers).toHaveLength(3);
+    });
+    await purgeVault("u1");
+    answers[2]?.(pageOf(["a2"], false, "v1|cut|"));
+    await vi.waitFor(() => {
+      expect(answers).toHaveLength(4);
+    });
+    expect(asked[3]?.cursor).toBeUndefined();
+    answers[3]?.(pageOf(["a1", "a2"], false, "v1|done|"));
+
+    await expect(resynced).resolves.toBeUndefined();
+    expect(await currentVault()?.db.count("accounts")).toBe(2);
+    stop();
+  });
+
+  it("keeps the profile out of a copy emptied while the server was answering for it", async () => {
+    let answerMe: (response: Response) => void = () => undefined;
+    const me = vi
+      .fn<typeof fetch>()
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => (answerMe = resolve)))
+      .mockImplementation(() => Promise.resolve(meResponse()));
+    vi.stubGlobal("fetch", me);
+    const stop = start();
+    await vi.waitFor(() => {
+      expect(me).toHaveBeenCalledOnce();
+    });
+
+    await purgeVault("u1");
+    answerMe(meResponse());
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    failing = true;
+    await expect(pullNow()).rejects.toThrow("the feed is down");
+
+    expect(await currentVault()?.db.get("profile", PROFILE_KEY)).toBeUndefined();
+    warn.mockRestore();
     stop();
   });
 

@@ -14,7 +14,14 @@ import {
 import type { SyncChangesResponse } from "@/types/api";
 
 import type { VaultHandle } from "./db";
-import { pullChanges, type PullPageQuery, SessionChangedError, SyncFeedStalledError } from "./pull";
+import {
+  pullChanges,
+  type PullPageQuery,
+  PullSupersededError,
+  SessionChangedError,
+  SyncFeedStalledError,
+} from "./pull";
+import { purgeVault } from "./purge";
 import type { OutboxOperation } from "./schema";
 
 type Changes = Partial<SyncChangesResponse["changes"]>;
@@ -72,6 +79,7 @@ describe("pullChanges", () => {
       changed: true,
       cursor: "v1|final|",
       serverTime: "2026-09-03T12:00:00.000Z",
+      epoch: 1,
     });
     expect(queries).toEqual([
       { cursor: undefined, limit: 500 },
@@ -195,6 +203,39 @@ describe("pullChanges", () => {
     ]);
 
     await expect(pullChanges(vault, { fetchPage })).rejects.toBeInstanceOf(SyncFeedStalledError);
+  });
+});
+
+describe("a purge while the pull is paging (T-164)", () => {
+  afterEach(wipeVaults);
+
+  it("writes nothing the purge did not see, so the next pull starts a snapshot", async () => {
+    const vault = await openTestVault("u1");
+    const queries: PullPageQuery[] = [];
+    const pages = [
+      page({ accounts: [account({ id: "a1" })] }, { count: 1, hasMore: true, nextCursor: "c1" }),
+      page({ accounts: [account({ id: "a2" })] }, { count: 1, hasMore: true, nextCursor: "c2" }),
+    ];
+    const fetchPage = async (query: PullPageQuery): Promise<SyncChangesResponse> => {
+      queries.push(query);
+      const next = pages[queries.length - 1];
+      if (!next) throw new Error("the pull asked for one page too many");
+      if (queries.length === 2) await purgeVault("u1");
+      return next;
+    };
+
+    await expect(pullChanges(vault, { fetchPage })).rejects.toBeInstanceOf(PullSupersededError);
+
+    expect(queries).toHaveLength(2);
+    expect(await vault.db.count("accounts")).toBe(0);
+    expect(await vault.db.get("meta", "syncCursor")).toBeUndefined();
+    expect(await vault.db.get("meta", "syncedAt")).toBeUndefined();
+
+    const { fetchPage: again, queries: next } = feed([
+      page({ accounts: [account({ id: "a1" })] }, { count: 1, hasMore: false, nextCursor: "v1|" }),
+    ]);
+    await pullChanges(vault, { fetchPage: again });
+    expect(next).toEqual([{ cursor: undefined, limit: 500 }]);
   });
 });
 

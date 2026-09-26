@@ -304,6 +304,37 @@ export async function coldStart(context: BrowserContext, at?: Date): Promise<Pag
   return page;
 }
 
+export async function networkComesBack(page: Page): Promise<void> {
+  await page.context().setOffline(true);
+  await page.context().setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+}
+
+export function accountIdsIn(page: Page, vault: string): Promise<string[]> {
+  return page.evaluate(async (name) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(name);
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+      request.onerror = () => {
+        reject(request.error ?? new Error("open failed"));
+      };
+    });
+    const keys = await new Promise<IDBValidKey[]>((resolve, reject) => {
+      const request = db.transaction("accounts", "readonly").objectStore("accounts").getAllKeys();
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+      request.onerror = () => {
+        reject(request.error ?? new Error("read failed"));
+      };
+    });
+    db.close();
+    return keys.map(String);
+  }, vault);
+}
+
 // The first snapshot has drained and the shell is cached: from here the device works with no network.
 export async function readyForOffline(page: Page): Promise<void> {
   await installWorker(page);
