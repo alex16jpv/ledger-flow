@@ -5,6 +5,18 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-26 · The app screen budget goes to 230 kB gz (T-164, the owner's call)
+
+- **What happened:** the heaviest app screen (`shared/groups/[id]`) measured 219.995 of 220 kB gz on
+  `main`, and the fix of T-164 adds 217 bytes to the frame every screen loads (220.212 kB). No fix to
+  the frame fitted in the 5 bytes left.
+- **Decision (owner, 2026-09-26):** the budget goes from 220 to 230 kB gz, to leave room for the fixes
+  still to come, not only this one. It was 200 until T-120 (2026-09-21).
+- **Alternatives:** 221 kB, enough for this fix alone; or keeping 220 and freeing weight elsewhere in
+  the frame first, a piece of work of its own with no known size.
+- **Consequence:** about 9.8 kB gz of headroom on the heaviest screen. The budget still catches a
+  heavy addition; what it no longer does is stop every small fix to the frame.
+
 ## 2026-09-26 · A purge moves an epoch that every pulled page checks (T-164)
 
 - **What was wrong:** `forceFullResync` and the logout's `purgeVault` emptied the mirror without
