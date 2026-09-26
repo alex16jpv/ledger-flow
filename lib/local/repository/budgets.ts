@@ -4,6 +4,7 @@ import { api } from "@/lib/api/client";
 import type { Budget, BudgetList, SyncBudget } from "@/types/api";
 
 import {
+  budgetExpired,
   type BudgetTransaction,
   deriveBudgetView,
   lifetimeFloor,
@@ -33,7 +34,6 @@ function listQuery(params: BudgetListParams, cursor?: string) {
   };
 }
 
-// The expired and lifetime filters run after pagination, so `hasMore` is followed on short pages.
 async function drain(params: BudgetListParams): Promise<Budget[]> {
   const data: Budget[] = [];
   let cursor: string | undefined;
@@ -55,15 +55,12 @@ interface ViewContext {
 const windowKey = (period: ResolvedPeriod): string =>
   `${period.from.getTime()}_${period.to.getTime()}`;
 
-// Undefined means the mirror cannot answer, and the read goes to the server.
 async function viewContext(
   db: IDBPDatabase<VaultSchema>,
   budgets: SyncBudget[],
   reference: Date,
-): Promise<ViewContext | undefined> {
-  const timeZone = await mirrorTimeZone(db);
-  if (timeZone === undefined) return undefined;
-
+  timeZone: string,
+): Promise<ViewContext> {
   const archivedCategoryIds = new Set<string>();
   for (const record of await db.getAll("categories")) {
     if (record.archived === 1) archivedCategoryIds.add(record.id);
@@ -116,41 +113,59 @@ function toView(budget: SyncBudget, context: ViewContext): Budget {
   };
 }
 
-// Both run after pagination, as on the server, so a page's `total` counts rows these drop.
-function listed(view: Budget, budget: SyncBudget, params: BudgetListParams): boolean {
-  if (Date.parse(view.periodTo) <= lifetimeFloor(budget).getTime()) return false;
-  return Boolean(params.includeExpired) || !view.expired;
+function listed(
+  budget: SyncBudget,
+  reference: Date,
+  timeZone: string,
+  params: BudgetListParams,
+): boolean {
+  const period = resolvePeriod(budget, reference, timeZone);
+  if (period.to.getTime() <= lifetimeFloor(budget).getTime()) return false;
+  return Boolean(params.includeExpired) || !budgetExpired(budget, reference);
 }
 
-// Sorted by id, which is the `_id` ascending the endpoint pages by and IndexedDB's own key order.
-async function storedBudgets(
+interface Listing {
+  budgets: SyncBudget[];
+  timeZone: string;
+}
+
+// Judged before any paging, as the server's query does. Sorted by id, the `_id` order it pages by.
+async function listing(
   db: IDBPDatabase<VaultSchema>,
   params: BudgetListParams,
-): Promise<SyncBudget[]> {
+  reference: Date,
+): Promise<Listing | undefined> {
+  const timeZone = await mirrorTimeZone(db);
+  if (timeZone === undefined) return undefined;
   const records = await db.getAll("budgets");
-  return records
+  const budgets = records
     .filter((record) => params.includeArchived === true || record.archived === 0)
-    .map((record) => record.row);
+    .map((record) => record.row)
+    .filter((budget) => listed(budget, reference, timeZone, params));
+  return { budgets, timeZone };
 }
 
 function referenceOf(reference: string | undefined): Date {
   return reference ? new Date(reference) : new Date();
 }
 
-function viewsOf(budgets: SyncBudget[], context: ViewContext, params: BudgetListParams): Budget[] {
-  return budgets
-    .map((budget) => ({ budget, view: toView(budget, context) }))
-    .filter(({ budget, view }) => listed(view, budget, params))
-    .map(({ view }) => view);
+async function viewsOf(
+  db: IDBPDatabase<VaultSchema>,
+  budgets: SyncBudget[],
+  reference: Date,
+  timeZone: string,
+): Promise<Budget[]> {
+  const context = await viewContext(db, budgets, reference, timeZone);
+  return budgets.map((budget) => toView(budget, context));
 }
 
 export function readBudgets(params: BudgetListParams = {}): Promise<Budget[]> {
   return read<Budget[]>(
     () => drain(params),
     async (db) => {
-      const budgets = await storedBudgets(db, params);
-      const context = await viewContext(db, budgets, referenceOf(params.reference));
-      return context && viewsOf(budgets, context, params);
+      const reference = referenceOf(params.reference);
+      const found = await listing(db, params, reference);
+      return found && viewsOf(db, found.budgets, reference, found.timeZone);
     },
   );
 }
@@ -159,13 +174,11 @@ export function readBudgetsPage(params: BudgetListParams = {}): Promise<BudgetLi
   return read<BudgetList>(
     () => api<BudgetList>("/budgets", { query: listQuery(params) }),
     async (db) => {
-      // The envelope counts and pages the stored rows; the view filters only thin `data` after.
-      const { data: paged, pagination } = mirrorPage(
-        await storedBudgets(db, params),
-        params.limit ?? BUDGET_PAGE_LIMIT,
-      );
-      const context = await viewContext(db, paged, referenceOf(params.reference));
-      return context && { data: viewsOf(paged, context, params), pagination };
+      const reference = referenceOf(params.reference);
+      const found = await listing(db, params, reference);
+      if (!found) return undefined;
+      const { data, pagination } = mirrorPage(found.budgets, params.limit ?? BUDGET_PAGE_LIMIT);
+      return { data: await viewsOf(db, data, reference, found.timeZone), pagination };
     },
   );
 }
@@ -179,8 +192,10 @@ export async function mirrorBudget(
   const record = await db.get("budgets", id);
   // The detail endpoint answers for an archived budget too; only the list leaves it out.
   if (!record) return undefined;
-  const context = await viewContext(db, [record.row], referenceOf(reference));
-  return context && toView(record.row, context);
+  const timeZone = await mirrorTimeZone(db);
+  if (timeZone === undefined) return undefined;
+  const [view] = await viewsOf(db, [record.row], referenceOf(reference), timeZone);
+  return view;
 }
 
 export function readBudget(id: string, reference?: string): Promise<Budget> {

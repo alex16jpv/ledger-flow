@@ -15,7 +15,7 @@
   "Ended" at 0.72 opacity), spent at 24px over the limit, progress (`warn` at 80%, `over` past 100%) and
   a sentence of status: "X left · n days", "Over by X", "nothing spent yet".
 - An informative footer: adjustments and transfers never count.
-- Pagination through `hasMore`/`nextCursor`; short pages are possible.
+- Pagination through `hasMore`/`nextCursor`; only the last page is short.
 - **No budget for the selected filter** while the month has others: the sentence "No {period} budgets
   this month" and, on the current period, the same call to action for that period. Under "All" and
   "Monthly" the dashed card above already is that invitation, so the sentence stays alone.

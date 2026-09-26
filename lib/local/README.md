@@ -249,11 +249,11 @@ oracle every parity test compares against, and other clients read them.
 `repository/budgets.ts` builds the API's view out of the saved shape. The mirror stores `SyncBudget`,
 and everything the view adds — `periodKey`, the window, `baseAmount`/`amount`, `hasOverride`,
 `expired`, `effectiveFrom` — comes from that row plus the categories mirror, except `spent`, which
-needs the transactions and arrived with O-F3 part 2. The list's two post-pagination filters are the
-server's: a period that closes on or before the budget's lifetime floor is dropped, and an expired
-CUSTOM one-shot leaves the default listing, both **after** the page is counted, so a page's `total`
-counts rows its `data` no longer shows. The detail answers for an archived budget; only the list
-leaves it out.
+needs the transactions and arrived with O-F3 part 2. The list's two filters are the server's: a
+period that closes on or before the budget's lifetime floor is dropped, and an expired CUSTOM one-shot
+leaves the default listing, both **before** the page is cut, as the server's query does since T-161,
+so a page's `data`, `total` and `hasMore` count the same rows. The detail answers for an archived
+budget; only the list leaves it out.
 
 `repository/stats.ts` is the single seam for `/stats/spending`. All six of its call sites in
 `features/*/api.ts` go through `readSpending` — `home.fetchSpending`, `budgets.fetchSpendingTotal`,

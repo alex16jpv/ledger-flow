@@ -5,6 +5,21 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-26 · The mirror judges the budget list before paging it (T-161)
+
+- **What was wrong:** `GET /budgets` read a page and only then dropped expired CUSTOM budgets and
+  periods closing on or before the lifetime floor, while `total` and `hasMore` still counted them, and
+  the mirror copied that order on purpose. Home reads one page of 100 (`readBudgetsPage`), so enough
+  ended budgets sorting ahead of the live ones left it with no budgets, online and offline alike.
+- **Decision:** the backend now judges both filters in its query (lag-money-manager, T-161), and the
+  mirror follows it: every stored budget is judged against the reference in the profile's zone, then
+  the page is cut, then only that page's views are built. The CUSTOM expiry rule is one function
+  (`budgetExpired`) shared by the view and the listing.
+- **Alternative:** keeping the old order in the mirror. It would disagree with the server on `total`
+  and `hasMore` and keep Home's bug offline.
+- **Consequence:** judging touches every stored budget, but only with `resolvePeriod` and the floor;
+  the spend, which needs the transactions, is still computed for the page alone.
+
 ## 2026-09-26 · Another account signing in takes the previous one's copy and moves its tabs (T-167, the owner's call)
 
 - **What was wrong:** nothing purged a copy except an explicit logout. When someone's session ended
@@ -2206,7 +2221,9 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   `reference`: any instant inside the month resolves the same period instance, and the local
   midnight is unambiguous across time zones.
 - **The whole list is fetched following `hasMore`**, never `data.length`: the backend drops expired
-  and pre-floor budgets after paginating, so a page can be short while more remain.
+  and pre-floor budgets after paginating, so a page can be short while more remain. _(Since T-161 the
+  backend judges both in its query and only the last page is short; following `hasMore` stays, since a
+  user can hold more budgets than one page.)_
 - **The global monthly budget is the featured card**; other global budgets (weekly, yearly…) list as
   regular cards. When it is missing the slot shows the dashed CTA, which opens the same
   `GlobalBudgetForm` the onboarding and the home use, so there is one way to create it.
