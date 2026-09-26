@@ -185,7 +185,6 @@
     "greeting": "Hola, {name}",
     "greetingPlain": "Hola",
     "pendingReview": "{count, plural, one {# captura rápida por revisar} other {# capturas rápidas por revisar}}",
-    "pendingTotal": "· {amount} en total",
     "spending": "Gasto de {month}",
     "dayOf": "Día {day} de {total}",
     "dailyAverage": "Promedio diario",

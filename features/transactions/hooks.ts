@@ -32,7 +32,8 @@ import { transactionKeys } from "./keys";
 
 export interface PendingSummary {
   count: number;
-  total: number;
+  expense: number;
+  income: number;
 }
 
 export function usePendingSummary(enabled = true) {
@@ -42,7 +43,8 @@ export function usePendingSummary(enabled = true) {
     enabled,
     select: (list): PendingSummary => ({
       count: list.pagination.total,
-      total: list.summary?.totalAmount ?? 0,
+      expense: list.summary?.expense ?? 0,
+      income: list.summary?.income ?? 0,
     }),
   });
 }

@@ -174,3 +174,53 @@ test("Save all completes the categorized cards, one guarded operation per row", 
     expect(row.pendingDetails).toBe(false);
   }
 });
+
+// T-106: the one sum of every amount read $1,277,900 for this inbox, which meant nothing.
+test("Home and the inbox say what went out and what came in, and a transfer in neither", async ({
+  page,
+  request,
+}) => {
+  // A fresh user: the figures are the whole inbox's, so a shared one would never add up.
+  const email = uniqueEmail("totals");
+  const registered = await request.post("/api/auth/register", {
+    headers: { origin: APP },
+    data: { name: "Totals E2E", email, password: "LedgerFlow!2026" },
+  });
+  expect(registered.ok(), await registered.text()).toBe(true);
+  await request.post("/api/accounts", {
+    headers: { origin: APP },
+    data: { name: "Wallet", type: "CASH", color: "GRAY", balance: 100_000 },
+  });
+  const savings = (await (
+    await request.post("/api/accounts", {
+      headers: { origin: APP },
+      data: { name: "Savings", type: "SAVINGS", color: "GREEN", balance: 0 },
+    })
+  ).json()) as { id: string };
+  for (const data of [
+    { amount: 12_500 },
+    { amount: 15_400 },
+    { amount: 1_200_000, type: "INCOME" },
+    { amount: 50_000, type: "TRANSFER", toAccountId: savings.id },
+  ]) {
+    const created = await request.post("/api/transactions/quick", {
+      headers: { origin: APP },
+      data,
+    });
+    expect(created.ok(), await created.text()).toBe(true);
+  }
+  await page.context().addCookies((await request.storageState()).cookies);
+
+  await page.goto("/home");
+  const alert = page.getByRole("link", { name: /4 quick entries to review/ });
+  await expect(alert).toHaveText("4 quick entries to review · −$27,900 · +$1,200,000");
+  await expectNoAxeViolations(page);
+
+  await alert.click();
+  const heading = page.getByRole("heading", { level: 1, name: "To review · 4" });
+  await expect(heading).toBeVisible();
+  const header = page.locator("header", { has: heading });
+  await expect(header.getByText("−$27,900")).toBeVisible();
+  await expect(header.getByText("+$1,200,000")).toBeVisible();
+  await expectNoAxeViolations(page);
+});

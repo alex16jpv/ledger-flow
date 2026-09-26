@@ -310,6 +310,14 @@ An **adjustment** is the one movement that can carry no category at all, so a ca
 chips and no picker — only its description and "Open full form". Nothing the product does puts one
 here: the server refuses an `ADJUSTMENT` at the quick endpoint.
 
+**The header's figures are one per direction (T-106).** On the right of "To review · n", what the
+entries waiting took out and what they brought in, `−$27,900` and `+$1,200,000`, each in its type's
+colour and each only when it is not zero; a transfer is counted in n and in neither. It used to be a
+single grey sum of every amount, which added an income to the expenses — two expenses of $12,500 and
+$15,400 and an income of $1,200,000 read "$1,227,900", which is neither what went out, nor what came
+in, nor the difference. The net was the third option and was discarded: with a large income it
+hides that there are expenses waiting at all.
+
 The screen's copy names them **entries**, not expenses, for the same reason: "Save n entries?",
 "n entries saved", and in the list's filters "Only what is still to review", which no longer echoes
 "Only quick entries" next to it. Only the alert still names expenses, and only for the half of the

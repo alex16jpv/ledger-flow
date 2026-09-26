@@ -14,8 +14,14 @@
   avatar shows its `user` icon instead of empty initials. The general rule: **no text in the app shows
   the punctuation of a fact it does not have**; the sentence is rewritten without it.
 
-- **Review inbox:** a clickable `warning` alert with the count and the sum
-  (`GET /transactions?pendingDetails=true`); hidden when there is nothing to review.
+- **Review inbox:** a clickable `warning` alert with the count and, after it, what the entries
+  waiting took out and what they brought in: "3 to review · −$27,900 · +$1,200,000", the expenses in
+  `--text` and the income in `--income` like the inbox's own cards, each figure only when it is not
+  zero (T-106). A transfer waiting there is counted and in neither figure: it moved money between two
+  of the user's accounts. The two figures are written in their colour with the currency symbol in it —
+  the muted symbol of an amount falls to 4.3:1 on `--warning-soft` in dark mode.
+  (`GET /transactions?pendingDetails=true&limit=1&includeSummary=true`: the count and
+  `summary.expense` and `summary.income`); hidden when there is nothing to review.
 - **Hero card:** the eyebrow "{month} spending", a "Day n of N" badge, the hero amount from
   `GET /stats/spending?type=EXPENSE&from=start of month&to=start of the next` (bounds in the user's
   zone, converted to UTC), a line with the daily average and yesterday's spending, bars per day

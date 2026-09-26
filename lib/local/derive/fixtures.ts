@@ -214,7 +214,7 @@ export interface ParityFixture {
   settlements?: FixtureSettlement[];
   expected: {
     balances: { key: string; accountId: string; balance: number }[];
-    pending: { count: number; total: number; transactionIds: string[] };
+    pending: { count: number; expense: number; income: number; transactionIds: string[] };
     spending: ExpectedSpending[];
     lists: ExpectedList[];
     budgets: { reference: string; views: ExpectedBudgetView[] };

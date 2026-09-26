@@ -5080,7 +5080,7 @@ export type paths = {
                     from?: string;
                     /** @description End of the range, exclusive (the day it falls on is included). */
                     to?: string;
-                    /** @description Adds summary.totalAmount, the sum over the whole filtered set (one extra aggregation, so opt-in) */
+                    /** @description Adds summary.expense and summary.income, the sums of each over the whole filtered set (one extra aggregation, so opt-in) */
                     includeSummary?: "true" | "false";
                     /** @description Only transactions carrying this tag (tags are stored trimmed and lowercased) */
                     tag?: string;
@@ -7010,7 +7010,7 @@ export type components = {
             source: "MANUAL" | "QUICK" | "IMPORT";
             /** @example COP */
             currency: string;
-            /** @description What the movement counts as yours: what left the account minus what has come back. **This is the figure Stats and the budgets measure**, and it is the amount itself unless the movement is an expense of a shared group. The list, its day totals and `summary.totalAmount` stay gross: they are what moved through the accounts. */
+            /** @description What the movement counts as yours: what left the account minus what has come back. **This is the figure Stats and the budgets measure**, and it is the amount itself unless the movement is an expense of a shared group. The list, its day totals and `summary` stay gross: they are what moved through the accounts. */
             countsAsYours: number;
             /**
              * Format: uuid
@@ -7081,7 +7081,7 @@ export type components = {
             source: "MANUAL" | "QUICK" | "IMPORT";
             /** @example COP */
             currency: string;
-            /** @description What the movement counts as yours: what left the account minus what has come back. **This is the figure Stats and the budgets measure**, and it is the amount itself unless the movement is an expense of a shared group. The list, its day totals and `summary.totalAmount` stay gross: they are what moved through the accounts. */
+            /** @description What the movement counts as yours: what left the account minus what has come back. **This is the figure Stats and the budgets measure**, and it is the amount itself unless the movement is an expense of a shared group. The list, its day totals and `summary` stay gross: they are what moved through the accounts. */
             countsAsYours: number;
             /**
              * Format: uuid
@@ -7118,9 +7118,12 @@ export type components = {
         TransactionList: {
             data: components["schemas"]["Transaction"][];
             pagination: components["schemas"]["Pagination"];
-            /** @description Only when includeSummary=true. Sums the whole filtered set, not the page. */
+            /** @description Only when includeSummary=true. Sums the whole filtered set, not the page, one figure per direction: what left in expenses and what came in as income. Transfers, adjustments and settlements count in neither, because which way they moved depends on the account you look from. */
             summary?: {
-                totalAmount: number;
+                /** @description The amounts of the EXPENSE rows in the set. */
+                expense: number;
+                /** @description The amounts of the INCOME rows in the set. */
+                income: number;
             };
         };
         TransactionWithRestamps: components["schemas"]["Transaction"] & {

@@ -156,6 +156,17 @@ function toMirrorFilter(
   };
 }
 
+type TransactionSummary = NonNullable<TransactionList["summary"]>;
+
+// The endpoint's own sums, added in minor units the way lib/local/derive adds every figure.
+function summarize(records: readonly TransactionRecord[]): TransactionSummary {
+  const sumOf = (type: SyncTransaction["type"]) =>
+    sumAmounts(
+      records.filter((record) => record.row.type === type).map((record) => record.row.amount),
+    );
+  return { expense: sumOf("EXPENSE"), income: sumOf("INCOME") };
+}
+
 // The index is (date, id) descending, so any other order is read whole and sorted, never streamed.
 function isDefaultOrder(filter: MirrorFilter): boolean {
   return filter.sort === "date" && filter.order === "desc";
@@ -199,11 +210,7 @@ async function orderedMirror(
   };
   const data = page.map((record) => toApiRow(record.row));
   if (!filter.includeSummary) return { data, pagination };
-  return {
-    data,
-    pagination,
-    summary: { totalAmount: sumAmounts(matched.map((record) => record.row.amount)) },
-  };
+  return { data, pagination, summary: summarize(matched) };
 }
 
 async function queryMirror(
@@ -219,7 +226,7 @@ async function queryMirror(
   }
 
   const data: Transaction[] = [];
-  const summed: number[] = [];
+  const summed: TransactionRecord[] = [];
   let walked = 0;
   let past = false;
   let beyond = false;
@@ -232,7 +239,7 @@ async function queryMirror(
     const record = entry.value;
     if (!filter.matches(record)) continue;
     walked += 1;
-    if (filter.includeSummary) summed.push(record.row.amount);
+    if (filter.includeSummary) summed.push(record);
     if (pivot !== undefined && !past) {
       if (indexedDB.cmp(entry.key, pivot) >= 0) continue;
       past = true;
@@ -256,8 +263,7 @@ async function queryMirror(
     nextCursor: hasMore ? (data.at(-1)?.id ?? null) : null,
   };
   if (!filter.includeSummary) return { data, pagination };
-  // The endpoint's own sum, added in minor units the way lib/local/derive adds every figure.
-  return { data, pagination, summary: { totalAmount: sumAmounts(summed) } };
+  return { data, pagination, summary: summarize(summed) };
 }
 
 export function readTransactions(query: TransactionQuery): Promise<TransactionList> {
