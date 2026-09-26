@@ -201,7 +201,7 @@ describe("the transaction list through the repository", () => {
       readTransactions({ sort: "amount", order: "asc", includeSummary: true, limit: 1 }),
     ).resolves.toMatchObject({
       pagination: { total: 2, hasMore: true, nextCursor: "x1" },
-      summary: { totalAmount: 30 },
+      summary: { expense: 30, income: 0 },
     });
   });
 
@@ -504,13 +504,28 @@ describe("the screen filters against the mirror", () => {
 });
 
 describe("the pending tray", () => {
+  it("sums what went out and what came in apart, and a transfer in neither", async () => {
+    await mirrorOf([
+      transaction({ id: "p1", type: "EXPENSE", amount: 12500, pendingDetails: true }),
+      transaction({ id: "p2", type: "EXPENSE", amount: 15400, pendingDetails: true }),
+      transaction({ id: "p3", type: "INCOME", amount: 1200000, pendingDetails: true }),
+      transaction({ id: "p4", type: "TRANSFER", amount: 50000, pendingDetails: true }),
+      transaction({ id: "p5", type: "INCOME", amount: 9000, pendingDetails: false }),
+    ]);
+
+    const list = await readTransactions({ pendingDetails: true, limit: 1, includeSummary: true });
+
+    expect(list.pagination.total).toBe(4);
+    expect(list.summary).toEqual({ expense: 27900, income: 1200000 });
+  });
+
   it("counts and sums the ones still to review, in minor units", async () => {
     await mirrorOf(ALL);
 
     const list = await readTransactions({ pendingDetails: true, limit: 1, includeSummary: true });
 
     expect(list.pagination.total).toBe(2);
-    expect(list.summary).toEqual({ totalAmount: 0.3 });
+    expect(list.summary).toEqual({ expense: 0.3, income: 0 });
     expect(ids(list)).toEqual(["t4"]);
   });
 

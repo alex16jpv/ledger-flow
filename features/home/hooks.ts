@@ -133,7 +133,11 @@ export function useHomeData(month: MonthContext) {
   const pending = useQuery({
     queryKey: homeKeys.pending(),
     queryFn: fetchHomePending,
-    select: (list) => ({ count: list.pagination.total, total: list.summary?.totalAmount ?? 0 }),
+    select: (list) => ({
+      count: list.pagination.total,
+      expense: list.summary?.expense ?? 0,
+      income: list.summary?.income ?? 0,
+    }),
   });
   const globalBudget = budgets.data?.find(isGlobalMonthlyBudget) ?? null;
   const yesterdaySpent = month.yesterdayKey

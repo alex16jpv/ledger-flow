@@ -5,6 +5,29 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-26 · The review inbox's figure is two, one per direction (T-106, the owner's call)
+
+- **What was wrong:** Home's alert and the inbox header showed `summary.totalAmount`, the sum of
+  every amount waiting, whatever its type. Since T-98 the inbox also holds a quick income, and a
+  transfer whose follow-up failed, so two expenses of $12,500 and $15,400, an income of $1,200,000 and
+  a transfer of $50,000 read "$1,277,900": not what went out, not what came in, not the difference.
+- **Decision (owner, 2026-09-26):** two figures, what went out and what came in, each in its type's
+  colour and each only when it is not zero; a transfer counts in the number of entries and in neither
+  figure. The backend's `summary` became `{ expense, income }` (the same `includeSummary=true`, one
+  aggregation), and the mirror answers the same two sums with `sumAmounts`, checked against
+  `expected.pending` of the parity fixtures, which now carry a quick income and a quick transfer.
+- **Alternatives:** only the expenses, which is what the old sentence promised but hides an income
+  that is waiting too; the net, the one figure the old code nearly computed, discarded because a
+  large income makes the expenses waiting disappear from it; and no figure at all, only the count.
+  On the contract side, keeping `totalAmount` beside the new fields was rejected: it is the figure
+  that meant nothing, and no one else reads it.
+- **Consequence:** both screens draw the figures with `Amount`, so a currency whose symbol goes last
+  reads the same one tap apart. In Home's amber alert it takes `mutedParts={false}`: the muted
+  currency symbol and decimals are 4.3:1 on `--warning-soft` in dark mode, so there they keep the
+  figure's colour. The alert moved to `PendingAlert` so it has its own test. An older frontend
+  against the new backend shows the count alone when it reads the server, and its own wrong sum
+  while it reads a ready mirror, until it updates.
+
 ## 2026-09-26 · The app screen budget goes to 230 kB gz (T-164, the owner's call)
 
 - **What happened:** the heaviest app screen (`shared/groups/[id]`) measured 219.995 of 220 kB gz on
@@ -1952,7 +1975,8 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   `usePendingCount`. No optimistic removal: the row leaves only when the server confirmed.
 - **Count and total come from one request.** `GET /transactions?pendingDetails=true&limit=1&includeSummary=true`
   (backend `11c0a67`) returns `pagination.total` and `summary.totalAmount`; `usePendingSummary` feeds
-  both the shell counter and the inbox header, so the client still adds no money.
+  both the shell counter and the inbox header, so the client still adds no money. _Superseded in part
+  on 2026-09-26 (T-106): the summary is `expense` and `income`, one figure per direction._
 - **`?focus=<id>`** marks the card with the brand outline and scrolls it into view, which is how the
   detail's "Complete" link lands on the right item.
 

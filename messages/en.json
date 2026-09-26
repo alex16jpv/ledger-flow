@@ -185,7 +185,6 @@
     "greeting": "Hi, {name}",
     "greetingPlain": "Hi",
     "pendingReview": "{count, plural, one {# quick entry to review} other {# quick entries to review}}",
-    "pendingTotal": "· {amount} in total",
     "spending": "{month} spending",
     "dayOf": "Day {day} of {total}",
     "dailyAverage": "Daily average",

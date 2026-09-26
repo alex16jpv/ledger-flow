@@ -13,6 +13,7 @@ export interface AmountProps {
   kind?: AmountKind;
   size?: AmountSize;
   signed?: boolean;
+  mutedParts?: boolean;
   className?: string;
 }
 
@@ -47,6 +48,7 @@ export function Amount({
   kind = "expense",
   size = "base",
   signed = true,
+  mutedParts = true,
   className,
 }: AmountProps) {
   const money = useMoney();
@@ -57,7 +59,8 @@ export function Amount({
       {sign}
       <span
         className={cn(
-          "mr-[0.15em] font-normal text-text-3",
+          "mr-[0.15em] font-normal",
+          mutedParts && "text-text-3",
           size === "hero" && "align-[0.55em] text-[0.5em] font-medium tracking-normal",
         )}
       >
@@ -65,7 +68,7 @@ export function Amount({
       </span>
       {integer}
       {fraction && (
-        <span className="text-text-3">
+        <span className={cn(mutedParts && "text-text-3")}>
           {decimal}
           {fraction}
         </span>

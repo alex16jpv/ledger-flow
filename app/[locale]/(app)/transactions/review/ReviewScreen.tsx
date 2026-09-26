@@ -139,8 +139,15 @@ export function ReviewScreen() {
           back("/transactions");
         }}
         actions={
-          summary.data && summary.data.total > 0 ? (
-            <Amount value={summary.data.total} signed={false} size="sm" className="text-text-3" />
+          summary.data && (summary.data.expense > 0 || summary.data.income > 0) ? (
+            <>
+              {summary.data.expense > 0 && (
+                <Amount value={summary.data.expense} kind="expense" size="sm" />
+              )}
+              {summary.data.income > 0 && (
+                <Amount value={summary.data.income} kind="income" size="sm" />
+              )}
+            </>
           ) : undefined
         }
       />

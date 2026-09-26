@@ -132,7 +132,13 @@ beforeEach(() => {
         json({
           data: pending,
           pagination: { ...pagination, total: pending.length },
-          summary: { totalAmount: pending.reduce((sum, row) => sum + row.amount, 0) },
+          summary: {
+            expense: pending.reduce(
+              (sum, row) => sum + (row.type === "EXPENSE" ? row.amount : 0),
+              0,
+            ),
+            income: pending.reduce((sum, row) => sum + (row.type === "INCOME" ? row.amount : 0), 0),
+          },
         }),
       );
     return Promise.resolve(json({ code: "NOT_FOUND", message: url }, { status: 404 }));
@@ -159,7 +165,7 @@ describe("ReviewScreen", () => {
   it("lists the pending quick expenses with recent chips and completes one in place", async () => {
     render();
     expect(await screen.findByRole("heading", { level: 1, name: "To review · 2" })).toBeVisible();
-    expect(await screen.findByText("27,900")).toBeVisible();
+    expect(await screen.findByText("−27,900")).toBeVisible();
     const cards = await screen.findAllByRole("group", { name: "Category" });
     expect(cards).toHaveLength(2);
     const first = document.querySelector<HTMLElement>('[data-transaction-id="q1"]');
@@ -246,7 +252,7 @@ describe("ReviewScreen", () => {
           json({
             data: pending,
             pagination: { ...pagination, total: pending.length },
-            summary: { totalAmount: 0 },
+            summary: { expense: 0, income: 0 },
           }),
         );
       return Promise.resolve(json({ code: "NOT_FOUND", message: url }, { status: 404 }));
@@ -347,6 +353,41 @@ describe("ReviewScreen", () => {
     if (!row) throw new Error("card q1 not rendered");
     expect(within(row).getByText(/1,200,000/)).toHaveTextContent(/^\+/);
     expect(within(row).getByText(/Bancolombia/)).toBeVisible();
+  });
+
+  // T-106: one grey sum added the income and the transfer to the expenses and read $1,277,900.
+  it("heads the inbox with what went out and what came in, never one sum", async () => {
+    pending = [
+      ...INITIAL.map((row) => ({ ...row })),
+      {
+        ...INITIAL[0]!,
+        id: "q3",
+        type: "INCOME",
+        amount: 1200000,
+        fromAccountId: null,
+        toAccountId: "a1",
+      },
+      { ...INITIAL[0]!, id: "q4", type: "TRANSFER", amount: 50000, toAccountId: "a2" },
+    ];
+    render();
+
+    const heading = await screen.findByRole("heading", { level: 1, name: "To review · 4" });
+    const header = heading.closest("header");
+    if (!header) throw new Error("page header not rendered");
+    expect(await within(header).findByText("−27,900")).toBeVisible();
+    expect(within(header).getByText("+1,200,000")).toBeVisible();
+    expect(within(header).queryByText(/1,277,900/)).toBeNull();
+  });
+
+  it("heads the inbox with no figure when only a transfer is waiting", async () => {
+    pending = [{ ...INITIAL[0]!, id: "q4", type: "TRANSFER", amount: 50000, toAccountId: "a2" }];
+    render();
+
+    const heading = await screen.findByRole("heading", { level: 1, name: "To review · 1" });
+    const header = heading.closest("header");
+    if (!header) throw new Error("page header not rendered");
+    expect(within(header).queryByText(/50,000/)).toBeNull();
+    expect(within(header).queryByText(/\$/)).toBeNull();
   });
 
   it("shows the all-reviewed state when nothing is pending", async () => {

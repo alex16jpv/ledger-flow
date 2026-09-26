@@ -103,7 +103,7 @@ describe("home reads", () => {
         json({
           data: [apiRow(alsoPending)],
           pagination: { limit: 1, offset: 0, total: 2, hasMore: true, nextCursor: "t2" },
-          summary: { totalAmount: 0.3 },
+          summary: { expense: 0.3, income: 0 },
         }),
       );
     });

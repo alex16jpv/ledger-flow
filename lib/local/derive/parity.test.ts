@@ -296,7 +296,10 @@ describe.each(PARITY_FIXTURES)("$id", (fixture) => {
     const tray = await readTransactions({ pendingDetails: true, limit: 100, includeSummary: true });
 
     expect(tray.pagination.total).toBe(fixture.expected.pending.count);
-    expect(tray.summary?.totalAmount).toBe(fixture.expected.pending.total);
+    expect(tray.summary).toEqual({
+      expense: fixture.expected.pending.expense,
+      income: fixture.expected.pending.income,
+    });
     expect(tray.data.map((row) => row.id).sort()).toEqual(
       [...fixture.expected.pending.transactionIds].sort(),
     );
@@ -345,10 +348,10 @@ describe("the rules the fixtures fix", () => {
     const withoutTransfers = bogota.transactions.filter(
       (transaction) => transaction.type !== "TRANSFER",
     );
-    expect(balanceOf(bogota, "savings")).toBe(5500000);
+    expect(balanceOf(bogota, "savings")).toBe(5600000);
     expect(balanceOf(bogota, "savings", withoutTransfers)).toBe(5000000);
     expect(balanceOf(bogota, "card", withoutTransfers)).toBe(balanceOf(bogota, "card") - 300000);
-    expect(balanceOf(bogota, "bank", withoutTransfers)).toBe(balanceOf(bogota, "bank") + 800000);
+    expect(balanceOf(bogota, "bank", withoutTransfers)).toBe(balanceOf(bogota, "bank") + 900000);
   });
 });
 
@@ -393,8 +396,8 @@ describe("the fifth kind of movement", () => {
       includeSummary: true,
     });
     expect(page.data.filter((row) => row.type === "SETTLEMENT")).toHaveLength(4);
-    // The list is gross: it is what moved through the accounts, not what is left as yours.
-    expect(page.summary?.totalAmount).toBe(305000 + moved);
+    // Gross, like the list: what moved through the accounts; a settlement is in neither direction.
+    expect(page.summary).toEqual({ expense: 305000, income: 0 });
   });
 });
 

@@ -362,10 +362,10 @@ sides cannot drift into disagreeing about the same money.
   operations — a walk over the outbox, not over the whole history — and a test in O-F4 must prove the
   two agree whenever the outbox is empty.
 - The pending tray is **not** a second derivation: `repository/transactions.ts` already answers it
-  (`pendingDetails=true&includeSummary=true`, count in `total`, sum in `summary`), so the parity test
+  (`pendingDetails=true&includeSummary=true`, count in `total`, the expense and income sums in `summary`), so the parity test
   feeds the fixture rows into a test vault and reads the tray through the repository.
 - `sumAmounts` is the one adder. `repository/transactions.ts` answers `includeSummary` with it, so
-  no arithmetic is left in the repository — that figure is the endpoint's own sum, not a projection.
+  no arithmetic is left in the repository — those figures are the endpoint's own sums, not a projection.
 - `resolvePeriod` is the budget window: the same rules as the server's `shared/budgetPeriod.ts`,
   including the BIWEEKLY grid anchored on the Monday of 2024-01-01 and the key that never carries a
   dot because it is also a `$set` path in `amountOverrides`.

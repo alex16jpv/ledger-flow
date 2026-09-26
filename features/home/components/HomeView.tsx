@@ -15,7 +15,6 @@ import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
 import { splitAccounts } from "@/lib/accounts/debt";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
-import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { useStoredData } from "@/lib/local/useStoredData";
 import { useAppUser } from "@/lib/session";
@@ -24,6 +23,7 @@ import { dayBars, topBudgets, useHomeData, useMonthContext } from "../hooks";
 import { AccountsSection } from "./AccountsSection";
 import { BudgetsSection } from "./BudgetsSection";
 import { HeroCard } from "./HeroCard";
+import { PendingAlert } from "./PendingAlert";
 import { StatsRow } from "./StatsRow";
 
 interface HomeViewProps {
@@ -45,7 +45,6 @@ export function HomeView({
   const t = useTranslations();
   const user = useAppUser();
   const dates = useDates();
-  const money = useMoney();
   const month = useMonthContext();
   const data = useHomeData(month);
   const firstName = user?.name.split(" ")[0] ?? "";
@@ -131,13 +130,7 @@ export function HomeView({
         </Alert>
       )}
       {pending && pending.count > 0 && (
-        <Link href="/transactions/review" className="block rounded-md">
-          <Alert tone="warning">
-            <b className="font-semibold">{t("home.pendingReview", { count: pending.count })}</b>
-            {pending.total > 0 &&
-              ` ${t("home.pendingTotal", { amount: money.format(pending.total) })}`}
-          </Alert>
-        </Link>
+        <PendingAlert count={pending.count} expense={pending.expense} income={pending.income} />
       )}
       {/* P-34: only once there is something to lose, and never in the installed app (§8.18). */}
       <InstallNotice hasSomethingToLose={hasLocalData} />

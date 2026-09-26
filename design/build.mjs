@@ -443,7 +443,7 @@ ${heroChart}
 <div class="progress color-INDIGO" style="flex:1"><span class="fill" style="width:64%"></span>${paceMark()}</div>
 <span class="small muted" style="white-space:nowrap">64% of monthly budget</span></div>
 </section>`;
-  const pend = `<a class="alert warning" href="#" style="align-items:center">${iconSvg("inbox")}<span style="flex:1"><b>3 quick entries to review</b> · $47,900 in total</span>${iconSvg("chevron-right", "sm")}</a>`;
+  const pend = `<a class="alert warning" href="#" style="align-items:center">${iconSvg("inbox")}<span style="flex:1"><b>3 quick entries to review</b> · <span class="amount expense" style="color:var(--text)">−${moneyText(27900)}</span> · <span class="amount income">+${moneyText(1200000)}</span></span>${iconSvg("chevron-right", "sm")}</a>`;
   const installRisk =
     notice === "risk"
       ? `<span class="small muted">This browser can also delete what you record offline after a few days without opening the site. Installing the app stops that.</span>`
@@ -1317,7 +1317,7 @@ ${item(12500, "Today 8:42", "Bancolombia", true)}${item(15400, "Yesterday 13:05"
     back: true,
     title: "To review · 3",
     narrow: true,
-    actions: `<span class="small muted amount">${money(1227900)}</span>`,
+    actions: `<span class="small hstack" style="gap:8px">${amount(27900)}${amount(1200000, "income")}</span>`,
     sheet: sh,
   });
 };
