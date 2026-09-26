@@ -2,8 +2,14 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { backendFetch, readBackendJson } from "@/lib/api/backend";
 import { clientIpOf } from "@/lib/api/client-ip";
-import { REFRESH_COOKIE } from "@/lib/auth/cookies";
 import {
+  parseSessionMarker,
+  REFRESH_COOKIE,
+  SESSION_COOKIE,
+  sessionMarkerCookie,
+} from "@/lib/auth/cookies";
+import {
+  applyCookies,
   endExpiredSessionResponse,
   forwardedRequestId,
   passThroughError,
@@ -11,6 +17,7 @@ import {
   untrustedOriginResponse,
   withBackend,
 } from "@/lib/auth/handlers";
+import { decodeAccessToken } from "@/lib/auth/jwt";
 import { isSessionVerdict, SESSION_END_HEADER } from "@/lib/auth/session-end";
 import type { AuthTokens } from "@/types/api";
 
@@ -61,6 +68,11 @@ export async function POST(request: NextRequest) {
         { status: 502 },
       );
     }
-    return sessionResponse(tokens, undefined, 200, requestId);
+    const response = sessionResponse(tokens, undefined, 200, requestId);
+    const owner = decodeAccessToken(tokens.accessToken)?.userId;
+    const marked = parseSessionMarker(request.cookies.get(SESSION_COOKIE)?.value)?.userId;
+    // T-167: a refresh that lands after another user's sign-in brings back its own user's session.
+    if (owner && marked && owner !== marked) applyCookies(response, [sessionMarkerCookie(owner)]);
+    return response;
   });
 }

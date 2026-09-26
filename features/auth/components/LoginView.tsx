@@ -2,10 +2,12 @@
 
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import { AuthHeading } from "@/components/shell/AuthFrame";
 import { Alert } from "@/components/ui/Alert";
-import { safeNextPath } from "@/lib/auth/routes";
+import { readSessionMarker } from "@/lib/auth/marker";
+import { nextAfterSignIn, safeNextPath } from "@/lib/auth/routes";
 import { isEnabled } from "@/lib/flags";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 
@@ -18,6 +20,7 @@ export function LoginView() {
   const params = useSearchParams();
   const next = safeNextPath(params.get("next"));
   const knownEmail = useDeviceEmail();
+  const [previous] = useState(() => readSessionMarker());
 
   return (
     <div className="flex flex-col gap-5">
@@ -28,8 +31,8 @@ export function LoginView() {
       <LoginForm
         forgotPasswordEnabled={isEnabled("forgotPassword")}
         knownEmail={knownEmail}
-        onSuccess={() => {
-          router.replace(next);
+        onSuccess={({ user }) => {
+          router.replace(nextAfterSignIn(next, previous?.userId, user.id));
         }}
       />
       <p className="text-center text-sm text-text-2">

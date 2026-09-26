@@ -221,6 +221,33 @@ describe("refresh handler", () => {
     expect(response.headers.get(SESSION_END_HEADER)).toBeNull();
   });
 
+  it("re-marks the device when the renewed session belongs to someone the marker does not name", async () => {
+    const access = (userId: string) =>
+      `h.${Buffer.from(JSON.stringify({ userId })).toString("base64url")}.s`;
+    fetchMock.mockResolvedValue(json({ accessToken: access("ada"), refreshToken: "ref2" }));
+    const request = new NextRequest(`${APP}/api/auth/refresh`, {
+      method: "POST",
+      headers: { origin: APP, cookie: "__Secure-refresh=ref; __Host-session=grace.1758000000" },
+    });
+
+    const response = await refresh(request);
+
+    expect(setCookies(response).some((c) => c.startsWith("__Host-session=ada."))).toBe(true);
+  });
+
+  it("leaves the marker alone when the renewed session is the one it names", async () => {
+    const access = `h.${Buffer.from(JSON.stringify({ userId: "ada" })).toString("base64url")}.s`;
+    fetchMock.mockResolvedValue(json({ accessToken: access, refreshToken: "ref2" }));
+    const request = new NextRequest(`${APP}/api/auth/refresh`, {
+      method: "POST",
+      headers: { origin: APP, cookie: "__Secure-refresh=ref; __Host-session=ada.1758000000" },
+    });
+
+    const response = await refresh(request);
+
+    expect(setCookies(response).some((c) => c.startsWith("__Host-session="))).toBe(false);
+  });
+
   it("answers 401 without a refresh cookie", async () => {
     const request = new NextRequest(`${APP}/api/auth/refresh`, {
       method: "POST",

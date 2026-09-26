@@ -5,6 +5,65 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-26 · Another account signing in takes the previous one's copy and moves its tabs (T-167, the owner's call)
+
+- **What was wrong:** nothing purged a copy except an explicit logout. When someone's session ended
+  and someone else signed in on the same browser, the first person's whole mirror (accounts,
+  movements, budgets, Shared, their profile) stayed in `lf-vault-<id>` for good, and a tab still open
+  on them kept painting it. Since T-152 that tab no longer syncs, but it showed the finances of an
+  account the browser no longer had a session for.
+- **Decision (owner, 2026-09-26, all three on the session's recommendation):**
+  - **The copy goes, the queue waits.** A successful login or registration runs
+    `purgeOtherVaults(userId)` before it resolves. Every other `lf-vault-*` loses its mirror and
+    cursor and moves its epoch. This is the same `clearVault` that `purgeVault` runs, so a pull in
+    flight in another tab writes nothing after it (T-164). It **keeps its outbox**, which goes out on
+    that person's next sign-in here, as "Sign out and keep them" does. Nobody is asked. Only then does
+    the signing tab post `session:signedIn`.
+  - **Its tabs follow the session.** Every tab of the app (`AccountSwitch`) reads the session marker
+    on that message, when it becomes visible, on `focus` and on `pageshow`, and compares it with the
+    marker the page loaded with (or, with none, the first user it showed). A different user sends the
+    tab to Home with a full load, which then says "Another account signed in on this browser". The
+    same user with a newer `issuedAt`, while this tab's session was expired, reloads it quietly:
+    otherwise it would keep saying nothing syncs for a session that is live.
+  - **"Delete everything on this device" counts the queues it takes from other accounts** and says so
+    in its confirmation (`countPendingElsewhere`). The confirm button waits for that count.
+- **Why the marker the page loaded with, not the session's user:** `/api/auth/refresh` never
+  re-stamped the marker. A refresh that landed after another user's sign-in left the first user's
+  tokens under the second user's marker. Every page then got `/me` for one user and a marker for the
+  other, so comparing against `/me` reloaded forever. For the same reason, a `/me` that already
+  answered with the new user would have hidden the switch. Two fixes:
+  - the comparison uses the marker the page loaded with, so a page never moves twice for one marker;
+  - the refresh now re-stamps the marker when the renewed access token belongs to someone the
+    existing marker does not name, so cookies and marker agree again. It stamps only over an existing
+    marker, never where there is none.
+- **Alternatives:**
+  - Asking whoever signs in what to do with the queue, rejected by the owner: a stranger would throw
+    away someone else's work, and learn it exists.
+  - Discarding the queue, rejected by the owner: unsent work only goes when its owner chooses.
+  - Sending the stale tab to Sign in: the session is already live.
+  - Keeping other accounts' queues out of "Delete everything", rejected by the owner: it is the button
+    for leaving a browser clean.
+  - A client navigation instead of a full load: the query cache, the vault handle and the mirror's
+    scheduler all belong to the previous account.
+  - A `?switched=1` on the URL for the toast: it can be bookmarked and shared, and has to be stripped.
+  - Purging only the previous marker's user rather than every other vault: a vault left behind when
+    the marker was lost, or a third person's, would stay.
+- **Consequence:**
+  - The toast survives the full load through one `sessionStorage` key per tab,
+    `lf:account-switched`, a flag with nothing personal in it. A browser that refuses that storage
+    moves the tab without the toast.
+  - The login no longer honours a `next` that belonged to another account (`nextAfterSignIn`):
+    signing in from the first user's expired sheet, whose route carries their screen, lands the
+    second user on Home instead of on a row that is not theirs.
+  - The offline-ready announcement is forgotten when another copy was cleared, so the copy of the
+    user signing in announces itself again.
+  - A browser without `indexedDB.databases()` purges and counts nothing here, the same limit
+    `purgeVault` already has on logout.
+  - A failed purge is reported (`vault`) and does not undo the sign-in.
+  - The login still offers the email of the account whose copy is on the device, as P-37 decided.
+    That copy belongs to its owner until someone else signs in; then it is gone, and the next offer
+    is the new account's.
+
 ## 2026-09-26 · The review inbox's figure is two, one per direction (T-106, the owner's call)
 
 - **What was wrong:** Home's alert and the inbox header showed `summary.totalAmount`, the sum of
@@ -2477,6 +2536,8 @@ cover` is set once in the root layout for the standalone display.
   mirror and queueing writes. `SessionProvider` passes the safe default and warns when it keeps a
   queue; **the confirmation dialog that would pass `discardPendingWork: true` belongs to O-F5a/O-F6
   and does not exist yet**, so today unsent work always survives a logout.
+- **Amended by T-167 (2026-09-26):** a successful sign-in now also purges every other account's
+  mirror, keeping its queue, which is the other time a purge happens without a logout.
 
 ## 2026-09-03 · The mirror only answers when the network is gone, and the seam is one constant (O-F2a)
 
@@ -5524,7 +5585,8 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
   keeps a foreign answer from settling the write, and what is left is a refresh swapping the session
   inside a request that then succeeds, a window of one round trip.
 - **Consequence:** a tab left on the first user after a switch stops syncing in both directions and
-  keeps serving the copy it had until T-167 decides what it shows. `SESSION_CHANGED` is a BFF code like
+  keeps serving the copy it had until T-167 decides what it shows (decided on 2026-09-26: the copy is
+  purged at the sign-in and the tab moves to the account that signed in). `SESSION_CHANGED` is a BFF code like
   `UNTRUSTED_ORIGIN`: it is not in the API's contract and the client never branches on it. The pull
   surfaces it as a failed pass; a batch refused while the marker still names the owner (no marker at
   all) is requeued like any other refusal, with its attempt counted and the ordinary backoff.

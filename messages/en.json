@@ -698,6 +698,7 @@
       "confirmTitle": "Delete everything on this device?",
       "confirmBody": "This deletes the copy of your data on this device and {count, plural, =1 {# change} other {# changes}} that only exist here. It does not delete your account: signing in again downloads everything the server has.",
       "confirmBodyEmpty": "This deletes the copy of your data on this device. It does not delete your account: signing in again downloads everything the server has.",
+      "confirmElsewhere": "It also deletes {count, plural, =1 {# unsent change} other {# unsent changes}} from another account that signed in on this browser.",
       "confirmCta": "Delete everything",
       "cancel": "Cancel",
       "wiped": "Everything on this device was deleted"
@@ -707,6 +708,7 @@
       "body": "{count, plural, =0 {Nothing is being sent to the server.} =1 {# change is saved here.} other {# changes are saved here.}}",
       "action": "Sign in to sync"
     },
+    "accountSwitched": "Another account signed in on this browser",
     "update": {
       "title": "A new version of Ledger Flow is ready.",
       "body": "Reloading takes a second. Nothing you saved is lost.",

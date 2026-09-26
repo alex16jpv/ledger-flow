@@ -7,8 +7,12 @@ import { ApiError } from "@/lib/api/errors";
 import { noteSessionStarted } from "@/lib/api/refresh";
 import { readSessionMarker } from "@/lib/auth/marker";
 import { readVaultProfile } from "@/lib/local/db";
+import { purgeOtherVaults } from "@/lib/local/purge";
 import { reportOnline } from "@/lib/network/connectivity";
 import { setLocalOnly } from "@/lib/network/local-only";
+import { reportError } from "@/lib/observability/reporter";
+import type { SessionUser } from "@/lib/session/api";
+import { tabChannel } from "@/lib/session/channel";
 
 import { login, register } from "./api";
 
@@ -21,10 +25,14 @@ export function retryAfterOf(error: unknown): number | null {
   return null;
 }
 
-function syncFromNowOn(): void {
+async function syncFromNowOn({ user }: SessionUser): Promise<void> {
   noteSessionStarted();
   setLocalOnly(false);
   reportOnline(true);
+  await purgeOtherVaults(user.id).catch((error: unknown) => {
+    reportError(error, "vault");
+  });
+  tabChannel.post({ type: "session:signedIn" });
 }
 
 export function useLogin() {

@@ -2,7 +2,7 @@ import { openDB } from "idb";
 
 import { forgetOfflineReadyAnnouncement } from "@/lib/pwa/readiness";
 
-import { isVaultSupported, vaultExists } from "./db";
+import { isVaultSupported, otherVaultUsers, vaultExists } from "./db";
 import { advanceMirrorEpoch, MIRROR_STORES, vaultDatabaseName, type VaultSchema } from "./schema";
 import { markSuggestionsStale } from "./suggest/stale";
 
@@ -26,13 +26,7 @@ const NOTHING: VaultPurgeOutcome = {
   operationsKept: 0,
 };
 
-// D-3, D-7, invariant 7: the mirror is disposable; unsent work goes only if the user chose it.
-export async function purgeVault(
-  userId: string,
-  options: VaultPurgeOptions = {},
-): Promise<VaultPurgeOutcome> {
-  if (!isVaultSupported() || !(await vaultExists(userId))) return NOTHING;
-
+async function clearVault(userId: string, options: VaultPurgeOptions): Promise<VaultPurgeOutcome> {
   const db = await openDB<VaultSchema>(vaultDatabaseName(userId));
   try {
     const names = PURGEABLE_STORES.filter((name) => db.objectStoreNames.contains(name));
@@ -56,7 +50,6 @@ export async function purgeVault(
     await tx.done;
 
     markSuggestionsStale();
-    forgetOfflineReadyAnnouncement();
     return {
       mirrorCleared: true,
       operationsDiscarded: discard ? pending : 0,
@@ -65,4 +58,23 @@ export async function purgeVault(
   } finally {
     db.close();
   }
+}
+
+// D-3, D-7, invariant 7: the mirror is disposable; unsent work goes only if the user chose it.
+export async function purgeVault(
+  userId: string,
+  options: VaultPurgeOptions = {},
+): Promise<VaultPurgeOutcome> {
+  if (!isVaultSupported() || !(await vaultExists(userId))) return NOTHING;
+  const outcome = await clearVault(userId, options);
+  if (outcome.mirrorCleared) forgetOfflineReadyAnnouncement();
+  return outcome;
+}
+
+export async function purgeOtherVaults(userId: string): Promise<void> {
+  const others = await otherVaultUsers(userId);
+  const outcomes = await Promise.all(
+    others.map((other) => clearVault(other, { discardPendingWork: false })),
+  );
+  if (outcomes.some((outcome) => outcome.mirrorCleared)) forgetOfflineReadyAnnouncement();
 }

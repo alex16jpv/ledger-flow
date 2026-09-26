@@ -68,6 +68,13 @@ again downloads everything the server has." With an empty queue the sentence los
 changes that only exist here" is never shown with a zero — and reads "This deletes the copy of your data
 on this device." The call to action is a solid `danger` **"Delete everything"**, with a ghost "Cancel".
 
+**With another account's changes waiting here** (`#delete-local-copy-another-account`): the deletion
+takes every copy in the browser, so it also takes the unsent changes another account left when someone
+else signed in (see [Another account signs in](#another-account-signs-in-another-account-signed-in)).
+The sheet counts them apart and adds one sentence: "It also deletes **n unsent changes from another
+account** that signed in on this browser." Nobody deletes someone else's work without being told
+(owner, 2026-09-26). It says how many, never whose: no name or email of the other account.
+
 On confirmation the copy, the queue and **the device's session marker** are deleted, and the app goes to
 sign-in with the toast "Everything on this device was deleted". **The marker is not a detail:** it is
 what stops the device from insisting on opening the copy of a user the server no longer has.
@@ -97,7 +104,34 @@ device, next to the marker. While it is on:
   appears.
 - **On signing in again:** the app checks it is **the same user** before touching the copy, the queue
   goes out on the first pass, and the stripe turns `online` with its "n changes synced" counter. If it
-  is **another** user, the previous one's copy is not mixed in: the deletion sheet is offered first.
+  is **another** user, the previous one's copy is not mixed in: see
+  [Another account signs in](#another-account-signs-in-another-account-signed-in).
+
+## Another account signs in (`#another-account-signed-in`)
+
+A device can hold more than one person's copy: someone's session ends, and someone else signs in on
+the same browser. **Whoever signs in, nobody else's copy stays on the device**: the moment the sign-in
+(or a new account) succeeds, every other account's accounts, transactions, budgets and Shared are
+deleted from this browser. They are a copy of the server, so that person loses nothing: their next
+sign-in downloads them again.
+
+**Their unsent changes stay, and nobody is asked.** They wait on this device, out of sight, and go out
+by themselves the next time that person signs in here — the same as "Sign out and keep them". The
+person signing in is never shown them or asked about them: it is not their work to keep or throw away,
+and they are not told another account left anything behind until they choose "Delete everything on
+this device", the only way to delete them, whose confirmation counts them (see
+[Confirming the deletion](#confirming-the-deletion-delete-local-copy)).
+
+**The account that signs in starts at Home**, even when it signed in from the previous account's
+session sheet, whose "Sign in to sync" keeps that account's screen to come back to: that screen was
+never the new account's.
+
+**A tab still open on the previous account moves to the one that signed in.** The browser's session is
+the new one now, so that tab is too: it goes to Home of the account that signed in and shows the toast
+**"Another account signed in on this browser"**. It moves as soon as the other sign-in happens, or
+the next time the tab is looked at if it could not hear about it; nothing of the previous account stays
+on screen. When it is **the same** person who signed in again from another tab, a tab that was showing
+the session sheet or the stripe of a dead session simply comes back to life, with no toast.
 
 ## Projected figures (`#projected-figures`)
 

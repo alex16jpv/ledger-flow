@@ -17,6 +17,7 @@ mirror says it cannot.
 | Losing it costs                                | one pull                                                                                                                                                                                                         | the user's data                                         |
 | On a version bump                              | cleared and re-pulled                                                                                                                                                                                            | migrated one operation at a time, or the upgrade blocks |
 | On logout                                      | always cleared                                                                                                                                                                                                   | kept unless the caller confirms discarding it           |
+| On another account's sign-in                   | always cleared                                                                                                                                                                                                   | kept for its owner's next sign-in (T-167)               |
 | On session expiry / app update / cache cleanup | untouched                                                                                                                                                                                                        | untouched (invariant 7)                                 |
 
 They share one database because **IndexedDB transactions cannot span two databases** and O-F4 has to
@@ -190,7 +191,9 @@ page names the copy's owner in `x-lf-session-user`, and the BFF answers `409 SES
 access token belongs to someone else — the marker cannot see a refresh that swapped the session inside
 one request. And the profile the mirror asks for when the feed never carried one is kept only if it is
 the owner's, and the answers the screens keep in the copy (`keepSentInvitation`,
-`keepReceivedInvitation`, `keepAddedExpense`) go through `ownVault()`. Whose copy the tab should show after the switch is T-167, not this.
+`keepReceivedInvitation`, `keepAddedExpense`) go through `ownVault()`. And the switch itself takes the copy away (T-167): the sign-in clears every
+other account's mirror (`purgeOtherVaults`, below), and a tab still showing one moves to the account
+that signed in (`AccountSwitch`).
 
 A request that arrives while a pull is running joins it and asks for **one more pass** when it ends
 (F-32): the pull in flight cannot carry what the server wrote after it started. It is the same
@@ -670,7 +673,7 @@ Both answer honestly when the API is missing rather than assuming it is there.
 
 ## Purging
 
-Purging is **never automatic**. `purgeVault(userId, { discardPendingWork })` clears the mirror every
+Purging is **never automatic**, with one exception: another account's sign-in (T-167, below). `purgeVault(userId, { discardPendingWork })` clears the mirror every
 time — on a shared device the next user must not see the previous one's data — and keeps unsent
 operations unless the caller confirms discarding them, reporting `operationsKept` /
 `operationsDiscarded` either way. It also moves the mirror epoch, so a pull already downloading
@@ -681,6 +684,13 @@ writes nothing after it (T-164). `lib/query/purge.ts` keeps the disposable React
 still unsent, Settings asks first (`SignOutSheet`) whether to keep it for the next sign-in on this
 device, the default, or discard it. Any other logout — another tab's, or one with nothing unsent —
 keeps the queue.
+
+`purgeOtherVaults(userId)` runs on every successful sign-in and registration (T-167, the owner's
+call): every other `lf-vault-*` on the device loses its mirror the same way, and always keeps its
+queue. Nobody is asked about the queue, and it goes out on that account's next sign-in here. When it
+cleared another copy it also forgets the offline-ready announcement, so the copy of the user signing
+in announces itself again. "Delete everything on this device" (`wipeThisDevice`) takes those queues
+too, and its confirmation counts them first (`countPendingElsewhere`).
 
 ## Tests
 

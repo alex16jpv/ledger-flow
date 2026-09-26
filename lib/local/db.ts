@@ -7,6 +7,7 @@ import {
   MIRROR_STORES,
   type OutboxOperation,
   PROFILE_KEY,
+  VAULT_DB_PREFIX,
   vaultDatabaseName,
   type VaultSchema,
 } from "./schema";
@@ -240,6 +241,19 @@ export function canListVaults(): boolean {
   return isVaultSupported() && typeof indexedDB.databases === "function";
 }
 
+export async function otherVaultUsers(userId: string | undefined): Promise<string[]> {
+  if (!canListVaults()) return [];
+  return (await indexedDB.databases())
+    .map((database) => database.name)
+    .filter(
+      (name): name is string =>
+        typeof name === "string" &&
+        name.startsWith(VAULT_DB_PREFIX) &&
+        (userId === undefined || name !== vaultDatabaseName(userId)),
+    )
+    .map((name) => name.slice(VAULT_DB_PREFIX.length));
+}
+
 export async function vaultExists(userId: string): Promise<boolean> {
   if (!canListVaults()) return false;
   const name = vaultDatabaseName(userId);
@@ -258,6 +272,11 @@ export async function readVaultProfile(userId: string): Promise<User | null> {
 }
 
 // Asking how much is unsent must not migrate anything nor create the database.
+export async function countPendingElsewhere(userId: string | undefined): Promise<number> {
+  const counts = await Promise.all((await otherVaultUsers(userId)).map(countPendingOperations));
+  return counts.reduce((sum, count) => sum + count, 0);
+}
+
 export async function countPendingOperations(userId: string): Promise<number> {
   if (!(await vaultExists(userId))) return 0;
   const db = await openDB<VaultSchema>(vaultDatabaseName(userId));

@@ -3,7 +3,7 @@ import { purgePersistedCaches } from "@/lib/query/purge";
 import { account, openTestVault, transaction, wipeVaults } from "@/lib/testing/vault";
 
 import { countPendingOperations, vaultExists } from "./db";
-import { purgeVault } from "./purge";
+import { purgeOtherVaults, purgeVault } from "./purge";
 import { accountRecord, type OutboxOperation, transactionRecord } from "./schema";
 
 function operation(seq: number): OutboxOperation {
@@ -100,6 +100,83 @@ describe("purgeVault", () => {
       operationsKept: 0,
     });
     expect(await vaultExists("ghost")).toBe(false);
+  });
+});
+
+describe("purgeOtherVaults", () => {
+  afterEach(wipeVaults);
+
+  it("clears every other user's copy and keeps each one's unsent work", async () => {
+    await fill("u1", 3);
+    await fill("u2", 0);
+    await fill("me", 2);
+
+    await purgeOtherVaults("me");
+
+    for (const other of ["u1", "u2"]) {
+      const vault = await openTestVault(other);
+      expect(await vault.db.count("accounts")).toBe(0);
+      expect(await vault.db.count("transactions")).toBe(0);
+      expect(await vault.db.get("meta", "syncCursor")).toBeUndefined();
+      vault.close();
+    }
+    expect(await countPendingOperations("u1")).toBe(3);
+    expect(await countPendingOperations("u2")).toBe(0);
+  });
+
+  it("never touches the copy of the user who signed in", async () => {
+    await fill("me", 2);
+    await fill("u1", 1);
+
+    await purgeOtherVaults("me");
+
+    const mine = await openTestVault("me");
+    expect(await mine.db.count("accounts")).toBe(1);
+    expect(await mine.db.get("meta", "syncCursor")).toEqual({
+      key: "syncCursor",
+      value: "v1|cursor",
+    });
+    expect(await mine.db.count("outbox")).toBe(2);
+  });
+
+  it("forgets the offline-ready announcement, which was said of a copy that is gone", async () => {
+    await fill("u1", 0);
+    markOfflineReadyAnnounced();
+
+    await purgeOtherVaults("me");
+
+    expect(offlineReadyAnnounced()).toBe(false);
+  });
+
+  it("keeps the announcement when there was no other copy to clear", async () => {
+    await fill("me", 0);
+    markOfflineReadyAnnounced();
+
+    await purgeOtherVaults("me");
+
+    expect(offlineReadyAnnounced()).toBe(true);
+  });
+
+  it("clears nothing where the browser cannot list its databases", async () => {
+    await fill("u1", 1);
+    const listing = Object.getOwnPropertyDescriptor(indexedDB, "databases");
+    Object.defineProperty(indexedDB, "databases", { value: undefined, configurable: true });
+    try {
+      await purgeOtherVaults("me");
+    } finally {
+      if (listing) Object.defineProperty(indexedDB, "databases", listing);
+      else Reflect.deleteProperty(indexedDB, "databases");
+    }
+
+    const vault = await openTestVault("u1");
+    expect(await vault.db.count("accounts")).toBe(1);
+    vault.close();
+  });
+
+  it("does nothing, and creates nothing, on a device with no other copy", async () => {
+    await purgeOtherVaults("me");
+
+    expect(await vaultExists("me")).toBe(false);
   });
 });
 

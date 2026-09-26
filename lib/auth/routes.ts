@@ -52,3 +52,11 @@ export function safeNextPath(value: string | null | undefined, fallback = APP_HO
   if (url.origin !== PARSE_ORIGIN || url.pathname.includes("//")) return fallback;
   return `${url.pathname}${url.search}${url.hash}`;
 }
+
+export function nextAfterSignIn(
+  next: string,
+  previousUserId: string | undefined,
+  signedInUserId: string,
+): string {
+  return previousUserId === undefined || previousUserId === signedInUserId ? next : APP_HOME_PATH;
+}

@@ -3,6 +3,7 @@ export const CHANNEL_NAME = "lf";
 export type TabMessage =
   | { type: "session:expired" }
   | { type: "session:logout" }
+  | { type: "session:signedIn" }
   | { type: "session:refreshed"; at: number }
   | { type: "theme"; palette: string; mode: string }
   | { type: "locale"; locale: string };
