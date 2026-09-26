@@ -17,3 +17,6 @@ x check plus minus ellipsis ellipsis-vertical bell chart-pie chart-column chart-
  split hard-drive shield-check monitor-smartphone history database log-in cloud-alert git-merge undo-2 cloud-download server
 circle-help
 users
+mail
+mail-check
+user-x
