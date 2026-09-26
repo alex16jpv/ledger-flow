@@ -5,9 +5,8 @@ import { gzipSync } from "node:zlib";
 // F-10: budgets exclude the shared runtime, and a pattern matching no route watches nothing.
 const BUDGETS = [
   { name: "landing", route: /^(?:\/\(public\))?(?:\/\[locale\])?\/page$/, limitKb: 60 },
-  // Raised from 200 on 2026-09-21 (T-120, the owner's call): the 26 app screens sat between 191 and
-  // 199.9 kB gz, so the class had run out of headroom and Shared has four screens still to come.
-  { name: "app screen", route: /^(?:\/\[locale\])?\/\(app\)\/(?!dev\/).+\/page$/, limitKb: 220 },
+  // The owner's number (DECISIONS.md, 2026-09-26): 200 until T-120, 220 until T-164.
+  { name: "app screen", route: /^(?:\/\[locale\])?\/\(app\)\/(?!dev\/).+\/page$/, limitKb: 230 },
 ];
 
 // The gate builds into its own directory so it never overwrites the `.next` a running app serves (F-56).

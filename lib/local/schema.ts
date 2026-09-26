@@ -51,11 +51,28 @@ export type MetaKey =
   // D-24: a store of its own would cost a mirror version bump for notices a pull cannot rebuild.
   | "syncNotices"
   // F-66: learned from the `serverTime` of every answer, for when there is no network left.
-  | "clockOffsetMs";
+  | "clockOffsetMs"
+  // T-164: moved by every purge, so a pull that began before one writes nothing after it.
+  | "mirrorEpoch";
 
 export interface MetaRecord {
   key: MetaKey;
   value: string | number | null;
+}
+
+interface MetaReader {
+  get: (key: "mirrorEpoch") => Promise<MetaRecord | undefined>;
+}
+
+export async function readMirrorEpoch(meta: MetaReader): Promise<number> {
+  const record = await meta.get("mirrorEpoch");
+  return typeof record?.value === "number" ? record.value : 0;
+}
+
+export async function advanceMirrorEpoch(
+  meta: MetaReader & { put: (record: MetaRecord) => Promise<unknown> },
+): Promise<void> {
+  await meta.put({ key: "mirrorEpoch", value: (await readMirrorEpoch(meta)) + 1 });
 }
 
 // IndexedDB refuses booleans and nulls as keys, so every filter is stored as a sibling key.

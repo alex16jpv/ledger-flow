@@ -12,6 +12,7 @@ import {
   joinedGroupRecord,
   PROFILE_KEY,
   profileRecord,
+  readMirrorEpoch,
   receivedInvitationRecord,
   sentInvitationRecord,
 } from "./schema";
@@ -41,6 +42,8 @@ export interface PullResult {
   changed: boolean;
   cursor: string;
   serverTime: string;
+  // The mirror epoch these pages were written under, for whatever the caller adds to the same copy.
+  epoch: number;
 }
 
 export class SyncFeedStalledError extends Error {
@@ -50,6 +53,13 @@ export class SyncFeedStalledError extends Error {
     super("The change feed asked for another page without moving its cursor");
     this.name = "SyncFeedStalledError";
     this.cursor = cursor;
+  }
+}
+
+export class PullSupersededError extends Error {
+  constructor() {
+    super("The offline copy was emptied during this pull");
+    this.name = "PullSupersededError";
   }
 }
 
@@ -115,9 +125,15 @@ async function dropJoinedGroup(
   return dropped;
 }
 
-async function applyPage(handle: VaultHandle, page: SyncChangesResponse): Promise<Applied> {
+async function applyPage(
+  handle: VaultHandle,
+  page: SyncChangesResponse,
+  epoch: number,
+): Promise<Applied> {
   const { changes, pagination } = page;
   const tx = writeTransaction(handle.db);
+  // T-164: the first request of the transaction, so a purge lands wholly before this page or after it.
+  if ((await readMirrorEpoch(tx.objectStore("meta"))) !== epoch) throw new PullSupersededError();
   let news = false;
   let readdressed = false;
   if (changes.user) {
@@ -202,7 +218,9 @@ export async function pullChanges(
   options: PullOptions = {},
 ): Promise<PullResult> {
   const { limit = PULL_PAGE_LIMIT, fetchPage = requestPage } = options;
-  const stored = await handle.db.get("meta", "syncCursor");
+  const start = handle.db.transaction("meta");
+  const stored = await start.store.get("syncCursor");
+  const epoch = await readMirrorEpoch(start.store);
   let cursor = typeof stored?.value === "string" ? stored.value : undefined;
   let pages = 0;
   let rows = 0;
@@ -214,7 +232,7 @@ export async function pullChanges(
     // F-66: every answer carries the server's clock, needed before there is a refusal to explain.
     await rememberServerTime(handle.db, page.serverTime);
     // Rows are applied by id with put, so the deliberate 60-second overlap of D-14 costs nothing.
-    const applied = await applyPage(handle, page);
+    const applied = await applyPage(handle, page, epoch);
     if (applied.news || applied.ready) markSuggestionsStale();
     changed = applied.news || changed;
     pages += 1;
@@ -226,7 +244,7 @@ export async function pullChanges(
 
     const next = page.pagination.nextCursor;
     if (!page.pagination.hasMore) {
-      return { pages, rows, changed, cursor: next, serverTime: page.serverTime };
+      return { pages, rows, changed, cursor: next, serverTime: page.serverTime, epoch };
     }
     if (next === cursor) throw new SyncFeedStalledError(next);
     cursor = next;

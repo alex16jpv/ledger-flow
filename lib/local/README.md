@@ -196,6 +196,17 @@ A request that arrives while a pull is running joins it and asks for **one more 
 (F-32): the pull in flight cannot carry what the server wrote after it started. It is the same
 `wanted`/`served` discipline the engine uses for the queue.
 
+**A purge ends the pull that was running under it** (T-164). Everything that empties the mirror —
+`purgeVault` on a resync or a logout, in this tab or another, and the `MIRROR_VERSION` reset of
+`openVault` — moves `meta.mirrorEpoch` in the same transaction that clears the rows. `pullChanges`
+reads the epoch together with the cursor, and every page checks it as the first request of its own
+transaction, so a purge lands wholly before a page or wholly after it. A page that finds the epoch
+moved writes nothing and the pass ends with `PullSupersededError`. The mirror does not report it as a
+failure: it served nobody, so everyone waiting on it waits on a fresh pass from an empty cursor — the
+resync's own pass, or the one another tab's purge cut short. Before this, the page in flight landed after the purge, wrote its cursor and marked
+the copy readable, and every row before that cursor was gone until the next resync. The profile the
+mirror fetches after a pass is kept under the same epoch.
+
 **A pull that brought news makes the screens read again** (F-38). Writing into IndexedDB is invisible
 to React Query, so before this a change another device made landed in the mirror and the screen went
 on showing what it had read until a reload. `pullChanges` answers `changed`, `startMirror` calls
@@ -662,12 +673,14 @@ Both answer honestly when the API is missing rather than assuming it is there.
 Purging is **never automatic**. `purgeVault(userId, { discardPendingWork })` clears the mirror every
 time — on a shared device the next user must not see the previous one's data — and keeps unsent
 operations unless the caller confirms discarding them, reporting `operationsKept` /
-`operationsDiscarded` either way. `lib/query/purge.ts` keeps the disposable React Query caches
+`operationsDiscarded` either way. It also moves the mirror epoch, so a pull already downloading
+writes nothing after it (T-164). `lib/query/purge.ts` keeps the disposable React Query caches
 (`lf-cache-*`) and never matches the vault prefix.
 
-`SessionProvider` calls `purgeVault` on an explicit logout with the safe default and warns when it
-keeps a queue. **The confirmation that would pass `discardPendingWork: true` is O-F5a/O-F6 and does
-not exist yet**, so today unsent work always survives a logout.
+`SessionProvider` calls `purgeVault` on an explicit logout with the user's answer (F-34): with work
+still unsent, Settings asks first (`SignOutSheet`) whether to keep it for the next sign-in on this
+device, the default, or discard it. Any other logout — another tab's, or one with nothing unsent —
+keeps the queue.
 
 ## Tests
 
