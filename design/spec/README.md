@@ -41,6 +41,7 @@ without being here first (D-36).
 | [screens/conflicts.md](screens/conflicts.md)           | `conflicts.html`      |
 | [screens/attention-tray.md](screens/attention-tray.md) | `attention-tray.html` |
 | [screens/local-mode.md](screens/local-mode.md)         | `local-mode.html`     |
+| [screens/emails.md](screens/emails.md)                 | `emails.html`         |
 
 ## How to consume this design
 

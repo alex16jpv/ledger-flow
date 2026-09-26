@@ -1,0 +1,376 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Emails · Ledger Flow design</title>
+<link rel="stylesheet" href="../../tokens/palette.tinta.css"><link rel="stylesheet" href="../../tokens/palette.brisa.css">
+<link rel="stylesheet" href="../../tokens/semantic.css"><link rel="stylesheet" href="../../tokens/base.css">
+<link rel="stylesheet" href="assets/ui.css"><link rel="stylesheet" href="assets/shell.css">
+<script defer src="assets/icons.js"></script><script defer src="assets/plates.js"></script><script defer src="assets/shell.js"></script></head><body><div class="pv-app"><header class="pv-top">
+<a class="pv-brand" href="index.html"><span class="pv-logo"><svg class="icon sm" aria-hidden="true"><use href="#i-layers"/></svg></span>Ledger Flow · Design</a>
+<label class="pv-field">Palette <select id="pv-palette"><option value="tinta">Tinta</option><option value="brisa">Brisa (demo)</option></select></label>
+<div class="pv-seg"><button data-pv="mode" data-value="light">Light</button><button data-pv="mode" data-value="dark">Dark</button><button data-pv="mode" data-value="system">System</button></div>
+<div class="pv-seg"><button data-pv="device" data-value="mobile">Mobile 390</button><button data-pv="device" data-value="tablet">Tablet 820</button><button data-pv="device" data-value="desktop">Desktop 1280</button></div>
+</header><aside class="pv-side">
+<div class="pv-search"><input id="pv-q" type="search" placeholder="Search a screen or a state" autocomplete="off" aria-label="Search"><div id="pv-results" class="pv-results" hidden></div></div>
+<nav class="pv-nav">
+<div class="pv-group"><a class="pv-link" href="index.html">Start here</a><a class="pv-link" href="in-review.html">Waiting on you<span class="pv-count">0</span></a><a class="pv-link" href="changes.html">What changed</a></div>
+<div class="pv-group"><span class="pv-group-name">Foundations</span><a class="pv-link" href="foundations.html">Foundations<span class="pv-count">3</span></a></div><div class="pv-group"><span class="pv-group-name">Screens</span><a class="pv-link" href="home.html">Home<span class="pv-count">7</span></a><a class="pv-link" href="add.html">Add<span class="pv-count">23</span></a><a class="pv-link" href="access.html">Access<span class="pv-count">8</span></a><a class="pv-link" href="transactions.html">Transactions<span class="pv-count">27</span></a><a class="pv-link" href="accounts.html">Accounts<span class="pv-count">17</span></a><a class="pv-link" href="shared.html">Shared<span class="pv-count">52</span></a><a class="pv-link" href="notifications.html">Notifications<span class="pv-count">9</span></a><a class="pv-link" href="categories.html">Categories<span class="pv-count">3</span></a><a class="pv-link" href="budgets.html">Budgets<span class="pv-count">5</span></a><a class="pv-link" href="budget-detail.html">Budget detail<span class="pv-count">11</span></a><a class="pv-link" href="stats.html">Stats<span class="pv-count">11</span></a><a class="pv-link" href="trends.html">Trends<span class="pv-count">7</span></a><a class="pv-link" href="settings.html">Settings<span class="pv-count">33</span></a><a class="pv-link" href="public.html">Public<span class="pv-count">3</span></a></div><div class="pv-group"><span class="pv-group-name">States</span><a class="pv-link" href="states.html">Screen states<span class="pv-count">7</span></a><a class="pv-link" href="sync-stripes.html">Sync stripes<span class="pv-count">8</span></a><a class="pv-link" href="conflicts.html">Sync conflicts<span class="pv-count">7</span></a><a class="pv-link" href="attention-tray.html">Attention tray<span class="pv-count">5</span></a><a class="pv-link" href="local-mode.html">Local mode<span class="pv-count">7</span></a></div><div class="pv-group"><span class="pv-group-name">Emails</span><a class="pv-link on" href="emails.html">Emails<span class="pv-count">16</span></a></div><div class="pv-group"><span class="pv-group-name">Decisions</span><a class="pv-link" href="variants.html">Decided variants<span class="pv-count">84</span></a></div>
+</nav></aside><main class="pv-main"><h1 class="pv-h1">Emails</h1>
+<p class="pv-note">Every email the app sends, in the language of the account and in the client’s own fonts. One layout for all of them: the brand as text, a title, one or two sentences, the code or the facts, one button, and a grey box for “if it wasn’t you”. No images, nothing a person typed, no tracking. The backend’s templates copy these plates; dark mode is what clients that honour it show.</p>
+<div class="pv-grid"><article class="pv-item plain wide" id="emails-in-the-inbox">
+<header class="pv-head"><a class="pv-name" href="#emails-in-the-inbox">In the inbox</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">Sender, subject and preview text of every email, as a list of messages shows them. The code never goes in the subject or the preview: those show up on a locked phone.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client mail-inbox"><div class="item"><span class="from">Ledger Flow</span><span class="subject">Confirm your email for Ledger Flow</span><span class="pre">Type the code in the app or use the button. It works for 24 hours.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Reset your Ledger Flow password</span><span class="pre">The code works for 30 minutes. If you didn’t ask for it, ignore this email.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Choose a new password for Ledger Flow</span><span class="pre">You undid a change to your account. The code works for 30 minutes.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Your Ledger Flow password was changed</span><span class="pre">If it wasn’t you, reset it now.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Confirm your new email for Ledger Flow</span><span class="pre">Your account moves to this address once you confirm it. It works for 24 hours.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Your Ledger Flow email is being changed</span><span class="pre">If it wasn’t you, undo it from this email.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">New sign-in to Ledger Flow: Chrome on Windows</span><span class="pre">If it was you, there’s nothing to do.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Your Ledger Flow account was deleted</span><span class="pre">Signing up again with this email and the password it had brings it back.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">A passkey was added to your Ledger Flow account</span><span class="pre">If it wasn’t you, undo it from this email.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Two-step verification is on for Ledger Flow</span><span class="pre">If it wasn’t you, undo it from this email.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">A passkey was removed from your Ledger Flow account</span><span class="pre">If it wasn’t you, reset your password now.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Two-step verification is off for Ledger Flow</span><span class="pre">If it wasn’t you, reset your password now.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">A recovery code was used on your Ledger Flow account</span><span class="pre">You have 7 left. If it wasn’t you, reset your password now.</span></div></div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client mail-inbox"><div class="item"><span class="from">Ledger Flow</span><span class="subject">Confirma tu correo en Ledger Flow</span><span class="pre">Escribe el código en la app o usa el botón. Sirve 24 horas.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Restablece tu contraseña de Ledger Flow</span><span class="pre">El código sirve 30 minutos. Si no lo pediste, ignora este correo.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Elige una contraseña nueva para Ledger Flow</span><span class="pre">Deshiciste un cambio en tu cuenta. El código sirve 30 minutos.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Se cambió la contraseña de tu cuenta de Ledger Flow</span><span class="pre">Si no fuiste tú, restablécela ya.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Confirma tu correo nuevo de Ledger Flow</span><span class="pre">Tu cuenta pasa a esta dirección cuando la confirmes. Sirve 24 horas.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Se pidió cambiar el correo de tu cuenta de Ledger Flow</span><span class="pre">Si no fuiste tú, deshazlo desde este correo.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Nuevo acceso a Ledger Flow: Chrome en Windows</span><span class="pre">Si fuiste tú, no tienes que hacer nada.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Tu cuenta de Ledger Flow se eliminó</span><span class="pre">Si te registras de nuevo con este correo y la contraseña que tenía, la recuperas.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Se añadió una llave de acceso a tu cuenta de Ledger Flow</span><span class="pre">Si no fuiste tú, deshazlo desde este correo.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">La verificación en dos pasos está activa en Ledger Flow</span><span class="pre">Si no fuiste tú, deshazlo desde este correo.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Se quitó una llave de acceso de tu cuenta de Ledger Flow</span><span class="pre">Si no fuiste tú, restablece tu contraseña ya.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">La verificación en dos pasos se desactivó en Ledger Flow</span><span class="pre">Si no fuiste tú, restablece tu contraseña ya.</span></div><div class="item"><span class="from">Ledger Flow</span><span class="subject">Se usó un código de recuperación en tu cuenta de Ledger Flow</span><span class="pre">Te quedan 7. Si no fuiste tú, restablece tu contraseña ya.</span></div></div></div></div>
+</article><article class="pv-item plain wide" id="verify-email">
+<header class="pv-head"><a class="pv-name" href="#verify-email">Confirm your email</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">On sign-up and on Resend. The code or the button confirm it; “It wasn’t me” deletes an account nobody ever confirmed and frees the address.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana@example.com</span><span class="subject">Confirm your email for Ledger Flow</span><span class="pre">Type the code in the app or use the button. It works for 24 hours.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Confirm your email</h1>
+<p>Type this code in Ledger Flow to confirm this address is yours.</p>
+<div class="mail-code">482913</div>
+<p class="small">It works for 24 hours. Asking for another one cancels this one. Only type this code in Ledger Flow. Nobody from Ledger Flow will ever ask you for it.</p>
+<a class="mail-btn" href="#">Confirm email</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/verify?token=q7Xk2mVb9RtL4wPz</a></p>
+<div class="mail-aside"><h2>Didn’t sign up?</h2><p>Someone typed your address when signing up. Use “It wasn’t me” to delete that account and free your address.</p><a class="mail-btn secondary" href="#">It wasn’t me</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/not-me?token=q7Xk2mVb9RtL4wPz</a></p></div></div><div class="mail-foot"><p>You’re getting this because someone signed up for Ledger Flow with this address.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana@example.com</span><span class="subject">Confirma tu correo en Ledger Flow</span><span class="pre">Escribe el código en la app o usa el botón. Sirve 24 horas.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Confirma tu correo</h1>
+<p>Escribe este código en Ledger Flow para confirmar que esta dirección es tuya.</p>
+<div class="mail-code">482913</div>
+<p class="small">Sirve 24 horas. Si pides otro, este deja de servir. Escribe este código solo en Ledger Flow. Nadie de Ledger Flow te lo va a pedir.</p>
+<a class="mail-btn" href="#">Confirmar correo</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/verify?token=q7Xk2mVb9RtL4wPz</a></p>
+<div class="mail-aside"><h2>¿No te registraste?</h2><p>Alguien escribió tu dirección al registrarse. Usa «No fui yo» para eliminar esa cuenta y liberar tu correo.</p><a class="mail-btn secondary" href="#">No fui yo</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/not-me?token=q7Xk2mVb9RtL4wPz</a></p></div></div><div class="mail-foot"><p>Te llega porque alguien se registró en Ledger Flow con esta dirección.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="password-reset">
+<header class="pv-head"><a class="pv-name" href="#password-reset">Reset your password</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">Forgot your password? It only arrives when the address has a live account, and nothing in it says so.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana@example.com</span><span class="subject">Reset your Ledger Flow password</span><span class="pre">The code works for 30 minutes. If you didn’t ask for it, ignore this email.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Reset your password</h1>
+<p>Type this code in Ledger Flow to choose a new password. Your other devices will be signed out.</p>
+<div class="mail-code">482913</div>
+<p class="small">It works for 30 minutes. Asking for another one cancels this one. Only type this code in Ledger Flow. Nobody from Ledger Flow will ever ask you for it.</p>
+<a class="mail-btn" href="#">Choose a new password</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/reset?token=q7Xk2mVb9RtL4wPz</a></p>
+<div class="mail-aside"><h2>Didn’t ask for this?</h2><p>Ignore this email. Your password stays the same, and the code and the link stop working in 30 minutes.</p></div></div><div class="mail-foot"><p>You’re getting this because someone asked to reset the password of the Ledger Flow account with this address.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana@example.com</span><span class="subject">Restablece tu contraseña de Ledger Flow</span><span class="pre">El código sirve 30 minutos. Si no lo pediste, ignora este correo.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Restablece tu contraseña</h1>
+<p>Escribe este código en Ledger Flow para elegir una contraseña nueva. Se cerrará la sesión en tus otros dispositivos.</p>
+<div class="mail-code">482913</div>
+<p class="small">Sirve 30 minutos. Si pides otro, este deja de servir. Escribe este código solo en Ledger Flow. Nadie de Ledger Flow te lo va a pedir.</p>
+<a class="mail-btn" href="#">Elegir una contraseña nueva</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/reset?token=q7Xk2mVb9RtL4wPz</a></p>
+<div class="mail-aside"><h2>¿No lo pediste?</h2><p>Ignora este correo. Tu contraseña sigue igual, y el código y el enlace dejan de servir en 30 minutos.</p></div></div><div class="mail-foot"><p>Te llega porque alguien pidió restablecer la contraseña de la cuenta de Ledger Flow con esta dirección.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="password-reset-after-undo">
+<header class="pv-head"><a class="pv-name" href="#password-reset-after-undo">Choose a new password · after an undo</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">The reset that “Undo the change” sends to the original address. Nothing to ignore: the old password already stopped working.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana@example.com</span><span class="subject">Choose a new password for Ledger Flow</span><span class="pre">You undid a change to your account. The code works for 30 minutes.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Choose a new password</h1>
+<p>You undid a change to your account from this address, and every device was signed out. Type this code in Ledger Flow to choose a new password: the old one no longer works.</p>
+<div class="mail-code">482913</div>
+<p class="small">It works for 30 minutes. Asking for another one cancels this one. Only type this code in Ledger Flow. Nobody from Ledger Flow will ever ask you for it.</p>
+<a class="mail-btn" href="#">Choose a new password</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/reset?token=q7Xk2mVb9RtL4wPz</a></p>
+<div class="mail-aside"><h2>Code expired?</h2><p>Ask for another one with “Forgot your password?” on the Sign in screen.</p></div></div><div class="mail-foot"><p>You’re getting this because you undid a change to your Ledger Flow account from this address.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana@example.com</span><span class="subject">Elige una contraseña nueva para Ledger Flow</span><span class="pre">Deshiciste un cambio en tu cuenta. El código sirve 30 minutos.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Elige una contraseña nueva</h1>
+<p>Deshiciste un cambio en tu cuenta desde esta dirección y se cerró la sesión en todos los dispositivos. Escribe este código en Ledger Flow para elegir una contraseña nueva: la anterior ya no sirve.</p>
+<div class="mail-code">482913</div>
+<p class="small">Sirve 30 minutos. Si pides otro, este deja de servir. Escribe este código solo en Ledger Flow. Nadie de Ledger Flow te lo va a pedir.</p>
+<a class="mail-btn" href="#">Elegir una contraseña nueva</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/reset?token=q7Xk2mVb9RtL4wPz</a></p>
+<div class="mail-aside"><h2>¿Se venció el código?</h2><p>Pide otro con «¿Olvidaste tu contraseña?» en la pantalla de Entrar.</p></div></div><div class="mail-foot"><p>Te llega porque deshiciste un cambio en tu cuenta de Ledger Flow desde esta dirección.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="password-changed">
+<header class="pv-head"><a class="pv-name" href="#password-changed">Password changed</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">After Password & email and after a reset. Security notices carry when and on what, and one way back.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana@example.com</span><span class="subject">Your Ledger Flow password was changed</span><span class="pre">If it wasn’t you, reset it now.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Your password was changed</h1>
+<p>Your other devices were signed out. If you made this change, there’s nothing else to do.</p>
+<table class="mail-facts"><tr><th>When</th><td>Sep 26, 2026, 7:42 PM GMT-5</td></tr><tr><th>Device</th><td>Chrome on Windows</td></tr></table>
+<div class="mail-aside"><h2>Not you?</h2><p>Reset your password now. It signs out every device, including the one that changed it.</p><a class="mail-btn secondary" href="#">Reset password</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/forgot</a></p></div></div><div class="mail-foot"><p>This is a security notice for your Ledger Flow account. These can’t be turned off: they’re how we tell you what happens to your account.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana@example.com</span><span class="subject">Se cambió la contraseña de tu cuenta de Ledger Flow</span><span class="pre">Si no fuiste tú, restablécela ya.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Se cambió tu contraseña</h1>
+<p>Se cerró la sesión en tus otros dispositivos. Si fuiste tú, no tienes que hacer nada más.</p>
+<table class="mail-facts"><tr><th>Cuándo</th><td>26 de sept de 2026, 7:42 p. m. GMT-5</td></tr><tr><th>Dispositivo</th><td>Chrome en Windows</td></tr></table>
+<div class="mail-aside"><h2>¿No fuiste tú?</h2><p>Restablece tu contraseña ya. Se cierra la sesión en todos los dispositivos, también en el que la cambió.</p><a class="mail-btn secondary" href="#">Restablecer contraseña</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/forgot</a></p></div></div><div class="mail-foot"><p>Es un aviso de seguridad de tu cuenta de Ledger Flow. Estos avisos no se pueden desactivar: así te contamos lo que pasa con tu cuenta.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="email-change-confirm">
+<header class="pv-head"><a class="pv-name" href="#email-change-confirm">Email change · to the new address</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">The account moves only when the new address answers.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana.ruiz@work.example</span><span class="subject">Confirm your new email for Ledger Flow</span><span class="pre">Your account moves to this address once you confirm it. It works for 24 hours.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Confirm your new email</h1>
+<p>Type this code in Ledger Flow to move your account to this address. Until you do, it keeps its current email. Confirming signs out your other devices.</p>
+<div class="mail-code">482913</div>
+<p class="small">It works for 24 hours. Asking for another one cancels this one. Only type this code in Ledger Flow. Nobody from Ledger Flow will ever ask you for it.</p>
+<a class="mail-btn" href="#">Confirm new email</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/confirm-email?token=q7Xk2mVb9RtL4wPz</a></p>
+<div class="mail-aside"><h2>Didn’t ask for this?</h2><p>Ignore this email. Nothing changes, and this address isn’t added to any account.</p></div></div><div class="mail-foot"><p>You’re getting this because someone asked to use this address for a Ledger Flow account.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana.ruiz@work.example</span><span class="subject">Confirma tu correo nuevo de Ledger Flow</span><span class="pre">Tu cuenta pasa a esta dirección cuando la confirmes. Sirve 24 horas.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Confirma tu correo nuevo</h1>
+<p>Escribe este código en Ledger Flow para pasar tu cuenta a esta dirección. Mientras no lo hagas, sigue con su correo actual. Al confirmar se cierra la sesión en tus otros dispositivos.</p>
+<div class="mail-code">482913</div>
+<p class="small">Sirve 24 horas. Si pides otro, este deja de servir. Escribe este código solo en Ledger Flow. Nadie de Ledger Flow te lo va a pedir.</p>
+<a class="mail-btn" href="#">Confirmar correo nuevo</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/confirm-email?token=q7Xk2mVb9RtL4wPz</a></p>
+<div class="mail-aside"><h2>¿No lo pediste?</h2><p>Ignora este correo. No cambia nada y esta dirección no se añade a ninguna cuenta.</p></div></div><div class="mail-foot"><p>Te llega porque alguien pidió usar esta dirección en una cuenta de Ledger Flow.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="email-change-requested">
+<header class="pv-head"><a class="pv-name" href="#email-change-requested">Email change · to the old address</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">Sent the moment the change is asked for. “Undo the change” keeps working for 7 days, confirmed or not.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana@example.com</span><span class="subject">Your Ledger Flow email is being changed</span><span class="pre">If it wasn’t you, undo it from this email.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Your email is being changed</h1>
+<p>Someone asked to move your account to <b>ana.ruiz@work.example</b>. It moves once that address is confirmed.</p>
+<table class="mail-facts"><tr><th>When</th><td>Sep 26, 2026, 7:42 PM GMT-5</td></tr><tr><th>Device</th><td>Chrome on Windows</td></tr></table>
+<div class="mail-aside"><h2>Not you?</h2><p>Undo it: your account keeps this address, every device is signed out and you choose a new password. This link works for 7 days, even if the change was already confirmed.</p><a class="mail-btn secondary" href="#">Undo the change</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/undo?token=q7Xk2mVb9RtL4wPz</a></p></div></div><div class="mail-foot"><p>This is a security notice for your Ledger Flow account. These can’t be turned off: they’re how we tell you what happens to your account.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana@example.com</span><span class="subject">Se pidió cambiar el correo de tu cuenta de Ledger Flow</span><span class="pre">Si no fuiste tú, deshazlo desde este correo.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Se pidió cambiar tu correo</h1>
+<p>Se pidió pasar tu cuenta a <b>ana.ruiz@work.example</b>. El cambio se hace cuando se confirme esa dirección.</p>
+<table class="mail-facts"><tr><th>Cuándo</th><td>26 de sept de 2026, 7:42 p. m. GMT-5</td></tr><tr><th>Dispositivo</th><td>Chrome en Windows</td></tr></table>
+<div class="mail-aside"><h2>¿No fuiste tú?</h2><p>Deshazlo: tu cuenta se queda con esta dirección, se cierra la sesión en todos los dispositivos y eliges una contraseña nueva. El enlace sirve 7 días, aunque el cambio ya se haya confirmado.</p><a class="mail-btn secondary" href="#">Deshacer el cambio</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/undo?token=q7Xk2mVb9RtL4wPz</a></p></div></div><div class="mail-foot"><p>Es un aviso de seguridad de tu cuenta de Ledger Flow. Estos avisos no se pueden desactivar: así te contamos lo que pasa con tu cuenta.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="new-sign-in">
+<header class="pv-head"><a class="pv-name" href="#new-sign-in">New sign-in</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">Only from a device without a valid device token for the account. Signing up sends nothing; after a password or email change or Sign out everywhere, a device you already used can get it once.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana@example.com</span><span class="subject">New sign-in to Ledger Flow: Chrome on Windows</span><span class="pre">If it was you, there’s nothing to do.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>New sign-in to your account</h1>
+<p>Your account was signed in on a device we don’t recognize. If it was you, there’s nothing to do.</p>
+<table class="mail-facts"><tr><th>When</th><td>Sep 26, 2026, 7:42 PM GMT-5</td></tr><tr><th>Device</th><td>Chrome on Windows</td></tr></table>
+<div class="mail-aside"><h2>Not you?</h2><p>Reset your password now. It signs out every device.</p><a class="mail-btn secondary" href="#">Reset password</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/forgot</a></p></div></div><div class="mail-foot"><p>This is a security notice for your Ledger Flow account. These can’t be turned off: they’re how we tell you what happens to your account.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana@example.com</span><span class="subject">Nuevo acceso a Ledger Flow: Chrome en Windows</span><span class="pre">Si fuiste tú, no tienes que hacer nada.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Nuevo acceso a tu cuenta</h1>
+<p>Se inició sesión en tu cuenta desde un dispositivo que no reconocemos. Si fuiste tú, no tienes que hacer nada.</p>
+<table class="mail-facts"><tr><th>Cuándo</th><td>26 de sept de 2026, 7:42 p. m. GMT-5</td></tr><tr><th>Dispositivo</th><td>Chrome en Windows</td></tr></table>
+<div class="mail-aside"><h2>¿No fuiste tú?</h2><p>Restablece tu contraseña ya. Se cierra la sesión en todos los dispositivos.</p><a class="mail-btn secondary" href="#">Restablecer contraseña</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/forgot</a></p></div></div><div class="mail-foot"><p>Es un aviso de seguridad de tu cuenta de Ledger Flow. Estos avisos no se pueden desactivar: así te contamos lo que pasa con tu cuenta.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="account-deleted">
+<header class="pv-head"><a class="pv-name" href="#account-deleted">Account deleted</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">After Delete my account. It says how to come back, because the history is kept.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana@example.com</span><span class="subject">Your Ledger Flow account was deleted</span><span class="pre">Signing up again with this email and the password it had brings it back.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Your account was deleted</h1>
+<p>Every device was signed out. Your account and your financial history are kept for a while: signing up again with this email and the password it had brings everything back.</p>
+<p class="small">To have it erased for good, write to ledgerflow@alexpiral.com: it’s done within 15 business days.</p>
+<table class="mail-facts"><tr><th>When</th><td>Sep 26, 2026, 7:42 PM GMT-5</td></tr><tr><th>Device</th><td>Chrome on Windows</td></tr></table>
+<div class="mail-aside"><h2>Didn’t delete it?</h2><p>Signing up again with this email and the password it had when it was deleted brings it back. Then change the password in Settings.</p><a class="mail-btn secondary" href="#">Create account</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/register</a></p></div></div><div class="mail-foot"><p>This is a security notice for your Ledger Flow account. These can’t be turned off: they’re how we tell you what happens to your account.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana@example.com</span><span class="subject">Tu cuenta de Ledger Flow se eliminó</span><span class="pre">Si te registras de nuevo con este correo y la contraseña que tenía, la recuperas.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Tu cuenta se eliminó</h1>
+<p>Se cerró la sesión en todos los dispositivos. Tu cuenta y tu historial financiero se conservan un tiempo: si te registras de nuevo con este correo y la contraseña que tenía, lo recuperas todo.</p>
+<p class="small">Para borrarla del todo, escribe a ledgerflow@alexpiral.com: se hace en 15 días hábiles.</p>
+<table class="mail-facts"><tr><th>Cuándo</th><td>26 de sept de 2026, 7:42 p. m. GMT-5</td></tr><tr><th>Dispositivo</th><td>Chrome en Windows</td></tr></table>
+<div class="mail-aside"><h2>¿No la eliminaste?</h2><p>Si te registras de nuevo con este correo y la contraseña que tenía al eliminarse, la recuperas. Después cambia la contraseña en Ajustes.</p><a class="mail-btn secondary" href="#">Crear cuenta</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/register</a></p></div></div><div class="mail-foot"><p>Es un aviso de seguridad de tu cuenta de Ledger Flow. Estos avisos no se pueden desactivar: así te contamos lo que pasa con tu cuenta.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="passkey-added">
+<header class="pv-head"><a class="pv-name" href="#passkey-added">Passkey added · for later</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">Drawn now so the notices are complete; sent once passkeys exist. “Undo the change” also removes what was added since.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana@example.com</span><span class="subject">A passkey was added to your Ledger Flow account</span><span class="pre">If it wasn’t you, undo it from this email.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>A passkey was added</h1>
+<p>A new passkey can now sign in to your account without a password.</p>
+<table class="mail-facts"><tr><th>When</th><td>Sep 26, 2026, 7:42 PM GMT-5</td></tr><tr><th>Device</th><td>Chrome on Windows</td></tr></table>
+<div class="mail-aside"><h2>Not you?</h2><p>Undo it: we remove every passkey, authenticator app and recovery code added since then, sign out every device, and you choose a new password. This link works for 7 days.</p><a class="mail-btn secondary" href="#">Undo the change</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/undo?token=q7Xk2mVb9RtL4wPz</a></p></div></div><div class="mail-foot"><p>This is a security notice for your Ledger Flow account. These can’t be turned off: they’re how we tell you what happens to your account.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana@example.com</span><span class="subject">Se añadió una llave de acceso a tu cuenta de Ledger Flow</span><span class="pre">Si no fuiste tú, deshazlo desde este correo.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Se añadió una llave de acceso</h1>
+<p>Una llave de acceso nueva ya puede entrar a tu cuenta sin contraseña.</p>
+<table class="mail-facts"><tr><th>Cuándo</th><td>26 de sept de 2026, 7:42 p. m. GMT-5</td></tr><tr><th>Dispositivo</th><td>Chrome en Windows</td></tr></table>
+<div class="mail-aside"><h2>¿No fuiste tú?</h2><p>Deshazlo: quitamos las llaves de acceso, la app de autenticación y los códigos de recuperación añadidos desde entonces, se cierra la sesión en todos los dispositivos y eliges una contraseña nueva. El enlace sirve 7 días.</p><a class="mail-btn secondary" href="#">Deshacer el cambio</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/undo?token=q7Xk2mVb9RtL4wPz</a></p></div></div><div class="mail-foot"><p>Es un aviso de seguridad de tu cuenta de Ledger Flow. Estos avisos no se pueden desactivar: así te contamos lo que pasa con tu cuenta.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="two-factor-on">
+<header class="pv-head"><a class="pv-name" href="#two-factor-on">Two-step verification on · for later</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">The same notice for the authenticator app.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana@example.com</span><span class="subject">Two-step verification is on for Ledger Flow</span><span class="pre">If it wasn’t you, undo it from this email.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Two-step verification is on</h1>
+<p>Signing in now also asks for a code from your authenticator app.</p>
+<table class="mail-facts"><tr><th>When</th><td>Sep 26, 2026, 7:42 PM GMT-5</td></tr><tr><th>Device</th><td>Chrome on Windows</td></tr></table>
+<div class="mail-aside"><h2>Not you?</h2><p>Undo it: we remove every passkey, authenticator app and recovery code added since then, sign out every device, and you choose a new password. This link works for 7 days.</p><a class="mail-btn secondary" href="#">Undo the change</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/undo?token=q7Xk2mVb9RtL4wPz</a></p></div></div><div class="mail-foot"><p>This is a security notice for your Ledger Flow account. These can’t be turned off: they’re how we tell you what happens to your account.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana@example.com</span><span class="subject">La verificación en dos pasos está activa en Ledger Flow</span><span class="pre">Si no fuiste tú, deshazlo desde este correo.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>La verificación en dos pasos está activa</h1>
+<p>Entrar ahora pide también un código de tu app de autenticación.</p>
+<table class="mail-facts"><tr><th>Cuándo</th><td>26 de sept de 2026, 7:42 p. m. GMT-5</td></tr><tr><th>Dispositivo</th><td>Chrome en Windows</td></tr></table>
+<div class="mail-aside"><h2>¿No fuiste tú?</h2><p>Deshazlo: quitamos las llaves de acceso, la app de autenticación y los códigos de recuperación añadidos desde entonces, se cierra la sesión en todos los dispositivos y eliges una contraseña nueva. El enlace sirve 7 días.</p><a class="mail-btn secondary" href="#">Deshacer el cambio</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/undo?token=q7Xk2mVb9RtL4wPz</a></p></div></div><div class="mail-foot"><p>Es un aviso de seguridad de tu cuenta de Ledger Flow. Estos avisos no se pueden desactivar: así te contamos lo que pasa con tu cuenta.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="passkey-removed">
+<header class="pv-head"><a class="pv-name" href="#passkey-removed">Passkey removed · for later</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">Removing something needs no undo: the way back is a new password.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana@example.com</span><span class="subject">A passkey was removed from your Ledger Flow account</span><span class="pre">If it wasn’t you, reset your password now.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>A passkey was removed</h1>
+<p>That passkey can no longer sign in to your account.</p>
+<table class="mail-facts"><tr><th>When</th><td>Sep 26, 2026, 7:42 PM GMT-5</td></tr><tr><th>Device</th><td>Chrome on Windows</td></tr></table>
+<div class="mail-aside"><h2>Not you?</h2><p>Reset your password now. It signs out every device.</p><a class="mail-btn secondary" href="#">Reset password</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/forgot</a></p></div></div><div class="mail-foot"><p>This is a security notice for your Ledger Flow account. These can’t be turned off: they’re how we tell you what happens to your account.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana@example.com</span><span class="subject">Se quitó una llave de acceso de tu cuenta de Ledger Flow</span><span class="pre">Si no fuiste tú, restablece tu contraseña ya.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Se quitó una llave de acceso</h1>
+<p>Esa llave de acceso ya no puede entrar a tu cuenta.</p>
+<table class="mail-facts"><tr><th>Cuándo</th><td>26 de sept de 2026, 7:42 p. m. GMT-5</td></tr><tr><th>Dispositivo</th><td>Chrome en Windows</td></tr></table>
+<div class="mail-aside"><h2>¿No fuiste tú?</h2><p>Restablece tu contraseña ya. Se cierra la sesión en todos los dispositivos.</p><a class="mail-btn secondary" href="#">Restablecer contraseña</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/forgot</a></p></div></div><div class="mail-foot"><p>Es un aviso de seguridad de tu cuenta de Ledger Flow. Estos avisos no se pueden desactivar: así te contamos lo que pasa con tu cuenta.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="two-factor-off">
+<header class="pv-head"><a class="pv-name" href="#two-factor-off">Two-step verification off · for later</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">The same as removing a passkey.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana@example.com</span><span class="subject">Two-step verification is off for Ledger Flow</span><span class="pre">If it wasn’t you, reset your password now.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Two-step verification is off</h1>
+<p>Signing in no longer asks for a code from your authenticator app.</p>
+<table class="mail-facts"><tr><th>When</th><td>Sep 26, 2026, 7:42 PM GMT-5</td></tr><tr><th>Device</th><td>Chrome on Windows</td></tr></table>
+<div class="mail-aside"><h2>Not you?</h2><p>Reset your password now. It signs out every device.</p><a class="mail-btn secondary" href="#">Reset password</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/forgot</a></p></div></div><div class="mail-foot"><p>This is a security notice for your Ledger Flow account. These can’t be turned off: they’re how we tell you what happens to your account.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana@example.com</span><span class="subject">La verificación en dos pasos se desactivó en Ledger Flow</span><span class="pre">Si no fuiste tú, restablece tu contraseña ya.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>La verificación en dos pasos se desactivó</h1>
+<p>Entrar ya no pide un código de tu app de autenticación.</p>
+<table class="mail-facts"><tr><th>Cuándo</th><td>26 de sept de 2026, 7:42 p. m. GMT-5</td></tr><tr><th>Dispositivo</th><td>Chrome en Windows</td></tr></table>
+<div class="mail-aside"><h2>¿No fuiste tú?</h2><p>Restablece tu contraseña ya. Se cierra la sesión en todos los dispositivos.</p><a class="mail-btn secondary" href="#">Restablecer contraseña</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/forgot</a></p></div></div><div class="mail-foot"><p>Es un aviso de seguridad de tu cuenta de Ledger Flow. Estos avisos no se pueden desactivar: así te contamos lo que pasa con tu cuenta.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="recovery-code-used">
+<header class="pv-head"><a class="pv-name" href="#recovery-code-used">Recovery code used · for later</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">Every time one is spent, with how many are left.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>To ana@example.com</span><span class="subject">A recovery code was used on your Ledger Flow account</span><span class="pre">You have 7 left. If it wasn’t you, reset your password now.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>A recovery code was used</h1>
+<p>One of your recovery codes was used to sign in. You have 7 left, and each one works once.</p>
+<table class="mail-facts"><tr><th>When</th><td>Sep 26, 2026, 7:42 PM GMT-5</td></tr><tr><th>Device</th><td>Chrome on Windows</td></tr></table>
+<div class="mail-aside"><h2>Not you?</h2><p>Reset your password now, then create new codes in Settings › Security.</p><a class="mail-btn secondary" href="#">Reset password</a>
+<p class="mail-url">If the button doesn’t work, open this link: <a href="#">https://ledgerflow.alexpiral.com/en/forgot</a></p></div></div><div class="mail-foot"><p>This is a security notice for your Ledger Flow account. These can’t be turned off: they’re how we tell you what happens to your account.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · Questions? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div><div lang="es"><span class="mail-lang">Español</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@ledgerflow.alexpiral.com&gt;</span><span>Para ana@example.com</span><span class="subject">Se usó un código de recuperación en tu cuenta de Ledger Flow</span><span class="pre">Te quedan 7. Si no fuiste tú, restablece tu contraseña ya.</span></div>
+<div class="mail"><div class="mail-card"><span class="mail-brand">Ledger Flow</span>
+<h1>Se usó un código de recuperación</h1>
+<p>Se usó uno de tus códigos de recuperación para entrar. Te quedan 7 y cada uno sirve una vez.</p>
+<table class="mail-facts"><tr><th>Cuándo</th><td>26 de sept de 2026, 7:42 p. m. GMT-5</td></tr><tr><th>Dispositivo</th><td>Chrome en Windows</td></tr></table>
+<div class="mail-aside"><h2>¿No fuiste tú?</h2><p>Restablece tu contraseña ya y después crea códigos nuevos en Ajustes › Seguridad.</p><a class="mail-btn secondary" href="#">Restablecer contraseña</a>
+<p class="mail-url">Si el botón no funciona, abre este enlace: <a href="#">https://ledgerflow.alexpiral.com/es/forgot</a></p></div></div><div class="mail-foot"><p>Es un aviso de seguridad de tu cuenta de Ledger Flow. Estos avisos no se pueden desactivar: así te contamos lo que pasa con tu cuenta.</p><p>Ledger Flow · <a href="#">ledgerflow.alexpiral.com</a> · ¿Dudas? <a href="#">ledgerflow@alexpiral.com</a></p></div></div>
+</div></div></div>
+</article><article class="pv-item plain wide" id="plain-text-version">
+<header class="pv-head"><a class="pv-name" href="#plain-text-version">Plain-text version · a code</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">Every email goes with one: the same words in the same order, and every button written out as its link.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English · text/plain</span><div class="mail-client"><pre class="mail-text">Ledger Flow
+
+Confirm your email
+
+Type this code in Ledger Flow to confirm this address is yours.
+
+    482913
+
+It works for 24 hours. Asking for another one cancels this one. Only type this code in Ledger Flow. Nobody from Ledger Flow will ever ask you for it.
+
+Confirm email: https://ledgerflow.alexpiral.com/en/verify?token=q7Xk2mVb9RtL4wPz
+
+Didn’t sign up?
+Someone typed your address when signing up. Use “It wasn’t me” to delete that account and free your address.
+It wasn’t me: https://ledgerflow.alexpiral.com/en/not-me?token=q7Xk2mVb9RtL4wPz
+
+--
+You’re getting this because someone signed up for Ledger Flow with this address.
+Ledger Flow · https://ledgerflow.alexpiral.com/en · Questions? ledgerflow@alexpiral.com</pre></div></div><div lang="es"><span class="mail-lang">Español · text/plain</span><div class="mail-client"><pre class="mail-text">Ledger Flow
+
+Confirma tu correo
+
+Escribe este código en Ledger Flow para confirmar que esta dirección es tuya.
+
+    482913
+
+Sirve 24 horas. Si pides otro, este deja de servir. Escribe este código solo en Ledger Flow. Nadie de Ledger Flow te lo va a pedir.
+
+Confirmar correo: https://ledgerflow.alexpiral.com/es/verify?token=q7Xk2mVb9RtL4wPz
+
+¿No te registraste?
+Alguien escribió tu dirección al registrarse. Usa «No fui yo» para eliminar esa cuenta y liberar tu correo.
+No fui yo: https://ledgerflow.alexpiral.com/es/not-me?token=q7Xk2mVb9RtL4wPz
+
+--
+Te llega porque alguien se registró en Ledger Flow con esta dirección.
+Ledger Flow · https://ledgerflow.alexpiral.com/es · ¿Dudas? ledgerflow@alexpiral.com</pre></div></div></div>
+</article><article class="pv-item plain wide" id="plain-text-notice">
+<header class="pv-head"><a class="pv-name" href="#plain-text-notice">Plain-text version · a notice</a><span class="pv-badge new">New</span><span class="pv-date">2026-09-26</span></header>
+<p class="pv-sub">A notice writes its facts as lines, and ends with the security footer.</p>
+<div class="mail-pair"><div lang="en"><span class="mail-lang">English · text/plain</span><div class="mail-client"><pre class="mail-text">Ledger Flow
+
+Your password was changed
+
+Your other devices were signed out. If you made this change, there’s nothing else to do.
+
+When: Sep 26, 2026, 7:42 PM GMT-5
+Device: Chrome on Windows
+
+Not you?
+Reset your password now. It signs out every device, including the one that changed it.
+Reset password: https://ledgerflow.alexpiral.com/en/forgot
+
+--
+This is a security notice for your Ledger Flow account. These can’t be turned off: they’re how we tell you what happens to your account.
+Ledger Flow · https://ledgerflow.alexpiral.com/en · Questions? ledgerflow@alexpiral.com</pre></div></div><div lang="es"><span class="mail-lang">Español · text/plain</span><div class="mail-client"><pre class="mail-text">Ledger Flow
+
+Se cambió tu contraseña
+
+Se cerró la sesión en tus otros dispositivos. Si fuiste tú, no tienes que hacer nada más.
+
+Cuándo: 26 de sept de 2026, 7:42 p. m. GMT-5
+Dispositivo: Chrome en Windows
+
+¿No fuiste tú?
+Restablece tu contraseña ya. Se cierra la sesión en todos los dispositivos, también en el que la cambió.
+Restablecer contraseña: https://ledgerflow.alexpiral.com/es/forgot
+
+--
+Es un aviso de seguridad de tu cuenta de Ledger Flow. Estos avisos no se pueden desactivar: así te contamos lo que pasa con tu cuenta.
+Ledger Flow · https://ledgerflow.alexpiral.com/es · ¿Dudas? ledgerflow@alexpiral.com</pre></div></div></div>
+</article></div></main></div></body></html>

@@ -43,6 +43,7 @@ pages belong to **groups**, and the sidebar is the map. Every plate carries the 
 | Foundations | `foundations`                                                                                                               |
 | Screens     | `home` `add` `access` `transactions` `accounts` `shared` `categories` `budgets` `budget-detail` `stats` `settings` `public` |
 | States      | `states` `sync-stripes` `conflicts` `attention-tray` `local-mode`                                                           |
+| Emails      | `emails`                                                                                                                    |
 | Decisions   | `variants`                                                                                                                  |
 
 **`in-review.html` is the queue.** A design being worked on gets `review: true` in the page model:
