@@ -432,8 +432,9 @@ write-offs back: each one is a decision, and each is undone on its own once the 
 ## Invitations (`#invitations`, `#invite`)
 
 **Letting somebody see a group is an invitation, addressed to the email of the person in it.** Nothing
-is emailed — there is no mail system — and the sheets say so: the invitation waits in **their** Shared,
-and they find it the next time they open Ledger Flow with that address. Each group is its own
+is emailed — invitations are not among the emails the app sends — and the sheets say so: the invitation
+waits in **their** Shared, and they find it the next time they open Ledger Flow with that address, once
+it is confirmed. Each group is its own
 invitation: somebody who joined one of your groups is asked again for the next one, and never appears
 in a group they did not accept.
 
@@ -525,6 +526,23 @@ sits beside Shared in the sidebar**, read as "1 waiting". It is brand, like ever
 from somebody else, and never amber. The count is the invitations that can still be answered, and it
 goes the moment the last one is. The day notifications exist, an invitation is also a notification,
 and these three signs are theirs.
+
+### With an email not confirmed (`#invite-needs-confirmed-email`, `#invitations-need-confirmed-email`)
+
+**Sending, accepting and seeing new invitations wait for a confirmed email** (the owner's decision 3 of
+2026-09-26): an invitation takes the sender's address to somebody else, and it finds the person by
+theirs, so both have to be proven. Groups already joined are not touched. It ends the risk accepted on
+2026-09-22, that whoever registered somebody else's address received what was sent to it.
+
+- **Inviting:** the sheet opens with a `warning` alert, "**Confirm your email to invite people.** An
+  invitation goes out with your address, so it has to be confirmed first. **Confirm email**", which
+  opens the code sheet ([states.md](states.md)), and **Invite** and **Invite again** are disabled.
+  **Withdraw** and **Stop sharing** are not: they only take something back.
+- **Being invited:** the server only looks for invitations to a confirmed address, so none can show
+  before — including one that was already seen before this rule existed: it waits, like every other,
+  until the email is confirmed, and its 30 days keep running. While the email is not confirmed, the invitations' place carries a `neutral` alert,
+  "Invitations to you show up here once you confirm your email. **Confirm it**". A
+  `403 EMAIL_NOT_VERIFIED` that arrives anyway — the email changed on another device — shows the same.
 
 ### Offline (`#invitations-offline`)
 

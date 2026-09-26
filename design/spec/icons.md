@@ -13,7 +13,8 @@ Categories `tags` · Shared `users` · Settings `settings` · Add `plus` · To r
 `star` · Transfer `repeat` / `arrow-left-right` · Balance adjustment `scale` · Income `trending-up` ·
 Expense `trending-down` · Tag `tag` · Note `notebook-pen` · Date `calendar` · Time `clock` · Sessions
 `smartphone`/`monitor` · Appearance `palette` · Mode `sun`/`moon` · Sign out `log-out` · Warning
-`triangle-alert` · Error `circle-alert` · Success `circle-check` · Info `info` · Uncategorized `hash`.
+`triangle-alert` · Error `circle-alert` · Success `circle-check` · Info `info` · Uncategorized `hash` ·
+Email `mail` · Email confirmed `mail-check` · Account removed `user-x` · Undo `undo-2`.
 
 ## Curated set for categories (the key is `Category.icon`)
 

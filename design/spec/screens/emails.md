@@ -108,7 +108,7 @@ T-205 checks it in Gmail, Outlook and Apple Mail, light and dark, before calling
     only ever takes values from a fixed list of browser and system names. Anything else is "Unknown
     device". It is the only variable that reaches a subject.
 - **An action that happens by opening a link.** Mail scanners open links. Every link lands on a page
-  that asks for one tap (drawn in [access.md](access.md) by T-204).
+  that asks for one tap ([access.md](access.md), "Pages reached from an email").
 - **A way to turn the security notices off** (the owner's decision 8, 2026-09-26).
 
 ## Plain-text version
@@ -131,17 +131,17 @@ minute: "2-digit", timeZone, timeZoneName: "shortOffset" })` with `en-US` or `es
 
 | Template                    | When                                                              | To                   | Link                              | Works for                        | Budget                    |
 | --------------------------- | ----------------------------------------------------------------- | -------------------- | --------------------------------- | -------------------------------- | ------------------------- |
-| `verify-email`              | Sign up, and Resend                                               | The account          | `/{locale}/verify?token=…`        | 24 hours                         | Verification and security |
-|                             | "It wasn't me" in the same email                                  |                      | `/{locale}/not-me?token=…`        | While the account is unconfirmed |                           |
-| `password-reset`            | Forgot your password?, only when the address has a live account   | The account          | `/{locale}/reset?token=…`         | 30 minutes                       | Reset                     |
-| `password-reset-after-undo` | "Undo the change" was confirmed                                   | The original address | `/{locale}/reset?token=…`         | 30 minutes                       | Reset                     |
+| `verify-email`              | Sign up, and Resend                                               | The account          | `/{locale}/verify#token=…`        | 24 hours                         | Verification and security |
+|                             | "It wasn't me" in the same email                                  |                      | `/{locale}/not-me#token=…`        | While the account is unconfirmed |                           |
+| `password-reset`            | Forgot your password?, only when the address has a live account   | The account          | `/{locale}/reset#token=…`         | 30 minutes                       | Reset                     |
+| `password-reset-after-undo` | "Undo the change" was confirmed                                   | The original address | `/{locale}/reset#token=…`         | 30 minutes                       | Reset                     |
 | `password-changed`          | Password & email, and after a reset                               | The account          | `/{locale}/forgot`                | —                                | Verification and security |
-| `email-change-confirm`      | Password & email, a new address                                   | The new address      | `/{locale}/confirm-email?token=…` | 24 hours                         | Verification and security |
-| `email-change-requested`    | The same moment                                                   | The old address      | `/{locale}/undo?token=…`          | 7 days                           | Verification and security |
+| `email-change-confirm`      | Password & email, a new address                                   | The new address      | `/{locale}/confirm-email#token=…` | 24 hours                         | Verification and security |
+| `email-change-requested`    | The same moment                                                   | The old address      | `/{locale}/undo#token=…`          | 7 days                           | Verification and security |
 | `new-sign-in`               | A sign-in from a device with no valid device token for that email | The account          | `/{locale}/forgot`                | —                                | Verification and security |
 | `account-deleted`           | Delete my account                                                 | The account          | `/{locale}/register`              | —                                | Verification and security |
-| `passkey-added`             | A passkey is added · for later                                    | The account          | `/{locale}/undo?token=…`          | 7 days                           | Verification and security |
-| `two-factor-on`             | The authenticator app is turned on · for later                    | The account          | `/{locale}/undo?token=…`          | 7 days                           | Verification and security |
+| `passkey-added`             | A passkey is added · for later                                    | The account          | `/{locale}/undo#token=…`          | 7 days                           | Verification and security |
+| `two-factor-on`             | The authenticator app is turned on · for later                    | The account          | `/{locale}/undo#token=…`          | 7 days                           | Verification and security |
 | `passkey-removed`           | A passkey is removed · for later                                  | The account          | `/{locale}/forgot`                | —                                | Verification and security |
 | `two-factor-off`            | The authenticator app is turned off · for later                   | The account          | `/{locale}/forgot`                | —                                | Verification and security |
 | `recovery-code-used`        | A recovery code signs in or resets the password · for later       | The account          | `/{locale}/forgot`                | —                                | Verification and security |
@@ -159,16 +159,21 @@ so the path says it, and each page can say what its tap does before the tap:
 | `/forgot`        | Forgot your password? with nothing filled in. No token                                                                                                                                                 |
 | `/register`      | Create account. No token                                                                                                                                                                               |
 
-The path names are a contract: T-204 draws the pages at them.
+The path names are a contract: the pages at them are drawn in [access.md](access.md).
 
 **Tokens and codes.**
 
 - **Every link carries its own token, for one purpose and one use**; the plates show the same token
-  in every link only because they are mockups. A token is kept as a hash, like the code.
+  in every link only because they are mockups. A token is kept as a hash, like the code. **It travels
+  in the fragment, after `#`**, which the browser never sends to a server: it reaches no access log, no
+  referrer and no error report, and the page takes it from there ([access.md](access.md)).
 - **Every code takes 5 wrong tries** and then stops working, whatever it is for; asking for another one
-  cancels the one before, and the email says so.
+  cancels the one before, and the email says so — but only once the new email has been accepted for
+  delivery, so a send that fails never leaves the person with no working code.
 - **Resend does not cancel an earlier "It wasn't me"**: that link is the protection of whoever owns the
-  address, and it keeps working in every verification email until the account is confirmed.
+  address, and it keeps working in every verification email until the account is confirmed. It belongs
+  to that account and that address together: it stops working when the account is confirmed or moves
+  to another address, so a mistyped inbox can never delete the account once it has left.
 - **"Undo the change" stops the current password**: whoever made the change knows it. From the tap,
   the account can only be entered after choosing a new one with `password-reset-after-undo`, or with
   Forgot your password? if that code expires.
@@ -184,7 +189,13 @@ The path names are a contract: T-204 draws the pages at them.
   `tokenVersion`), so after one of those each known device can get one `new-sign-in` on its next
   sign-in; T-211 decides whether devices outlive that.
 - **"It wasn't me" in `verify-email`** deletes the account only while nobody has confirmed it (the
-  owner's decision 11). That deletion sends no `account-deleted`: the account was never that address's.
+  owner's decision 11), and erases it rather than archiving it, so it cannot be brought back. That
+  deletion sends no `account-deleted`: the account was never that address's.
+- **`email-change-requested` goes only to an address that was confirmed.** An account that never
+  confirmed its email is usually correcting a typo, and the old address may be a stranger's: telling
+  them the new one would hand over somebody's real address. The old codes and links simply stop working.
+- **While an undo link works, the old address stays reserved** for the account, so nobody can sign up
+  with it in those 7 days and the undo never collides with another account.
 - `passkey-added`, `two-factor-on`, `passkey-removed`, `two-factor-off` and `recovery-code-used` are
   drawn now so the notices are complete, and are sent once passkeys and two-step verification exist.
   **Their words are provisional**: T-214 designs that sign-in, and changes them here if it has to.

@@ -212,6 +212,20 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     and it never says _no results_ — it is simply not there. A row writes the text of its field and
     nothing else. Two shapes drawn beside it and not chosen: the rest of the text greyed inside the
     field (`ghost`, accepted with Tab, → or a check button), and chips under the field, which Tags had.
+37. **Code field (`code`)** — the 6-digit code an email brings (T-204). One `<input>` drawn as six
+    cells of at most 52 × 56px, 8px apart, that shrink together on a narrow screen; monospace 24px
+    semibold. The cells are its drawing and are `aria-hidden`; the input is what the keyboard and the
+    screen reader meet, labelled "6-digit code", `inputmode="numeric"`, `autocomplete="one-time-code"` —
+    so the phone offers the code it just received —, `spellcheck="false"`, `autocorrect="off"`, and
+    **without `maxlength`**: its own input and paste handlers keep the digits and stop at six, so pasting
+    "482 719" or "482-719" fills all six instead of being cut before the space goes. The caret stays at
+    the end; Backspace takes the last digit. The ring sits on the cell where the next digit goes, and on
+    the sixth when all six are in. `error` turns every edge to `--danger-solid`, sets `aria-invalid` and
+    points `aria-describedby` at the message under the field, which is announced when it appears; the
+    digits stay selected, so typing replaces them. `disabled` greys them. **Nothing sends itself**: the
+    screen's button does, and focus moves on to the next field only after a paste or the phone's autofill,
+    never while typing. A countdown beside it is plain text outside any live region; only the moment
+    Resend becomes available is announced.
 
 **Every chart obeys the same contract**, and every shape has exactly one implementation: a slot — a
 bar, a cell, a column, a pair — carries its name and its amount as its accessible name (a position on

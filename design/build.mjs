@@ -392,6 +392,7 @@ const home = ({
   debt = "two-cards",
   news = 0,
   invites = 0,
+  banner = "",
 } = {}) => {
   const bars = [
     [30, ""],
@@ -528,7 +529,7 @@ ${row("car", "BLUE", "Uber to work", "Yesterday 18:10 · Visa Gold", 18400)}
 <div class="actions"><button class="btn ghost icon-only round desktop-only" aria-label="Search">${iconSvg("search")}</button>${bell(news)}${av}</div></header>`;
   const mobile = `${header}${pend}${installCard}${hero}${stats}${budgetsSection}${accountsSection}${recent}`;
   const desk = `${header}${pend}${installCard}<div class="grid-main"><div class="stack" style="gap:20px">${hero}${stats}${recent}</div><div class="stack" style="gap:20px">${budgetsSection}${accountsSection}</div></div>`;
-  return `<div class="shell">${sidebar("inicio", news, invites)}<main class="main">
+  return `<div class="shell">${sidebar("inicio", news, invites)}<main class="main">${banner}
 <div class="page mobile-only">${mobile}</div><div class="page desktop-only">${desk}</div>
 </main>${nav ?? tabbar("inicio", news > 0, invites)}</div>${sheet}`;
 };
@@ -1065,7 +1066,7 @@ const login = (state = "") => {
   return authFrame(`<div class="stack" style="gap:20px">
 <div class="stack-sm" style="text-align:center"><h1 class="h1">Welcome back</h1><p class="muted" style="margin:0">Sign in to keep tracking your spending.</p></div>${err}
 <div class="stack">${field("Email", "john@example.com", null, { icon: "user" })}${field("Password", "••••••••••", null, { icon: "lock", cls: "focus" })}</div>
-<a class="small" href="#" style="color:var(--brand-text);font-weight:500;align-self:flex-end;opacity:.6" aria-disabled="true">Forgot your password? <span class="faint">(soon)</span></a>
+<a class="small" href="#" style="color:var(--brand-text);font-weight:500;align-self:flex-end">Forgot your password?</a>
 <button class="btn primary lg block">Sign in</button>
 <p class="small muted" style="text-align:center;margin:0">New here? <a href="#" style="color:var(--brand-text);font-weight:500">Create account</a></p></div>`);
 };
@@ -1075,13 +1076,16 @@ const register = (state = "") => {
     state == "reactivated"
       ? `<div class="alert info">${iconSvg("info")}<span><b>Welcome back.</b> We restored your previous account with its full history; the currency is kept.</span></div>`
       : "";
+  const taken =
+    '<span>This email already has an account. <a href="#" style="font-weight:500;text-decoration:underline">Sign in</a> or <a href="#" style="font-weight:500;text-decoration:underline">reset your password</a>. If you deleted it, sign up with the password it had to bring it back.</span>';
+  const check = state == "check" ? humanCheck() : state == "check-failed" ? HUMAN_CHECK_FAILED : "";
   return authFrame(`<div class="stack" style="gap:20px">
 <div class="stack-sm" style="text-align:center"><h1 class="h1">Create account</h1><p class="muted" style="margin:0">Under a minute. No card needed.</p></div>${react}
-<div class="stack">${field("Name", "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, state == "taken" ? { icon: "user", error: '<span>This email already has an account. If you deleted it, sign up with the password it had to bring it back. <a href="#" style="font-weight:500;text-decoration:underline">Sign in</a></span>' } : { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
+<div class="stack">${field("Name", "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, state == "taken" ? { icon: "user", error: taken } : { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
 <div class="field"><span class="label">Language</span><button class="picker">${tile("globe", "TEAL", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">English</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">The language of your account. You can change it any time in Settings.</span></div>
 <div class="field"><span class="label">Currency</span><button class="picker">${tile("coins", "GREEN", "sm")}<span class="body"><span class="lbl">Detected from your region</span><span class="val">COP · Colombian peso</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">Used for all your accounts. It locks once you create your first account.</span></div>
 <div class="field"><span class="label">Time zone</span><button class="picker">${tile("globe", "BLUE", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">America/Bogota · GMT−5</span></span>${iconSvg("chevron-down", "sm")}</button></div></div>
-<label class="check"><span class="box on">${iconSvg("check", "sm")}</span><span>I agree to the <a href="#">Privacy policy</a> and to the processing of my personal data (Ley 1581).</span></label>
+<label class="check"><span class="box on">${iconSvg("check", "sm")}</span><span>I agree to the <a href="#">Privacy policy</a> and to the processing of my personal data (Ley 1581).</span></label>${check}
 <button class="btn primary lg block">Create account</button>
 <p class="small muted" style="text-align:center;margin:0">Already have an account? <a href="#" style="color:var(--brand-text);font-weight:500">Sign in</a></p></div>`);
 };
@@ -1119,6 +1123,178 @@ const onboarding = (step) => {
     `<div class="stack" style="gap:20px"><div class="step-dots" role="img" aria-label="Step ${step} of 2">${dots}</div>${body}</div>`,
   );
 };
+
+// ── Access by email · T-204 ─────────────────────────────────────────────────
+const LINK_STYLE = 'style="color:var(--brand-text);font-weight:500"';
+const authLink = (label) => `<a href="#" ${LINK_STYLE}>${label}</a>`;
+const alertLink = (label) =>
+  `<a href="#" style="color:inherit;font-weight:600;text-decoration:underline">${label}</a>`;
+const authTitle = (title, lead = "") =>
+  `<div class="stack-sm" style="text-align:center"><h1 class="h1">${title}</h1>${lead ? `<p class="muted" style="margin:0">${lead}</p>` : ""}</div>`;
+const authOutcome = (icon, color, title, lead) =>
+  `<div class="stack-sm" style="align-items:center;text-align:center">${tile(icon, color, "lg")}<h1 class="h1">${title}</h1><p class="muted" style="margin:0">${lead}</p></div>`;
+const authFoot = (html) => `<p class="small muted" style="text-align:center;margin:0">${html}</p>`;
+const authPage = (html) => authFrame(`<div class="stack" style="gap:20px">${html}</div>`);
+
+const codeField = (digits = "", o = {}) => {
+  const live = !o.error && !o.disabled;
+  const cells = range(0, 6)
+    .map(
+      (i) =>
+        `<span class="cell${live && i === digits.length ? " focus" : ""}">${digits[i] ?? ""}</span>`,
+    )
+    .join("");
+  const err = o.error
+    ? `<span class="help error">${iconSvg("circle-alert", "sm")}<span>${o.error}</span></span>`
+    : "";
+  return `<div class="field"><span class="label">6-digit code</span><div class="code${o.error ? " error" : ""}${o.disabled ? " disabled" : ""}">${cells}</div>${err}</div>`;
+};
+
+const humanCheck = () =>
+  `<div class="stack-sm" style="align-items:center"><p class="small muted" style="margin:0;text-align:center">One more step: tick the box so we know you’re a person.</p><div class="hstack" style="justify-content:space-between;width:300px;max-width:100%;height:65px;padding:0 16px;border:1px solid var(--border-strong);border-radius:var(--r-sm);background:var(--surface-2)"><span class="check" style="align-items:center;color:var(--text)"><span class="box" style="margin-top:0"></span>Verify you are human</span><span class="xs faint">Cloudflare</span></div></div>`;
+
+const HUMAN_CHECK_FAILED = `<div class="alert danger">${iconSvg("circle-alert")}<span><b>We couldn’t check that you’re a person.</b> Try again. If it keeps failing, something in this browser may be blocking Cloudflare’s check, such as a content blocker.</span></div>`;
+
+const OFFLINE_SEND = `<div class="alert warning">${iconSvg("wifi-off")}<span><b>You’re offline.</b> Sending the code needs a connection.</span></div>`;
+
+const resendBlock = ({ wait = "", disabled = false } = {}) => {
+  const btn = wait
+    ? `<span class="small muted" style="padding:6px 0">You can resend it in ${wait}</span>`
+    : `<button class="btn secondary sm"${disabled ? " disabled" : ""}>Resend code</button>`;
+  return `<div class="stack-sm" style="align-items:center;text-align:center;gap:4px">${btn}<p class="xs muted" style="margin:0">Not there? Check your spam folder. Wrong address? ${authLink("Change it")}</p></div>`;
+};
+
+const forgotPassword = (state = "") => {
+  const blocked = state == "offline" || state == "429";
+  const alert =
+    state == "offline"
+      ? OFFLINE_SEND
+      : state == "429"
+        ? `<div class="alert warning">${iconSvg("clock")}<span><b>Too many requests.</b> You can ask for a code again in 4:12.</span></div>`
+        : "";
+  return authPage(`${authTitle("Forgot your password?", "Type your account’s email and we’ll send a code to it so you can choose a new password.")}${alert}
+${field("Email", "john@example.com", null, { icon: "user" })}
+<button class="btn primary lg block"${blocked ? " disabled" : ""}>Send code</button>
+${authFoot(authLink("Back to sign in"))}`);
+};
+
+const RESET_CODE_ERROR =
+  "That code doesn’t work. It may be mistyped, out of date or replaced by a newer one: check the last email we sent, or ask for a new code.";
+
+const resetPassword = (state = "") => {
+  const link = state == "link";
+  const head = link
+    ? authTitle("Choose a new password")
+    : authTitle(
+        "Check your email",
+        "If <b>john@example.com</b> has an account, we just sent it a 6-digit code. It works for 30 minutes.",
+      );
+  const typed = state == "" ? "4827" : "482719";
+  const code = link ? "" : codeField(typed, { error: state == "wrong" ? RESET_CODE_ERROR : "" });
+  const pwd = field("New password", state == "" ? null : "••••••••••", "At least 8 characters", {
+    icon: "lock",
+    help: "Between 8 and 128 characters.",
+  });
+  const after = link
+    ? authFoot(`Link not working? ${authLink("Ask for a code instead")}`)
+    : resendBlock({ wait: state == "" ? "0:48" : "" });
+  return authPage(`${head}<div class="stack">${code}${pwd}</div>
+<p class="xs muted" style="margin:0;text-align:center">Saving it signs you in here and signs out every other device.</p>
+<button class="btn primary lg block"${state == "wrong" ? " disabled" : ""}>Save password and sign in</button>
+${after}`);
+};
+
+const linkNoLongerWorks = () =>
+  authPage(`${authOutcome("circle-alert", "NONE", "This link no longer works", "A password link works for 30 minutes and only once, and asking for another code cancels it.")}
+<button class="btn primary lg block">Ask for a new code</button>
+${authFoot(authLink("Back to sign in"))}`);
+
+const fact = (label, value) =>
+  `<div class="hstack" style="justify-content:space-between;gap:12px"><span class="small muted">${label}</span><span class="small" style="font-weight:500">${value}</span></div>`;
+
+const neverConfirmed = (confirm = false) => {
+  if (confirm)
+    return authPage(`${authTitle("Start fresh?")}
+<div class="alert danger">${iconSvg("circle-alert")}<span>Everything in this account is <b>deleted for good</b>: its accounts, transactions, budgets and categories, and it leaves every shared group. Your email and the password you just chose stay.</span></div>
+<div class="stack-sm"><button class="btn danger solid lg block">Delete everything and start</button><button class="btn ghost lg block">Go back</button></div>`);
+  if (confirm === "details")
+    return authPage(`${authTitle("Your details", "A fresh start takes nothing from before, not even the name. You can change these later in Settings.")}
+<div class="stack">${field("Name", null, "Your name", { icon: "user" })}
+<div class="field"><span class="label">Language</span><button class="picker">${tile("globe", "TEAL", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">English</span></span>${iconSvg("chevron-down", "sm")}</button></div>
+<div class="field"><span class="label">Currency</span><button class="picker">${tile("coins", "GREEN", "sm")}<span class="body"><span class="lbl">Detected from your region</span><span class="val">COP · Colombian peso</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">Used for all your accounts. It locks once you create your first account.</span></div>
+<div class="field"><span class="label">Time zone</span><button class="picker">${tile("globe", "BLUE", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">America/Bogota · GMT−5</span></span>${iconSvg("chevron-down", "sm")}</button></div></div>
+<button class="btn primary lg block">Continue</button>`);
+  return authPage(`${authTitle("Keep what’s in this account?", "Your email is confirmed now. Until today it never was, so someone else could have created this account with your address.")}
+<div class="card stack-sm" style="gap:8px">${fact("Created", "Mar 12, 2026")}${fact("Accounts", "3")}${fact("Transactions", "214")}</div>
+<p class="small muted" style="margin:0">Keep it if you created it and never got around to confirming the email. Start fresh if you didn’t: nothing somebody else put in it stays with you.</p>
+<div class="stack-sm"><button class="btn primary lg block">Keep it</button><button class="btn secondary lg block">Start fresh</button></div>`);
+};
+
+const emailLinkPage = (kind) => {
+  if (kind == "verify")
+    return authPage(`${authTitle("Confirm your email", "Use the button to confirm that the address this email reached belongs to your Ledger Flow account.")}
+<button class="btn primary lg block">Confirm email</button>`);
+  if (kind == "verify-done")
+    return authPage(`${authOutcome("mail-check", "GREEN", "Email confirmed", "You can invite people to Shared and accept their invitations.")}
+<button class="btn primary lg block">Open Ledger Flow</button>`);
+  if (kind == "confirm-email")
+    return authPage(`${authTitle("Move your account to this address?", "Your account’s email becomes the address this message reached, and your other devices are signed out. From now on you sign in with it.")}
+<button class="btn primary lg block">Confirm new email</button>`);
+  if (kind == "not-me")
+    return authPage(`${authTitle("Delete the account that used your address?", "Somebody signed up to Ledger Flow with this address and never confirmed it. This deletes that account and everything in it, for good, and frees your address.")}
+<div class="alert warning">${iconSvg("triangle-alert")}<span><b>If you signed up yourself, don’t.</b> Use the code or the Confirm email button in the same message instead.</span></div>
+<div class="stack-sm"><button class="btn danger solid lg block">Delete that account</button><button class="btn ghost lg block">Don’t delete it</button></div>`);
+  if (kind == "not-me-done")
+    return authPage(`${authOutcome("user-x", "NONE", "That account is gone", "Your address is free: you can create your own account with it.")}
+<button class="btn primary lg block">Create account</button>`);
+  if (kind == "undo")
+    return authPage(`${authTitle("Undo the change?", "Your account’s email goes back to this address, even if the change was already confirmed.")}
+<div class="alert warning">${iconSvg("triangle-alert")}<span>Every device is signed out and <b>your current password stops working</b>. We’ll email you a code to choose a new one.</span></div>
+<button class="btn primary lg block">Undo the change</button>`);
+  return authPage(`${authOutcome("undo-2", "NONE", "Change undone", "Every device was signed out. We sent a code to this address so you can choose a new password: it works for 30 minutes.")}
+<button class="btn primary lg block">Enter the code</button>`);
+};
+
+const CONFIRM_STRIPE = `<div class="banner warning" role="status">${iconSvg("mail")}<span class="txt"><b>Confirm your email.</b><span class="sub">You need it to invite people to Shared and to be invited.</span></span><span class="actions"><button class="action">Confirm</button><button class="btn ghost icon-only sm round" aria-label="Not now" style="color:inherit">${iconSvg("x", "sm")}</button></span></div>`;
+
+const confirmEmailSheet = (state = "") => {
+  const send = state == "send" || state == "failed" || state == "check";
+  const offline = state == "offline";
+  const lead = send
+    ? "We’ll send a 6-digit code to <b>john@example.com</b>."
+    : "We sent a 6-digit code to <b>john@example.com</b>. It works for 24 hours.";
+  const alert = offline
+    ? `<div class="alert warning">${iconSvg("wifi-off")}<span><b>You’re offline.</b> Confirming your email needs a connection.</span></div>`
+    : state == "failed"
+      ? `<div class="alert danger">${iconSvg("circle-alert")}<span><b>We couldn’t send the email.</b> Try again in a few minutes.</span></div>`
+      : "";
+  const typed = state == "" ? "48" : state == "wrong" ? "482719" : "";
+  const code = send
+    ? ""
+    : codeField(typed, {
+        disabled: offline,
+        error: state == "wrong" ? "That code isn’t right. Check the last email we sent." : "",
+      });
+  const check = state == "check" ? humanCheck() : "";
+  const primary = send
+    ? `<button class="btn primary lg block">Send code</button>`
+    : `<button class="btn primary lg block"${offline ? " disabled" : ""}>Confirm</button>`;
+  const after = send
+    ? `<p class="xs muted" style="margin:0;text-align:center">Wrong address? ${authLink("Change it")}</p>`
+    : resendBlock({ wait: state == "" ? "0:42" : "", disabled: offline });
+  return sheetWrap(
+    `<p class="small muted" style="margin:0">${lead}</p>${alert}${code}${check}${primary}${after}`,
+    "Confirm your email",
+  );
+};
+
+const OFFLINE_STRIPE = `<div class="banner offline" role="status">${iconSvg("wifi-off")}<span class="txt"><b>You’re offline.</b> Changes are saved on this device and will sync when you’re back online.</span></div>`;
+
+const confirmEmailOver = (state) =>
+  home({
+    banner: state == "offline" ? OFFLINE_STRIPE : CONFIRM_STRIPE,
+    sheet: confirmEmailSheet(state),
+  });
 
 const transactions = ({ settlement = false, toast = "", sheet = "" } = {}) => {
   const body = `<div class="input" style="height:44px">${iconSvg("search", "sm")}<span class="placeholder" style="flex:1">Search description, note or tag</span></div>
@@ -2657,6 +2833,7 @@ const settings = ({
   update = false,
   scrolled = false,
   installed = false,
+  unconfirmed = false,
 } = {}) => {
   const signout = offline
     ? `<button class="btn secondary block" disabled>${iconSvg("log-out", "sm")}Sign out</button><p class="xs muted" role="status" style="text-align:center;margin:0">Signing out needs a connection: your session lives on the server.</p>`
@@ -2668,7 +2845,7 @@ const settings = ({
 <span class="eyebrow">Preferences</span>
 <div class="list card flush">${settingsRow("globe", "Language", "App language", '<span class="small muted">English</span>', "TEAL")}${settingsRow("coins", "Currency", "Locked: you already have accounts", '<span class="badge">COP</span>', "GREEN")}${settingsRow("clock", "Time zone", "Defines your days and periods", '<span class="small muted">Bogotá</span>', "BLUE")}${settingsRow("palette", "Appearance", "Palette and mode", '<span class="small muted">Tinta · System</span>', "PURPLE")}${settingsRow("bell", "Notifications", "What reaches you, and where", "", "INDIGO")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}</div>
 <span class="eyebrow">Security</span>
-<div class="list card flush">${settingsRow("lock", "Password & email", "Requires your current password", "", "GRAY")}${settingsRow("smartphone", "Active sessions", "Sign out devices you don’t recognize", '<span class="badge">3</span>', "GRAY")}</div>`;
+<div class="list card flush">${unconfirmed ? settingsRow("lock", "Password & email", "Your email isn’t confirmed yet", '<span class="badge warning">Not confirmed</span>', "GRAY") : settingsRow("lock", "Password & email", "Requires your current password", "", "GRAY")}${settingsRow("smartphone", "Active sessions", "Sign out devices you don’t recognize", '<span class="badge">3</span>', "GRAY")}</div>`;
   const body = `${scrolled ? "" : top}
 <span class="eyebrow">Data</span>
 <div class="list card flush">${settingsRow("refresh-cw", "Sync status", "What this device has, and what it still owes the server", '<span class="badge warning">2</span>', "TEAL")}${settingsRow("download", "Export transactions", "Coming soon", '<span class="badge outline">soon</span>')}${settingsRow("upload", "Import from your bank", "Coming soon", '<span class="badge outline">soon</span>')}</div>
@@ -2712,8 +2889,20 @@ const sessions = () => {
   });
 };
 
-const profileSecurity = () => {
-  const body = `${field("Name", "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, { icon: "user", help: "Changing it signs out your other sessions." })}
+const PENDING_EMAIL = `<div class="card stack-sm" style="background:var(--surface-2);gap:12px"><div class="hstack" style="gap:12px;align-items:flex-start">${tile("mail", "AMBER", "sm")}<span class="stack-sm" style="gap:2px;min-width:0"><span style="font-weight:500;overflow-wrap:anywhere">Waiting for confirmation at new@example.com</span><span class="small muted">We sent it a code and a link. Until it’s confirmed, your account keeps john@example.com.</span></span></div><div class="hstack" style="gap:8px;flex-wrap:wrap"><button class="btn primary sm">Enter code</button><button class="btn secondary sm">Resend</button><button class="btn ghost sm">Cancel change</button></div></div>`;
+
+const profileSecurity = (email = "") => {
+  const emailField =
+    email == "unconfirmed"
+      ? `<div class="field"><span class="label" style="display:flex;align-items:center;gap:8px">Email<span class="badge warning">Not confirmed</span></span><div class="input">${iconSvg("user", "sm")}<span class="value">john@example.com</span></div><span class="help">Confirm it to invite people to Shared and to be invited. ${authLink("Confirm it")}</span></div>`
+      : field("Email", "john@example.com", null, {
+          icon: "user",
+          help:
+            email == "pending"
+              ? "A new address gets a code first: the change happens once you confirm it, and then your other sessions are signed out."
+              : "Changing it signs out your other sessions.",
+        });
+  const body = `${field("Name", "John Doe", null, { icon: "user" })}${emailField}${email == "pending" ? PENDING_EMAIL : ""}
 <div class="divider"></div><span class="eyebrow">Change password</span>${field("New password", null, "At least 8 characters", { icon: "lock" })}
 <div class="alert warning">${iconSvg("lock")}<span>To change your email or password, confirm your <b>current password</b>. For safety, your other devices will need to sign in again.</span></div>
 ${field("Current password", "••••••••••", null, { icon: "lock", cls: "focus" })}
@@ -5257,11 +5446,19 @@ ${sharedPeopleBody()}`,
     },
   );
 
+const sharedUnconfirmed = () =>
+  sharedScreen(
+    `<div class="alert neutral">${iconSvg("mail")}<span>Invitations to you show up here once you confirm your email. ${alertLink("Confirm it")}</span></div>
+${sharedPeopleBody()}`,
+  );
+
 const sharedInvitationsInMore = () =>
   home({ invites: 1, nav: tabbar("mas", false, 1), sheet: navMenuSheet(true, 0, 1) });
 
 const inviteRow = (name, meta, right, badge = "") =>
   `<div class="row" style="cursor:default">${face(name)}<span class="body"><span class="title"><span class="truncate">${name}</span>${badge}</span><span class="meta">${meta}</span></span><span class="right" style="flex-direction:row;align-items:center;gap:8px">${right}</span></div>`;
+
+const CONFIRM_TO_INVITE = `<div class="alert warning">${iconSvg("mail")}<span><b>Confirm your email to invite people.</b> An invitation goes out with your address, so it has to be confirmed first. ${alertLink("Confirm email")}</span></div>`;
 
 const inviteSheet = (beto = "none") => {
   const betoRow =
@@ -5280,14 +5477,14 @@ const inviteSheet = (beto = "none") => {
         : inviteRow(
             "Beto Cano",
             "beto@example.com · not invited",
-            `<button class="btn secondary sm">Invite</button>`,
+            `<button class="btn secondary sm"${beto === "unconfirmed" ? " disabled" : ""}>Invite</button>`,
           );
   const said =
     beto === "waiting"
       ? `<p class="small muted" role="status" style="margin:0"><b>Beto sees it in Shared</b> the next time he opens Ledger Flow with beto@example.com. If that address has no account yet, the invitation waits for it all the same — and you are not told which: it reads <i>waiting</i> either way until he answers.</p>`
       : "";
   return fullWrap(
-    `<p class="small muted" style="margin:0">Somebody who joins sees <b>Cartagena trip</b> — its expenses, who paid and how each one is split — and never your accounts, categories or notes. Nothing is emailed: the invitation waits in their Shared.</p>
+    `${beto === "unconfirmed" ? CONFIRM_TO_INVITE : ""}<p class="small muted" style="margin:0">Somebody who joins sees <b>Cartagena trip</b> — its expenses, who paid and how each one is split — and never your accounts, categories or notes. Nothing is emailed: the invitation waits in their Shared.</p>
 <div class="list card flush">
 ${inviteRow("Ana Ruiz", "ana@example.com · joined Sep 19", `<button class="btn ghost sm">Stop sharing</button>`, '<span class="badge success">Joined</span>')}
 ${betoRow}
@@ -5946,7 +6143,7 @@ const EMAILS = {
 };
 
 const mailUrl = (l, path) =>
-  `https://${MAIL_SITE}/${l}/${path}${path === "forgot" || path === "register" ? "" : `?token=${MAIL_TOKEN}`}`;
+  `https://${MAIL_SITE}/${l}/${path}${path === "forgot" || path === "register" ? "" : `#token=${MAIL_TOKEN}`}`;
 
 const mailButton = (l, label, path, secondary = false) =>
   `<a class="mail-btn${secondary ? " secondary" : ""}" href="#">${label}</a>
@@ -6344,21 +6541,111 @@ const PAGES = [
     file: "access.html",
     title: "Access",
     group: "Screens",
-    note: "Sign in and sign up, centred and short. Registration suggests the detected currency and time zone and says the currency locks with the first account. After signing up, two onboarding steps: the first account, which becomes the main one, and a total monthly budget.",
+    note: "Sign in and sign up, centred and short. Registration suggests the detected currency and time zone and says the currency locks with the first account. After signing up, two onboarding steps: the first account, which becomes the main one, and a total monthly budget. Forgot your password? asks for a code by email, and every link in an email lands on a page here that does nothing until you tap its one button.",
     plates: [
-      plate("sign-in", "Sign in", "", login(), { added: "2026-09-01" }),
+      plate(
+        "sign-in",
+        "Sign in",
+        "Forgot your password? is live now that the app sends email (T-204).",
+        login(),
+        { added: "2026-09-01", updated: "2026-09-26" },
+      ),
       plate("sign-in-rate-limited", "Sign in · too many attempts", "", login("429"), {
         added: "2026-09-01",
       }),
+      plate(
+        "forgot-password",
+        "Forgot your password?",
+        "The email arrives filled in when it was typed on Sign in. Cloudflare's check runs unseen when you send; it only shows itself when it has doubts.",
+        forgotPassword(),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "forgot-password-code",
+        "Forgot your password? · the code",
+        "The same answer whether the address has an account or not: this screen never tells who uses Ledger Flow. The code and the new password go together, because the server checks both at once.",
+        resetPassword(),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "forgot-password-wrong-code",
+        "Forgot your password? · wrong code",
+        "RESET_CODE_INVALID, the one answer for a mistyped, expired, replaced or used-up code, and for an address with no account: two answers would tell which addresses exist. Save waits until the code changes.",
+        resetPassword("wrong"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "forgot-password-rate-limited",
+        "Forgot your password? · too many requests",
+        "RATE_LIMITED, with the countdown from Retry-After. The same limits apply whether the address has an account or not.",
+        forgotPassword("429"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "forgot-password-offline",
+        "Forgot your password? · offline",
+        "Every screen on this page that sends something says so the same way.",
+        forgotPassword("offline"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "choose-new-password",
+        "Choose a new password · from the link",
+        "/reset. The token leaves the address bar as the page opens, and is only spent when the new password is sent: a mail scanner that opens the link changes nothing.",
+        resetPassword("link"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "link-no-longer-works",
+        "A link that no longer works",
+        "Used, expired or cancelled by a newer one. Every link page has this state with its own words.",
+        linkNoLongerWorks(),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "keep-or-start-fresh",
+        "Keep what's in this account?",
+        "Only after recovering an account that never confirmed its email and has something in it (the owner's decision 12). Asked once; until it is answered, opening the app comes back here.",
+        neverConfirmed(),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "start-fresh",
+        "Start fresh",
+        "The confirmation, because it cannot be undone.",
+        neverConfirmed(true),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "start-fresh-details",
+        "Start fresh · your details",
+        "The name, language, currency and time zone were typed by whoever created the account, so they go too. Then onboarding, as for a new account.",
+        neverConfirmed("details"),
+        { added: "2026-09-26" },
+      ),
       plate("create-account", "Create account", "With currency and time zone.", register(), {
         added: "2026-09-01",
       }),
       plate(
+        "create-account-human-check",
+        "Create account · Cloudflare has doubts",
+        "The check is invisible unless it suspects a bot; then its box appears above the button. The same slot on Forgot your password? and on Resend.",
+        register("check"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "human-check-failed",
+        "Create account · the check failed",
+        "The check could not run or said no. Nothing was sent; the button tries again.",
+        register("check-failed"),
+        { added: "2026-09-26" },
+      ),
+      plate(
         "create-account-email-taken",
         "Create account · email taken",
-        "EMAIL_TAKEN: a live account, or a deleted one signed up with a password it did not have.",
+        "EMAIL_TAKEN: a live account, or a deleted one signed up with a password it did not have. It offers Forgot your password?, which is how the owner of the inbox takes an address back.",
         register("taken"),
-        { added: "2026-09-23" },
+        { added: "2026-09-23", updated: "2026-09-26" },
       ),
       plate(
         "account-reactivated",
@@ -6383,6 +6670,55 @@ const PAGES = [
         "The chip in the frame's header and the Language row in the form are the same value, sent as the account's locale.",
         registerLanguage(),
         { added: "2026-09-06" },
+      ),
+      plate(
+        "verify-link",
+        "From an email · confirm your email",
+        "/verify. Nothing happens by opening it; the button confirms.",
+        emailLinkPage("verify"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "verify-link-done",
+        "From an email · email confirmed",
+        "Open Ledger Flow goes to Home with a session and to Sign in without one.",
+        emailLinkPage("verify-done"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "confirm-new-email-link",
+        "From an email · move to the new address",
+        "/confirm-email. The browser that confirms keeps whatever session it had.",
+        emailLinkPage("confirm-email"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "not-me-link",
+        "From an email · it wasn't me",
+        "/not-me, from verify-email (the owner's decision 11). It says it deletes before the tap.",
+        emailLinkPage("not-me"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "not-me-link-done",
+        "From an email · the account is gone",
+        "The account is erased, not archived, so nobody can bring it back; the address gets nothing more from it.",
+        emailLinkPage("not-me-done"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "undo-link",
+        "From an email · undo the change",
+        "/undo, from the security notices. Today the only change it undoes is an email change; T-214 adds the words for passkeys and two-step verification.",
+        emailLinkPage("undo"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "undo-link-done",
+        "From an email · change undone",
+        "The code to choose a new password is on its way to the same address. Enter the code opens the code screen for that address, without asking for another code.",
+        emailLinkPage("undo-done"),
+        { added: "2026-09-26" },
       ),
     ],
   },
@@ -6816,6 +7152,13 @@ const PAGES = [
         { added: "2026-09-22" },
       ),
       plate(
+        "invitations-need-confirmed-email",
+        "Invitations wait for a confirmed email",
+        "The server only looks for invitations to an address once it is confirmed, so none can show before: the line says so while it isn't.",
+        sharedUnconfirmed(),
+        { added: "2026-09-26" },
+      ),
+      plate(
         "pending-people",
         "Not synced yet · People",
         "A payment from Beto was recorded with no connection. It marks what it touches and nothing else (owner’s decision, 2026-09-23): Beto’s net, and the two figures on top, which add up everybody and move together. Ana and Diego are untouched, so their figures carry nothing.",
@@ -6863,6 +7206,13 @@ const PAGES = [
         "Right after <b>Invite</b>. The row reads <i>waiting</i> and offers <b>Withdraw</b>, and the sheet says the part that protects the other person: you are not told whether that address has an account. It reads the same either way until they answer.",
         groupDetail({ sheet: inviteSheet("waiting") }),
         { added: "2026-09-22" },
+      ),
+      plate(
+        "invite-needs-confirmed-email",
+        "Inviting, with an email not confirmed",
+        "EMAIL_NOT_VERIFIED. Invite waits for a confirmed email; Withdraw and Stop sharing do not.",
+        groupDetail({ sheet: inviteSheet("unconfirmed") }),
+        { added: "2026-09-26" },
       ),
       plate(
         "stop-sharing",
@@ -7502,6 +7852,27 @@ const PAGES = [
         { added: "2026-09-01" },
       ),
       plate(
+        "settings-email-not-confirmed",
+        "Settings · email not confirmed",
+        "Where the ✕ of the stripe never hides it.",
+        settings({ unconfirmed: true }),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "profile-and-security-not-confirmed",
+        "Profile & security · email not confirmed",
+        "Confirm it opens the same sheet as the stripe.",
+        profileSecurity("unconfirmed"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "profile-and-security-pending-email",
+        "Profile & security · waiting for the new address",
+        "From T-222 a new address is confirmed before it counts. Enter code opens the code sheet for the new address; Cancel change drops it.",
+        profileSecurity("pending"),
+        { added: "2026-09-26" },
+      ),
+      plate(
         "delete-account",
         "Delete my account",
         "Reversible by signing up again with the same email and password. The password is the confirmation.",
@@ -7729,6 +8100,55 @@ const PAGES = [
         "The stripe at the top of the content column, in blue, with Reload and ✕ (T-196, his choice of 2026-09-25). It shares the one slot of the sync stripes, after the ones you have to act on. The ✕ puts it away until you next open the app or come back to it; Settings › Version keeps saying it meanwhile. It never reloads on its own.",
         newVersionVariant("stripe"),
         { added: "2026-09-06", updated: "2026-09-25" },
+      ),
+      plate(
+        "confirm-your-email",
+        "Confirm your email",
+        "An account whose email is not confirmed, new or from before email existed. The stripe shares the one slot of the sync stripes, after the new-version one; the ✕ puts it away until the app is next opened. Settings › Password & email says it too.",
+        home({ banner: CONFIRM_STRIPE }),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "confirm-email-code",
+        "Confirm your email · the code",
+        "Right after signing up, or once a code was sent. Resend waits for its countdown, written as text so it stays readable.",
+        confirmEmailOver(""),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "confirm-email-send",
+        "Confirm your email · nothing sent yet",
+        "An account from before email existed has had no code: the sheet offers to send one.",
+        confirmEmailOver("send"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "confirm-email-wrong-code",
+        "Confirm your email · wrong code",
+        "The same words as the reset's; an expired code says so and Resend is ready.",
+        confirmEmailOver("wrong"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "confirm-email-send-failed",
+        "Confirm your email · the email didn't go",
+        "EMAIL_SEND_FAILED. Here it can be said: the address is the person's own.",
+        confirmEmailOver("failed"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "confirm-email-human-check",
+        "Confirm your email · Cloudflare has doubts",
+        "Inside the app the check sits in the same place: right above the button that sends.",
+        confirmEmailOver("check"),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "confirm-email-offline",
+        "Confirm your email · offline",
+        "The offline stripe takes the slot. The sheet, opened from Settings or already open when the connection went, says why it can't do anything.",
+        confirmEmailOver("offline"),
+        { added: "2026-09-26" },
       ),
     ],
   },

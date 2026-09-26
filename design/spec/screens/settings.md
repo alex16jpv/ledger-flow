@@ -11,7 +11,10 @@ eyebrows:
   "Locked: you already have accounts" or "You can change it until you create your first account"; Time
   zone; Appearance with palette · mode; **Notifications**, "What reaches you, and where", which opens
   the page specified in [notifications.md](notifications.md); Categories.
-- **Security** — Password & email; Active sessions with a count.
+- **Security** — Password & email; Active sessions with a count. **While the email is not confirmed**
+  (`#settings-email-not-confirmed`), Password & email reads "Your email isn't confirmed yet" with a
+  `warning` badge, "Not confirmed". This row is where the confirmation is never hidden: the stripe's ✕
+  puts that one away ([states.md](states.md) `#confirm-your-email`).
 - **Your data** — the user's rights: access, rectification, erasure and withdrawal of consent; the
   version of the policy accepted and its date; the contact address `ledgerflow@alexpiral.com`; and a
   link to the policy.
@@ -215,6 +218,28 @@ drops `Android` from the user agent — is still an Android: a Linux user agent 
 - **Profile & security** (`#profile-and-security`): name, email (help: it signs out other sessions), a
   new password, a re-authentication alert and a required "Current password" field when the email or the
   password changes; `CURRENT_PASSWORD_INVALID` shows inline; success brings a toast and a token refresh.
+  **An email not confirmed** (`#profile-and-security-not-confirmed`) carries a `warning` badge, "Not
+  confirmed", beside the field's label — inside the field it would collide with a long address —, and
+  the help "Confirm it to invite people to Shared and to be invited.
+  **Confirm it**", which opens the code sheet of [states.md](states.md).
+
+  **Until T-222, a new email saved here is not confirmed**: the change goes through as it does today, but
+  the account's email turns unconfirmed, a code goes to the new address, the toast reads "Check {new
+  email}: confirm it to use invitations in Shared", and the stripe comes back. Otherwise confirming one
+  address and then switching to somebody else's would carry the confirmation over.
+
+  **From T-222 a new address counts only once it is confirmed** (`#profile-and-security-pending-email`).
+  The field's help becomes "A new address gets a code first: the change happens once you confirm it, and
+  then your other sessions are signed out." Saving a new one — with the current password, as now, and
+  Cloudflare's check ([access.md](access.md)) — leaves the field on the current address, shows the toast
+  "Check {new email}: your email changes once you confirm it", and puts a card under the field: a `mail`
+  tile, "Waiting for confirmation at **{new email}**", "We sent it a code and a link. Until it's
+  confirmed, your account keeps {email}.", and **Enter code** (the code sheet, for the new address),
+  **Resend** (with its countdown and Cloudflare's check) and **Cancel change**. The card goes when the
+  address is confirmed, here or from the link, when it is cancelled, or when its 24 hours pass, and then
+  the change is dropped. Saving another new address while one is waiting replaces it, and the first
+  one's code and link stop working.
+
 - **Currency and time zone** (sheets): a searchable list of ISO 4217 codes with local names; when
   locked, a read-only sheet with the `CURRENCY_LOCKED` explanation. Time zone: a searchable IANA list
   with offsets; saving refreshes the token so budgets and stats use the new one immediately.

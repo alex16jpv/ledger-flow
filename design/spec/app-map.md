@@ -15,8 +15,11 @@ is `noindex`.
 
 ✅ Sign in · ✅ Sign up (name, email, password, currency suggested by `Intl` and confirmable, detected
 time zone) · ✅ reactivation notice (`reactivated: true`) · ✅ the 429 state; ⬜ "a 500 while signing
-up → try signing in" (copy only) · 🔮 email verification and forgotten password (link visible but
-inactive, marked "soon").
+up → try signing in" (copy only) · ✅ drawn, not built yet (T-204; the backend is T-207, T-209, T-221 and T-211):
+forgotten password (`/forgot`, the code with the new password, `/reset`), Cloudflare's check, "keep or
+start fresh" after recovering an account never confirmed, the pages reached from an email (`/verify`,
+`/confirm-email`, `/not-me`, `/undo`), and confirming the email (a stripe, a code sheet, Settings and
+the invitations of Shared).
 
 ✅ A two-step onboarding after signing up: the first account, with its opening balance, then the total
 monthly budget.
