@@ -24,3 +24,10 @@ account can still sign in here — and it is read without opening the vault the 
 access screens live outside the frame that owns it and a database created by the question would look
 like an evicted vault (D-20). A device with no vault gets the empty field, which is where a first
 sign-in happens.
+
+**Whoever signs in, nobody else's copy stays on the device** (T-167). Before the sign-in resolves,
+every other account's mirror is cleared and its unsent changes are kept for that account's next
+sign-in (`purgeOtherVaults`); then the other tabs are told (`session:signedIn`), and one still showing
+another account moves to Home of this one (`AccountSwitch`, in the app frame). The login itself
+lands on Home too, not on the `next` it was given, when the device's marker named another account
+(`nextAfterSignIn`): that way back was the previous account's.

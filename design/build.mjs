@@ -2860,6 +2860,11 @@ const state = (kind) => {
     const body = `<div class="list card flush">${rows}</div>` + toast;
     return screen(body, { tab: "mov", side: "mov", title: "Transactions", banner });
   }
+  if (kind == "switched") {
+    return home({
+      sheet: `<div class="toast">${iconSvg("check")}Another account signed in on this browser</div>`,
+    });
+  }
   if (kind == "local") {
     const inner = `<div class="alert warning">${iconSvg("cloud-off")}<span>Your session ended, so nothing is syncing. The app keeps working on this device and your changes are saved here — sign in again to send them.</span></div><button class="btn primary lg block">${iconSvg("log-in", "sm")}Sign in to sync</button>`;
     return screen(settingsBodyDim(), {
@@ -3744,11 +3749,14 @@ const threeExits = () => {
   });
 };
 
-const deleteLocalCopy = () => {
+const deleteLocalCopy = ({ elsewhere = 0 } = {}) => {
+  const others = elsewhere
+    ? ` It also deletes <b>${elsewhere} unsent changes from another account</b> that signed in on this browser.`
+    : "";
   const inner =
     `<div class="alert danger">${iconSvg("trash-2")}<span>This deletes the copy of your data on this device and ` +
     `<b>2 changes that only exist here</b>. It does not delete your account: signing in again downloads ` +
-    `everything the server has.</span></div>` +
+    `everything the server has.${others}</span></div>` +
     '<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button>' +
     '<button class="btn danger lg" style="flex:1.4">Delete everything</button></div>';
   return screen(settingsBodyDim(), {
@@ -7424,6 +7432,20 @@ const PAGES = [
         "The confirmation: it deletes the local copy and its unsent changes, not the account.",
         deleteLocalCopy(),
         { added: "2026-09-08" },
+      ),
+      plate(
+        "delete-local-copy-another-account",
+        "Delete everything · with another account's changes",
+        "Another account's unsent changes wait hidden on this device after someone else signed in. The deletion takes them too, so the sheet counts them and says whose they are.",
+        deleteLocalCopy({ elsewhere: 3 }),
+        { added: "2026-09-26" },
+      ),
+      plate(
+        "another-account-signed-in",
+        "Another account signed in",
+        "A tab still open on the previous account moves to the one that signed in, on Home, and says why. Nothing of the previous account stays on screen, and its unsent changes wait on this device for its next sign-in.",
+        state("switched"),
+        { added: "2026-09-26" },
       ),
       plate(
         "projected-figures",

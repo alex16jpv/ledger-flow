@@ -1,6 +1,12 @@
 import { readdirSync } from "node:fs";
 
-import { isGuestOnlyPath, isProtectedPath, safeNextPath, stripLocale } from "./routes";
+import {
+  isGuestOnlyPath,
+  isProtectedPath,
+  nextAfterSignIn,
+  safeNextPath,
+  stripLocale,
+} from "./routes";
 
 // `dev/pickers` is switched off by the componentCatalog flag, not by a session.
 const FLAG_GUARDED = new Set(["dev"]);
@@ -63,5 +69,16 @@ describe("route rules", () => {
     expect(safeNextPath("/%2F/evil.example")).toBe("/%2F/evil.example");
     expect(safeNextPath("//evil.example", "/onboarding")).toBe("/onboarding");
     expect(safeNextPath("/stats?from=//x#//y")).toBe("/stats?from=//x#//y");
+  });
+});
+
+describe("nextAfterSignIn", () => {
+  it("keeps the way back for the person the device held, or a first sign-in", () => {
+    expect(nextAfterSignIn("/accounts/a1", "ada", "ada")).toBe("/accounts/a1");
+    expect(nextAfterSignIn("/accounts/a1", undefined, "ada")).toBe("/accounts/a1");
+  });
+
+  it("starts someone else at Home, not on the previous account's screen", () => {
+    expect(nextAfterSignIn("/accounts/a1", "ada", "grace")).toBe("/home");
   });
 });

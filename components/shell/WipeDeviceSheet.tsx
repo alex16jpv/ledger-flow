@@ -1,11 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Sheet, SheetCancel } from "@/components/ui/Sheet";
+import { countPendingElsewhere } from "@/lib/local/db";
+import { currentVault } from "@/lib/local/repository";
+import { reportError } from "@/lib/observability/reporter";
 
 // P-32: the confirmation of the third exit, shared by the sheet and Sync status (DESIGN §8.17).
 export function WipeDeviceSheet({
@@ -21,6 +24,25 @@ export function WipeDeviceSheet({
 }) {
   const t = useTranslations("states.noSession");
   const [wiping, setWiping] = useState(false);
+  const [elsewhere, setElsewhere] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    let wanted = true;
+    countPendingElsewhere(currentVault()?.userId).then(
+      (count) => {
+        if (wanted) setElsewhere(count);
+      },
+      (error: unknown) => {
+        reportError(error, "vault");
+        if (wanted) setElsewhere(0);
+      },
+    );
+    return () => {
+      wanted = false;
+      setElsewhere(null);
+    };
+  }, [open]);
 
   return (
     <Sheet
@@ -36,6 +58,7 @@ export function WipeDeviceSheet({
             size="lg"
             className="flex-[1.4]"
             loading={wiping}
+            disabled={elsewhere === null}
             onClick={() => {
               setWiping(true);
               void Promise.resolve(onConfirm());
@@ -48,6 +71,7 @@ export function WipeDeviceSheet({
     >
       <Alert tone="danger">
         {pending > 0 ? t("confirmBody", { count: pending }) : t("confirmBodyEmpty")}
+        {elsewhere ? ` ${t("confirmElsewhere", { count: elsewhere })}` : null}
       </Alert>
     </Sheet>
   );

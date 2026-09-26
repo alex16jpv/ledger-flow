@@ -335,6 +335,34 @@ export function accountIdsIn(page: Page, vault: string): Promise<string[]> {
   }, vault);
 }
 
+export function storeCount(page: Page, vault: string, store: string): Promise<number> {
+  return page.evaluate(
+    async ({ name, storeName }) => {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(name);
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
+        request.onerror = () => {
+          reject(request.error ?? new Error("open failed"));
+        };
+      });
+      const count = await new Promise<number>((resolve, reject) => {
+        const request = db.transaction(storeName, "readonly").objectStore(storeName).count();
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
+        request.onerror = () => {
+          reject(request.error ?? new Error("read failed"));
+        };
+      });
+      db.close();
+      return count;
+    },
+    { name: vault, storeName: store },
+  );
+}
+
 // The first snapshot has drained and the shell is cached: from here the device works with no network.
 export async function readyForOffline(page: Page): Promise<void> {
   await installWorker(page);

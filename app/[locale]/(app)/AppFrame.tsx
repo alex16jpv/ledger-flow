@@ -6,6 +6,7 @@ import { useLocale } from "next-intl";
 import { type ReactNode, Suspense, useCallback, useEffect, useState } from "react";
 
 import {
+  AccountSwitch,
   ADD_HREF,
   type AddOptions,
   AppShell,
@@ -122,6 +123,11 @@ function Frame({ children }: { children: ReactNode }) {
       </Suspense>
       <ServiceWorkerUpdates />
       <OfflineReadyAnnouncement enabled={Boolean(localUserId)} />
+      <AccountSwitch
+        vaultUserId={localUserId}
+        mountedMarker={marker}
+        expired={sessionStatus === "expired"}
+      />
       <AppShell
         userName={user?.name ?? ""}
         pendingCount={pendingCount}

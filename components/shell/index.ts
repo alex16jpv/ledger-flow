@@ -1,3 +1,4 @@
+export { AccountSwitch } from "./AccountSwitch";
 export { AppShell, MAIN_ID } from "./AppShell";
 export { Avatar, initialsOf } from "./Avatar";
 export { ConnectionBanner } from "./ConnectionBanner";

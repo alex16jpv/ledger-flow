@@ -698,6 +698,7 @@
       "confirmTitle": "¿Borrar todo en este dispositivo?",
       "confirmBody": "Esto borra la copia de tus datos en este dispositivo y {count, plural, =1 {# cambio} other {# cambios}} que solo existen aquí. No borra tu cuenta: al entrar otra vez se descarga todo lo que tenga el servidor.",
       "confirmBodyEmpty": "Esto borra la copia de tus datos en este dispositivo. No borra tu cuenta: al entrar otra vez se descarga todo lo que tenga el servidor.",
+      "confirmElsewhere": "También borra {count, plural, =1 {# cambio sin enviar} other {# cambios sin enviar}} de otra cuenta que inició sesión en este navegador.",
       "confirmCta": "Borrar todo",
       "cancel": "Cancelar",
       "wiped": "Se borró todo en este dispositivo"
@@ -707,6 +708,7 @@
       "body": "{count, plural, =0 {No se está enviando nada al servidor.} =1 {# cambio guardado aquí.} other {# cambios guardados aquí.}}",
       "action": "Iniciar sesión para sincronizar"
     },
+    "accountSwitched": "Otra cuenta inició sesión en este navegador",
     "update": {
       "title": "Hay una versión nueva de Ledger Flow.",
       "body": "Recargar tarda un segundo. No se pierde nada de lo que guardaste.",
