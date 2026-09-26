@@ -5,6 +5,7 @@ export {
   deriveBalances,
 } from "./balances";
 export {
+  budgetExpired,
   type BudgetRow,
   type BudgetTransaction,
   deriveBudgetView,

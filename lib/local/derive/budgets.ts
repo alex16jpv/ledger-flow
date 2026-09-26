@@ -71,12 +71,20 @@ export function deriveBudgetView(
     amount: override ?? budget.amount,
     hasOverride: override !== undefined,
     spent: fromCents(spentCents),
-    expired:
-      budget.periodType === "CUSTOM" &&
-      budget.periodEndDate !== null &&
-      reference.getTime() >= Date.parse(budget.periodEndDate),
+    expired: budgetExpired(budget, reference),
     archivedCategoryIds: budget.categoryIds.filter((id) => archivedCategoryIds.has(id)),
   };
+}
+
+export function budgetExpired(
+  budget: Pick<BudgetRow, "periodType" | "periodEndDate">,
+  reference: Date,
+): boolean {
+  return (
+    budget.periodType === "CUSTOM" &&
+    budget.periodEndDate !== null &&
+    reference.getTime() >= Date.parse(budget.periodEndDate)
+  );
 }
 
 // A CUSTOM window is explicit, so a budget backdated before its own creation still lists.
