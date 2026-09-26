@@ -5577,6 +5577,476 @@ ${notifSwitchRow("Activity", "Answers to your invitations, and expenses and paym
   });
 };
 
+const MAIL_SITE = "ledgerflow.alexpiral.com";
+const MAIL_CONTACT = "ledgerflow@alexpiral.com";
+const MAIL_TO = "ana@example.com";
+const MAIL_NEW_TO = "ana.ruiz@work.example";
+const MAIL_CODE = "482913";
+const MAIL_TOKEN = "q7Xk2mVb9RtL4wPz";
+
+const MAIL = {
+  en: {
+    lang: "English",
+    to: "To",
+    link: "If the button doesn’t work, open this link:",
+    when: "When",
+    device: "Device",
+    deviceValue: "Chrome on Windows",
+    whenValue: "Sep 26, 2026, 7:42 PM GMT-5",
+    codeNote:
+      "Only type this code in Ledger Flow. Nobody from Ledger Flow will ever ask you for it.",
+    why: (reason) => `You’re getting this because ${reason}.`,
+    security:
+      "This is a security notice for your Ledger Flow account. These can’t be turned off: they’re how we tell you what happens to your account.",
+    contact: "Questions?",
+    notYou: "Not you?",
+    reset: "Reset password",
+    undo: "Undo the change",
+  },
+  es: {
+    lang: "Español",
+    to: "Para",
+    link: "Si el botón no funciona, abre este enlace:",
+    when: "Cuándo",
+    device: "Dispositivo",
+    deviceValue: "Chrome en Windows",
+    whenValue: "26 de sept de 2026, 7:42 p. m. GMT-5",
+    codeNote: "Escribe este código solo en Ledger Flow. Nadie de Ledger Flow te lo va a pedir.",
+    why: (reason) => `Te llega porque ${reason}.`,
+    security:
+      "Es un aviso de seguridad de tu cuenta de Ledger Flow. Estos avisos no se pueden desactivar: así te contamos lo que pasa con tu cuenta.",
+    contact: "¿Dudas?",
+    notYou: "¿No fuiste tú?",
+    reset: "Restablecer contraseña",
+    undo: "Deshacer el cambio",
+  },
+};
+
+const UNDO_BODY = {
+  en: "Undo it: we remove every passkey, authenticator app and recovery code added since then, sign out every device, and you choose a new password. This link works for 7 days.",
+  es: "Deshazlo: quitamos las llaves de acceso, la app de autenticación y los códigos de recuperación añadidos desde entonces, se cierra la sesión en todos los dispositivos y eliges una contraseña nueva. El enlace sirve 7 días.",
+};
+const RESET_BODY = {
+  en: "Reset your password now. It signs out every device.",
+  es: "Restablece tu contraseña ya. Se cierra la sesión en todos los dispositivos.",
+};
+
+const EMAILS = {
+  "verify-email": {
+    code: true,
+    path: "verify",
+    en: {
+      subject: "Confirm your email for Ledger Flow",
+      pre: "Type the code in the app or use the button. It works for 24 hours.",
+      title: "Confirm your email",
+      lead: "Type this code in Ledger Flow to confirm this address is yours.",
+      ttl: "It works for 24 hours. Asking for another one cancels this one.",
+      button: "Confirm email",
+      aside: [
+        "Didn’t sign up?",
+        "Someone typed your address when signing up. Use “It wasn’t me” to delete that account and free your address.",
+        "It wasn’t me",
+        "not-me",
+      ],
+      why: "someone signed up for Ledger Flow with this address",
+    },
+    es: {
+      subject: "Confirma tu correo en Ledger Flow",
+      pre: "Escribe el código en la app o usa el botón. Sirve 24 horas.",
+      title: "Confirma tu correo",
+      lead: "Escribe este código en Ledger Flow para confirmar que esta dirección es tuya.",
+      ttl: "Sirve 24 horas. Si pides otro, este deja de servir.",
+      button: "Confirmar correo",
+      aside: [
+        "¿No te registraste?",
+        "Alguien escribió tu dirección al registrarse. Usa «No fui yo» para eliminar esa cuenta y liberar tu correo.",
+        "No fui yo",
+        "not-me",
+      ],
+      why: "alguien se registró en Ledger Flow con esta dirección",
+    },
+  },
+  "password-reset": {
+    code: true,
+    path: "reset",
+    en: {
+      subject: "Reset your Ledger Flow password",
+      pre: "The code works for 30 minutes. If you didn’t ask for it, ignore this email.",
+      title: "Reset your password",
+      lead: "Type this code in Ledger Flow to choose a new password. Your other devices will be signed out.",
+      ttl: "It works for 30 minutes. Asking for another one cancels this one.",
+      button: "Choose a new password",
+      aside: [
+        "Didn’t ask for this?",
+        "Ignore this email. Your password stays the same, and the code and the link stop working in 30 minutes.",
+      ],
+      why: "someone asked to reset the password of the Ledger Flow account with this address",
+    },
+    es: {
+      subject: "Restablece tu contraseña de Ledger Flow",
+      pre: "El código sirve 30 minutos. Si no lo pediste, ignora este correo.",
+      title: "Restablece tu contraseña",
+      lead: "Escribe este código en Ledger Flow para elegir una contraseña nueva. Se cerrará la sesión en tus otros dispositivos.",
+      ttl: "Sirve 30 minutos. Si pides otro, este deja de servir.",
+      button: "Elegir una contraseña nueva",
+      aside: [
+        "¿No lo pediste?",
+        "Ignora este correo. Tu contraseña sigue igual, y el código y el enlace dejan de servir en 30 minutos.",
+      ],
+      why: "alguien pidió restablecer la contraseña de la cuenta de Ledger Flow con esta dirección",
+    },
+  },
+  "password-reset-after-undo": {
+    code: true,
+    path: "reset",
+    en: {
+      subject: "Choose a new password for Ledger Flow",
+      pre: "You undid a change to your account. The code works for 30 minutes.",
+      title: "Choose a new password",
+      lead: "You undid a change to your account from this address, and every device was signed out. Type this code in Ledger Flow to choose a new password: the old one no longer works.",
+      ttl: "It works for 30 minutes. Asking for another one cancels this one.",
+      button: "Choose a new password",
+      aside: [
+        "Code expired?",
+        "Ask for another one with “Forgot your password?” on the Sign in screen.",
+      ],
+      why: "you undid a change to your Ledger Flow account from this address",
+    },
+    es: {
+      subject: "Elige una contraseña nueva para Ledger Flow",
+      pre: "Deshiciste un cambio en tu cuenta. El código sirve 30 minutos.",
+      title: "Elige una contraseña nueva",
+      lead: "Deshiciste un cambio en tu cuenta desde esta dirección y se cerró la sesión en todos los dispositivos. Escribe este código en Ledger Flow para elegir una contraseña nueva: la anterior ya no sirve.",
+      ttl: "Sirve 30 minutos. Si pides otro, este deja de servir.",
+      button: "Elegir una contraseña nueva",
+      aside: [
+        "¿Se venció el código?",
+        "Pide otro con «¿Olvidaste tu contraseña?» en la pantalla de Entrar.",
+      ],
+      why: "deshiciste un cambio en tu cuenta de Ledger Flow desde esta dirección",
+    },
+  },
+  "password-changed": {
+    en: {
+      subject: "Your Ledger Flow password was changed",
+      pre: "If it wasn’t you, reset it now.",
+      title: "Your password was changed",
+      lead: "Your other devices were signed out. If you made this change, there’s nothing else to do.",
+      aside: [
+        MAIL.en.notYou,
+        "Reset your password now. It signs out every device, including the one that changed it.",
+        MAIL.en.reset,
+        "forgot",
+      ],
+    },
+    es: {
+      subject: "Se cambió la contraseña de tu cuenta de Ledger Flow",
+      pre: "Si no fuiste tú, restablécela ya.",
+      title: "Se cambió tu contraseña",
+      lead: "Se cerró la sesión en tus otros dispositivos. Si fuiste tú, no tienes que hacer nada más.",
+      aside: [
+        MAIL.es.notYou,
+        "Restablece tu contraseña ya. Se cierra la sesión en todos los dispositivos, también en el que la cambió.",
+        MAIL.es.reset,
+        "forgot",
+      ],
+    },
+  },
+  "email-change-confirm": {
+    code: true,
+    path: "confirm-email",
+    to: MAIL_NEW_TO,
+    en: {
+      subject: "Confirm your new email for Ledger Flow",
+      pre: "Your account moves to this address once you confirm it. It works for 24 hours.",
+      title: "Confirm your new email",
+      lead: "Type this code in Ledger Flow to move your account to this address. Until you do, it keeps its current email. Confirming signs out your other devices.",
+      ttl: "It works for 24 hours. Asking for another one cancels this one.",
+      button: "Confirm new email",
+      aside: [
+        "Didn’t ask for this?",
+        "Ignore this email. Nothing changes, and this address isn’t added to any account.",
+      ],
+      why: "someone asked to use this address for a Ledger Flow account",
+    },
+    es: {
+      subject: "Confirma tu correo nuevo de Ledger Flow",
+      pre: "Tu cuenta pasa a esta dirección cuando la confirmes. Sirve 24 horas.",
+      title: "Confirma tu correo nuevo",
+      lead: "Escribe este código en Ledger Flow para pasar tu cuenta a esta dirección. Mientras no lo hagas, sigue con su correo actual. Al confirmar se cierra la sesión en tus otros dispositivos.",
+      ttl: "Sirve 24 horas. Si pides otro, este deja de servir.",
+      button: "Confirmar correo nuevo",
+      aside: [
+        "¿No lo pediste?",
+        "Ignora este correo. No cambia nada y esta dirección no se añade a ninguna cuenta.",
+      ],
+      why: "alguien pidió usar esta dirección en una cuenta de Ledger Flow",
+    },
+  },
+  "email-change-requested": {
+    en: {
+      subject: "Your Ledger Flow email is being changed",
+      pre: "If it wasn’t you, undo it from this email.",
+      title: "Your email is being changed",
+      lead: `Someone asked to move your account to <b>${MAIL_NEW_TO}</b>. It moves once that address is confirmed.`,
+      aside: [
+        MAIL.en.notYou,
+        "Undo it: your account keeps this address, every device is signed out and you choose a new password. This link works for 7 days, even if the change was already confirmed.",
+        MAIL.en.undo,
+        "undo",
+      ],
+    },
+    es: {
+      subject: "Se pidió cambiar el correo de tu cuenta de Ledger Flow",
+      pre: "Si no fuiste tú, deshazlo desde este correo.",
+      title: "Se pidió cambiar tu correo",
+      lead: `Se pidió pasar tu cuenta a <b>${MAIL_NEW_TO}</b>. El cambio se hace cuando se confirme esa dirección.`,
+      aside: [
+        MAIL.es.notYou,
+        "Deshazlo: tu cuenta se queda con esta dirección, se cierra la sesión en todos los dispositivos y eliges una contraseña nueva. El enlace sirve 7 días, aunque el cambio ya se haya confirmado.",
+        MAIL.es.undo,
+        "undo",
+      ],
+    },
+  },
+  "new-sign-in": {
+    en: {
+      subject: `New sign-in to Ledger Flow: ${MAIL.en.deviceValue}`,
+      pre: "If it was you, there’s nothing to do.",
+      title: "New sign-in to your account",
+      lead: "Your account was signed in on a device we don’t recognize. If it was you, there’s nothing to do.",
+      aside: [MAIL.en.notYou, RESET_BODY.en, MAIL.en.reset, "forgot"],
+    },
+    es: {
+      subject: `Nuevo acceso a Ledger Flow: ${MAIL.es.deviceValue}`,
+      pre: "Si fuiste tú, no tienes que hacer nada.",
+      title: "Nuevo acceso a tu cuenta",
+      lead: "Se inició sesión en tu cuenta desde un dispositivo que no reconocemos. Si fuiste tú, no tienes que hacer nada.",
+      aside: [MAIL.es.notYou, RESET_BODY.es, MAIL.es.reset, "forgot"],
+    },
+  },
+  "account-deleted": {
+    en: {
+      subject: "Your Ledger Flow account was deleted",
+      pre: "Signing up again with this email and the password it had brings it back.",
+      title: "Your account was deleted",
+      lead: "Every device was signed out. Your account and your financial history are kept for a while: signing up again with this email and the password it had brings everything back.",
+      extra: `To have it erased for good, write to ${MAIL_CONTACT}: it’s done within 15 business days.`,
+      aside: [
+        "Didn’t delete it?",
+        "Signing up again with this email and the password it had when it was deleted brings it back. Then change the password in Settings.",
+        "Create account",
+        "register",
+      ],
+    },
+    es: {
+      subject: "Tu cuenta de Ledger Flow se eliminó",
+      pre: "Si te registras de nuevo con este correo y la contraseña que tenía, la recuperas.",
+      title: "Tu cuenta se eliminó",
+      lead: "Se cerró la sesión en todos los dispositivos. Tu cuenta y tu historial financiero se conservan un tiempo: si te registras de nuevo con este correo y la contraseña que tenía, lo recuperas todo.",
+      extra: `Para borrarla del todo, escribe a ${MAIL_CONTACT}: se hace en 15 días hábiles.`,
+      aside: [
+        "¿No la eliminaste?",
+        "Si te registras de nuevo con este correo y la contraseña que tenía al eliminarse, la recuperas. Después cambia la contraseña en Ajustes.",
+        "Crear cuenta",
+        "register",
+      ],
+    },
+  },
+  "passkey-added": {
+    en: {
+      subject: "A passkey was added to your Ledger Flow account",
+      pre: "If it wasn’t you, undo it from this email.",
+      title: "A passkey was added",
+      lead: "A new passkey can now sign in to your account without a password.",
+      aside: [MAIL.en.notYou, UNDO_BODY.en, MAIL.en.undo, "undo"],
+    },
+    es: {
+      subject: "Se añadió una llave de acceso a tu cuenta de Ledger Flow",
+      pre: "Si no fuiste tú, deshazlo desde este correo.",
+      title: "Se añadió una llave de acceso",
+      lead: "Una llave de acceso nueva ya puede entrar a tu cuenta sin contraseña.",
+      aside: [MAIL.es.notYou, UNDO_BODY.es, MAIL.es.undo, "undo"],
+    },
+  },
+  "two-factor-on": {
+    en: {
+      subject: "Two-step verification is on for Ledger Flow",
+      pre: "If it wasn’t you, undo it from this email.",
+      title: "Two-step verification is on",
+      lead: "Signing in now also asks for a code from your authenticator app.",
+      aside: [MAIL.en.notYou, UNDO_BODY.en, MAIL.en.undo, "undo"],
+    },
+    es: {
+      subject: "La verificación en dos pasos está activa en Ledger Flow",
+      pre: "Si no fuiste tú, deshazlo desde este correo.",
+      title: "La verificación en dos pasos está activa",
+      lead: "Entrar ahora pide también un código de tu app de autenticación.",
+      aside: [MAIL.es.notYou, UNDO_BODY.es, MAIL.es.undo, "undo"],
+    },
+  },
+  "passkey-removed": {
+    en: {
+      subject: "A passkey was removed from your Ledger Flow account",
+      pre: "If it wasn’t you, reset your password now.",
+      title: "A passkey was removed",
+      lead: "That passkey can no longer sign in to your account.",
+      aside: [MAIL.en.notYou, RESET_BODY.en, MAIL.en.reset, "forgot"],
+    },
+    es: {
+      subject: "Se quitó una llave de acceso de tu cuenta de Ledger Flow",
+      pre: "Si no fuiste tú, restablece tu contraseña ya.",
+      title: "Se quitó una llave de acceso",
+      lead: "Esa llave de acceso ya no puede entrar a tu cuenta.",
+      aside: [MAIL.es.notYou, RESET_BODY.es, MAIL.es.reset, "forgot"],
+    },
+  },
+  "two-factor-off": {
+    en: {
+      subject: "Two-step verification is off for Ledger Flow",
+      pre: "If it wasn’t you, reset your password now.",
+      title: "Two-step verification is off",
+      lead: "Signing in no longer asks for a code from your authenticator app.",
+      aside: [MAIL.en.notYou, RESET_BODY.en, MAIL.en.reset, "forgot"],
+    },
+    es: {
+      subject: "La verificación en dos pasos se desactivó en Ledger Flow",
+      pre: "Si no fuiste tú, restablece tu contraseña ya.",
+      title: "La verificación en dos pasos se desactivó",
+      lead: "Entrar ya no pide un código de tu app de autenticación.",
+      aside: [MAIL.es.notYou, RESET_BODY.es, MAIL.es.reset, "forgot"],
+    },
+  },
+  "recovery-code-used": {
+    en: {
+      subject: "A recovery code was used on your Ledger Flow account",
+      pre: "You have 7 left. If it wasn’t you, reset your password now.",
+      title: "A recovery code was used",
+      lead: "One of your recovery codes was used to sign in. You have 7 left, and each one works once.",
+      aside: [
+        MAIL.en.notYou,
+        "Reset your password now, then create new codes in Settings › Security.",
+        MAIL.en.reset,
+        "forgot",
+      ],
+    },
+    es: {
+      subject: "Se usó un código de recuperación en tu cuenta de Ledger Flow",
+      pre: "Te quedan 7. Si no fuiste tú, restablece tu contraseña ya.",
+      title: "Se usó un código de recuperación",
+      lead: "Se usó uno de tus códigos de recuperación para entrar. Te quedan 7 y cada uno sirve una vez.",
+      aside: [
+        MAIL.es.notYou,
+        "Restablece tu contraseña ya y después crea códigos nuevos en Ajustes › Seguridad.",
+        MAIL.es.reset,
+        "forgot",
+      ],
+    },
+  },
+};
+
+const mailUrl = (l, path) =>
+  `https://${MAIL_SITE}/${l}/${path}${path === "forgot" || path === "register" ? "" : `?token=${MAIL_TOKEN}`}`;
+
+const mailButton = (l, label, path, secondary = false) =>
+  `<a class="mail-btn${secondary ? " secondary" : ""}" href="#">${label}</a>
+<p class="mail-url">${MAIL[l].link} <a href="#">${mailUrl(l, path)}</a></p>`;
+
+const mailFacts = (l) =>
+  `<table class="mail-facts"><tr><th>${MAIL[l].when}</th><td>${MAIL[l].whenValue}</td></tr><tr><th>${MAIL[l].device}</th><td>${MAIL[l].deviceValue}</td></tr></table>`;
+
+const mailBody = (key, l) => {
+  const e = EMAILS[key];
+  const c = e[l];
+  const [asideTitle, asideBody, action, actionPath] = c.aside;
+  const middle = e.code
+    ? `<div class="mail-code">${MAIL_CODE}</div>
+<p class="small">${c.ttl} ${MAIL[l].codeNote}</p>
+${mailButton(l, c.button, e.path)}`
+    : mailFacts(l);
+  const aside = `<div class="mail-aside"><h2>${asideTitle}</h2><p>${asideBody}</p>${action ? mailButton(l, action, actionPath, true) : ""}</div>`;
+  const why = c.why ? MAIL[l].why(c.why) : MAIL[l].security;
+  return {
+    subject: c.subject,
+    pre: c.pre,
+    to: e.to ?? MAIL_TO,
+    html: `<span class="mail-brand">Ledger Flow</span>
+<h1>${c.title}</h1>
+<p>${c.lead}</p>${c.extra ? `\n<p class="small">${c.extra}</p>` : ""}
+${middle}
+${aside}`,
+    foot: `<p>${why}</p><p>Ledger Flow · <a href="#">${MAIL_SITE}</a> · ${MAIL[l].contact} <a href="#">${MAIL_CONTACT}</a></p>`,
+  };
+};
+
+const mailClient = (
+  l,
+  m,
+) => `<div lang="${l}"><span class="mail-lang">${MAIL[l].lang}</span><div class="mail-client">
+<div class="mail-env"><span><b>Ledger Flow</b> &lt;no-reply@${MAIL_SITE}&gt;</span><span>${MAIL[l].to} ${m.to}</span><span class="subject">${m.subject}</span><span class="pre">${m.pre}</span></div>
+<div class="mail"><div class="mail-card">${m.html}</div><div class="mail-foot">${m.foot}</div></div>
+</div></div>`;
+
+const mailPlate = (key) =>
+  `<div class="mail-pair">${["en", "es"].map((l) => mailClient(l, mailBody(key, l))).join("")}</div>`;
+
+const mailInbox = () =>
+  `<div class="mail-pair">${["en", "es"]
+    .map(
+      (l) =>
+        `<div lang="${l}"><span class="mail-lang">${MAIL[l].lang}</span><div class="mail-client mail-inbox">${Object.keys(
+          EMAILS,
+        )
+          .map((key) => {
+            const m = mailBody(key, l);
+            return `<div class="item"><span class="from">Ledger Flow</span><span class="subject">${m.subject}</span><span class="pre">${m.pre}</span></div>`;
+          })
+          .join("")}</div></div>`,
+    )
+    .join("")}</div>`;
+
+const mailText = (key, l) => {
+  const e = EMAILS[key];
+  const c = e[l];
+  const [asideTitle, asideBody, action, actionPath] = c.aside;
+  const plain = (html) => html.replace(/<[^>]+>/g, "");
+  const middle = e.code
+    ? [
+        `    ${MAIL_CODE}`,
+        "",
+        `${c.ttl} ${MAIL[l].codeNote}`,
+        "",
+        `${c.button}: ${mailUrl(l, e.path)}`,
+      ]
+    : [`${MAIL[l].when}: ${MAIL[l].whenValue}`, `${MAIL[l].device}: ${MAIL[l].deviceValue}`];
+  return [
+    "Ledger Flow",
+    "",
+    c.title,
+    "",
+    plain(c.lead),
+    ...(c.extra ? ["", c.extra] : []),
+    "",
+    ...middle,
+    "",
+    asideTitle,
+    asideBody,
+    ...(action ? [`${action}: ${mailUrl(l, actionPath)}`] : []),
+    "",
+    "--",
+    c.why ? MAIL[l].why(c.why) : MAIL[l].security,
+    `Ledger Flow · https://${MAIL_SITE}/${l} · ${MAIL[l].contact} ${MAIL_CONTACT}`,
+  ].join("\n");
+};
+
+const mailTextPlate = (key) =>
+  `<div class="mail-pair">${["en", "es"]
+    .map(
+      (l) =>
+        `<div lang="${l}"><span class="mail-lang">${MAIL[l].lang} · text/plain</span><div class="mail-client"><pre class="mail-text">${mailText(key, l)}</pre></div></div>`,
+    )
+    .join("")}</div>`;
+
 const plate = (id, title, note, html, o = {}) => ({ id, title, note, html, ...o });
 const plateDay = (p) => p.updated ?? p.added;
 
@@ -7464,6 +7934,126 @@ const PAGES = [
     ],
   },
   {
+    file: "emails.html",
+    title: "Emails",
+    group: "Emails",
+    note: "Every email the app sends, in the language of the account and in the client’s own fonts. One layout for all of them: the brand as text, a title, one or two sentences, the code or the facts, one button, and a grey box for “if it wasn’t you”. No images, nothing a person typed, no tracking. The backend’s templates copy these plates; dark mode is what clients that honour it show.",
+    plates: [
+      plate(
+        "emails-in-the-inbox",
+        "In the inbox",
+        "Sender, subject and preview text of every email, as a list of messages shows them. The code never goes in the subject or the preview: those show up on a locked phone.",
+        mailInbox(),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "verify-email",
+        "Confirm your email",
+        "On sign-up and on Resend. The code or the button confirm it; “It wasn’t me” deletes an account nobody ever confirmed and frees the address.",
+        mailPlate("verify-email"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "password-reset",
+        "Reset your password",
+        "Forgot your password? It only arrives when the address has a live account, and nothing in it says so.",
+        mailPlate("password-reset"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "password-reset-after-undo",
+        "Choose a new password · after an undo",
+        "The reset that “Undo the change” sends to the original address. Nothing to ignore: the old password already stopped working.",
+        mailPlate("password-reset-after-undo"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "password-changed",
+        "Password changed",
+        "After Password & email and after a reset. Security notices carry when and on what, and one way back.",
+        mailPlate("password-changed"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "email-change-confirm",
+        "Email change · to the new address",
+        "The account moves only when the new address answers.",
+        mailPlate("email-change-confirm"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "email-change-requested",
+        "Email change · to the old address",
+        "Sent the moment the change is asked for. “Undo the change” keeps working for 7 days, confirmed or not.",
+        mailPlate("email-change-requested"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "new-sign-in",
+        "New sign-in",
+        "Only from a device without a valid device token for the account. Signing up sends nothing; after a password or email change or Sign out everywhere, a device you already used can get it once.",
+        mailPlate("new-sign-in"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "account-deleted",
+        "Account deleted",
+        "After Delete my account. It says how to come back, because the history is kept.",
+        mailPlate("account-deleted"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "passkey-added",
+        "Passkey added · for later",
+        "Drawn now so the notices are complete; sent once passkeys exist. “Undo the change” also removes what was added since.",
+        mailPlate("passkey-added"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "two-factor-on",
+        "Two-step verification on · for later",
+        "The same notice for the authenticator app.",
+        mailPlate("two-factor-on"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "passkey-removed",
+        "Passkey removed · for later",
+        "Removing something needs no undo: the way back is a new password.",
+        mailPlate("passkey-removed"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "two-factor-off",
+        "Two-step verification off · for later",
+        "The same as removing a passkey.",
+        mailPlate("two-factor-off"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "recovery-code-used",
+        "Recovery code used · for later",
+        "Every time one is spent, with how many are left.",
+        mailPlate("recovery-code-used"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "plain-text-version",
+        "Plain-text version · a code",
+        "Every email goes with one: the same words in the same order, and every button written out as its link.",
+        mailTextPlate("verify-email"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+      plate(
+        "plain-text-notice",
+        "Plain-text version · a notice",
+        "A notice writes its facts as lines, and ends with the security footer.",
+        mailTextPlate("password-changed"),
+        { frame: false, wide: true, added: "2026-09-26" },
+      ),
+    ],
+  },
+  {
     file: "variants.html",
     title: "Decided variants",
     group: "Decisions",
@@ -8218,7 +8808,7 @@ const OPEN = ALL_PLATES.filter((p) => p.verdict === "open");
 const WAITING = IN_REVIEW.length + new Set(OPEN.map((p) => p.asks)).size;
 const LATEST = [...ALL_PLATES].map(plateDay).sort().at(-1);
 
-const GROUPS = ["Foundations", "Screens", "States", "Decisions"];
+const GROUPS = ["Foundations", "Screens", "States", "Emails", "Decisions"];
 
 const topBar = () => `<header class="pv-top">
 <a class="pv-brand" href="index.html"><span class="pv-logo">${iconSvg("layers", "sm")}</span>Ledger Flow · Design</a>

@@ -62,6 +62,8 @@ function modesFor(seeds) {
       bg: derive(N, 0.975),
       surface: derive(N, 0.998, 0.4),
       surface2: derive(N, 0.955),
+      border: derive(N, 0.905),
+      borderStrong: derive(N, 0.8),
       text: derive(N, 0.21),
       text2: derive(N, 0.45),
       text3: derive(N, 0.49),
@@ -78,6 +80,8 @@ function modesFor(seeds) {
       bg: derive(N, 0.135),
       surface: derive(N, 0.18),
       surface2: derive(N, 0.215),
+      border: derive(N, 0.27),
+      borderStrong: derive(N, 0.36),
       text: derive(N, 0.95, 0.5),
       text2: derive(N, 0.74),
       text3: derive(N, 0.62),
@@ -133,6 +137,86 @@ function checkPalette(file) {
   return failures;
 }
 
+const EMAIL_ROLES = {
+  bg: "bg",
+  surface: "surface",
+  "surface-2": "surface2",
+  border: "border",
+  "border-strong": "borderStrong",
+  text: "text",
+  "text-2": "text2",
+  "text-3": "text3",
+  brand: "brand",
+  "on-brand": "onBrand",
+  "brand-text": "brandText",
+};
+
+const toHex = (colour) =>
+  "#" +
+  oklchToLinearRgb(colour)
+    .map((v) => (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055))
+    .map((v) =>
+      Math.round(v * 255)
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("");
+
+const channelGap = (a, b) =>
+  Math.max(
+    ...[1, 3, 5].map((i) =>
+      Math.abs(parseInt(a.slice(i, i + 2), 16) - parseInt(b.slice(i, i + 2), 16)),
+    ),
+  );
+
+// Emails cannot read tokens, so ui.css and the email spec write Tinta out in hex; they must still be Tinta.
+function checkEmailColours() {
+  const modes = modesFor(parseSeeds(readFileSync("tokens/palette.tinta.css", "utf8")));
+  const sources = {
+    "design/preview/assets/ui.css": [
+      ...readFileSync("design/preview/assets/ui.css", "utf8").matchAll(
+        /--mail-([a-z0-9-]+): light-dark\((#[0-9a-f]{6}), (#[0-9a-f]{6})\)/g,
+      ),
+    ],
+    "design/spec/screens/emails.md": [
+      ...readFileSync("design/spec/screens/emails.md", "utf8").matchAll(
+        /\| `--([a-z0-9-]+)`\s*\| `(#[0-9a-f]{6})`\s*\| `(#[0-9a-f]{6})`/g,
+      ),
+    ],
+  };
+  let failures = 0;
+  console.log("\nemail colours (Tinta, in hex)");
+  for (const [file, rows] of Object.entries(sources)) {
+    const seen = new Set(rows.map((m) => m[1]));
+    for (const role of Object.keys(EMAIL_ROLES)) {
+      if (!seen.has(role)) {
+        failures++;
+        console.log(`FAIL ${file}: --${role} is missing`);
+      }
+    }
+    for (const [, role, light, dark] of rows) {
+      const key = EMAIL_ROLES[role];
+      if (!key) {
+        failures++;
+        console.log(`FAIL ${file}: --${role} is not an email colour`);
+        continue;
+      }
+      for (const [mode, written] of [
+        ["light", light],
+        ["dark", dark],
+      ]) {
+        const expected = toHex(modes[mode][key]);
+        const ok = channelGap(written, expected) <= 2;
+        if (!ok) failures++;
+        console.log(
+          `${ok ? "  ok " : "FAIL "}${mode.padEnd(6)}${role.padEnd(16)}${written} (tokens: ${expected}) · ${file}`,
+        );
+      }
+    }
+  }
+  return failures;
+}
+
 const files =
   process.argv.length > 2
     ? process.argv.slice(2)
@@ -145,5 +229,7 @@ for (const file of files) {
   console.log(`\n${file}`);
   total += checkPalette(file);
 }
+const emailFailures = process.argv.length > 2 ? 0 : checkEmailColours();
 console.log(total ? `\n${total} pairs below the minimum` : "\nAll pairs meet WCAG AA");
-process.exit(total ? 1 : 0);
+if (emailFailures) console.log(`${emailFailures} email colours no longer match the tokens`);
+process.exit(total || emailFailures ? 1 : 0);
