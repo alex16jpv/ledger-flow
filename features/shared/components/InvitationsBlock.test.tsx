@@ -1,15 +1,27 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import type * as Flags from "@/lib/flags";
+import type { FeatureFlag } from "@/lib/flags";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { confirmEmailStore } from "@/lib/session/confirm-email";
+import { SessionProvider } from "@/lib/session/SessionProvider";
 import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
-import { receivedInvitation } from "@/lib/testing/vault";
+import { profile, receivedInvitation } from "@/lib/testing/vault";
 import type { ReceivedInvitation } from "@/types/api";
 
 import { InvitationsBlock } from "./InvitationsBlock";
+
+vi.mock("@/lib/flags", async (importOriginal) => {
+  const actual = await importOriginal<typeof Flags>();
+  return {
+    ...actual,
+    isEnabled: (flag: FeatureFlag) => flag === "emailVerification" || actual.isEnabled(flag),
+  };
+});
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -27,12 +39,14 @@ function serve(rows: ReceivedInvitation[], answer?: (url: string) => Response) {
   });
 }
 
-const view = () =>
+const view = (emailVerified = true) =>
   renderWithProviders(
     <QueryProvider>
-      <ToastProvider>
-        <InvitationsBlock />
-      </ToastProvider>
+      <SessionProvider initialUser={profile({ emailVerified })} onSignedOut={vi.fn()}>
+        <ToastProvider>
+          <InvitationsBlock />
+        </ToastProvider>
+      </SessionProvider>
     </QueryProvider>,
   );
 
@@ -156,5 +170,47 @@ describe("InvitationsBlock", () => {
     expect(await screen.findByRole("button", { name: "Accept" })).toHaveAccessibleDescription(
       "Ana Ruiz invited you to Villa de Leyva weekend",
     );
+  });
+
+  it("says invitations wait for a confirmed email, and opens the code sheet", async () => {
+    const user = userEvent.setup();
+    serve([]);
+    view(false);
+
+    expect(
+      await screen.findByText(/Invitations to you show up here once you confirm your email/),
+    ).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => urlOf(input).includes("/api/invitations"))).toBe(
+      false,
+    );
+    await user.click(screen.getByRole("button", { name: "Confirm it" }));
+    expect(confirmEmailStore.getSnapshot().sheetOpen).toBe(true);
+    confirmEmailStore.reset();
+  });
+
+  it("asks the server again who this is when an answer is refused for an email not confirmed", async () => {
+    const user = userEvent.setup();
+    const rows = [receivedInvitation({ id: "inv1" })];
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/api/auth/me")) return Promise.resolve(json({ user: profile() }));
+      if (init?.method === "POST")
+        return Promise.resolve(
+          json({ error: "Forbidden", message: "no", code: "EMAIL_NOT_VERIFIED" }, { status: 403 }),
+        );
+      return Promise.resolve(page(rows));
+    });
+    view();
+
+    await user.click(await screen.findByRole("button", { name: "Accept" }));
+
+    expect(
+      await screen.findByText("Confirm your email first: invitations wait for it."),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([input]) => urlOf(input).endsWith("/api/auth/me"))).toBe(
+        true,
+      );
+    });
   });
 });

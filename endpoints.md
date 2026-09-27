@@ -2,7 +2,7 @@
 
 # lag-money-manager API endpoints
 
-Version 1.0.0 · 83 operations · 105 schemas.
+Version 1.0.0 · 86 operations · 110 schemas.
 
 Regenerate with `npm run gen:api-types` against a running backend. The client never calls these
 URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), which adds the
@@ -11,7 +11,7 @@ URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), wh
 | Group                           | Operations |
 | ------------------------------- | ---------- |
 | [Accounts](#accounts)           | 7          |
-| [Auth](#auth)                   | 9          |
+| [Auth](#auth)                   | 12         |
 | [Budgets](#budgets)             | 8          |
 | [Categories](#categories)       | 7          |
 | [Contacts](#contacts)           | 6          |
@@ -183,6 +183,9 @@ Idempotent - restoring an already-active account returns it unchanged.
 
 | Endpoint                     | Auth   | Summary                                                        |
 | ---------------------------- | ------ | -------------------------------------------------------------- |
+| `POST /auth/email/not-me`    | public | Delete, for good, an account that used somebody else's address |
+| `POST /auth/email/resend`    | bearer | Email a new code to confirm the account's email                |
+| `POST /auth/email/verify`    | bearer | Confirm the account's email with the emailed code or link      |
 | `POST /auth/login`           | public | Login and obtain a JWT token                                   |
 | `POST /auth/logout`          | public | Revoke the refresh token's session family (per-device logout)  |
 | `POST /auth/logout-all`      | bearer | Revoke every session of the authenticated user                 |
@@ -192,6 +195,57 @@ Idempotent - restoring an already-active account returns it unchanged.
 | `POST /auth/register`        | public | Register a new user                                            |
 | `GET /auth/sessions`         | bearer | List the user's active device sessions                         |
 | `DELETE /auth/sessions/{id}` | bearer | Revoke one device session by its id                            |
+
+### `POST /auth/email/not-me`
+
+"It wasn't me" of `verify-email` (`/{locale}/not-me#token=…`), for whoever holds the inbox. It works while the account has never confirmed an email — not even an earlier address — and still has the address the link went to, with no change of address since, and does what the owner's decision 11 says: the account and everything in it are erased — not archived, so no register can bring them back — its invitations end as when an account is deleted, and the address is free for a new account at once. No `account-deleted` is sent. Every verification email of such an account carries its own link and all of them work until then; a new code does not cancel them. An account confirmed once gets `verify-email` without it.
+
+No token required.
+
+**Body** `NotMeInput` (required)
+
+**Responses**
+
+| Status | Schema          | Description                                                                                                                                                     |
+| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `Message`       | The account is gone and its address is free                                                                                                                     |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION), or a link that no longer works: the account was confirmed, moved to another address, or is already gone (code LINK_INVALID) |
+| `429`  | `ErrorResponse` | Too many attempts from this IP (code RATE_LIMITED)                                                                                                              |
+
+### `POST /auth/email/resend`
+
+Send code and Resend code of the sheet that confirms the email. Sends `verify-email` to the account's address, in its language: a 6-digit code and a link, both for 24 hours, and "It wasn't me". The new code replaces the old one only once its email was accepted; the "It wasn't me" of earlier emails keeps working. Unlike Forgot your password?, a failed send is said: the address is the account's own. `captcha` is a Cloudflare Turnstile token for the action `verify-email`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
+
+**Body** `ResendVerificationInput` (required)
+
+**Responses**
+
+| Status | Schema                 | Description                                                                                                                                                                                         |
+| ------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `202`  | `VerificationCodeSent` | The email was accepted for delivery. `resendAfterSeconds` is the countdown before Resend                                                                                                            |
+| `400`  | `ErrorResponse`        | Validation error (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID)                                                                                                  |
+| `401`  | `ErrorResponse`        | Missing, invalid or expired access token                                                                                                                                                            |
+| `404`  | `ErrorResponse`        | The account no longer exists                                                                                                                                                                        |
+| `409`  | `ErrorResponse`        | The email is already confirmed (code EMAIL_ALREADY_VERIFIED)                                                                                                                                        |
+| `422`  | `ErrorResponse`        | The address does not accept our emails: it bounced or complained before, or the provider refused it (code EMAIL_SEND_FAILED). A code that was live before still works                               |
+| `429`  | `ErrorResponse`        | Too many requests (code RATE_LIMITED; `Retry-After` in seconds): from this IP, from this device or IP in the hour, for this account (five a day), or for this address — one a minute and five a day |
+| `503`  | `ErrorResponse`        | The email could not be sent, or may not have gone (code EMAIL_SEND_FAILED), or the captcha could not be checked (code CAPTCHA_UNAVAILABLE). A code that was live before still works                 |
+
+### `POST /auth/email/verify`
+
+Either `{ code }`, with the session (`Authorization`) of the account the code went to, or `{ token }` from the email's link (`/{locale}/verify#token=…`) with no session: it names the account. A code takes five tries and works for 24 hours; asking for another cancels it once the new email is accepted. Confirming is not spent: an account already confirmed answers 200 for its code and for its link, so tapping the link after typing the code reads "Email confirmed". A link for an address the account no longer has is LINK_INVALID, and so is one replaced by a newer code, even once the account is confirmed: only the newest email's link answers 200. Confirming ends the wait of the invitations addressed to it: they reach the change feed on the next pull.
+
+**Body** `VerifyEmailInput` (required)
+
+**Responses**
+
+| Status | Schema          | Description                                                                                                                                                                                                                                                                                                               |
+| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `Message`       | The email is confirmed                                                                                                                                                                                                                                                                                                    |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION); a code that is not the one sent (code EMAIL_CODE_INVALID); no code that still works — it expired, it was tried five times, or none was sent (code EMAIL_CODE_EXPIRED: send a new one); or a link that no longer works — expired, replaced, or for another address (code LINK_INVALID) |
+| `401`  | `ErrorResponse` | A code with a missing, invalid or expired access token                                                                                                                                                                                                                                                                    |
+| `404`  | `ErrorResponse` | A code for an account that no longer exists                                                                                                                                                                                                                                                                               |
+| `429`  | `ErrorResponse` | Too many attempts from this IP (code RATE_LIMITED)                                                                                                                                                                                                                                                                        |
 
 ### `POST /auth/login`
 
@@ -290,7 +344,7 @@ No token required.
 
 ### `POST /auth/register`
 
-Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email and the password of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored); with any other password it answers 409 EMAIL_TAKEN, like a live account. On a 500 the user may still have been created: try login before retrying register.
+Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email and the password of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored); with any other password it answers 409 EMAIL_TAKEN, like a live account. On a 500 the user may still have been created: try login before retrying register. `captcha` is a Cloudflare Turnstile token issued for the action `register`: with it, an account whose email is not confirmed is sent `verify-email` (a 6-digit code and a link, 24 hours); without it, nothing is sent and `GET /users/{id}` shows no live code, so the client offers Send code. A send that fails does not fail the register. The account works before its email is confirmed (`user.emailVerified`); only invitations wait for it.
 
 No token required.
 
@@ -301,9 +355,10 @@ No token required.
 | Status | Schema          | Description                                                                                                                                                                                                              |
 | ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `201`  | `AuthTokens`    | User registered and logged in                                                                                                                                                                                            |
-| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                                                                                       |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID)                                                                                                                       |
 | `409`  | `ErrorResponse` | Email is already registered (code EMAIL_TAKEN): a live account, a soft-deleted one registered with a different password, or a concurrent register that reactivated it first                                              |
 | `429`  | `ErrorResponse` | Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total — counted with the failed logins (code RATE_LIMITED) |
+| `503`  | `ErrorResponse` | A captcha was sent and could not be checked (code CAPTCHA_UNAVAILABLE): nothing was created. Try again                                                                                                                   |
 
 ### `GET /auth/sessions`
 
@@ -882,7 +937,7 @@ Idempotent — restoring an already-active contact returns it unchanged.
 
 ### `GET /invitations`
 
-Invitations to somebody else's shared group, addressed to your email, still waiting and still in time, oldest first. Each one shows only the group's name, its colour and currency, and who sent it. The offline client reads them from the change feed (`invitationsReceived`), which also brings the ones already answered; this listing is its fallback.
+Invitations to somebody else's shared group, addressed to your email, still waiting and still in time, oldest first. Each one shows only the group's name, its colour and currency, and who sent it. The offline client reads them from the change feed (`invitationsReceived`), which also brings the ones already answered; this listing is its fallback. Only once your email is confirmed: until then nothing addressed to it is shown.
 
 **Query**
 
@@ -899,6 +954,7 @@ Invitations to somebody else's shared group, addressed to your email, still wait
 | `200`  | `ReceivedInvitationList` | Paginated list of the invitations waiting for you                                                                      |
 | `400`  | `ErrorResponse`          | Invalid query parameters (code VALIDATION), or a cursor that names no invitation of this listing (code INVALID_CURSOR) |
 | `401`  | `ErrorResponse`          | Unauthorized                                                                                                           |
+| `403`  | `ErrorResponse`          | Your email is not confirmed yet (code EMAIL_NOT_VERIFIED)                                                              |
 
 ### `POST /invitations/{id}/accept`
 
@@ -917,6 +973,7 @@ Joining touches nothing in your ledger. A group in another currency cannot be jo
 | `200`  | `ReceivedInvitation` | The invitation, accepted                                                                                                                                                                                                                                                                                          |
 | `400`  | `ErrorResponse`      | Validation error (code VALIDATION), an invitation that can no longer be answered (code INVITATION_UNAVAILABLE), a group in another currency (code CURRENCY_MISMATCH), your own invitation (code INVITATION_TO_SELF), or a group you already joined through another invitation (code PARTICIPANT_ALREADY_IN_GROUP) |
 | `401`  | `ErrorResponse`      | Unauthorized                                                                                                                                                                                                                                                                                                      |
+| `403`  | `ErrorResponse`      | Your email is not confirmed yet, and the invitation is addressed to it rather than one you already answered (code EMAIL_NOT_VERIFIED)                                                                                                                                                                             |
 | `404`  | `ErrorResponse`      | Invitation not found (uniform for missing and addressed to somebody else)                                                                                                                                                                                                                                         |
 
 ### `POST /invitations/{id}/decline`
@@ -936,6 +993,7 @@ The person who invited learns it was declined, never why. Declining twice answer
 | `200`  | `ReceivedInvitation` | The invitation, declined                                                                                                                                         |
 | `400`  | `ErrorResponse`      | Validation error (code VALIDATION), an invitation that can no longer be answered (code INVITATION_UNAVAILABLE), or your own invitation (code INVITATION_TO_SELF) |
 | `401`  | `ErrorResponse`      | Unauthorized                                                                                                                                                     |
+| `403`  | `ErrorResponse`      | Your email is not confirmed yet, and the invitation is addressed to it rather than one you already answered (code EMAIL_NOT_VERIFIED)                            |
 | `404`  | `ErrorResponse`      | Invitation not found (uniform for missing and addressed to somebody else)                                                                                        |
 
 ### `POST /invitations/{id}/leave`
@@ -1423,6 +1481,7 @@ Every invitation ever sent for this group, oldest first, in the inviter's view: 
 ### `POST /shared-groups/{id}/invitations`
 
 Addressed to the email of a contact who is in the group. **Nothing is emailed**: the invitation waits in that person's Shared, found by the address, for 30 days. The answer is the same whether or not the address has an account — the route never looks — so an invitation cannot be used to find out who uses the app.
+Only from an account whose email is confirmed (`user.emailVerified`): an invitation takes the sender's address to somebody else.
 One live invitation per person per group: inviting somebody who is already waiting or already joined answers that invitation with 200. One that ran out of time steps aside and a new one is sent (201).
 
 **Path**
@@ -1441,6 +1500,7 @@ One live invitation per person per group: inviting somebody who is already waiti
 | `201`  | `SentInvitation` | Invitation sent                                                                                                                                                                                                                                                                                                 |
 | `400`  | `ErrorResponse`  | Validation error (code VALIDATION), somebody who is not in the group (code PARTICIPANT_NOT_IN_GROUP), a contact with no email (code CONTACT_HAS_NO_EMAIL), your own email (code INVITATION_TO_SELF), too many invitations waiting (code INVITATION_LIMIT_REACHED) or an archived group (code RESOURCE_ARCHIVED) |
 | `401`  | `ErrorResponse`  | Unauthorized                                                                                                                                                                                                                                                                                                    |
+| `403`  | `ErrorResponse`  | Your email is not confirmed yet: an invitation carries it to somebody else (code EMAIL_NOT_VERIFIED)                                                                                                                                                                                                            |
 | `404`  | `ErrorResponse`  | Shared group or contact not found (uniform for missing and not owned)                                                                                                                                                                                                                                           |
 
 ### `DELETE /shared-groups/{id}/invitations/{invitationId}`
@@ -2028,6 +2088,8 @@ id that belongs to another user is rejected with 409 ID_TAKEN.
 
 ### `GET /users/{id}`
 
+The profile, and while its email is not confirmed, what the sheet that confirms it needs (`emailVerification`).
+
 **Path**
 
 | Name | Type          | Required | Description |
@@ -2036,16 +2098,16 @@ id that belongs to another user is rejected with 409 ID_TAKEN.
 
 **Responses**
 
-| Status | Schema          | Description                                         |
-| ------ | --------------- | --------------------------------------------------- |
-| `200`  | `User`          | User found                                          |
-| `400`  | `ErrorResponse` | Invalid ID format (code VALIDATION)                 |
-| `401`  | `ErrorResponse` | Missing, invalid or expired access token            |
-| `404`  | `ErrorResponse` | User not found (or not the authenticated user's id) |
+| Status | Schema                      | Description                                         |
+| ------ | --------------------------- | --------------------------------------------------- |
+| `200`  | `UserWithEmailVerification` | User found                                          |
+| `400`  | `ErrorResponse`             | Invalid ID format (code VALIDATION)                 |
+| `401`  | `ErrorResponse`             | Missing, invalid or expired access token            |
+| `404`  | `ErrorResponse`             | User not found (or not the authenticated user's id) |
 
 ### `PUT /users/{id}`
 
-Changing `email` or `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again. `currency` can only change while the user has no accounts (mono-currency mode). Changing the email to one belonging to another account (soft-deleted included) conflicts — reactivation only applies on register.
+Changing `email` or `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again. `currency` can only change while the user has no accounts (mono-currency mode). Changing the email to one belonging to another account (soft-deleted included) conflicts — reactivation only applies on register. A new email is not confirmed (`emailVerified` false) and is sent `verify-email`; a send that fails does not undo the change, and the sheet offers Send code.
 
 **Path**
 

@@ -1,4 +1,5 @@
 import { expect, type Page, test, uniqueEmail } from "../fixtures";
+import { TEST_CAPTCHA } from "../mailpit";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -17,6 +18,7 @@ async function signUp(page: Page, request: Request) {
   const response = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: {
+      captcha: TEST_CAPTCHA,
       name: "Accounts E2E",
       email: uniqueEmail("accounts"),
       password: "LedgerFlow!2026",

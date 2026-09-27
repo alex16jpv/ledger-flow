@@ -5,6 +5,7 @@ import type {
   KeepOrStartFreshInput,
   ResetPasswordInput,
   User,
+  VerificationCodeSent,
 } from "@/types/api";
 
 import type { LoginValues } from "./schemas";
@@ -20,6 +21,7 @@ export interface RegisterInput {
   currency: string;
   timezone: string;
   locale: "en" | "es";
+  captcha?: string;
 }
 
 export function register(values: RegisterInput): Promise<SessionUser> {
@@ -45,4 +47,20 @@ export function answerKeepOrStartFresh(
     method: "POST",
     body: answer,
   });
+}
+
+export function confirmEmailWithCode(code: string): Promise<unknown> {
+  return api("/auth/verify", { method: "POST", body: { code } });
+}
+
+export function confirmEmailWithLink(token: string): Promise<unknown> {
+  return api("/auth/verify", { method: "POST", body: { token } });
+}
+
+export function sendVerificationCode(captcha: string): Promise<VerificationCodeSent> {
+  return api<VerificationCodeSent>("/auth/resend", { method: "POST", body: { captcha } });
+}
+
+export function deleteAccountThatUsedMyEmail(token: string): Promise<unknown> {
+  return api("/auth/not-me", { method: "POST", body: { token } });
 }

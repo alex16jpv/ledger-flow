@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 
 import { expect, type Page, test, uniqueEmail } from "../fixtures";
+import { TEST_CAPTCHA } from "../mailpit";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 const SEED = { email: "seed@ledgerflow.test", password: "LedgerFlow!2026" };
@@ -167,7 +168,7 @@ test("without a main account the sheet asks for one instead of failing silently"
   const email = uniqueEmail("quick");
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "Quick E2E", email, password: "LedgerFlow!2026" },
+    data: { captcha: TEST_CAPTCHA, name: "Quick E2E", email, password: "LedgerFlow!2026" },
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
@@ -328,7 +329,12 @@ test("the category chips never hide More, whatever the names and the text size (
 }) => {
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "Chips E2E", email: uniqueEmail("chips"), password: "LedgerFlow!2026" },
+    data: {
+      captcha: TEST_CAPTCHA,
+      name: "Chips E2E",
+      email: uniqueEmail("chips"),
+      password: "LedgerFlow!2026",
+    },
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   const account = await request.post("/api/accounts", {

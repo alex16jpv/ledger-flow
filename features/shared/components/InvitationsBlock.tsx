@@ -1,9 +1,10 @@
 "use client";
 
-import { Users } from "lucide-react";
+import { Mail, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 
+import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -11,12 +12,16 @@ import { List, Row, RowBody } from "@/components/ui/Row";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError, presentError } from "@/lib/api/errors";
+import { isEnabled } from "@/lib/flags";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 import { serverNow } from "@/lib/local/clock";
 import { isAnswerable } from "@/lib/local/repository";
 import { useOffline } from "@/lib/network/useOffline";
+import { emailUnconfirmed, openConfirmEmail } from "@/lib/session/confirm-email";
+import { useSession } from "@/lib/session/SessionProvider";
+import { useAppUser } from "@/lib/session/useAppUser";
 import type { ReceivedInvitation } from "@/types/api";
 
 import { useAnswerInvitation, useReceivedInvitations } from "../hooks";
@@ -127,6 +132,9 @@ export function InvitationsBlock() {
   const t = useTranslations();
   const toast = useToast();
   const offline = useOffline();
+  const session = useSession();
+  const appUser = useAppUser();
+  const unconfirmed = isEnabled("emailVerification") && emailUnconfirmed(appUser);
   const { data } = useReceivedInvitations();
   const answer = useAnswerInvitation();
   const [visitStart] = useState(() => serverNow());
@@ -146,7 +154,22 @@ export function InvitationsBlock() {
           Date.parse(invitation.answeredAt) >= visitStart),
     )
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  if (rows.length === 0) return null;
+  const notice = unconfirmed ? (
+    <Alert tone="neutral" icon={Mail}>
+      {t.rich("shared.invitations.confirmFirst", {
+        confirm: (chunks) => (
+          <button
+            type="button"
+            onClick={openConfirmEmail}
+            className="font-semibold underline underline-offset-[3px]"
+          >
+            {chunks}
+          </button>
+        ),
+      })}
+    </Alert>
+  ) : null;
+  if (rows.length === 0) return notice;
   const waiting = rows.filter((row) => !gone.has(row.id) && isAnswerable(row)).length;
 
   async function respond(invitation: ReceivedInvitation, choice: Answer) {
@@ -156,7 +179,10 @@ export function InvitationsBlock() {
       setAnswered((was) => new Map(was).set(row.id, row));
     } catch (error) {
       const code = error instanceof ApiError ? error.code : null;
-      if (code === "INVITATION_UNAVAILABLE" || code === "NOT_FOUND") {
+      if (code === "EMAIL_NOT_VERIFIED") {
+        void session.refetch();
+        toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
+      } else if (code === "INVITATION_UNAVAILABLE" || code === "NOT_FOUND") {
         setGone((was) => new Set(was).add(invitation.id));
       } else if (code === "CURRENCY_MISMATCH") {
         toast.show({ message: t("shared.invitations.otherCurrencyRefused"), tone: "danger" });
@@ -171,42 +197,45 @@ export function InvitationsBlock() {
   }
 
   return (
-    <section className="flex flex-col gap-2" aria-labelledby="shared-invitations">
-      <div className="flex items-center justify-between px-1">
-        <h2 id="shared-invitations" className="text-md font-semibold">
-          {t("shared.invitations.title")}
-        </h2>
-        {waiting > 0 && (
-          <Badge tone="brand">
-            <span aria-hidden="true">{waiting}</span>
-            <span className="sr-only">{t("nav.waitingCount", { count: waiting })}</span>
-          </Badge>
+    <>
+      {notice}
+      <section className="flex flex-col gap-2" aria-labelledby="shared-invitations">
+        <div className="flex items-center justify-between px-1">
+          <h2 id="shared-invitations" className="text-md font-semibold">
+            {t("shared.invitations.title")}
+          </h2>
+          {waiting > 0 && (
+            <Badge tone="brand">
+              <span aria-hidden="true">{waiting}</span>
+              <span className="sr-only">{t("nav.waitingCount", { count: waiting })}</span>
+            </Badge>
+          )}
+        </div>
+        <Card flush>
+          <List>
+            {rows.map((invitation) => (
+              <InvitationRow
+                key={invitation.id}
+                invitation={invitation}
+                gone={gone.has(invitation.id)}
+                busy={busy?.id === invitation.id ? busy.answer : null}
+                offline={offline}
+                onAnswer={(choice) => {
+                  void respond(invitation, choice);
+                }}
+              />
+            ))}
+          </List>
+        </Card>
+        {offline && waiting > 0 && (
+          <p role="status" className="px-1 text-xs text-text-2">
+            {t("shared.invitations.offline")}
+          </p>
         )}
-      </div>
-      <Card flush>
-        <List>
-          {rows.map((invitation) => (
-            <InvitationRow
-              key={invitation.id}
-              invitation={invitation}
-              gone={gone.has(invitation.id)}
-              busy={busy?.id === invitation.id ? busy.answer : null}
-              offline={offline}
-              onAnswer={(choice) => {
-                void respond(invitation, choice);
-              }}
-            />
-          ))}
-        </List>
-      </Card>
-      {offline && waiting > 0 && (
-        <p role="status" className="px-1 text-xs text-text-2">
-          {t("shared.invitations.offline")}
+        <p className="px-1 text-xs text-text-3">
+          {t(waiting > 0 ? "shared.invitations.foot" : "shared.invitations.answeredFoot")}
         </p>
-      )}
-      <p className="px-1 text-xs text-text-3">
-        {t(waiting > 0 ? "shared.invitations.foot" : "shared.invitations.answeredFoot")}
-      </p>
-    </section>
+      </section>
+    </>
   );
 }

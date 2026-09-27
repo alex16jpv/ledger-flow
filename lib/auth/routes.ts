@@ -6,6 +6,7 @@ export const ONBOARDING_PATH = "/onboarding";
 export const FORGOT_PATH = "/forgot";
 export const RESET_PATH = "/reset";
 export const KEEP_OR_START_FRESH_PATH = "/keep-or-start-fresh";
+export const PROFILE_PATH = "/settings/profile";
 
 // §2.6: the app links here when the session is dead and the queue still has to go up.
 export const REAUTH_PARAM = "reauth";

@@ -21,7 +21,7 @@ import { purgePersistedCaches } from "@/lib/query/purge";
 import { themeStore } from "@/lib/theme/store";
 import type { User } from "@/types/api";
 
-import { fetchCurrentUser, requestLogout, requestLogoutAll } from "./api";
+import { fetchCurrentUser, requestLogout, requestLogoutAll, type SessionProfile } from "./api";
 import { tabChannel } from "./channel";
 import { sessionKeys } from "./keys";
 
@@ -29,7 +29,7 @@ export type SessionStatus = "loading" | "authenticated" | "expired" | "error";
 
 interface SessionContextValue {
   status: SessionStatus;
-  user: User | null;
+  user: SessionProfile | null;
   expired: boolean;
   logout: (options?: SignOutOptions) => Promise<void>;
   logoutAll: (options?: SignOutOptions) => Promise<void>;

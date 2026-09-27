@@ -26,6 +26,7 @@ export function profile(overrides: Partial<User> = {}): User {
   return {
     id: USER_ID,
     email: "john@example.com",
+    emailVerified: true,
     name: "John Doe",
     currency: "COP",
     timezone: PROFILE_TIME_ZONE,

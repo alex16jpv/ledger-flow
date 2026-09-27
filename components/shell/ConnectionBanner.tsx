@@ -11,6 +11,11 @@ import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { connectivityStore } from "@/lib/network/connectivity";
 import { localOnlyStore } from "@/lib/network/local-only";
 import { applyUpdate, dismissUpdate, updateStore } from "@/lib/pwa/update";
+import {
+  dismissConfirmStripe,
+  openConfirmEmail,
+  useConfirmEmail,
+} from "@/lib/session/confirm-email";
 
 import { MAIN_ID } from "./AppShell";
 
@@ -42,9 +47,14 @@ interface ConnectionBannerProps {
   // §2.6: the session died with a vault here, so nothing recorded is reaching the server.
   signedOut?: boolean;
   onSignIn?: () => void;
+  unconfirmedEmail?: string;
 }
 
-export function ConnectionBanner({ signedOut = false, onSignIn }: ConnectionBannerProps) {
+export function ConnectionBanner({
+  signedOut = false,
+  onSignIn,
+  unconfirmedEmail,
+}: ConnectionBannerProps) {
   const t = useTranslations("states");
   const outbox = useOutbox();
   const router = useRouter();
@@ -70,6 +80,7 @@ export function ConnectionBanner({ signedOut = false, onSignIn }: ConnectionBann
     updateStore.getServerSnapshot,
   );
   const waitedForIt = useWaitedForIt(outbox.pending > 0, PENDING_GRACE_MS);
+  const { stripeDismissedFor } = useConfirmEmail();
 
   const updateStripe = (
     <Banner
@@ -193,6 +204,23 @@ export function ConnectionBanner({ signedOut = false, onSignIn }: ConnectionBann
         variant="online"
         title={t("backOnline.title")}
         body={synced > 0 ? t("backOnline.synced", { count: synced }) : undefined}
+      />
+    );
+  }
+  if (unconfirmedEmail && stripeDismissedFor !== unconfirmedEmail) {
+    return (
+      <Banner
+        variant="verify"
+        title={t("confirmEmail.title")}
+        body={t("confirmEmail.body")}
+        action={{ label: t("confirmEmail.confirm"), onClick: openConfirmEmail }}
+        dismiss={{
+          label: t("confirmEmail.dismiss"),
+          onClick: () => {
+            dismissConfirmStripe(unconfirmedEmail);
+            document.getElementById(MAIN_ID)?.focus();
+          },
+        }}
       />
     );
   }

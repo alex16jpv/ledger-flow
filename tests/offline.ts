@@ -6,6 +6,7 @@ import {
   test,
   uniqueEmail,
 } from "./fixtures";
+import { TEST_CAPTCHA } from "./mailpit";
 import { SW_PATH } from "./sw-path";
 
 // The suite runs on its own port, and a wrong origin is a `403 UNTRUSTED_ORIGIN`.
@@ -64,6 +65,7 @@ export async function freshUser(
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: {
+      captcha: TEST_CAPTCHA,
       name: `Offline ${tag}`,
       email,
       password,

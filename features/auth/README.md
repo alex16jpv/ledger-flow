@@ -46,6 +46,14 @@ its box when Cloudflare has doubts. Its script loads the first time one of those
 in the bundle. The flow exists only where `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set: without a key
 there is no captcha, the backend refuses to send, and Sign in keeps the link inactive.
 
+**Confirming the email** (T-210): while the session's email is not confirmed the app frame paints the
+amber `verify` stripe, last in the order of the sync stripes, and Settings › Password & email says it
+too. Confirm opens one sheet (`ConfirmEmailSheet`, mounted by the frame and opened from anywhere through
+`lib/session/confirm-email`), which asks `/me` again and opens on the code when one is live or on Send
+code when none is; both sends carry Cloudflare's check. Sign up sends a `register` token, so the backend
+emails the code at once. The email's two links land on `/verify` and `/not-me`, which do nothing until
+their one button is tapped, like `/reset`. Nothing else waits for the confirmation: only invitations.
+
 **A reset of an account that never confirmed its email** may open "Keep what's in this account?"
 (`/keep-or-start-fresh`, the owner's decision 12). Until it is answered the app frame opens nothing of
 the account — no mirror, no screens — and sends every visit, and every sign-in, there. Start fresh is

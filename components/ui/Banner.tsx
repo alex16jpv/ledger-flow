@@ -4,6 +4,7 @@ import {
   CloudCheck,
   CloudDownload,
   LogIn,
+  Mail,
   WifiOff,
   X,
 } from "lucide-react";
@@ -13,7 +14,8 @@ import { iconProps } from "@/lib/icons/sizes";
 
 import { cn } from "./cn";
 
-export type BannerVariant = "offline" | "online" | "error" | "signedout" | "blocked" | "update";
+export type BannerVariant =
+  "offline" | "online" | "error" | "signedout" | "blocked" | "update" | "verify";
 
 const VARIANT: Record<BannerVariant, string> = {
   offline:
@@ -24,6 +26,8 @@ const VARIANT: Record<BannerVariant, string> = {
     "bg-warning-soft text-warning border-b-[color-mix(in_oklab,var(--warning)_25%,transparent)]",
   blocked: "bg-danger-soft text-danger",
   update: "bg-info-soft text-info",
+  verify:
+    "bg-warning-soft text-warning border-b-[color-mix(in_oklab,var(--warning)_25%,transparent)]",
 };
 
 const ICON: Record<BannerVariant, typeof WifiOff> = {
@@ -33,6 +37,7 @@ const ICON: Record<BannerVariant, typeof WifiOff> = {
   signedout: LogIn,
   blocked: CloudAlert,
   update: CloudDownload,
+  verify: Mail,
 };
 
 export interface BannerAction {

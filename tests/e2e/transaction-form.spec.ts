@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "../fixtures";
+import { TEST_CAPTCHA } from "../mailpit";
 import { freshUser, signInAs, vaultState } from "../offline";
 import { expectNoAxeViolations } from "./axe";
 
@@ -171,6 +172,7 @@ test("a point typed in Spanish is the decimal, not a thousands group", async ({
   const signedUp = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: {
+      captcha: TEST_CAPTCHA,
       name: "Decimal E2E",
       email: uniqueEmail("decimal"),
       password: "LedgerFlow!2026",
@@ -210,6 +212,7 @@ test("a form opened before the profile arrives dates the movement in the user's 
   const signedUp = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: {
+      captcha: TEST_CAPTCHA,
       name: "Madrid E2E",
       email: uniqueEmail("madrid"),
       password: "LedgerFlow!2026",
@@ -338,7 +341,12 @@ test("adjusting a card asks what it owes and books the difference as debt", asyn
   // Its own user and its own card: the two projects run this at once and used to fight over the seed.
   const signedUp = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "Adjust E2E", email: uniqueEmail("adjust"), password: "LedgerFlow!2026" },
+    data: {
+      captcha: TEST_CAPTCHA,
+      name: "Adjust E2E",
+      email: uniqueEmail("adjust"),
+      password: "LedgerFlow!2026",
+    },
   });
   expect(signedUp.ok()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
@@ -428,6 +436,7 @@ test("an income is not offered a card or a loan, and the server refuses one anyw
   const created = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: {
+      captcha: TEST_CAPTCHA,
       name: "Rules E2E",
       email: uniqueEmail("rules"),
       password: "LedgerFlow!2026",
@@ -507,6 +516,7 @@ test("a transfer can be paid from somewhere else, and only into an account that 
   const created = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: {
+      captcha: TEST_CAPTCHA,
       name: "Outside E2E",
       email: uniqueEmail("outside"),
       password: "LedgerFlow!2026",
@@ -571,7 +581,12 @@ test("a loan instalment is saved as a payment and an interest expense", async ({
 }) => {
   const signedUp = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "Instalment E2E", email: uniqueEmail("instalment"), password: "LedgerFlow!2026" },
+    data: {
+      captcha: TEST_CAPTCHA,
+      name: "Instalment E2E",
+      email: uniqueEmail("instalment"),
+      password: "LedgerFlow!2026",
+    },
   });
   expect(signedUp.ok()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);

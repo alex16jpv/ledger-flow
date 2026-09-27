@@ -14,7 +14,7 @@ const base: Flags = {
   exportTransactions: false,
   importTransactions: false,
   forgotPassword: env.NEXT_PUBLIC_TURNSTILE_SITE_KEY !== undefined,
-  emailVerification: false,
+  emailVerification: env.NEXT_PUBLIC_TURNSTILE_SITE_KEY !== undefined,
   componentCatalog: true,
   devLogin: false,
 };

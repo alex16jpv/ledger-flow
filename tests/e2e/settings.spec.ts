@@ -1,4 +1,5 @@
 import { expect, test, uniqueEmail } from "../fixtures";
+import { TEST_CAPTCHA } from "../mailpit";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
@@ -9,7 +10,13 @@ async function signedInPage(
   const email = uniqueEmail("settings");
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "Settings E2E", email, password: "LedgerFlow!2026", locale: "en" },
+    data: {
+      captcha: TEST_CAPTCHA,
+      name: "Settings E2E",
+      email,
+      password: "LedgerFlow!2026",
+      locale: "en",
+    },
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
@@ -70,7 +77,7 @@ test("a new user edits the profile, changes currency and time zone, reviews sess
   const password = "LedgerFlow!2026";
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "Settings E2E", email, password },
+    data: { captcha: TEST_CAPTCHA, name: "Settings E2E", email, password },
   });
   expect(registered.ok()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);

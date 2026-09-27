@@ -15,6 +15,7 @@ import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { setLocalOnly } from "@/lib/network/local-only";
 import { activateWaitingWorker } from "@/lib/pwa/registration";
 import { reportUpdateWaiting, resurfaceUpdate, updateStore } from "@/lib/pwa/update";
+import { confirmEmailStore } from "@/lib/session/confirm-email";
 import { renderWithProviders } from "@/lib/testing/render";
 import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 
@@ -58,13 +59,16 @@ afterEach(async () => {
   resetSynced();
   connectivityStore.reset();
   updateStore.reset();
+  confirmEmailStore.reset();
   setLocalOnly(false);
   vi.mocked(activateWaitingWorker).mockReset();
   setCurrentVault(null);
   await wipeVaults();
 });
 
-const render = (props: { signedOut?: boolean; onSignIn?: () => void } = {}) =>
+const render = (
+  props: { signedOut?: boolean; onSignIn?: () => void; unconfirmedEmail?: string } = {},
+) =>
   renderWithProviders(
     <ToastProvider>
       <ConnectionBanner {...props} />
@@ -294,5 +298,56 @@ describe("ConnectionBanner", () => {
     await userEvent.click(screen.getByRole("button", { name: "See all" }));
 
     expect(push).toHaveBeenCalledWith("/sync");
+  });
+
+  describe("an email not confirmed", () => {
+    const EMAIL = "ada@ledgerflow.test";
+
+    it("asks last, opens the sheet, and a ✕ puts it away for that address only", async () => {
+      await queueOf([]);
+      const { rerender } = renderWithProviders(
+        <main id="main" tabIndex={-1}>
+          <ConnectionBanner unconfirmedEmail={EMAIL} />
+        </main>,
+      );
+      const stripe = screen.getByRole("status");
+      expect(stripe).toHaveTextContent("Confirm your email.");
+      expect(stripe).toHaveTextContent("You need it to invite people to Shared and to be invited.");
+
+      await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
+      expect(confirmEmailStore.getSnapshot().sheetOpen).toBe(true);
+
+      await userEvent.click(screen.getByRole("button", { name: "Not now" }));
+      expect(screen.queryByText("Confirm your email.")).not.toBeInTheDocument();
+      expect(screen.getByRole("main")).toHaveFocus();
+
+      rerender(
+        <main id="main" tabIndex={-1}>
+          <ConnectionBanner unconfirmedEmail="new@ledgerflow.test" />
+        </main>,
+      );
+      expect(screen.getByRole("status")).toHaveTextContent("Confirm your email.");
+    });
+
+    it("waits behind every other stripe, the new version included", async () => {
+      await queueOf([]);
+      reportUpdateWaiting();
+      render({ unconfirmedEmail: EMAIL });
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "A new version of Ledger Flow is ready.",
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Not now" }));
+      expect(screen.getByRole("status")).toHaveTextContent("Confirm your email.");
+
+      reportOnline(false);
+      expect(await screen.findByRole("status")).toHaveTextContent("You’re offline.");
+    });
+
+    it("never shows for a session that is confirmed", async () => {
+      await queueOf([]);
+      render();
+      expect(screen.queryByText("Confirm your email.")).not.toBeInTheDocument();
+    });
   });
 });

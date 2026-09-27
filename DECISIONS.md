@@ -5,6 +5,47 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-27 · Confirming the email: the stripe, the code sheet and the two link pages (T-210)
+
+- **One sheet, mounted by the app frame and opened through a store** (`lib/session/confirm-email.ts`).
+  The stripe, Settings › Profile & security and both places in Shared open the same sheet, and a feature
+  may not import another, so what they share is a store in `lib`, not a component. The sheet lives in
+  `features/auth` because it reuses that feature's pieces as they are (the code field, the Resend block
+  of the reset, the captcha failure, the limits). Alternative: one sheet per screen, three copies that
+  drift.
+- **The sheet's code loads the first time it opens** (`next/dynamic`), and stays mounted after, so a
+  second opening neither fetches the chunk nor remounts the dialog: statically imported by the frame it put 8 kB gz on every screen (229.2 of
+  the 230 kB budget); loaded on demand it costs 0.6 kB.
+- **The sheet asks `/me` again each time it opens** and shows a skeleton until it answers, because the
+  code's state (`emailVerification`: live, sent when, resend when) is only true right then: another tab,
+  the email's link or a later email may have changed it, and a sign-in or a profile save carries no such
+  field (`SessionProfile`). Offline it opens at once with what it had, disabled. An account confirmed
+  meanwhile closes it with "Email confirmed".
+- **The stripe's ✕ is kept in memory, per address** (`dismissConfirmStripe`): it comes back on the next load, as the spec asks, and
+  at once for a new address saved in Profile & security, whose confirmation is new too.
+- **The flow exists where a Turnstile site key is set** (`emailVerification` follows the same key as
+  `forgotPassword`): Send code, Resend and the register's email all need a token. Without a key nothing
+  asks to confirm, and `/verify` and `/not-me` are 404.
+- **Sign up sends a `register` token when the flow exists**, so the backend emails the code right away and
+  the sheet opens on the code. `CAPTCHA_UNAVAILABLE` there says nothing was created, instead of the "your
+  account may already exist" of any other 5xx.
+- **Invitations are held in the UI by the profile's `emailVerified`**, not only by the backend's `403`:
+  the sheet warns and disables Invite and Invite again, and the invitations' place says they wait. The
+  backend's switch (`EMAIL_VERIFICATION_REQUIRED`) is off until the owner turns it on after this ships, so
+  in between the UI already asks for what the server will: the owner's decision 3. Received invitations
+  are not even asked for until the profile is known and confirmed, since `GET /invitations` answers
+  `403` then. A `403 EMAIL_NOT_VERIFIED` anyway (the email changed elsewhere) says so and asks `/me`
+  again.
+- **The BFF has its own handlers for the three email routes** (`/api/auth/verify`, `/resend`, `/not-me`)
+  and the generic proxy now refuses `auth/email/*` and `auth/password/*`: Resend has to carry the device
+  cookie, the link routes must work without a session, and only named routes are under Vercel's rate
+  rule (the email guide's step 9). Found on the way: the auth handlers answered a backend that could not
+  be reached with Next's bare 500 instead of the `503 DB_UNAVAILABLE` every proxied route gives; they now
+  go through `withBackend`.
+- **The e2e suite runs with `EMAIL_VERIFICATION_REQUIRED` on**, as production will, so the shared specs
+  register with Cloudflare's dummy token and confirm through Mailpit. The seed user stays unconfirmed, as
+  every account from before email is: the stripe shows in the suite as it will in production.
+
 ## 2026-09-26 · Forgot your password?, its captcha and "Keep what's in this account?" (T-208)
 
 - **The flow is on where a Turnstile site key is set** (`forgotPassword` reads

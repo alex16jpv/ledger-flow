@@ -86,6 +86,17 @@ describe("generic API proxy", () => {
       headers: { origin: APP, cookie: "__Host-access=tok" },
     });
     expect((await POST(blocked, context("auth", "refresh"))).status).toBe(404);
+    for (const segments of [
+      ["auth", "email", "resend"],
+      ["auth", "email", "verify"],
+      ["auth", "password", "forgot"],
+    ]) {
+      const email = new NextRequest(`${APP}/api/${segments.join("/")}`, {
+        method: "POST",
+        headers: { origin: APP, cookie: "__Host-access=tok" },
+      });
+      expect((await POST(email, context(...segments))).status).toBe(404);
+    }
     const sessions = new NextRequest(`${APP}/api/auth/sessions`, {
       headers: { cookie: "__Host-access=tok" },
     });

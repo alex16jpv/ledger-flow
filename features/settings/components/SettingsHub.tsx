@@ -32,6 +32,7 @@ import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { LOGIN_PATH } from "@/lib/auth/routes";
 import { env } from "@/lib/env";
+import { isEnabled } from "@/lib/flags";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { Link } from "@/lib/i18n/navigation";
 import { useRouter } from "@/lib/i18n/navigation";
@@ -44,6 +45,7 @@ import { useInstallPrompt } from "@/lib/pwa/install";
 import { devicePlatform } from "@/lib/pwa/platform";
 import { applyUpdate, updateStore } from "@/lib/pwa/update";
 import { useMounted } from "@/lib/react/useMounted";
+import { emailUnconfirmed } from "@/lib/session/confirm-email";
 import { useSession } from "@/lib/session/SessionProvider";
 import { useAppUser } from "@/lib/session/useAppUser";
 import { useTheme } from "@/lib/theme";
@@ -154,6 +156,7 @@ export function SettingsHub() {
   >(null);
   // F-82: the profile card greets and draws initials, so it reads the mirror too.
   const user = useAppUser();
+  const unconfirmed = isEnabled("emailVerification") && emailUnconfirmed(user);
   const currencyLocked = hasAccounts.data !== false;
 
   return (
@@ -232,7 +235,14 @@ export function SettingsHub() {
           icon={<Lock {...iconProps("sm")} />}
           color="GRAY"
           title={t("settings.credentials.title")}
-          meta={t("settings.credentials.subtitle")}
+          meta={
+            unconfirmed
+              ? t("settings.credentials.notConfirmedMeta")
+              : t("settings.credentials.subtitle")
+          }
+          right={
+            unconfirmed && <Badge tone="warning">{t("settings.credentials.notConfirmed")}</Badge>
+          }
           href="/settings/profile"
         />
         <SettingsRow

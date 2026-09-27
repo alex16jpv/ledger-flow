@@ -14,8 +14,16 @@ import { REQUEST_ID_HEADER } from "./request-id";
 
 export const PROXY_BODY_LIMIT_BYTES = 64_000;
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-// Session endpoints have dedicated handlers; the proxy must never forward raw tokens for them.
-const BLOCKED_PREFIXES = ["auth/login", "auth/register", "auth/refresh", "auth/logout", "auth/me"];
+// Session and email endpoints have dedicated handlers, and only those carry the Vercel rate rule.
+const BLOCKED_PREFIXES = [
+  "auth/login",
+  "auth/register",
+  "auth/refresh",
+  "auth/logout",
+  "auth/me",
+  "auth/password",
+  "auth/email",
+];
 const FORWARDED_RESPONSE_HEADERS = [
   "content-type",
   REQUEST_ID_HEADER,

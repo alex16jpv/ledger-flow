@@ -219,6 +219,31 @@
       "detailsSubtitle": "Empezar de cero no conserva nada de antes, ni siquiera el nombre. Puedes cambiar estos datos después en Ajustes.",
       "namePlaceholder": "Tu nombre",
       "offline": "Responder necesita conexión."
+    },
+    "verify": {
+      "title": "Confirma tu correo",
+      "body": "Usa el botón para confirmar que la dirección a la que llegó este correo es la de tu cuenta de Ledger Flow.",
+      "submit": "Confirmar correo",
+      "doneTitle": "Correo confirmado",
+      "doneBody": "Ya puedes invitar a gente en Shared y aceptar sus invitaciones.",
+      "deadBody": "Un enlace de confirmación sirve durante 24 horas y una sola vez, y pedir otro código lo anula."
+    },
+    "notMe": {
+      "title": "¿Eliminar la cuenta que usó tu dirección?",
+      "body": "Alguien se registró en Ledger Flow con esta dirección y nunca la confirmó. Esto elimina esa cuenta y todo lo que tiene, para siempre, y libera tu dirección.",
+      "warningTitle": "Si te registraste tú, no lo hagas.",
+      "warningBody": "Usa el código o el botón Confirmar correo del mismo mensaje.",
+      "submit": "Eliminar esa cuenta",
+      "keep": "No la elimines",
+      "doneTitle": "Esa cuenta ya no existe",
+      "doneBody": "Tu dirección está libre: puedes crear tu propia cuenta con ella.",
+      "createAccount": "Crear cuenta",
+      "deadBody": "Solo sirve mientras la cuenta no esté confirmada. Si no la confirmaste tú, ¿Olvidaste tu contraseña? te la devuelve.",
+      "forgot": "¿Olvidaste tu contraseña?"
+    },
+    "link": {
+      "openApp": "Abrir Ledger Flow",
+      "offline": "Esto necesita conexión."
     }
   },
   "onboarding": {
@@ -351,7 +376,11 @@
       "currentPassword": "Contraseña actual",
       "reauthNote": "Para cambiar tu correo o tu contraseña, confirma tu contraseña actual. Por seguridad, tus otros dispositivos tendrán que iniciar sesión de nuevo.",
       "saved": "Perfil actualizado",
-      "savedReauth": "Perfil actualizado. Se cerró la sesión en tus otros dispositivos."
+      "savedReauth": "Perfil actualizado. Se cerró la sesión en tus otros dispositivos.",
+      "notConfirmedMeta": "Tu correo aún no está confirmado",
+      "notConfirmed": "Sin confirmar",
+      "notConfirmedHelp": "Confírmalo para invitar a gente en Shared y para que te inviten. <confirm>Confírmalo</confirm>",
+      "savedNewEmail": "Revisa {email}: confírmalo para usar las invitaciones de Shared"
     },
     "sessions": {
       "title": "Sesiones activas",
@@ -769,6 +798,22 @@
       "body": "Recargar tarda un segundo. No se pierde nada de lo que guardaste.",
       "reload": "Recargar",
       "dismiss": "Ahora no"
+    },
+    "confirmEmail": {
+      "title": "Confirma tu correo.",
+      "body": "Lo necesitas para invitar a gente en Shared y para que te inviten.",
+      "confirm": "Confirmar",
+      "dismiss": "Ahora no",
+      "sheetTitle": "Confirma tu correo",
+      "sent": "Enviamos un código de 6 cifras a <b>{email}</b>. Sirve durante 24 horas.",
+      "willSend": "Enviaremos un código de 6 cifras a <b>{email}</b>.",
+      "submit": "Confirmar",
+      "send": "Enviar código",
+      "wrongAddress": "¿Correo equivocado? <change>Cámbialo</change>",
+      "offline": "Confirmar tu correo necesita conexión.",
+      "sendFailedTitle": "No pudimos enviar el correo.",
+      "sendFailedBody": "Vuelve a intentarlo en unos minutos.",
+      "done": "Correo confirmado"
     }
   },
   "dev": {
@@ -931,7 +976,12 @@
     "CAPTCHA_INVALID": "No pudimos comprobar que eres una persona. Inténtalo de nuevo.",
     "CAPTCHA_UNAVAILABLE": "Algo falló de nuestro lado. No cambió nada: inténtalo de nuevo.",
     "KEEP_OR_START_FRESH_CLOSED": "Esa pregunta ya se respondió.",
-    "START_FRESH_IN_PROGRESS": "Todavía estamos preparando tu nuevo comienzo. Inténtalo en un minuto."
+    "START_FRESH_IN_PROGRESS": "Todavía estamos preparando tu nuevo comienzo. Inténtalo en un minuto.",
+    "EMAIL_NOT_VERIFIED": "Primero confirma tu correo: las invitaciones lo esperan.",
+    "EMAIL_ALREADY_VERIFIED": "Tu correo ya está confirmado.",
+    "EMAIL_CODE_INVALID": "Ese código no es correcto. Revisa el último correo que te enviamos.",
+    "EMAIL_CODE_EXPIRED": "Este código ya no sirve: venció o se probó demasiadas veces. Envía uno nuevo.",
+    "EMAIL_SEND_FAILED": "No pudimos enviar el correo. Vuelve a intentarlo en unos minutos."
   },
   "validation": {
     "required": "Este campo es obligatorio.",
@@ -1760,7 +1810,8 @@
       "answeredFoot": "Contestadas aquí o en otro dispositivo. Se van la próxima vez que abras Shared.",
       "offline": "Contestar necesita conexión: quien te invitó recibe tu respuesta, y solo el servidor puede comprobar que la invitación sigue en pie.",
       "alreadyIn": "Ya estás en este grupo por otra invitación.",
-      "otherCurrencyRefused": "Este grupo está en otra moneda que la tuya, así que solo se puede rechazar."
+      "otherCurrencyRefused": "Este grupo está en otra moneda que la tuya, así que solo se puede rechazar.",
+      "confirmFirst": "Las invitaciones para ti aparecen aquí cuando confirmes tu correo. <confirm>Confírmalo</confirm>"
     },
     "invite": {
       "door": "Invítalos a ver este grupo",
@@ -1790,7 +1841,8 @@
       "stopAgain": "Para que lo vuelva a ver, invítalo otra vez.",
       "stopped": "{name} ya no ve este grupo",
       "withdrawn": "Se retiró la invitación a {name}",
-      "left": "{email} · salió {date}"
+      "left": "{email} · salió {date}",
+      "confirmFirst": "<b>Confirma tu correo para invitar a gente.</b> Una invitación sale con tu dirección, así que primero tiene que estar confirmada. <confirm>Confirmar correo</confirm>"
     },
     "joined": {
       "section": "Compartidos contigo",

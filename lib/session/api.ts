@@ -1,8 +1,10 @@
 import { api } from "@/lib/api/client";
-import type { User } from "@/types/api";
+import type { User, UserWithEmailVerification } from "@/types/api";
+
+export type SessionProfile = User & Partial<Pick<UserWithEmailVerification, "emailVerification">>;
 
 export interface SessionUser {
-  user: User;
+  user: SessionProfile;
 }
 
 export function fetchCurrentUser(): Promise<SessionUser> {
