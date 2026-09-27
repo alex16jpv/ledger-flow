@@ -4,7 +4,30 @@ import userEvent from "@testing-library/user-event";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
 
+import { carriedEmail, carryEmail } from "../carry";
 import { LoginForm } from "./LoginForm";
+
+vi.mock("@/lib/i18n/navigation", () => ({
+  Link: ({
+    children,
+    href,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    href: string;
+    onClick?: () => void;
+  }) => (
+    <a
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
+        onClick?.();
+      }}
+    >
+      {children}
+    </a>
+  ),
+}));
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { headers: { "content-type": "application/json" }, ...init });
@@ -19,16 +42,51 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderForm(onSuccess = vi.fn(), knownEmail?: string | null) {
+function renderForm(
+  onSuccess = vi.fn(),
+  knownEmail?: string | null,
+  forgotPasswordEnabled = false,
+) {
   renderWithProviders(
     <QueryProvider>
-      <LoginForm onSuccess={onSuccess} forgotPasswordEnabled={false} knownEmail={knownEmail} />
+      <LoginForm
+        onSuccess={onSuccess}
+        forgotPasswordEnabled={forgotPasswordEnabled}
+        knownEmail={knownEmail}
+      />
     </QueryProvider>,
   );
   return onSuccess;
 }
 
 describe("LoginForm", () => {
+  beforeEach(() => {
+    carryEmail("");
+  });
+
+  it("opens Forgot your password? with the email typed so far", async () => {
+    renderForm(vi.fn(), null, true);
+    await userEvent.type(screen.getByLabelText("Email"), "ada@ledgerflow.test");
+    const forgot = screen.getByRole("link", { name: "Forgot your password?" });
+    expect(forgot).toHaveAttribute("href", "/forgot");
+    await userEvent.click(forgot);
+    expect(carriedEmail()).toBe("ada@ledgerflow.test");
+  });
+
+  it("shows Forgot your password? inactive where no captcha is configured", () => {
+    renderForm();
+    expect(screen.queryByRole("link", { name: /Forgot your password/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/soon/)).toBeInTheDocument();
+  });
+
+  it("arrives with the email another screen carried over, before the device's", async () => {
+    carryEmail("typed@elsewhere.test");
+    renderForm(vi.fn(), "ada@ledgerflow.test");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Email")).toHaveValue("typed@elsewhere.test");
+    });
+  });
+
   it("arrives with the device's email written and the password focused", async () => {
     renderForm(vi.fn(), "ada@ledgerflow.test");
     await waitFor(() => {

@@ -8,11 +8,18 @@ describe("buildCsp", () => {
       reportOnly: false,
       reportUri: "/api/csp-report",
     });
-    expect(csp).toContain("script-src 'self' 'nonce-abc' 'strict-dynamic'");
+    expect(csp).toContain(
+      "script-src 'self' 'nonce-abc' 'strict-dynamic' https://challenges.cloudflare.com",
+    );
     expect(csp).toContain("connect-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("upgrade-insecure-requests");
     expect(csp).not.toContain("unsafe-eval");
+  });
+
+  it("lets in Cloudflare's check and no other frame", () => {
+    const csp = buildCsp({ nonce: "n", isDevelopment: false, reportOnly: false, reportUri: "/r" });
+    expect(csp).toContain("frame-src https://challenges.cloudflare.com;");
   });
 
   it("allows eval and same-origin framing only in development", () => {

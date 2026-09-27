@@ -5,6 +5,46 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-26 · Forgot your password?, its captcha and "Keep what's in this account?" (T-208)
+
+- **The flow is on where a Turnstile site key is set** (`forgotPassword` reads
+  `NEXT_PUBLIC_TURNSTILE_SITE_KEY`), not per environment. Without a key there is no captcha to send,
+  and the backend refuses to email without its secret, so a deployment before the owner sets up
+  Turnstile and SES (T-206) keeps Sign in's link inactive instead of offering a flow that fails. Vercel
+  previews stay off too: the widget only allows the production hostname. Alternative: a per-environment
+  flag, which would need a code change to turn on and would be on in production before the backend can
+  send.
+- **Turnstile's real script in the e2e suite**, with Cloudflare's test site key, rather than a stub: the
+  backend already calls Cloudflare's `siteverify` with the test secret, and the real script is what
+  proves the CSP (`script-src` and `frame-src` for `challenges.cloudflare.com`) and the explicit render.
+  The widget renders once per screen (`useHumanCheck`), invisible (`interaction-only`, `execute`), and
+  a token is asked for at the moment of sending and reset before the next one: it works once. Its slot
+  is clipped to zero height rather than hidden, because the frame has to stay rendered to run unseen.
+- **What one access screen hands the next lives in memory** (`features/auth/carry.ts`): the typed email,
+  the code step, the link's token. The URL would put an address in access logs, and storage outlives
+  the tab; memory also survives the language chip, which remounts the page. A full reload loses them,
+  which for the link page is its own state ("This page lost its link").
+- **The link page reads its fragment through `useSyncExternalStore`**: the server cannot see a fragment,
+  so it renders a placeholder, and the first client read strips the token and keeps it, idempotently.
+  The strip keeps Next's history state: Next's patched `replaceState` dispatches a route restore that
+  stalled the navigation after the reset. Next's router still holds the boot address, fragment included,
+  and would write it back on a `router.refresh()`, which this page never calls; the e2e checks the
+  address again after typing.
+- **The question after the reset is a page of the access frame** (`/keep-or-start-fresh`), and the app
+  frame, when `/me` says it is open, starts no mirror, renders no screen and sends the visit there; Sign
+  in and the reset go there directly. Its steps are in the query (`?step=confirm|details`) so Back and
+  the language chip keep them. When `/me` cannot answer, the pull refuses a feed whose profile carries
+  the open question (`QuestionOpenError`) and writes nothing. Start fresh is **one request** with the new details, as the backend
+  expects; Delete everything and start only opens Your details. The access frame has no session
+  provider, so it renews an expired access token once itself (`withFreshSession`).
+- **`409 RESYNC_REQUIRED` drops the copy and keeps the queue** (`pullChanges`), like "Force full
+  resync": invariant 7 says unsent work is sacred, and what it holds for erased rows comes back refused
+  and waits in Sync. The device that answered Start fresh also drops its copy right away. Alternative:
+  discarding the queue, which would lose writes made offline by the person who now owns the account.
+- **Also fixed here:** the `#start-fresh-details` plate drew the confirmation (`neverConfirmed("details")`
+  fell into the `true` branch), the language row of Create account used a blue tile where its plate has
+  teal, and the 429 alert of Sign in now shows its clock, as the plate does.
+
 ## 2026-09-26 · The mirror judges the budget list before paging it (T-161)
 
 - **What was wrong:** `GET /budgets` read a page and only then dropped expired CUSTOM budgets and
@@ -1816,7 +1856,8 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   per-IP budget of the CI backend for every later test, so the countdown is covered by a Testing
   Library test with a mocked 429 (mocks are a fallback: the suite tests against the real API wherever it can).
 - **"Forgot your password?"** is rendered inactive with "(soon)" behind the `forgotPassword` flag
-  until the backend has email delivery (TRACKING-R2 future tasks).
+  until the backend has email delivery (TRACKING-R2 future tasks). _Superseded 2026-09-26 (T-208): the flag
+  now follows the Turnstile site key, and the flow exists wherever one is set._
 - **Element boundaries** now match full paths (`partialMatch: false`): the previous tail matching
   classified `features/*/components/*` as `components/ui`.
 

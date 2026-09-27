@@ -13,7 +13,7 @@ type Flags = Readonly<Record<FeatureFlag, boolean>>;
 const base: Flags = {
   exportTransactions: false,
   importTransactions: false,
-  forgotPassword: false,
+  forgotPassword: env.NEXT_PUBLIC_TURNSTILE_SITE_KEY !== undefined,
   emailVerification: false,
   componentCatalog: true,
   devLogin: false,

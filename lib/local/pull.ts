@@ -1,6 +1,8 @@
 import { api } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
 import { SESSION_USER_HEADER } from "@/lib/auth/cookies";
 import { sessionIsFor } from "@/lib/auth/marker";
+import { forgetOfflineReadyAnnouncement } from "@/lib/pwa/readiness";
 import type { SyncChangesResponse } from "@/types/api";
 
 import { rememberServerTime } from "./clock";
@@ -8,8 +10,10 @@ import type { VaultHandle } from "./db";
 import { type WriteTransaction, writeTransaction } from "./outbox/queue";
 import { reconcileContext, reconcileRow } from "./outbox/reconcile";
 import {
+  advanceMirrorEpoch,
   joinedExpenseRecord,
   joinedGroupRecord,
+  MIRROR_STORES,
   PROFILE_KEY,
   profileRecord,
   readMirrorEpoch,
@@ -60,6 +64,13 @@ export class PullSupersededError extends Error {
   constructor() {
     super("The offline copy was emptied during this pull");
     this.name = "PullSupersededError";
+  }
+}
+
+export class QuestionOpenError extends Error {
+  constructor() {
+    super("The account waits for Keep what's in this account?, so nothing of it is downloaded");
+    this.name = "QuestionOpenError";
   }
 }
 
@@ -131,6 +142,7 @@ async function applyPage(
   epoch: number,
 ): Promise<Applied> {
   const { changes, pagination } = page;
+  if (changes.user?.keepOrStartFresh) throw new QuestionOpenError();
   const tx = writeTransaction(handle.db);
   // T-164: the first request of the transaction, so a purge lands wholly before this page or after it.
   if ((await readMirrorEpoch(tx.objectStore("meta"))) !== epoch) throw new PullSupersededError();
@@ -213,6 +225,23 @@ async function applyPage(
   return { news: news || readdressed, readdressed, ready };
 }
 
+const resyncRequired = (error: unknown) =>
+  error instanceof ApiError && error.code === "RESYNC_REQUIRED";
+
+async function dropCopy(handle: VaultHandle, epoch: number): Promise<number> {
+  const tx = writeTransaction(handle.db);
+  const meta = tx.objectStore("meta");
+  if ((await readMirrorEpoch(meta)) !== epoch) throw new PullSupersededError();
+  for (const name of MIRROR_STORES) await tx.objectStore(name).clear();
+  await meta.delete("syncCursor");
+  await meta.delete("syncedAt");
+  await advanceMirrorEpoch(meta);
+  await tx.done;
+  markSuggestionsStale();
+  forgetOfflineReadyAnnouncement();
+  return epoch + 1;
+}
+
 export async function pullChanges(
   handle: VaultHandle,
   options: PullOptions = {},
@@ -220,7 +249,7 @@ export async function pullChanges(
   const { limit = PULL_PAGE_LIMIT, fetchPage = requestPage } = options;
   const start = handle.db.transaction("meta");
   const stored = await start.store.get("syncCursor");
-  const epoch = await readMirrorEpoch(start.store);
+  let epoch = await readMirrorEpoch(start.store);
   let cursor = typeof stored?.value === "string" ? stored.value : undefined;
   let pages = 0;
   let rows = 0;
@@ -228,7 +257,16 @@ export async function pullChanges(
 
   for (;;) {
     if (!sessionIsFor(handle.userId)) throw new SessionChangedError(handle.userId);
-    const page = await fetchPage({ cursor, limit }, handle.userId);
+    let page: SyncChangesResponse;
+    try {
+      page = await fetchPage({ cursor, limit }, handle.userId);
+    } catch (error) {
+      if (!resyncRequired(error) || cursor === undefined) throw error;
+      epoch = await dropCopy(handle, epoch);
+      cursor = undefined;
+      changed = true;
+      continue;
+    }
     // F-66: every answer carries the server's clock, needed before there is a refusal to explain.
     await rememberServerTime(handle.db, page.serverTime);
     // Rows are applied by id with put, so the deliberate 60-second overlap of D-14 costs nothing.

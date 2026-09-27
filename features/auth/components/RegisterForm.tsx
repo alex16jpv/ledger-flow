@@ -1,21 +1,18 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Globe, User } from "lucide-react";
+import { User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
-import { LanguageChoiceSheet, useDetectedLocale } from "@/components/shell/LanguageChoice";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { CurrencyPicker } from "@/components/ui/CurrencyPicker";
 import { Field, Input } from "@/components/ui/Field";
-import { Picker } from "@/components/ui/Picker";
-import { Tile } from "@/components/ui/Tile";
-import { TimeZonePicker } from "@/components/ui/TimeZonePicker";
 import { ApiError, presentError } from "@/lib/api/errors";
+import { FORGOT_PATH, LOGIN_PATH } from "@/lib/auth/routes";
+import { isEnabled } from "@/lib/flags";
 import { Link } from "@/lib/i18n/navigation";
 import { type AppLocale } from "@/lib/i18n/routing";
 import { useDeviceDefaults } from "@/lib/i18n/useDeviceDefaults";
@@ -23,9 +20,11 @@ import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
 import type { SessionUser } from "@/lib/session/api";
 
+import { carryEmail } from "../carry";
 import { retryAfterOf, useRegister } from "../hooks";
 import { registerSchema, type RegisterValues } from "../schemas";
 import { PasswordInput } from "./PasswordInput";
+import { ProfileDefaultsFields } from "./ProfileDefaultsFields";
 import { RateLimitAlert } from "./RateLimitAlert";
 
 interface RegisterFormProps {
@@ -38,8 +37,6 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
   const registerMutation = useRegister();
   const defaults = useDeviceDefaults();
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
-  const [languageOpen, setLanguageOpen] = useState(false);
-  const detected = useDetectedLocale();
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -53,6 +50,8 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
   });
   const { errors } = form.formState;
   const consent = useWatch({ control: form.control, name: "consent" });
+  const currency = useWatch({ control: form.control, name: "currency" });
+  const timezone = useWatch({ control: form.control, name: "timezone" });
 
   useEffect(() => {
     if (!defaults) return;
@@ -69,6 +68,10 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
       setRetryAfter(retryAfterOf(error));
     }
   });
+
+  const carryTyped = () => {
+    carryEmail(form.getValues("email"));
+  };
 
   const failure = registerMutation.error;
   const emailTaken = failure instanceof ApiError && failure.code === "EMAIL_TAKEN";
@@ -109,10 +112,31 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
           error={
             emailTaken ? (
               <span>
-                {t("auth.register.emailTaken")}{" "}
-                <Link href="/login" className="font-medium underline">
-                  {t("auth.register.signInLink")}
-                </Link>
+                {t.rich(
+                  isEnabled("forgotPassword")
+                    ? "auth.register.emailTaken"
+                    : "auth.register.emailTakenSignIn",
+                  {
+                    signIn: (chunks) => (
+                      <Link
+                        href={LOGIN_PATH}
+                        onClick={carryTyped}
+                        className="font-medium underline"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
+                    reset: (chunks) => (
+                      <Link
+                        href={FORGOT_PATH}
+                        onClick={carryTyped}
+                        className="font-medium underline"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
+                  },
+                )}
               </span>
             ) : (
               validationMessage(t, errors.email?.message)
@@ -138,60 +162,20 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
             {...form.register("password")}
           />
         </Field>
-        <Field label={t("auth.register.language")} help={t("auth.register.languageHelp")}>
-          {/* F-02: the same value as the chip — the `locale` the account is created with. */}
-          <Picker
-            label={
-              detected === locale
-                ? t("auth.register.languageDetected")
-                : t("auth.register.language")
-            }
-            value={t(`settings.language.${locale}`)}
-            onClick={() => {
-              setLanguageOpen(true);
-            }}
-            leading={
-              <Tile size="sm" color="BLUE">
-                <Globe {...iconProps("sm")} />
-              </Tile>
-            }
-          />
-        </Field>
-        <Field
-          label={t("auth.register.currency")}
-          help={t("auth.register.currencyHelp")}
-          error={validationMessage(t, errors.currency?.message)}
-        >
-          <Controller
-            control={form.control}
-            name="currency"
-            render={({ field }) => (
-              <CurrencyPicker
-                value={field.value || null}
-                onChange={field.onChange}
-                label={t("auth.register.currency")}
-                hint={t("auth.register.currencyDetected")}
-              />
-            )}
-          />
-        </Field>
-        <Field
-          label={t("auth.register.timeZone")}
-          error={validationMessage(t, errors.timezone?.message)}
-        >
-          <Controller
-            control={form.control}
-            name="timezone"
-            render={({ field }) => (
-              <TimeZonePicker
-                value={field.value || null}
-                onChange={field.onChange}
-                label={t("auth.register.timeZone")}
-                hint={t("auth.register.timeZoneDetected")}
-              />
-            )}
-          />
-        </Field>
+        <ProfileDefaultsFields
+          locale={locale}
+          languageHelp
+          currency={currency}
+          onCurrencyChange={(code) => {
+            form.setValue("currency", code, { shouldValidate: form.formState.isSubmitted });
+          }}
+          currencyError={validationMessage(t, errors.currency?.message)}
+          timezone={timezone}
+          onTimezoneChange={(zone) => {
+            form.setValue("timezone", zone, { shouldValidate: form.formState.isSubmitted });
+          }}
+          timezoneError={validationMessage(t, errors.timezone?.message)}
+        />
       </div>
       <Checkbox {...form.register("consent")} error={validationMessage(t, errors.consent?.message)}>
         {t.rich("auth.register.consent", {
@@ -211,12 +195,6 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
       >
         {t("auth.register.submit")}
       </Button>
-      <LanguageChoiceSheet
-        open={languageOpen}
-        onClose={() => {
-          setLanguageOpen(false);
-        }}
-      />
     </form>
   );
 }

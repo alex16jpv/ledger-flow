@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 
 import { POST as logout } from "@/app/api/auth/logout/route";
 import { POST as refresh } from "@/app/api/auth/refresh/route";
-import { authenticate } from "@/lib/auth/handlers";
+import { authenticate, requestPasswordReset } from "@/lib/auth/handlers";
 import { SESSION_END_HEADER } from "@/lib/auth/session-end";
 
 vi.mock("server-only", () => ({}));
@@ -166,6 +166,100 @@ describe("login handler", () => {
     expect(response.headers.get("retry-after")).toBe("60");
     await expect(response.json()).resolves.toMatchObject({ code: "RATE_LIMITED" });
     expect(setCookies(response)).toHaveLength(0);
+  });
+});
+
+describe("forgot-password handler", () => {
+  it("sends the device cookie with the captcha and answers the backend's 202 as it came", async () => {
+    fetchMock.mockResolvedValue(json({ resendAfterSeconds: 60 }, { status: 202 }));
+    const response = await requestPasswordReset(
+      post(
+        "/api/auth/forgot",
+        { email: "a@b.co", captcha: "tok", deviceToken: "forged" },
+        { cookie: "__Secure-device=dev1" },
+      ),
+    );
+    expect(response.status).toBe(202);
+    await expect(response.json()).resolves.toEqual({ resendAfterSeconds: 60 });
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://backend.test/auth/password/forgot");
+    expect(JSON.parse(init?.body as string)).toEqual({
+      email: "a@b.co",
+      captcha: "tok",
+      deviceToken: "dev1",
+    });
+    expect(setCookies(response)).toHaveLength(0);
+  });
+
+  it("drops a device token the browser wrote when the device has no cookie", async () => {
+    fetchMock.mockResolvedValue(json({ resendAfterSeconds: 60 }, { status: 202 }));
+    await requestPasswordReset(
+      post("/api/auth/forgot", { email: "a@b.co", captcha: "tok", deviceToken: "forged" }),
+    );
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      email: "a@b.co",
+      captcha: "tok",
+    });
+  });
+
+  it("answers 502, not an empty 202, when the backend's answer cannot be read", async () => {
+    fetchMock.mockResolvedValue(new Response("", { status: 202 }));
+    const response = await requestPasswordReset(post("/api/auth/forgot", { email: "a@b.co" }));
+    expect(response.status).toBe(502);
+  });
+
+  it("rejects another origin before spending the captcha", async () => {
+    const response = await requestPasswordReset(
+      post("/api/auth/forgot", { email: "a@b.co" }, { origin: "https://evil.example" }),
+    );
+    expect(response.status).toBe(403);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("passes the captcha refusal and the limits through with their code", async () => {
+    fetchMock.mockResolvedValue(
+      json(
+        { error: "TooMany", message: "slow", code: "RATE_LIMITED" },
+        { status: 429, headers: { "retry-after": "240" } },
+      ),
+    );
+    const response = await requestPasswordReset(post("/api/auth/forgot", { email: "a@b.co" }));
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("240");
+    await expect(response.json()).resolves.toMatchObject({ code: "RATE_LIMITED" });
+  });
+});
+
+describe("reset-password handler", () => {
+  it("answers a session like a login, keeping the new device token", async () => {
+    fetchMock.mockResolvedValue(json({ ...tokens, deviceToken: "dev2" }, { status: 200 }));
+    const response = await authenticate(
+      "/auth/password/reset",
+      post("/api/auth/reset", { token: "t".repeat(43), newPassword: "LedgerFlow!2027" }),
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ user: tokens.user });
+    const cookies = setCookies(response);
+    expect(cookies.some((c) => c.startsWith("__Host-access=acc"))).toBe(true);
+    expect(cookies.some((c) => c.startsWith(`__Host-session=${tokens.user.id}.`))).toBe(true);
+    expect(cookies.some((c) => c.startsWith("__Secure-device=dev2"))).toBe(true);
+  });
+
+  it("does not add the device token to a body the backend reads strictly", async () => {
+    fetchMock.mockResolvedValue(json(tokens, { status: 200 }));
+    await authenticate(
+      "/auth/password/reset",
+      post(
+        "/api/auth/reset",
+        { email: "a@b.co", code: "123456", newPassword: "LedgerFlow!2027" },
+        { cookie: "__Secure-device=dev1" },
+      ),
+    );
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      email: "a@b.co",
+      code: "123456",
+      newPassword: "LedgerFlow!2027",
+    });
   });
 });
 

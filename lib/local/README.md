@@ -149,6 +149,16 @@ snapshot down the same code path.
   incomplete copy would read as an empty account.
 - A feed that says `hasMore` while handing back the same cursor would page forever; that is
   `SyncFeedStalledError`, not a retry.
+- **A copy from before a Start fresh is thrown away** (T-207, T-208). Start fresh erases the account's
+  rows for good, with no tombstone the feed could send, so the backend answers a cursor issued before
+  it with `409 RESYNC_REQUIRED`. `pullChanges` then empties the mirror stores, the cursor and
+  `syncedAt` in one transaction that also moves `mirrorEpoch`, and pages again with no cursor: a
+  snapshot. The queue stays, as in "Force full resync" (invariant 7): what it holds for rows that are
+  gone comes back refused and waits in Sync for its owner. A snapshot refused the same way is an error,
+  not another round.
+- **Nothing of an account with "Keep what's in this account?" open is downloaded** (T-208): a page whose
+  profile carries the question is refused before anything is written (`QuestionOpenError`). The app
+  frame already opens no mirror when `/me` says the question is open; this covers a `/me` that failed.
 - **The row the feed sends is not the last word while the queue still holds writes for it** (D-23,
   F-25). `applyPage` hands each row to `outbox/reconcile.ts`, which puts the server's row down and
   projects back on top of it, in `seq` order, every operation on that row that is still `pending` or

@@ -26,6 +26,15 @@ const env = {
   AUTH_IP_RATE_LIMIT_MAX: "10000",
   REFRESH_RATE_LIMIT_MAX: "1000",
   RATE_LIMIT_MAX: "10000",
+  EMAIL_PROVIDERS: "mailpit",
+  MAILPIT_URL: process.env.E2E_MAILPIT_URL ?? "http://localhost:8025",
+  APP_URL: appUrl,
+  TURNSTILE_SECRET: "1x0000000000000000000000000000000AA",
+  // Every run is one IP, one device and a new address per test: only the per-address brakes stay real.
+  EMAIL_IP_HOURLY_MAX: "100000",
+  EMAIL_DEVICE_HOURLY_MAX: "100000",
+  EMAIL_DAILY_CAP: "1000000",
+  EMAIL_MONTHLY_CAP: "10000000",
 };
 
 if (!existsSync(backendDir)) {

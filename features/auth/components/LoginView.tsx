@@ -7,7 +7,7 @@ import { useState } from "react";
 import { AuthHeading } from "@/components/shell/AuthFrame";
 import { Alert } from "@/components/ui/Alert";
 import { readSessionMarker } from "@/lib/auth/marker";
-import { nextAfterSignIn, safeNextPath } from "@/lib/auth/routes";
+import { KEEP_OR_START_FRESH_PATH, nextAfterSignIn, safeNextPath } from "@/lib/auth/routes";
 import { isEnabled } from "@/lib/flags";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 
@@ -32,7 +32,11 @@ export function LoginView() {
         forgotPasswordEnabled={isEnabled("forgotPassword")}
         knownEmail={knownEmail}
         onSuccess={({ user }) => {
-          router.replace(nextAfterSignIn(next, previous?.userId, user.id));
+          router.replace(
+            user.keepOrStartFresh
+              ? KEEP_OR_START_FRESH_PATH
+              : nextAfterSignIn(next, previous?.userId, user.id),
+          );
         }}
       />
       <p className="text-center text-sm text-text-2">
