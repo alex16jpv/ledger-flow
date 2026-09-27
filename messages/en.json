@@ -165,7 +165,10 @@
       "currencyPicker": "Choose your currency",
       "timeZonePicker": "Choose your time zone",
       "consentRequired": "You need to accept the privacy policy to continue.",
-      "emailTakenSignIn": "This email already has an account. <signIn>Sign in</signIn>. If you deleted it, sign up with the password it had to bring it back."
+      "unavailable": {
+        "title": "You can’t create an account here.",
+        "body": "It needs Cloudflare’s check, which this version of the app doesn’t have."
+      }
     },
     "offline": "You’re offline.",
     "sendFailed": "Something went wrong on our side. Nothing changed: try again.",

@@ -1149,7 +1149,7 @@ export type paths = {
         put?: never;
         /**
          * Register a new user
-         * @description Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email and the password of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored); with any other password it answers 409 EMAIL_TAKEN, like a live account. On a 500 the user may still have been created: try login before retrying register. `captcha` is a Cloudflare Turnstile token issued for the action `register`: with it, an account whose email is not confirmed is sent `verify-email` (a 6-digit code and a link, 24 hours); without it, nothing is sent and `GET /users/{id}` shows no live code, so the client offers Send code. A send that fails does not fail the register. The account works before its email is confirmed (`user.emailVerified`); only invitations wait for it.
+         * @description Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email and the password of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored); with any other password it answers 409 EMAIL_TAKEN, like a live account. On a 500 the user may still have been created: try login before retrying register. `captcha` is a Cloudflare Turnstile token issued for the action `register`, asked for when the button is pressed: it works once, and nothing is created without one that passes. An account whose email is not confirmed is sent `verify-email` (a 6-digit code and a link, 24 hours). A send that fails does not fail the register: `GET /users/{id}` then shows no live code, so the client offers Send code. The account works before its email is confirmed (`user.emailVerified`); only invitations wait for it.
          */
         post: {
             parameters: {
@@ -1173,7 +1173,7 @@ export type paths = {
                         "application/json": components["schemas"]["AuthTokens"];
                     };
                 };
-                /** @description Validation error (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID) */
+                /** @description Validation error, a missing captcha among them (code VALIDATION), or Cloudflare refused the captcha token: spent, expired, forged, or issued for another site or action (code CAPTCHA_INVALID). Ask for a new token and try again */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1200,7 +1200,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description A captcha was sent and could not be checked (code CAPTCHA_UNAVAILABLE): nothing was created. Try again */
+                /** @description The captcha could not be checked (code CAPTCHA_UNAVAILABLE): nothing was created. Try again */
                 503: {
                     headers: {
                         [name: string]: unknown;
@@ -6982,7 +6982,7 @@ export type components = {
             /** @enum {string} */
             locale?: "en" | "es";
             deviceToken?: string;
-            captcha?: string;
+            captcha: string;
         };
         ResendVerificationInput: {
             captcha: string;
@@ -7838,7 +7838,7 @@ export type components = {
         UserWithEmailVerification: components["schemas"]["User"] & {
             /** @description What the sheet that confirms the email needs: which of its shapes, and Resend's countdown. Null once the email is confirmed. */
             emailVerification: {
-                /** @description A code sent in the last 24 hours that still has tries: show the code field. False when none was ever sent — accounts from before email, a register without captcha, a send that failed — or it expired or was used up: show Send code. */
+                /** @description A code sent in the last 24 hours that still has tries: show the code field. False when none was ever sent — accounts from before email, a send that failed — or it expired or was used up: show Send code. */
                 codeLive: boolean;
                 /**
                  * Format: date-time

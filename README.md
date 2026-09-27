@@ -23,21 +23,21 @@ npm run dev          # http://localhost:3001
 Validated at build time by `lib/env.ts` (`@t3-oss/env-nextjs` + Zod); a missing variable fails
 the build. `SKIP_ENV_VALIDATION=1` skips the check for tooling that has no environment.
 
-| Variable                                            | Scope  | Purpose                                                                                                                                  |
-| --------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `API_URL`                                           | server | Backend base URL. Only the BFF knows it.                                                                                                 |
-| `API_SECRET`                                        | server | Shared secret sent as `x-api-secret` on every backend call; the backend requires it in production.                                       |
-| `NEXT_PUBLIC_APP_URL`                               | public | Base URL of this deployment (metadata, sitemap, manifest).                                                                               |
-| `NEXT_PUBLIC_CONTACT_EMAIL`                         | public | Contact, support and privacy mailbox.                                                                                                    |
-| `NEXT_PUBLIC_APP_VERSION`                           | public | Tag or commit SHA shown in Settings › About.                                                                                             |
-| `NEXT_PUBLIC_APP_ENV`                               | public | Optional feature-flag environment when it differs from `NODE_ENV` (the e2e build uses `test`).                                           |
-| `NEXT_PUBLIC_SW_PATH`                               | public | Worker the app registers; defaults to `/sw.js`. The e2e build uses `/sw-e2e.js` (F-56).                                                  |
-| `NEXT_DIST_DIR`                                     | build  | Where `next build` writes; defaults to `.next`. e2e uses `.next-e2e`, the gate `.next-gate` (F-56).                                      |
-| `SERWIST_SW_DEST`                                   | build  | Where `serwist build` writes the worker; defaults to `public/sw.js`.                                                                     |
-| `NEXT_PUBLIC_SENTRY_DSN`                            | public | Optional. Enables Sentry error tracking (client, server and edge); unset keeps the SDK disabled.                                         |
-| `NEXT_PUBLIC_VERCEL_ENV`                            | public | Set by Vercel (`production`, `preview`, `development`); used as the Sentry environment.                                                  |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`                    | public | Optional. Cloudflare Turnstile site key for the captcha of Forgot your password?; unset, the flow is off and Sign in shows it as "soon". |
-| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | build  | Deploy pipeline only: source-map upload during `next build`. Absent locally, the build skips it.                                         |
+| Variable                                            | Scope  | Purpose                                                                                                                                                                                                |
+| --------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `API_URL`                                           | server | Backend base URL. Only the BFF knows it.                                                                                                                                                               |
+| `API_SECRET`                                        | server | Shared secret sent as `x-api-secret` on every backend call; the backend requires it in production.                                                                                                     |
+| `NEXT_PUBLIC_APP_URL`                               | public | Base URL of this deployment (metadata, sitemap, manifest).                                                                                                                                             |
+| `NEXT_PUBLIC_CONTACT_EMAIL`                         | public | Contact, support and privacy mailbox.                                                                                                                                                                  |
+| `NEXT_PUBLIC_APP_VERSION`                           | public | Tag or commit SHA shown in Settings › About.                                                                                                                                                           |
+| `NEXT_PUBLIC_APP_ENV`                               | public | Optional feature-flag environment when it differs from `NODE_ENV` (the e2e build uses `test`).                                                                                                         |
+| `NEXT_PUBLIC_SW_PATH`                               | public | Worker the app registers; defaults to `/sw.js`. The e2e build uses `/sw-e2e.js` (F-56).                                                                                                                |
+| `NEXT_DIST_DIR`                                     | build  | Where `next build` writes; defaults to `.next`. e2e uses `.next-e2e`, the gate `.next-gate` (F-56).                                                                                                    |
+| `SERWIST_SW_DEST`                                   | build  | Where `serwist build` writes the worker; defaults to `public/sw.js`.                                                                                                                                   |
+| `NEXT_PUBLIC_SENTRY_DSN`                            | public | Optional. Enables Sentry error tracking (client, server and edge); unset keeps the SDK disabled.                                                                                                       |
+| `NEXT_PUBLIC_VERCEL_ENV`                            | public | Set by Vercel (`production`, `preview`, `development`); used as the Sentry environment.                                                                                                                |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`                    | public | Optional. Cloudflare Turnstile site key for the captcha of Sign up, Forgot your password? and confirming the email; unset, Sign up is off, Sign in shows Forgot as "soon" and nothing asks to confirm. |
+| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | build  | Deploy pipeline only: source-map upload during `next build`. Absent locally, the build skips it.                                                                                                       |
 
 ## Scripts
 
