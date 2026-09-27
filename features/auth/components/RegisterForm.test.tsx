@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { QueryProvider } from "@/lib/query/QueryProvider";
@@ -125,8 +125,14 @@ describe("RegisterForm", () => {
     expect(screen.getByText("You can’t create an account here.")).toBeInTheDocument();
     await fillValid();
     await userEvent.click(screen.getByRole("checkbox"));
-    expect(screen.getByRole("button", { name: "Create account" })).toBeDisabled();
-    await userEvent.type(screen.getByLabelText("Password"), "{Enter}");
+    const button = screen.getByRole("button", { name: "Create account" });
+    expect(button).toBeDisabled();
+    const form = button.closest("form");
+    if (!form) throw new Error("no form");
+    fireEvent.submit(form);
+    await waitFor(() => {
+      expect(screen.queryByText("You need to accept the privacy policy to continue.")).toBeNull();
+    });
     expect(token).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });

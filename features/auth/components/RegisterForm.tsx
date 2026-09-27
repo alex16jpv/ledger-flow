@@ -40,7 +40,7 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
   const t = useTranslations();
   const registerMutation = useRegister();
   const defaults = useDeviceDefaults();
-  const checked = isEnabled("emailVerification");
+  const canRegister = isEnabled("emailVerification");
   const check = useHumanCheck("register");
   const [humanFailed, setHumanFailed] = useState(false);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
@@ -67,7 +67,7 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
   }, [defaults, form]);
 
   const submit = form.handleSubmit(async ({ name, email, password, currency, timezone }) => {
-    if (!checked) return;
+    if (!canRegister) return;
     setHumanFailed(false);
     let captcha: string;
     try {
@@ -118,7 +118,7 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
       noValidate
       className="flex flex-col gap-5"
     >
-      {!checked && (
+      {!canRegister && (
         <Alert tone="warning" title={t("auth.register.unavailable.title")}>
           {t("auth.register.unavailable.body")}
         </Alert>
@@ -208,14 +208,14 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
           ),
         })}
       </Checkbox>
-      <HumanCheckSlot interactive={check.interactive} mount={checked ? check.mount : noSlot}>
+      <HumanCheckSlot interactive={check.interactive} mount={canRegister ? check.mount : noSlot}>
         {humanRefused && <HumanCheckFailed className="mb-5" />}
         <Button
           type="submit"
           size="lg"
           block
           loading={registerMutation.isPending || form.formState.isSubmitting}
-          disabled={!checked || blocked || !consent}
+          disabled={!canRegister || blocked || !consent}
         >
           {t("auth.register.submit")}
         </Button>

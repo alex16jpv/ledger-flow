@@ -41,7 +41,7 @@ the new password, since mail scanners open links. What one access screen hands t
 email, the code already sent, the link's token — lives in memory (`carry.ts`), never in the URL,
 which reaches logs, and survives the language chip, which remounts the page.
 
-**Cloudflare's check** (`lib/captcha`) runs unseen when Send code or Resend is pressed, and only shows
+**Cloudflare's check** (`lib/captcha`) runs unseen when Create account, Send code or Resend is pressed, and only shows
 its box when Cloudflare has doubts. Its script loads the first time one of those screens opens, never
 in the bundle. The flow exists only where `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set: without a key
 there is no captcha, the backend refuses to send, and Sign in keeps the link inactive.

@@ -98,16 +98,16 @@ and push the tag.
 
 Variables per environment (Vercel › Settings › Environment Variables):
 
-| Variable                                            | Production                                                        | Preview                                               |
-| --------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------- |
-| `API_URL`                                           | deployed backend URL                                              | staging backend URL                                   |
-| `API_SECRET`                                        | backend shared secret                                             | staging secret                                        |
-| `NEXT_PUBLIC_APP_URL`                               | `https://ledgerflow.alexpiral.com`                                | unset: falls back to the branch alias                 |
-| `NEXT_PUBLIC_CONTACT_EMAIL`                         | `ledgerflow@alexpiral.com`                                        | same                                                  |
-| `NEXT_PUBLIC_APP_VERSION`                           | unset: falls back to the commit SHA                               | same                                                  |
-| `NEXT_PUBLIC_SENTRY_DSN`                            | Sentry project DSN                                                | same DSN (events land as `preview`)                   |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`                    | the widget's site key (set with the backend's `TURNSTILE_SECRET`) | unset: the widget only allows the production hostname |
-| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | source-map upload                                                 | same                                                  |
+| Variable                                            | Production                                                        | Preview                                                                                   |
+| --------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `API_URL`                                           | deployed backend URL                                              | staging backend URL                                                                       |
+| `API_SECRET`                                        | backend shared secret                                             | staging secret                                                                            |
+| `NEXT_PUBLIC_APP_URL`                               | `https://ledgerflow.alexpiral.com`                                | unset: falls back to the branch alias                                                     |
+| `NEXT_PUBLIC_CONTACT_EMAIL`                         | `ledgerflow@alexpiral.com`                                        | same                                                                                      |
+| `NEXT_PUBLIC_APP_VERSION`                           | unset: falls back to the commit SHA                               | same                                                                                      |
+| `NEXT_PUBLIC_SENTRY_DSN`                            | Sentry project DSN                                                | same DSN (events land as `preview`)                                                       |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`                    | the widget's site key (set with the backend's `TURNSTILE_SECRET`) | unset: the widget only allows the production hostname, so previews cannot create accounts |
+| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | source-map upload                                                 | same                                                                                      |
 
 Vercel exposes `NEXT_PUBLIC_VERCEL_ENV`, `NEXT_PUBLIC_VERCEL_BRANCH_URL` and
 `NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA` when "Automatically expose System Environment Variables" is on.

@@ -19,7 +19,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   and the typecheck could not see the drift.
 - **The e2e reaches an account with no live code by spending its five tries**, since a register can no
   longer skip the email and an account from before email cannot be made from the browser suite. It waits
-  out the real per-address minute before Send code, so it runs as `test.slow()`.
+  out the real per-address minute before Send code, so it has a two-minute timeout.
 
 ## 2026-09-27 · Confirming the email: the stripe, the code sheet and the two link pages (T-210)
 
@@ -43,9 +43,9 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   `forgotPassword`): Send code, Resend and the register's email all need a token. Without a key nothing
   asks to confirm, and `/verify` and `/not-me` are 404.
 - **Sign up sends a `register` token when the flow exists**, so the backend emails the code right away and
-  the sheet opens on the code. _Superseded by T-230: the token is always required, and with no key Sign up
-  is off._ `CAPTCHA_UNAVAILABLE` there says nothing was created, instead of the "your
-  account may already exist" of any other 5xx.
+  the sheet opens on the code. `CAPTCHA_UNAVAILABLE` there says nothing was created, instead of the "your
+  account may already exist" of any other 5xx. _Superseded by T-230: the token is always required, and
+  with no key Sign up is off._
 - **Invitations are held in the UI by the profile's `emailVerified`**, not only by the backend's `403`:
   the sheet warns and disables Invite and Invite again, and the invitations' place says they wait. The
   backend's switch (`EMAIL_VERIFICATION_REQUIRED`) is off until the owner turns it on after this ships, so

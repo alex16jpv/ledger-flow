@@ -61,7 +61,7 @@ test("an account whose code is used up sends another from the sheet, with Cloudf
   page,
   request,
 }) => {
-  test.slow();
+  test.setTimeout(120_000);
   const email = await registered(request, "verify-send");
   const { code: first } = await readVerifyEmail(request, email);
   const wrong = first === "000000" ? "111111" : "000000";
@@ -85,7 +85,10 @@ test("an account whose code is used up sends another from the sheet, with Cloudf
   await send.click();
   await expect(sheet.getByText(`We sent a 6-digit code to ${email}`)).toBeVisible();
 
-  const { code } = await readVerifyEmail(request, email);
+  let code = first;
+  await expect
+    .poll(async () => (code = (await readVerifyEmail(request, email)).code))
+    .not.toBe(first);
   await sheet.getByLabel("6-digit code").fill(code);
   await sheet.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByText("Email confirmed")).toBeVisible();
