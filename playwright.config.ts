@@ -18,6 +18,8 @@ const frontEnv = {
   NEXT_PUBLIC_APP_URL: baseURL,
   NEXT_PUBLIC_CONTACT_EMAIL: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "ledgerflow@alexpiral.com",
   NEXT_PUBLIC_APP_ENV: "test",
+  // Cloudflare's test site key: it always passes and never asks for a tick.
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
   E2E_APP_URL: baseURL,
 };
 

@@ -25,6 +25,7 @@ export { type ChartSlot, ChartSlots, type ChartSlotsProps, HATCH } from "./Chart
 export { Checkbox } from "./Checkbox";
 export { CategoryChip, Chip, ChipRow } from "./Chip";
 export { cn } from "./cn";
+export { CodeField } from "./CodeField";
 export { ColBars, type ColBarsProps, type Column, type ColumnSegment } from "./ColBars";
 export { DateTimeField, type DateTimeValue } from "./DateTimeField";
 export { DayBars } from "./DayBars";

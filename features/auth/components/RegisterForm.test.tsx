@@ -4,15 +4,36 @@ import userEvent from "@testing-library/user-event";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
 
+import { carriedEmail, carryEmail } from "../carry";
 import { RegisterForm } from "./RegisterForm";
 
 const replace = vi.fn();
 vi.mock("@/lib/i18n/navigation", () => ({
   useRouter: () => ({ replace, push: vi.fn(), back: vi.fn() }),
   usePathname: () => "/register",
-  Link: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
+  Link: ({
+    children,
+    href,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    href: string;
+    onClick?: () => void;
+  }) => (
+    <a
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
+        onClick?.();
+      }}
+    >
+      {children}
+    </a>
   ),
+}));
+let forgotPassword = false;
+vi.mock("@/lib/flags", () => ({
+  isEnabled: (flag: string) => flag === "forgotPassword" && forgotPassword,
 }));
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
@@ -98,6 +119,25 @@ describe("RegisterForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Create account" }));
     expect(await screen.findByText(/This email already has an account/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
+  });
+
+  it("offers both ways back for a taken address, each carrying it over", async () => {
+    forgotPassword = true;
+    carryEmail("");
+    fetchMock.mockResolvedValue(
+      json({ error: "Conflict", message: "taken", code: "EMAIL_TAKEN" }, { status: 409 }),
+    );
+    renderForm();
+    await screen.findByRole("button", { name: /COP · / });
+    await fillValid();
+    await userEvent.click(screen.getByRole("checkbox"));
+    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    const reset = await screen.findByRole("link", { name: "reset your password" });
+    expect(reset).toHaveAttribute("href", "/forgot");
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
+    await userEvent.click(reset);
+    expect(carriedEmail()).toBe("john.doe@example.com");
+    forgotPassword = false;
   });
 
   it("suggests signing in when the backend answers 500", async () => {

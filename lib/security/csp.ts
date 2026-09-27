@@ -7,6 +7,8 @@ export interface SecurityHeaderOptions {
   loopback?: boolean;
 }
 
+export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
+
 export function buildCsp({
   nonce,
   isDevelopment,
@@ -18,6 +20,7 @@ export function buildCsp({
     `'self'`,
     `'nonce-${nonce}'`,
     `'strict-dynamic'`,
+    TURNSTILE_ORIGIN,
     ...(isDevelopment ? [`'unsafe-eval'`] : []),
   ];
   const directives = [
@@ -27,6 +30,7 @@ export function buildCsp({
     `img-src 'self' data: blob:`,
     `font-src 'self'`,
     `connect-src 'self'`,
+    `frame-src ${TURNSTILE_ORIGIN}`,
     `worker-src 'self'`,
     `manifest-src 'self'`,
     `frame-ancestors ${isDevelopment ? "'self'" : "'none'"}`,

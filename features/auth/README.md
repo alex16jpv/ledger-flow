@@ -31,3 +31,23 @@ sign-in (`purgeOtherVaults`); then the other tabs are told (`session:signedIn`),
 another account moves to Home of this one (`AccountSwitch`, in the app frame). The login itself
 lands on Home too, not on the `next` it was given, when the device's marker named another account
 (`nextAfterSignIn`): that way back was the previous account's.
+
+**Forgot your password?** (`/forgot`, T-208) asks for a code and then takes the code and the new
+password together, because the backend checks both in one call; the email's link (`/reset#token=…`)
+takes the new password alone. Every address gets the same words and the same countdown, and every bad
+code the one answer, so nothing on these screens tells who has an account (`design/spec/screens/access.md`).
+The link page takes the token out of the address bar before anything else and spends it only with
+the new password, since mail scanners open links. What one access screen hands the next — a typed
+email, the code already sent, the link's token — lives in memory (`carry.ts`), never in the URL,
+which reaches logs, and survives the language chip, which remounts the page.
+
+**Cloudflare's check** (`lib/captcha`) runs unseen when Send code or Resend is pressed, and only shows
+its box when Cloudflare has doubts. Its script loads the first time one of those screens opens, never
+in the bundle. The flow exists only where `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set: without a key
+there is no captcha, the backend refuses to send, and Sign in keeps the link inactive.
+
+**A reset of an account that never confirmed its email** may open "Keep what's in this account?"
+(`/keep-or-start-fresh`, the owner's decision 12). Until it is answered the app frame opens nothing of
+the account — no mirror, no screens — and sends every visit, and every sign-in, there. Start fresh is
+one request with the new details; this device's copy goes right after, and any other device's goes
+the next time it syncs (`RESYNC_REQUIRED`, `lib/local/README.md`).

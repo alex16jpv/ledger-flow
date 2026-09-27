@@ -40,6 +40,14 @@ describe("route rules", () => {
     expect(isProtectedPath("/homely")).toBe(false);
   });
 
+  it("asks for a session on the question after a reset, never on the reset itself", () => {
+    expect(isProtectedPath("/keep-or-start-fresh")).toBe(true);
+    for (const path of ["/forgot", "/reset"]) {
+      expect(isProtectedPath(path)).toBe(false);
+      expect(isGuestOnlyPath(path)).toBe(false);
+    }
+  });
+
   it("only follows same-origin next paths", () => {
     expect(safeNextPath("/budgets?x=1")).toBe("/budgets?x=1");
     expect(safeNextPath("//evil.example")).toBe("/home");

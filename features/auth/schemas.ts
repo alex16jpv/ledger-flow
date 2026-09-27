@@ -28,3 +28,33 @@ export const registerSchema = z.object({
 });
 
 export type RegisterValues = Infer<typeof registerSchema>;
+
+const newPassword = z
+  .string()
+  .min(PASSWORD_MIN, { error: "validation.passwordRange" })
+  .max(PASSWORD_MAX, { error: "validation.passwordRange" });
+
+export const forgotSchema = z.object({
+  email: z.email({ error: "validation.email" }),
+});
+
+export type ForgotValues = Infer<typeof forgotSchema>;
+
+export const resetCodeSchema = z.object({
+  code: z.string().regex(/^\d{6}$/, { error: "validation.code" }),
+  newPassword,
+});
+
+export type ResetCodeValues = Infer<typeof resetCodeSchema>;
+
+export const resetLinkSchema = z.object({ newPassword });
+
+export type ResetLinkValues = Infer<typeof resetLinkSchema>;
+
+export const freshDetailsSchema = z.object({
+  name: registerSchema.shape.name,
+  currency: registerSchema.shape.currency,
+  timezone: registerSchema.shape.timezone,
+});
+
+export type FreshDetailsValues = Infer<typeof freshDetailsSchema>;

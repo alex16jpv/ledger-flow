@@ -691,6 +691,137 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/auth/password/forgot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email a code and a link to choose a new password
+         * @description Always the same answer, in at least the same time, whether the address has a live account, a deleted one or none, and whether the email could be sent: nothing here may tell them apart. Only a live account is emailed, in its own language: a 6-digit code and a link (`/{locale}/reset#token=…`), both good for 30 minutes and for one reset. A new code replaces the previous one only once its email was accepted for delivery. `captcha` is a Cloudflare Turnstile token issued for the action `forgot-password`, asked for when the button is pressed: it works once. `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ForgotPasswordInput"];
+                };
+            };
+            responses: {
+                /** @description Taken. If the address has an account, a code is on its way. `resendAfterSeconds` is the same for every address: the countdown before Resend. */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ForgotPasswordAccepted"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), or Cloudflare refused the captcha token: spent, expired, forged, or issued for another site or action (code CAPTCHA_INVALID). Ask for a new token and try again */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests (code RATE_LIMITED; `Retry-After` in seconds): from this IP, from this device or IP in the hour, or for this address — one a minute and five a day. Counted the same for every address, account or not */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The captcha could not be checked, so nothing was sent (code CAPTCHA_UNAVAILABLE). Try again */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Choose a new password with the emailed code or link
+         * @description Either the address and the 6-digit code, or the link's token alone (it names the account). Sets the password, signs out every other device (every refresh and device token issued before stops working), confirms the account's email, and answers a session like a login. Using a code or the link spends every code of that request. A code takes five tries. When the account had never confirmed its email and holds accounts or transactions, the answer's `user.keepOrStartFresh` is set: ask "Keep what's in this account?" before opening anything (`POST /users/{id}/keep-or-start-fresh`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ResetPasswordInput"];
+                };
+            };
+            responses: {
+                /** @description Password changed and signed in */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuthTokens"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION); a code that does not work — mistyped, expired, replaced by a newer one, used up by five tries, or for an address with no account, all one answer (code RESET_CODE_INVALID); or a link that no longer works — used, expired or replaced (code LINK_INVALID) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many attempts from this IP (code RATE_LIMITED) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/refresh": {
         parameters: {
             query?: never;
@@ -5019,6 +5150,20 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /**
+                 * @description The cursor, or `since`, is from before the account's last Start
+                 *     fresh, which erased rows without tombstones (code
+                 *     RESYNC_REQUIRED): drop the local copy and ask again without a
+                 *     cursor.
+                 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
             };
         };
         put?: never;
@@ -5865,6 +6010,88 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/users/{id}/keep-or-start-fresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer "Keep what's in this account?"
+         * @description Open only while `keepOrStartFresh` is set: after a password reset of an account that had never confirmed its email and held something, so whoever created it may not own the inbox. It stays open until it is answered. `keep` closes it and changes nothing. `start-fresh` deletes for good the account's accounts, transactions, budgets, categories, contacts and the shared groups it created with their expenses and payments; stops sharing those groups and leaves the ones it joined, as deleting an account does; seeds the default categories again; and sets the profile from the body, the currency free again. The email and the password stay. Only a session opened by the reset or after it may answer. A start-fresh that fails half-way stays open and chosen: send it again to finish it (a `keep` is then refused). Every copy of the account's data synced before it is out of date: `GET /sync/changes` with an older cursor answers RESYNC_REQUIRED.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description User ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["KeepOrStartFreshInput"];
+                };
+            };
+            responses: {
+                /** @description Answered; `keepOrStartFresh` is null again */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["User"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Missing, invalid or expired access token, or one issued before the question was asked: only a session opened by the reset (or after it) may answer */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description User not found (or not the authenticated user's id) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description No question is open: never asked, already answered, or `keep` after Start fresh was chosen (code KEEP_OR_START_FRESH_CLOSED); or another start-fresh request is still erasing (code START_FRESH_IN_PROGRESS) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 };
 export type webhooks = Record<string, never>;
 export type components = {
@@ -5952,14 +6179,14 @@ export type components = {
             accessToken: string;
             refreshToken: string;
             user?: components["schemas"]["User"];
-            /** @description Login and register only. Proof that this device already signed in to this email: send it back as `deviceToken` on the next login or register and its failed attempts get a budget of their own, so a stranger's failures cannot lock this device out. Keep it across logouts, and keep the new one each login or register answers. A password or email change and a logout-all revoke every device token issued before. */
+            /** @description Login, register and password reset only. Proof that this device already signed in to this email: send it back as `deviceToken` on the next login, register or Forgot your password? and its attempts get a budget of their own, so a stranger's failures cannot lock this device out. Keep it across logouts, and keep the new one each of them answers. A password or email change and a logout-all revoke every device token issued before. */
             deviceToken?: string;
         };
         BatchUpdateFailure: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "KEEP_OR_START_FRESH_CLOSED" | "START_FRESH_IN_PROGRESS" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message: string;
         };
         /** @description Per-item outcome. The status is 200 even when some items failed: read `failed`. */
@@ -6250,11 +6477,21 @@ export type components = {
              * @description Stable machine-readable code. Branch on this, never on message.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "KEEP_OR_START_FRESH_CLOSED" | "START_FRESH_IN_PROGRESS" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             details?: {
                 field?: string;
                 message?: string;
             }[];
+        };
+        ForgotPasswordAccepted: {
+            /** @description Seconds before another code can be asked for this address: the same for every address. */
+            resendAfterSeconds: number;
+        };
+        ForgotPasswordInput: {
+            /** Format: email */
+            email: string;
+            captcha: string;
+            deviceToken?: string;
         };
         /**
          * @description The account types an INCOME may not land on: money arriving at one of them is a payment, not income. A transaction whose type is INCOME and whose destination account has one of these types is rejected with 400 INCOME_ON_CARD_OR_LOAN; record a TRANSFER from the account the money came from, or an ADJUSTMENT when it came from outside. OVERDRAFT is deliberately absent — it is the account that holds the money and sometimes dips below zero, so a salary landing there is income.
@@ -6348,6 +6585,18 @@ export type components = {
             you: boolean;
             joined: boolean;
         };
+        KeepOrStartFreshInput: {
+            /** @enum {string} */
+            choice: "keep";
+        } | {
+            /** @enum {string} */
+            choice: "start-fresh";
+            name: string;
+            /** @enum {string} */
+            locale: "en" | "es";
+            currency: string;
+            timezone: string;
+        };
         LoginInput: {
             /** Format: email */
             email: string;
@@ -6435,6 +6684,15 @@ export type components = {
             /** @enum {string} */
             locale?: "en" | "es";
             deviceToken?: string;
+        };
+        ResetPasswordInput: {
+            /** Format: email */
+            email: string;
+            code: string;
+            newPassword: string;
+        } | {
+            token: string;
+            newPassword: string;
         };
         /** @description A row a write rewrote besides the one it answers: an expense whose split was imputed again, a movement whose figure or history moved, an account whose balance a movement moved or whose default was taken. */
         Restamp: {
@@ -6916,7 +7174,7 @@ export type components = {
              * @description conflict / rejected: the code the matching route would have answered.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "KEEP_OR_START_FRESH_CLOSED" | "START_FRESH_IN_PROGRESS" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message?: string;
             details?: {
                 field?: string;
@@ -7258,6 +7516,13 @@ export type components = {
             locale: "en" | "es";
             /** Format: date-time */
             lastLoginAt: string | null;
+            /** @description Set after a password reset of an account that had never confirmed its email and held accounts or transactions: ask "Keep what's in this account?" before opening anything, and answer with POST /users/{id}/keep-or-start-fresh. The three facts are when the account was created and what it held then (active accounts, transactions). Null otherwise. */
+            keepOrStartFresh: {
+                /** Format: date-time */
+                createdAt: string;
+                accounts: number;
+                transactions: number;
+            } | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -7320,12 +7585,15 @@ export type CreateTransactionInput = components['schemas']['CreateTransactionInp
 export type DefaultSplit = components['schemas']['DefaultSplit'];
 export type DeleteUserInput = components['schemas']['DeleteUserInput'];
 export type ErrorResponse = components['schemas']['ErrorResponse'];
+export type ForgotPasswordAccepted = components['schemas']['ForgotPasswordAccepted'];
+export type ForgotPasswordInput = components['schemas']['ForgotPasswordInput'];
 export type IncomeRefusedAccountType = components['schemas']['IncomeRefusedAccountType'];
 export type JoinedExpense = components['schemas']['JoinedExpense'];
 export type JoinedExpenseList = components['schemas']['JoinedExpenseList'];
 export type JoinedGroup = components['schemas']['JoinedGroup'];
 export type JoinedGroupList = components['schemas']['JoinedGroupList'];
 export type JoinedParticipant = components['schemas']['JoinedParticipant'];
+export type KeepOrStartFreshInput = components['schemas']['KeepOrStartFreshInput'];
 export type LoginInput = components['schemas']['LoginInput'];
 export type Message = components['schemas']['Message'];
 export type MessageWithRestamps = components['schemas']['MessageWithRestamps'];
@@ -7335,6 +7603,7 @@ export type ReceivedInvitation = components['schemas']['ReceivedInvitation'];
 export type ReceivedInvitationList = components['schemas']['ReceivedInvitationList'];
 export type RefreshInput = components['schemas']['RefreshInput'];
 export type RegisterInput = components['schemas']['RegisterInput'];
+export type ResetPasswordInput = components['schemas']['ResetPasswordInput'];
 export type Restamp = components['schemas']['Restamp'];
 export type RestoreDefaultsResponse = components['schemas']['RestoreDefaultsResponse'];
 export type RestoreInput = components['schemas']['RestoreInput'];

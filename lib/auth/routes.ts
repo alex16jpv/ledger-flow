@@ -3,16 +3,20 @@ export const REGISTER_PATH = "/register";
 export const HOME_PATH = "/";
 export const APP_HOME_PATH = "/home";
 export const ONBOARDING_PATH = "/onboarding";
+export const FORGOT_PATH = "/forgot";
+export const RESET_PATH = "/reset";
+export const KEEP_OR_START_FRESH_PATH = "/keep-or-start-fresh";
 
 // §2.6: the app links here when the session is dead and the queue still has to go up.
 export const REAUTH_PARAM = "reauth";
 
 // P-32/P-33 (owner, 2026-09-08): a device carrying the marker goes to the app, not the pitch.
 const GUEST_ONLY = new Set([HOME_PATH, LOGIN_PATH, REGISTER_PATH]);
-// One line per screen folder of `app/[locale]/(app)`; `routes.test.ts` fails when one is missing.
+// Every screen folder of `(app)` (checked by `routes.test.ts`), `/onboarding` and the question.
 export const APP_PREFIXES = [
   "/home",
   "/onboarding",
+  KEEP_OR_START_FRESH_PATH,
   "/transactions",
   "/accounts",
   "/shared",

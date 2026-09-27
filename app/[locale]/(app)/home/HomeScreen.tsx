@@ -3,13 +3,16 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Sheet } from "@/components/ui/Sheet";
+import { useToast } from "@/components/ui/Toast";
 import { AccountForm } from "@/features/accounts/components/AccountForm";
 import { GlobalBudgetForm } from "@/features/budgets/components/GlobalBudgetForm";
 import { HomeView } from "@/features/home/components/HomeView";
 import { homeKeys } from "@/features/home/keys";
+import { APP_HOME_PATH } from "@/lib/auth/routes";
+import { useRouter } from "@/lib/i18n/navigation";
 
 import { OwedLine } from "./OwedLine";
 import { RecentTransactions } from "./RecentTransactions";
@@ -21,6 +24,15 @@ export function HomeScreen() {
   const params = useSearchParams();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<OpenSheet>(null);
+  const router = useRouter();
+  const toast = useToast();
+  const passwordChanged = params.get("passwordChanged") === "1";
+
+  useEffect(() => {
+    if (!passwordChanged) return;
+    toast.show({ message: t("home.passwordChanged") });
+    router.replace(APP_HOME_PATH);
+  }, [passwordChanged, toast, t, router]);
 
   const close = () => {
     setOpen(null);

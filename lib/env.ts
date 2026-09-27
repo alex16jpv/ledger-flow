@@ -17,6 +17,7 @@ export const env = createEnv({
     NEXT_PUBLIC_SW_PATH: z.string().startsWith("/").default("/sw.js"),
     NEXT_PUBLIC_SENTRY_DSN: z.url().optional(),
     NEXT_PUBLIC_VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().min(1).optional(),
   },
   shared: {
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -36,6 +37,7 @@ export const env = createEnv({
     NEXT_PUBLIC_SW_PATH: process.env.NEXT_PUBLIC_SW_PATH,
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
     NEXT_PUBLIC_VERCEL_ENV: process.env.NEXT_PUBLIC_VERCEL_ENV,
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     NODE_ENV: process.env.NODE_ENV,
   },
   emptyStringAsUndefined: true,

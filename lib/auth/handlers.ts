@@ -7,7 +7,7 @@ import { clientIpOf } from "@/lib/api/client-ip";
 import { REQUEST_ID_HEADER } from "@/lib/api/request-id";
 import { env } from "@/lib/env";
 import { LOCALE_COOKIE } from "@/lib/i18n/routing";
-import type { AuthTokens, ErrorResponse, User } from "@/types/api";
+import type { AuthTokens, ErrorResponse, ForgotPasswordAccepted, User } from "@/types/api";
 
 import {
   type CookieSpec,
@@ -132,10 +132,11 @@ function withDeviceToken(body: unknown, deviceToken: string | undefined): unknow
   return deviceToken ? { ...fields, deviceToken } : fields;
 }
 
-export async function authenticate(
-  path: "/auth/login" | "/auth/register",
+async function forwardAuthRequest(
+  path: string,
   request: NextRequest,
-): Promise<NextResponse> {
+  { sendDeviceToken }: { sendDeviceToken: boolean },
+): Promise<{ upstream: Response; requestId: string | null } | NextResponse> {
   const denied = untrustedOriginResponse(request);
   if (denied) return denied;
   const body = await readJsonBody(request);
@@ -148,11 +149,24 @@ export async function authenticate(
   const requestId = forwardedRequestId(request);
   const upstream = await backendFetch(path, {
     method: "POST",
-    body: withDeviceToken(body, request.cookies.get(DEVICE_COOKIE)?.value),
+    body: sendDeviceToken ? withDeviceToken(body, request.cookies.get(DEVICE_COOKIE)?.value) : body,
     requestId,
     clientIp: clientIpOf(request),
     userAgent: request.headers.get("user-agent"),
   });
+  return { upstream, requestId };
+}
+
+// The backend reads the reset's body strictly: no device token there.
+export async function authenticate(
+  path: "/auth/login" | "/auth/register" | "/auth/password/reset",
+  request: NextRequest,
+): Promise<NextResponse> {
+  const forwarded = await forwardAuthRequest(path, request, {
+    sendDeviceToken: path !== "/auth/password/reset",
+  });
+  if (forwarded instanceof NextResponse) return forwarded;
+  const { upstream, requestId } = forwarded;
   if (!upstream.ok) return passThroughError(upstream, requestId);
   const tokens = await readBackendJson<AuthTokens>(upstream);
   if (!tokens) {
@@ -163,5 +177,24 @@ export async function authenticate(
   }
   const response = sessionResponse(tokens, tokens.user, upstream.status, requestId);
   if (tokens.deviceToken) applyCookies(response, [deviceCookie(tokens.deviceToken)]);
+  return response;
+}
+
+export async function requestPasswordReset(request: NextRequest): Promise<NextResponse> {
+  const forwarded = await forwardAuthRequest("/auth/password/forgot", request, {
+    sendDeviceToken: true,
+  });
+  if (forwarded instanceof NextResponse) return forwarded;
+  const { upstream, requestId } = forwarded;
+  if (!upstream.ok) return passThroughError(upstream, requestId);
+  const accepted = await readBackendJson<ForgotPasswordAccepted>(upstream);
+  if (!accepted) {
+    return NextResponse.json(
+      { error: "UpstreamError", message: "Empty forgot-password response", code: "INTERNAL" },
+      { status: 502 },
+    );
+  }
+  const response = NextResponse.json(accepted, { status: upstream.status });
+  if (requestId) response.headers.set(REQUEST_ID_HEADER, requestId);
   return response;
 }

@@ -33,11 +33,11 @@ export function AuthFrame({ children }: { children: ReactNode }) {
   );
 }
 
-export function AuthHeading({ title, subtitle }: { title: ReactNode; subtitle: ReactNode }) {
+export function AuthHeading({ title, subtitle }: { title: ReactNode; subtitle?: ReactNode }) {
   return (
     <div className="flex flex-col gap-2 text-center">
       <h1 className="text-2xl font-semibold tracking-[-0.02em]">{title}</h1>
-      <p className="text-text-2">{subtitle}</p>
+      {subtitle && <p className="text-text-2">{subtitle}</p>}
     </div>
   );
 }

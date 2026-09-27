@@ -55,7 +55,8 @@
       "body": "What you have typed will be lost.",
       "keep": "Keep editing",
       "leave": "Leave"
-    }
+    },
+    "hoursMinutes": "{hours} h {minutes} min"
   },
   "nav": {
     "label": "Navigation",
@@ -155,7 +156,7 @@
       "submit": "Create account",
       "alreadyHaveAccount": "Already have an account?",
       "signIn": "Sign in",
-      "emailTaken": "This email already has an account. If you deleted it, sign up with the password it had to bring it back.",
+      "emailTaken": "This email already has an account. <signIn>Sign in</signIn> or <reset>reset your password</reset>. If you deleted it, sign up with the password it had to bring it back.",
       "maybeCreated": "Your account may already exist: try signing in before registering again.",
       "reactivated": {
         "title": "Welcome back.",
@@ -163,8 +164,61 @@
       },
       "currencyPicker": "Choose your currency",
       "timeZonePicker": "Choose your time zone",
-      "signInLink": "Sign in",
-      "consentRequired": "You need to accept the privacy policy to continue."
+      "consentRequired": "You need to accept the privacy policy to continue.",
+      "emailTakenSignIn": "This email already has an account. <signIn>Sign in</signIn>. If you deleted it, sign up with the password it had to bring it back."
+    },
+    "offline": "You’re offline.",
+    "sendFailed": "Something went wrong on our side. Nothing changed: try again.",
+    "forgot": {
+      "title": "Forgot your password?",
+      "subtitle": "Type your account’s email and we’ll send a code to it so you can choose a new password.",
+      "submit": "Send code",
+      "backToSignIn": "Back to sign in",
+      "offline": "Sending the code needs a connection.",
+      "tooManyRequests": "Too many requests.",
+      "retryIn": "You can ask for a code again in {time}."
+    },
+    "reset": {
+      "title": "Check your email",
+      "subtitle": "If <b>{email}</b> has an account, we just sent it a 6-digit code. It works for 30 minutes.",
+      "code": "6-digit code",
+      "newPassword": "New password",
+      "signsOut": "Saving it signs you in here and signs out every other device.",
+      "submit": "Save password and sign in",
+      "resendIn": "You can resend it in {time}",
+      "resend": "Resend code",
+      "resendReady": "You can resend the code now.",
+      "notThere": "Not there? Check your spam folder. Wrong address? <change>Change it</change>",
+      "offline": "Saving the password needs a connection.",
+      "linkTitle": "Choose a new password",
+      "linkFoot": "Link not working? <ask>Ask for a code instead</ask>",
+      "linkLost": "This page lost its link. Open the link from the email again.",
+      "deadTitle": "This link no longer works",
+      "deadBody": "A password link works for 30 minutes and only once, and asking for another code cancels it.",
+      "askNewCode": "Ask for a new code"
+    },
+    "humanCheck": {
+      "prompt": "One more step: tick the box so we know you’re a person.",
+      "failedTitle": "We couldn’t check that you’re a person.",
+      "failedBody": "Try again. If it keeps failing, something in this browser may be blocking Cloudflare’s check, such as a content blocker."
+    },
+    "keep": {
+      "title": "Keep what’s in this account?",
+      "subtitle": "Your email is confirmed now. Until today it never was, so someone else could have created this account with your address.",
+      "created": "Created",
+      "accounts": "Accounts",
+      "transactions": "Transactions",
+      "help": "Keep it if you created it and never got around to confirming the email. Start fresh if you didn’t: nothing somebody else put in it stays with you.",
+      "keep": "Keep it",
+      "startFresh": "Start fresh",
+      "confirmTitle": "Start fresh?",
+      "confirmBody": "Everything in this account is <b>deleted for good</b>: its accounts, transactions, budgets and categories, and it leaves every shared group. Your email and the password you just chose stay.",
+      "confirm": "Delete everything and start",
+      "goBack": "Go back",
+      "detailsTitle": "Your details",
+      "detailsSubtitle": "A fresh start takes nothing from before, not even the name. You can change these later in Settings.",
+      "namePlaceholder": "Your name",
+      "offline": "Answering needs a connection."
     }
   },
   "onboarding": {
@@ -224,7 +278,8 @@
       "dismiss": "Not now"
     },
     "owedBothWays": "{owed} owed to you · you owe {owe}",
-    "owedToYou": "{owed} owed to you"
+    "owedToYou": "{owed} owed to you",
+    "passwordChanged": "Password changed. Every other device was signed out."
   },
   "settings": {
     "title": "Settings",
@@ -794,7 +849,8 @@
       "creditCard": "Credit card",
       "primary": "Primary",
       "secondary": "Secondary",
-      "trendPoint": "Day {day} · Spent {amount}"
+      "trendPoint": "Day {day} · Spent {amount}",
+      "code": "6-digit code"
     },
     "pickersPlayground": {
       "title": "Pickers",
@@ -868,7 +924,14 @@
     "INVITATION_LIMIT_REACHED": "You already have 50 invitations waiting. Withdraw one before sending another.",
     "INVITATION_UNAVAILABLE": "This invitation is no longer available.",
     "SHARED_LINE_NOT_PAID": "That part isn’t marked paid, so it can’t go into your ledger yet.",
-    "SHARED_LINE_IN_LEDGER": "That part is already in your ledger."
+    "SHARED_LINE_IN_LEDGER": "That part is already in your ledger.",
+    "RESYNC_REQUIRED": "Your data changed since this device last synced. Downloading it again.",
+    "RESET_CODE_INVALID": "That code doesn’t work. It may be mistyped, out of date or replaced by a newer one: check the last email we sent, or ask for a new code.",
+    "LINK_INVALID": "This link no longer works.",
+    "CAPTCHA_INVALID": "We couldn’t check that you’re a person. Try again.",
+    "CAPTCHA_UNAVAILABLE": "Something went wrong on our side. Nothing changed: try again.",
+    "KEEP_OR_START_FRESH_CLOSED": "That question was already answered.",
+    "START_FRESH_IN_PROGRESS": "Your fresh start is still being prepared. Try again in a minute."
   },
   "validation": {
     "required": "This field is required.",
@@ -888,7 +951,9 @@
     "amountMax": "That amount is above the limit the app supports (10 trillion).",
     "tooMany": "Too many items selected.",
     "dateOrder": "The end must be after the start.",
-    "confirmWord": "Type the word exactly to confirm."
+    "confirmWord": "Type the word exactly to confirm.",
+    "passwordRange": "Between 8 and 128 characters.",
+    "code": "Type the 6 digits of the code."
   },
   "accounts": {
     "form": {

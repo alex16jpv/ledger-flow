@@ -7,7 +7,10 @@
   **language chip** (`globe` plus "EN" / "ES") sits to the right of the brand in sign-in, sign-up and
   onboarding: it changes the screen's language instantly, before an account exists.
 - **Sign in** (`#sign-in`): email, password with show/hide (`eye`), and "Forgot your password?", which
-  opens [its flow](#forgot-your-password-forgot) with the email carried over when one was typed. A 401
+  opens [its flow](#forgot-your-password-forgot) with the email carried over when one was typed. A
+  deployment with no Cloudflare site key cannot run [the check](#cloudflares-check), so there the link
+  stays inactive with "(soon)", as it was before the app sent email, and `/forgot` and `/reset` do not
+  exist. A 401
   shows a `danger` alert, "Wrong email or password" — one message, never revealing which half failed. A
   429 (`#sign-in-rate-limited`) shows a `warning` alert with a countdown computed from `Retry-After` or
   from the 15-minute window, and the button stays disabled while it runs.
@@ -137,7 +140,7 @@ it goes.
   moment of sending, never kept and never queued offline.
 - The privacy policy names Cloudflare among the processors (T-220).
 
-## Keep what's in this account?
+## Keep what's in this account? (`/keep-or-start-fresh`)
 
 `#keep-or-start-fresh`, `#start-fresh`, `#start-fresh-details`
 
@@ -163,8 +166,14 @@ account before the answer**: no copy is downloaded to the device until it is kno
   account and detected the same way, with "A fresh start takes nothing from before, not even the name.
   You can change these later in Settings." — whoever created the account typed the old ones — and
   **Continue**, into onboarding as a new account. The currency is free again, since no account exists.
+- **Nothing is erased until Continue.** Delete everything and start only opens Your details; Continue
+  sends the choice and the details as one request, because the server erases the account and writes
+  its new profile together, and there is never an account with an empty profile in between. Each step
+  has its own address (`?step=confirm`, `?step=details`), so Back returns to the one before, and the
+  language chip keeps the step.
 - **Asked once, and answered for sure:** the server keeps the question open until it has an answer, so
-  closing the page and opening the app again lands here. The three facts come with the question.
+  closing the page and opening the app again lands here, and so does signing in on another device. The
+  three facts come with the question.
 
 ## Pages reached from an email
 

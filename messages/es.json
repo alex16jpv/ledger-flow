@@ -55,7 +55,8 @@
       "body": "Se perderá lo que has escrito.",
       "keep": "Seguir editando",
       "leave": "Salir"
-    }
+    },
+    "hoursMinutes": "{hours} h {minutes} min"
   },
   "nav": {
     "label": "Navegación",
@@ -155,7 +156,7 @@
       "submit": "Crear cuenta",
       "alreadyHaveAccount": "¿Ya tienes cuenta?",
       "signIn": "Entrar",
-      "emailTaken": "Este correo ya tiene una cuenta. Si la eliminaste, regístrate con la contraseña que tenía para recuperarla.",
+      "emailTaken": "Este correo ya tiene una cuenta. <signIn>Entra</signIn> o <reset>restablece tu contraseña</reset>. Si la eliminaste, regístrate con la contraseña que tenía para recuperarla.",
       "maybeCreated": "Puede que tu cuenta ya se haya creado: intenta entrar antes de registrarte otra vez.",
       "reactivated": {
         "title": "Bienvenido de vuelta.",
@@ -163,8 +164,61 @@
       },
       "currencyPicker": "Elige tu moneda",
       "timeZonePicker": "Elige tu zona horaria",
-      "signInLink": "Entrar",
-      "consentRequired": "Debes aceptar la política de privacidad para continuar."
+      "consentRequired": "Debes aceptar la política de privacidad para continuar.",
+      "emailTakenSignIn": "Este correo ya tiene una cuenta. <signIn>Entra</signIn>. Si la eliminaste, regístrate con la contraseña que tenía para recuperarla."
+    },
+    "offline": "Sin conexión.",
+    "sendFailed": "Algo falló de nuestro lado. No cambió nada: inténtalo de nuevo.",
+    "forgot": {
+      "title": "¿Olvidaste tu contraseña?",
+      "subtitle": "Escribe el correo de tu cuenta y te enviaremos un código para que elijas una contraseña nueva.",
+      "submit": "Enviar código",
+      "backToSignIn": "Volver a iniciar sesión",
+      "offline": "Enviar el código necesita conexión.",
+      "tooManyRequests": "Demasiadas solicitudes.",
+      "retryIn": "Podrás pedir un código otra vez en {time}."
+    },
+    "reset": {
+      "title": "Revisa tu correo",
+      "subtitle": "Si <b>{email}</b> tiene una cuenta, le acabamos de enviar un código de 6 cifras. Sirve durante 30 minutos.",
+      "code": "Código de 6 cifras",
+      "newPassword": "Contraseña nueva",
+      "signsOut": "Al guardarla entras aquí y se cierra la sesión en todos tus demás dispositivos.",
+      "submit": "Guardar contraseña y entrar",
+      "resendIn": "Podrás reenviarlo en {time}",
+      "resend": "Reenviar código",
+      "resendReady": "Ya puedes reenviar el código.",
+      "notThere": "¿No llegó? Revisa tu carpeta de spam. ¿Correo equivocado? <change>Cámbialo</change>",
+      "offline": "Guardar la contraseña necesita conexión.",
+      "linkTitle": "Elige una contraseña nueva",
+      "linkFoot": "¿El enlace no funciona? <ask>Pide un código</ask>",
+      "linkLost": "Esta página perdió su enlace. Abre otra vez el enlace del correo.",
+      "deadTitle": "Este enlace ya no sirve",
+      "deadBody": "Un enlace de contraseña sirve durante 30 minutos y una sola vez, y pedir otro código lo anula.",
+      "askNewCode": "Pedir un código nuevo"
+    },
+    "humanCheck": {
+      "prompt": "Un paso más: marca la casilla para saber que eres una persona.",
+      "failedTitle": "No pudimos comprobar que eres una persona.",
+      "failedBody": "Inténtalo de nuevo. Si sigue fallando, puede que algo en este navegador esté bloqueando la comprobación de Cloudflare, como un bloqueador de contenido."
+    },
+    "keep": {
+      "title": "¿Conservar lo que hay en esta cuenta?",
+      "subtitle": "Tu correo ya está confirmado. Hasta hoy nunca lo estuvo, así que otra persona pudo crear esta cuenta con tu dirección.",
+      "created": "Creada",
+      "accounts": "Cuentas",
+      "transactions": "Movimientos",
+      "help": "Consérvala si la creaste tú y nunca llegaste a confirmar el correo. Empieza de cero si no: nada de lo que otra persona puso en ella se queda contigo.",
+      "keep": "Conservarla",
+      "startFresh": "Empezar de cero",
+      "confirmTitle": "¿Empezar de cero?",
+      "confirmBody": "Todo lo que hay en esta cuenta se <b>elimina para siempre</b>: sus cuentas, movimientos, presupuestos y categorías, y sale de todos los grupos compartidos. Tu correo y la contraseña que acabas de elegir se quedan.",
+      "confirm": "Eliminar todo y empezar",
+      "goBack": "Volver",
+      "detailsTitle": "Tus datos",
+      "detailsSubtitle": "Empezar de cero no conserva nada de antes, ni siquiera el nombre. Puedes cambiar estos datos después en Ajustes.",
+      "namePlaceholder": "Tu nombre",
+      "offline": "Responder necesita conexión."
     }
   },
   "onboarding": {
@@ -224,7 +278,8 @@
       "dismiss": "Ahora no"
     },
     "owedBothWays": "{owed} que te deben · debes {owe}",
-    "owedToYou": "{owed} que te deben"
+    "owedToYou": "{owed} que te deben",
+    "passwordChanged": "Contraseña cambiada. Se cerró la sesión en todos tus demás dispositivos."
   },
   "settings": {
     "title": "Ajustes",
@@ -794,7 +849,8 @@
       "creditCard": "Tarjeta de crédito",
       "primary": "Primario",
       "secondary": "Secundario",
-      "trendPoint": "Día {day} · Gastado {amount}"
+      "trendPoint": "Día {day} · Gastado {amount}",
+      "code": "Código de 6 cifras"
     },
     "pickersPlayground": {
       "title": "Selectores",
@@ -868,7 +924,14 @@
     "INVITATION_LIMIT_REACHED": "Ya tienes 50 invitaciones esperando. Retira una antes de enviar otra.",
     "INVITATION_UNAVAILABLE": "Esta invitación ya no está disponible.",
     "SHARED_LINE_NOT_PAID": "Esa parte no está marcada como pagada, así que todavía no puede ir a tu libro.",
-    "SHARED_LINE_IN_LEDGER": "Esa parte ya está en tu libro."
+    "SHARED_LINE_IN_LEDGER": "Esa parte ya está en tu libro.",
+    "RESYNC_REQUIRED": "Tus datos cambiaron desde la última sincronización de este dispositivo. Los estamos descargando de nuevo.",
+    "RESET_CODE_INVALID": "Ese código no sirve. Puede estar mal escrito, vencido o reemplazado por uno más nuevo: revisa el último correo que te enviamos o pide un código nuevo.",
+    "LINK_INVALID": "Este enlace ya no sirve.",
+    "CAPTCHA_INVALID": "No pudimos comprobar que eres una persona. Inténtalo de nuevo.",
+    "CAPTCHA_UNAVAILABLE": "Algo falló de nuestro lado. No cambió nada: inténtalo de nuevo.",
+    "KEEP_OR_START_FRESH_CLOSED": "Esa pregunta ya se respondió.",
+    "START_FRESH_IN_PROGRESS": "Todavía estamos preparando tu nuevo comienzo. Inténtalo en un minuto."
   },
   "validation": {
     "required": "Este campo es obligatorio.",
@@ -888,7 +951,9 @@
     "amountMax": "Ese monto supera el límite que admite la app (10 billones).",
     "tooMany": "Has seleccionado demasiados elementos.",
     "dateOrder": "El fin debe ser posterior al inicio.",
-    "confirmWord": "Escribe la palabra exacta para confirmar."
+    "confirmWord": "Escribe la palabra exacta para confirmar.",
+    "passwordRange": "Entre 8 y 128 caracteres.",
+    "code": "Escribe las 6 cifras del código."
   },
   "accounts": {
     "form": {

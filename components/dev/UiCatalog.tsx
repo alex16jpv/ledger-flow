@@ -18,6 +18,7 @@ import {
   CategoryChip,
   Chip,
   ChipRow,
+  CodeField,
   ColBars,
   DayBars,
   DayHeader,
@@ -168,6 +169,7 @@ export function UiCatalog() {
   const [swatch, setSwatch] = useState<ColorToken | null>("BLUE");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [checked, setChecked] = useState(true);
+  const [code, setCode] = useState("4827");
   const [chip, setChip] = useState("food");
 
   const days = Array.from({ length: 30 }, (_, index) => {
@@ -322,6 +324,9 @@ export function UiCatalog() {
               defaultValue={48200}
               onChange={() => undefined}
             />
+            <Field label={t("sample.code")}>
+              <CodeField value={code} onChange={setCode} />
+            </Field>
             <Segment
               label={t("sample.type")}
               value={segment}

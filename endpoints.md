@@ -2,7 +2,7 @@
 
 # lag-money-manager API endpoints
 
-Version 1.0.0 · 80 operations · 101 schemas.
+Version 1.0.0 · 83 operations · 105 schemas.
 
 Regenerate with `npm run gen:api-types` against a running backend. The client never calls these
 URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), which adds the
@@ -11,7 +11,7 @@ URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), wh
 | Group                           | Operations |
 | ------------------------------- | ---------- |
 | [Accounts](#accounts)           | 7          |
-| [Auth](#auth)                   | 7          |
+| [Auth](#auth)                   | 9          |
 | [Budgets](#budgets)             | 8          |
 | [Categories](#categories)       | 7          |
 | [Contacts](#contacts)           | 6          |
@@ -22,7 +22,7 @@ URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), wh
 | [Stats](#stats)                 | 1          |
 | [Sync](#sync)                   | 2          |
 | [Transactions](#transactions)   | 8          |
-| [Users](#users)                 | 3          |
+| [Users](#users)                 | 4          |
 
 ## Accounts
 
@@ -186,6 +186,8 @@ Idempotent - restoring an already-active account returns it unchanged.
 | `POST /auth/login`           | public | Login and obtain a JWT token                                   |
 | `POST /auth/logout`          | public | Revoke the refresh token's session family (per-device logout)  |
 | `POST /auth/logout-all`      | bearer | Revoke every session of the authenticated user                 |
+| `POST /auth/password/forgot` | public | Email a code and a link to choose a new password               |
+| `POST /auth/password/reset`  | public | Choose a new password with the emailed code or link            |
 | `POST /auth/refresh`         | public | Exchange a refresh token for a new access + refresh token pair |
 | `POST /auth/register`        | public | Register a new user                                            |
 | `GET /auth/sessions`         | bearer | List the user's active device sessions                         |
@@ -235,6 +237,39 @@ Bumps the user's token version, so every outstanding refresh token stops working
 | ------ | --------------- | ---------------------------------------- |
 | `200`  | `Message`       | All sessions revoked                     |
 | `401`  | `ErrorResponse` | Missing, invalid or expired access token |
+
+### `POST /auth/password/forgot`
+
+Always the same answer, in at least the same time, whether the address has a live account, a deleted one or none, and whether the email could be sent: nothing here may tell them apart. Only a live account is emailed, in its own language: a 6-digit code and a link (`/{locale}/reset#token=…`), both good for 30 minutes and for one reset. A new code replaces the previous one only once its email was accepted for delivery. `captcha` is a Cloudflare Turnstile token issued for the action `forgot-password`, asked for when the button is pressed: it works once. `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
+
+No token required.
+
+**Body** `ForgotPasswordInput` (required)
+
+**Responses**
+
+| Status | Schema                   | Description                                                                                                                                                                                                              |
+| ------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `202`  | `ForgotPasswordAccepted` | Taken. If the address has an account, a code is on its way. `resendAfterSeconds` is the same for every address: the countdown before Resend.                                                                             |
+| `400`  | `ErrorResponse`          | Validation error (code VALIDATION), or Cloudflare refused the captcha token: spent, expired, forged, or issued for another site or action (code CAPTCHA_INVALID). Ask for a new token and try again                      |
+| `429`  | `ErrorResponse`          | Too many requests (code RATE_LIMITED; `Retry-After` in seconds): from this IP, from this device or IP in the hour, or for this address — one a minute and five a day. Counted the same for every address, account or not |
+| `503`  | `ErrorResponse`          | The captcha could not be checked, so nothing was sent (code CAPTCHA_UNAVAILABLE). Try again                                                                                                                              |
+
+### `POST /auth/password/reset`
+
+Either the address and the 6-digit code, or the link's token alone (it names the account). Sets the password, signs out every other device (every refresh and device token issued before stops working), confirms the account's email, and answers a session like a login. Using a code or the link spends every code of that request. A code takes five tries. When the account had never confirmed its email and holds accounts or transactions, the answer's `user.keepOrStartFresh` is set: ask "Keep what's in this account?" before opening anything (`POST /users/{id}/keep-or-start-fresh`).
+
+No token required.
+
+**Body** `ResetPasswordInput` (required)
+
+**Responses**
+
+| Status | Schema          | Description                                                                                                                                                                                                                                                                                    |
+| ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `AuthTokens`    | Password changed and signed in                                                                                                                                                                                                                                                                 |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION); a code that does not work — mistyped, expired, replaced by a newer one, used up by five tries, or for an address with no account, all one answer (code RESET_CODE_INVALID); or a link that no longer works — used, expired or replaced (code LINK_INVALID) |
+| `429`  | `ErrorResponse` | Too many attempts from this IP (code RATE_LIMITED)                                                                                                                                                                                                                                             |
 
 ### `POST /auth/refresh`
 
@@ -1731,11 +1766,12 @@ stops a write from being missed forever.
 
 **Responses**
 
-| Status | Schema                | Description                                                                              |
-| ------ | --------------------- | ---------------------------------------------------------------------------------------- |
-| `200`  | `SyncChangesResponse` | One page of changes                                                                      |
-| `400`  | `ErrorResponse`       | Invalid query parameters (code VALIDATION) or an unreadable cursor (code INVALID_CURSOR) |
-| `401`  | `ErrorResponse`       | Unauthorized                                                                             |
+| Status | Schema                | Description                                                                                                                                                                             |
+| ------ | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SyncChangesResponse` | One page of changes                                                                                                                                                                     |
+| `400`  | `ErrorResponse`       | Invalid query parameters (code VALIDATION) or an unreadable cursor (code INVALID_CURSOR)                                                                                                |
+| `401`  | `ErrorResponse`       | Unauthorized                                                                                                                                                                            |
+| `409`  | `ErrorResponse`       | The cursor, or `since`, is from before the account's last Start fresh, which erased rows without tombstones (code RESYNC_REQUIRED): drop the local copy and ask again without a cursor. |
 
 ## Transactions
 
@@ -1983,11 +2019,12 @@ id that belongs to another user is rejected with 409 ID_TAKEN.
 
 ## Users
 
-| Endpoint             | Auth   | Summary          |
-| -------------------- | ------ | ---------------- |
-| `GET /users/{id}`    | bearer | Get a user by ID |
-| `PUT /users/{id}`    | bearer | Update a user    |
-| `DELETE /users/{id}` | bearer | Delete a user    |
+| Endpoint                               | Auth   | Summary                               |
+| -------------------------------------- | ------ | ------------------------------------- |
+| `GET /users/{id}`                      | bearer | Get a user by ID                      |
+| `PUT /users/{id}`                      | bearer | Update a user                         |
+| `DELETE /users/{id}`                   | bearer | Delete a user                         |
+| `POST /users/{id}/keep-or-start-fresh` | bearer | Answer "Keep what's in this account?" |
 
 ### `GET /users/{id}`
 
@@ -2050,3 +2087,25 @@ Requires `currentPassword`: a hijacked 15-minute access token must not be able t
 | `401`  | `ErrorResponse` | Missing, invalid or expired access token, or wrong currentPassword (code CURRENT_PASSWORD_INVALID) |
 | `404`  | `ErrorResponse` | User not found (or not the authenticated user's id)                                                |
 | `429`  | `ErrorResponse` | Too many wrong currentPassword guesses for this user (code RATE_LIMITED)                           |
+
+### `POST /users/{id}/keep-or-start-fresh`
+
+Open only while `keepOrStartFresh` is set: after a password reset of an account that had never confirmed its email and held something, so whoever created it may not own the inbox. It stays open until it is answered. `keep` closes it and changes nothing. `start-fresh` deletes for good the account's accounts, transactions, budgets, categories, contacts and the shared groups it created with their expenses and payments; stops sharing those groups and leaves the ones it joined, as deleting an account does; seeds the default categories again; and sets the profile from the body, the currency free again. The email and the password stay. Only a session opened by the reset or after it may answer. A start-fresh that fails half-way stays open and chosen: send it again to finish it (a `keep` is then refused). Every copy of the account's data synced before it is out of date: `GET /sync/changes` with an older cursor answers RESYNC_REQUIRED.
+
+**Path**
+
+| Name | Type          | Required | Description |
+| ---- | ------------- | -------- | ----------- |
+| `id` | string (uuid) | yes      | User ID     |
+
+**Body** `KeepOrStartFreshInput` (required)
+
+**Responses**
+
+| Status | Schema          | Description                                                                                                                                                                                                  |
+| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `200`  | `User`          | Answered; `keepOrStartFresh` is null again                                                                                                                                                                   |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                                                                           |
+| `401`  | `ErrorResponse` | Missing, invalid or expired access token, or one issued before the question was asked: only a session opened by the reset (or after it) may answer                                                           |
+| `404`  | `ErrorResponse` | User not found (or not the authenticated user's id)                                                                                                                                                          |
+| `409`  | `ErrorResponse` | No question is open: never asked, already answered, or `keep` after Start fresh was chosen (code KEEP_OR_START_FRESH_CLOSED); or another start-fresh request is still erasing (code START_FRESH_IN_PROGRESS) |

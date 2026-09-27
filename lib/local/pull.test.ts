@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/errors";
 import {
   account,
   budget,
@@ -18,6 +19,7 @@ import {
   pullChanges,
   type PullPageQuery,
   PullSupersededError,
+  QuestionOpenError,
   SessionChangedError,
   SyncFeedStalledError,
 } from "./pull";
@@ -556,6 +558,76 @@ describe("a pull with operations still queued", () => {
     await pullChanges(vault, { fetchPage });
 
     expect((await vault.db.get("transactions", "t1"))?.row.description).toBe("Named there");
+  });
+});
+
+describe("a copy from before a Start fresh (T-207)", () => {
+  afterEach(wipeVaults);
+
+  const resyncRequired = () =>
+    new ApiError({ status: 409, code: "RESYNC_REQUIRED", message: "", requestId: "r" });
+
+  it("throws the copy away, keeps the queue and downloads the account again", async () => {
+    const vault = await openTestVault("u1");
+    await vault.db.put("accounts", {
+      id: "a-old",
+      row: account({ id: "a-old" }),
+      updatedAt: "2026-09-01T00:00:00.000Z",
+    } as never);
+    await vault.db.put("meta", { key: "syncCursor", value: "v1|before|" });
+    await vault.db.put("meta", { key: "syncedAt", value: "2026-09-01T00:00:00.000Z" });
+    await queue(vault, { entityId: "t-unsent", action: "create" });
+    const before = Number((await vault.db.get("meta", "mirrorEpoch"))?.value ?? 0);
+    const queries: PullPageQuery[] = [];
+    const answers = [
+      page(
+        { accounts: [account({ id: "a-new" })] },
+        { count: 1, hasMore: false, nextCursor: "v2|after|" },
+      ),
+    ];
+
+    const result = await pullChanges(vault, {
+      fetchPage: (query) => {
+        queries.push(query);
+        if (query.cursor) return Promise.reject(resyncRequired());
+        const next = answers.shift();
+        return next ? Promise.resolve(next) : Promise.reject(new Error("one page too many"));
+      },
+    });
+
+    expect(queries.map((query) => query.cursor)).toEqual(["v1|before|", undefined]);
+    expect(await vault.db.get("accounts", "a-old")).toBeUndefined();
+    expect(await vault.db.get("accounts", "a-new")).toBeDefined();
+    expect(await vault.db.count("outbox")).toBe(1);
+    expect(result).toMatchObject({ changed: true, epoch: before + 1, cursor: "v2|after|" });
+    expect((await vault.db.get("meta", "mirrorEpoch"))?.value).toBe(before + 1);
+  });
+
+  it("downloads nothing of an account whose Keep what's in this account? is open", async () => {
+    const vault = await openTestVault("u1");
+    const facts = { createdAt: "2026-03-12T00:00:00.000Z", accounts: 1, transactions: 0 };
+    const { fetchPage } = feed([
+      page(
+        { user: profile({ keepOrStartFresh: facts }), accounts: [account({ id: "a1" })] },
+        { count: 2, hasMore: false, nextCursor: "c1" },
+      ),
+    ]);
+
+    await expect(pullChanges(vault, { fetchPage })).rejects.toBeInstanceOf(QuestionOpenError);
+    expect(await vault.db.get("accounts", "a1")).toBeUndefined();
+    expect(await vault.db.get("meta", "syncCursor")).toBeUndefined();
+    expect(await vault.db.get("meta", "syncedAt")).toBeUndefined();
+  });
+
+  it("gives up rather than loop when a snapshot is refused too", async () => {
+    const vault = await openTestVault("u1");
+    await vault.db.put("meta", { key: "syncCursor", value: "v1|before|" });
+    const fetchPage = vi.fn(() => Promise.reject(resyncRequired()));
+
+    await expect(pullChanges(vault, { fetchPage })).rejects.toMatchObject({
+      code: "RESYNC_REQUIRED",
+    });
+    expect(fetchPage).toHaveBeenCalledTimes(2);
   });
 });
 

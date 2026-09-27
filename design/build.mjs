@@ -1213,7 +1213,7 @@ const fact = (label, value) =>
   `<div class="hstack" style="justify-content:space-between;gap:12px"><span class="small muted">${label}</span><span class="small" style="font-weight:500">${value}</span></div>`;
 
 const neverConfirmed = (confirm = false) => {
-  if (confirm)
+  if (confirm === true)
     return authPage(`${authTitle("Start fresh?")}
 <div class="alert danger">${iconSvg("circle-alert")}<span>Everything in this account is <b>deleted for good</b>: its accounts, transactions, budgets and categories, and it leaves every shared group. Your email and the password you just chose stay.</span></div>
 <div class="stack-sm"><button class="btn danger solid lg block">Delete everything and start</button><button class="btn ghost lg block">Go back</button></div>`);
