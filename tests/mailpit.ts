@@ -21,16 +21,18 @@ interface Search {
   messages: { ID: string }[];
 }
 
-interface Options {
-  after?: number;
-}
+const codeIn = (text: string) => /^\s*(\d{6})\s*$/m.exec(text)?.[1];
 
+const linkIn = (text: string, page: string) =>
+  new RegExp(`https?://[^/\\s]+(/(?:[a-z]{2}/)?${page}#token=[\\w-]+)`).exec(text)?.[1];
+
+// Registering sends verify-email too, so the newest message is read only once it is the one wanted.
 async function readLatestText(
   request: APIRequestContext,
   to: string,
-  { after = 0 }: Options,
+  page: string,
 ): Promise<string> {
-  let id = "";
+  let text = "";
   await expect
     .poll(
       async () => {
@@ -38,29 +40,22 @@ async function readLatestText(
           `${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`,
         );
         const { messages } = (await response.json()) as Search;
-        id = messages.length > after ? (messages[0]?.ID ?? "") : "";
-        return id;
+        const id = messages[0]?.ID;
+        if (!id) return "";
+        const message = (await (await request.get(`${MAILPIT}/api/v1/message/${id}`)).json()) as {
+          Text: string;
+        };
+        text = linkIn(message.Text, page) ? message.Text : "";
+        return text;
       },
-      { message: `an email for ${to}`, timeout: 15_000 },
+      { message: `a ${page} email for ${to}`, timeout: 15_000 },
     )
     .not.toBe("");
-  const message = (await (await request.get(`${MAILPIT}/api/v1/message/${id}`)).json()) as {
-    Text: string;
-  };
-  return message.Text;
+  return text;
 }
 
-const codeIn = (text: string) => /^\s*(\d{6})\s*$/m.exec(text)?.[1];
-
-const linkIn = (text: string, page: string) =>
-  new RegExp(`https?://[^/\\s]+(/(?:[a-z]{2}/)?${page}#token=[\\w-]+)`).exec(text)?.[1];
-
-export async function readResetEmail(
-  request: APIRequestContext,
-  to: string,
-  options: Options = {},
-): Promise<ResetEmail> {
-  const text = await readLatestText(request, to, options);
+export async function readResetEmail(request: APIRequestContext, to: string): Promise<ResetEmail> {
+  const text = await readLatestText(request, to, "reset");
   const code = codeIn(text);
   const link = linkIn(text, "reset");
   if (!code || !link) throw new Error(`no code or link in the email to ${to}`);
@@ -70,9 +65,8 @@ export async function readResetEmail(
 export async function readVerifyEmail(
   request: APIRequestContext,
   to: string,
-  options: Options = {},
 ): Promise<VerifyEmail> {
-  const text = await readLatestText(request, to, options);
+  const text = await readLatestText(request, to, "verify");
   const code = codeIn(text);
   const link = linkIn(text, "verify");
   if (!code || !link) throw new Error(`no code or link in the email to ${to}`);

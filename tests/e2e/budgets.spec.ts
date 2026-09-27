@@ -1,4 +1,5 @@
 import { expect, type Page, test, uniqueEmail } from "../fixtures";
+import { TEST_CAPTCHA } from "../mailpit";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -15,6 +16,7 @@ async function signUp(page: Page, request: Request) {
   const response = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: {
+      captcha: TEST_CAPTCHA,
       name: "Budgets E2E",
       email: uniqueEmail("budgets"),
       password: "LedgerFlow!2026",
@@ -286,6 +288,7 @@ test("a Los Angeles user in USD sees the global budget they just created, format
   const response = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: {
+      captcha: TEST_CAPTCHA,
       name: "Budgets LA",
       email: uniqueEmail("budgets-la"),
       password: "LedgerFlow!2026",
@@ -350,6 +353,7 @@ test("the detail says how the period got here, where it ends and how it compares
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
     data: {
+      captcha: TEST_CAPTCHA,
       name: "Budget charts",
       email: uniqueEmail("charts"),
       password: "LedgerFlow!2026",

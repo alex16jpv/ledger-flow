@@ -130,7 +130,7 @@ test("It wasn't me erases the account that used the address, and frees it", asyn
 
   const again = await inbox.request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "The owner", email, password: "Another!2026" },
+    data: { name: "The owner", email, password: "Another!2026", captcha: TEST_CAPTCHA },
   });
   expect(again.status(), await again.text()).toBe(201);
 

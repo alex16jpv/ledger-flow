@@ -1,4 +1,5 @@
 import { expect, test, uniqueEmail } from "../fixtures";
+import { TEST_CAPTCHA } from "../mailpit";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -23,7 +24,7 @@ test("a taken email shows the inline error with a sign-in link", async ({ page, 
   const email = uniqueEmail("taken");
   await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "Taken", email, password: "LedgerFlow!2026" },
+    data: { captcha: TEST_CAPTCHA, name: "Taken", email, password: "LedgerFlow!2026" },
   });
   await request.post("/api/auth/logout", { headers: { origin: APP } });
   await page.goto("/register");
@@ -48,7 +49,7 @@ test("a deleted account comes back only with the password it had", async ({ page
   const password = "LedgerFlow!2026";
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "Before", email, password },
+    data: { captcha: TEST_CAPTCHA, name: "Before", email, password },
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   const { user } = (await registered.json()) as { user: { id: string } };

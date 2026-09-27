@@ -1,4 +1,5 @@
 import { expect, test, uniqueEmail } from "../fixtures";
+import { TEST_CAPTCHA } from "../mailpit";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
@@ -54,7 +55,7 @@ test("register sets httpOnly session cookies, refresh rotates them and logout cl
   const email = uniqueEmail("auth");
   const register = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "E2E", email, password: "LedgerFlow!2026", locale: "en" },
+    data: { captcha: TEST_CAPTCHA, name: "E2E", email, password: "LedgerFlow!2026", locale: "en" },
   });
   expect(register.status()).toBe(201);
   const body = (await register.json()) as { user: { email: string }; accessToken?: string };
@@ -94,7 +95,7 @@ test("the refresh cookie never travels to pages", async ({ page, request }) => {
   const email = uniqueEmail("auth-refresh");
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "E2E", email, password: "LedgerFlow!2026" },
+    data: { captcha: TEST_CAPTCHA, name: "E2E", email, password: "LedgerFlow!2026" },
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   const state = await request.storageState();

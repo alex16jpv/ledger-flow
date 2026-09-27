@@ -1,4 +1,5 @@
 import { expect, type Page, test, uniqueEmail } from "../fixtures";
+import { TEST_CAPTCHA } from "../mailpit";
 import { vaultState } from "../offline";
 import { expectNoAxeViolations } from "./axe";
 
@@ -104,7 +105,7 @@ test("Save all completes the categorized cards, one guarded operation per row", 
   const email = uniqueEmail("saveall");
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "Save All E2E", email, password: "LedgerFlow!2026" },
+    data: { captcha: TEST_CAPTCHA, name: "Save All E2E", email, password: "LedgerFlow!2026" },
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   const wallet = await request.post("/api/accounts", {
@@ -184,7 +185,7 @@ test("Home and the inbox say what went out and what came in, and a transfer in n
   const email = uniqueEmail("totals");
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "Totals E2E", email, password: "LedgerFlow!2026" },
+    data: { captcha: TEST_CAPTCHA, name: "Totals E2E", email, password: "LedgerFlow!2026" },
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   await request.post("/api/accounts", {

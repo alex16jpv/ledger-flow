@@ -19,7 +19,7 @@ async function emptyAccount(request: APIRequestContext, tag: string): Promise<st
   const email = uniqueEmail(tag);
   const registered = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "Forgot E2E", email, password: OLD_PASSWORD },
+    data: { captcha: TEST_CAPTCHA, name: "Forgot E2E", email, password: OLD_PASSWORD },
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   await request.post("/api/auth/logout", { headers: { origin: APP } });
