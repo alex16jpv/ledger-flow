@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Field, Input } from "@/components/ui/Field";
 import { ApiError, presentError } from "@/lib/api/errors";
 import { FORGOT_PATH, LOGIN_PATH } from "@/lib/auth/routes";
+import { HumanCheckSlot, useHumanCheck } from "@/lib/captcha/useHumanCheck";
 import { isEnabled } from "@/lib/flags";
 import { Link } from "@/lib/i18n/navigation";
 import { type AppLocale } from "@/lib/i18n/routing";
@@ -23,9 +24,12 @@ import type { SessionUser } from "@/lib/session/api";
 import { carryEmail } from "../carry";
 import { retryAfterOf, useRegister } from "../hooks";
 import { registerSchema, type RegisterValues } from "../schemas";
+import { HumanCheckFailed } from "./HumanCheckFailed";
 import { PasswordInput } from "./PasswordInput";
 import { ProfileDefaultsFields } from "./ProfileDefaultsFields";
 import { RateLimitAlert } from "./RateLimitAlert";
+
+const noSlot = () => undefined;
 
 interface RegisterFormProps {
   locale: AppLocale;
@@ -36,6 +40,9 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
   const t = useTranslations();
   const registerMutation = useRegister();
   const defaults = useDeviceDefaults();
+  const checked = isEnabled("emailVerification");
+  const check = useHumanCheck("register");
+  const [humanFailed, setHumanFailed] = useState(false);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
@@ -60,11 +67,30 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
   }, [defaults, form]);
 
   const submit = form.handleSubmit(async ({ name, email, password, currency, timezone }) => {
+    setHumanFailed(false);
+    let captcha: string | undefined;
+    if (checked) {
+      try {
+        captcha = await check.token();
+      } catch {
+        setHumanFailed(true);
+        return;
+      }
+    }
     try {
       onSuccess(
-        await registerMutation.mutateAsync({ name, email, password, currency, timezone, locale }),
+        await registerMutation.mutateAsync({
+          name,
+          email,
+          password,
+          currency,
+          timezone,
+          locale,
+          ...(captcha ? { captcha } : {}),
+        }),
       );
     } catch (error) {
+      if (error instanceof ApiError && error.code === "CAPTCHA_INVALID") setHumanFailed(true);
       setRetryAfter(retryAfterOf(error));
     }
   });
@@ -74,10 +100,15 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
   };
 
   const failure = registerMutation.error;
-  const emailTaken = failure instanceof ApiError && failure.code === "EMAIL_TAKEN";
-  const serverError = failure instanceof ApiError && failure.status >= 500;
+  const code = failure instanceof ApiError ? failure.code : null;
+  const emailTaken = code === "EMAIL_TAKEN";
+  const humanRefused = humanFailed || code === "CAPTCHA_INVALID";
+  const nothingCreated = code === "CAPTCHA_UNAVAILABLE";
+  const serverError = failure instanceof ApiError && failure.status >= 500 && !nothingCreated;
   const otherFailure =
-    failure && !emailTaken && !serverError && retryAfter === null ? presentError(failure) : null;
+    failure && !emailTaken && !serverError && !humanRefused && retryAfter === null
+      ? presentError(failure)
+      : null;
   const blocked = retryAfter !== null;
 
   return (
@@ -186,15 +217,18 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
           ),
         })}
       </Checkbox>
-      <Button
-        type="submit"
-        size="lg"
-        block
-        loading={registerMutation.isPending}
-        disabled={blocked || !consent}
-      >
-        {t("auth.register.submit")}
-      </Button>
+      <HumanCheckSlot interactive={check.interactive} mount={checked ? check.mount : noSlot}>
+        {humanRefused && <HumanCheckFailed className="mb-5" />}
+        <Button
+          type="submit"
+          size="lg"
+          block
+          loading={registerMutation.isPending || form.formState.isSubmitting}
+          disabled={blocked || !consent}
+        >
+          {t("auth.register.submit")}
+        </Button>
+      </HumanCheckSlot>
     </form>
   );
 }

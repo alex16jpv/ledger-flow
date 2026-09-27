@@ -15,7 +15,8 @@ test("registration needs the consent box, then lands on onboarding", async ({ pa
   await page.getByRole("checkbox").check({ force: true });
   await expect(submit).toBeEnabled();
   await submit.click();
-  await expect(page).toHaveURL(`${APP}/onboarding`);
+  // T-210: registering checks Cloudflare's token and emails the code before it answers.
+  await expect(page).toHaveURL(`${APP}/onboarding`, { timeout: 15_000 });
 });
 
 test("a taken email shows the inline error with a sign-in link", async ({ page, request }) => {
@@ -31,7 +32,9 @@ test("a taken email shows the inline error with a sign-in link", async ({ page, 
   await page.getByLabel("Password", { exact: true }).fill("LedgerFlow!2026");
   await page.getByRole("checkbox").check({ force: true });
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByText(/This email already has an account/)).toBeVisible();
+  await expect(page.getByText(/This email already has an account/)).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(
     page
       .getByRole("alert")
@@ -65,10 +68,12 @@ test("a deleted account comes back only with the password it had", async ({ page
   };
   await page.goto("/register");
   await signUp("Someone-else!2026");
-  await expect(page.getByText(/If you deleted it, sign up with the password it had/)).toBeVisible();
+  await expect(page.getByText(/If you deleted it, sign up with the password it had/)).toBeVisible({
+    timeout: 15_000,
+  });
 
   await signUp(password);
-  await expect(page).toHaveURL(`${APP}/home?reactivated=1`);
+  await expect(page).toHaveURL(`${APP}/home?reactivated=1`, { timeout: 15_000 });
   await expect(page.getByText("Welcome back.")).toBeVisible();
 });
 

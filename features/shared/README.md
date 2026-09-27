@@ -124,6 +124,10 @@ invited, waiting, out of time, joined or declined — and **never** tells a wait
 address with an account from one without, because the server never says. An invitation past its date
 is still `PENDING` on the server and is read against the server's clock (`isAnswerable`). The count on
 More, on the bar and in the sidebar is the invitations that can still be answered.
+**Invitations wait for a confirmed email** (T-210, the owner's decision 3): while the profile's
+`emailVerified` is false, `InviteSheet` warns and disables Invite and Invite again — Withdraw and Stop
+sharing only take something back — and `InvitationsBlock` says invitations to you show up once you
+confirm. Both open the code sheet of the app frame. A `403 EMAIL_NOT_VERIFIED` asks `/me` again.
 
 **A group somebody shared with you is read, not worked.** Only its owner writes in it (v1), so it has
 no outbox route: the feed brings it as `joinedGroups` and `joinedExpenses`, the mirror keeps it, and

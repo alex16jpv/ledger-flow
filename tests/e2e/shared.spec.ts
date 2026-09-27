@@ -1,16 +1,23 @@
 import { expect, type Page, test, uniqueEmail } from "../fixtures";
+import { confirmEmailOf, TEST_CAPTCHA } from "../mailpit";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 type Request = Parameters<Parameters<typeof test>[2]>[0]["request"];
 
 // Every mutation runs on a throwaway user with its ten seeded categories, so the seed stays untouched.
-async function signUp(page: Page, request: Request) {
+// Invitations wait for a confirmed email (EMAIL_VERIFICATION_REQUIRED in the suite's backend).
+async function register(request: Request, name: string, email: string) {
   const response = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: { name: "Shared E2E", email: uniqueEmail("shared"), password: "LedgerFlow!2026" },
+    data: { name, email, password: "LedgerFlow!2026", captcha: TEST_CAPTCHA },
   });
   expect(response.ok()).toBe(true);
+  await confirmEmailOf(request, email);
+}
+
+async function signUp(page: Page, request: Request) {
+  await register(request, "Shared E2E", uniqueEmail("shared"));
   await page.context().addCookies((await request.storageState()).cookies);
 }
 
@@ -379,11 +386,7 @@ test("an invitation reaches the other person's Shared, and their answer comes ba
   await expectNoAxeViolations(page);
 
   const other = await browser.newContext({ baseURL: APP });
-  const registered = await other.request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { name: "Beto", email: inviteeEmail, password: "LedgerFlow!2026" },
-  });
-  expect(registered.ok()).toBe(true);
+  await register(other.request, "Beto", inviteeEmail);
   const invitee = await other.newPage();
   await invitee.goto("/shared");
   const invitations = invitee.getByRole("region", { name: "Invitations" });
@@ -432,11 +435,7 @@ test("somebody who joined reads the group, adds their paid part to their own led
   await post(`/api/shared-groups/${group.id}/invitations`, { contactId: contact.id });
 
   const other = await browser.newContext({ baseURL: APP });
-  const registered = await other.request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { name: "Beto Cano", email: inviteeEmail, password: "LedgerFlow!2026" },
-  });
-  expect(registered.ok()).toBe(true);
+  await register(other.request, "Beto Cano", inviteeEmail);
   const waiting = await other.request.get("/api/invitations", { headers: { origin: APP } });
   const [invitation] = ((await waiting.json()) as { data: { id: string }[] }).data;
   const accepted = await other.request.post(`/api/invitations/${invitation?.id ?? ""}/accept`, {

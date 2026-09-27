@@ -5,19 +5,27 @@ import { useTranslations } from "next-intl";
 import { useForm, useWatch } from "react-hook-form";
 
 import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
+import { isEnabled } from "@/lib/flags";
 import { validationMessage } from "@/lib/i18n/validation";
 import { useOffline } from "@/lib/network/useOffline";
+import { emailUnconfirmed, openConfirmEmail } from "@/lib/session/confirm-email";
 import type { User } from "@/types/api";
 
 import { type ProfileChange, useUpdateProfile } from "../hooks";
 import { profileSchema, type ProfileValues } from "../schemas";
 
+interface ProfileSaved {
+  reauthenticated: boolean;
+  newEmail: string | null;
+}
+
 export interface ProfileViewProps {
   user: User;
-  onSaved: (reauthenticated: boolean) => void;
+  onSaved: (saved: ProfileSaved) => void;
 }
 
 export function ProfileView({ user, onSaved }: ProfileViewProps) {
@@ -29,6 +37,7 @@ export function ProfileView({ user, onSaved }: ProfileViewProps) {
     defaultValues: { name: user.name, email: user.email, newPassword: "", currentPassword: "" },
   });
   const { errors } = form.formState;
+  const unconfirmed = isEnabled("emailVerification") && emailUnconfirmed(user);
   const [email, newPassword] = useWatch({ control: form.control, name: ["email", "newPassword"] });
   const credentialsChange =
     newPassword.length > 0 || email.trim().toLowerCase() !== user.email.toLowerCase();
@@ -54,9 +63,12 @@ export function ProfileView({ user, onSaved }: ProfileViewProps) {
       };
     }
     try {
-      await update.mutateAsync(change);
+      const updated = await update.mutateAsync(change);
       form.reset({ ...values, newPassword: "", currentPassword: "" });
-      onSaved(change.reauthenticateWith !== undefined);
+      onSaved({
+        reauthenticated: change.reauthenticateWith !== undefined,
+        newEmail: change.email === undefined ? null : updated.email,
+      });
     } catch {
       return;
     }
@@ -78,8 +90,31 @@ export function ProfileView({ user, onSaved }: ProfileViewProps) {
           <Input autoComplete="name" {...form.register("name")} />
         </Field>
         <Field
-          label={t("settings.credentials.email")}
-          help={t("settings.credentials.emailHelp")}
+          label={
+            unconfirmed ? (
+              <span className="flex items-center gap-2">
+                {t("settings.credentials.email")}
+                <Badge tone="warning">{t("settings.credentials.notConfirmed")}</Badge>
+              </span>
+            ) : (
+              t("settings.credentials.email")
+            )
+          }
+          help={
+            unconfirmed
+              ? t.rich("settings.credentials.notConfirmedHelp", {
+                  confirm: (chunks) => (
+                    <button
+                      type="button"
+                      onClick={openConfirmEmail}
+                      className="font-medium text-brand-text"
+                    >
+                      {chunks}
+                    </button>
+                  ),
+                })
+              : t("settings.credentials.emailHelp")
+          }
           error={emailError ?? validationMessage(t, errors.email?.message ?? serverFields.email)}
         >
           <Input type="email" autoComplete="email" inputMode="email" {...form.register("email")} />

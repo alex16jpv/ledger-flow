@@ -11,6 +11,7 @@ import { APP_HOME_PATH, KEEP_OR_START_FRESH_PATH } from "@/lib/auth/routes";
 import { formatCountdown } from "@/lib/hooks/useCountdown";
 import { useRouter } from "@/lib/i18n/navigation";
 import { readVaultProfile } from "@/lib/local/db";
+import { pullNow } from "@/lib/local/mirror";
 import { purgeOtherVaults, purgeVault } from "@/lib/local/purge";
 import { reportOnline } from "@/lib/network/connectivity";
 import { setLocalOnly } from "@/lib/network/local-only";
@@ -20,7 +21,17 @@ import { tabChannel } from "@/lib/session/channel";
 import { sessionKeys } from "@/lib/session/keys";
 import type { KeepOrStartFreshInput } from "@/types/api";
 
-import { answerKeepOrStartFresh, login, register, requestResetCode, resetPassword } from "./api";
+import {
+  answerKeepOrStartFresh,
+  confirmEmailWithCode,
+  confirmEmailWithLink,
+  deleteAccountThatUsedMyEmail,
+  login,
+  register,
+  requestResetCode,
+  resetPassword,
+  sendVerificationCode,
+} from "./api";
 
 export const RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
 
@@ -143,4 +154,39 @@ export function useDeviceEmail(): string | null {
     };
   }, []);
   return email;
+}
+
+function useEmailConfirmed(): () => void {
+  const queryClient = useQueryClient();
+  return useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: sessionKeys.me() });
+    void pullNow().catch(() => undefined);
+  }, [queryClient]);
+}
+
+export function useConfirmEmailCode() {
+  const confirmed = useEmailConfirmed();
+  return useMutation({
+    mutationFn: (code: string) => withFreshSession(() => confirmEmailWithCode(code)),
+    onSuccess: confirmed,
+  });
+}
+
+export function useSendVerificationCode() {
+  const confirmed = useEmailConfirmed();
+  return useMutation({
+    mutationFn: (captcha: string) => withFreshSession(() => sendVerificationCode(captcha)),
+    onError: (error) => {
+      if (error instanceof ApiError && error.code === "EMAIL_ALREADY_VERIFIED") confirmed();
+    },
+  });
+}
+
+export function useConfirmEmailLink() {
+  const confirmed = useEmailConfirmed();
+  return useMutation({ mutationFn: confirmEmailWithLink, onSuccess: confirmed });
+}
+
+export function useDeleteAccountThatUsedMyEmail() {
+  return useMutation({ mutationFn: deleteAccountThatUsedMyEmail });
 }

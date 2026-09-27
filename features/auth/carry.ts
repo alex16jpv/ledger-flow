@@ -28,12 +28,15 @@ export function lastSentCode(): SentCode | null {
   return sentCode && { email: sentCode.email, resendAt: sentCode.resendAt };
 }
 
-let resetToken: string | null = null;
+export type LinkPurpose = "reset" | "verify" | "not-me";
 
-export function keepResetToken(value: string | null): void {
-  resetToken = value;
+const linkTokens = new Map<LinkPurpose, string>();
+
+export function keepLinkToken(purpose: LinkPurpose, value: string | null): void {
+  if (value === null) linkTokens.delete(purpose);
+  else linkTokens.set(purpose, value);
 }
 
-export function keptResetToken(): string | null {
-  return resetToken;
+export function keptLinkToken(purpose: LinkPurpose): string | null {
+  return linkTokens.get(purpose) ?? null;
 }

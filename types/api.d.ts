@@ -503,6 +503,252 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/auth/email/not-me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete, for good, an account that used somebody else's address
+         * @description "It wasn't me" of `verify-email` (`/{locale}/not-me#token=…`), for whoever holds the inbox. It works while the account has never confirmed an email — not even an earlier address — and still has the address the link went to, with no change of address since, and does what the owner's decision 11 says: the account and everything in it are erased — not archived, so no register can bring them back — its invitations end as when an account is deleted, and the address is free for a new account at once. No `account-deleted` is sent. Every verification email of such an account carries its own link and all of them work until then; a new code does not cancel them. An account confirmed once gets `verify-email` without it.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["NotMeInput"];
+                };
+            };
+            responses: {
+                /** @description The account is gone and its address is free */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Message"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), or a link that no longer works: the account was confirmed, moved to another address, or is already gone (code LINK_INVALID) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many attempts from this IP (code RATE_LIMITED) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email a new code to confirm the account's email
+         * @description Send code and Resend code of the sheet that confirms the email. Sends `verify-email` to the account's address, in its language: a 6-digit code and a link, both for 24 hours, and "It wasn't me". The new code replaces the old one only once its email was accepted; the "It wasn't me" of earlier emails keeps working. Unlike Forgot your password?, a failed send is said: the address is the account's own. `captcha` is a Cloudflare Turnstile token for the action `verify-email`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ResendVerificationInput"];
+                };
+            };
+            responses: {
+                /** @description The email was accepted for delivery. `resendAfterSeconds` is the countdown before Resend */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VerificationCodeSent"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Missing, invalid or expired access token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The account no longer exists */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The email is already confirmed (code EMAIL_ALREADY_VERIFIED) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The address does not accept our emails: it bounced or complained before, or the provider refused it (code EMAIL_SEND_FAILED). A code that was live before still works */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests (code RATE_LIMITED; `Retry-After` in seconds): from this IP, from this device or IP in the hour, for this account (five a day), or for this address — one a minute and five a day */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The email could not be sent, or may not have gone (code EMAIL_SEND_FAILED), or the captcha could not be checked (code CAPTCHA_UNAVAILABLE). A code that was live before still works */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/email/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm the account's email with the emailed code or link
+         * @description Either `{ code }`, with the session (`Authorization`) of the account the code went to, or `{ token }` from the email's link (`/{locale}/verify#token=…`) with no session: it names the account. A code takes five tries and works for 24 hours; asking for another cancels it once the new email is accepted. Confirming is not spent: an account already confirmed answers 200 for its code and for its link, so tapping the link after typing the code reads "Email confirmed". A link for an address the account no longer has is LINK_INVALID, and so is one replaced by a newer code, even once the account is confirmed: only the newest email's link answers 200. Confirming ends the wait of the invitations addressed to it: they reach the change feed on the next pull.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["VerifyEmailInput"];
+                };
+            };
+            responses: {
+                /** @description The email is confirmed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Message"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION); a code that is not the one sent (code EMAIL_CODE_INVALID); no code that still works — it expired, it was tried five times, or none was sent (code EMAIL_CODE_EXPIRED: send a new one); or a link that no longer works — expired, replaced, or for another address (code LINK_INVALID) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A code with a missing, invalid or expired access token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A code for an account that no longer exists */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many attempts from this IP (code RATE_LIMITED) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -903,7 +1149,7 @@ export type paths = {
         put?: never;
         /**
          * Register a new user
-         * @description Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email and the password of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored); with any other password it answers 409 EMAIL_TAKEN, like a live account. On a 500 the user may still have been created: try login before retrying register.
+         * @description Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email and the password of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored); with any other password it answers 409 EMAIL_TAKEN, like a live account. On a 500 the user may still have been created: try login before retrying register. `captcha` is a Cloudflare Turnstile token issued for the action `register`: with it, an account whose email is not confirmed is sent `verify-email` (a 6-digit code and a link, 24 hours); without it, nothing is sent and `GET /users/{id}` shows no live code, so the client offers Send code. A send that fails does not fail the register. The account works before its email is confirmed (`user.emailVerified`); only invitations wait for it.
          */
         post: {
             parameters: {
@@ -927,7 +1173,7 @@ export type paths = {
                         "application/json": components["schemas"]["AuthTokens"];
                     };
                 };
-                /** @description Validation error (code VALIDATION) */
+                /** @description Validation error (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID) */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -947,6 +1193,15 @@ export type paths = {
                 };
                 /** @description Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total — counted with the failed logins (code RATE_LIMITED) */
                 429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A captcha was sent and could not be checked (code CAPTCHA_UNAVAILABLE): nothing was created. Try again */
+                503: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2582,7 +2837,7 @@ export type paths = {
         };
         /**
          * The invitations waiting for you
-         * @description Invitations to somebody else's shared group, addressed to your email, still waiting and still in time, oldest first. Each one shows only the group's name, its colour and currency, and who sent it. The offline client reads them from the change feed (`invitationsReceived`), which also brings the ones already answered; this listing is its fallback.
+         * @description Invitations to somebody else's shared group, addressed to your email, still waiting and still in time, oldest first. Each one shows only the group's name, its colour and currency, and who sent it. The offline client reads them from the change feed (`invitationsReceived`), which also brings the ones already answered; this listing is its fallback. Only once your email is confirmed: until then nothing addressed to it is shown.
          */
         get: {
             parameters: {
@@ -2620,6 +2875,15 @@ export type paths = {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Your email is not confirmed yet (code EMAIL_NOT_VERIFIED) */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2689,6 +2953,15 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /** @description Your email is not confirmed yet, and the invitation is addressed to it rather than one you already answered (code EMAIL_NOT_VERIFIED) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
                 /** @description Invitation not found (uniform for missing and addressed to somebody else) */
                 404: {
                     headers: {
@@ -2751,6 +3024,15 @@ export type paths = {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Your email is not confirmed yet, and the invitation is addressed to it rather than one you already answered (code EMAIL_NOT_VERIFIED) */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4198,6 +4480,7 @@ export type paths = {
         /**
          * Invite somebody in the group to see it
          * @description Addressed to the email of a contact who is in the group. **Nothing is emailed**: the invitation waits in that person's Shared, found by the address, for 30 days. The answer is the same whether or not the address has an account — the route never looks — so an invitation cannot be used to find out who uses the app.
+         *     Only from an account whose email is confirmed (`user.emailVerified`): an invitation takes the sender's address to somebody else.
          *     One live invitation per person per group: inviting somebody who is already waiting or already joined answers that invitation with 200. One that ran out of time steps aside and a new one is sent (201).
          */
         post: {
@@ -4245,6 +4528,15 @@ export type paths = {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Your email is not confirmed yet: an invitation carries it to somebody else (code EMAIL_NOT_VERIFIED) */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -5810,7 +6102,10 @@ export type paths = {
             path?: never;
             cookie?: never;
         };
-        /** Get a user by ID */
+        /**
+         * Get a user by ID
+         * @description The profile, and while its email is not confirmed, what the sheet that confirms it needs (`emailVerification`).
+         */
         get: {
             parameters: {
                 query?: never;
@@ -5829,7 +6124,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["User"];
+                        "application/json": components["schemas"]["UserWithEmailVerification"];
                     };
                 };
                 /** @description Invalid ID format (code VALIDATION) */
@@ -5863,7 +6158,7 @@ export type paths = {
         };
         /**
          * Update a user
-         * @description Changing `email` or `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again. `currency` can only change while the user has no accounts (mono-currency mode). Changing the email to one belonging to another account (soft-deleted included) conflicts — reactivation only applies on register.
+         * @description Changing `email` or `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again. `currency` can only change while the user has no accounts (mono-currency mode). Changing the email to one belonging to another account (soft-deleted included) conflicts — reactivation only applies on register. A new email is not confirmed (`emailVerified` false) and is sent `verify-email`; a send that fails does not undo the change, and the sheet offers Send code.
          */
         put: {
             parameters: {
@@ -6186,7 +6481,7 @@ export type components = {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "KEEP_OR_START_FRESH_CLOSED" | "START_FRESH_IN_PROGRESS" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "KEEP_OR_START_FRESH_CLOSED" | "START_FRESH_IN_PROGRESS" | "EMAIL_NOT_VERIFIED" | "EMAIL_ALREADY_VERIFIED" | "EMAIL_CODE_INVALID" | "EMAIL_CODE_EXPIRED" | "EMAIL_SEND_FAILED" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message: string;
         };
         /** @description Per-item outcome. The status is 200 even when some items failed: read `failed`. */
@@ -6477,7 +6772,7 @@ export type components = {
              * @description Stable machine-readable code. Branch on this, never on message.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "KEEP_OR_START_FRESH_CLOSED" | "START_FRESH_IN_PROGRESS" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "KEEP_OR_START_FRESH_CLOSED" | "START_FRESH_IN_PROGRESS" | "EMAIL_NOT_VERIFIED" | "EMAIL_ALREADY_VERIFIED" | "EMAIL_CODE_INVALID" | "EMAIL_CODE_EXPIRED" | "EMAIL_SEND_FAILED" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             details?: {
                 field?: string;
                 message?: string;
@@ -6610,6 +6905,9 @@ export type components = {
             /** @description The other rows this write rewrote, empty when it touched none. A queued write on one of them guarded by `previousUpdatedAt` may be guarded by `updatedAt` instead: nothing else moved it in between. */
             restamped: components["schemas"]["Restamp"][];
         };
+        NotMeInput: {
+            token: string;
+        };
         Pagination: {
             limit: number;
             offset: number;
@@ -6683,6 +6981,11 @@ export type components = {
             currency?: string;
             /** @enum {string} */
             locale?: "en" | "es";
+            deviceToken?: string;
+            captcha?: string;
+        };
+        ResendVerificationInput: {
+            captcha: string;
             deviceToken?: string;
         };
         ResetPasswordInput: {
@@ -7174,7 +7477,7 @@ export type components = {
              * @description conflict / rejected: the code the matching route would have answered.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "KEEP_OR_START_FRESH_CLOSED" | "START_FRESH_IN_PROGRESS" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "KEEP_OR_START_FRESH_CLOSED" | "START_FRESH_IN_PROGRESS" | "EMAIL_NOT_VERIFIED" | "EMAIL_ALREADY_VERIFIED" | "EMAIL_CODE_INVALID" | "EMAIL_CODE_EXPIRED" | "EMAIL_SEND_FAILED" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message?: string;
             details?: {
                 field?: string;
@@ -7505,6 +7808,8 @@ export type components = {
             name: string;
             /** Format: email */
             email: string;
+            /** @description Whether this address is confirmed, by its code or link, or by a password reset. Until it is, the account works as ever but invitations wait: sending, accepting and seeing new ones answer 403 EMAIL_NOT_VERIFIED. */
+            emailVerified: boolean;
             /** @example America/Bogota */
             timezone: string;
             /** @example COP */
@@ -7529,6 +7834,32 @@ export type components = {
             updatedAt: string;
             /** @description Present (true) only when register revived a soft-deleted account. */
             reactivated?: boolean;
+        };
+        UserWithEmailVerification: components["schemas"]["User"] & {
+            /** @description What the sheet that confirms the email needs: which of its shapes, and Resend's countdown. Null once the email is confirmed. */
+            emailVerification: {
+                /** @description A code sent in the last 24 hours that still has tries: show the code field. False when none was ever sent — accounts from before email, a register without captcha, a send that failed — or it expired or was used up: show Send code. */
+                codeLive: boolean;
+                /**
+                 * Format: date-time
+                 * @description When the last code went.
+                 */
+                lastSentAt: string | null;
+                /**
+                 * Format: date-time
+                 * @description When Resend can go again, while that is ahead; null when it can go now. The daily limits can still answer 429 with its own Retry-After.
+                 */
+                resendAvailableAt: string | null;
+            } | null;
+        };
+        VerificationCodeSent: {
+            /** @description Seconds before Resend can go again. */
+            resendAfterSeconds: number;
+        };
+        VerifyEmailInput: {
+            code: string;
+        } | {
+            token: string;
         };
         WriteOffInput: {
             /** Format: uuid */
@@ -7597,12 +7928,14 @@ export type KeepOrStartFreshInput = components['schemas']['KeepOrStartFreshInput
 export type LoginInput = components['schemas']['LoginInput'];
 export type Message = components['schemas']['Message'];
 export type MessageWithRestamps = components['schemas']['MessageWithRestamps'];
+export type NotMeInput = components['schemas']['NotMeInput'];
 export type Pagination = components['schemas']['Pagination'];
 export type QuickAddTransactionInput = components['schemas']['QuickAddTransactionInput'];
 export type ReceivedInvitation = components['schemas']['ReceivedInvitation'];
 export type ReceivedInvitationList = components['schemas']['ReceivedInvitationList'];
 export type RefreshInput = components['schemas']['RefreshInput'];
 export type RegisterInput = components['schemas']['RegisterInput'];
+export type ResendVerificationInput = components['schemas']['ResendVerificationInput'];
 export type ResetPasswordInput = components['schemas']['ResetPasswordInput'];
 export type Restamp = components['schemas']['Restamp'];
 export type RestoreDefaultsResponse = components['schemas']['RestoreDefaultsResponse'];
@@ -7654,6 +7987,9 @@ export type UpdateSharedGroupInput = components['schemas']['UpdateSharedGroupInp
 export type UpdateTransactionInput = components['schemas']['UpdateTransactionInput'];
 export type UpdateUserInput = components['schemas']['UpdateUserInput'];
 export type User = components['schemas']['User'];
+export type UserWithEmailVerification = components['schemas']['UserWithEmailVerification'];
+export type VerificationCodeSent = components['schemas']['VerificationCodeSent'];
+export type VerifyEmailInput = components['schemas']['VerifyEmailInput'];
 export type WriteOffInput = components['schemas']['WriteOffInput'];
 export type ZeroDecimalCurrency = components['schemas']['ZeroDecimalCurrency'];
 export type ParameterIfMatch = components['parameters']['IfMatch'];

@@ -2,6 +2,8 @@ import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import type * as Flags from "@/lib/flags";
+import type { FeatureFlag } from "@/lib/flags";
 import { activateWaitingWorker } from "@/lib/pwa/registration";
 import { dismissUpdate, reportUpdateWaiting, updateStore } from "@/lib/pwa/update";
 import { QueryProvider } from "@/lib/query/QueryProvider";
@@ -19,6 +21,13 @@ vi.mock("@/lib/i18n/navigation", () => ({
   ),
 }));
 vi.mock("@/lib/pwa/registration", () => ({ activateWaitingWorker: vi.fn() }));
+vi.mock("@/lib/flags", async (importOriginal) => {
+  const actual = await importOriginal<typeof Flags>();
+  return {
+    ...actual,
+    isEnabled: (flag: FeatureFlag) => flag === "emailVerification" || actual.isEnabled(flag),
+  };
+});
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -78,5 +87,39 @@ describe("Settings › Version", () => {
     await waitFor(() => {
       expect(activateWaitingWorker).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe("Settings › Password & email", () => {
+  it("says the email is not confirmed, where the stripe's ✕ cannot hide it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              user: {
+                id: "u1",
+                name: "John",
+                locale: "en",
+                createdAt: "2026-08-01T10:00:00.000Z",
+                emailVerified: false,
+              },
+            }),
+            { headers: { "content-type": "application/json" } },
+          ),
+        ),
+      ),
+    );
+    view();
+    const row = (await screen.findByText("Your email isn’t confirmed yet")).closest("a");
+    expect(row).toHaveAttribute("href", "/settings/profile");
+    expect(row).toHaveTextContent("Not confirmed");
+  });
+
+  it("keeps its usual line for a confirmed email", async () => {
+    view();
+    expect(await screen.findByText("Requires your current password")).toBeInTheDocument();
+    expect(screen.queryByText("Not confirmed")).not.toBeInTheDocument();
   });
 });

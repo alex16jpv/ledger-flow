@@ -544,6 +544,13 @@ export function UiCatalog() {
               action={{ label: tStates("update.reload"), onClick: () => undefined }}
               dismiss={{ label: tStates("update.dismiss"), onClick: () => undefined }}
             />
+            <Banner
+              variant="verify"
+              title={tStates("confirmEmail.title")}
+              body={tStates("confirmEmail.body")}
+              action={{ label: tStates("confirmEmail.confirm"), onClick: () => undefined }}
+              dismiss={{ label: tStates("confirmEmail.dismiss"), onClick: () => undefined }}
+            />
           </div>
         </Section>
 

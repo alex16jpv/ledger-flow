@@ -40,12 +40,18 @@ export const forgotSchema = z.object({
 
 export type ForgotValues = Infer<typeof forgotSchema>;
 
+const code = z.string().regex(/^\d{6}$/, { error: "validation.code" });
+
 export const resetCodeSchema = z.object({
-  code: z.string().regex(/^\d{6}$/, { error: "validation.code" }),
+  code,
   newPassword,
 });
 
 export type ResetCodeValues = Infer<typeof resetCodeSchema>;
+
+export const confirmCodeSchema = z.object({ code });
+
+export type ConfirmCodeValues = Infer<typeof confirmCodeSchema>;
 
 export const resetLinkSchema = z.object({ newPassword });
 

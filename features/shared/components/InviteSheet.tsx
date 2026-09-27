@@ -1,5 +1,6 @@
 "use client";
 
+import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -11,9 +12,13 @@ import { Card } from "@/components/ui/Card";
 import { List, Row, RowBody, RowMeta, RowTitle } from "@/components/ui/Row";
 import { Sheet, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
-import { presentError } from "@/lib/api/errors";
+import { ApiError, presentError } from "@/lib/api/errors";
+import { isEnabled } from "@/lib/flags";
 import { useDates } from "@/lib/i18n/useDates";
 import { useOffline } from "@/lib/network/useOffline";
+import { emailUnconfirmed, openConfirmEmail } from "@/lib/session/confirm-email";
+import { useSession } from "@/lib/session/SessionProvider";
+import { useAppUser } from "@/lib/session/useAppUser";
 import type { Contact, SharedGroup, SyncSharedGroup } from "@/types/api";
 
 import { useGroupInvitations, useInvite, useWithdrawInvitation } from "../hooks";
@@ -43,6 +48,7 @@ interface PersonAction {
   variant: "secondary" | "ghost";
   run: () => void;
   online: boolean;
+  invites?: boolean;
 }
 
 interface Stopping {
@@ -55,6 +61,7 @@ function PersonRow({
   invite,
   busy,
   offline,
+  mayInvite,
   onInvite,
   onWithdraw,
   onStop,
@@ -64,6 +71,7 @@ function PersonRow({
   invite: PersonInvite;
   busy: boolean;
   offline: boolean;
+  mayInvite: boolean;
   onInvite: () => void;
   onWithdraw: () => void;
   onStop: () => void;
@@ -91,12 +99,36 @@ function PersonRow({
 
   const actions: Record<InviteState, PersonAction> = {
     noEmail: { label: t("addEmail"), variant: "secondary", run: onAddEmail, online: false },
-    notInvited: { label: t("invite"), variant: "secondary", run: onInvite, online: true },
+    notInvited: {
+      label: t("invite"),
+      variant: "secondary",
+      run: onInvite,
+      online: true,
+      invites: true,
+    },
     waiting: { label: t("withdraw"), variant: "ghost", run: onWithdraw, online: true },
-    expired: { label: t("inviteAgain"), variant: "secondary", run: onInvite, online: true },
+    expired: {
+      label: t("inviteAgain"),
+      variant: "secondary",
+      run: onInvite,
+      online: true,
+      invites: true,
+    },
     joined: { label: t("stopSharing"), variant: "ghost", run: onStop, online: true },
-    declined: { label: t("inviteAgain"), variant: "secondary", run: onInvite, online: true },
-    left: { label: t("inviteAgain"), variant: "secondary", run: onInvite, online: true },
+    declined: {
+      label: t("inviteAgain"),
+      variant: "secondary",
+      run: onInvite,
+      online: true,
+      invites: true,
+    },
+    left: {
+      label: t("inviteAgain"),
+      variant: "secondary",
+      run: onInvite,
+      online: true,
+      invites: true,
+    },
   };
   const action = actions[state];
 
@@ -114,7 +146,7 @@ function PersonRow({
         size="sm"
         variant={action.variant}
         loading={busy}
-        disabled={action.online && offline}
+        disabled={(action.online && offline) || (action.invites === true && !mayInvite)}
         onClick={action.run}
       >
         {action.label}
@@ -127,6 +159,9 @@ export function InviteSheet({ open, group, contacts, onClose }: InviteSheetProps
   const t = useTranslations();
   const toast = useToast();
   const offline = useOffline();
+  const session = useSession();
+  const appUser = useAppUser();
+  const unconfirmed = isEnabled("emailVerification") && emailUnconfirmed(appUser);
   const invitations = useGroupInvitations(group.id);
   const invite = useInvite();
   const withdraw = useWithdrawInvitation();
@@ -147,6 +182,7 @@ export function InviteSheet({ open, group, contacts, onClose }: InviteSheetProps
     try {
       await action();
     } catch (error) {
+      if (error instanceof ApiError && error.code === "EMAIL_NOT_VERIFIED") void session.refetch();
       toast.show({ message: t(presentError(error).messageKey), tone: "danger" });
     } finally {
       setBusy(null);
@@ -224,6 +260,22 @@ export function InviteSheet({ open, group, contacts, onClose }: InviteSheetProps
       title={t("shared.invite.title", { group: group.name })}
     >
       <div className="flex flex-col gap-4">
+        {unconfirmed && (
+          <Alert tone="warning" icon={Mail}>
+            {t.rich("shared.invite.confirmFirst", {
+              ...rich,
+              confirm: (chunks) => (
+                <button
+                  type="button"
+                  onClick={openConfirmEmail}
+                  className="font-semibold underline underline-offset-[3px]"
+                >
+                  {chunks}
+                </button>
+              ),
+            })}
+          </Alert>
+        )}
         <p className="text-sm text-text-3">
           {t.rich("shared.invite.intro", { group: group.name, ...rich })}
         </p>
@@ -238,6 +290,7 @@ export function InviteSheet({ open, group, contacts, onClose }: InviteSheetProps
                   invite={person}
                   busy={busy === contact.id}
                   offline={offline}
+                  mayInvite={!unconfirmed}
                   onAddEmail={() => {
                     setEditing(contact);
                   }}

@@ -12,7 +12,6 @@ import { CodeField } from "@/components/ui/CodeField";
 import { Field } from "@/components/ui/Field";
 import { ApiError } from "@/lib/api/errors";
 import { HumanCheckSlot, useHumanCheck } from "@/lib/captcha/useHumanCheck";
-import { useCountdown } from "@/lib/hooks/useCountdown";
 import { validationMessage } from "@/lib/i18n/validation";
 import { useOffline } from "@/lib/network/useOffline";
 import type { SessionUser } from "@/lib/session/api";
@@ -23,12 +22,12 @@ import {
   retryAfterOf,
   useRequestResetCode,
   useResetPassword,
-  useWaitText,
 } from "../hooks";
 import { resetCodeSchema, type ResetCodeValues } from "../schemas";
 import { HumanCheckFailed } from "./HumanCheckFailed";
 import { PasswordInput } from "./PasswordInput";
 import { RateLimitAlert } from "./RateLimitAlert";
+import { ResendBlock } from "./ResendBlock";
 
 type Failure = "human" | FailureKey | null;
 
@@ -200,51 +199,5 @@ export function ResetCodeForm({
         />
       </HumanCheckSlot>
     </form>
-  );
-}
-
-interface ResendBlockProps {
-  seconds: number;
-  sending: boolean;
-  disabled: boolean;
-  onResend: () => void;
-  onChangeEmail: () => void;
-}
-
-function ResendBlock({ seconds, sending, disabled, onResend, onChangeEmail }: ResendBlockProps) {
-  const t = useTranslations("auth.reset");
-  const waitText = useWaitText();
-  const remaining = useCountdown(seconds);
-  return (
-    <div className="flex flex-col items-center gap-1 text-center">
-      {remaining > 0 ? (
-        <span className="py-1.5 text-sm text-text-3">
-          {t("resendIn", { time: waitText(remaining) })}
-        </span>
-      ) : (
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          loading={sending}
-          disabled={disabled}
-          onClick={onResend}
-        >
-          {t("resend")}
-        </Button>
-      )}
-      <span className="sr-only" aria-live="polite">
-        {remaining === 0 ? t("resendReady") : ""}
-      </span>
-      <p className="text-xs text-text-3">
-        {t.rich("notThere", {
-          change: (chunks) => (
-            <button type="button" onClick={onChangeEmail} className="font-medium text-brand-text">
-              {chunks}
-            </button>
-          ),
-        })}
-      </p>
-    </div>
   );
 }

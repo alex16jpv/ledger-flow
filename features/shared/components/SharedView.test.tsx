@@ -3,12 +3,14 @@ import { screen, within } from "@testing-library/react";
 import { ToastProvider } from "@/components/ui/Toast";
 import { resetOutboxStatus } from "@/lib/local/outbox";
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { SessionProvider } from "@/lib/session/SessionProvider";
 import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
 import {
   contact,
   joinedExpense,
   joinedGroup,
+  profile,
   queueWrite,
   receivedInvitation,
   settlement,
@@ -108,9 +110,11 @@ function serve(
 const view = () =>
   renderWithProviders(
     <QueryProvider>
-      <ToastProvider>
-        <SharedView />
-      </ToastProvider>
+      <SessionProvider initialUser={profile()} onSignedOut={vi.fn()}>
+        <ToastProvider>
+          <SharedView />
+        </ToastProvider>
+      </SessionProvider>
     </QueryProvider>,
   );
 

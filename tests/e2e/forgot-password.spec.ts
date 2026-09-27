@@ -1,5 +1,5 @@
 import { type APIRequestContext, expect, type Page, test, uniqueEmail } from "../fixtures";
-import { readResetEmail } from "../mailpit";
+import { readResetEmail, TEST_CAPTCHA } from "../mailpit";
 import {
   accountIdsIn,
   APP,
@@ -14,7 +14,6 @@ import { expectNoAxeViolations } from "./axe";
 
 const OLD_PASSWORD = "LedgerFlow!2026";
 const NEW_PASSWORD = "LedgerFlow!2027-new";
-const TEST_CAPTCHA = "XXXX.DUMMY.TOKEN.XXXX";
 
 async function emptyAccount(request: APIRequestContext, tag: string): Promise<string> {
   const email = uniqueEmail(tag);

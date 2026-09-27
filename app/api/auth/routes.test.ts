@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 
 import { POST as logout } from "@/app/api/auth/logout/route";
 import { POST as refresh } from "@/app/api/auth/refresh/route";
-import { authenticate, requestPasswordReset } from "@/lib/auth/handlers";
+import { authenticate, confirmEmail, requestPasswordReset } from "@/lib/auth/handlers";
 import { SESSION_END_HEADER } from "@/lib/auth/session-end";
 
 vi.mock("server-only", () => ({}));
@@ -227,6 +227,77 @@ describe("forgot-password handler", () => {
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("240");
     await expect(response.json()).resolves.toMatchObject({ code: "RATE_LIMITED" });
+  });
+});
+
+describe("email confirmation handlers", () => {
+  it("sends a code with the session, and answers the backend's 200 as it came", async () => {
+    fetchMock.mockResolvedValue(json({ message: "Email confirmed" }));
+    const response = await confirmEmail(
+      "/auth/email/verify",
+      post("/api/auth/verify", { code: "482719" }, { cookie: "__Host-access=acc" }),
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ message: "Email confirmed" });
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://backend.test/auth/email/verify");
+    expect(new Headers(init?.headers).get("authorization")).toBe("Bearer acc");
+    expect(JSON.parse(init?.body as string)).toEqual({ code: "482719" });
+  });
+
+  it("adds this device's cookie to Resend, and passes the limits through", async () => {
+    fetchMock.mockResolvedValue(
+      json(
+        { error: "TooMany", message: "slow", code: "RATE_LIMITED" },
+        { status: 429, headers: { "retry-after": "60" } },
+      ),
+    );
+    const response = await confirmEmail(
+      "/auth/email/resend",
+      post(
+        "/api/auth/resend",
+        { captcha: "tok", deviceToken: "forged" },
+        { cookie: "__Host-access=acc; __Secure-device=dev1" },
+      ),
+    );
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("60");
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://backend.test/auth/email/resend");
+    expect(new Headers(init?.headers).get("authorization")).toBe("Bearer acc");
+    expect(JSON.parse(init?.body as string)).toEqual({ captcha: "tok", deviceToken: "dev1" });
+  });
+
+  it("sends It wasn't me without any session, whatever this browser holds", async () => {
+    fetchMock.mockResolvedValue(json({ message: "Deleted" }));
+    await confirmEmail(
+      "/auth/email/not-me",
+      post("/api/auth/not-me", { token: "t".repeat(96) }, { cookie: "__Host-access=acc" }),
+    );
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://backend.test/auth/email/not-me");
+    expect(new Headers(init?.headers).get("authorization")).toBeNull();
+  });
+
+  it("rejects another origin before touching the backend", async () => {
+    const response = await confirmEmail(
+      "/auth/email/verify",
+      post("/api/auth/verify", { token: "t" }, { origin: "https://evil.example" }),
+    );
+    expect(response.status).toBe(403);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("answers 503 DB_UNAVAILABLE, like every other route, when the backend cannot be reached", async () => {
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+    for (const response of [
+      await confirmEmail("/auth/email/verify", post("/api/auth/verify", { token: "t" })),
+      await requestPasswordReset(post("/api/auth/forgot", { email: "a@b.co" })),
+      await authenticate("/auth/login", post("/api/auth/login", { email: "a@b.co" })),
+    ]) {
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toMatchObject({ code: "DB_UNAVAILABLE" });
+    }
   });
 });
 

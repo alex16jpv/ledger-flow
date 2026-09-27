@@ -219,6 +219,31 @@
       "detailsSubtitle": "A fresh start takes nothing from before, not even the name. You can change these later in Settings.",
       "namePlaceholder": "Your name",
       "offline": "Answering needs a connection."
+    },
+    "verify": {
+      "title": "Confirm your email",
+      "body": "Use the button to confirm that the address this email reached belongs to your Ledger Flow account.",
+      "submit": "Confirm email",
+      "doneTitle": "Email confirmed",
+      "doneBody": "You can invite people to Shared and accept their invitations.",
+      "deadBody": "A confirmation link works for 24 hours and only once, and asking for another code cancels it."
+    },
+    "notMe": {
+      "title": "Delete the account that used your address?",
+      "body": "Somebody signed up to Ledger Flow with this address and never confirmed it. This deletes that account and everything in it, for good, and frees your address.",
+      "warningTitle": "If you signed up yourself, don’t.",
+      "warningBody": "Use the code or the Confirm email button in the same message instead.",
+      "submit": "Delete that account",
+      "keep": "Don’t delete it",
+      "doneTitle": "That account is gone",
+      "doneBody": "Your address is free: you can create your own account with it.",
+      "createAccount": "Create account",
+      "deadBody": "It only works while the account is unconfirmed. If you didn’t confirm it, Forgot your password? takes it back for you.",
+      "forgot": "Forgot your password?"
+    },
+    "link": {
+      "openApp": "Open Ledger Flow",
+      "offline": "This needs a connection."
     }
   },
   "onboarding": {
@@ -351,7 +376,11 @@
       "currentPassword": "Current password",
       "reauthNote": "To change your email or password, confirm your current password. For safety, your other devices will need to sign in again.",
       "saved": "Profile updated",
-      "savedReauth": "Profile updated. Your other devices were signed out."
+      "savedReauth": "Profile updated. Your other devices were signed out.",
+      "notConfirmedMeta": "Your email isn’t confirmed yet",
+      "notConfirmed": "Not confirmed",
+      "notConfirmedHelp": "Confirm it to invite people to Shared and to be invited. <confirm>Confirm it</confirm>",
+      "savedNewEmail": "Check {email}: confirm it to use invitations in Shared"
     },
     "sessions": {
       "title": "Active sessions",
@@ -769,6 +798,22 @@
       "body": "Reloading takes a second. Nothing you saved is lost.",
       "reload": "Reload",
       "dismiss": "Not now"
+    },
+    "confirmEmail": {
+      "title": "Confirm your email.",
+      "body": "You need it to invite people to Shared and to be invited.",
+      "confirm": "Confirm",
+      "dismiss": "Not now",
+      "sheetTitle": "Confirm your email",
+      "sent": "We sent a 6-digit code to <b>{email}</b>. It works for 24 hours.",
+      "willSend": "We’ll send a 6-digit code to <b>{email}</b>.",
+      "submit": "Confirm",
+      "send": "Send code",
+      "wrongAddress": "Wrong address? <change>Change it</change>",
+      "offline": "Confirming your email needs a connection.",
+      "sendFailedTitle": "We couldn’t send the email.",
+      "sendFailedBody": "Try again in a few minutes.",
+      "done": "Email confirmed"
     }
   },
   "dev": {
@@ -931,7 +976,12 @@
     "CAPTCHA_INVALID": "We couldn’t check that you’re a person. Try again.",
     "CAPTCHA_UNAVAILABLE": "Something went wrong on our side. Nothing changed: try again.",
     "KEEP_OR_START_FRESH_CLOSED": "That question was already answered.",
-    "START_FRESH_IN_PROGRESS": "Your fresh start is still being prepared. Try again in a minute."
+    "START_FRESH_IN_PROGRESS": "Your fresh start is still being prepared. Try again in a minute.",
+    "EMAIL_NOT_VERIFIED": "Confirm your email first: invitations wait for it.",
+    "EMAIL_ALREADY_VERIFIED": "Your email is already confirmed.",
+    "EMAIL_CODE_INVALID": "That code isn’t right. Check the last email we sent.",
+    "EMAIL_CODE_EXPIRED": "This code no longer works: it expired, or it was tried too many times. Send a new one.",
+    "EMAIL_SEND_FAILED": "We couldn’t send the email. Try again in a few minutes."
   },
   "validation": {
     "required": "This field is required.",
@@ -1760,7 +1810,8 @@
       "answeredFoot": "Answered here or on any other device. They leave the next time Shared opens.",
       "offline": "Answering needs a connection: the person who invited you is told your answer, and only the server can check the invitation still stands.",
       "alreadyIn": "You are already in this group through another invitation.",
-      "otherCurrencyRefused": "This group is in another currency than yours, so it can only be declined."
+      "otherCurrencyRefused": "This group is in another currency than yours, so it can only be declined.",
+      "confirmFirst": "Invitations to you show up here once you confirm your email. <confirm>Confirm it</confirm>"
     },
     "invite": {
       "door": "Invite them to see this group",
@@ -1790,7 +1841,8 @@
       "stopAgain": "To let them see it again, invite them again.",
       "stopped": "{name} no longer sees this group",
       "withdrawn": "The invitation to {name} was withdrawn",
-      "left": "{email} · left {date}"
+      "left": "{email} · left {date}",
+      "confirmFirst": "<b>Confirm your email to invite people.</b> An invitation goes out with your address, so it has to be confirmed first. <confirm>Confirm email</confirm>"
     },
     "joined": {
       "section": "Shared with you",

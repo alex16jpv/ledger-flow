@@ -2,11 +2,15 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import type * as Flags from "@/lib/flags";
+import type { FeatureFlag } from "@/lib/flags";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { confirmEmailStore } from "@/lib/session/confirm-email";
+import { SessionProvider } from "@/lib/session/SessionProvider";
 import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
-import { contact, sentInvitation, sharedGroup } from "@/lib/testing/vault";
+import { contact, profile, sentInvitation, sharedGroup } from "@/lib/testing/vault";
 import type { SentInvitation } from "@/types/api";
 
 import { InviteSheet } from "./InviteSheet";
@@ -14,6 +18,14 @@ import { InviteSheet } from "./InviteSheet";
 const ANA = "k1";
 const BETO = "k2";
 const LUCIA = "k3";
+vi.mock("@/lib/flags", async (importOriginal) => {
+  const actual = await importOriginal<typeof Flags>();
+  return {
+    ...actual,
+    isEnabled: (flag: FeatureFlag) => flag === "emailVerification" || actual.isEnabled(flag),
+  };
+});
+
 const fetchMock = vi.fn<typeof fetch>();
 
 const group = sharedGroup({
@@ -68,12 +80,14 @@ function serve(rows: SentInvitation[]) {
   return calls;
 }
 
-const view = () =>
+const view = (emailVerified = true) =>
   renderWithProviders(
     <QueryProvider>
-      <ToastProvider>
-        <InviteSheet open group={group} contacts={people} onClose={vi.fn()} />
-      </ToastProvider>
+      <SessionProvider initialUser={profile({ emailVerified })} onSignedOut={vi.fn()}>
+        <ToastProvider>
+          <InviteSheet open group={group} contacts={people} onClose={vi.fn()} />
+        </ToastProvider>
+      </SessionProvider>
     </QueryProvider>,
   );
 
@@ -172,5 +186,21 @@ describe("InviteSheet", () => {
     const lucia = await rowOf("Lucía Mesa");
     expect(within(lucia).getByRole("button", { name: "Add email" })).toBeEnabled();
     expect(screen.getByRole("status")).toHaveTextContent("Inviting needs a connection");
+  });
+
+  it("waits for a confirmed email to invite, but still lets you take back", async () => {
+    const user = userEvent.setup();
+    serve([joined]);
+    view(false);
+
+    expect(await screen.findByText("Confirm your email to invite people.")).toBeInTheDocument();
+    const beto = await rowOf("Beto Cano");
+    expect(within(beto).getByRole("button", { name: "Invite" })).toBeDisabled();
+    const ana = await rowOf("Ana Ruiz");
+    expect(within(ana).getByRole("button", { name: "Stop sharing" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Confirm email" }));
+    expect(confirmEmailStore.getSnapshot().sheetOpen).toBe(true);
+    confirmEmailStore.reset();
   });
 });

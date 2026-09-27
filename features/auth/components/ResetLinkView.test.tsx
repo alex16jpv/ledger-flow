@@ -6,7 +6,7 @@ import { reportOnline } from "@/lib/network/connectivity";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
 
-import { keepResetToken } from "../carry";
+import { keepLinkToken } from "../carry";
 import { ResetLinkView } from "./ResetLinkView";
 
 const replace = vi.fn();
@@ -29,7 +29,7 @@ beforeEach(() => {
   replace.mockReset();
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
-  keepResetToken(null);
+  keepLinkToken("reset", null);
   window.history.replaceState(null, "", `/reset#token=${TOKEN}`);
 });
 

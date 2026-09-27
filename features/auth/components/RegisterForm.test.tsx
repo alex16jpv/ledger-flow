@@ -32,8 +32,16 @@ vi.mock("@/lib/i18n/navigation", () => ({
   ),
 }));
 let forgotPassword = false;
+let emailVerification = false;
 vi.mock("@/lib/flags", () => ({
-  isEnabled: (flag: string) => flag === "forgotPassword" && forgotPassword,
+  isEnabled: (flag: string) =>
+    (flag === "forgotPassword" && forgotPassword) ||
+    (flag === "emailVerification" && emailVerification),
+}));
+const token = vi.fn<() => Promise<string>>();
+vi.mock("@/lib/captcha/useHumanCheck", () => ({
+  useHumanCheck: () => ({ mount: vi.fn(), interactive: false, token }),
+  HumanCheckSlot: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
@@ -46,6 +54,8 @@ const fetchMock = vi.fn<typeof fetch>();
 beforeEach(() => {
   replace.mockReset();
   fetchMock.mockReset();
+  token.mockReset().mockResolvedValue("captcha-token");
+  emailVerification = false;
   vi.stubGlobal("fetch", fetchMock);
   vi.spyOn(navigator, "language", "get").mockReturnValue("es-CO");
 });
@@ -106,6 +116,64 @@ describe("RegisterForm", () => {
     });
     expect(typeof body.timezone).toBe("string");
     expect(body).not.toHaveProperty("consent");
+    expect(body).not.toHaveProperty("captcha");
+    expect(token).not.toHaveBeenCalled();
+  });
+
+  it("asks Cloudflare when the flow exists, so the backend sends the confirmation email", async () => {
+    emailVerification = true;
+    fetchMock.mockResolvedValue(
+      json({ user: { id: "u1", name: "John", reactivated: false } }, { status: 201 }),
+    );
+    const onSuccess = renderForm();
+    await screen.findByRole("button", { name: /COP · / });
+    await fillValid();
+    await userEvent.click(screen.getByRole("checkbox"));
+    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalled();
+    });
+    expect(token).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as Record<
+      string,
+      unknown
+    >;
+    expect(body.captcha).toBe("captcha-token");
+  });
+
+  it("creates nothing when Cloudflare's check fails, and says so", async () => {
+    emailVerification = true;
+    token.mockRejectedValue(new Error("blocked"));
+    renderForm();
+    await screen.findByRole("button", { name: /COP · / });
+    await fillValid();
+    await userEvent.click(screen.getByRole("checkbox"));
+    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    expect(await screen.findByText(/We couldn’t check that you’re a person/)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("says a refused token and an unchecked one apart from an account that may exist", async () => {
+    emailVerification = true;
+    fetchMock.mockResolvedValueOnce(
+      json({ error: "Bad", message: "no", code: "CAPTCHA_INVALID" }, { status: 400 }),
+    );
+    renderForm();
+    await screen.findByRole("button", { name: /COP · / });
+    await fillValid();
+    await userEvent.click(screen.getByRole("checkbox"));
+    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    expect(await screen.findByText(/We couldn’t check that you’re a person/)).toBeInTheDocument();
+
+    fetchMock.mockResolvedValueOnce(
+      json({ error: "Unavailable", message: "no", code: "CAPTCHA_UNAVAILABLE" }, { status: 503 }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    expect(
+      await screen.findByText("Something went wrong on our side. Nothing changed: try again."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/We couldn’t check that you’re a person/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/may already exist/)).not.toBeInTheDocument();
   });
 
   it("shows the taken-email error inline with a sign-in link", async () => {

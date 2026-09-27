@@ -185,6 +185,7 @@ Accounts, Stats, Categories, Settings and the user (T-72). From 900px up the sid
 | `/`                                                            | Public landing (server-rendered per request, P-41)                                                                                            |
 | `/login`, `/register`, `/onboarding`                           | Access and first-run flow                                                                                                                     |
 | `/forgot`, `/reset#token=…`, `/keep-or-start-fresh`            | Forgot your password? (by code or by the email's link) and the question after recovering an account that never confirmed its email            |
+| `/verify#token=…`, `/not-me#token=…`                           | The confirmation email's two links: confirm the address, or erase the account that used it without confirming it (one tap each)               |
 | `/home`                                                        | Authenticated home                                                                                                                            |
 | `/settings`, `/settings/appearance`                            | Settings hub (language, currency, time zone, your data, install, about, delete) and appearance                                                |
 | `/settings/profile`, `/settings/sessions`                      | Profile & security (name, email, password with re-authentication) and active sessions                                                         |

@@ -30,6 +30,8 @@ const env = {
   MAILPIT_URL: process.env.E2E_MAILPIT_URL ?? "http://localhost:8025",
   APP_URL: appUrl,
   TURNSTILE_SECRET: "1x0000000000000000000000000000000AA",
+  // Production turns it on once the app can confirm an email: the suite runs as production will.
+  EMAIL_VERIFICATION_REQUIRED: "true",
   // Every run is one IP, one device and a new address per test: only the per-address brakes stay real.
   EMAIL_IP_HOURLY_MAX: "100000",
   EMAIL_DEVICE_HOURLY_MAX: "100000",

@@ -3,6 +3,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import { isEnabled } from "@/lib/flags";
 import {
   deriveJoined,
   type JoinedGroupStanding,
@@ -14,6 +15,8 @@ import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { isAnswerable, type JoinedRows, type SharedLedgerRows } from "@/lib/local/repository";
 import { REFERENCE_STALE_TIME_MS } from "@/lib/query/client";
 import { invalidateMoneyMovement, QUERY_DOMAINS } from "@/lib/query/domains";
+import { emailUnconfirmed } from "@/lib/session/confirm-email";
+import { useAppUser } from "@/lib/session/useAppUser";
 import type { AddParticipantsInput, Contact, RestoreInput, UpdateContactInput } from "@/types/api";
 
 import {
@@ -276,12 +279,15 @@ export function useRestoreContact() {
   });
 }
 
+// Until the email is confirmed the server finds none, and its listing answers 403 EMAIL_NOT_VERIFIED.
 export function useReceivedInvitations(enabled = true) {
+  const user = useAppUser();
+  const mayAsk = !isEnabled("emailVerification") || (user !== null && !emailUnconfirmed(user));
   return useQuery({
     queryKey: sharedKeys.received(),
     queryFn: fetchReceivedInvitations,
     staleTime: REFERENCE_STALE_TIME_MS,
-    enabled,
+    enabled: enabled && mayAsk,
   });
 }
 

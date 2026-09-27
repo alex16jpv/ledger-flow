@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert, WifiOff } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { AuthHeading } from "@/components/shell/AuthFrame";
@@ -19,7 +19,7 @@ import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOffline } from "@/lib/network/useOffline";
 
-import { keepResetToken, keptResetToken } from "../carry";
+import { keepLinkToken } from "../carry";
 import {
   type FailureKey,
   failureKey,
@@ -28,34 +28,16 @@ import {
   useResetPassword,
 } from "../hooks";
 import { resetLinkSchema, type ResetLinkValues } from "../schemas";
+import { useLinkToken } from "../useLinkToken";
 import { PasswordInput } from "./PasswordInput";
 import { RateLimitAlert } from "./RateLimitAlert";
-
-const TOKEN_PARAM = "token";
-
-const noSubscription = () => () => undefined;
-const notReadYet = () => undefined;
-
-// Keeps Next's history state: its patched replaceState would restore a route and stall the next navigation.
-function takeTokenFromAddress(): string | null {
-  const fragment = new URLSearchParams(window.location.hash.slice(1)).get(TOKEN_PARAM);
-  if (window.location.hash) {
-    window.history.replaceState(
-      window.history.state,
-      "",
-      `${window.location.pathname}${window.location.search}`,
-    );
-  }
-  if (fragment) keepResetToken(fragment);
-  return fragment ?? keptResetToken();
-}
 
 export function ResetLinkView() {
   const t = useTranslations();
   const offline = useOffline();
   const finish = useFinishReset();
   const reset = useResetPassword();
-  const token = useSyncExternalStore(noSubscription, takeTokenFromAddress, notReadYet);
+  const token = useLinkToken("reset");
   const [dead, setDead] = useState(false);
   const [failure, setFailure] = useState<FailureKey | null>(null);
   const [redeemed, setRedeemed] = useState(false);
@@ -72,7 +54,7 @@ export function ResetLinkView() {
     try {
       const session = await reset.mutateAsync({ token, newPassword });
       setRedeemed(true);
-      keepResetToken(null);
+      keepLinkToken("reset", null);
       finish(session);
     } catch (error) {
       const wait = retryAfterOf(error);
@@ -81,7 +63,7 @@ export function ResetLinkView() {
         error instanceof ApiError &&
         (error.code === "LINK_INVALID" || error.code === "VALIDATION")
       ) {
-        keepResetToken(null);
+        keepLinkToken("reset", null);
         setDead(true);
       } else setFailure(failureKey(error));
     }

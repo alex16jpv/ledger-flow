@@ -22,6 +22,7 @@ import { useSharedSection, useWaitingInvitationCount } from "@/features/shared/h
 import { usePendingCount } from "@/features/transactions/hooks";
 import { readSessionMarker, vaultUserFor } from "@/lib/auth/marker";
 import { KEEP_OR_START_FRESH_PATH, LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
+import { isEnabled } from "@/lib/flags";
 import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import { localePrefix } from "@/lib/i18n/locales";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
@@ -39,12 +40,17 @@ import { warmAppShell } from "@/lib/pwa/service-worker";
 import { invalidateMirrorBacked } from "@/lib/query/domains";
 import { useMounted } from "@/lib/react/useMounted";
 import { SessionProvider, useSession } from "@/lib/session";
+import { emailUnconfirmed, useConfirmEmailOpenedOnce } from "@/lib/session/confirm-email";
 import { profileResolved } from "@/lib/session/profile";
 
 import { ServiceWorkerUpdates } from "./ServiceWorkerUpdates";
 
 const QuickAddSheet = dynamic(() =>
   import("./QuickAddSheet").then((module) => module.QuickAddSheet),
+);
+
+const ConfirmEmailSheet = dynamic(() =>
+  import("@/features/auth/components/ConfirmEmailSheet").then((module) => module.ConfirmEmailSheet),
 );
 
 function Frame({ children }: { children: ReactNode }) {
@@ -87,6 +93,11 @@ function Frame({ children }: { children: ReactNode }) {
   const categorySummary = useCategorySummary(moreOpen);
   const shared = useSharedSection(moreOpen);
   const invitations = useWaitingInvitationCount();
+  const confirmEmailOpened = useConfirmEmailOpenedOnce();
+  const askToConfirm =
+    isEnabled("emailVerification") &&
+    sessionStatus === "authenticated" &&
+    emailUnconfirmed(session.user);
   // F-38: what the pull writes into the mirror only reaches the screens through an invalidation.
   const onMirrorChanged = useCallback(() => {
     void invalidateMirrorBacked(queryClient);
@@ -142,7 +153,13 @@ function Frame({ children }: { children: ReactNode }) {
         onMore={() => {
           setMoreOpen(true);
         }}
-        banner={<ConnectionBanner signedOut={sessionStatus === "expired"} onSignIn={goToLogin} />}
+        banner={
+          <ConnectionBanner
+            signedOut={sessionStatus === "expired"}
+            onSignIn={goToLogin}
+            unconfirmedEmail={askToConfirm ? session.user?.email : undefined}
+          />
+        }
       >
         {mounted && !questionOpen ? children : null}
       </AppShell>
@@ -158,6 +175,7 @@ function Frame({ children }: { children: ReactNode }) {
         owedToYou={shared.section?.owedToYou}
         invitations={invitations}
       />
+      {isEnabled("emailVerification") && confirmEmailOpened && <ConfirmEmailSheet />}
       <QuickAddSheet
         open={quickAdd.open}
         chain={quickAdd.chain}
