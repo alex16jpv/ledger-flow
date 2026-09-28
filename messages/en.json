@@ -1009,7 +1009,8 @@
     "EMAIL_CODE_INVALID": "That code isn’t right. Check the last email we sent.",
     "EMAIL_CODE_EXPIRED": "This code no longer works: it expired, or it was tried too many times. Send a new one.",
     "EMAIL_SEND_FAILED": "We couldn’t send the email. Try again in a few minutes.",
-    "EMAIL_CHANGE_NOT_PENDING": "This change isn’t waiting any more: it was confirmed, cancelled, or its 24 hours passed."
+    "EMAIL_CHANGE_NOT_PENDING": "This change isn’t waiting any more: it was confirmed, cancelled, or its 24 hours passed.",
+    "EMAIL_CHANGE_REQUIRES_VERIFICATION": "Your email changes only once you confirm the new address. Reload the app and save it again."
   },
   "validation": {
     "required": "This field is required.",

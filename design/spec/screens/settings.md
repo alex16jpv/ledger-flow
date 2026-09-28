@@ -215,7 +215,7 @@ drops `Android` from the user agent — is still an Android: a Linux user agent 
   from 600px up; and "Sign out" becomes icon-only, keeping the device in its accessible name. Nothing
   in the row is ever truncated: measured at 375px, the three facts on one line showed 73% of their
   text each.
-- **Profile & security** (`#profile-and-security`): name, email (help: it signs out other sessions), a
+- **Profile & security** (`#profile-and-security`): name, email (help: a new address gets a code first, see below), a
   new password, a re-authentication alert and a required "Current password" field when the email or the
   password changes; `CURRENT_PASSWORD_INVALID` shows inline; success brings a toast and a token refresh.
   **An email not confirmed** (`#profile-and-security-not-confirmed`) carries a `warning` badge, "Not

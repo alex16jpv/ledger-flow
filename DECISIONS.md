@@ -10,8 +10,11 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **The email leaves `PUT /users/:id`.** Save changes with a new address asks `POST
 /users/:id/email-change` first, with the current password and an `email-change` token, and only then
   sends the name or the new password: a refused address saves nothing. The password never has to be
-  given twice, since the pending change does not bump `tokenVersion`. Once this ships, the backend
-  closes `email` on the `PUT`.
+  given twice, since the pending change does not bump `tokenVersion`. Once this shipped, the backend
+  closed `email` on the `PUT` (its T-232): `UpdateUserInput` has no `email` any more, and a body that
+  still carries one reads `400 EMAIL_CHANGE_REQUIRES_VERIFICATION` (T-234). No build that knows the code
+  sends `email` there, and one cached from before T-222 reads it as an unknown 400: its text exists
+  because every code has one.
 - **Four operations, three named routes** (`/api/auth/change-email` POST and DELETE,
   `/api/auth/change-email/resend`, `/api/auth/confirm-change`), and the generic proxy refuses
   `users/*/email-change`: asking and Resend must carry the device cookie so the email brakes count the
@@ -2483,7 +2486,8 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 ## 2026-09-02 · Settings complete (W-30)
 
 - **A credential change signs this device in again.** `PUT /users/:id` with `email` or `password`
-  bumps the token version and revokes every refresh token, ours included; instead of letting the next
+  (only `password` since T-222: the email moves once its new address confirms it) bumps the token
+  version and revokes every refresh token, ours included; instead of letting the next
   refresh fail into the session-expired sheet, `useUpdateProfile` calls `/api/auth/login` with the new
   pair right after the update and the toast says the other devices were signed out.
 - **Changing the time zone refreshes the access token immediately** (`refreshSession()`), because the

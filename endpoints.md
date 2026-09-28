@@ -2128,7 +2128,7 @@ The profile, and while its email is not confirmed, what the sheet that confirms 
 
 ### `PUT /users/{id}`
 
-Changing `email` or `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again. `currency` can only change while the user has no accounts (mono-currency mode). Changing the email to one belonging to another account (soft-deleted included) conflicts — reactivation only applies on register. A new email is not confirmed (`emailVerified` false) and is sent `verify-email`; a send that fails does not undo the change, and the sheet offers Send code.
+Changing `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again. `currency` can only change while the user has no accounts (mono-currency mode). The email does not change here: a body with `email` is refused whole, before its password or its fields are checked, and nothing is written; it changes through `POST /users/{id}/email-change`, once the new address confirms it.
 
 **Path**
 
@@ -2140,14 +2140,13 @@ Changing `email` or `password` requires `currentPassword` (re-authentication) an
 
 **Responses**
 
-| Status | Schema          | Description                                                                                                                                                   |
-| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `User`          | User updated                                                                                                                                                  |
-| `400`  | `ErrorResponse` | Validation error, e.g. missing currentPassword when changing email/password (code VALIDATION), or currency change while accounts exist (code CURRENCY_LOCKED) |
-| `401`  | `ErrorResponse` | Missing, invalid or expired access token, or wrong currentPassword (code CURRENT_PASSWORD_INVALID)                                                            |
-| `404`  | `ErrorResponse` | User not found (or not the authenticated user's id)                                                                                                           |
-| `409`  | `ErrorResponse` | Email already used by another account (code DUPLICATE)                                                                                                        |
-| `429`  | `ErrorResponse` | Too many wrong currentPassword guesses for this user (code RATE_LIMITED)                                                                                      |
+| Status | Schema          | Description                                                                                                                                                                                                                   |
+| ------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `User`          | User updated                                                                                                                                                                                                                  |
+| `400`  | `ErrorResponse` | Validation error, e.g. missing currentPassword when changing the password (code VALIDATION); an `email` in the body (code EMAIL_CHANGE_REQUIRES_VERIFICATION); or currency change while accounts exist (code CURRENCY_LOCKED) |
+| `401`  | `ErrorResponse` | Missing, invalid or expired access token, or wrong currentPassword (code CURRENT_PASSWORD_INVALID)                                                                                                                            |
+| `404`  | `ErrorResponse` | User not found (or not the authenticated user's id)                                                                                                                                                                           |
+| `429`  | `ErrorResponse` | Too many wrong currentPassword guesses for this user (code RATE_LIMITED)                                                                                                                                                      |
 
 ### `DELETE /users/{id}`
 
@@ -2173,7 +2172,7 @@ Requires `currentPassword`: a hijacked 15-minute access token must not be able t
 
 ### `POST /users/{id}/email-change`
 
-Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a credential change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP. PUT /users/{id} with `email` still moves the account at once, until the app uses this route.
+Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION).
 
 **Path**
 
