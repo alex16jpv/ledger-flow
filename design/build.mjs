@@ -2932,13 +2932,7 @@ const profileSecurity = (email = "", { sheet = "" } = {}) => {
               help: NEW_EMAIL_HELP,
               error: "We can’t send email to this address. Check it, or use another one.",
             })
-          : field("Email", "john@example.com", null, {
-              icon: "user",
-              help:
-                email == "pending" || email == "new-sheet" || email == "new-taken"
-                  ? NEW_EMAIL_HELP
-                  : "Changing it signs out your other sessions.",
-            });
+          : field("Email", "john@example.com", null, { icon: "user", help: NEW_EMAIL_HELP });
   const pending = email == "pending" || email == "new-sheet";
   const body = `${field("Name", "John Doe", null, { icon: "user" })}${emailField}${pending ? PENDING_EMAIL : ""}
 <div class="divider"></div><span class="eyebrow">Change password</span>${field("New password", null, "At least 8 characters", { icon: "lock" })}

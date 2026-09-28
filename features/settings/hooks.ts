@@ -66,7 +66,7 @@ export function useAccountCount(enabled = true) {
   });
 }
 
-export interface ProfileChange extends Omit<UpdateUserInput, "email"> {
+export interface ProfileChange extends UpdateUserInput {
   reauthenticateWith?: { email: string; password: string };
 }
 
