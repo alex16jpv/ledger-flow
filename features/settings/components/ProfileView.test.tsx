@@ -1,9 +1,12 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 
+import { ToastProvider } from "@/components/ui/Toast";
 import type * as Flags from "@/lib/flags";
 import type { FeatureFlag } from "@/lib/flags";
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import type { SessionProfile } from "@/lib/session/api";
 import { confirmEmailStore } from "@/lib/session/confirm-email";
 import { SessionProvider } from "@/lib/session/SessionProvider";
 import { renderWithProviders } from "@/lib/testing/render";
@@ -11,13 +14,21 @@ import type { User } from "@/types/api";
 
 import { ProfileView } from "./ProfileView";
 
+const flow = { on: true };
 vi.mock("@/lib/flags", async (importOriginal) => {
   const actual = await importOriginal<typeof Flags>();
   return {
     ...actual,
-    isEnabled: (flag: FeatureFlag) => flag === "emailVerification" || actual.isEnabled(flag),
+    isEnabled: (flag: FeatureFlag) =>
+      flag === "emailVerification" ? flow.on : actual.isEnabled(flag),
   };
 });
+
+const token = vi.fn<() => Promise<string>>();
+vi.mock("@/lib/captcha/useHumanCheck", () => ({
+  useHumanCheck: () => ({ mount: vi.fn(), interactive: false, token }),
+  HumanCheckSlot: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { headers: { "content-type": "application/json" }, ...init });
@@ -41,18 +52,44 @@ function urlOf(input: string | URL | Request): string {
   return input instanceof URL ? input.href : input.url;
 }
 
-function renderView(onSaved = vi.fn(), shown: User = user) {
+function renderView(onSaved = vi.fn(), shown: SessionProfile = user) {
   renderWithProviders(
     <QueryProvider>
       <SessionProvider onSignedOut={vi.fn()}>
-        <ProfileView user={shown} onSaved={onSaved} />
+        <ToastProvider>
+          <ProfileView user={shown} onSaved={onSaved} />
+        </ToastProvider>
       </SessionProvider>
     </QueryProvider>,
   );
   return onSaved;
 }
 
+const failure = (code: string, status: number) =>
+  json({ error: "Error", message: code, code }, { status });
+
+const sent = (path: string) =>
+  fetchMock.mock.calls
+    .filter(([input]) => urlOf(input) === path)
+    .map(([, init]) => JSON.parse(init?.body as string) as Record<string, unknown>);
+
+const waiting = {
+  email: "new@ledgerflow.test",
+  expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+  resendAvailableAt: new Date(Date.now() + 42_000).toISOString(),
+};
+
+async function askForNewEmail(address = "new@ledgerflow.test") {
+  const email = screen.getByLabelText("Email");
+  await userEvent.clear(email);
+  await userEvent.type(email, address);
+  await userEvent.type(screen.getByLabelText("Current password"), "OldPass!2026");
+  await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+}
+
 beforeEach(() => {
+  flow.on = true;
+  token.mockReset().mockResolvedValue("captcha-token");
   fetchMock.mockReset();
   fetchMock.mockImplementation((input, init) => {
     const url = urlOf(input);
@@ -74,32 +111,183 @@ describe("ProfileView", () => {
     renderView(vi.fn(), { ...user, emailVerified: false });
     expect(screen.getByText("Not confirmed")).toBeInTheDocument();
     expect(screen.getByText(/Confirm it to invite people to Shared/)).toBeInTheDocument();
-    expect(screen.queryByText("Changing it signs out your other devices.")).not.toBeInTheDocument();
+    expect(screen.queryByText(/A new address gets a code first/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Confirm it" }));
     expect(confirmEmailStore.getSnapshot().sheetOpen).toBe(true);
   });
 
-  it("tells the screen which address a new email went to", async () => {
-    fetchMock.mockImplementation((input, init) => {
+  it("asks the new address to confirm itself, and changes nothing else", async () => {
+    fetchMock.mockImplementation((input) => {
       const url = urlOf(input);
-      const moved = { ...user, email: "new@ledgerflow.test", emailVerified: false };
-      if (url.startsWith("/api/auth/me")) return Promise.resolve(json({ user: moved }));
-      if (init?.method === "PUT") return Promise.resolve(json(moved));
-      if (init?.method === "POST") return Promise.resolve(json({ user: moved, accessToken: "a" }));
+      if (url.startsWith("/api/auth/me")) return Promise.resolve(json({ user }));
+      if (url === "/api/auth/change-email")
+        return Promise.resolve(
+          json({ resendAfterSeconds: 60, emailChange: waiting }, { status: 202 }),
+        );
       return Promise.resolve(json({}));
     });
     const onSaved = renderView();
-    const email = screen.getByLabelText("Email");
-    await userEvent.clear(email);
-    await userEvent.type(email, "new@ledgerflow.test");
-    await userEvent.type(screen.getByLabelText("Current password"), "OldPass!2026");
-    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(
+      screen.getByText(/A new address gets a code first: the change happens once you confirm it/),
+    ).toBeInTheDocument();
+    await askForNewEmail();
     await waitFor(() => {
       expect(onSaved).toHaveBeenCalledWith({
-        reauthenticated: true,
+        reauthenticated: false,
         newEmail: "new@ledgerflow.test",
       });
     });
+    expect(sent("/api/auth/change-email")).toEqual([
+      { email: "new@ledgerflow.test", currentPassword: "OldPass!2026", captcha: "captcha-token" },
+    ]);
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+    expect(screen.getByLabelText("Email")).toHaveValue(user.email);
+  });
+
+  it("saves a new password only after the new address was asked for", async () => {
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (url.startsWith("/api/auth/me")) return Promise.resolve(json({ user }));
+      if (url === "/api/auth/change-email") return Promise.resolve(failure("EMAIL_TAKEN", 409));
+      if (init?.method === "PUT") return Promise.resolve(json(user));
+      return Promise.resolve(json({}));
+    });
+    const onSaved = renderView();
+    await userEvent.type(screen.getByLabelText(/^New password/), "Str0ngPass!");
+    await askForNewEmail("taken@ledgerflow.test");
+    expect(await screen.findByText("This email already has an account.")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it("says a wrong current password under its field, after one request only", async () => {
+    fetchMock.mockImplementation((input) => {
+      if (urlOf(input) === "/api/auth/change-email")
+        return Promise.resolve(failure("CURRENT_PASSWORD_INVALID", 401));
+      return Promise.resolve(json({ user }));
+    });
+    renderView();
+    await askForNewEmail();
+    expect(await screen.findByText("Your current password is wrong.")).toBeInTheDocument();
+    expect(sent("/api/auth/change-email")).toHaveLength(1);
+    expect(fetchMock.mock.calls.some(([input]) => urlOf(input) === "/api/auth/refresh")).toBe(
+      false,
+    );
+    expect(screen.queryByText("We couldn’t check that you’re a person.")).not.toBeInTheDocument();
+  });
+
+  it("does not ask for the address again when only the password failed after it", async () => {
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (url.startsWith("/api/auth/me")) return Promise.resolve(json({ user }));
+      if (url === "/api/auth/change-email")
+        return Promise.resolve(
+          json({ resendAfterSeconds: 60, emailChange: waiting }, { status: 202 }),
+        );
+      if (init?.method === "PUT") return Promise.resolve(failure("DB_UNAVAILABLE", 503));
+      return Promise.resolve(json({}));
+    });
+    renderView();
+    await userEvent.type(screen.getByLabelText(/^New password/), "Str0ngPass!");
+    await askForNewEmail();
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true);
+    });
+    expect(screen.getByLabelText(/^Email/)).toHaveValue(user.email);
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(2);
+    });
+    expect(sent("/api/auth/change-email")).toHaveLength(1);
+  });
+
+  it("hides a change whose 24 hours passed", () => {
+    renderView(vi.fn(), {
+      ...user,
+      emailChange: { ...waiting, expiresAt: new Date(Date.now() - 1_000).toISOString() },
+    });
+    expect(screen.queryByText(/Waiting for confirmation at/)).not.toBeInTheDocument();
+  });
+
+  it("says under the field when the address takes none of our email", async () => {
+    fetchMock.mockImplementation((input) => {
+      if (urlOf(input) === "/api/auth/change-email")
+        return Promise.resolve(failure("EMAIL_SEND_FAILED", 422));
+      return Promise.resolve(json({ user }));
+    });
+    renderView();
+    await askForNewEmail();
+    expect(
+      await screen.findByText("We can’t send email to this address. Check it, or use another one."),
+    ).toBeInTheDocument();
+  });
+
+  it("says a send that failed on our side in an alert, and a refused check with its own", async () => {
+    fetchMock.mockImplementation((input) => {
+      if (urlOf(input) === "/api/auth/change-email")
+        return Promise.resolve(failure("EMAIL_SEND_FAILED", 503));
+      return Promise.resolve(json({ user }));
+    });
+    renderView();
+    await askForNewEmail();
+    expect(
+      await screen.findByText("We couldn’t send the email. Try again in a few minutes."),
+    ).toBeInTheDocument();
+    token.mockRejectedValueOnce(new Error("blocked"));
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByText("We couldn’t check that you’re a person.")).toBeInTheDocument();
+  });
+
+  it("waits out a limit with its countdown, and Save changes off until it ends", async () => {
+    fetchMock.mockImplementation((input) => {
+      if (urlOf(input) === "/api/auth/change-email")
+        return Promise.resolve(
+          new Response(JSON.stringify({ error: "Too many", code: "RATE_LIMITED" }), {
+            status: 429,
+            headers: { "content-type": "application/json", "retry-after": "42" },
+          }),
+        );
+      return Promise.resolve(json({ user }));
+    });
+    renderView();
+    await askForNewEmail();
+    expect(await screen.findByText("You can try again in 0:42.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    expect(screen.queryByText("Too many attempts. Try again in a moment.")).not.toBeInTheDocument();
+  });
+
+  it("keeps the field read-only where there is no Cloudflare check", async () => {
+    flow.on = false;
+    renderView();
+    const email = screen.getByLabelText("Email");
+    expect(email).toHaveAttribute("readonly");
+    expect(
+      screen.getByText("Changing the email needs Cloudflare’s check, which isn’t set up here."),
+    ).toBeInTheDocument();
+    await userEvent.type(email, "x");
+    expect(screen.queryByLabelText("Current password")).not.toBeInTheDocument();
+  });
+
+  it("shows the address that waits, with Enter code, Resend and Cancel change", async () => {
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (url.startsWith("/api/auth/me"))
+        return Promise.resolve(json({ user: { ...user, emailChange: waiting } }));
+      if (url === "/api/auth/change-email" && init?.method === "DELETE")
+        return Promise.resolve(json({ message: "Nothing waits" }));
+      return Promise.resolve(json({}));
+    });
+    renderView(vi.fn(), { ...user, emailChange: waiting });
+    expect(screen.getByText(/Waiting for confirmation at/)).toHaveTextContent(
+      "Waiting for confirmation at new@ledgerflow.test",
+    );
+    expect(screen.getByRole("button", { name: /Resend in 0:4\d/ })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Enter code" }));
+    expect(confirmEmailStore.getSnapshot()).toMatchObject({ sheetOpen: true, target: "new" });
+    await userEvent.click(screen.getByRole("button", { name: "Cancel change" }));
+    expect(
+      await screen.findByText(`Change cancelled. Your account keeps ${user.email}.`),
+    ).toBeInTheDocument();
   });
 
   it("renames without asking for the current password", async () => {
@@ -129,7 +317,6 @@ describe("ProfileView", () => {
     });
     const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
     expect(JSON.parse(put?.[1]?.body as string)).toEqual({
-      name: "Ana",
       password: "Str0ngPass!",
       currentPassword: "OldPass!2026",
     });
@@ -152,7 +339,7 @@ describe("ProfileView", () => {
       return Promise.resolve(json({}));
     });
     renderView();
-    await userEvent.type(screen.getByLabelText("Email"), "x");
+    await userEvent.type(screen.getByLabelText(/^New password/), "Str0ngPass!");
     await userEvent.type(screen.getByLabelText("Current password"), "wrong");
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(await screen.findByText("Your current password is wrong.")).toBeInTheDocument();

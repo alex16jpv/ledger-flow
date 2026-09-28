@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
+import { RateLimitAlert } from "@/components/ui/RateLimitAlert";
 import { ApiError, presentError } from "@/lib/api/errors";
 import { FORGOT_PATH } from "@/lib/auth/routes";
 import { Link } from "@/lib/i18n/navigation";
@@ -20,7 +21,6 @@ import { carriedEmail, carryEmail } from "../carry";
 import { retryAfterOf, useLogin } from "../hooks";
 import { loginSchema, type LoginValues } from "../schemas";
 import { PasswordInput } from "./PasswordInput";
-import { RateLimitAlert } from "./RateLimitAlert";
 
 interface LoginFormProps {
   onSuccess: (session: SessionUser) => void;

@@ -9,7 +9,10 @@ user has accounts, a searchable picker otherwise), the time-zone sheet (saves an
 token so budgets and stats use the new zone at once), `ProfileView` (`/settings/profile`: name, email and
 password; a credential change asks for the current password and signs this device in again with the
 new pair, because the API revokes every refresh token; an email not confirmed carries its badge and
-opens the code sheet, and a new one is unconfirmed until its code comes back, T-210), `SessionsView` (`/settings/sessions`: one row
+opens the code sheet, T-210; a new address only counts once its code comes back, T-222: saving one asks
+for it with Cloudflare's check before the name or the password are saved, and a card under the field
+shows the address that waits, with Enter code, Resend and Cancel change; where there is no site key the
+field is read-only), `SessionsView` (`/settings/sessions`: one row
 per device from the user agent, sign out one, or every device with a confirmation that warns this one
 goes too), the "Your data" section (rights under Law 1581, contact mailbox, policy link), the
 "Install app" row (`beforeinstallprompt`), About with the Version row — which, while a new version is

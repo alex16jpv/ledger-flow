@@ -64,6 +64,7 @@ export const ERROR_CODES = [
   "EMAIL_CODE_INVALID",
   "EMAIL_CODE_EXPIRED",
   "EMAIL_SEND_FAILED",
+  "EMAIL_CHANGE_NOT_PENDING",
   "RATE_LIMITED",
   "DB_UNAVAILABLE",
   "INTERNAL",
@@ -147,6 +148,7 @@ const SHOWN: Readonly<Record<ErrorCode, readonly [ErrorScope, string?]>> = {
   EMAIL_CODE_INVALID: ["field", "code"],
   EMAIL_CODE_EXPIRED: ["field", "code"],
   EMAIL_SEND_FAILED: ["form"],
+  EMAIL_CHANGE_NOT_PENDING: ["form"],
   RATE_LIMITED: ["rateLimit"],
   DB_UNAVAILABLE: ["screen"],
   INTERNAL: ["screen"],
@@ -163,6 +165,11 @@ export const ERROR_TABLE: Readonly<Record<ErrorCode, ErrorPresentation>> = Objec
     return [code, { scope, ...(field ? { field } : {}), messageKey: `errors.${code}` }];
   }),
 ) as Readonly<Record<ErrorCode, ErrorPresentation>>;
+
+// A wrong current password is a 401 too, and renewing the session and sending again would guess twice.
+export function sessionMayRenew(error: ApiError): boolean {
+  return error.status === 401 && error.code !== "CURRENT_PASSWORD_INVALID";
+}
 
 export function isErrorCode(value: unknown): value is ErrorCode {
   return typeof value === "string" && (ERROR_CODES as readonly string[]).includes(value);

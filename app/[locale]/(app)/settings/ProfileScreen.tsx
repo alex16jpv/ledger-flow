@@ -6,7 +6,6 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { ProfileView } from "@/features/settings/components/ProfileView";
-import { isEnabled } from "@/lib/flags";
 import { useBackNavigation } from "@/lib/navigation/history";
 import { useSession } from "@/lib/session";
 
@@ -25,12 +24,12 @@ export function ProfileScreen() {
       />
       {user ? (
         <ProfileView
-          key={user.id}
+          key={`${user.id}:${user.email}`}
           user={user}
           onSaved={({ reauthenticated, newEmail }) => {
             toast.show({
               message:
-                newEmail !== null && isEnabled("emailVerification")
+                newEmail !== null
                   ? t("settings.credentials.savedNewEmail", { email: newEmail })
                   : reauthenticated
                     ? t("settings.credentials.savedReauth")

@@ -10,7 +10,7 @@ import { reportError } from "@/lib/observability/reporter";
 import { tabChannel } from "@/lib/session/channel";
 
 import { API_PREFIX } from "./client";
-import { NetworkError } from "./errors";
+import { ApiError, NetworkError, sessionMayRenew } from "./errors";
 import { newRequestId } from "./request-id";
 
 export const REFRESH_LOCK = "lf-refresh";
@@ -120,4 +120,16 @@ export function resetRefreshState(): void {
   inFlight = null;
   lastRefreshAt = 0;
   sessionOver = false;
+}
+
+const isUnauthorized = (error: unknown) => error instanceof ApiError && sessionMayRenew(error);
+
+// The client renews on a 401 everywhere but `/auth/*`, which the access frame and email routes use.
+export async function withFreshSession<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if (!isUnauthorized(error) || !(await refreshSession())) throw error;
+    return run();
+  }
 }

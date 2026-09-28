@@ -73,6 +73,17 @@ export async function readVerifyEmail(
   return { code, link, notMe: linkIn(text, "not-me") ?? null };
 }
 
+export async function readEmailChangeEmail(
+  request: APIRequestContext,
+  to: string,
+): Promise<ResetEmail> {
+  const text = await readLatestText(request, to, "confirm-email");
+  const code = codeIn(text);
+  const link = linkIn(text, "confirm-email");
+  if (!code || !link) throw new Error(`no code or link in the email to ${to}`);
+  return { code, link };
+}
+
 // For a session registered with TEST_CAPTCHA: the code its verify-email carries confirms it.
 export async function confirmEmailOf(request: APIRequestContext, email: string): Promise<void> {
   const { code } = await readVerifyEmail(request, email);

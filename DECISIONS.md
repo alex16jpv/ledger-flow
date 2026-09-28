@@ -5,6 +5,37 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-28 · A new email waits for its code, through named BFF routes (T-222)
+
+- **The email leaves `PUT /users/:id`.** Save changes with a new address asks `POST
+/users/:id/email-change` first, with the current password and an `email-change` token, and only then
+  sends the name or the new password: a refused address saves nothing. The password never has to be
+  given twice, since the pending change does not bump `tokenVersion`. Once this ships, the backend
+  closes `email` on the `PUT`.
+- **Four operations, three named routes** (`/api/auth/change-email` POST and DELETE,
+  `/api/auth/change-email/resend`, `/api/auth/confirm-change`), and the generic proxy refuses
+  `users/*/email-change`: asking and Resend must carry the device cookie so the email brakes count the
+  device and not the IP, confirming must add this browser's refresh token to a link, and only named
+  routes can be under Vercel's rate rule. The route takes the account from the access token, so a body
+  can never name another. A link's answer sets cookies only when the backend opened a session (this
+  browser held the account's); otherwise the page gets `{}` and no profile.
+- **The calls live in `lib/session/email-change`**, not in a feature: Settings asks, Resends and
+  cancels, and the code sheet of `features/auth` Resends and confirms. `withFreshSession`,
+  `useWaitText`, `HumanCheckFailed` and `RateLimitAlert` moved up (`lib/api/refresh`, `lib/hooks`,
+  `components/ui`) for the same reason: `/auth/*` routes are not renewed by the client on a 401, and a
+  feature cannot import another.
+- **`setUser` keeps what only `/me` says** (`emailVerification`, `emailChange`) for the same account: a
+  `PUT` answers a bare `User`, and saving a name would have hidden the card until the next `/me`.
+- **The sheet keys its form by the facts `/me` answered.** The first render after the sheet's own `/me`
+  can still hold the cached copy (React Query notifies the observer after the refetch promise settles),
+  and the form read its opening once: it could open on a code that was no longer live, or on an old
+  countdown. Found here; it was already true of T-210's shape. Its final states (address taken,
+  nothing waiting) live in the sheet's body, because the refusal also empties the cached change.
+- **No site key, no new email**: the field is read-only and says why, as Sign up is (T-230). Keeping the
+  old immediate change there would break the day the backend closes it.
+- Alternatives: a second `PUT` field (the backend's contract is the four operations); letting the generic
+  proxy carry them (no device cookie, no rate rule).
+
 ## 2026-09-27 · Sign up needs Cloudflare's check everywhere (T-230)
 
 - **The backend creates no account without a `register` token** (its T-228): a register with no captcha

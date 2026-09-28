@@ -10,6 +10,8 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Field, Input } from "@/components/ui/Field";
+import { HumanCheckFailed } from "@/components/ui/HumanCheckFailed";
+import { RateLimitAlert } from "@/components/ui/RateLimitAlert";
 import { ApiError, presentError } from "@/lib/api/errors";
 import { FORGOT_PATH, LOGIN_PATH } from "@/lib/auth/routes";
 import { HumanCheckSlot, useHumanCheck } from "@/lib/captcha/useHumanCheck";
@@ -24,10 +26,8 @@ import type { SessionUser } from "@/lib/session/api";
 import { carryEmail } from "../carry";
 import { retryAfterOf, useRegister } from "../hooks";
 import { registerSchema, type RegisterValues } from "../schemas";
-import { HumanCheckFailed } from "./HumanCheckFailed";
 import { PasswordInput } from "./PasswordInput";
 import { ProfileDefaultsFields } from "./ProfileDefaultsFields";
-import { RateLimitAlert } from "./RateLimitAlert";
 
 const noSlot = () => undefined;
 

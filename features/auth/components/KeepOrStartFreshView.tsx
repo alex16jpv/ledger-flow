@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Field";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ApiError } from "@/lib/api/errors";
+import { withFreshSession } from "@/lib/api/refresh";
 import {
   APP_HOME_PATH,
   KEEP_OR_START_FRESH_PATH,
@@ -38,7 +39,6 @@ import {
   failureKey,
   fetchSessionUser,
   useKeepOrStartFresh,
-  withFreshSession,
 } from "../hooks";
 import { freshDetailsSchema, type FreshDetailsValues } from "../schemas";
 import { ProfileDefaultsFields } from "./ProfileDefaultsFields";

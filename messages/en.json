@@ -247,6 +247,15 @@
     "link": {
       "openApp": "Open Ledger Flow",
       "offline": "This needs a connection."
+    },
+    "confirmNewEmail": {
+      "title": "Move your account to this address?",
+      "body": "Your account’s email becomes the address this message reached, and your other devices are signed out. From now on you sign in with it.",
+      "submit": "Confirm new email",
+      "doneTitle": "Your email changed",
+      "doneBody": "Every other device was signed out. Sign in with this address from now on.",
+      "takenTitle": "That address now belongs to another account",
+      "takenBody": "Your account keeps its current email."
     }
   },
   "onboarding": {
@@ -373,7 +382,7 @@
       "pageTitle": "Profile & security",
       "name": "Name",
       "email": "Email",
-      "emailHelp": "Changing it signs out your other devices.",
+      "emailHelp": "A new address gets a code first: the change happens once you confirm it, and then your other sessions are signed out.",
       "newPassword": "New password",
       "newPasswordHelp": "At least 8 characters. Leave it empty to keep the current one.",
       "currentPassword": "Current password",
@@ -383,7 +392,16 @@
       "notConfirmedMeta": "Your email isn’t confirmed yet",
       "notConfirmed": "Not confirmed",
       "notConfirmedHelp": "Confirm it to invite people to Shared and to be invited. <confirm>Confirm it</confirm>",
-      "savedNewEmail": "Check {email}: confirm it to use invitations in Shared"
+      "savedNewEmail": "Check {email}: your email changes once you confirm it",
+      "emailLocked": "Changing the email needs Cloudflare’s check, which isn’t set up here.",
+      "emailUndeliverable": "We can’t send email to this address. Check it, or use another one.",
+      "pendingTitle": "Waiting for confirmation at <b>{email}</b>",
+      "pendingBody": "We sent it a code and a link. Until it’s confirmed, your account keeps {email}.",
+      "enterCode": "Enter code",
+      "resend": "Resend",
+      "resendIn": "Resend in {time}",
+      "cancelChange": "Cancel change",
+      "cancelled": "Change cancelled. Your account keeps {email}."
     },
     "sessions": {
       "title": "Active sessions",
@@ -816,7 +834,13 @@
       "offline": "Confirming your email needs a connection.",
       "sendFailedTitle": "We couldn’t send the email.",
       "sendFailedBody": "Try again in a few minutes.",
-      "done": "Email confirmed"
+      "done": "Email confirmed",
+      "newSheetTitle": "Confirm your new email",
+      "newDone": "Your email is now {email}. Every other device was signed out.",
+      "takenTitle": "That address now belongs to another account.",
+      "takenBody": "Your account keeps its current email.",
+      "goneTitle": "This change isn’t waiting any more.",
+      "goneBody": "It was confirmed, cancelled, or its 24 hours passed."
     }
   },
   "dev": {
@@ -984,7 +1008,8 @@
     "EMAIL_ALREADY_VERIFIED": "Your email is already confirmed.",
     "EMAIL_CODE_INVALID": "That code isn’t right. Check the last email we sent.",
     "EMAIL_CODE_EXPIRED": "This code no longer works: it expired, or it was tried too many times. Send a new one.",
-    "EMAIL_SEND_FAILED": "We couldn’t send the email. Try again in a few minutes."
+    "EMAIL_SEND_FAILED": "We couldn’t send the email. Try again in a few minutes.",
+    "EMAIL_CHANGE_NOT_PENDING": "This change isn’t waiting any more: it was confirmed, cancelled, or its 24 hours passed."
   },
   "validation": {
     "required": "This field is required.",

@@ -10,6 +10,7 @@ import { AuthHeading } from "@/components/shell/AuthFrame";
 import { Alert } from "@/components/ui/Alert";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { RateLimitAlert } from "@/components/ui/RateLimitAlert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { ApiError } from "@/lib/api/errors";
@@ -30,7 +31,6 @@ import {
 import { resetLinkSchema, type ResetLinkValues } from "../schemas";
 import { useLinkToken } from "../useLinkToken";
 import { PasswordInput } from "./PasswordInput";
-import { RateLimitAlert } from "./RateLimitAlert";
 
 export function ResetLinkView() {
   const t = useTranslations();

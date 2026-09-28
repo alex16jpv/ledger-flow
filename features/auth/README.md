@@ -60,3 +60,11 @@ their one button is tapped, like `/reset`. Nothing else waits for the confirmati
 the account — no mirror, no screens — and sends every visit, and every sign-in, there. Start fresh is
 one request with the new details; this device's copy goes right after, and any other device's goes
 the next time it syncs (`RESYNC_REQUIRED`, `lib/local/README.md`).
+
+**A new email** (T-222) waits for its own code: Profile & security asks for it (`lib/session/email-change`,
+`/api/auth/change-email`) and the account keeps its address until the new one answers. The same sheet
+confirms it, opened by the card's Enter code (`openConfirmNewEmail`): the code keeps this device signed in
+with a new session and signs every other one out. The email's link lands on `/confirm-email`, which does
+nothing until its button, like `/verify`; it keeps this browser's session only when it was the account's.
+The sheet ends, with its code gone, when the address became another account's meanwhile or nothing waits
+any more.

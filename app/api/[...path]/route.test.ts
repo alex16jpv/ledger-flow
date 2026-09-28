@@ -90,6 +90,10 @@ describe("generic API proxy", () => {
       ["auth", "email", "resend"],
       ["auth", "email", "verify"],
       ["auth", "password", "forgot"],
+      ["users", "u1", "email-change"],
+      ["users", "u1", "email-change", "resend"],
+      ["users", "u1", "Email-Change"],
+      ["AUTH", "email", "confirm-change"],
     ]) {
       const email = new NextRequest(`${APP}/api/${segments.join("/")}`, {
         method: "POST",

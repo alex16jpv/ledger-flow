@@ -7,7 +7,7 @@ import { clientIpOf } from "@/lib/api/client-ip";
 import { REQUEST_ID_HEADER } from "@/lib/api/request-id";
 import { env } from "@/lib/env";
 import { LOCALE_COOKIE } from "@/lib/i18n/routing";
-import type { AuthTokens, ErrorResponse, User } from "@/types/api";
+import type { AuthTokens, EmailChangeConfirmed, ErrorResponse, User } from "@/types/api";
 
 import {
   ACCESS_COOKIE,
@@ -17,8 +17,10 @@ import {
   expiredAuthCookies,
   expiredSessionCookies,
   localeCookie,
+  REFRESH_COOKIE,
   sessionCookies,
 } from "./cookies";
+import { decodeAccessToken } from "./jwt";
 import { isTrustedOrigin } from "./origin";
 
 export const AUTH_JSON_LIMIT_BYTES = 10_000;
@@ -126,22 +128,34 @@ export function endExpiredSessionResponse(status = 401): NextResponse {
   return response;
 }
 
+const isFields = (body: unknown): body is Record<string, unknown> =>
+  typeof body === "object" && body !== null && !Array.isArray(body);
+
 function withDeviceToken(body: unknown, deviceToken: string | undefined): unknown {
-  if (typeof body !== "object" || body === null || Array.isArray(body)) return body;
+  if (!isFields(body)) return body;
   const fields: Record<string, unknown> = { ...body };
   delete fields.deviceToken;
   return deviceToken ? { ...fields, deviceToken } : fields;
 }
 
+// Only a link carries the refresh token, and only the cookie's: a body cannot name another session.
+function withRefreshToken(body: unknown, refreshToken: string | undefined): unknown {
+  if (!isFields(body)) return body;
+  const fields: Record<string, unknown> = { ...body };
+  delete fields.refreshToken;
+  return refreshToken && "token" in fields ? { ...fields, refreshToken } : fields;
+}
+
 interface ForwardOptions {
   sendDeviceToken: boolean;
   sendSession?: boolean;
+  sendRefreshToken?: boolean;
 }
 
 async function forwardAuthRequest(
   path: string,
   request: NextRequest,
-  { sendDeviceToken, sendSession = false }: ForwardOptions,
+  { sendDeviceToken, sendSession = false, sendRefreshToken = false }: ForwardOptions,
 ): Promise<{ upstream: Response; requestId: string | null } | NextResponse> {
   const denied = untrustedOriginResponse(request);
   if (denied) return denied;
@@ -153,9 +167,14 @@ async function forwardAuthRequest(
     );
   }
   const requestId = forwardedRequestId(request);
+  const withDevice = sendDeviceToken
+    ? withDeviceToken(body, request.cookies.get(DEVICE_COOKIE)?.value)
+    : body;
   const upstream = await backendFetch(path, {
     method: "POST",
-    body: sendDeviceToken ? withDeviceToken(body, request.cookies.get(DEVICE_COOKIE)?.value) : body,
+    body: sendRefreshToken
+      ? withRefreshToken(withDevice, request.cookies.get(REFRESH_COOKIE)?.value)
+      : withDevice,
     accessToken: sendSession ? request.cookies.get(ACCESS_COOKIE)?.value : undefined,
     requestId,
     clientIp: clientIpOf(request),
@@ -229,6 +248,81 @@ async function forwardWithAnswer(
       headers: { "cache-control": "no-store" },
     });
     if (requestId) response.headers.set(REQUEST_ID_HEADER, requestId);
+    return response;
+  });
+}
+
+function noSessionResponse(): NextResponse {
+  return NextResponse.json({ error: "Unauthorized", message: "No session" }, { status: 401 });
+}
+
+function emailChangePath(request: NextRequest): string | null {
+  const userId = decodeAccessToken(request.cookies.get(ACCESS_COOKIE)?.value)?.userId;
+  return userId ? `/users/${encodeURIComponent(userId)}/email-change` : null;
+}
+
+// Asking and Resend count this device, not its IP, and both name the account by the session.
+export async function requestEmailChange(
+  kind: "request" | "resend",
+  request: NextRequest,
+): Promise<NextResponse> {
+  const path = emailChangePath(request);
+  if (!path) return noSessionResponse();
+  return forwardWithAnswer(kind === "resend" ? `${path}/resend` : path, request, {
+    sendDeviceToken: true,
+    sendSession: true,
+  });
+}
+
+export async function cancelEmailChange(request: NextRequest): Promise<NextResponse> {
+  const denied = untrustedOriginResponse(request);
+  if (denied) return denied;
+  const path = emailChangePath(request);
+  if (!path) return noSessionResponse();
+  const requestId = forwardedRequestId(request);
+  return withBackend(async () => {
+    const upstream = await backendFetch(path, {
+      method: "DELETE",
+      accessToken: request.cookies.get(ACCESS_COOKIE)?.value,
+      requestId,
+      clientIp: clientIpOf(request),
+      userAgent: request.headers.get("user-agent"),
+    });
+    if (!upstream.ok) return passThroughError(upstream, requestId);
+    const response = NextResponse.json((await readBackendJson<unknown>(upstream)) ?? {}, {
+      headers: { "cache-control": "no-store" },
+    });
+    if (requestId) response.headers.set(REQUEST_ID_HEADER, requestId);
+    return response;
+  });
+}
+
+// The backend answers tokens only for a code or this browser's own session; with none, cookies stay.
+export async function confirmEmailChange(request: NextRequest): Promise<NextResponse> {
+  return withBackend(async () => {
+    const forwarded = await forwardAuthRequest("/auth/email/confirm-change", request, {
+      sendDeviceToken: false,
+      sendSession: true,
+      sendRefreshToken: true,
+    });
+    if (forwarded instanceof NextResponse) return forwarded;
+    const { upstream, requestId } = forwarded;
+    if (!upstream.ok) return passThroughError(upstream, requestId);
+    const answer = await readBackendJson<EmailChangeConfirmed>(upstream);
+    if (!answer) {
+      return NextResponse.json(
+        { error: "UpstreamError", message: "Empty answer from confirm-change", code: "INTERNAL" },
+        { status: 502 },
+      );
+    }
+    const { accessToken, refreshToken, deviceToken, user } = answer;
+    if (!accessToken || !refreshToken) {
+      const response = NextResponse.json({}, { headers: { "cache-control": "no-store" } });
+      if (requestId) response.headers.set(REQUEST_ID_HEADER, requestId);
+      return response;
+    }
+    const response = sessionResponse({ accessToken, refreshToken }, user, 200, requestId);
+    if (deviceToken) applyCookies(response, [deviceCookie(deviceToken)]);
     return response;
   });
 }

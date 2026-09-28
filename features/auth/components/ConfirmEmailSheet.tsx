@@ -10,6 +10,8 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { CodeField } from "@/components/ui/CodeField";
 import { Field } from "@/components/ui/Field";
+import { HumanCheckFailed } from "@/components/ui/HumanCheckFailed";
+import { RateLimitAlert } from "@/components/ui/RateLimitAlert";
 import { Sheet } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
@@ -17,12 +19,19 @@ import { ApiError } from "@/lib/api/errors";
 import { PROFILE_PATH } from "@/lib/auth/routes";
 import { HumanCheckSlot, useHumanCheck } from "@/lib/captcha/useHumanCheck";
 import { useCountdown } from "@/lib/hooks/useCountdown";
+import { useWaitText } from "@/lib/hooks/useWaitText";
 import { useRouter } from "@/lib/i18n/navigation";
 import { validationMessage } from "@/lib/i18n/validation";
-import { serverNow } from "@/lib/local/clock";
+import { secondsUntilServer } from "@/lib/local/clock";
 import { useOffline } from "@/lib/network/useOffline";
 import type { SessionProfile } from "@/lib/session/api";
-import { closeConfirmEmail, emailUnconfirmed, useConfirmEmail } from "@/lib/session/confirm-email";
+import {
+  closeConfirmEmail,
+  type ConfirmTarget,
+  emailUnconfirmed,
+  useConfirmEmail,
+} from "@/lib/session/confirm-email";
+import { useConfirmEmailChangeCode, useResendEmailChange } from "@/lib/session/email-change";
 import { useSession } from "@/lib/session/SessionProvider";
 
 import {
@@ -31,16 +40,15 @@ import {
   retryAfterOf,
   useConfirmEmailCode,
   useSendVerificationCode,
-  useWaitText,
 } from "../hooks";
 import { confirmCodeSchema, type ConfirmCodeValues } from "../schemas";
-import { HumanCheckFailed } from "./HumanCheckFailed";
-import { RateLimitAlert } from "./RateLimitAlert";
 import { ResendBlock } from "./ResendBlock";
 
 type Shape = "code" | "send";
 
 type Failure = "human" | "sendFailed" | "expired" | FailureKey | null;
+
+type Final = "taken" | "gone";
 
 interface Opening {
   shape: Shape;
@@ -49,14 +57,20 @@ interface Opening {
 
 const bold = (chunks: React.ReactNode) => <b className="font-semibold text-text">{chunks}</b>;
 
+const finalOf = (error: unknown): Final | null =>
+  error instanceof ApiError && error.code === "EMAIL_TAKEN"
+    ? "taken"
+    : error instanceof ApiError && error.code === "EMAIL_CHANGE_NOT_PENDING"
+      ? "gone"
+      : null;
+
 function openingOf(user: SessionProfile): Opening {
   const verification = user.emailVerification;
   if (!verification) return { shape: "send", resendAfterSeconds: 0 };
-  const resendAt = verification.resendAvailableAt
-    ? Date.parse(verification.resendAvailableAt)
-    : Number.NaN;
-  const wait = Number.isNaN(resendAt) ? 0 : Math.ceil((resendAt - serverNow()) / 1000);
-  return { shape: verification.codeLive ? "code" : "send", resendAfterSeconds: Math.max(0, wait) };
+  return {
+    shape: verification.codeLive ? "code" : "send",
+    resendAfterSeconds: secondsUntilServer(verification.resendAvailableAt),
+  };
 }
 
 const secondsUntil = (at: number): number => Math.max(0, Math.ceil((at - Date.now()) / 1000));
@@ -70,49 +84,80 @@ function sendFailure(error: unknown): Failure {
 
 export function ConfirmEmailSheet() {
   const t = useTranslations("states.confirmEmail");
-  const { sheetOpen, openings } = useConfirmEmail();
+  const { sheetOpen, openings, target } = useConfirmEmail();
   return (
-    <Sheet layout="dialog" open={sheetOpen} onClose={closeConfirmEmail} title={t("sheetTitle")}>
-      {sheetOpen && <ConfirmEmailBody key={openings} />}
+    <Sheet
+      layout="dialog"
+      open={sheetOpen}
+      onClose={closeConfirmEmail}
+      title={target === "new" ? t("newSheetTitle") : t("sheetTitle")}
+    >
+      {sheetOpen && <ConfirmEmailBody key={openings} target={target} />}
     </Sheet>
   );
 }
 
-function useConfirmed(): () => void {
+function useConfirmed(target: ConfirmTarget): (email: string) => void {
   const t = useTranslations("states.confirmEmail");
   const toast = useToast();
   const said = useRef(false);
-  return useCallback(() => {
-    closeConfirmEmail();
-    if (said.current) return;
-    said.current = true;
-    toast.show({ message: t("done") });
-  }, [t, toast]);
+  return useCallback(
+    (email: string) => {
+      closeConfirmEmail();
+      if (said.current) return;
+      said.current = true;
+      toast.show({ message: target === "new" ? t("newDone", { email }) : t("done") });
+    },
+    [t, toast, target],
+  );
 }
 
-function ConfirmEmailBody() {
+function NoLongerWaits({ final }: { final: Final }) {
+  const t = useTranslations("states.confirmEmail");
+  return final === "taken" ? (
+    <Alert tone="danger" title={t("takenTitle")}>
+      {t("takenBody")}
+    </Alert>
+  ) : (
+    <Alert tone="warning" title={t("goneTitle")}>
+      {t("goneBody")}
+    </Alert>
+  );
+}
+
+function ConfirmEmailBody({ target }: { target: ConfirmTarget }) {
   const t = useTranslations();
   const session = useSession();
   const offline = useOffline();
-  const confirmed = useConfirmed();
-  const [asked, setAsked] = useState(false);
+  const confirmed = useConfirmed(target);
+  const [answer, setAnswer] = useState<{ user: SessionProfile | null } | null>(null);
+  const asked = answer !== null;
+  const [final, setFinal] = useState<Final | null>(null);
   const refetch = useRef(session.refetch);
 
   useEffect(() => {
     let wanted = true;
-    void refetch.current().finally(() => {
-      if (wanted) setAsked(true);
-    });
+    void refetch.current().then(
+      (result) => {
+        if (wanted) setAnswer({ user: result.data?.user ?? null });
+      },
+      () => {
+        if (wanted) setAnswer({ user: null });
+      },
+    );
     return () => {
       wanted = false;
     };
   }, []);
 
-  const user = session.user;
-  const alreadyConfirmed = asked && user !== null && !emailUnconfirmed(user);
+  // What `/me` answered when the sheet opened: the cache can lag it, and later writes must not remount.
+  const user = answer?.user ?? session.user;
+  const confirmedEmail =
+    target === "current" && asked && user !== null && !emailUnconfirmed(user) ? user.email : null;
+  const alreadyConfirmed = confirmedEmail !== null;
   useEffect(() => {
-    if (alreadyConfirmed) confirmed();
-  }, [alreadyConfirmed, confirmed]);
+    if (confirmedEmail !== null) confirmed(confirmedEmail);
+  }, [confirmedEmail, confirmed]);
 
   if (!user || alreadyConfirmed || (!asked && !offline)) {
     return (
@@ -124,9 +169,28 @@ function ConfirmEmailBody() {
       </div>
     );
   }
+  const formKey = asked ? "asked" : "cached";
+  if (final) return <NoLongerWaits final={final} />;
+  if (target === "new") {
+    if (!user.emailChange) return <NoLongerWaits final="gone" />;
+    return (
+      <ConfirmEmailForm
+        key={formKey}
+        target="new"
+        email={user.emailChange.email}
+        opening={{
+          shape: "code",
+          resendAfterSeconds: secondsUntilServer(user.emailChange.resendAvailableAt),
+        }}
+        onConfirmed={confirmed}
+        onFinal={setFinal}
+      />
+    );
+  }
   return (
     <ConfirmEmailForm
-      key={asked ? "asked" : "cached"}
+      key={formKey}
+      target="current"
       email={user.email}
       opening={openingOf(user)}
       onConfirmed={confirmed}
@@ -135,18 +199,27 @@ function ConfirmEmailBody() {
 }
 
 interface ConfirmEmailFormProps {
+  target: ConfirmTarget;
   email: string;
   opening: Opening;
-  onConfirmed: () => void;
+  onConfirmed: (email: string) => void;
+  onFinal?: (final: Final) => void;
 }
 
-function ConfirmEmailForm({ email, opening, onConfirmed }: ConfirmEmailFormProps) {
+function ConfirmEmailForm({ target, email, opening, onConfirmed, onFinal }: ConfirmEmailFormProps) {
   const t = useTranslations();
   const router = useRouter();
   const offline = useOffline();
-  const check = useHumanCheck("verify-email");
-  const confirm = useConfirmEmailCode();
-  const send = useSendVerificationCode();
+  const check = useHumanCheck(target === "new" ? "email-change" : "verify-email");
+  const confirmCurrent = useConfirmEmailCode();
+  const confirmNew = useConfirmEmailChangeCode();
+  const sendCurrent = useSendVerificationCode();
+  const sendNew = useResendEmailChange();
+  const confirm = (code: string): Promise<unknown> =>
+    target === "new" ? confirmNew.mutateAsync(code) : confirmCurrent.mutateAsync(code);
+  const send = (captcha: string): Promise<{ resendAfterSeconds: number }> =>
+    target === "new" ? sendNew.mutateAsync(captcha) : sendCurrent.mutateAsync(captcha);
+  const sending = target === "new" ? sendNew.isPending : sendCurrent.isPending;
   const codeRef = useRef<HTMLInputElement | null>(null);
   const [shape, setShape] = useState<Shape>(opening.shape);
   const [rejectedCode, setRejectedCode] = useState<string | null>(null);
@@ -175,12 +248,14 @@ function ConfirmEmailForm({ email, opening, onConfirmed }: ConfirmEmailFormProps
   const submit = form.handleSubmit(async ({ code: typed }) => {
     setFailure(null);
     try {
-      await confirm.mutateAsync(typed);
-      onConfirmed();
+      await confirm(typed);
+      onConfirmed(email);
     } catch (error) {
       const wait = retryAfterOf(error);
       const errorCode = error instanceof ApiError ? error.code : null;
-      if (wait !== null) setConfirmRetryAfter(wait);
+      const ended = target === "new" ? finalOf(error) : null;
+      if (ended) onFinal?.(ended);
+      else if (wait !== null) setConfirmRetryAfter(wait);
       else if (errorCode === "EMAIL_CODE_INVALID") setRejectedCode(typed);
       else if (errorCode === "EMAIL_CODE_EXPIRED") {
         form.reset({ code: "" });
@@ -200,20 +275,23 @@ function ConfirmEmailForm({ email, opening, onConfirmed }: ConfirmEmailFormProps
       return;
     }
     try {
-      const { resendAfterSeconds } = await send.mutateAsync(captcha);
+      const { resendAfterSeconds } = await send(captcha);
       form.reset({ code: "" });
       setRejectedCode(null);
       setShape("code");
       setResendAt(Date.now() + resendAfterSeconds * 1000);
     } catch (error) {
       const wait = retryAfterOf(error);
-      if (error instanceof ApiError && error.code === "EMAIL_ALREADY_VERIFIED") onConfirmed();
+      const ended = target === "new" ? finalOf(error) : null;
+      if (ended) onFinal?.(ended);
+      else if (error instanceof ApiError && error.code === "EMAIL_ALREADY_VERIFIED")
+        onConfirmed(email);
       else if (wait !== null) setResendAt(Date.now() + wait * 1000);
       else setFailure(sendFailure(error));
     }
   };
 
-  const busy = isSubmitting || send.isPending;
+  const busy = isSubmitting || sending;
   const alert = offline ? (
     <Alert tone="warning" icon={WifiOff} title={t("auth.offline")}>
       {t("states.confirmEmail.offline")}
@@ -240,7 +318,7 @@ function ConfirmEmailForm({ email, opening, onConfirmed }: ConfirmEmailFormProps
           <SendCodeButton
             key={resendAt}
             seconds={secondsUntil(resendAt)}
-            sending={send.isPending}
+            sending={sending}
             disabled={offline}
             onSend={() => {
               void sendCode();
@@ -312,7 +390,7 @@ function ConfirmEmailForm({ email, opening, onConfirmed }: ConfirmEmailFormProps
         size="lg"
         block
         loading={isSubmitting}
-        disabled={offline || codeRejected || confirmRetryAfter !== null || send.isPending}
+        disabled={offline || codeRejected || confirmRetryAfter !== null || sending}
       >
         {t("states.confirmEmail.submit")}
       </Button>
@@ -321,7 +399,7 @@ function ConfirmEmailForm({ email, opening, onConfirmed }: ConfirmEmailFormProps
         <ResendBlock
           key={resendAt}
           seconds={secondsUntil(resendAt)}
-          sending={send.isPending}
+          sending={sending}
           disabled={offline || isSubmitting}
           onResend={() => {
             void sendCode();

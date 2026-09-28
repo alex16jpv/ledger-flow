@@ -3,13 +3,14 @@ import { reportError } from "@/lib/observability/reporter";
 import { tabChannel } from "@/lib/session/channel";
 
 import { api, setUnauthorizedHandler } from "./client";
-import { NetworkError } from "./errors";
+import { ApiError, NetworkError } from "./errors";
 import {
   noteRefreshedElsewhere,
   noteSessionEnded,
   noteSessionStarted,
   refreshSession,
   resetRefreshState,
+  withFreshSession,
 } from "./refresh";
 
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -198,5 +199,27 @@ describe("refresh single-flight", () => {
     await expect(refreshSession()).resolves.toBe(true);
     expect(request).toHaveBeenCalledWith("lf-refresh", expect.any(Function));
     Reflect.deleteProperty(navigator, "locks");
+  });
+});
+
+describe("withFreshSession", () => {
+  const unauthorized = (code: "CURRENT_PASSWORD_INVALID" | null = null) =>
+    new ApiError({ status: 401, code, message: "no", requestId: "r1" });
+
+  it("renews an expired session once and runs again", async () => {
+    fetchMock.mockResolvedValue(json({ ok: true }));
+    const run = vi.fn().mockRejectedValueOnce(unauthorized()).mockResolvedValueOnce("done");
+    await expect(withFreshSession(run)).resolves.toBe("done");
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.map(([input]) => urlOf(input))).toEqual(["/api/auth/refresh"]);
+  });
+
+  it("sends a wrong current password once, without renewing anything", async () => {
+    const run = vi.fn().mockRejectedValue(unauthorized("CURRENT_PASSWORD_INVALID"));
+    await expect(withFreshSession(run)).rejects.toMatchObject({
+      code: "CURRENT_PASSWORD_INVALID",
+    });
+    expect(run).toHaveBeenCalledOnce();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

@@ -8,7 +8,7 @@ import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
 
 import { keepLinkToken } from "../carry";
-import { NotMeLinkView, VerifyLinkView } from "./EmailLinkView";
+import { ConfirmNewEmailLinkView, NotMeLinkView, VerifyLinkView } from "./EmailLinkView";
 
 vi.mock("@/lib/i18n/navigation", () => ({
   Link: ({ children, href }: { children: ReactNode; href: string }) => (
@@ -38,6 +38,7 @@ beforeEach(() => {
   reportOnline(true);
   keepLinkToken("verify", null);
   keepLinkToken("not-me", null);
+  keepLinkToken("confirm-email", null);
 });
 
 afterEach(() => {
@@ -159,5 +160,58 @@ describe("NotMeLinkView", () => {
       "href",
       "/forgot",
     );
+  });
+});
+
+describe("ConfirmNewEmailLinkView", () => {
+  it("moves the account only on the tap, and says every other device was signed out", async () => {
+    arriveWith("/confirm-email", TOKEN);
+    fetchMock.mockResolvedValue(json({}));
+    renderPage(<ConfirmNewEmailLinkView />);
+
+    const button = await screen.findByRole("button", { name: "Confirm new email" });
+    expect(
+      screen.getByRole("heading", { name: "Move your account to this address?" }),
+    ).toBeVisible();
+    expect(window.location.hash).toBe("");
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await userEvent.click(button);
+
+    expect(await screen.findByRole("heading", { name: "Your email changed" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Every other device was signed out. Sign in with this address from now on."),
+    ).toBeInTheDocument();
+    expect(sentTo("/api/auth/confirm-change")).toEqual([{ token: TOKEN }]);
+    expect(screen.getByRole("link", { name: "Open Ledger Flow" })).toHaveAttribute("href", "/home");
+  });
+
+  it("says the address became another account's, and that this one keeps its email", async () => {
+    arriveWith("/confirm-email", TOKEN);
+    fetchMock.mockResolvedValue(
+      json({ error: "Conflict", message: "taken", code: "EMAIL_TAKEN" }, { status: 409 }),
+    );
+    renderPage(<ConfirmNewEmailLinkView />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Confirm new email" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "That address now belongs to another account" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Your account keeps its current email.")).toBeInTheDocument();
+  });
+
+  it("reads a used link as one that no longer works", async () => {
+    arriveWith("/confirm-email", TOKEN);
+    fetchMock.mockResolvedValue(
+      json({ error: "Bad", message: "gone", code: "LINK_INVALID" }, { status: 400 }),
+    );
+    renderPage(<ConfirmNewEmailLinkView />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Confirm new email" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "This link no longer works" }),
+    ).toBeInTheDocument();
   });
 });

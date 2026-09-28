@@ -33,8 +33,15 @@ const FORWARDED_RESPONSE_HEADERS = [
   "ratelimit-reset",
 ];
 
+const BLOCKED_PATTERNS = [/^users\/[^/]+\/email-change(\/|$)/];
+
+// Express matches routes whatever their case, so the block has to as well.
 function isBlocked(path: string): boolean {
-  return BLOCKED_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+  const lower = path.toLowerCase();
+  return (
+    BLOCKED_PREFIXES.some((prefix) => lower === prefix || lower.startsWith(`${prefix}/`)) ||
+    BLOCKED_PATTERNS.some((pattern) => pattern.test(lower))
+  );
 }
 
 export async function proxyToBackend(
