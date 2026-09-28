@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { QueryProvider } from "@/lib/query/QueryProvider";
@@ -31,12 +31,10 @@ vi.mock("@/lib/i18n/navigation", () => ({
     </a>
   ),
 }));
-let forgotPassword = false;
-let emailVerification = false;
+let siteKey = true;
 vi.mock("@/lib/flags", () => ({
   isEnabled: (flag: string) =>
-    (flag === "forgotPassword" && forgotPassword) ||
-    (flag === "emailVerification" && emailVerification),
+    (flag === "forgotPassword" || flag === "emailVerification") && siteKey,
 }));
 const token = vi.fn<() => Promise<string>>();
 vi.mock("@/lib/captcha/useHumanCheck", () => ({
@@ -55,7 +53,7 @@ beforeEach(() => {
   replace.mockReset();
   fetchMock.mockReset();
   token.mockReset().mockResolvedValue("captcha-token");
-  emailVerification = false;
+  siteKey = true;
   vi.stubGlobal("fetch", fetchMock);
   vi.spyOn(navigator, "language", "get").mockReturnValue("es-CO");
 });
@@ -92,36 +90,7 @@ describe("RegisterForm", () => {
     expect(screen.getByRole("button", { name: "Create account" })).toBeEnabled();
   });
 
-  it("sends the detected settings and the UI locale", async () => {
-    fetchMock.mockResolvedValue(
-      json({ user: { id: "u1", name: "John", reactivated: false } }, { status: 201 }),
-    );
-    const onSuccess = renderForm();
-    await screen.findByRole("button", { name: /COP · / });
-    await fillValid();
-    await userEvent.click(screen.getByRole("checkbox"));
-    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
-    await waitFor(() => {
-      expect(onSuccess).toHaveBeenCalled();
-    });
-    const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as Record<
-      string,
-      unknown
-    >;
-    expect(body).toMatchObject({
-      name: "John Doe",
-      email: "john.doe@example.com",
-      currency: "COP",
-      locale: "en",
-    });
-    expect(typeof body.timezone).toBe("string");
-    expect(body).not.toHaveProperty("consent");
-    expect(body).not.toHaveProperty("captcha");
-    expect(token).not.toHaveBeenCalled();
-  });
-
-  it("asks Cloudflare when the flow exists, so the backend sends the confirmation email", async () => {
-    emailVerification = true;
+  it("sends the detected settings, the UI locale and Cloudflare's token", async () => {
     fetchMock.mockResolvedValue(
       json({ user: { id: "u1", name: "John", reactivated: false } }, { status: 201 }),
     );
@@ -138,11 +107,37 @@ describe("RegisterForm", () => {
       string,
       unknown
     >;
-    expect(body.captcha).toBe("captcha-token");
+    expect(body).toMatchObject({
+      name: "John Doe",
+      email: "john.doe@example.com",
+      currency: "COP",
+      locale: "en",
+      captcha: "captcha-token",
+    });
+    expect(typeof body.timezone).toBe("string");
+    expect(body).not.toHaveProperty("consent");
+  });
+
+  it("says no account can be created where there is no site key, and keeps the button off", async () => {
+    siteKey = false;
+    renderForm();
+    await screen.findByRole("button", { name: /COP · / });
+    expect(screen.getByText("You can’t create an account here.")).toBeInTheDocument();
+    await fillValid();
+    await userEvent.click(screen.getByRole("checkbox"));
+    const button = screen.getByRole("button", { name: "Create account" });
+    expect(button).toBeDisabled();
+    const form = button.closest("form");
+    if (!form) throw new Error("no form");
+    fireEvent.submit(form);
+    await waitFor(() => {
+      expect(screen.queryByText("You need to accept the privacy policy to continue.")).toBeNull();
+    });
+    expect(token).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("creates nothing when Cloudflare's check fails, and says so", async () => {
-    emailVerification = true;
     token.mockRejectedValue(new Error("blocked"));
     renderForm();
     await screen.findByRole("button", { name: /COP · / });
@@ -154,7 +149,6 @@ describe("RegisterForm", () => {
   });
 
   it("says a refused token and an unchecked one apart from an account that may exist", async () => {
-    emailVerification = true;
     fetchMock.mockResolvedValueOnce(
       json({ error: "Bad", message: "no", code: "CAPTCHA_INVALID" }, { status: 400 }),
     );
@@ -176,21 +170,7 @@ describe("RegisterForm", () => {
     expect(screen.queryByText(/may already exist/)).not.toBeInTheDocument();
   });
 
-  it("shows the taken-email error inline with a sign-in link", async () => {
-    fetchMock.mockResolvedValue(
-      json({ error: "Conflict", message: "taken", code: "EMAIL_TAKEN" }, { status: 409 }),
-    );
-    renderForm();
-    await screen.findByRole("button", { name: /COP · / });
-    await fillValid();
-    await userEvent.click(screen.getByRole("checkbox"));
-    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
-    expect(await screen.findByText(/This email already has an account/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
-  });
-
   it("offers both ways back for a taken address, each carrying it over", async () => {
-    forgotPassword = true;
     carryEmail("");
     fetchMock.mockResolvedValue(
       json({ error: "Conflict", message: "taken", code: "EMAIL_TAKEN" }, { status: 409 }),
@@ -205,7 +185,6 @@ describe("RegisterForm", () => {
     expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
     await userEvent.click(reset);
     expect(carriedEmail()).toBe("john.doe@example.com");
-    forgotPassword = false;
   });
 
   it("suggests signing in when the backend answers 500", async () => {

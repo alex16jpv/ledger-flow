@@ -83,6 +83,7 @@ describe("auth", () => {
       currency: "COP",
       timezone: "America/Bogota",
       locale: "en",
+      captcha: "XXXX.DUMMY.TOKEN.XXXX",
     });
 
     await waitFor(() => {
@@ -133,6 +134,7 @@ describe("auth", () => {
       currency: "COP",
       timezone: "America/Bogota",
       locale: "en",
+      captcha: "XXXX.DUMMY.TOKEN.XXXX",
     });
     await waitFor(() => {
       expect(databases).toHaveBeenCalled();

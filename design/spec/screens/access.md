@@ -45,6 +45,12 @@
   inbox, not the one who typed it. A 500 shows "Your account may
   already have been created: try signing in before signing up again."
 
+  **Creating an account needs [the check](#cloudflares-check)**: the server creates none without it. A
+  deployment with no Cloudflare site key, such as a preview, cannot run it, so there the screen opens
+  with a `warning` alert on top (`#create-account-unavailable`), "**You can't create an account
+  here.** It needs Cloudflare's check, which this version of the app doesn't have.", and **Create
+  account** stays disabled. The links that lead here do not change.
+
 - **Onboarding 1 · first account** (`#onboarding-first-account`): step dots on top; name, type (**the
   same `picker` row as the account form**, not chips), an optional current balance (sent as `balance`,
   kept as `openingBalance`) and a colour, drawn at random like every create form
@@ -117,7 +123,7 @@
 
 ## Cloudflare's check
 
-`#create-account-human-check`, `#human-check-failed`, `#confirm-email-human-check`
+`#create-account-human-check`, `#human-check-failed`, `#confirm-email-human-check`, `#create-account-unavailable`
 
 Cloudflare Turnstile guards what sends an email or creates an account, and nothing else: **Create
 account**; **Send code** in Forgot your password? and **Resend code** on its code step; **Send code** and

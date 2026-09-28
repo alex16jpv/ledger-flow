@@ -165,7 +165,10 @@
       "currencyPicker": "Elige tu moneda",
       "timeZonePicker": "Elige tu zona horaria",
       "consentRequired": "Debes aceptar la política de privacidad para continuar.",
-      "emailTakenSignIn": "Este correo ya tiene una cuenta. <signIn>Entra</signIn>. Si la eliminaste, regístrate con la contraseña que tenía para recuperarla."
+      "unavailable": {
+        "title": "Aquí no se puede crear una cuenta.",
+        "body": "Hace falta la comprobación de Cloudflare, y esta versión de la app no la tiene."
+      }
     },
     "offline": "Sin conexión.",
     "sendFailed": "Algo falló de nuestro lado. No cambió nada: inténtalo de nuevo.",

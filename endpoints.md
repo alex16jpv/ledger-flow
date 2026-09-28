@@ -344,7 +344,7 @@ No token required.
 
 ### `POST /auth/register`
 
-Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email and the password of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored); with any other password it answers 409 EMAIL_TAKEN, like a live account. On a 500 the user may still have been created: try login before retrying register. `captcha` is a Cloudflare Turnstile token issued for the action `register`: with it, an account whose email is not confirmed is sent `verify-email` (a 6-digit code and a link, 24 hours); without it, nothing is sent and `GET /users/{id}` shows no live code, so the client offers Send code. A send that fails does not fail the register. The account works before its email is confirmed (`user.emailVerified`); only invitations wait for it.
+Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email and the password of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored); with any other password it answers 409 EMAIL_TAKEN, like a live account. On a 500 the user may still have been created: try login before retrying register. `captcha` is a Cloudflare Turnstile token issued for the action `register`, asked for when the button is pressed: it works once, and nothing is created without one that passes. An account whose email is not confirmed is sent `verify-email` (a 6-digit code and a link, 24 hours). A send that fails does not fail the register: `GET /users/{id}` then shows no live code, so the client offers Send code. The account works before its email is confirmed (`user.emailVerified`); only invitations wait for it.
 
 No token required.
 
@@ -352,13 +352,13 @@ No token required.
 
 **Responses**
 
-| Status | Schema          | Description                                                                                                                                                                                                              |
-| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `201`  | `AuthTokens`    | User registered and logged in                                                                                                                                                                                            |
-| `400`  | `ErrorResponse` | Validation error (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID)                                                                                                                       |
-| `409`  | `ErrorResponse` | Email is already registered (code EMAIL_TAKEN): a live account, a soft-deleted one registered with a different password, or a concurrent register that reactivated it first                                              |
-| `429`  | `ErrorResponse` | Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total — counted with the failed logins (code RATE_LIMITED) |
-| `503`  | `ErrorResponse` | A captcha was sent and could not be checked (code CAPTCHA_UNAVAILABLE): nothing was created. Try again                                                                                                                   |
+| Status | Schema          | Description                                                                                                                                                                                                                       |
+| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `201`  | `AuthTokens`    | User registered and logged in                                                                                                                                                                                                     |
+| `400`  | `ErrorResponse` | Validation error, a missing captcha among them (code VALIDATION), or Cloudflare refused the captcha token: spent, expired, forged, or issued for another site or action (code CAPTCHA_INVALID). Ask for a new token and try again |
+| `409`  | `ErrorResponse` | Email is already registered (code EMAIL_TAKEN): a live account, a soft-deleted one registered with a different password, or a concurrent register that reactivated it first                                                       |
+| `429`  | `ErrorResponse` | Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total — counted with the failed logins (code RATE_LIMITED)          |
+| `503`  | `ErrorResponse` | The captcha could not be checked (code CAPTCHA_UNAVAILABLE): nothing was created. Try again                                                                                                                                       |
 
 ### `GET /auth/sessions`
 

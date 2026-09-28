@@ -40,7 +40,7 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
   const t = useTranslations();
   const registerMutation = useRegister();
   const defaults = useDeviceDefaults();
-  const checked = isEnabled("emailVerification");
+  const canRegister = isEnabled("emailVerification");
   const check = useHumanCheck("register");
   const [humanFailed, setHumanFailed] = useState(false);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
@@ -67,15 +67,14 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
   }, [defaults, form]);
 
   const submit = form.handleSubmit(async ({ name, email, password, currency, timezone }) => {
+    if (!canRegister) return;
     setHumanFailed(false);
-    let captcha: string | undefined;
-    if (checked) {
-      try {
-        captcha = await check.token();
-      } catch {
-        setHumanFailed(true);
-        return;
-      }
+    let captcha: string;
+    try {
+      captcha = await check.token();
+    } catch {
+      setHumanFailed(true);
+      return;
     }
     try {
       onSuccess(
@@ -86,7 +85,7 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
           currency,
           timezone,
           locale,
-          ...(captcha ? { captcha } : {}),
+          captcha,
         }),
       );
     } catch (error) {
@@ -119,6 +118,11 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
       noValidate
       className="flex flex-col gap-5"
     >
+      {!canRegister && (
+        <Alert tone="warning" title={t("auth.register.unavailable.title")}>
+          {t("auth.register.unavailable.body")}
+        </Alert>
+      )}
       {serverError && <Alert tone="warning">{t("auth.register.maybeCreated")}</Alert>}
       {otherFailure && <Alert tone="danger">{t(otherFailure.messageKey)}</Alert>}
       {blocked && (
@@ -143,31 +147,18 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
           error={
             emailTaken ? (
               <span>
-                {t.rich(
-                  isEnabled("forgotPassword")
-                    ? "auth.register.emailTaken"
-                    : "auth.register.emailTakenSignIn",
-                  {
-                    signIn: (chunks) => (
-                      <Link
-                        href={LOGIN_PATH}
-                        onClick={carryTyped}
-                        className="font-medium underline"
-                      >
-                        {chunks}
-                      </Link>
-                    ),
-                    reset: (chunks) => (
-                      <Link
-                        href={FORGOT_PATH}
-                        onClick={carryTyped}
-                        className="font-medium underline"
-                      >
-                        {chunks}
-                      </Link>
-                    ),
-                  },
-                )}
+                {t.rich("auth.register.emailTaken", {
+                  signIn: (chunks) => (
+                    <Link href={LOGIN_PATH} onClick={carryTyped} className="font-medium underline">
+                      {chunks}
+                    </Link>
+                  ),
+                  reset: (chunks) => (
+                    <Link href={FORGOT_PATH} onClick={carryTyped} className="font-medium underline">
+                      {chunks}
+                    </Link>
+                  ),
+                })}
               </span>
             ) : (
               validationMessage(t, errors.email?.message)
@@ -217,14 +208,14 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
           ),
         })}
       </Checkbox>
-      <HumanCheckSlot interactive={check.interactive} mount={checked ? check.mount : noSlot}>
+      <HumanCheckSlot interactive={check.interactive} mount={canRegister ? check.mount : noSlot}>
         {humanRefused && <HumanCheckFailed className="mb-5" />}
         <Button
           type="submit"
           size="lg"
           block
           loading={registerMutation.isPending || form.formState.isSubmitting}
-          disabled={blocked || !consent}
+          disabled={!canRegister || blocked || !consent}
         >
           {t("auth.register.submit")}
         </Button>

@@ -5,6 +5,22 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-09-27 · Sign up needs Cloudflare's check everywhere (T-230)
+
+- **The backend creates no account without a `register` token** (its T-228): a register with no captcha
+  is `400 VALIDATION`. Where there is no Turnstile site key — Vercel previews, a local run without the
+  test key — the app cannot get one, so Sign up says so in a `warning` alert and keeps Create account
+  disabled (`access.md`, `#create-account-unavailable`), instead of failing with a generic error after
+  the user typed everything. The owner chose this over the Forgot-password treatment (a 404 and every
+  link to Sign up inactive with "(soon)"), which would have left the landing's main button dead in
+  previews for a screen that has always existed.
+- **`RegisterInput` comes from the generated types** (`Required<Omit<RegisterInput, "deviceToken">>`),
+  not a hand-written interface: the copy kept `captcha?` optional after the contract made it required,
+  and the typecheck could not see the drift.
+- **The e2e reaches an account with no live code by spending its five tries**, since a register can no
+  longer skip the email and an account from before email cannot be made from the browser suite. It waits
+  out the real per-address minute before Send code, so it has a two-minute timeout.
+
 ## 2026-09-27 · Confirming the email: the stripe, the code sheet and the two link pages (T-210)
 
 - **One sheet, mounted by the app frame and opened through a store** (`lib/session/confirm-email.ts`).
@@ -28,7 +44,8 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   asks to confirm, and `/verify` and `/not-me` are 404.
 - **Sign up sends a `register` token when the flow exists**, so the backend emails the code right away and
   the sheet opens on the code. `CAPTCHA_UNAVAILABLE` there says nothing was created, instead of the "your
-  account may already exist" of any other 5xx.
+  account may already exist" of any other 5xx. _Superseded by T-230: the token is always required, and
+  with no key Sign up is off._
 - **Invitations are held in the UI by the profile's `emailVerified`**, not only by the backend's `403`:
   the sheet warns and disables Invite and Invite again, and the invitations' place says they wait. The
   backend's switch (`EMAIL_VERIFICATION_REQUIRED`) is off until the owner turns it on after this ships, so

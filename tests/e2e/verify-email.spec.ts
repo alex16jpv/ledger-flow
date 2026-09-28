@@ -5,20 +5,13 @@ import { expectNoAxeViolations } from "./axe";
 
 const PASSWORD = "LedgerFlow!2026";
 
-async function registered(
-  request: APIRequestContext,
-  tag: string,
-  { captcha = true }: { captcha?: boolean } = {},
-): Promise<string> {
+const CODE_TRIES = 5;
+
+async function registered(request: APIRequestContext, tag: string): Promise<string> {
   const email = uniqueEmail(tag);
   const response = await request.post("/api/auth/register", {
     headers: { origin: APP },
-    data: {
-      name: "Verify E2E",
-      email,
-      password: PASSWORD,
-      ...(captcha && { captcha: TEST_CAPTCHA }),
-    },
+    data: { name: "Verify E2E", email, password: PASSWORD, captcha: TEST_CAPTCHA },
   });
   expect(response.ok(), await response.text()).toBe(true);
   return email;
@@ -64,11 +57,21 @@ test("a new account confirms its email with the code its sign-up sent", async ({
   await expect(page.getByText("Not confirmed")).toHaveCount(0);
 });
 
-test("an account with no code sends one from the sheet, with Cloudflare's check", async ({
+test("an account whose code is used up sends another from the sheet, with Cloudflare's check", async ({
   page,
   request,
 }) => {
-  const email = await registered(request, "verify-send", { captcha: false });
+  test.setTimeout(120_000);
+  const email = await registered(request, "verify-send");
+  const { code: first } = await readVerifyEmail(request, email);
+  const wrong = first === "000000" ? "111111" : "000000";
+  for (let tries = 0; tries < CODE_TRIES; tries += 1) {
+    const response = await request.post("/api/auth/verify", {
+      headers: { origin: APP },
+      data: { code: wrong },
+    });
+    expect(response.status()).toBe(400);
+  }
   await signedIn(page, request);
   await page.goto("/settings");
   await expect(page.getByText("Your email isn’t confirmed yet")).toBeVisible();
@@ -76,10 +79,16 @@ test("an account with no code sends one from the sheet, with Cloudflare's check"
   await stripe(page).getByRole("button", { name: "Confirm" }).click();
   const sheet = page.getByRole("dialog", { name: "Confirm your email" });
   await expect(sheet.getByText(`We’ll send a 6-digit code to ${email}`)).toBeVisible();
-  await sheet.getByRole("button", { name: "Send code" }).click();
+  await expect(sheet.getByText(/You can resend it in \d:\d\d/)).toBeVisible();
+  const send = sheet.getByRole("button", { name: "Send code" });
+  await expect(send).toBeEnabled({ timeout: 75_000 });
+  await send.click();
   await expect(sheet.getByText(`We sent a 6-digit code to ${email}`)).toBeVisible();
 
-  const { code } = await readVerifyEmail(request, email);
+  let code = first;
+  await expect
+    .poll(async () => (code = (await readVerifyEmail(request, email)).code))
+    .not.toBe(first);
   await sheet.getByLabel("6-digit code").fill(code);
   await sheet.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByText("Email confirmed")).toBeVisible();

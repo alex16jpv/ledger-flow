@@ -41,7 +41,7 @@ the new password, since mail scanners open links. What one access screen hands t
 email, the code already sent, the link's token — lives in memory (`carry.ts`), never in the URL,
 which reaches logs, and survives the language chip, which remounts the page.
 
-**Cloudflare's check** (`lib/captcha`) runs unseen when Send code or Resend is pressed, and only shows
+**Cloudflare's check** (`lib/captcha`) runs unseen when Create account, Send code or Resend is pressed, and only shows
 its box when Cloudflare has doubts. Its script loads the first time one of those screens opens, never
 in the bundle. The flow exists only where `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set: without a key
 there is no captcha, the backend refuses to send, and Sign in keeps the link inactive.
@@ -51,7 +51,8 @@ amber `verify` stripe, last in the order of the sync stripes, and Settings › P
 too. Confirm opens one sheet (`ConfirmEmailSheet`, mounted by the frame and opened from anywhere through
 `lib/session/confirm-email`), which asks `/me` again and opens on the code when one is live or on Send
 code when none is; both sends carry Cloudflare's check. Sign up sends a `register` token, so the backend
-emails the code at once. The email's two links land on `/verify` and `/not-me`, which do nothing until
+emails the code at once; the backend creates no account without one, so with no site key Sign up says it
+cannot create an account there and keeps its button off (T-230). The email's two links land on `/verify` and `/not-me`, which do nothing until
 their one button is tapped, like `/reset`. Nothing else waits for the confirmation: only invitations.
 
 **A reset of an account that never confirmed its email** may open "Keep what's in this account?"

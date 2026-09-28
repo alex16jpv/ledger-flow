@@ -1079,14 +1079,18 @@ const register = (state = "") => {
   const taken =
     '<span>This email already has an account. <a href="#" style="font-weight:500;text-decoration:underline">Sign in</a> or <a href="#" style="font-weight:500;text-decoration:underline">reset your password</a>. If you deleted it, sign up with the password it had to bring it back.</span>';
   const check = state == "check" ? humanCheck() : state == "check-failed" ? HUMAN_CHECK_FAILED : "";
+  const unavailable =
+    state == "unavailable"
+      ? `<div class="alert warning">${iconSvg("triangle-alert")}<span><b>You can’t create an account here.</b> It needs Cloudflare’s check, which this version of the app doesn’t have.</span></div>`
+      : "";
   return authFrame(`<div class="stack" style="gap:20px">
-<div class="stack-sm" style="text-align:center"><h1 class="h1">Create account</h1><p class="muted" style="margin:0">Under a minute. No card needed.</p></div>${react}
+<div class="stack-sm" style="text-align:center"><h1 class="h1">Create account</h1><p class="muted" style="margin:0">Under a minute. No card needed.</p></div>${react}${unavailable}
 <div class="stack">${field("Name", "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, state == "taken" ? { icon: "user", error: taken } : { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
 <div class="field"><span class="label">Language</span><button class="picker">${tile("globe", "TEAL", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">English</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">The language of your account. You can change it any time in Settings.</span></div>
 <div class="field"><span class="label">Currency</span><button class="picker">${tile("coins", "GREEN", "sm")}<span class="body"><span class="lbl">Detected from your region</span><span class="val">COP · Colombian peso</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">Used for all your accounts. It locks once you create your first account.</span></div>
 <div class="field"><span class="label">Time zone</span><button class="picker">${tile("globe", "BLUE", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">America/Bogota · GMT−5</span></span>${iconSvg("chevron-down", "sm")}</button></div></div>
 <label class="check"><span class="box on">${iconSvg("check", "sm")}</span><span>I agree to the <a href="#">Privacy policy</a> and to the processing of my personal data (Ley 1581).</span></label>${check}
-<button class="btn primary lg block">Create account</button>
+<button class="btn primary lg block"${unavailable ? " disabled" : ""}>Create account</button>
 <p class="small muted" style="text-align:center;margin:0">Already have an account? <a href="#" style="color:var(--brand-text);font-weight:500">Sign in</a></p></div>`);
 };
 
@@ -6632,6 +6636,13 @@ const PAGES = [
         "The check is invisible unless it suspects a bot; then its box appears above the button. The same slot on Forgot your password? and on Resend.",
         register("check"),
         { added: "2026-09-26" },
+      ),
+      plate(
+        "create-account-unavailable",
+        "Create account · no check here",
+        "A deployment with no Cloudflare site key, such as a preview, cannot run the check, and the server creates no account without it. The screen says so and the button stays off.",
+        register("unavailable"),
+        { added: "2026-09-27" },
       ),
       plate(
         "human-check-failed",
