@@ -1063,6 +1063,8 @@ const login = (state = "") => {
     err = `<div class="alert danger">${iconSvg("circle-alert")}<span>Wrong email or password.</span></div>`;
   if (state == "429")
     err = `<div class="alert warning">${iconSvg("clock")}<span><b>Too many attempts.</b> You can try again in 12:40.</span></div>`;
+  if (state == "deleted")
+    err = `<div class="alert info">${iconSvg("info")}<span><b>Your account was deleted.</b> It’s kept until October 28, 2026: signing in before then restores it.</span></div>`;
   return authFrame(`<div class="stack" style="gap:20px">
 <div class="stack-sm" style="text-align:center"><h1 class="h1">Welcome back</h1><p class="muted" style="margin:0">Sign in to keep tracking your spending.</p></div>${err}
 <div class="stack">${field("Email", "john@example.com", null, { icon: "user" })}${field("Password", "••••••••••", null, { icon: "lock", cls: "focus" })}</div>
@@ -1072,20 +1074,14 @@ const login = (state = "") => {
 };
 
 const register = (state = "") => {
-  const react =
-    state == "reactivated"
-      ? `<div class="alert info">${iconSvg("info")}<span><b>Welcome back.</b> We restored your previous account with its full history; the currency is kept.</span></div>`
-      : "";
-  const taken =
-    '<span>This email already has an account. <a href="#" style="font-weight:500;text-decoration:underline">Sign in</a> or <a href="#" style="font-weight:500;text-decoration:underline">reset your password</a>. If you deleted it, sign up with the password it had to bring it back.</span>';
   const check = state == "check" ? humanCheck() : state == "check-failed" ? HUMAN_CHECK_FAILED : "";
   const unavailable =
     state == "unavailable"
       ? `<div class="alert warning">${iconSvg("triangle-alert")}<span><b>You can’t create an account here.</b> It needs Cloudflare’s check, which this version of the app doesn’t have.</span></div>`
       : "";
   return authFrame(`<div class="stack" style="gap:20px">
-<div class="stack-sm" style="text-align:center"><h1 class="h1">Create account</h1><p class="muted" style="margin:0">Under a minute. No card needed.</p></div>${react}${unavailable}
-<div class="stack">${field("Name", "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, state == "taken" ? { icon: "user", error: taken } : { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
+<div class="stack-sm" style="text-align:center"><h1 class="h1">Create account</h1><p class="muted" style="margin:0">Under a minute. No card needed.</p></div>${unavailable}
+<div class="stack">${field("Name", "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
 <div class="field"><span class="label">Language</span><button class="picker">${tile("globe", "TEAL", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">English</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">The language of your account. You can change it any time in Settings.</span></div>
 <div class="field"><span class="label">Currency</span><button class="picker">${tile("coins", "GREEN", "sm")}<span class="body"><span class="lbl">Detected from your region</span><span class="val">COP · Colombian peso</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">Used for all your accounts. It locks once you create your first account.</span></div>
 <div class="field"><span class="label">Time zone</span><button class="picker">${tile("globe", "BLUE", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">America/Bogota · GMT−5</span></span>${iconSvg("chevron-down", "sm")}</button></div></div>
@@ -1213,34 +1209,50 @@ const linkNoLongerWorks = () =>
 <button class="btn primary lg block">Ask for a new code</button>
 ${authFoot(authLink("Back to sign in"))}`);
 
-const fact = (label, value) =>
-  `<div class="hstack" style="justify-content:space-between;gap:12px"><span class="small muted">${label}</span><span class="small" style="font-weight:500">${value}</span></div>`;
+const registerCode = (state = "") =>
+  authPage(`${authTitle("Check your email", "We sent an email to <b>john@example.com</b>. Type the 6-digit code in it to finish creating your account.")}
+${codeField(state == "wrong" ? "482719" : "4827", { error: state == "wrong" ? RESET_CODE_ERROR : "" })}
+<button class="btn primary lg block"${state == "wrong" ? " disabled" : ""}>Create account</button>
+${resendBlock({ wait: state == "wrong" ? "" : "0:48" })}`);
 
-const neverConfirmed = (confirm = false) => {
-  if (confirm === true)
-    return authPage(`${authTitle("Start fresh?")}
-<div class="alert danger">${iconSvg("circle-alert")}<span>Everything in this account is <b>deleted for good</b>: its accounts, transactions, budgets and categories, and it leaves every shared group. Your email and the password you just chose stay.</span></div>
-<div class="stack-sm"><button class="btn danger solid lg block">Delete everything and start</button><button class="btn ghost lg block">Go back</button></div>`);
-  if (confirm === "details")
-    return authPage(`${authTitle("Your details", "A fresh start takes nothing from before, not even the name. You can change these later in Settings.")}
-<div class="stack">${field("Name", null, "Your name", { icon: "user" })}
-<div class="field"><span class="label">Language</span><button class="picker">${tile("globe", "TEAL", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">English</span></span>${iconSvg("chevron-down", "sm")}</button></div>
-<div class="field"><span class="label">Currency</span><button class="picker">${tile("coins", "GREEN", "sm")}<span class="body"><span class="lbl">Detected from your region</span><span class="val">COP · Colombian peso</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">Used for all your accounts. It locks once you create your first account.</span></div>
-<div class="field"><span class="label">Time zone</span><button class="picker">${tile("globe", "BLUE", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">America/Bogota · GMT−5</span></span>${iconSvg("chevron-down", "sm")}</button></div></div>
-<button class="btn primary lg block">Continue</button>`);
-  return authPage(`${authTitle("Keep what’s in this account?", "Your email is confirmed now. Until today it never was, so someone else could have created this account with your address.")}
-<div class="card stack-sm" style="gap:8px">${fact("Created", "Mar 12, 2026")}${fact("Accounts", "3")}${fact("Transactions", "214")}</div>
-<p class="small muted" style="margin:0">Keep it if you created it and never got around to confirming the email. Start fresh if you didn’t: nothing somebody else put in it stays with you.</p>
-<div class="stack-sm"><button class="btn primary lg block">Keep it</button><button class="btn secondary lg block">Start fresh</button></div>`);
+const restoreAccount = () =>
+  authPage(`${authOutcome("archive-restore", "NONE", "Restore your account?", "You deleted this account on <b>September 28, 2026</b>. It’s kept until <b>October 28, 2026</b>, and then erased for good.")}
+<p class="small muted" style="margin:0;text-align:center">Restoring brings back everything in it, as it was. The shared groups you left when you deleted it stay left.</p>
+<div class="stack-sm"><button class="btn primary lg block">Restore account</button><button class="btn ghost lg block">Not now</button></div>`);
+
+const confirmRequired = (state = "") => {
+  if (state == "change")
+    return authPage(`${authTitle("Use another email", "We’ll send a code to the new address. Once you confirm it, it becomes your account’s email.")}
+<div class="stack">${field("New email", "john.doe@example.com", null, { icon: "user" })}${field("Current password", "••••••••••", null, { icon: "lock", help: "So nobody else can change your email." })}</div>
+<button class="btn primary lg block">Send code</button>
+${authFoot(authLink("Back"))}`);
+  const code = state == "code";
+  const queued =
+    state == "queued"
+      ? `<div class="alert info">${iconSvg("cloud-upload")}<span><b>3 changes on this device</b> are kept and sync once you confirm.</span></div>`
+      : "";
+  const lead = code
+    ? "We sent a 6-digit code to <b>john@example.com</b>. It works for 24 hours."
+    : "We’ll send a 6-digit code to <b>john@example.com</b>.";
+  const body = code
+    ? `${codeField("48")}<button class="btn primary lg block">Confirm</button>${resendBlock({ wait: "0:42" })}`
+    : `<button class="btn primary lg block">Send code</button><p class="xs muted" style="margin:0;text-align:center">Wrong address? ${authLink("Change it")}</p>`;
+  return authPage(`${authTitle("Confirm your email to continue", "Ledger Flow now asks every account to confirm its email. Nothing in your account has changed: once you confirm, you’re back in.")}${queued}
+<p class="small muted" style="margin:0;text-align:center">${lead}</p>
+${body}
+${authFoot(authLink("Sign out"))}`);
 };
 
 const emailLinkPage = (kind) => {
   if (kind == "verify")
-    return authPage(`${authTitle("Confirm your email", "Use the button to confirm that the address this email reached belongs to your Ledger Flow account.")}
+    return authPage(`${authTitle("Confirm your email", "Use the button to confirm that this address is yours.")}
 <button class="btn primary lg block">Confirm email</button>`);
   if (kind == "verify-done")
-    return authPage(`${authOutcome("mail-check", "GREEN", "Email confirmed", "You can invite people to Shared and accept their invitations.")}
+    return authPage(`${authOutcome("mail-check", "GREEN", "Email confirmed", "Nothing else changes in your account.")}
 <button class="btn primary lg block">Open Ledger Flow</button>`);
+  if (kind == "verify-ready")
+    return authPage(`${authOutcome("mail-check", "GREEN", "Your account is ready", "Sign in with this email and the password you chose.")}
+<button class="btn primary lg block">Sign in</button>`);
   if (kind == "confirm-email")
     return authPage(`${authTitle("Move your account to this address?", "Your account’s email becomes the address this message reached, and your other devices are signed out. From now on you sign in with it.")}
 <button class="btn primary lg block">Confirm new email</button>`);
@@ -1250,13 +1262,13 @@ const emailLinkPage = (kind) => {
   if (kind == "confirm-email-taken")
     return authPage(`${authOutcome("circle-alert", "NONE", "That address now belongs to another account", "Your account keeps its current email.")}
 <button class="btn primary lg block">Open Ledger Flow</button>`);
-  if (kind == "not-me")
-    return authPage(`${authTitle("Delete the account that used your address?", "Somebody signed up to Ledger Flow with this address and never confirmed it. This deletes that account and everything in it, for good, and frees your address.")}
-<div class="alert warning">${iconSvg("triangle-alert")}<span><b>If you signed up yourself, don’t.</b> Use the code or the Confirm email button in the same message instead.</span></div>
-<div class="stack-sm"><button class="btn danger solid lg block">Delete that account</button><button class="btn ghost lg block">Don’t delete it</button></div>`);
-  if (kind == "not-me-done")
-    return authPage(`${authOutcome("user-x", "NONE", "That account is gone", "Your address is free: you can create your own account with it.")}
-<button class="btn primary lg block">Create account</button>`);
+  if (kind == "restore")
+    return authPage(`${authTitle("Restore your account?", "Your account was deleted. This brings it back with everything in it, except the shared groups it left.")}
+<div class="alert warning">${iconSvg("triangle-alert")}<span>Every device is signed out and <b>your current password stops working</b>. We’ll email you a code to choose a new one.</span></div>
+<button class="btn primary lg block">Restore account</button>`);
+  if (kind == "restore-done")
+    return authPage(`${authOutcome("archive-restore", "NONE", "Account restored", "Every device was signed out. We sent a code to this address so you can choose a new password: it works for 30 minutes.")}
+<button class="btn primary lg block">Enter the code</button>`);
   if (kind == "undo")
     return authPage(`${authTitle("Undo the change?", "Your account’s email goes back to this address, even if the change was already confirmed.")}
 <div class="alert warning">${iconSvg("triangle-alert")}<span>Every device is signed out and <b>your current password stops working</b>. We’ll email you a code to choose a new one.</span></div>
@@ -1265,7 +1277,7 @@ const emailLinkPage = (kind) => {
 <button class="btn primary lg block">Enter the code</button>`);
 };
 
-const CONFIRM_STRIPE = `<div class="banner warning" role="status">${iconSvg("mail")}<span class="txt"><b>Confirm your email.</b><span class="sub">You need it to invite people to Shared and to be invited.</span></span><span class="actions"><button class="action">Confirm</button><button class="btn ghost icon-only sm round" aria-label="Not now" style="color:inherit">${iconSvg("x", "sm")}</button></span></div>`;
+const CONFIRM_STRIPE = `<div class="banner warning" role="status">${iconSvg("mail")}<span class="txt"><b>Confirm your email by October 12.</b><span class="sub">After that, signing in asks for a code first. Nothing in your account changes.</span></span><span class="actions"><button class="action">Confirm</button><button class="btn ghost icon-only sm round" aria-label="Not now" style="color:inherit">${iconSvg("x", "sm")}</button></span></div>`;
 
 const newEmailSheet = (state = "") => {
   if (state == "taken")
@@ -2867,7 +2879,7 @@ const settings = ({
 <span class="eyebrow">Preferences</span>
 <div class="list card flush">${settingsRow("globe", "Language", "App language", '<span class="small muted">English</span>', "TEAL")}${settingsRow("coins", "Currency", "Locked: you already have accounts", '<span class="badge">COP</span>', "GREEN")}${settingsRow("clock", "Time zone", "Defines your days and periods", '<span class="small muted">Bogotá</span>', "BLUE")}${settingsRow("palette", "Appearance", "Palette and mode", '<span class="small muted">Tinta · System</span>', "PURPLE")}${settingsRow("bell", "Notifications", "What reaches you, and where", "", "INDIGO")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}</div>
 <span class="eyebrow">Security</span>
-<div class="list card flush">${unconfirmed ? settingsRow("lock", "Password & email", "Your email isn’t confirmed yet", '<span class="badge warning">Not confirmed</span>', "GRAY") : settingsRow("lock", "Password & email", "Requires your current password", "", "GRAY")}${settingsRow("smartphone", "Active sessions", "Sign out devices you don’t recognize", '<span class="badge">3</span>', "GRAY")}</div>`;
+<div class="list card flush">${unconfirmed ? settingsRow("lock", "Password & email", "Confirm your email by October 12", '<span class="badge warning">Not confirmed</span>', "GRAY") : settingsRow("lock", "Password & email", "Requires your current password", "", "GRAY")}${settingsRow("smartphone", "Active sessions", "Sign out devices you don’t recognize", '<span class="badge">3</span>', "GRAY")}</div>`;
   const body = `${scrolled ? "" : top}
 <span class="eyebrow">Data</span>
 <div class="list card flush">${settingsRow("refresh-cw", "Sync status", "What this device has, and what it still owes the server", '<span class="badge warning">2</span>', "TEAL")}${settingsRow("download", "Export transactions", "Coming soon", '<span class="badge outline">soon</span>')}${settingsRow("upload", "Import from your bank", "Coming soon", '<span class="badge outline">soon</span>')}</div>
@@ -2919,7 +2931,7 @@ const NEW_EMAIL_HELP =
 const profileSecurity = (email = "", { sheet = "" } = {}) => {
   const emailField =
     email == "unconfirmed"
-      ? `<div class="field"><span class="label" style="display:flex;align-items:center;gap:8px">Email<span class="badge warning">Not confirmed</span></span><div class="input">${iconSvg("user", "sm")}<span class="value">john@example.com</span></div><span class="help">Confirm it to invite people to Shared and to be invited. ${authLink("Confirm it")}</span></div>`
+      ? `<div class="field"><span class="label" style="display:flex;align-items:center;gap:8px">Email<span class="badge warning">Not confirmed</span></span><div class="input">${iconSvg("user", "sm")}<span class="value">john@example.com</span></div><span class="help">Confirm it by October 12 to keep signing in as usual, and to invite people to Shared and be invited. ${authLink("Confirm it")}</span></div>`
       : email == "locked"
         ? field("Email", "john@example.com", null, {
             icon: "user",
@@ -2953,7 +2965,7 @@ const settingsBodyDim = () =>
   '<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px;font-size:17px">JD</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">John Doe</span><span class="small muted">john@example.com</span></span></div><div class="skeleton" style="height:180px"></div><div class="skeleton" style="height:120px"></div>';
 
 const deleteAccountScreen = (state = "") => {
-  const inner = `<div class="alert danger">${iconSvg("circle-alert")}<span>Your account and your financial history are kept for a while so you can come back: signing up again with the same email and this password brings everything back. You’ll be signed out now.</span></div>
+  const inner = `<div class="alert danger">${iconSvg("circle-alert")}<span>Your account and everything in it are kept for <b>30 days</b>, until <b>October 28, 2026</b>, and then <b>erased for good</b>. Until then, signing in with your email and password restores it. You leave your shared groups now, and restoring doesn’t bring you back into them. You’ll be signed out now.</span></div>
 ${field("Current password", "••••••••••", null, { help: "So nobody else can delete your account.", ...(state == "wrong" ? { error: "Your current password is wrong." } : {}) })}
 <div class="stack-sm"><button class="btn danger solid lg block">Delete account</button><button class="btn ghost lg block">Cancel</button></div>`;
   return screen(settingsBodyDim(), {
@@ -5843,7 +5855,7 @@ const MAIL = {
     deviceValue: "Chrome en Windows",
     whenValue: "26 de sept de 2026, 7:42 p. m. GMT-5",
     codeNote: "Escribe este código solo en Ledger Flow. Nadie de Ledger Flow te lo va a pedir.",
-    why: (reason) => `Te llega porque ${reason}.`,
+    why: (reason) => `Recibes este correo porque ${reason}.`,
     security:
       "Es un aviso de seguridad de tu cuenta de Ledger Flow. Estos avisos no se pueden desactivar: así te contamos lo que pasa con tu cuenta.",
     contact: "¿Dudas?",
@@ -5855,84 +5867,188 @@ const MAIL = {
 
 const UNDO_BODY = {
   en: "Undo it: we remove every passkey, authenticator app and recovery code added since then, sign out every device, and you choose a new password. This link works for 7 days.",
-  es: "Deshazlo: quitamos las llaves de acceso, la app de autenticación y los códigos de recuperación añadidos desde entonces, se cierra la sesión en todos los dispositivos y eliges una contraseña nueva. El enlace sirve 7 días.",
+  es: "Deshazlo: quitamos las llaves de acceso, la app de autenticación y los códigos de recuperación añadidos desde entonces, se cierra la sesión en todos los dispositivos y eliges una contraseña nueva. El enlace vale por 7 días.",
 };
 const RESET_BODY = {
   en: "Reset your password now. It signs out every device.",
   es: "Restablece tu contraseña ya. Se cierra la sesión en todos los dispositivos.",
 };
 
+const MAIL_DELETED_ON = { en: "September 28", es: "28 de septiembre" };
+const MAIL_ERASED_ON = { en: "October 28", es: "28 de octubre" };
+const MAIL_DEADLINE = { en: "October 12", es: "12 de octubre" };
+
 const EMAILS = {
+  "sign-up": {
+    kind: "code",
+    path: "verify",
+    en: {
+      subject: "Finish creating your Ledger Flow account",
+      pre: "Type the code in the app or use the button.",
+      title: "Welcome to Ledger Flow",
+      lead: "Type this code in the app to confirm this address and finish creating your account.",
+      extra: "Didn’t sign up? Ignore this email: without the code, no account is created.",
+      ttl: "It works for 24 hours. Asking for another one cancels this one.",
+      button: "Confirm email",
+      why: "someone started creating a Ledger Flow account with this address",
+    },
+    es: {
+      subject: "Termina de crear tu cuenta de Ledger Flow",
+      pre: "Escribe el código en la app o usa el botón.",
+      title: "Te damos la bienvenida a Ledger Flow",
+      lead: "Escribe este código en la app para confirmar esta dirección y terminar de crear tu cuenta.",
+      extra: "¿No te registraste? Ignora este correo: sin el código no se crea ninguna cuenta.",
+      ttl: "Vale por 24 horas. Si pides otro, este deja de valer.",
+      button: "Confirmar correo",
+      why: "alguien empezó a crear una cuenta de Ledger Flow con esta dirección",
+    },
+  },
+  "account-exists": {
+    kind: "link",
+    path: "login",
+    en: {
+      subject: "You already have a Ledger Flow account",
+      pre: "Sign in with it, or choose a new password if you forgot it.",
+      title: "You already have an account",
+      lead: "Someone tried to create a Ledger Flow account with this address, and it already has one. If it was you, sign in with it.",
+      extra: "If it wasn’t you, ignore this email: nothing changed.",
+      button: "Sign in",
+      aside: [
+        "Forgot your password?",
+        "Choose a new one with a code sent here. It signs out every device.",
+        MAIL.en.reset,
+        "forgot",
+      ],
+      why: "someone tried to sign up for Ledger Flow with this address",
+    },
+    es: {
+      subject: "Ya tienes una cuenta de Ledger Flow",
+      pre: "Entra con ella, o elige una contraseña nueva si la olvidaste.",
+      title: "Ya tienes una cuenta",
+      lead: "Alguien intentó crear una cuenta de Ledger Flow con esta dirección, y ya tiene una. Si fuiste tú, entra con ella.",
+      extra: "Si no fuiste tú, ignora este correo: no cambió nada.",
+      button: "Entrar",
+      aside: [
+        "¿Olvidaste tu contraseña?",
+        "Elige una nueva con un código que llega aquí. Se cierra la sesión en todos los dispositivos.",
+        MAIL.es.reset,
+        "forgot",
+      ],
+      why: "alguien intentó registrarse en Ledger Flow con esta dirección",
+    },
+  },
   "verify-email": {
-    code: true,
+    kind: "code",
     path: "verify",
     en: {
       subject: "Confirm your email for Ledger Flow",
-      pre: "Type the code in the app or use the button. It works for 24 hours.",
+      pre: "Type the code in the app or use the button.",
       title: "Confirm your email",
       lead: "Type this code in Ledger Flow to confirm this address is yours.",
       ttl: "It works for 24 hours. Asking for another one cancels this one.",
       button: "Confirm email",
-      aside: [
-        "Didn’t sign up?",
-        "Someone typed your address when signing up. Use “It wasn’t me” to delete that account and free your address.",
-        "It wasn’t me",
-        "not-me",
-      ],
-      why: "someone signed up for Ledger Flow with this address",
+      why: "someone asked to confirm this address for a Ledger Flow account",
     },
     es: {
       subject: "Confirma tu correo en Ledger Flow",
-      pre: "Escribe el código en la app o usa el botón. Sirve 24 horas.",
+      pre: "Escribe el código en la app o usa el botón.",
       title: "Confirma tu correo",
       lead: "Escribe este código en Ledger Flow para confirmar que esta dirección es tuya.",
-      ttl: "Sirve 24 horas. Si pides otro, este deja de servir.",
+      ttl: "Vale por 24 horas. Si pides otro, este deja de valer.",
+      button: "Confirmar correo",
+      why: "alguien pidió confirmar esta dirección en una cuenta de Ledger Flow",
+    },
+  },
+  "confirm-deadline": {
+    kind: "link",
+    path: "verify",
+    en: {
+      subject: `Confirm your email for Ledger Flow by ${MAIL_DEADLINE.en}`,
+      pre: "It takes one tap, and nothing in your account changes.",
+      title: `Confirm your email by ${MAIL_DEADLINE.en}`,
+      lead: "Ledger Flow now asks every account to confirm its email: that way nobody else can use your address, and our security notices reach you. Nothing in your account changes.",
+      extra: `The button works until ${MAIL_DEADLINE.en}. After that, signing in first asks for a code sent to this address.`,
+      button: "Confirm email",
+      aside: [
+        "Don’t have a Ledger Flow account?",
+        "Don’t use the button: ignore this email. Nothing in anybody’s account changes.",
+      ],
+      why: "a Ledger Flow account uses this address and hasn’t confirmed it",
+    },
+    es: {
+      subject: `Confirma tu correo de Ledger Flow a más tardar el ${MAIL_DEADLINE.es}`,
+      pre: "Es un toque, y en tu cuenta no cambia nada.",
+      title: `Confirma tu correo a más tardar el ${MAIL_DEADLINE.es}`,
+      lead: "Ledger Flow ahora pide a todas las cuentas confirmar su correo: así nadie más puede usar tu dirección y te llegan nuestros avisos de seguridad. En tu cuenta no cambia nada.",
+      extra: `El botón vale hasta el ${MAIL_DEADLINE.es}. Después, para entrar te pediremos primero un código enviado a esta dirección.`,
       button: "Confirmar correo",
       aside: [
-        "¿No te registraste?",
-        "Alguien escribió tu dirección al registrarse. Usa «No fui yo» para eliminar esa cuenta y liberar tu correo.",
-        "No fui yo",
-        "not-me",
+        "¿No tienes cuenta en Ledger Flow?",
+        "No uses el botón: ignora este correo. No cambia nada en ninguna cuenta.",
       ],
-      why: "alguien se registró en Ledger Flow con esta dirección",
+      why: "una cuenta de Ledger Flow usa esta dirección y todavía no la confirma",
+    },
+  },
+  "confirm-deadline-reminder": {
+    kind: "link",
+    path: "verify",
+    en: {
+      subject: "4 days left to confirm your email for Ledger Flow",
+      pre: "It takes one tap, and nothing in your account changes.",
+      title: "4 days left to confirm your email",
+      lead: `Confirm it by <b>${MAIL_DEADLINE.en}</b> to keep signing in as usual. Nothing in your account changes.`,
+      extra: `The button works until ${MAIL_DEADLINE.en}. After that, signing in first asks for a code sent to this address.`,
+      button: "Confirm email",
+      aside: [
+        "Don’t have a Ledger Flow account?",
+        "Don’t use the button: ignore this email. Nothing in anybody’s account changes.",
+      ],
+      why: "a Ledger Flow account uses this address and hasn’t confirmed it",
+    },
+    es: {
+      subject: "Quedan 4 días para confirmar tu correo de Ledger Flow",
+      pre: "Es un toque, y en tu cuenta no cambia nada.",
+      title: "Quedan 4 días para confirmar tu correo",
+      lead: `Confírmalo a más tardar el <b>${MAIL_DEADLINE.es}</b> para seguir entrando como siempre. En tu cuenta no cambia nada.`,
+      extra: `El botón vale hasta el ${MAIL_DEADLINE.es}. Después, para entrar te pediremos primero un código enviado a esta dirección.`,
+      button: "Confirmar correo",
+      aside: [
+        "¿No tienes cuenta en Ledger Flow?",
+        "No uses el botón: ignora este correo. No cambia nada en ninguna cuenta.",
+      ],
+      why: "una cuenta de Ledger Flow usa esta dirección y todavía no la confirma",
     },
   },
   "password-reset": {
-    code: true,
+    kind: "code",
     path: "reset",
     en: {
       subject: "Reset your Ledger Flow password",
-      pre: "The code works for 30 minutes. If you didn’t ask for it, ignore this email.",
+      pre: "If you didn’t ask for it, ignore this email.",
       title: "Reset your password",
       lead: "Type this code in Ledger Flow to choose a new password. Your other devices will be signed out.",
       ttl: "It works for 30 minutes. Asking for another one cancels this one.",
       button: "Choose a new password",
-      aside: [
-        "Didn’t ask for this?",
-        "Ignore this email. Your password stays the same, and the code and the link stop working in 30 minutes.",
-      ],
+      aside: ["Didn’t ask for this?", "Ignore this email: your password stays the same."],
       why: "someone asked to reset the password of the Ledger Flow account with this address",
     },
     es: {
       subject: "Restablece tu contraseña de Ledger Flow",
-      pre: "El código sirve 30 minutos. Si no lo pediste, ignora este correo.",
+      pre: "Si no lo pediste, ignora este correo.",
       title: "Restablece tu contraseña",
       lead: "Escribe este código en Ledger Flow para elegir una contraseña nueva. Se cerrará la sesión en tus otros dispositivos.",
-      ttl: "Sirve 30 minutos. Si pides otro, este deja de servir.",
+      ttl: "Vale por 30 minutos. Si pides otro, este deja de valer.",
       button: "Elegir una contraseña nueva",
-      aside: [
-        "¿No lo pediste?",
-        "Ignora este correo. Tu contraseña sigue igual, y el código y el enlace dejan de servir en 30 minutos.",
-      ],
+      aside: ["¿No lo pediste?", "Ignora este correo: tu contraseña sigue igual."],
       why: "alguien pidió restablecer la contraseña de la cuenta de Ledger Flow con esta dirección",
     },
   },
   "password-reset-after-undo": {
-    code: true,
+    kind: "code",
     path: "reset",
     en: {
       subject: "Choose a new password for Ledger Flow",
-      pre: "You undid a change to your account. The code works for 30 minutes.",
+      pre: "You undid a change to your account.",
       title: "Choose a new password",
       lead: "You undid a change to your account from this address, and every device was signed out. Type this code in Ledger Flow to choose a new password: the old one no longer works.",
       ttl: "It works for 30 minutes. Asking for another one cancels this one.",
@@ -5945,10 +6061,10 @@ const EMAILS = {
     },
     es: {
       subject: "Elige una contraseña nueva para Ledger Flow",
-      pre: "Deshiciste un cambio en tu cuenta. El código sirve 30 minutos.",
+      pre: "Deshiciste un cambio en tu cuenta.",
       title: "Elige una contraseña nueva",
       lead: "Deshiciste un cambio en tu cuenta desde esta dirección y se cerró la sesión en todos los dispositivos. Escribe este código en Ledger Flow para elegir una contraseña nueva: la anterior ya no sirve.",
-      ttl: "Sirve 30 minutos. Si pides otro, este deja de servir.",
+      ttl: "Vale por 30 minutos. Si pides otro, este deja de valer.",
       button: "Elegir una contraseña nueva",
       aside: [
         "¿Se venció el código?",
@@ -5984,12 +6100,12 @@ const EMAILS = {
     },
   },
   "email-change-confirm": {
-    code: true,
+    kind: "code",
     path: "confirm-email",
     to: MAIL_NEW_TO,
     en: {
       subject: "Confirm your new email for Ledger Flow",
-      pre: "Your account moves to this address once you confirm it. It works for 24 hours.",
+      pre: "Your account moves to this address once you confirm it.",
       title: "Confirm your new email",
       lead: `Type this code in Ledger Flow to move the account <b>${MAIL_TO_MASKED}</b> to this address. Until you do, it keeps that email. Confirming signs out your other devices.`,
       ttl: "It works for 24 hours. Asking for another one cancels this one.",
@@ -6001,12 +6117,12 @@ const EMAILS = {
       why: "someone asked to use this address for a Ledger Flow account",
     },
     es: {
-      subject: "Confirma tu correo nuevo de Ledger Flow",
-      pre: "Tu cuenta pasa a esta dirección cuando la confirmes. Sirve 24 horas.",
-      title: "Confirma tu correo nuevo",
+      subject: "Confirma tu nuevo correo en Ledger Flow",
+      pre: "Tu cuenta pasa a esta dirección cuando la confirmes.",
+      title: "Confirma tu nuevo correo",
       lead: `Escribe este código en Ledger Flow para pasar la cuenta <b>${MAIL_TO_MASKED}</b> a esta dirección. Mientras no lo hagas, sigue con ese correo. Al confirmar se cierra la sesión en tus otros dispositivos.`,
-      ttl: "Sirve 24 horas. Si pides otro, este deja de servir.",
-      button: "Confirmar correo nuevo",
+      ttl: "Vale por 24 horas. Si pides otro, este deja de valer.",
+      button: "Confirmar nuevo correo",
       aside: [
         "¿No lo pediste, o esa no es tu cuenta?",
         "No uses el código ni el botón: ignora este correo. No cambia nada y esta dirección no se añade a ninguna cuenta.",
@@ -6016,10 +6132,10 @@ const EMAILS = {
   },
   "email-change-requested": {
     en: {
-      subject: "Your Ledger Flow email is being changed",
+      subject: "Someone asked to change your Ledger Flow email",
       pre: "If it wasn’t you, undo it from this email.",
-      title: "Your email is being changed",
-      lead: `Someone asked to move your account to <b>${MAIL_NEW_TO}</b>. It moves once that address is confirmed.`,
+      title: "A change to your email was requested",
+      lead: `A request was made to change your account’s email to <b>${MAIL_NEW_TO}</b>. It changes once that address is confirmed.`,
       aside: [
         MAIL.en.notYou,
         "Undo it: your account keeps this address, every device is signed out and you choose a new password. This link works for 7 days, even if the change was already confirmed.",
@@ -6031,10 +6147,10 @@ const EMAILS = {
       subject: "Se pidió cambiar el correo de tu cuenta de Ledger Flow",
       pre: "Si no fuiste tú, deshazlo desde este correo.",
       title: "Se pidió cambiar tu correo",
-      lead: `Se pidió pasar tu cuenta a <b>${MAIL_NEW_TO}</b>. El cambio se hace cuando se confirme esa dirección.`,
+      lead: `Se pidió cambiar el correo de tu cuenta a <b>${MAIL_NEW_TO}</b>. El cambio se hace cuando se confirme esa dirección.`,
       aside: [
         MAIL.es.notYou,
-        "Deshazlo: tu cuenta se queda con esta dirección, se cierra la sesión en todos los dispositivos y eliges una contraseña nueva. El enlace sirve 7 días, aunque el cambio ya se haya confirmado.",
+        "Deshazlo: tu cuenta se queda con esta dirección, se cierra la sesión en todos los dispositivos y eliges una contraseña nueva. El enlace vale por 7 días, aunque el cambio ya se haya confirmado.",
         MAIL.es.undo,
         "undo",
       ],
@@ -6057,31 +6173,46 @@ const EMAILS = {
     },
   },
   "account-deleted": {
+    path: "restore",
     en: {
       subject: "Your Ledger Flow account was deleted",
-      pre: "Signing up again with this email and the password it had brings it back.",
+      pre: `It’s kept until ${MAIL_ERASED_ON.en}. Signing in before then restores it.`,
       title: "Your account was deleted",
-      lead: "Every device was signed out. Your account and your financial history are kept for a while: signing up again with this email and the password it had brings everything back.",
-      extra: `To have it erased for good, write to ${MAIL_CONTACT}: it’s done within 15 business days.`,
+      lead: `Every device was signed out. Your account and everything in it are kept until <b>${MAIL_ERASED_ON.en}</b>, and then erased for good. If you change your mind, sign in with this email and your password before then.`,
       aside: [
         "Didn’t delete it?",
-        "Signing up again with this email and the password it had when it was deleted brings it back. Then change the password in Settings.",
-        "Create account",
-        "register",
+        `Restore it now: every device is signed out and you choose a new password. This link works for 7 days; after that, Forgot your password? also restores it until ${MAIL_ERASED_ON.en}.`,
+        "Restore account",
+        "restore",
       ],
     },
     es: {
       subject: "Tu cuenta de Ledger Flow se eliminó",
-      pre: "Si te registras de nuevo con este correo y la contraseña que tenía, la recuperas.",
+      pre: `Se conserva hasta el ${MAIL_ERASED_ON.es}. Si entras antes, la restauras.`,
       title: "Tu cuenta se eliminó",
-      lead: "Se cerró la sesión en todos los dispositivos. Tu cuenta y tu historial financiero se conservan un tiempo: si te registras de nuevo con este correo y la contraseña que tenía, lo recuperas todo.",
-      extra: `Para borrarla del todo, escribe a ${MAIL_CONTACT}: se hace en 15 días hábiles.`,
+      lead: `Se cerró la sesión en todos los dispositivos. Tu cuenta y todo lo que tiene se conservan hasta el <b>${MAIL_ERASED_ON.es}</b>, y después se borran para siempre. Si cambias de idea, entra con este correo y tu contraseña antes de esa fecha.`,
       aside: [
         "¿No la eliminaste?",
-        "Si te registras de nuevo con este correo y la contraseña que tenía al eliminarse, la recuperas. Después cambia la contraseña en Ajustes.",
-        "Crear cuenta",
-        "register",
+        `Restáurala ya: se cierra la sesión en todos los dispositivos y eliges una contraseña nueva. El enlace vale por 7 días; después, «¿Olvidaste tu contraseña?» también la restaura hasta el ${MAIL_ERASED_ON.es}.`,
+        "Restaurar la cuenta",
+        "restore",
       ],
+    },
+  },
+  "account-restored": {
+    en: {
+      subject: "Your Ledger Flow account was restored",
+      pre: "If it wasn’t you, reset your password now.",
+      title: "Your account was restored",
+      lead: `Your account, deleted on ${MAIL_DELETED_ON.en}, was restored by signing in: everything in it is back except the shared groups it left, and it won’t be erased.`,
+      aside: [MAIL.en.notYou, RESET_BODY.en, MAIL.en.reset, "forgot"],
+    },
+    es: {
+      subject: "Tu cuenta de Ledger Flow se restauró",
+      pre: "Si no fuiste tú, restablece tu contraseña ya.",
+      title: "Se restauró tu cuenta",
+      lead: `Tu cuenta, eliminada el ${MAIL_DELETED_ON.es}, se restauró al entrar: vuelve todo lo que tenía menos los grupos compartidos que dejó, y ya no se va a borrar.`,
+      aside: [MAIL.es.notYou, RESET_BODY.es, MAIL.es.reset, "forgot"],
     },
   },
   "passkey-added": {
@@ -6176,8 +6307,133 @@ const EMAILS = {
   },
 };
 
+const variantOf = (base, over) => ({
+  ...EMAILS[base],
+  variant: true,
+  en: { ...EMAILS[base].en, ...over.en },
+  es: { ...EMAILS[base].es, ...over.es },
+});
+
+const EMAIL_VARIANTS = {
+  "account-exists-deleted": variantOf("account-exists", {
+    en: {
+      pre: `Sign in by ${MAIL_ERASED_ON.en} to restore it.`,
+      title: "Your deleted account can still come back",
+      lead: `Someone tried to create a Ledger Flow account with this address. It has one, deleted on ${MAIL_DELETED_ON.en}: it’s kept until <b>${MAIL_ERASED_ON.en}</b>, and signing in by then restores it.`,
+      extra:
+        "After that it’s erased for good, and this address is free for a new account. If it wasn’t you, ignore this email.",
+      aside: [
+        "Forgot your password?",
+        "Choosing a new one restores it too. It signs out every device.",
+        MAIL.en.reset,
+        "forgot",
+      ],
+    },
+    es: {
+      pre: `Entra a más tardar el ${MAIL_ERASED_ON.es} para restaurarla.`,
+      title: "Tu cuenta eliminada todavía puede volver",
+      lead: `Alguien intentó crear una cuenta de Ledger Flow con esta dirección. Tiene una, eliminada el ${MAIL_DELETED_ON.es}: se conserva hasta el <b>${MAIL_ERASED_ON.es}</b>, y si entras a más tardar ese día la restauras.`,
+      extra:
+        "Después se borra para siempre y esta dirección queda libre para una cuenta nueva. Si no fuiste tú, ignora este correo.",
+      aside: [
+        "¿Olvidaste tu contraseña?",
+        "Al elegir una nueva también la restauras. Se cierra la sesión en todos los dispositivos.",
+        MAIL.es.reset,
+        "forgot",
+      ],
+    },
+  }),
+  "password-reset-deleted": variantOf("password-reset", {
+    en: {
+      lead: `Type this code in Ledger Flow to choose a new password. This account was deleted on ${MAIL_DELETED_ON.en}: choosing one restores it.`,
+      aside: [
+        "Didn’t ask for this?",
+        `Ignore this email: nothing changes, and the account is erased on ${MAIL_ERASED_ON.en} as planned.`,
+      ],
+    },
+    es: {
+      lead: `Escribe este código en Ledger Flow para elegir una contraseña nueva. Esta cuenta se eliminó el ${MAIL_DELETED_ON.es}: al elegirla, la restauras.`,
+      aside: [
+        "¿No lo pediste?",
+        `Ignora este correo: no cambia nada y la cuenta se borra el ${MAIL_ERASED_ON.es}, como estaba previsto.`,
+      ],
+    },
+  }),
+  "password-reset-after-restore": variantOf("password-reset-after-undo", {
+    en: {
+      pre: "You restored your account.",
+      lead: "You restored your account from this address, and every device was signed out. Type this code in Ledger Flow to choose a new password: the old one no longer works.",
+      why: "you restored your Ledger Flow account from this address",
+    },
+    es: {
+      pre: "Restauraste tu cuenta.",
+      lead: "Restauraste tu cuenta desde esta dirección y se cerró la sesión en todos los dispositivos. Escribe este código en Ledger Flow para elegir una contraseña nueva: la anterior ya no sirve.",
+      why: "restauraste tu cuenta de Ledger Flow desde esta dirección",
+    },
+  }),
+  "account-restored-reset": variantOf("account-restored", {
+    en: {
+      lead: `Your account, deleted on ${MAIL_DELETED_ON.en}, was restored by choosing a new password: everything in it is back except the shared groups it left, and it won’t be erased. Every other device was signed out.`,
+    },
+    es: {
+      lead: `Tu cuenta, eliminada el ${MAIL_DELETED_ON.es}, se restauró al elegir una contraseña nueva: vuelve todo lo que tenía menos los grupos compartidos que dejó, y ya no se va a borrar. Se cerró la sesión en los demás dispositivos.`,
+    },
+  }),
+};
+
+EMAIL_VARIANTS["account-exists-held"] = {
+  kind: "none",
+  variant: true,
+  en: {
+    ...EMAILS["account-exists"].en,
+    subject: "This address is kept for a Ledger Flow account",
+    pre: "This address can’t be used for a new account until October 5.",
+    title: "This address is kept for an account",
+    lead: "Someone tried to create a Ledger Flow account with this address. An account moved away from it in the last few days and can still come back to it, so it’s kept for that account until <b>October 5</b>.",
+    extra:
+      "If that account is yours, the email about the change has a link to undo it. If not, ignore this email.",
+    aside: undefined,
+  },
+  es: {
+    ...EMAILS["account-exists"].es,
+    subject: "Esta dirección está reservada para una cuenta de Ledger Flow",
+    pre: "Esta dirección no se puede usar para una cuenta nueva hasta el 5 de octubre.",
+    title: "Esta dirección está reservada para una cuenta",
+    lead: "Alguien intentó crear una cuenta de Ledger Flow con esta dirección. Una cuenta dejó de usarla hace pocos días y todavía puede volver a ella, así que queda reservada para esa cuenta hasta el <b>5 de octubre</b>.",
+    extra:
+      "Si esa cuenta es tuya, el correo sobre el cambio tiene un enlace para deshacerlo. Si no, ignora este correo.",
+    aside: undefined,
+  },
+};
+EMAIL_VARIANTS["email-change-taken"] = {
+  kind: "link",
+  path: "login",
+  to: MAIL_NEW_TO,
+  variant: true,
+  en: {
+    subject: "Your address was asked for by another Ledger Flow account",
+    pre: "Nothing changes: this address already has an account.",
+    title: "This address already has an account",
+    lead: "Someone asked to move another Ledger Flow account to this address. It already has one, so nothing changes.",
+    extra: "If it was you, sign in with this address instead. If it wasn’t, ignore this email.",
+    button: "Sign in",
+    why: "someone asked to use this address for a Ledger Flow account",
+  },
+  es: {
+    subject: "Otra cuenta de Ledger Flow pidió usar tu dirección",
+    pre: "No cambia nada: esta dirección ya tiene una cuenta.",
+    title: "Esta dirección ya tiene una cuenta",
+    lead: "Alguien pidió pasar otra cuenta de Ledger Flow a esta dirección. Ya tiene una, así que no cambia nada.",
+    extra: "Si fuiste tú, entra con esta dirección. Si no, ignora este correo.",
+    button: "Entrar",
+    why: "alguien pidió usar esta dirección en una cuenta de Ledger Flow",
+  },
+};
+
+const mailOf = (key) => EMAILS[key] ?? EMAIL_VARIANTS[key];
+
 const mailUrl = (l, path) =>
-  `https://${MAIL_SITE}/${l}/${path}${path === "forgot" || path === "register" ? "" : `#token=${MAIL_TOKEN}`}`;
+  `https://${MAIL_SITE}/${l}/${path}${["forgot", "login"].includes(path) ? "" : `#token=${MAIL_TOKEN}`}`;
 
 const mailButton = (l, label, path, secondary = false) =>
   `<a class="mail-btn${secondary ? " secondary" : ""}" href="#">${label}</a>
@@ -6187,15 +6443,22 @@ const mailFacts = (l) =>
   `<table class="mail-facts"><tr><th>${MAIL[l].when}</th><td>${MAIL[l].whenValue}</td></tr><tr><th>${MAIL[l].device}</th><td>${MAIL[l].deviceValue}</td></tr></table>`;
 
 const mailBody = (key, l) => {
-  const e = EMAILS[key];
+  const e = mailOf(key);
   const c = e[l];
-  const [asideTitle, asideBody, action, actionPath] = c.aside;
-  const middle = e.code
-    ? `<div class="mail-code">${MAIL_CODE}</div>
+  const [asideTitle, asideBody, action, actionPath] = c.aside ?? [];
+  const middle =
+    e.kind === "code"
+      ? `<div class="mail-code">${MAIL_CODE}</div>
 <p class="small">${c.ttl} ${MAIL[l].codeNote}</p>
 ${mailButton(l, c.button, e.path)}`
-    : mailFacts(l);
-  const aside = `<div class="mail-aside"><h2>${asideTitle}</h2><p>${asideBody}</p>${action ? mailButton(l, action, actionPath, true) : ""}</div>`;
+      : e.kind === "link"
+        ? mailButton(l, c.button, e.path)
+        : e.kind === "none"
+          ? ""
+          : mailFacts(l);
+  const aside = c.aside
+    ? `\n<div class="mail-aside"><h2>${asideTitle}</h2><p>${asideBody}</p>${action ? mailButton(l, action, actionPath, true) : ""}</div>`
+    : "";
   const why = c.why ? MAIL[l].why(c.why) : MAIL[l].security;
   return {
     subject: c.subject,
@@ -6204,8 +6467,7 @@ ${mailButton(l, c.button, e.path)}`
     html: `<span class="mail-brand">Ledger Flow</span>
 <h1>${c.title}</h1>
 <p>${c.lead}</p>${c.extra ? `\n<p class="small">${c.extra}</p>` : ""}
-${middle}
-${aside}`,
+${middle}${aside}`,
     foot: `<p>${why}</p><p>Ledger Flow · <a href="#">${MAIL_SITE}</a> · ${MAIL[l].contact} <a href="#">${MAIL_CONTACT}</a></p>`,
   };
 };
@@ -6237,19 +6499,24 @@ const mailInbox = () =>
     .join("")}</div>`;
 
 const mailText = (key, l) => {
-  const e = EMAILS[key];
+  const e = mailOf(key);
   const c = e[l];
-  const [asideTitle, asideBody, action, actionPath] = c.aside;
+  const [asideTitle, asideBody, action, actionPath] = c.aside ?? [];
   const plain = (html) => html.replace(/<[^>]+>/g, "");
-  const middle = e.code
-    ? [
-        `    ${MAIL_CODE}`,
-        "",
-        `${c.ttl} ${MAIL[l].codeNote}`,
-        "",
-        `${c.button}: ${mailUrl(l, e.path)}`,
-      ]
-    : [`${MAIL[l].when}: ${MAIL[l].whenValue}`, `${MAIL[l].device}: ${MAIL[l].deviceValue}`];
+  const middle =
+    e.kind === "code"
+      ? [
+          `    ${MAIL_CODE}`,
+          "",
+          `${c.ttl} ${MAIL[l].codeNote}`,
+          "",
+          `${c.button}: ${mailUrl(l, e.path)}`,
+        ]
+      : e.kind === "link"
+        ? [`${c.button}: ${mailUrl(l, e.path)}`]
+        : e.kind === "none"
+          ? []
+          : [`${MAIL[l].when}: ${MAIL[l].whenValue}`, `${MAIL[l].device}: ${MAIL[l].deviceValue}`];
   return [
     "Ledger Flow",
     "",
@@ -6259,10 +6526,9 @@ const mailText = (key, l) => {
     ...(c.extra ? ["", c.extra] : []),
     "",
     ...middle,
-    "",
-    asideTitle,
-    asideBody,
-    ...(action ? [`${action}: ${mailUrl(l, actionPath)}`] : []),
+    ...(c.aside
+      ? ["", asideTitle, asideBody, ...(action ? [`${action}: ${mailUrl(l, actionPath)}`] : [])]
+      : []),
     "",
     "--",
     c.why ? MAIL[l].why(c.why) : MAIL[l].security,
@@ -6575,7 +6841,7 @@ const PAGES = [
     file: "access.html",
     title: "Access",
     group: "Screens",
-    note: "Sign in and sign up, centred and short. Registration suggests the detected currency and time zone and says the currency locks with the first account. After signing up, two onboarding steps: the first account, which becomes the main one, and a total monthly budget. Forgot your password? asks for a code by email, and every link in an email lands on a page here that does nothing until you tap its one button.",
+    note: "Sign in and sign up, centred and short. Registration suggests the detected currency and time zone and says the currency locks with the first account; the account exists once the code it emails is typed. Then two onboarding steps: the first account, which becomes the main one, and a total monthly budget. Forgot your password? asks for a code by email, a deleted account asks whether to restore it, and every link in an email lands on a page here that does nothing until you tap its one button.",
     plates: [
       plate(
         "sign-in",
@@ -6587,6 +6853,41 @@ const PAGES = [
       plate("sign-in-rate-limited", "Sign in · too many attempts", "", login("429"), {
         added: "2026-09-01",
       }),
+      plate(
+        "sign-in-after-deleting",
+        "Sign in · after deleting the account",
+        "Where Delete my account lands: the date it is erased, and that signing in before then restores it.",
+        login("deleted"),
+        { added: "2026-09-28" },
+      ),
+      plate(
+        "restore-your-account",
+        "Restore your account?",
+        "The right password of an account deleted in the last 30 days (the owner's decision 20). Not now leaves it deleted; Restore account signs in and tells the inbox.",
+        restoreAccount(),
+        { added: "2026-09-28" },
+      ),
+      plate(
+        "confirm-email-required",
+        "Confirm your email to continue",
+        "An account from before email existed, past its 14 days (the owner's decision 17). The data is untouched and what the device queued offline waits; this is only the door.",
+        confirmRequired("queued"),
+        { added: "2026-09-28" },
+      ),
+      plate(
+        "confirm-email-required-code",
+        "Confirm your email to continue · the code",
+        "After Send code: the same code field and Resend as the sheet in the app.",
+        confirmRequired("code"),
+        { added: "2026-09-28" },
+      ),
+      plate(
+        "confirm-email-required-change",
+        "Confirm your email to continue · another address",
+        "Wrong address? Change it: the new address and the current password, answered the same for every address. Confirming the new one confirms the account.",
+        confirmRequired("change"),
+        { added: "2026-09-28" },
+      ),
       plate(
         "forgot-password",
         "Forgot your password?",
@@ -6637,29 +6938,26 @@ const PAGES = [
         { added: "2026-09-26" },
       ),
       plate(
-        "keep-or-start-fresh",
-        "Keep what's in this account?",
-        "Only after recovering an account that never confirmed its email and has something in it (the owner's decision 12). Asked once; until it is answered, opening the app comes back here.",
-        neverConfirmed(),
-        { added: "2026-09-26" },
+        "create-account",
+        "Create account",
+        "With currency and time zone. It creates nothing yet: it sends the code, and the account exists once the code is typed (the owner's decision 16).",
+        register(),
+        { added: "2026-09-01", updated: "2026-09-28" },
       ),
       plate(
-        "start-fresh",
-        "Start fresh",
-        "The confirmation, because it cannot be undone.",
-        neverConfirmed(true),
-        { added: "2026-09-26" },
+        "create-account-code",
+        "Create account · the code",
+        "The same words for every address: an address that already has an account gets account-exists instead of the code, and this screen never says so.",
+        registerCode(),
+        { added: "2026-09-28" },
       ),
       plate(
-        "start-fresh-details",
-        "Start fresh · your details",
-        "The name, language, currency and time zone were typed by whoever created the account, so they go too. Then onboarding, as for a new account.",
-        neverConfirmed("details"),
-        { added: "2026-09-26" },
+        "create-account-wrong-code",
+        "Create account · wrong code",
+        "One answer for every bad code, as in the reset: “expired” would only exist for the addresses without an account.",
+        registerCode("wrong"),
+        { added: "2026-09-28" },
       ),
-      plate("create-account", "Create account", "With currency and time zone.", register(), {
-        added: "2026-09-01",
-      }),
       plate(
         "create-account-human-check",
         "Create account · Cloudflare has doubts",
@@ -6681,20 +6979,6 @@ const PAGES = [
         register("check-failed"),
         { added: "2026-09-26" },
       ),
-      plate(
-        "create-account-email-taken",
-        "Create account · email taken",
-        "EMAIL_TAKEN: a live account, or a deleted one signed up with a password it did not have. It offers Forgot your password?, which is how the owner of the inbox takes an address back.",
-        register("taken"),
-        { added: "2026-09-23", updated: "2026-09-26" },
-      ),
-      plate(
-        "account-reactivated",
-        "Create account · reactivated",
-        "The server answers that the account existed: the history comes back and the currency is kept.",
-        register("reactivated"),
-        { added: "2026-09-01" },
-      ),
       plate("onboarding-first-account", "Onboarding 1 · first account", "", onboarding(1), {
         added: "2026-09-01",
       }),
@@ -6715,16 +6999,23 @@ const PAGES = [
       plate(
         "verify-link",
         "From an email · confirm your email",
-        "/verify. Nothing happens by opening it; the button confirms.",
+        "/verify, from sign-up, verify-email and the deadline emails. Nothing happens by opening it; the button confirms.",
         emailLinkPage("verify"),
-        { added: "2026-09-26" },
+        { added: "2026-09-26", updated: "2026-09-28" },
       ),
       plate(
         "verify-link-done",
         "From an email · email confirmed",
-        "Open Ledger Flow goes to Home with a session and to Sign in without one.",
+        "An account from before email existed. Open Ledger Flow goes to Home with a session and to Sign in without one.",
         emailLinkPage("verify-done"),
-        { added: "2026-09-26" },
+        { added: "2026-09-26", updated: "2026-09-28" },
+      ),
+      plate(
+        "verify-link-account-ready",
+        "From an email · your account is ready",
+        "A sign-up finished from the email's button. The tap proves the inbox, not the password, so it signs nobody in.",
+        emailLinkPage("verify-ready"),
+        { added: "2026-09-28" },
       ),
       plate(
         "confirm-new-email-link",
@@ -6748,20 +7039,6 @@ const PAGES = [
         { added: "2026-09-28" },
       ),
       plate(
-        "not-me-link",
-        "From an email · it wasn't me",
-        "/not-me, from verify-email (the owner's decision 11). It says it deletes before the tap.",
-        emailLinkPage("not-me"),
-        { added: "2026-09-26" },
-      ),
-      plate(
-        "not-me-link-done",
-        "From an email · the account is gone",
-        "The account is erased, not archived, so nobody can bring it back; the address gets nothing more from it.",
-        emailLinkPage("not-me-done"),
-        { added: "2026-09-26" },
-      ),
-      plate(
         "undo-link",
         "From an email · undo the change",
         "/undo, from the security notices. Today the only change it undoes is an email change; T-214 adds the words for passkeys and two-step verification.",
@@ -6774,6 +7051,20 @@ const PAGES = [
         "The code to choose a new password is on its way to the same address. Enter the code opens the code screen for that address, without asking for another code.",
         emailLinkPage("undo-done"),
         { added: "2026-09-26" },
+      ),
+      plate(
+        "restore-link",
+        "From an email · restore your account",
+        "/restore, from Your account was deleted, for whoever did not delete it. It works like an undo: it signs everyone out and stops the password, even if the account was restored meanwhile.",
+        emailLinkPage("restore"),
+        { added: "2026-09-28" },
+      ),
+      plate(
+        "restore-link-done",
+        "From an email · account restored",
+        "The code to choose a new password is on its way. Enter the code opens its screen without asking for another.",
+        emailLinkPage("restore-done"),
+        { added: "2026-09-28" },
       ),
     ],
   },
@@ -7944,9 +8235,9 @@ const PAGES = [
       plate(
         "delete-account",
         "Delete my account",
-        "Reversible by signing up again with the same email and password. The password is the confirmation.",
+        "Kept 30 days and then erased for good; signing in before then restores it (the owner's decisions 19 and 20). The password is the confirmation.",
         deleteAccountScreen(),
-        { added: "2026-09-01" },
+        { added: "2026-09-01", updated: "2026-09-28" },
       ),
       plate(
         "delete-account-wrong-password",
@@ -8173,21 +8464,21 @@ const PAGES = [
       plate(
         "confirm-your-email",
         "Confirm your email",
-        "An account whose email is not confirmed, new or from before email existed. The stripe shares the one slot of the sync stripes, after the new-version one; the ✕ puts it away until the app is next opened. Settings › Password & email says it too.",
+        "Only an account from before email existed, until its deadline (the owner's decision 17). The stripe shares the one slot of the sync stripes, after the new-version one; the ✕ puts it away until the app is next opened. Settings › Password & email says it too.",
         home({ banner: CONFIRM_STRIPE }),
-        { added: "2026-09-26" },
+        { added: "2026-09-26", updated: "2026-09-28" },
       ),
       plate(
         "confirm-email-code",
         "Confirm your email · the code",
-        "Right after signing up, or once a code was sent. Resend waits for its countdown, written as text so it stays readable.",
+        "Once a code was sent in the last 24 hours. Resend waits for its countdown, written as text so it stays readable.",
         confirmEmailOver(""),
         { added: "2026-09-26" },
       ),
       plate(
         "confirm-email-send",
         "Confirm your email · nothing sent yet",
-        "An account from before email existed has had no code: the sheet offers to send one.",
+        "The usual case: the deadline email carries a link and no code, so the sheet offers to send one.",
         confirmEmailOver("send"),
         { added: "2026-09-26" },
       ),
@@ -8447,35 +8738,91 @@ const PAGES = [
         "In the inbox",
         "Sender, subject and preview text of every email, as a list of messages shows them. The code never goes in the subject or the preview: those show up on a locked phone.",
         mailInbox(),
-        { frame: false, wide: true, added: "2026-09-26" },
+        { frame: false, wide: true, added: "2026-09-26", updated: "2026-09-28" },
+      ),
+      plate(
+        "sign-up",
+        "Sign up · the code that creates the account",
+        "Create account sends it, and the account exists only once its code is typed or its button tapped (the owner's decision 16). It is also the welcome. No box: with no account yet there is nothing to undo.",
+        mailPlate("sign-up"),
+        { frame: false, wide: true, added: "2026-09-28" },
+      ),
+      plate(
+        "account-exists",
+        "Sign up · the address already has an account",
+        "Sent instead of the code, at the same moment and under the same limits, so Create account reads the same for every address and never tells who has an account.",
+        mailPlate("account-exists"),
+        { frame: false, wide: true, added: "2026-09-28" },
+      ),
+      plate(
+        "account-exists-deleted",
+        "Sign up · the address has a deleted account",
+        "The same email while a deleted account is in its 30 days: the date it is erased, and that signing in or a new password restores it.",
+        mailPlate("account-exists-deleted"),
+        { frame: false, wide: true, added: "2026-09-28" },
+      ),
+      plate(
+        "account-exists-held",
+        "Sign up · the address is kept by an undo link",
+        "An account moved away from this address in the last 7 days and can still come back to it. No button: there is nothing to sign in to here.",
+        mailPlate("account-exists-held"),
+        { frame: false, wide: true, added: "2026-09-28" },
       ),
       plate(
         "verify-email",
-        "Confirm your email",
-        "On sign-up and on Resend. The code or the button confirm it; “It wasn’t me” deletes an account nobody ever confirmed and frees the address.",
+        "Confirm your email · an account from before email",
+        "Send code and Resend in the app, for the accounts from before email existed. The box is gone (the owner's approval F): someone signed in asked for it.",
         mailPlate("verify-email"),
-        { frame: false, wide: true, added: "2026-09-26" },
+        { frame: false, wide: true, added: "2026-09-26", updated: "2026-09-28" },
+      ),
+      plate(
+        "confirm-deadline",
+        "Confirm your email by a date",
+        "Once, to every account from before email existed that is unconfirmed (the owner's decision 17). Its link lasts until the deadline, because it carries no code; the box is for a mistyped address.",
+        mailPlate("confirm-deadline"),
+        { frame: false, wide: true, added: "2026-09-28" },
+      ),
+      plate(
+        "confirm-deadline-reminder",
+        "Confirm your email · the reminder",
+        "Four days before the deadline, only if the account is still unconfirmed.",
+        mailPlate("confirm-deadline-reminder"),
+        { frame: false, wide: true, added: "2026-09-28" },
       ),
       plate(
         "password-reset",
         "Reset your password",
-        "Forgot your password? It only arrives when the address has a live account, and nothing in it says so.",
+        "Forgot your password? It only arrives when the address has an account, live or deleted, and nothing in it says which addresses have one. How long the code works is said once.",
         mailPlate("password-reset"),
-        { frame: false, wide: true, added: "2026-09-26" },
+        { frame: false, wide: true, added: "2026-09-26", updated: "2026-09-28" },
+      ),
+      plate(
+        "password-reset-deleted",
+        "Reset your password · a deleted account",
+        "The same email for an account in its 30 days: choosing a new password restores it (the owner's decision 20). Ignoring it leaves the erasure as planned.",
+        mailPlate("password-reset-deleted"),
+        { frame: false, wide: true, added: "2026-09-28" },
       ),
       plate(
         "password-reset-after-undo",
         "Choose a new password · after an undo",
         "The reset that “Undo the change” sends to the original address. Nothing to ignore: the old password already stopped working.",
         mailPlate("password-reset-after-undo"),
-        { frame: false, wide: true, added: "2026-09-26" },
+        { frame: false, wide: true, added: "2026-09-26", updated: "2026-09-28" },
+      ),
+      plate(
+        "password-reset-after-restore",
+        "Choose a new password · after Restore account",
+        "The same email after “Restore account” in Your account was deleted: the restore stops the password, as an undo does.",
+        mailPlate("password-reset-after-restore"),
+        { frame: false, wide: true, added: "2026-09-28" },
       ),
       plate(
         "password-changed",
         "Password changed",
-        "After Password & email and after a reset. Security notices carry when and on what, and one way back.",
+        "After Password & email and after a reset of a live account. Security notices carry when and on what, and one way back.",
         mailPlate("password-changed"),
-        { frame: false, wide: true, added: "2026-09-26" },
+        { frame: false, wide: true, added: "2026-09-26", updated: "2026-09-28" },
       ),
       plate(
         "email-change-confirm",
@@ -8485,25 +8832,46 @@ const PAGES = [
         { frame: false, wide: true, added: "2026-09-26", updated: "2026-09-28" },
       ),
       plate(
+        "email-change-taken",
+        "Email change · the new address already has an account",
+        "Sent instead of the code, so Password & email never tells whether an address has an account (the owner's decision 16). The change shows waiting and never confirms.",
+        mailPlate("email-change-taken"),
+        { frame: false, wide: true, added: "2026-09-28" },
+      ),
+      plate(
         "email-change-requested",
         "Email change · to the old address",
         "Sent the moment the change is asked for. “Undo the change” keeps working for 7 days, confirmed or not.",
         mailPlate("email-change-requested"),
-        { frame: false, wide: true, added: "2026-09-26" },
+        { frame: false, wide: true, added: "2026-09-26", updated: "2026-09-28" },
       ),
       plate(
         "new-sign-in",
         "New sign-in",
-        "Only from a device without a valid device token for the account. Signing up sends nothing; after a password or email change or Sign out everywhere, a device you already used can get it once.",
+        "Only from a device without a valid device token for the account. Signing up sends nothing; only after an undo, a restore from its link or Sign out all other sessions can a device you already used get it once (the owner's approval E).",
         mailPlate("new-sign-in"),
-        { frame: false, wide: true, added: "2026-09-26" },
+        { frame: false, wide: true, added: "2026-09-26", updated: "2026-09-28" },
       ),
       plate(
         "account-deleted",
         "Account deleted",
-        "After Delete my account. It says how to come back, because the history is kept.",
+        "After Delete my account: the date it is erased for good, how to change your mind, and Restore account for whoever did not delete it (the owner's decisions 19 and 20).",
         mailPlate("account-deleted"),
-        { frame: false, wide: true, added: "2026-09-26" },
+        { frame: false, wide: true, added: "2026-09-26", updated: "2026-09-28" },
+      ),
+      plate(
+        "account-restored",
+        "Account restored · by signing in",
+        "Every way back tells the inbox (the owner's approval B). If it wasn't the owner, the way out is a new password.",
+        mailPlate("account-restored"),
+        { frame: false, wide: true, added: "2026-09-28" },
+      ),
+      plate(
+        "account-restored-reset",
+        "Account restored · by a new password",
+        "Sent instead of Password changed when the reset brought a deleted account back.",
+        mailPlate("account-restored-reset"),
+        { frame: false, wide: true, added: "2026-09-28" },
       ),
       plate(
         "passkey-added",
@@ -8544,8 +8912,8 @@ const PAGES = [
         "plain-text-version",
         "Plain-text version · a code",
         "Every email goes with one: the same words in the same order, and every button written out as its link.",
-        mailTextPlate("verify-email"),
-        { frame: false, wide: true, added: "2026-09-26" },
+        mailTextPlate("sign-up"),
+        { frame: false, wide: true, added: "2026-09-26", updated: "2026-09-28" },
       ),
       plate(
         "plain-text-notice",
