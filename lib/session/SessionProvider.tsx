@@ -21,7 +21,13 @@ import { purgePersistedCaches } from "@/lib/query/purge";
 import { themeStore } from "@/lib/theme/store";
 import type { User } from "@/types/api";
 
-import { fetchCurrentUser, requestLogout, requestLogoutAll, type SessionProfile } from "./api";
+import {
+  fetchCurrentUser,
+  requestLogout,
+  requestLogoutAll,
+  type SessionProfile,
+  type SessionUser,
+} from "./api";
 import { tabChannel } from "./channel";
 import { sessionKeys } from "./keys";
 
@@ -33,7 +39,7 @@ interface SessionContextValue {
   expired: boolean;
   logout: (options?: SignOutOptions) => Promise<void>;
   logoutAll: (options?: SignOutOptions) => Promise<void>;
-  refetch: () => Promise<unknown>;
+  refetch: () => Promise<{ data?: SessionUser }>;
   setUser: (user: User) => void;
 }
 
@@ -157,7 +163,11 @@ export function SessionProvider({
 
   const setUser = useCallback(
     (user: User) => {
-      queryClient.setQueryData(sessionKeys.me(), { user });
+      queryClient.setQueryData<{ user: SessionProfile }>(sessionKeys.me(), (current) => {
+        if (current?.user.id !== user.id) return { user };
+        const { emailVerification, emailChange } = current.user;
+        return { user: { emailVerification, emailChange, ...user } };
+      });
     },
     [queryClient],
   );

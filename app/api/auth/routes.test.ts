@@ -3,7 +3,14 @@ import { NextRequest } from "next/server";
 
 import { POST as logout } from "@/app/api/auth/logout/route";
 import { POST as refresh } from "@/app/api/auth/refresh/route";
-import { authenticate, confirmEmail, requestPasswordReset } from "@/lib/auth/handlers";
+import {
+  authenticate,
+  cancelEmailChange,
+  confirmEmail,
+  confirmEmailChange,
+  requestEmailChange,
+  requestPasswordReset,
+} from "@/lib/auth/handlers";
 import { SESSION_END_HEADER } from "@/lib/auth/session-end";
 
 vi.mock("server-only", () => ({}));
@@ -227,6 +234,137 @@ describe("forgot-password handler", () => {
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("240");
     await expect(response.json()).resolves.toMatchObject({ code: "RATE_LIMITED" });
+  });
+});
+
+const ACCESS_FOR_U1 = `h.${Buffer.from(JSON.stringify({ userId: "u1" })).toString("base64url")}.s`;
+
+describe("email change handlers", () => {
+  it("asks for the change on the session's own account, with this device's cookie", async () => {
+    fetchMock.mockResolvedValue(json({ resendAfterSeconds: 60, emailChange: {} }, { status: 202 }));
+    const response = await requestEmailChange(
+      "request",
+      post(
+        "/api/auth/change-email",
+        { email: "new@b.co", currentPassword: "x", captcha: "tok", deviceToken: "forged" },
+        { cookie: `__Host-access=${ACCESS_FOR_U1}; __Secure-device=dev1` },
+      ),
+    );
+    expect(response.status).toBe(202);
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://backend.test/users/u1/email-change");
+    expect(new Headers(init?.headers).get("authorization")).toBe(`Bearer ${ACCESS_FOR_U1}`);
+    expect(JSON.parse(init?.body as string)).toEqual({
+      email: "new@b.co",
+      currentPassword: "x",
+      captcha: "tok",
+      deviceToken: "dev1",
+    });
+  });
+
+  it("sends Resend to its own path, and answers 401 with no session before touching the backend", async () => {
+    fetchMock.mockResolvedValue(json({ resendAfterSeconds: 60, emailChange: {} }, { status: 202 }));
+    await requestEmailChange(
+      "resend",
+      post(
+        "/api/auth/change-email/resend",
+        { captcha: "tok" },
+        { cookie: `__Host-access=${ACCESS_FOR_U1}` },
+      ),
+    );
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://backend.test/users/u1/email-change/resend");
+    fetchMock.mockClear();
+    const anonymous = await requestEmailChange(
+      "resend",
+      post("/api/auth/change-email/resend", { captcha: "tok" }),
+    );
+    expect(anonymous.status).toBe(401);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("cancels with a DELETE on the session's account, from a trusted origin only", async () => {
+    fetchMock.mockResolvedValue(json({ message: "Nothing waits" }));
+    const request = (origin: string) =>
+      new NextRequest(`${APP}/api/auth/change-email`, {
+        method: "DELETE",
+        headers: { origin, cookie: `__Host-access=${ACCESS_FOR_U1}` },
+      });
+    expect((await cancelEmailChange(request("https://evil.example"))).status).toBe(403);
+    expect(fetchMock).not.toHaveBeenCalled();
+    const response = await cancelEmailChange(request(APP));
+    expect(response.status).toBe(200);
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://backend.test/users/u1/email-change");
+    expect(init?.method).toBe("DELETE");
+  });
+
+  it("stores the new session a code answers, and returns only the user", async () => {
+    fetchMock.mockResolvedValue(json({ ...tokens, deviceToken: "dev2" }));
+    const response = await confirmEmailChange(
+      post("/api/auth/confirm-change", { code: "482719" }, { cookie: "__Host-access=acc" }),
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ user: tokens.user });
+    const cookies = setCookies(response).join("\n");
+    expect(cookies).toContain("__Host-access=acc");
+    expect(cookies).toContain("__Secure-refresh=ref");
+    expect(cookies).toContain("__Secure-device=dev2");
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://backend.test/auth/email/confirm-change");
+    expect(new Headers(init?.headers).get("authorization")).toBe("Bearer acc");
+    expect(JSON.parse(init?.body as string)).toEqual({ code: "482719" });
+  });
+
+  it("sends a link with this browser's refresh cookie, never one the body names", async () => {
+    fetchMock.mockResolvedValue(json({ user: tokens.user }));
+    const response = await confirmEmailChange(
+      post(
+        "/api/auth/confirm-change",
+        { token: "t".repeat(64), refreshToken: "forged" },
+        { cookie: "__Secure-refresh=mine" },
+      ),
+    );
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      token: "t".repeat(64),
+      refreshToken: "mine",
+    });
+    await expect(response.json()).resolves.toEqual({});
+    expect(setCookies(response)).toEqual([]);
+  });
+
+  it("keeps this browser's session when the link answers one: cookies set, only the user returned", async () => {
+    fetchMock.mockResolvedValue(json({ ...tokens, deviceToken: "dev3" }));
+    const response = await confirmEmailChange(
+      post(
+        "/api/auth/confirm-change",
+        { token: "t".repeat(64) },
+        { cookie: "__Secure-refresh=mine" },
+      ),
+    );
+    await expect(response.json()).resolves.toEqual({ user: tokens.user });
+    const cookies = setCookies(response).join("\n");
+    expect(cookies).toContain("__Secure-refresh=ref");
+    expect(cookies).toContain("__Secure-device=dev3");
+  });
+
+  it("sends a link with no refresh token when this browser has none", async () => {
+    fetchMock.mockResolvedValue(json({ user: tokens.user }));
+    await confirmEmailChange(post("/api/auth/confirm-change", { token: "t".repeat(64) }));
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      token: "t".repeat(64),
+    });
+  });
+
+  it("passes the backend's refusals through with their code", async () => {
+    fetchMock.mockResolvedValue(
+      json({ error: "Conflict", message: "taken", code: "EMAIL_TAKEN" }, { status: 409 }),
+    );
+    const response = await confirmEmailChange(
+      post("/api/auth/confirm-change", { code: "482719" }, { cookie: "__Host-access=acc" }),
+    );
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ code: "EMAIL_TAKEN" });
+    expect(setCookies(response)).toEqual([]);
   });
 });
 

@@ -94,9 +94,20 @@ server fails and when something has to be confirmed.
   - **Done:** the sheet closes with the toast "Email confirmed", and the stripe and the Settings badge
     go. Confirming from the email's link in another browser does the same here the next time the app
     reads `/me`.
-  - **The same sheet confirms a new address** (T-222), titled "Confirm your new email", with "We sent a
-    6-digit code to **{new email}**. It works for 24 hours."; its toast is "Your email is now {new
-    email}. Every other device was signed out."
+  - **The same sheet confirms a new address** (T-222, `#confirm-new-email-code`), opened by Enter code on
+    the card of Profile & security ([settings.md](settings.md)): titled "Confirm your new email", with
+    "We sent a 6-digit code to **{new email}**. It works for 24 hours." Its Resend sends the new address
+    another code and link, "Wrong address? Change it" closes it on Profile & security, and a code that
+    stopped working turns it to "We'll send a 6-digit code to **{new email}**." with Send code, as above.
+    Its toast is "Your email is now {new email}. Every other device was signed out." This device stays
+    signed in. Two answers only this shape has, each a final state — the code and its buttons go, the ✕
+    closes the sheet, and the card goes behind it:
+    - **the address became another account's meanwhile** (`EMAIL_TAKEN`, `#confirm-new-email-taken`): a
+      `danger` alert, "**That address now belongs to another account.** Your account keeps its current
+      email.";
+    - **nothing waits any more** (`EMAIL_CHANGE_NOT_PENDING`): confirmed from the link, cancelled in
+      another tab, or past its 24 hours: a `warning` alert, "**This change isn't waiting any more.** It
+      was confirmed, cancelled, or its 24 hours passed." The same when the sheet opens and `/me` says so.
 
 - **Toast:** confirms every save, five seconds, with "Undo" where the backend can revert it (create →
   `DELETE`; make main → back to the previous one); no undo on deletions.

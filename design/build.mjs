@@ -1244,6 +1244,12 @@ const emailLinkPage = (kind) => {
   if (kind == "confirm-email")
     return authPage(`${authTitle("Move your account to this address?", "Your account’s email becomes the address this message reached, and your other devices are signed out. From now on you sign in with it.")}
 <button class="btn primary lg block">Confirm new email</button>`);
+  if (kind == "confirm-email-done")
+    return authPage(`${authOutcome("mail-check", "GREEN", "Your email changed", "Every other device was signed out. Sign in with this address from now on.")}
+<button class="btn primary lg block">Open Ledger Flow</button>`);
+  if (kind == "confirm-email-taken")
+    return authPage(`${authOutcome("circle-alert", "NONE", "That address now belongs to another account", "Your account keeps its current email.")}
+<button class="btn primary lg block">Open Ledger Flow</button>`);
   if (kind == "not-me")
     return authPage(`${authTitle("Delete the account that used your address?", "Somebody signed up to Ledger Flow with this address and never confirmed it. This deletes that account and everything in it, for good, and frees your address.")}
 <div class="alert warning">${iconSvg("triangle-alert")}<span><b>If you signed up yourself, don’t.</b> Use the code or the Confirm email button in the same message instead.</span></div>
@@ -1260,6 +1266,18 @@ const emailLinkPage = (kind) => {
 };
 
 const CONFIRM_STRIPE = `<div class="banner warning" role="status">${iconSvg("mail")}<span class="txt"><b>Confirm your email.</b><span class="sub">You need it to invite people to Shared and to be invited.</span></span><span class="actions"><button class="action">Confirm</button><button class="btn ghost icon-only sm round" aria-label="Not now" style="color:inherit">${iconSvg("x", "sm")}</button></span></div>`;
+
+const newEmailSheet = (state = "") => {
+  if (state == "taken")
+    return sheetWrap(
+      `<div class="alert danger">${iconSvg("circle-alert")}<span><b>That address now belongs to another account.</b> Your account keeps its current email.</span></div>`,
+      "Confirm your new email",
+    );
+  return sheetWrap(
+    `<p class="small muted" style="margin:0">We sent a 6-digit code to <b>new@example.com</b>. It works for 24 hours.</p>${codeField("48")}<button class="btn primary lg block">Confirm</button>${resendBlock({ wait: "0:42" })}`,
+    "Confirm your new email",
+  );
+};
 
 const confirmEmailSheet = (state = "") => {
   const send = state == "send" || state == "failed" || state == "check";
@@ -2893,20 +2911,36 @@ const sessions = () => {
   });
 };
 
-const PENDING_EMAIL = `<div class="card stack-sm" style="background:var(--surface-2);gap:12px"><div class="hstack" style="gap:12px;align-items:flex-start">${tile("mail", "AMBER", "sm")}<span class="stack-sm" style="gap:2px;min-width:0"><span style="font-weight:500;overflow-wrap:anywhere">Waiting for confirmation at new@example.com</span><span class="small muted">We sent it a code and a link. Until it’s confirmed, your account keeps john@example.com.</span></span></div><div class="hstack" style="gap:8px;flex-wrap:wrap"><button class="btn primary sm">Enter code</button><button class="btn secondary sm">Resend</button><button class="btn ghost sm">Cancel change</button></div></div>`;
+const PENDING_EMAIL = `<div class="card stack-sm" style="background:var(--surface-2);gap:12px"><div class="hstack" style="gap:12px;align-items:flex-start">${tile("mail", "AMBER", "sm")}<span class="stack-sm" style="gap:2px;min-width:0"><span style="font-weight:500;overflow-wrap:anywhere">Waiting for confirmation at <b>new@example.com</b></span><span class="small muted">We sent it a code and a link. Until it’s confirmed, your account keeps john@example.com.</span></span></div><div class="hstack" style="gap:8px;flex-wrap:wrap"><button class="btn primary sm">Enter code</button><button class="btn secondary sm" disabled>Resend in 0:42</button><button class="btn ghost sm">Cancel change</button></div></div>`;
 
-const profileSecurity = (email = "") => {
+const NEW_EMAIL_HELP =
+  "A new address gets a code first: the change happens once you confirm it, and then your other sessions are signed out.";
+
+const profileSecurity = (email = "", { sheet = "" } = {}) => {
   const emailField =
     email == "unconfirmed"
       ? `<div class="field"><span class="label" style="display:flex;align-items:center;gap:8px">Email<span class="badge warning">Not confirmed</span></span><div class="input">${iconSvg("user", "sm")}<span class="value">john@example.com</span></div><span class="help">Confirm it to invite people to Shared and to be invited. ${authLink("Confirm it")}</span></div>`
-      : field("Email", "john@example.com", null, {
-          icon: "user",
-          help:
-            email == "pending"
-              ? "A new address gets a code first: the change happens once you confirm it, and then your other sessions are signed out."
-              : "Changing it signs out your other sessions.",
-        });
-  const body = `${field("Name", "John Doe", null, { icon: "user" })}${emailField}${email == "pending" ? PENDING_EMAIL : ""}
+      : email == "locked"
+        ? field("Email", "john@example.com", null, {
+            icon: "user",
+            cls: "disabled",
+            help: "Changing the email needs Cloudflare’s check, which isn’t set up here.",
+          })
+        : email == "refused"
+          ? field("Email", "new@example", null, {
+              icon: "user",
+              help: NEW_EMAIL_HELP,
+              error: "We can’t send email to this address. Check it, or use another one.",
+            })
+          : field("Email", "john@example.com", null, {
+              icon: "user",
+              help:
+                email == "pending" || email == "new-sheet" || email == "new-taken"
+                  ? NEW_EMAIL_HELP
+                  : "Changing it signs out your other sessions.",
+            });
+  const pending = email == "pending" || email == "new-sheet";
+  const body = `${field("Name", "John Doe", null, { icon: "user" })}${emailField}${pending ? PENDING_EMAIL : ""}
 <div class="divider"></div><span class="eyebrow">Change password</span>${field("New password", null, "At least 8 characters", { icon: "lock" })}
 <div class="alert warning">${iconSvg("lock")}<span>To change your email or password, confirm your <b>current password</b>. For safety, your other devices will need to sign in again.</span></div>
 ${field("Current password", "••••••••••", null, { icon: "lock", cls: "focus" })}
@@ -2917,6 +2951,7 @@ ${field("Current password", "••••••••••", null, { icon: "loc
     back: true,
     title: "Profile & security",
     narrow: true,
+    sheet,
   });
 };
 
@@ -6704,6 +6739,20 @@ const PAGES = [
         { added: "2026-09-26" },
       ),
       plate(
+        "confirm-new-email-link-done",
+        "From an email · the email changed",
+        "Open Ledger Flow goes to Home when this browser kept the account's session, and to Sign in when it had none.",
+        emailLinkPage("confirm-email-done"),
+        { added: "2026-09-28" },
+      ),
+      plate(
+        "confirm-new-email-link-taken",
+        "From an email · the address was taken meanwhile",
+        "EMAIL_TAKEN: another account got the address after it was asked for. The change is dropped and the account keeps its email.",
+        emailLinkPage("confirm-email-taken"),
+        { added: "2026-09-28" },
+      ),
+      plate(
         "not-me-link",
         "From an email · it wasn't me",
         "/not-me, from verify-email (the owner's decision 11). It says it deletes before the tap.",
@@ -7879,9 +7928,23 @@ const PAGES = [
       plate(
         "profile-and-security-pending-email",
         "Profile & security · waiting for the new address",
-        "From T-222 a new address is confirmed before it counts. Enter code opens the code sheet for the new address; Cancel change drops it.",
+        "From T-222 a new address is confirmed before it counts. Enter code opens the code sheet for the new address; Resend waits for its countdown and then carries Cloudflare's check; Cancel change drops it.",
         profileSecurity("pending"),
-        { added: "2026-09-26" },
+        { added: "2026-09-26", updated: "2026-09-28" },
+      ),
+      plate(
+        "profile-and-security-new-email-refused",
+        "Profile & security · an address that takes no email",
+        "EMAIL_SEND_FAILED with 422: the address bounced or complained before, or the provider refused it. Nothing is saved.",
+        profileSecurity("refused"),
+        { added: "2026-09-28" },
+      ),
+      plate(
+        "profile-and-security-email-locked",
+        "Profile & security · no Cloudflare check here",
+        "Without a Turnstile site key (a preview, a local run without the test key) a new address could never be confirmed, so the field is read-only, as Sign up is.",
+        profileSecurity("locked"),
+        { added: "2026-09-28" },
       ),
       plate(
         "delete-account",
@@ -8153,6 +8216,20 @@ const PAGES = [
         "Inside the app the check sits in the same place: right above the button that sends.",
         confirmEmailOver("check"),
         { added: "2026-09-26" },
+      ),
+      plate(
+        "confirm-new-email-code",
+        "Confirm your new email",
+        "Enter code on Profile & security's card opens the same sheet for the new address. Resend sends it another code and link.",
+        profileSecurity("new-sheet", { sheet: newEmailSheet() }),
+        { added: "2026-09-28" },
+      ),
+      plate(
+        "confirm-new-email-taken",
+        "Confirm your new email · the address was taken meanwhile",
+        "EMAIL_TAKEN: a final state, with the code and its buttons gone and the card gone behind. EMAIL_CHANGE_NOT_PENDING reads the same way with its own warning.",
+        profileSecurity("new-taken", { sheet: newEmailSheet("taken") }),
+        { added: "2026-09-28" },
       ),
       plate(
         "confirm-email-offline",

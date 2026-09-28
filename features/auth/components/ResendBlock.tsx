@@ -4,8 +4,7 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/Button";
 import { useCountdown } from "@/lib/hooks/useCountdown";
-
-import { useWaitText } from "../hooks";
+import { useWaitText } from "@/lib/hooks/useWaitText";
 
 interface ResendBlockProps {
   seconds: number;

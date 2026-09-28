@@ -9,6 +9,8 @@ import { useForm } from "react-hook-form";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
+import { HumanCheckFailed } from "@/components/ui/HumanCheckFailed";
+import { RateLimitAlert } from "@/components/ui/RateLimitAlert";
 import { ApiError } from "@/lib/api/errors";
 import { HumanCheckSlot, useHumanCheck } from "@/lib/captcha/useHumanCheck";
 import { Link } from "@/lib/i18n/navigation";
@@ -19,8 +21,6 @@ import { useOffline } from "@/lib/network/useOffline";
 import { carryEmail } from "../carry";
 import { type FailureKey, failureKey, retryAfterOf, useRequestResetCode } from "../hooks";
 import { forgotSchema, type ForgotValues } from "../schemas";
-import { HumanCheckFailed } from "./HumanCheckFailed";
-import { RateLimitAlert } from "./RateLimitAlert";
 
 type Failure = "human" | FailureKey | null;
 

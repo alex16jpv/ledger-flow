@@ -1,14 +1,12 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError, type ErrorMessageKey, presentError } from "@/lib/api/errors";
-import { noteSessionStarted, refreshSession } from "@/lib/api/refresh";
+import { noteSessionStarted, withFreshSession } from "@/lib/api/refresh";
 import { readSessionMarker } from "@/lib/auth/marker";
 import { APP_HOME_PATH, KEEP_OR_START_FRESH_PATH } from "@/lib/auth/routes";
-import { formatCountdown } from "@/lib/hooks/useCountdown";
 import { useRouter } from "@/lib/i18n/navigation";
 import { readVaultProfile } from "@/lib/local/db";
 import { pullNow } from "@/lib/local/mirror";
@@ -18,6 +16,7 @@ import { setLocalOnly } from "@/lib/network/local-only";
 import { reportError } from "@/lib/observability/reporter";
 import { fetchCurrentUser, type SessionUser } from "@/lib/session/api";
 import { tabChannel } from "@/lib/session/channel";
+import { confirmEmailChangeWithLink } from "@/lib/session/email-change";
 import { sessionKeys } from "@/lib/session/keys";
 import type { KeepOrStartFreshInput } from "@/types/api";
 
@@ -79,17 +78,6 @@ export function useResetPassword() {
   return useMutation({ mutationFn: resetPassword, onSuccess: syncFromNowOn });
 }
 
-const isUnauthorized = (error: unknown) => error instanceof ApiError && error.status === 401;
-
-export async function withFreshSession<T>(run: () => Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (error) {
-    if (!isUnauthorized(error) || !(await refreshSession())) throw error;
-    return run();
-  }
-}
-
 export function fetchSessionUser(): Promise<SessionUser> {
   return withFreshSession(fetchCurrentUser);
 }
@@ -120,22 +108,6 @@ export function useKeepOrStartFresh(userId: string) {
       if (answer.choice === "start-fresh") await dropThisCopy(user.id);
     },
   });
-}
-
-const HOUR_SECONDS = 3600;
-
-export function useWaitText(): (seconds: number) => string {
-  const t = useTranslations("common");
-  return useCallback(
-    (seconds: number) =>
-      seconds < HOUR_SECONDS
-        ? formatCountdown(seconds)
-        : t("hoursMinutes", {
-            hours: Math.floor(seconds / HOUR_SECONDS),
-            minutes: Math.floor((seconds % HOUR_SECONDS) / 60),
-          }),
-    [t],
-  );
 }
 
 export function useDeviceEmail(): string | null {
@@ -185,6 +157,11 @@ export function useSendVerificationCode() {
 export function useConfirmEmailLink() {
   const confirmed = useEmailConfirmed();
   return useMutation({ mutationFn: confirmEmailWithLink, onSuccess: confirmed });
+}
+
+export function useConfirmEmailChangeLink() {
+  const confirmed = useEmailConfirmed();
+  return useMutation({ mutationFn: confirmEmailChangeWithLink, onSuccess: confirmed });
 }
 
 export function useDeleteAccountThatUsedMyEmail() {

@@ -223,22 +223,38 @@ drops `Android` from the user agent — is still an Android: a Linux user agent 
   the help "Confirm it to invite people to Shared and to be invited.
   **Confirm it**", which opens the code sheet of [states.md](states.md).
 
-  **Until T-222, a new email saved here is not confirmed**: the change goes through as it does today, but
-  the account's email turns unconfirmed, a code goes to the new address, the toast reads "Check {new
-  email}: confirm it to use invitations in Shared", and the stripe comes back. Otherwise confirming one
-  address and then switching to somebody else's would carry the confirmation over.
+  **A new address counts only once it is confirmed** (`#profile-and-security-pending-email`, T-222).
+  The field's help is "A new address gets a code first: the change happens once you confirm it, and then
+  your other sessions are signed out." Saving a new one — with the current password, as now, and
+  Cloudflare's check in its place above Save changes ([access.md](access.md)) — leaves the field on the
+  current address, shows the toast "Check {new email}: your email changes once you confirm it", and puts
+  a card under the field: a `mail` tile, "Waiting for confirmation at **{new email}**", "We sent it a code
+  and a link. Until it's confirmed, your account keeps {email}.", and **Enter code** (the code sheet, for
+  the new address: [states.md](states.md)), **Resend** — disabled and reading "Resend in 0:42" while its
+  countdown runs, then sending with Cloudflare's check, whose box shows above the card's buttons when it
+  has doubts — and **Cancel change**, which drops it with the toast "Change cancelled. Your account keeps
+  {email}.". The card goes when the address is confirmed, here or from the link, when it is cancelled, or
+  when its 24 hours pass, and then the change is dropped. Saving another new address while one is waiting
+  replaces it, and the first one's code and link stop working. Offline, the card's buttons are disabled
+  with the rest of the page.
 
-  **From T-222 a new address counts only once it is confirmed** (`#profile-and-security-pending-email`).
-  The field's help becomes "A new address gets a code first: the change happens once you confirm it, and
-  then your other sessions are signed out." Saving a new one — with the current password, as now, and
-  Cloudflare's check ([access.md](access.md)) — leaves the field on the current address, shows the toast
-  "Check {new email}: your email changes once you confirm it", and puts a card under the field: a `mail`
-  tile, "Waiting for confirmation at **{new email}**", "We sent it a code and a link. Until it's
-  confirmed, your account keeps {email}.", and **Enter code** (the code sheet, for the new address),
-  **Resend** (with its countdown and Cloudflare's check) and **Cancel change**. The card goes when the
-  address is confirmed, here or from the link, when it is cancelled, or when its 24 hours pass, and then
-  the change is dropped. Saving another new address while one is waiting replaces it, and the first
-  one's code and link stop working.
+  - **A new name or password saved with it goes after the address is asked for**, with the same current
+    password: if the address is refused, nothing is saved.
+  - **Refused before anything is sent**, under the field: an address another account holds, "This email
+    already has an account."; one that takes none of our email (`EMAIL_SEND_FAILED` with `422`: it
+    bounced or complained before, or the provider refused it), "We can't send email to this address.
+    Check it, or use another one." (`#profile-and-security-new-email-refused`). A send that failed on our
+    side (`503`) is the `danger` alert "We couldn't send the email. Try again in a few minutes.", and a
+    Resend that fails says the same words in an alert above the card's buttons. Nothing is saved in
+    either. A limit reached (`429`) is the countdown alert of [states.md](states.md), with Save changes
+    off until it ends.
+  - **Nothing waits any more** when Resend is pressed (confirmed from the link, cancelled in another
+    tab, or past its 24 hours): the card goes, with the toast "This change isn't waiting any more: it
+    was confirmed, cancelled, or its 24 hours passed."
+  - **Where there is no Cloudflare site key** (a preview, a local run without the test key) a new address
+    could never be confirmed, so the field is read-only, with the help "Changing the email needs
+    Cloudflare's check, which isn't set up here." (`#profile-and-security-email-locked`), as Sign up is
+    ([access.md](access.md) `#create-account-unavailable`).
 
 - **Currency and time zone** (sheets): a searchable list of ISO 4217 codes with local names; when
   locked, a read-only sheet with the `CURRENCY_LOCKED` explanation. Time zone: a searchable IANA list

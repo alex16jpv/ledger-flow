@@ -6,7 +6,11 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { reportOnline } from "@/lib/network/connectivity";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import type { SessionProfile } from "@/lib/session/api";
-import { confirmEmailStore, openConfirmEmail } from "@/lib/session/confirm-email";
+import {
+  confirmEmailStore,
+  openConfirmEmail,
+  openConfirmNewEmail,
+} from "@/lib/session/confirm-email";
 import { SessionProvider } from "@/lib/session/SessionProvider";
 import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
@@ -32,13 +36,16 @@ vi.mock("@/lib/captcha/useHumanCheck", () => ({
 const EMAIL = "ada@ledgerflow.test";
 const fetchMock = vi.fn<typeof fetch>();
 
+let startedAt = Date.now();
+const at = (offsetMs: number) => new Date(startedAt + offsetMs).toISOString();
+
 function me(overrides: Partial<SessionProfile> = {}): SessionProfile {
   return {
     ...profile({ email: EMAIL, emailVerified: false }),
     emailVerification: {
       codeLive: true,
-      lastSentAt: new Date(Date.now() - 18_000).toISOString(),
-      resendAvailableAt: new Date(Date.now() + 42_000).toISOString(),
+      lastSentAt: at(-18_000),
+      resendAvailableAt: at(42_000),
     },
     ...overrides,
   };
@@ -50,10 +57,14 @@ function serve({
   user = me(),
   verify,
   resend,
+  confirmChange,
+  resendChange,
 }: {
   user?: SessionProfile;
   verify?: Answer;
   resend?: Answer;
+  confirmChange?: Answer;
+  resendChange?: Answer;
 }) {
   fetchMock.mockImplementation((input, init) => {
     const url = urlOf(input);
@@ -61,6 +72,10 @@ function serve({
     if (url.endsWith("/api/auth/me")) return Promise.resolve(json({ user }));
     if (url.endsWith("/api/auth/verify") && verify) return Promise.resolve(verify(body));
     if (url.endsWith("/api/auth/resend") && resend) return Promise.resolve(resend(body));
+    if (url.endsWith("/api/auth/confirm-change") && confirmChange)
+      return Promise.resolve(confirmChange(body));
+    if (url.endsWith("/api/auth/change-email/resend") && resendChange)
+      return Promise.resolve(resendChange(body));
     return Promise.resolve(json({ error: "NotFound", message: url }, { status: 404 }));
   });
 }
@@ -73,8 +88,8 @@ const sentTo = (path: string) =>
 const failure = (code: string, status: number) =>
   json({ error: "Error", message: code, code }, { status });
 
-function renderSheet(initialUser: SessionProfile = me()) {
-  openConfirmEmail();
+function renderSheet(initialUser: SessionProfile = me(), open = openConfirmEmail) {
+  open();
   renderWithProviders(
     <QueryProvider>
       <SessionProvider initialUser={initialUser} onSignedOut={vi.fn()}>
@@ -93,6 +108,7 @@ async function typeCode(code: string) {
 }
 
 beforeEach(() => {
+  startedAt = Date.now();
   push.mockReset();
   fetchMock.mockReset();
   token.mockReset().mockResolvedValue("captcha-token");
@@ -143,8 +159,8 @@ describe("ConfirmEmailSheet", () => {
     const user = me({
       emailVerification: {
         codeLive: true,
-        lastSentAt: new Date(Date.now() - 120_000).toISOString(),
-        resendAvailableAt: new Date(Date.now() - 60_000).toISOString(),
+        lastSentAt: at(-120_000),
+        resendAvailableAt: at(-60_000),
       },
     });
     serve({
@@ -210,7 +226,7 @@ describe("ConfirmEmailSheet", () => {
       emailVerification: {
         codeLive: false,
         lastSentAt: new Date().toISOString(),
-        resendAvailableAt: new Date(Date.now() + 30_000).toISOString(),
+        resendAvailableAt: at(30_000),
       },
     });
     serve({ user });
@@ -254,7 +270,15 @@ describe("ConfirmEmailSheet", () => {
 
   it("restarts Resend's countdown on a limit, and keeps the code usable when a resend fails", async () => {
     let resends = 0;
+    const user = me({
+      emailVerification: {
+        codeLive: true,
+        lastSentAt: at(-60_000),
+        resendAvailableAt: at(-1_000),
+      },
+    });
     serve({
+      user,
       verify: () => json({ message: "Email confirmed" }),
       resend: () => {
         resends += 1;
@@ -266,18 +290,23 @@ describe("ConfirmEmailSheet", () => {
           : failure("EMAIL_SEND_FAILED", 503);
       },
     });
-    const user = me({
-      emailVerification: {
-        codeLive: true,
-        lastSentAt: new Date(Date.now() - 60_000).toISOString(),
-        resendAvailableAt: new Date(Date.now() - 1_000).toISOString(),
-      },
-    });
     renderSheet(user);
 
     await userEvent.click(await screen.findByRole("button", { name: "Resend code" }));
     expect(await screen.findByText(/You can resend it in 0:(50|49)/)).toBeInTheDocument();
     expect(screen.queryByText("Too many requests.")).not.toBeInTheDocument();
+  });
+
+  it("opens on what /me answers, not on the copy it had", async () => {
+    serve({
+      user: me({
+        emailVerification: { codeLive: false, lastSentAt: null, resendAvailableAt: null },
+      }),
+    });
+    renderSheet(me());
+
+    expect(await screen.findByRole("button", { name: "Send code" })).toBeEnabled();
+    expect(screen.queryByLabelText("6-digit code")).not.toBeInTheDocument();
   });
 
   it("keeps the digits after a failure on our side", async () => {
@@ -325,5 +354,106 @@ describe("ConfirmEmailSheet", () => {
 
     expect(push).toHaveBeenCalledWith("/settings/profile");
     expect(confirmEmailStore.getSnapshot().sheetOpen).toBe(false);
+  });
+
+  describe("for a new address", () => {
+    const NEW = "new@ledgerflow.test";
+    const waiting = (overrides: Partial<SessionProfile> = {}) =>
+      me({
+        emailVerified: true,
+        emailVerification: null,
+        emailChange: {
+          email: NEW,
+          expiresAt: at(86_400_000),
+          resendAvailableAt: at(42_000),
+        },
+        ...overrides,
+      });
+
+    it("takes the code the new address got, and says every other device was signed out", async () => {
+      serve({
+        user: waiting(),
+        confirmChange: () => json({ user: { ...waiting(), email: NEW, emailChange: undefined } }),
+      });
+      renderSheet(waiting(), openConfirmNewEmail);
+
+      expect(await screen.findByRole("dialog", { name: "Confirm your new email" })).toBeVisible();
+      expect(await screen.findByText(/We sent a 6-digit code to/)).toHaveTextContent(
+        `We sent a 6-digit code to ${NEW}. It works for 24 hours.`,
+      );
+      await typeCode("482719");
+      await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+      expect(
+        await screen.findByText(`Your email is now ${NEW}. Every other device was signed out.`),
+      ).toBeInTheDocument();
+      expect(sentTo("/api/auth/confirm-change")).toEqual([{ code: "482719" }]);
+      expect(confirmEmailStore.getSnapshot().sheetOpen).toBe(false);
+    });
+
+    it("resends to the new address with the email-change check", async () => {
+      const user = waiting({
+        emailChange: {
+          email: NEW,
+          expiresAt: at(86_400_000),
+          resendAvailableAt: null,
+        },
+      });
+      serve({
+        user,
+        resendChange: () =>
+          json(
+            {
+              resendAfterSeconds: 60,
+              emailChange: { email: NEW, expiresAt: at(86_400_000), resendAvailableAt: at(60_000) },
+            },
+            { status: 202 },
+          ),
+      });
+      renderSheet(user, openConfirmNewEmail);
+
+      const field = await screen.findByLabelText("6-digit code");
+      await userEvent.click(screen.getByRole("button", { name: "Resend code" }));
+
+      await waitFor(() => {
+        expect(sentTo("/api/auth/change-email/resend")).toEqual([{ captcha: "captcha-token" }]);
+      });
+      expect(await screen.findByText(/You can resend it in 0:[56]\d|1:00/)).toBeInTheDocument();
+      expect(field).toBeInTheDocument();
+    });
+
+    it("ends with the address taken by another account, its code and buttons gone", async () => {
+      const user = waiting();
+      serve({ user, confirmChange: () => failure("EMAIL_TAKEN", 409) });
+      renderSheet(user, openConfirmNewEmail);
+
+      await typeCode("482719");
+      await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+      expect(
+        await screen.findByText("That address now belongs to another account."),
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText("6-digit code")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Confirm" })).not.toBeInTheDocument();
+    });
+
+    it("says nothing waits any more when /me no longer has the change", async () => {
+      serve({ user: waiting({ emailChange: null }) });
+      renderSheet(waiting(), openConfirmNewEmail);
+
+      expect(await screen.findByText("This change isn’t waiting any more.")).toBeInTheDocument();
+      expect(screen.queryByLabelText("6-digit code")).not.toBeInTheDocument();
+    });
+
+    it("says nothing waits any more when the code finds the change gone", async () => {
+      const user = waiting();
+      serve({ user, confirmChange: () => failure("EMAIL_CHANGE_NOT_PENDING", 409) });
+      renderSheet(user, openConfirmNewEmail);
+
+      await typeCode("482719");
+      await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+      expect(await screen.findByText("This change isn’t waiting any more.")).toBeInTheDocument();
+    });
   });
 });

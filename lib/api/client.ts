@@ -6,7 +6,7 @@ import {
 import { isReportable, reportError } from "@/lib/observability/reporter";
 import type { ErrorResponse } from "@/types/api";
 
-import { ApiError, isErrorCode, NetworkError } from "./errors";
+import { ApiError, isErrorCode, NetworkError, sessionMayRenew } from "./errors";
 import { IDEMPOTENCY_HEADER, newIdempotencyKey } from "./idempotency";
 import { type QueryValue, toQueryString } from "./query";
 import { newRequestId, REQUEST_ID_HEADER } from "./request-id";
@@ -119,7 +119,7 @@ export async function api<T>(path: string, request: ApiRequest = {}): Promise<T>
 
   if (response.status === 401 && unauthorizedHandler && !path.startsWith("/auth/")) {
     const error = toApiError(response, await readJson(response.clone()), requestId);
-    if (await unauthorizedHandler(error, { startedAt, path }))
+    if (sessionMayRenew(error) && (await unauthorizedHandler(error, { startedAt, path })))
       response = await send(path, request, requestId);
   }
 

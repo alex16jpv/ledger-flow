@@ -120,6 +120,22 @@ describe("api", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("never renews the session for a wrong current password, which would guess it twice", async () => {
+    fetchMock.mockResolvedValue(
+      json(
+        { error: "Unauthorized", message: "nope", code: "CURRENT_PASSWORD_INVALID" },
+        { status: 401 },
+      ),
+    );
+    const handler = vi.fn().mockResolvedValue(true);
+    setUnauthorizedHandler(handler);
+    await expect(api("/users/u1", { method: "PUT", body: {} })).rejects.toMatchObject({
+      code: "CURRENT_PASSWORD_INVALID",
+    });
+    expect(handler).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("surfaces the 401 when the handler cannot recover", async () => {
     fetchMock.mockResolvedValue(
       json({ error: "Unauthorized", message: "expired" }, { status: 401 }),

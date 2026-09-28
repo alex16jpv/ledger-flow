@@ -1,7 +1,8 @@
 import { api } from "@/lib/api/client";
 import type { User, UserWithEmailVerification } from "@/types/api";
 
-export type SessionProfile = User & Partial<Pick<UserWithEmailVerification, "emailVerification">>;
+export type SessionProfile = User &
+  Partial<Pick<UserWithEmailVerification, "emailVerification" | "emailChange">>;
 
 export interface SessionUser {
   user: SessionProfile;

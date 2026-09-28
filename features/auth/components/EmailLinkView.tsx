@@ -15,9 +15,10 @@ import { type ReactNode, useState } from "react";
 import { AuthHeading } from "@/components/shell/AuthFrame";
 import { Alert } from "@/components/ui/Alert";
 import { Button, buttonClasses } from "@/components/ui/Button";
+import { RateLimitAlert } from "@/components/ui/RateLimitAlert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError, type ErrorCode } from "@/lib/api/errors";
 import { APP_HOME_PATH, FORGOT_PATH, LOGIN_PATH, REGISTER_PATH } from "@/lib/auth/routes";
 import { Link } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
@@ -29,13 +30,13 @@ import {
   type FailureKey,
   failureKey,
   retryAfterOf,
+  useConfirmEmailChangeLink,
   useConfirmEmailLink,
   useDeleteAccountThatUsedMyEmail,
 } from "../hooks";
 import { useLinkToken } from "../useLinkToken";
-import { RateLimitAlert } from "./RateLimitAlert";
 
-type Stage = "ready" | "done" | "dead";
+type Stage = "ready" | "done" | "dead" | "refused";
 
 interface Outcome {
   icon: LucideIcon;
@@ -55,6 +56,7 @@ interface EmailLinkPageProps {
   mutation: UseMutationResult<unknown, Error, string>;
   done: Outcome;
   dead: { body: string; action: { href: string; label: string } };
+  refused?: { code: ErrorCode; outcome: Outcome };
 }
 
 function OutcomeView({ icon: Icon, color, title, body, action }: Outcome) {
@@ -83,6 +85,7 @@ function EmailLinkPage({
   mutation,
   done,
   dead,
+  refused,
 }: EmailLinkPageProps) {
   const t = useTranslations();
   const offline = useOffline();
@@ -101,7 +104,10 @@ function EmailLinkPage({
     } catch (error) {
       const wait = retryAfterOf(error);
       if (wait !== null) setRetryAfter(wait);
-      else if (
+      else if (refused && error instanceof ApiError && error.code === refused.code) {
+        keepLinkToken(purpose, null);
+        setStage("refused");
+      } else if (
         error instanceof ApiError &&
         (error.code === "LINK_INVALID" || error.code === "VALIDATION")
       ) {
@@ -112,6 +118,7 @@ function EmailLinkPage({
   };
 
   if (stage === "done") return <OutcomeView {...done} />;
+  if (stage === "refused" && refused) return <OutcomeView {...refused.outcome} />;
   if (stage === "dead") {
     return (
       <OutcomeView
@@ -195,6 +202,39 @@ export function VerifyLinkView() {
         action: openApp,
       }}
       dead={{ body: t("verify.deadBody"), action: openApp }}
+    />
+  );
+}
+
+export function ConfirmNewEmailLinkView() {
+  const t = useTranslations("auth");
+  const confirm = useConfirmEmailChangeLink();
+  const openApp = { href: APP_HOME_PATH, label: t("link.openApp") };
+  return (
+    <EmailLinkPage
+      purpose="confirm-email"
+      title={t("confirmNewEmail.title")}
+      body={t("confirmNewEmail.body")}
+      submit={{ label: t("confirmNewEmail.submit") }}
+      mutation={confirm}
+      done={{
+        icon: MailCheck,
+        color: "GREEN",
+        title: t("confirmNewEmail.doneTitle"),
+        body: t("confirmNewEmail.doneBody"),
+        action: openApp,
+      }}
+      dead={{ body: t("verify.deadBody"), action: openApp }}
+      refused={{
+        code: "EMAIL_TAKEN",
+        outcome: {
+          icon: CircleAlert,
+          color: null,
+          title: t("confirmNewEmail.takenTitle"),
+          body: t("confirmNewEmail.takenBody"),
+          action: openApp,
+        },
+      }}
     />
   );
 }

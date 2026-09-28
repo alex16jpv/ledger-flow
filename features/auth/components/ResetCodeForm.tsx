@@ -10,6 +10,8 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { CodeField } from "@/components/ui/CodeField";
 import { Field } from "@/components/ui/Field";
+import { HumanCheckFailed } from "@/components/ui/HumanCheckFailed";
+import { RateLimitAlert } from "@/components/ui/RateLimitAlert";
 import { ApiError } from "@/lib/api/errors";
 import { HumanCheckSlot, useHumanCheck } from "@/lib/captcha/useHumanCheck";
 import { validationMessage } from "@/lib/i18n/validation";
@@ -24,9 +26,7 @@ import {
   useResetPassword,
 } from "../hooks";
 import { resetCodeSchema, type ResetCodeValues } from "../schemas";
-import { HumanCheckFailed } from "./HumanCheckFailed";
 import { PasswordInput } from "./PasswordInput";
-import { RateLimitAlert } from "./RateLimitAlert";
 import { ResendBlock } from "./ResendBlock";
 
 type Failure = "human" | FailureKey | null;

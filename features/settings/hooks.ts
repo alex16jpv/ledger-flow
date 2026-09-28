@@ -66,11 +66,11 @@ export function useAccountCount(enabled = true) {
   });
 }
 
-export interface ProfileChange extends UpdateUserInput {
+export interface ProfileChange extends Omit<UpdateUserInput, "email"> {
   reauthenticateWith?: { email: string; password: string };
 }
 
-// Email or password changes revoke every refresh token, so this device signs in again with the new pair.
+// A password change revokes every refresh token, so this device signs in again with the new pair.
 export function useUpdateProfile() {
   const { user, setUser } = useSession();
   return useMutation({

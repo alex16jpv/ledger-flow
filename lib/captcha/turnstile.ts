@@ -1,6 +1,6 @@
 import { TURNSTILE_ORIGIN } from "@/lib/security/csp";
 
-export type CaptchaAction = "forgot-password" | "register" | "verify-email";
+export type CaptchaAction = "forgot-password" | "register" | "verify-email" | "email-change";
 
 export interface TurnstileOptions {
   sitekey: string;

@@ -6,8 +6,7 @@ import { useEffect } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { useCountdown } from "@/lib/hooks/useCountdown";
-
-import { useWaitText } from "../hooks";
+import { useWaitText } from "@/lib/hooks/useWaitText";
 
 interface RateLimitAlertProps {
   retryAfterSeconds: number;

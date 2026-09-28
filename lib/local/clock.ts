@@ -41,6 +41,11 @@ export function resetClockOffset(): void {
 // What the server's clock says right now, as far as this device can tell.
 export const serverNow = (now: number = Date.now()): number => now - offsetMs;
 
+export function secondsUntilServer(at: string | null | undefined): number {
+  const when = at ? Date.parse(at) : Number.NaN;
+  return Number.isNaN(when) ? 0 : Math.max(0, Math.ceil((when - serverNow()) / 1000));
+}
+
 export async function rememberServerTime(
   db: VaultDb,
   serverTime: string,

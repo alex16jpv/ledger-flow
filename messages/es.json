@@ -247,6 +247,15 @@
     "link": {
       "openApp": "Abrir Ledger Flow",
       "offline": "Esto necesita conexión."
+    },
+    "confirmNewEmail": {
+      "title": "¿Pasar tu cuenta a esta dirección?",
+      "body": "El correo de tu cuenta pasa a ser la dirección a la que llegó este mensaje, y se cierra la sesión en tus otros dispositivos. A partir de ahora entras con ella.",
+      "submit": "Confirmar correo nuevo",
+      "doneTitle": "Tu correo cambió",
+      "doneBody": "Se cerró la sesión en todos los demás dispositivos. A partir de ahora entra con esta dirección.",
+      "takenTitle": "Esa dirección ahora es de otra cuenta",
+      "takenBody": "Tu cuenta conserva su correo actual."
     }
   },
   "onboarding": {
@@ -373,7 +382,7 @@
       "pageTitle": "Perfil y seguridad",
       "name": "Nombre",
       "email": "Correo",
-      "emailHelp": "Cambiarlo cierra la sesión en tus otros dispositivos.",
+      "emailHelp": "Una dirección nueva recibe primero un código: el cambio ocurre cuando la confirmas, y entonces se cierra la sesión en tus otros dispositivos.",
       "newPassword": "Nueva contraseña",
       "newPasswordHelp": "Mínimo 8 caracteres. Déjala vacía para conservar la actual.",
       "currentPassword": "Contraseña actual",
@@ -383,7 +392,16 @@
       "notConfirmedMeta": "Tu correo aún no está confirmado",
       "notConfirmed": "Sin confirmar",
       "notConfirmedHelp": "Confírmalo para invitar a gente en Shared y para que te inviten. <confirm>Confírmalo</confirm>",
-      "savedNewEmail": "Revisa {email}: confírmalo para usar las invitaciones de Shared"
+      "savedNewEmail": "Revisa {email}: tu correo cambia cuando lo confirmes",
+      "emailLocked": "Cambiar el correo necesita la comprobación de Cloudflare, que aquí no está configurada.",
+      "emailUndeliverable": "No podemos enviar correos a esta dirección. Revísala o usa otra.",
+      "pendingTitle": "Esperando la confirmación de <b>{email}</b>",
+      "pendingBody": "Le enviamos un código y un enlace. Hasta que se confirme, tu cuenta sigue con {email}.",
+      "enterCode": "Escribir el código",
+      "resend": "Reenviar",
+      "resendIn": "Reenviar en {time}",
+      "cancelChange": "Cancelar el cambio",
+      "cancelled": "Cambio cancelado. Tu cuenta sigue con {email}."
     },
     "sessions": {
       "title": "Sesiones activas",
@@ -816,7 +834,13 @@
       "offline": "Confirmar tu correo necesita conexión.",
       "sendFailedTitle": "No pudimos enviar el correo.",
       "sendFailedBody": "Vuelve a intentarlo en unos minutos.",
-      "done": "Correo confirmado"
+      "done": "Correo confirmado",
+      "newSheetTitle": "Confirma tu correo nuevo",
+      "newDone": "Tu correo ahora es {email}. Se cerró la sesión en todos los demás dispositivos.",
+      "takenTitle": "Esa dirección ahora es de otra cuenta.",
+      "takenBody": "Tu cuenta conserva su correo actual.",
+      "goneTitle": "Este cambio ya no está esperando.",
+      "goneBody": "Se confirmó, se canceló o pasaron sus 24 horas."
     }
   },
   "dev": {
@@ -984,7 +1008,8 @@
     "EMAIL_ALREADY_VERIFIED": "Tu correo ya está confirmado.",
     "EMAIL_CODE_INVALID": "Ese código no es correcto. Revisa el último correo que te enviamos.",
     "EMAIL_CODE_EXPIRED": "Este código ya no sirve: venció o se probó demasiadas veces. Envía uno nuevo.",
-    "EMAIL_SEND_FAILED": "No pudimos enviar el correo. Vuelve a intentarlo en unos minutos."
+    "EMAIL_SEND_FAILED": "No pudimos enviar el correo. Vuelve a intentarlo en unos minutos.",
+    "EMAIL_CHANGE_NOT_PENDING": "Este cambio ya no está esperando: se confirmó, se canceló o pasaron sus 24 horas."
   },
   "validation": {
     "required": "Este campo es obligatorio.",
