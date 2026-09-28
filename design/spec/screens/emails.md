@@ -101,9 +101,18 @@ T-205 checks it in Gmail, Outlook and Apple Mail, light and dark, before calling
 - **Links anywhere but `https://ledgerflow.alexpiral.com/{locale}/…`**, and the contact's `mailto:`.
 - **Anything a person typed**: not the account's name, not a passkey's name, not a group's. A name can
   be set by whoever registered someone else's address, and it would reach that inbox as our words.
-  - The one exception is the new address in `email-change-requested`, because it is what the owner needs
-    to see. It goes in only after the API's strict email validation, HTML-escaped, as plain text and
-    never a link, and never in a subject or the preview text.
+  - There are two exceptions, both addresses the owner needs to see. Each goes in only after the API's
+    strict email validation, HTML-escaped, as plain text and never a link, and never in a subject or the
+    preview text:
+    - the new address in `email-change-requested`;
+    - the account's current address in `email-change-confirm`, **masked**, as the account stores it (already
+      trimmed and lowercase), never from the request. The local part keeps its first two characters, or
+      only the first if it has three or fewer, followed by exactly three `•` (U+2022) whatever its length,
+      in the HTML and the plain text alike; the domain stays whole. `ana.ruiz@work.example` is
+      `an•••@work.example`, `ana+ledger@example.com` is `an•••@example.com` and `ana@example.com` is
+      `a•••@example.com`. The API only accepts ASCII addresses, so a character is a byte. It is masked
+      because the new address is not confirmed yet: after a typo the email reaches a stranger, who must
+      not learn somebody's full address (on a personal domain the domain alone can still say who it is).
   - **The device is not typed text**: it is read from the user agent, which the sender controls, so it
     only ever takes values from a fixed list of browser and system names. Anything else is "Unknown
     device". It is the only variable that reaches a subject.
@@ -194,6 +203,12 @@ The path names are a contract: the pages at them are drawn in [access.md](access
 - **`email-change-requested` goes only to an address that was confirmed.** An account that never
   confirmed its email is usually correcting a typo, and the old address may be a stranger's: telling
   them the new one would hand over somebody's real address. The old codes and links simply stop working.
+- **`email-change-confirm` names the account that moves**, masked (above). Several accounts can ask for
+  the same new address at once, each with its own code and link; without the name, the owner could tap
+  the link of someone else's request and move that account to their address, with the invitations
+  waiting for it. The mask lets the owner pick their own email when two arrive; an account with a
+  lookalike address (someone who knows the owner's domain and first letters) could still fool it. The
+  code cannot be mixed up: it only works in the app, signed in to the account that asked.
 - **While an undo link works, the old address stays reserved** for the account, so nobody can sign up
   with it in those 7 days and the undo never collides with another account.
 - `passkey-added`, `two-factor-on`, `passkey-removed`, `two-factor-off` and `recovery-code-used` are
@@ -270,15 +285,17 @@ plates show them in place, and `build.mjs` holds the same text.
 
 **`email-change-confirm`** (to the new address)
 
-| Piece   | en                                                                                                                                                     | es                                                                                                                                                                                      |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Subject | Confirm your new email for Ledger Flow                                                                                                                 | Confirma tu correo nuevo de Ledger Flow                                                                                                                                                 |
-| Preview | Your account moves to this address once you confirm it. It works for 24 hours.                                                                         | Tu cuenta pasa a esta dirección cuando la confirmes. Sirve 24 horas.                                                                                                                    |
-| Title   | Confirm your new email                                                                                                                                 | Confirma tu correo nuevo                                                                                                                                                                |
-| Lead    | Type this code in Ledger Flow to move your account to this address. Until you do, it keeps its current email. Confirming signs out your other devices. | Escribe este código en Ledger Flow para pasar tu cuenta a esta dirección. Mientras no lo hagas, sigue con su correo actual. Al confirmar se cierra la sesión en tus otros dispositivos. |
-| Button  | Confirm new email                                                                                                                                      | Confirmar correo nuevo                                                                                                                                                                  |
-| Box     | **Didn't ask for this?** Ignore this email. Nothing changes, and this address isn't added to any account.                                              | **¿No lo pediste?** Ignora este correo. No cambia nada y esta dirección no se añade a ninguna cuenta.                                                                                   |
-| Reason  | someone asked to use this address for a Ledger Flow account                                                                                            | alguien pidió usar esta dirección en una cuenta de Ledger Flow                                                                                                                          |
+| Piece   | en                                                                                                                                                                      | es                                                                                                                                                                                                  |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Subject | Confirm your new email for Ledger Flow                                                                                                                                  | Confirma tu correo nuevo de Ledger Flow                                                                                                                                                             |
+| Preview | Your account moves to this address once you confirm it. It works for 24 hours.                                                                                          | Tu cuenta pasa a esta dirección cuando la confirmes. Sirve 24 horas.                                                                                                                                |
+| Title   | Confirm your new email                                                                                                                                                  | Confirma tu correo nuevo                                                                                                                                                                            |
+| Lead    | Type this code in Ledger Flow to move the account **{maskedEmail}** to this address. Until you do, it keeps that email. Confirming signs out your other devices.        | Escribe este código en Ledger Flow para pasar la cuenta **{maskedEmail}** a esta dirección. Mientras no lo hagas, sigue con ese correo. Al confirmar se cierra la sesión en tus otros dispositivos. |
+| Button  | Confirm new email                                                                                                                                                       | Confirmar correo nuevo                                                                                                                                                                              |
+| Box     | **Didn't ask for this, or isn't that your account?** Don't use the code or the button: ignore this email. Nothing changes, and this address isn't added to any account. | **¿No lo pediste, o esa no es tu cuenta?** No uses el código ni el botón: ignora este correo. No cambia nada y esta dirección no se añade a ninguna cuenta.                                         |
+| Reason  | someone asked to use this address for a Ledger Flow account                                                                                                             | alguien pidió usar esta dirección en una cuenta de Ledger Flow                                                                                                                                      |
+
+`{maskedEmail}` is the account's current address, masked as "What an email never has" says.
 
 **`email-change-requested`** (to the old address)
 

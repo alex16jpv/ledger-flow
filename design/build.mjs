@@ -5811,6 +5811,7 @@ const MAIL_SITE = "ledgerflow.alexpiral.com";
 const MAIL_CONTACT = "ledgerflow@alexpiral.com";
 const MAIL_TO = "ana@example.com";
 const MAIL_NEW_TO = "ana.ruiz@work.example";
+const MAIL_TO_MASKED = "a•••@example.com";
 const MAIL_CODE = "482913";
 const MAIL_TOKEN = "q7Xk2mVb9RtL4wPz";
 
@@ -5990,12 +5991,12 @@ const EMAILS = {
       subject: "Confirm your new email for Ledger Flow",
       pre: "Your account moves to this address once you confirm it. It works for 24 hours.",
       title: "Confirm your new email",
-      lead: "Type this code in Ledger Flow to move your account to this address. Until you do, it keeps its current email. Confirming signs out your other devices.",
+      lead: `Type this code in Ledger Flow to move the account <b>${MAIL_TO_MASKED}</b> to this address. Until you do, it keeps that email. Confirming signs out your other devices.`,
       ttl: "It works for 24 hours. Asking for another one cancels this one.",
       button: "Confirm new email",
       aside: [
-        "Didn’t ask for this?",
-        "Ignore this email. Nothing changes, and this address isn’t added to any account.",
+        "Didn’t ask for this, or isn’t that your account?",
+        "Don’t use the code or the button: ignore this email. Nothing changes, and this address isn’t added to any account.",
       ],
       why: "someone asked to use this address for a Ledger Flow account",
     },
@@ -6003,12 +6004,12 @@ const EMAILS = {
       subject: "Confirma tu correo nuevo de Ledger Flow",
       pre: "Tu cuenta pasa a esta dirección cuando la confirmes. Sirve 24 horas.",
       title: "Confirma tu correo nuevo",
-      lead: "Escribe este código en Ledger Flow para pasar tu cuenta a esta dirección. Mientras no lo hagas, sigue con su correo actual. Al confirmar se cierra la sesión en tus otros dispositivos.",
+      lead: `Escribe este código en Ledger Flow para pasar la cuenta <b>${MAIL_TO_MASKED}</b> a esta dirección. Mientras no lo hagas, sigue con ese correo. Al confirmar se cierra la sesión en tus otros dispositivos.`,
       ttl: "Sirve 24 horas. Si pides otro, este deja de servir.",
       button: "Confirmar correo nuevo",
       aside: [
-        "¿No lo pediste?",
-        "Ignora este correo. No cambia nada y esta dirección no se añade a ninguna cuenta.",
+        "¿No lo pediste, o esa no es tu cuenta?",
+        "No uses el código ni el botón: ignora este correo. No cambia nada y esta dirección no se añade a ninguna cuenta.",
       ],
       why: "alguien pidió usar esta dirección en una cuenta de Ledger Flow",
     },
@@ -8479,9 +8480,9 @@ const PAGES = [
       plate(
         "email-change-confirm",
         "Email change · to the new address",
-        "The account moves only when the new address answers.",
+        "The account moves only when the new address answers. It names that account, masked, so two requests for one address can't be mixed up.",
         mailPlate("email-change-confirm"),
-        { frame: false, wide: true, added: "2026-09-26" },
+        { frame: false, wide: true, added: "2026-09-26", updated: "2026-09-28" },
       ),
       plate(
         "email-change-requested",
