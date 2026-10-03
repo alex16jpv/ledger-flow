@@ -84,6 +84,7 @@ export function deriveJoined(
   let amount = 0;
   let yourShare = 0;
   let ownerOwes = 0;
+  let paidBackByOwner = 0;
   for (const expense of rows) {
     amount += toCents(expense.amount);
     const mine = shareOf(expense, me);
@@ -102,7 +103,11 @@ export function deriveJoined(
     }
     if (me !== null && expense.paidByContactId === me) {
       const owner = shareOf(expense, null);
-      if (owner) ownerOwes += Math.max(0, toCents(owner.amount) - toCents(owner.collected));
+      if (owner) {
+        const back = Math.min(toCents(owner.collected), toCents(owner.amount));
+        ownerOwes += toCents(owner.amount) - back;
+        paidBackByOwner += back;
+      }
     }
   }
 
@@ -120,6 +125,8 @@ export function deriveJoined(
   };
 
   const mine = me === null ? null : personOf(me);
+  const net = toCents(mine?.open ?? 0) - ownerOwes;
+  const paidNet = Math.max(0, toCents(mine?.paid ?? 0) - paidBackByOwner + Math.min(0, net));
   const lines = rows.map((expense): JoinedLine => {
     const share = shareOf(expense, me);
     const yours = share ? toCents(share.amount) : 0;
@@ -161,9 +168,9 @@ export function deriveJoined(
     yourShare: fromCents(yourShare),
     youOwe: mine?.open ?? 0,
     ownerOwes: fromCents(ownerOwes),
-    net: fromCents(toCents(mine?.open ?? 0) - ownerOwes),
-    paidToOwner: mine?.paid ?? 0,
-    owedToOwner: fromCents(toCents(mine?.paid ?? 0) + toCents(mine?.open ?? 0)),
+    net: fromCents(net),
+    paidToOwner: fromCents(paidNet),
+    owedToOwner: fromCents(paidNet + Math.max(0, net)),
     state: mine?.state ?? "PAID",
     dateFrom: stamp(dates[0]),
     dateTo: stamp(dates.at(-1)),

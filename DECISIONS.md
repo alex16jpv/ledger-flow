@@ -5,6 +5,16 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-03 · The bar of a group you joined is net too (T-245)
+
+- **Decision:** on a group somebody shared with you, the bar is what you paid her net of what she paid
+  you back on the lines you fronted, capped by what she still owes you there, of that plus what you
+  still owe her net (`deriveJoined`). It was gross: with a line of yours in the group it read
+  `$0 paid of $39,166` under a header saying you owe her `$32,100`.
+- **Why:** the owner chose net for his own groups (T-243) and for this one when asked; the header is net.
+- **Consequence:** the bar is drawn only while you owe her net or have paid something net, like the
+  owner's.
+
 ## 2026-10-03 · A group's bar counts what came back net, like what is still owed (T-243)
 
 - **Decision:** the bar of a group, on its detail and on its row, is `netBack` of

@@ -72,6 +72,26 @@ describe("deriveJoined", () => {
     });
   });
 
+  it("fills the bar net of what she owes you, so its total holds while you pay", () => {
+    const bar = (collected: number) => {
+      const taxi = line(
+        "taxi",
+        [share(null, 30000, collected ? 30000 : 0), share("k2", 30000), share("k3", 30000)],
+        { paidByContactId: "k2" },
+      );
+      const food = line("food", [
+        share(null, 80000),
+        share("k2", 80000, collected),
+        share("k3", 80000),
+      ]);
+      const { paidToOwner, owedToOwner } = deriveJoined(joinedGroup(), [food, taxi], []);
+      return { paidToOwner, owedToOwner };
+    };
+
+    expect(bar(0)).toEqual({ paidToOwner: 0, owedToOwner: 50000 });
+    expect(bar(80000)).toEqual({ paidToOwner: 50000, owedToOwner: 50000 });
+  });
+
   it("gives what she wrote off no line to add, and moves nothing", () => {
     const group = joinedGroup({
       writeOffs: [

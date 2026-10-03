@@ -603,7 +603,8 @@ with you, Shared opens on `Shared groups`.
 The header leads with **where you stand with the person who shared it**: `You owe Ana $80,000`,
 `Ana owes you $40,000` or `Square with Ana`. It is drawn neutral, with a word for the direction, like
 every debt between people. Under it, as context, come the total and your share, and the bar of what you
-have paid of what you owe her. **`Counts as yours` does not lead here**: nothing of this group is in your
+have paid of what you owe her, both net of what she owes you on the lines you paid, so its total holds
+while you pay — the same reading as the owner's bar. **`Counts as yours` does not lead here**: nothing of this group is in your
 ledger until you add it, and what you add is an ordinary expense of yours.
 
 **People**, one row each, named by decision 28: **the owner and anybody who joined go by the name on
