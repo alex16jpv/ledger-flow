@@ -370,8 +370,8 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
     view.group.writeOffs.find(
       (one) => one.contactId === person.contactId && one.expenseId === person.expenseId,
     )?.amount ?? 0;
-  const open = view.people.filter(
-    (person) => person.owesYou > 0 || person.youOwe > 0 || person.surplus > 0,
+  const open = view.people.filter((person) =>
+    hasSomethingToSettle(settleParty(section, view, person)),
   );
   const actionFor = (person: PartyView): (() => void) | undefined => {
     if (person.state === "WRITTEN_OFF") {

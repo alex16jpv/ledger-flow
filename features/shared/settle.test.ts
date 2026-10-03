@@ -3,7 +3,16 @@ import { contact, settlement, sharedExpense, sharedGroup } from "@/lib/testing/v
 import type { SharedGroup, SharedShare, SyncSharedGroup } from "@/types/api";
 
 import { sectionOf } from "./ledger";
-import { hasSomethingToSettle, planSettlement, settleableAmount, settlePerson } from "./settle";
+import {
+  capIsTheGroup,
+  hasSomethingToSettle,
+  isInbound,
+  planSettlement,
+  settleableAmount,
+  settleCap,
+  settleParty,
+  settlePerson,
+} from "./settle";
 
 const ANA = "k1";
 const BETO = "k2";
@@ -79,6 +88,7 @@ function nightOut(): SharedLedgerRows {
     settlements: [],
     undone: [],
     dropped: [],
+    unstored: new Set(),
   };
 }
 
@@ -210,5 +220,260 @@ describe("what one settle-up covers", () => {
 
     expect(block).toMatchObject({ owesYou: 20_000 });
     expect(settlePerson(section, "s4")).toBeUndefined();
+  });
+});
+
+// Beto owes you 26,300 from Night out in August and 500,000 from the trip after it.
+function twoGroups(): SharedLedgerRows {
+  const two = [null, BETO];
+  return {
+    groups: [
+      withTotals(sharedGroup({ id: "g1", name: "Night out" })),
+      withTotals(sharedGroup({ id: "g2", name: "Cartagena trip" })),
+    ],
+    expenses: [
+      sharedExpense({
+        id: "n1",
+        groupId: "g1",
+        description: "Drinks",
+        date: "2026-08-10T20:00:00.000Z",
+        amount: 52_600,
+        split: equalSplit(52_600, two),
+      }),
+      sharedExpense({
+        id: "t1",
+        groupId: "g2",
+        description: "Hotel",
+        date: "2026-08-30T20:00:00.000Z",
+        amount: 700_000,
+        split: equalSplit(700_000, two),
+      }),
+      sharedExpense({
+        id: "t2",
+        groupId: "g2",
+        description: "Dinner",
+        date: "2026-09-02T20:00:00.000Z",
+        amount: 300_000,
+        split: equalSplit(300_000, two),
+      }),
+    ],
+    settlements: [],
+    undone: [],
+    dropped: [],
+    unstored: new Set(),
+  };
+}
+
+const betoPaid = (id: string, groupId: string, amount: number, date: string) =>
+  sharedExpense({
+    id,
+    groupId,
+    description: "Paid by Beto",
+    date,
+    amount: amount * 2,
+    paidByContactId: BETO,
+    split: equalSplit(amount * 2, [null, BETO]),
+  });
+
+function fromGroup(rows: SharedLedgerRows, groupId: string, key = `contact:${BETO}`) {
+  const section = sectionOf(rows, contacts);
+  const view = section.groups.find((one) => one.group.id === groupId);
+  const person = view?.people.find((one) => one.key === key);
+  if (!view || !person) throw new Error(`no ${key} in ${groupId}`);
+  return settleParty(section, view, person);
+}
+
+const coverage = (lines: { expenseId: string; covered: number }[]) =>
+  lines.map((line) => [line.expenseId, line.covered]);
+
+describe("settling from a group", () => {
+  it("proposes what is open in that group, and takes up to everything open between you", () => {
+    const beto = fromGroup(twoGroups(), "g2");
+
+    expect(beto.scope).toEqual({
+      groupId: "g2",
+      groupName: "Cartagena trip",
+      owedToYou: 500_000,
+      youOwe: 0,
+      net: 500_000,
+    });
+    expect(beto.net).toBe(526_300);
+    expect(isInbound(beto)).toBe(true);
+    expect(settleableAmount(beto)).toBe(500_000);
+    expect(settleCap(beto)).toBe(526_300);
+  });
+
+  it("covers that group first, oldest expense first, and sends its id", () => {
+    const plan = planSettlement(fromGroup(twoGroups(), "g2"), 500_000);
+
+    expect(plan).toMatchObject({ collected: 500_000, paid: 0, groupId: "g2" });
+    expect(coverage(plan.covers)).toEqual([
+      ["t1", 350_000],
+      ["t2", 150_000],
+    ]);
+  });
+
+  it("keeps less than the group inside it, though another group's line is older", () => {
+    const plan = planSettlement(fromGroup(twoGroups(), "g2"), 200_000);
+
+    expect(plan).toMatchObject({ collected: 200_000, paid: 0, groupId: "g2" });
+    expect(coverage(plan.covers)).toEqual([["t1", 200_000]]);
+  });
+
+  it("spills what is beyond the group onto the oldest line elsewhere", () => {
+    const plan = planSettlement(fromGroup(twoGroups(), "g2"), 510_000);
+
+    expect(coverage(plan.covers)).toEqual([
+      ["t1", 350_000],
+      ["t2", 150_000],
+      ["n1", 10_000],
+    ]);
+  });
+
+  it("records both halves of the group when the amount is the group's net", () => {
+    const rows = twoGroups();
+    rows.expenses.push(betoPaid("t3", "g2", 100_000, "2026-09-05T20:00:00.000Z"));
+    rows.expenses.push(betoPaid("n2", "g1", 20_000, "2026-08-11T20:00:00.000Z"));
+    const beto = fromGroup(rows, "g2");
+
+    expect(beto.scope).toMatchObject({ owedToYou: 500_000, youOwe: 100_000, net: 400_000 });
+    const plan = planSettlement(beto, 400_000);
+    expect(plan).toMatchObject({ collected: 500_000, paid: 100_000, refunded: 0, groupId: "g2" });
+    expect(coverage(plan.yourLines)).toEqual([["t3", 100_000]]);
+    expect(coverage(plan.covers)).toEqual([
+      ["t1", 350_000],
+      ["t2", 150_000],
+    ]);
+  });
+
+  it("records both halves of everything when the amount is the whole net", () => {
+    const rows = twoGroups();
+    rows.expenses.push(betoPaid("t3", "g2", 100_000, "2026-09-05T20:00:00.000Z"));
+    const beto = fromGroup(rows, "g2");
+
+    expect(beto.net).toBe(426_300);
+    const plan = planSettlement(beto, 426_300);
+    expect(plan).toMatchObject({ collected: 526_300, paid: 100_000, groupId: "g2" });
+    expect(coverage(plan.covers)).toEqual([
+      ["t1", 350_000],
+      ["t2", 150_000],
+      ["n1", 26_300],
+    ]);
+  });
+
+  // The owner's call: the group decides, even when the total points the other way.
+  it("settles the group in its own direction when the total points the other way", () => {
+    const rows = twoGroups();
+    rows.expenses.push(betoPaid("n2", "g1", 726_300, "2026-08-11T20:00:00.000Z"));
+    const beto = fromGroup(rows, "g2");
+
+    expect(beto.net).toBe(-200_000);
+    expect(isInbound(beto)).toBe(true);
+    expect(settleableAmount(beto)).toBe(500_000);
+    expect(settleCap(beto)).toBe(500_000);
+    expect(planSettlement(beto, 500_000)).toMatchObject({
+      collected: 500_000,
+      paid: 0,
+      groupId: "g2",
+    });
+    expect(planSettlement(beto, 300_000)).toMatchObject({ collected: 300_000, paid: 0 });
+    expect(planSettlement(beto, 200_000)).toMatchObject({ collected: 200_000, paid: 0 });
+  });
+
+  it("pays the group back when you owe there, though they owe you more elsewhere", () => {
+    const rows = twoGroups();
+    rows.expenses = [
+      ...rows.expenses.filter((one) => one.groupId === "g1"),
+      betoPaid("t3", "g2", 100_000, "2026-09-05T20:00:00.000Z"),
+    ];
+    rows.expenses.push(
+      sharedExpense({
+        id: "n3",
+        groupId: "g1",
+        description: "Concert",
+        date: "2026-08-12T20:00:00.000Z",
+        amount: 400_000,
+        split: equalSplit(400_000, [null, BETO]),
+      }),
+    );
+    const beto = fromGroup(rows, "g2");
+
+    expect(beto.net).toBe(126_300);
+    expect(beto.scope).toMatchObject({ owedToYou: 0, youOwe: 100_000, net: -100_000 });
+    expect(isInbound(beto)).toBe(false);
+    expect(settleableAmount(beto)).toBe(100_000);
+    expect(settleCap(beto)).toBe(100_000);
+    expect(capIsTheGroup(beto)).toBe(true);
+    const plan = planSettlement(beto, 100_000);
+    expect(plan).toMatchObject({ collected: 0, paid: 100_000, refunded: 0, groupId: "g2" });
+    expect(coverage(plan.yourLines)).toEqual([["t3", 100_000]]);
+  });
+
+  it("still settles a group where the two of you owe each other the same", () => {
+    const rows = twoGroups();
+    rows.expenses.push(betoPaid("t3", "g2", 500_000, "2026-09-05T20:00:00.000Z"));
+    const beto = fromGroup(rows, "g2");
+
+    expect(beto.scope).toMatchObject({ owedToYou: 500_000, youOwe: 500_000, net: 0 });
+    expect(settleableAmount(beto)).toBe(0);
+    expect(hasSomethingToSettle(beto)).toBe(true);
+    expect(planSettlement(beto, 0)).toMatchObject({ collected: 500_000, paid: 500_000 });
+  });
+
+  // Paid ahead, they have nothing open here: the refund is the People door's, not this group's.
+  it("has nothing to settle from a group where nothing is open with them", () => {
+    const rows = twoGroups();
+    rows.settlements = [
+      settlement({
+        id: "p1",
+        counterparty: { kind: "CONTACT", contactId: BETO, expenseId: null },
+        collected: 540_000,
+      }),
+    ];
+    const beto = fromGroup(rows, "g2");
+
+    expect(beto.scope).toMatchObject({ owedToYou: 0, youOwe: 0, net: 0 });
+    expect(hasSomethingToSettle(beto)).toBe(false);
+    expect(hasSomethingToSettle(partyFor(rows, BETO))).toBe(true);
+  });
+
+  it("never sends a group for a block of guests", () => {
+    const rows = twoGroups();
+    rows.expenses.push(
+      sharedExpense({
+        id: "t9",
+        groupId: "g2",
+        description: "Beach club",
+        date: "2026-09-03T20:00:00.000Z",
+        amount: 30_000,
+        split: {
+          mode: "EQUAL",
+          guests: { count: 2, name: null },
+          shares: [
+            share({ party: "USER", contactId: null, amount: 10_000 }),
+            share({ party: "GUESTS", contactId: null, amount: 20_000 }),
+          ],
+        },
+      }),
+    );
+    const block = fromGroup(rows, "g2", "guests:t9");
+
+    expect(block.scope).toBeNull();
+    expect(settleableAmount(block)).toBe(20_000);
+    expect(planSettlement(block, 20_000)).toMatchObject({ collected: 20_000, groupId: null });
+  });
+
+  it("from People, has no group first: it proposes the whole and covers the oldest line", () => {
+    const beto = partyFor(twoGroups(), BETO);
+
+    expect(beto.scope).toBeNull();
+    expect(settleableAmount(beto)).toBe(526_300);
+    expect(settleCap(beto)).toBe(526_300);
+    const plan = planSettlement(beto, 200_000);
+    expect(plan.groupId).toBeNull();
+    expect(coverage(plan.covers)).toEqual([
+      ["n1", 26_300],
+      ["t1", 173_700],
+    ]);
   });
 });

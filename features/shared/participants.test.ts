@@ -88,6 +88,7 @@ function trip(): SharedLedgerRows {
     ],
     undone: [],
     dropped: [],
+    unstored: new Set(),
   };
 }
 

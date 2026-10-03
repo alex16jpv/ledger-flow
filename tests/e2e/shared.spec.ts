@@ -147,6 +147,53 @@ test("settling up lowers what counts as yours, in the month the expense happened
   await expectNoAxeViolations(page);
 });
 
+// T-241: a group's door proposes that group, and a payment from it covers it before any older one.
+test("settling up from a group proposes that group and leaves an older group open", async ({
+  page,
+  request,
+}) => {
+  await signUp(page, request);
+  const post = async (path: string, data: unknown) => {
+    const response = await request.post(path, { headers: { origin: APP }, data });
+    expect(response.ok()).toBe(true);
+    return (await response.json()) as { id: string };
+  };
+  const beto = await post("/api/contacts", { name: "Beto Cano" });
+  const nightOut = await post("/api/shared-groups", { name: "Night out", contactIds: [beto.id] });
+  await post(`/api/shared-groups/${nightOut.id}/expenses`, {
+    description: "Drinks",
+    date: "2026-08-10T20:00:00.000Z",
+    amount: 52_600,
+  });
+  const trip = await post("/api/shared-groups", { name: "Cartagena trip", contactIds: [beto.id] });
+  await post(`/api/shared-groups/${trip.id}/expenses`, {
+    description: "Hotel",
+    date: "2026-08-30T20:00:00.000Z",
+    amount: 1_000_000,
+  });
+  await post("/api/accounts", { name: "Bancolombia Trip", type: "ACCOUNT", balance: 0 });
+
+  await page.goto(`/shared/groups/${trip.id}`);
+  await page.getByRole("button", { name: "Settle up" }).click();
+  const sheet = page.getByRole("dialog", { name: "Settle up with Beto Cano" });
+  await expect(sheet.getByText("Beto Cano owes you in Cartagena trip")).toBeVisible();
+  await expect(sheet.getByText("Across every group, Beto Cano owes you")).toBeVisible();
+  await expect(sheet.getByRole("textbox", { name: "Amount" })).toHaveValue("500,000");
+  await expect(sheet.getByText(/It settles Cartagena trip/)).toBeVisible();
+  await expectNoAxeViolations(page);
+  await sheet.getByRole("button", { name: /Where it arrives/ }).click();
+  await page.getByRole("option", { name: /Bancolombia Trip/ }).click();
+  await sheet.getByRole("button", { name: "Record payment" }).click();
+  await expect(page.getByText("Payment recorded")).toBeVisible();
+  await expect(page.getByText("Paid in full")).toBeVisible();
+
+  const stored = await request.get("/api/settlements", { headers: { origin: APP } });
+  const [payment] = ((await stored.json()) as { data: { groupId: string | null }[] }).data;
+  expect(payment?.groupId).toBe(trip.id);
+  await page.goto(`/shared/groups/${nightOut.id}`);
+  await expect(page.getByText("Nothing paid yet · owes you $26,300")).toBeVisible();
+});
+
 test("adding somebody to a group that exists shows the whole result before it happens", async ({
   page,
   request,

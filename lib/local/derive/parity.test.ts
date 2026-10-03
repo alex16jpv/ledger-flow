@@ -364,7 +364,7 @@ describe("the fifth kind of movement", () => {
   };
 
   // Every settle-up of the fixture but the one paid in cash, which moves no account.
-  const moved = 40000 + 22000 + 40000 + 5000;
+  const moved = 40000 + 22000 + 40000 + 5000 + 10000 + 40000;
 
   it("is no more spending than an adjustment is, unless the query names it", () => {
     expect(
@@ -395,7 +395,7 @@ describe("the fifth kind of movement", () => {
       limit: 100,
       includeSummary: true,
     });
-    expect(page.data.filter((row) => row.type === "SETTLEMENT")).toHaveLength(4);
+    expect(page.data.filter((row) => row.type === "SETTLEMENT")).toHaveLength(6);
     // Gross, like the list: what moved through the accounts; a settlement is in neither direction.
     expect(page.summary).toEqual({ expense: 305000, income: 0 });
   });
@@ -449,7 +449,7 @@ describe.each(SHARED_FIXTURES)("$id · the shared layer", (fixture) => {
   const groups = fixture.sharedGroups ?? [];
   const expenses = fixture.sharedExpenses ?? [];
   const settlements: FixtureSettlement[] = fixture.settlements ?? [];
-  const ledger = deriveShared({ groups, expenses, settlements });
+  const ledger = deriveShared({ unstored: new Set(), groups, expenses, settlements });
 
   it("resolves every split to the figures the server stored", () => {
     for (const expense of expenses) {

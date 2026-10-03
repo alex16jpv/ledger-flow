@@ -1,4 +1,4 @@
-import { impute, type OwedLine } from "@/lib/local/derive";
+import { imputeCounterparty, type OwedLine } from "@/lib/local/derive";
 import { fromCents, toCents } from "@/lib/local/derive/money";
 import type { ColorToken } from "@/lib/theme/feature-color";
 import type { SharedExpense } from "@/types/api";
@@ -12,6 +12,15 @@ export interface SettleLine {
   description: string | null;
   date: string;
   amount: number;
+}
+
+// What is open with them in the group the sheet was opened from, which is what it proposes.
+export interface SettleScope {
+  groupId: string;
+  groupName: string;
+  owedToYou: number;
+  youOwe: number;
+  net: number;
 }
 
 export interface SettleParty {
@@ -29,6 +38,7 @@ export interface SettleParty {
   theyOwe: SettleLine[];
   yourLines: SettleLine[];
   groups: { id: string; name: string }[];
+  scope: SettleScope | null;
 }
 
 export interface CoveredLine extends SettleLine {
@@ -43,6 +53,7 @@ export interface SettlePlan {
   covers: CoveredLine[];
   yourLines: CoveredLine[];
   refunded: number;
+  groupId: string | null;
 }
 
 const oldestFirst = (a: SettleLine, b: SettleLine): number =>
@@ -109,6 +120,7 @@ const partyOf = (section: SharedSection, seed: PartySeed): SettleParty => ({
   ...seed,
   net: fromCents(toCents(seed.owedToYou) - toCents(seed.youOwe)),
   ...linesOf(section, seed.key, seed.contactId),
+  scope: null,
 });
 
 // A person is settled across every group at once; a block of guests has only its own expense.
@@ -142,44 +154,97 @@ const guestParty = (section: SharedSection, view: GroupView, person: PartyView):
     groups: [{ id: view.group.id, name: view.group.name }],
   });
 
+function scopeOf(view: GroupView, person: PartyView): SettleScope {
+  return {
+    groupId: view.group.id,
+    groupName: view.group.name,
+    owedToYou: person.owesYou,
+    youOwe: person.youOwe,
+    net: fromCents(toCents(person.owesYou) - toCents(person.youOwe)),
+  };
+}
+
 export function settleParty(
   section: SharedSection,
   view: GroupView,
   person: PartyView,
 ): SettleParty {
   if (person.contactId === null) return guestParty(section, view, person);
-  return settlePerson(section, person.contactId) ?? guestParty(section, view, person);
+  const party = settlePerson(section, person.contactId);
+  if (!party) return guestParty(section, view, person);
+  return { ...party, scope: scopeOf(view, person) };
 }
 
 const owedLines = (lines: readonly SettleLine[]): OwedLine[] =>
-  lines.map((line) => ({ key: line.expenseId, date: line.date, owed: toCents(line.amount) }));
+  lines.map((line) => ({
+    key: line.expenseId,
+    date: line.date,
+    owed: toCents(line.amount),
+    groupId: line.groupId,
+  }));
 
-function cover(lines: readonly SettleLine[], pool: number): CoveredLine[] {
-  const { settled } = impute(owedLines(lines), toCents(pool));
+// The order the server answers what it covered: the group it was paid from first, then the oldest.
+function covered(
+  lines: readonly SettleLine[],
+  settled: ReadonlyMap<string, number>,
+  groupId: string | null,
+): CoveredLine[] {
+  const rank = (line: SettleLine): number => (line.groupId === groupId ? 0 : 1);
   return lines
     .map((line) => ({ ...line, covered: fromCents(settled.get(line.expenseId) ?? 0) }))
-    .filter((line) => line.covered > 0);
+    .filter((line) => line.covered > 0)
+    .sort((a, b) => rank(a) - rank(b));
 }
 
-export const settleableAmount = (party: SettleParty): number => Math.abs(party.net);
+export const isInbound = (party: SettleParty): boolean =>
+  party.scope !== null && toCents(party.scope.net) !== 0 ? party.scope.net > 0 : party.net >= 0;
 
-export const hasSomethingToSettle = (party: SettleParty): boolean =>
-  party.owedToYou > 0 || party.youOwe > 0;
+const totalLeansIn = (party: SettleParty, inbound: boolean): boolean =>
+  inbound ? party.net > 0 : party.net < 0;
+
+export const settleableAmount = (party: SettleParty): number =>
+  Math.abs(party.scope ? party.scope.net : party.net);
+
+export function settleCap(party: SettleParty): number {
+  if (!party.scope) return Math.abs(party.net);
+  const total = totalLeansIn(party, isInbound(party)) ? Math.abs(party.net) : 0;
+  return Math.max(Math.abs(party.scope.net), total);
+}
+
+export const capIsTheGroup = (party: SettleParty): boolean =>
+  party.scope !== null &&
+  (!totalLeansIn(party, isInbound(party)) ||
+    toCents(Math.abs(party.scope.net)) > toCents(Math.abs(party.net)));
+
+export const hasSomethingToSettle = (party: SettleParty): boolean => {
+  const open = party.scope ?? party;
+  return open.owedToYou > 0 || open.youOwe > 0;
+};
 
 // The sheet asks for what changes hands; both halves are recorded only once that squares it.
 export function planSettlement(party: SettleParty, cash: number): SettlePlan {
-  const full = toCents(cash) === toCents(settleableAmount(party));
-  const inbound = party.net >= 0;
-  const collected = full ? party.owedToYou : inbound ? cash : 0;
-  const paid = full ? party.youOwe : inbound ? 0 : cash;
-  const yourLines = cover(party.yourLines, paid);
+  const { scope } = party;
+  const inbound = isInbound(party);
+  const groupFull = scope !== null && toCents(cash) === toCents(Math.abs(scope.net));
+  const wholeFull =
+    !groupFull &&
+    toCents(cash) === toCents(Math.abs(party.net)) &&
+    (scope === null || totalLeansIn(party, inbound));
+  const collected = groupFull ? scope.owedToYou : wholeFull ? party.owedToYou : inbound ? cash : 0;
+  const paid = groupFull ? scope.youOwe : wholeFull ? party.youOwe : inbound ? 0 : cash;
+  const groupId = scope?.groupId ?? null;
+  const imputed = imputeCounterparty(owedLines(party.theyOwe), owedLines(party.yourLines), [
+    { id: "", createdAt: null, collected: toCents(collected), paid: toCents(paid), groupId },
+  ]);
+  const yourLines = covered(party.yourLines, imputed.yours, groupId);
   const assigned = yourLines.reduce((cents, line) => cents + toCents(line.covered), 0);
   return {
     collected,
     paid,
     cash,
-    covers: cover(party.theyOwe, collected),
+    covers: covered(party.theyOwe, imputed.theirs, groupId),
     yourLines,
     refunded: fromCents(toCents(paid) - assigned),
+    groupId,
   };
 }

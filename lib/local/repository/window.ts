@@ -5,6 +5,7 @@ import type { SyncTransaction } from "@/types/api";
 import { widenedBound } from "../derive";
 import { countsAsYours, deriveShared } from "../derive/shared";
 import { PROFILE_KEY, type VaultSchema } from "../schema";
+import { queuedPayments } from "./shared";
 
 // An array key [d, id] sorts after [d], so an open bound on [to] is the server's `$lt`.
 export function dateCursorRange(from?: string, to?: string): IDBKeyRange | null {
@@ -50,15 +51,17 @@ async function withCountsAsYours(
   rows: SyncTransaction[],
 ): Promise<SyncTransaction[]> {
   if (!rows.some((row) => row.sharedExpenseId !== null)) return rows;
-  const [groups, expenses, settlements] = await Promise.all([
+  const [groups, expenses, settlements, unstored] = await Promise.all([
     db.getAll("sharedGroups"),
     db.getAll("sharedExpenses"),
     db.getAll("settlements"),
+    queuedPayments(db),
   ]);
   const ledger = deriveShared({
     groups: groups.map((record) => record.row),
     expenses: expenses.map((record) => record.row),
     settlements: settlements.map((record) => record.row),
+    unstored,
   });
   return rows.map((row) =>
     row.sharedExpenseId !== null && ledger.cameBack.has(row.sharedExpenseId)

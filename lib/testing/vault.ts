@@ -191,6 +191,7 @@ export function settlement(overrides: Partial<Settlement> = {}): Settlement {
     id: "p1",
     userId: USER_ID,
     counterparty: { kind: "CONTACT", contactId: "k1", expenseId: null },
+    groupId: null,
     date: "2026-08-18T10:00:00.000Z",
     collected: 0,
     paid: 0,

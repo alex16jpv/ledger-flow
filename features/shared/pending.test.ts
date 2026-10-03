@@ -82,6 +82,7 @@ function rows(over: Partial<SharedLedgerRows> = {}): SharedLedgerRows {
     settlements: [],
     undone: [],
     dropped: [],
+    unstored: new Set(),
     ...over,
   };
 }
