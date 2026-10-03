@@ -1760,7 +1760,13 @@
       "undoTitle": "¿Deshacer el perdón de {name}?",
       "undoBody": "{name} vuelve a deber los {amount}, y el historial lo dice. Ninguna cifra tuya se mueve.",
       "undoConfirm": "Que vuelva a deber {amount}",
-      "undone": "{name} lo vuelve a deber"
+      "undone": "{name} lo vuelve a deber",
+      "squareTitle": "Quedar en paz con {name} en {group}",
+      "writtenOffLine": "Dado por perdido",
+      "crossAccount": "Dónde se registran los dos",
+      "crossTitle": "Esto te deja en paz con {name} en {group}.",
+      "crossBody": "Tu parte de {crossed} de lo que pagó {name} se cruza con lo que te debe: pasa a ser un gasto tuyo, con la fecha de cada uno de esos gastos y la categoría que elijas, y {crossed} de lo que te debe cuentan como pagados. La cuenta registra las dos cosas, {crossed} que entran y {crossed} que salen, así que su saldo no se mueve. Los otros {amount} se dan por perdidos, y por eso no cambia ninguna cifra.",
+      "onlyThisGroup": "Solo este grupo: lo que tú y {name} se deban en cualquier otro sigue igual. Si deshaces el perdón, vuelve a deber los {amount}; el cruce se queda, como un pago que se deshace por su lado."
     },
     "archiveGroup": {
       "title": "¿Archivar {name}?",
@@ -1769,7 +1775,9 @@
       "body": "No se borra nada y ninguna cifra se mueve. Un grupo archivado se sigue leyendo, y puedes restaurarlo.",
       "confirm": "Archivar",
       "confirmWithWriteOff": "Archivar y dar por perdidos {amount}",
-      "done": "{name} queda archivado"
+      "done": "{name} queda archivado",
+      "crossBody": "Aquí también le debes a {names}, así que archivar primero los deja en paz: tu parte de sus gastos se cruza con lo que te deben y pasa a ser un gasto tuyo, registrado entrando y saliendo de una cuenta para que su saldo no se mueva.",
+      "onlyThisGroup": "Solo este grupo: lo que se deban en otros grupos sigue igual."
     },
     "edit": {
       "title": "Editar este grupo compartido",

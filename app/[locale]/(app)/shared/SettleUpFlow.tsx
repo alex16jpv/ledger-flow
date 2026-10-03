@@ -82,7 +82,7 @@ export function SettleUpFlow({
         onClose();
       }}
       onWriteOff={
-        onWriteOff && person.owesYou > 0
+        onWriteOff && person.net > 0
           ? () => {
               setChosen(null);
               onClose();

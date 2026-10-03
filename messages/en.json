@@ -1760,7 +1760,13 @@
       "undoTitle": "Take back the write-off for {name}?",
       "undoBody": "{name} owes the {amount} again, and the history says so. No figure of yours moves either way.",
       "undoConfirm": "Owe the {amount} again",
-      "undone": "{name} owes it again"
+      "undone": "{name} owes it again",
+      "squareTitle": "Square {group} with {name}",
+      "writtenOffLine": "Written off",
+      "crossAccount": "Where both are recorded",
+      "crossTitle": "This squares {group} with {name}.",
+      "crossBody": "Your {crossed} share of what {name} paid is crossed against what they owe you: it becomes your expense, dated each of those expenses, in the category you choose, and {crossed} of what they owe you counts as paid. The account records both, {crossed} in and {crossed} out, so its balance does not move. The other {amount} is written off, and no figure changes for it.",
+      "onlyThisGroup": "Only this group: what you and {name} owe each other anywhere else stays as it is. Taking the write-off back makes them owe the {amount} again; the crossing stays, as a payment you can undo on its own."
     },
     "archiveGroup": {
       "title": "Archive {name}?",
@@ -1769,7 +1775,9 @@
       "body": "Nothing is deleted and no figure moves. An archived group stays readable, and you can restore it.",
       "confirm": "Archive",
       "confirmWithWriteOff": "Archive and write off {amount}",
-      "done": "{name} is archived"
+      "done": "{name} is archived",
+      "crossBody": "You also owe {names} here, so archiving squares that first: your share of what they paid is crossed against what they owe you and becomes your expense, recorded in and out of one account so its balance does not move.",
+      "onlyThisGroup": "Only this group: what you owe each other in other groups stays as it is."
     },
     "edit": {
       "title": "Edit this shared group",

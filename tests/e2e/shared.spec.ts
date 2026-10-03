@@ -412,6 +412,70 @@ test("a payment recorded by mistake is undone, and the movement goes with it", a
   await expect(page.getByText("Your share $50,000")).toBeVisible();
 });
 
+test("writing off somebody you also owe squares the group, and your share becomes your expense", async ({
+  page,
+  request,
+}) => {
+  await signUp(page, request);
+  await anExpense(request, 100_000, "Dinner");
+
+  await page.goto("/shared");
+  await page.getByRole("button", { name: "Add a person" }).click();
+  await page.getByPlaceholder("Beto Cano").fill("Ana Ruiz");
+  await page.getByRole("button", { name: "Add person" }).click();
+  await expect(page.getByText("Person added")).toBeVisible();
+
+  await page.getByRole("link", { name: "New shared group" }).first().click();
+  await page.getByPlaceholder("Cartagena trip").fill("Night out");
+  await page.getByRole("button", { name: "Add a person" }).click();
+  await page.getByRole("checkbox", { name: /Ana Ruiz/ }).check({ force: true });
+  await page.getByRole("button", { name: "Add 1" }).click();
+  await page.getByRole("button", { name: "Pick from my transactions" }).click();
+  await page.getByRole("checkbox", { name: /Dinner/ }).check({ force: true });
+  await page.getByRole("button", { name: /^Add 1 · / }).click();
+  await page.getByRole("button", { name: "Create shared group" }).click();
+  await page.getByRole("button", { name: "Add 1 expense" }).click();
+
+  await page.getByRole("button", { name: "Add expense" }).click();
+  await page.getByRole("button", { name: "Somebody else paid" }).click();
+  const paid = page.getByRole("dialog", { name: "Somebody else paid" });
+  await paid.getByRole("textbox", { name: "What was it" }).fill("Concert tickets");
+  await paid.getByRole("textbox", { name: "Amount" }).fill("40000");
+  await paid.getByRole("button", { name: "Add expense" }).click();
+  await expect(page.getByText("Expense added")).toBeVisible();
+
+  // Ana owes you 50,000 of the dinner and you owe her 20,000 of the tickets.
+  await page.getByRole("button", { name: "Settle up" }).click();
+  await page
+    .getByRole("dialog", { name: "Settle up with Ana Ruiz" })
+    .getByRole("button", { name: "Write off $30,000" })
+    .click();
+  const square = page.getByRole("dialog", { name: "Square Night out with Ana Ruiz" });
+  await expect(square.getByRole("button", { name: "Write off $30,000" })).toBeDisabled();
+  await square.getByRole("button", { name: /Where both are recorded/ }).click();
+  await page.getByRole("option", { name: /Bancolombia Dinner/ }).click();
+  await square
+    .getByRole("button", { name: /Category for your \$20,000 of Concert tickets/ })
+    .click();
+  await page.getByRole("dialog", { name: "Category" }).getByRole("option").first().click();
+  await expectNoAxeViolations(page);
+  await square.getByRole("button", { name: "Write off $30,000" }).click();
+  await expect(page.getByText("What Ana Ruiz owed is written off")).toBeVisible();
+
+  // Nobody owes anybody here now: her row reads written off, and the group is settled.
+  await expect(page.getByText(/Written off .* · the \$30,000 stays yours/)).toBeVisible();
+  await expect(page.getByText(/people · settled/)).toBeVisible();
+
+  // Your share of the tickets is an expense of yours now, and the account did not move.
+  await page.goto("/transactions");
+  await expect(page.getByRole("button", { name: /Concert tickets/ })).toBeVisible();
+  const accounts = await request.get("/api/accounts", { headers: { origin: APP } });
+  const bank = ((await accounts.json()) as { data: { name: string; balance: number }[] }).data.find(
+    (one) => one.name === "Bancolombia Dinner",
+  );
+  expect(bank?.balance).toBe(1_900_000);
+});
+
 test("an invitation reaches the other person's Shared, and their answer comes back", async ({
   page,
   request,

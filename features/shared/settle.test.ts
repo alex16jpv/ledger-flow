@@ -7,6 +7,7 @@ import {
   capIsTheGroup,
   hasSomethingToSettle,
   isInbound,
+  planCrossing,
   planSettlement,
   settleableAmount,
   settleCap,
@@ -475,5 +476,25 @@ describe("settling from a group", () => {
       ["n1", 26_300],
       ["t1", 173_700],
     ]);
+  });
+});
+
+describe("squaring a group before a write-off", () => {
+  it("crosses what you owe them there against what they owe you, and nothing elsewhere", () => {
+    const rows = twoGroups();
+    rows.expenses.push(betoPaid("t3", "g2", 100_000, "2026-09-05T20:00:00.000Z"));
+    rows.expenses.push(betoPaid("n2", "g1", 20_000, "2026-08-11T20:00:00.000Z"));
+
+    const plan = planCrossing(fromGroup(rows, "g2"));
+
+    expect(plan).toMatchObject({ collected: 100_000, paid: 100_000, cash: 0, refunded: 0 });
+    expect(plan?.groupId).toBe("g2");
+    expect(coverage(plan?.yourLines ?? [])).toEqual([["t3", 100_000]]);
+    expect(coverage(plan?.covers ?? [])).toEqual([["t1", 100_000]]);
+  });
+
+  it("crosses nothing where you owe them nothing, or outside a group", () => {
+    expect(planCrossing(fromGroup(twoGroups(), "g2"))).toBeNull();
+    expect(planCrossing(partyFor(nightOut(), ANA))).toBeNull();
   });
 });

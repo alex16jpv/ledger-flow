@@ -248,3 +248,23 @@ export function planSettlement(party: SettleParty, cash: number): SettlePlan {
     groupId,
   };
 }
+
+// Squaring a group before a write-off: what you owe them there crossed against what they owe you.
+export function planCrossing(party: SettleParty): SettlePlan | null {
+  const { scope } = party;
+  if (!scope) return null;
+  const crossed = Math.min(toCents(scope.owedToYou), toCents(scope.youOwe));
+  if (crossed <= 0) return null;
+  const imputed = imputeCounterparty(owedLines(party.theyOwe), owedLines(party.yourLines), [
+    { id: "", createdAt: null, collected: crossed, paid: crossed, groupId: scope.groupId },
+  ]);
+  return {
+    collected: fromCents(crossed),
+    paid: fromCents(crossed),
+    cash: 0,
+    covers: covered(party.theyOwe, imputed.theirs, scope.groupId),
+    yourLines: covered(party.yourLines, imputed.yours, scope.groupId),
+    refunded: 0,
+    groupId: scope.groupId,
+  };
+}
