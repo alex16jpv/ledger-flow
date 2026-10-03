@@ -72,7 +72,7 @@ import { EditSplitSheet } from "../../EditSplitSheet";
 import { SettleUpFlow } from "../../SettleUpFlow";
 import { TransactionPickerSheet } from "../../TransactionPickerSheet";
 import { WhatChangesSheet } from "../../WhatChangesSheet";
-import type { WriteOff } from "../../WriteOffSheet";
+import type { Squared } from "../../WriteOffSheet";
 
 // Two taps behind the screen it belongs to, and 230 kB gz is the screen's budget (T-139).
 const PaidByOtherSheet = dynamic(() =>
@@ -657,8 +657,8 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           onClose={() => {
             setWritingOff(null);
           }}
-          onConfirm={(target) => {
-            void forgive(writingOff, target.amount);
+          onConfirm={(squared) => {
+            void forgive(writingOff, squared);
           }}
         />
       )}
@@ -714,8 +714,8 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           onClose={() => {
             setArchiving(false);
           }}
-          onConfirm={(owing) => {
-            void archiveIt(owing);
+          onConfirm={(squared) => {
+            void archiveIt(squared);
           }}
         />
       )}
@@ -741,13 +741,14 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
     }
   }
 
-  async function forgive(person: PartyView, amount: number) {
+  async function forgive(person: PartyView, { owing, crossings }: Squared) {
     try {
       await writeOff.mutateAsync({
         groupId: view.group.id,
         contactId: person.contactId,
         expenseId: person.expenseId,
-        amount,
+        amount: owing[0]?.amount ?? 0,
+        crossings,
       });
       setWritingOff(null);
       toast.show({ message: t("shared.writeOff.done", { name: person.name }) });
@@ -772,9 +773,9 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
     }
   }
 
-  async function archiveIt(owing: WriteOff[]) {
+  async function archiveIt({ owing, crossings }: Squared) {
     try {
-      await archive.mutateAsync({ id: view.group.id, owing });
+      await archive.mutateAsync({ id: view.group.id, owing, crossings });
       setArchiving(false);
       toast.show({ message: t("shared.archiveGroup.done", { name: view.group.name }) });
     } catch (error) {

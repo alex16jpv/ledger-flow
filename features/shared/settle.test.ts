@@ -13,6 +13,7 @@ import {
   settleCap,
   settleParty,
   settlePerson,
+  writeOffWithoutCrossing,
 } from "./settle";
 
 const ANA = "k1";
@@ -496,5 +497,32 @@ describe("squaring a group before a write-off", () => {
   it("crosses nothing where you owe them nothing, or outside a group", () => {
     expect(planCrossing(fromGroup(twoGroups(), "g2"))).toBeNull();
     expect(planCrossing(partyFor(nightOut(), ANA))).toBeNull();
+  });
+});
+
+describe("writing off while deleting a movement", () => {
+  const person = (contactId: string, owesYou: number, youOwe: number) => ({
+    key: `contact:${contactId}`,
+    contactId,
+    expenseId: null,
+    name: contactId,
+    color: null,
+    share: 0,
+    paid: 0,
+    owesYou,
+    youOwe,
+    net: owesYou - youOwe,
+    surplus: 0,
+    state: "NOT_PAID" as const,
+  });
+
+  it("is one tap only for a sole debtor you owe nothing back", () => {
+    expect(writeOffWithoutCrossing([person(ANA, 60_000, 0), person(BETO, 0, 0)])?.contactId).toBe(
+      ANA,
+    );
+    expect(writeOffWithoutCrossing([person(ANA, 60_000, 30_000)])).toBeUndefined();
+    expect(
+      writeOffWithoutCrossing([person(ANA, 60_000, 0), person(BETO, 10_000, 0)]),
+    ).toBeUndefined();
   });
 });

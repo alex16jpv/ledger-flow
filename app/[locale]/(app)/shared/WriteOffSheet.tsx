@@ -1,7 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useRef, useState } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Amount } from "@/components/ui/Amount";
@@ -17,6 +17,7 @@ import { dayKey, localNoon } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { fromCents, toCents } from "@/lib/local/derive/money";
+import { newEntityId } from "@/lib/local/outbox/envelope";
 
 import {
   categoryOf,
@@ -31,6 +32,12 @@ export interface WriteOff {
   amount: number;
 }
 
+export interface Squared {
+  owing: WriteOff[];
+  // The payments that crossed the group first, which the write-off waits on in the queue.
+  crossings: string[];
+}
+
 interface Crossing {
   person: PartyView;
   plan: SettlePlan;
@@ -39,7 +46,7 @@ interface Crossing {
 // Somebody you also owe in the group is squared first, so a write-off leaves nobody owing there.
 function crossingsOf(section: SharedSection, view: GroupView, people: readonly PartyView[]) {
   return people.flatMap((person): Crossing[] => {
-    if (person.contactId === null) return [];
+    if (person.contactId === null || person.state === "WRITTEN_OFF") return [];
     const plan = planCrossing(settleParty(section, view, person));
     return plan ? [{ person, plan }] : [];
   });
@@ -52,6 +59,9 @@ const leftToWriteOff = (person: PartyView, crossings: readonly Crossing[]): numb
 
 function useCrossing(crossings: readonly Crossing[]) {
   const record = useRecordSettlement();
+  const [recorded, setRecorded] = useState<Record<string, string>>({});
+  // A second tap lands before the pending state re-renders the button disabled.
+  const submitting = useRef(false);
   const { timeZone } = useFormatSettings();
   const [accountId, setAccountId] = useState<string | null>(null);
   const [categories, setCategories] = useState<LineCategoriesValue>({
@@ -61,11 +71,16 @@ function useCrossing(crossings: readonly Crossing[]) {
   const lines = crossings.flatMap((one) => one.plan.yourLines);
   const ready =
     crossings.length === 0 || (accountId !== null && !missingCategory(categories, lines));
-  async function cross(): Promise<void> {
-    if (!accountId) return;
+  async function cross(): Promise<string[]> {
+    if (crossings.length === 0) return [];
+    if (!accountId) throw new Error("A crossing needs an account");
     const date = localNoon(dayKey(new Date(), timeZone), timeZone).toISOString();
+    const ids: Record<string, string> = { ...recorded };
     for (const { person, plan } of crossings) {
+      if (ids[person.key]) continue;
+      const id = newEntityId();
       await record.mutateAsync({
+        id,
         counterparty: { contactId: person.contactId, expenseId: null },
         groupId: plan.groupId,
         date,
@@ -82,9 +97,21 @@ function useCrossing(crossings: readonly Crossing[]) {
           categoryId: categoryOf(categories, line) ?? "",
         })),
       });
+      ids[person.key] = id;
+      setRecorded({ ...ids });
+    }
+    return Object.values(ids);
+  }
+  async function squareThen(done: (crossings: string[]) => void): Promise<void> {
+    if (submitting.current) return;
+    submitting.current = true;
+    try {
+      done(await cross());
+    } catch {
+      submitting.current = false;
     }
   }
-  return { record, accountId, setAccountId, categories, setCategories, lines, ready, cross };
+  return { record, accountId, setAccountId, categories, setCategories, lines, ready, squareThen };
 }
 
 function CrossingFields({ crossing }: { crossing: ReturnType<typeof useCrossing> }) {
@@ -129,7 +156,7 @@ export interface WriteOffSheetProps {
   person: PartyView;
   open: boolean;
   pending: boolean;
-  onConfirm: (writeOff: WriteOff) => void;
+  onConfirm: (squared: Squared) => void;
   onClose: () => void;
 }
 
@@ -146,7 +173,7 @@ export function WriteOffSheet({
   const ts = useTranslations("shared.settle");
   const tr = useTranslations();
   const money = useMoney();
-  const crossings = crossingsOf(section, view, [person]);
+  const [crossings] = useState(() => crossingsOf(section, view, [person]));
   const crossing = useCrossing(crossings);
   const [crossed] = crossings;
   const amount = leftToWriteOff(person, crossings);
@@ -158,13 +185,13 @@ export function WriteOffSheet({
   const where = { name: person.name, group: view.group.name };
 
   async function confirm() {
-    if (!crossing.ready) return;
-    try {
-      await crossing.cross();
-    } catch {
-      return;
-    }
-    onConfirm({ contactId: person.contactId, expenseId: person.expenseId, amount });
+    if (!crossing.ready || busy) return;
+    await crossing.squareThen((crossed) => {
+      onConfirm({
+        owing: [{ contactId: person.contactId, expenseId: person.expenseId, amount }],
+        crossings: crossed,
+      });
+    });
   }
 
   return (
@@ -184,7 +211,7 @@ export function WriteOffSheet({
             size="lg"
             block
             variant="dangerSolid"
-            disabled={!crossing.ready}
+            disabled={!crossing.ready || busy}
             loading={busy}
             onClick={() => {
               void confirm();
@@ -221,15 +248,17 @@ export function WriteOffSheet({
             {t("body")}
           </Alert>
         )}
-        <p className="text-sm text-text-3">
-          {person.paid > 0
-            ? t("keepsWhatWasPaid", { name: person.name, amount: money.format(person.paid) })
-            : t("rowReadsWrittenOff", { name: person.name })}{" "}
-          {left <= 0 && view.youOwe <= 0
-            ? t("becomesSettled", { name: view.group.name })
-            : t("stillOwed", { amount: money.format(fromCents(left)) })}{" "}
-          {t("undoable")}
-        </p>
+        {!crossed && (
+          <p className="text-sm text-text-3">
+            {person.paid > 0
+              ? t("keepsWhatWasPaid", { name: person.name, amount: money.format(person.paid) })
+              : t("rowReadsWrittenOff", { name: person.name })}{" "}
+            {left <= 0 && view.youOwe <= 0
+              ? t("becomesSettled", { name: view.group.name })
+              : t("stillOwed", { amount: money.format(fromCents(left)) })}{" "}
+            {t("undoable")}
+          </p>
+        )}
       </div>
     </Sheet>
   );
@@ -240,7 +269,7 @@ export interface ArchiveGroupSheetProps {
   view: GroupView;
   open: boolean;
   pending: boolean;
-  onConfirm: (owing: WriteOff[]) => void;
+  onConfirm: (squared: Squared) => void;
   onClose: () => void;
 }
 
@@ -254,10 +283,16 @@ export function ArchiveGroupSheet({
 }: ArchiveGroupSheetProps) {
   const t = useTranslations("shared.archiveGroup");
   const tr = useTranslations();
+  const locale = useLocale();
   const money = useMoney();
-  const crossings = crossingsOf(section, view, view.people);
+  const [crossings] = useState(() => crossingsOf(section, view, view.people));
   const crossing = useCrossing(crossings);
+  const busy = pending || crossing.record.isPending;
+  const names = new Intl.ListFormat(locale, { type: "conjunction" }).format(
+    crossings.map((one) => one.person.name),
+  );
   const owing = view.people
+    .filter((person) => person.state !== "WRITTEN_OFF")
     .map((person) => ({
       contactId: person.contactId,
       expenseId: person.expenseId,
@@ -268,13 +303,10 @@ export function ArchiveGroupSheet({
   const error = crossing.record.error ? presentError(crossing.record.error) : null;
 
   async function confirm() {
-    if (!crossing.ready) return;
-    try {
-      await crossing.cross();
-    } catch {
-      return;
-    }
-    onConfirm(owing);
+    if (!crossing.ready || busy) return;
+    await crossing.squareThen((crossed) => {
+      onConfirm({ owing, crossings: crossed });
+    });
   }
 
   return (
@@ -290,8 +322,8 @@ export function ArchiveGroupSheet({
             size="lg"
             block
             variant="dangerSolid"
-            disabled={!crossing.ready}
-            loading={pending || crossing.record.isPending}
+            disabled={!crossing.ready || busy}
+            loading={busy}
             onClick={() => {
               void confirm();
             }}
@@ -310,11 +342,7 @@ export function ArchiveGroupSheet({
         )}
         {crossings.length > 0 && (
           <>
-            <p className="text-sm text-text-3">
-              {t("crossBody", {
-                names: crossings.map((one) => one.person.name).join(", "),
-              })}
-            </p>
+            <p className="text-sm text-text-3">{t("crossBody", { names })}</p>
             <CrossingFields crossing={crossing} />
             <p className="text-xs text-text-3">{t("onlyThisGroup")}</p>
           </>

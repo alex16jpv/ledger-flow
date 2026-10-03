@@ -5298,20 +5298,20 @@ const crossFields = () =>
 const writeOffCrossingSheet = () =>
   fullWrap(
     `<div class="inset stack-sm" style="gap:8px">
-<div class="hstack" style="justify-content:space-between"><span class="small muted">Ana owes you in Night out</span><span class="amount">${money(56300)}</span></div>
-<div class="hstack" style="justify-content:space-between"><span class="small muted">You owe Ana in Night out</span><span class="amount">${money(30000)}</span></div>
+<div class="hstack" style="justify-content:space-between"><span class="small muted">Ana Ruiz owes you in Night out</span><span class="amount">${money(56300)}</span></div>
+<div class="hstack" style="justify-content:space-between"><span class="small muted">You owe Ana Ruiz in Night out</span><span class="amount">${money(30000)}</span></div>
 <div class="hstack" style="justify-content:space-between;border-top:1px solid var(--border);padding-top:8px"><span class="small" style="font-weight:600">Written off</span><span class="amount" style="font-weight:600">${money(26300)}</span></div></div>
 ${crossFields()}
-<div class="alert neutral">${iconSvg("info")}<span><b>This squares Night out with Ana.</b> Your ${moneyText(30000)} share of <b>Concert tickets</b> is crossed against what she owes you: it becomes an expense of yours dated September 20, in the category you choose, and ${moneyText(30000)} of what she owes you counts as paid. Bancolombia records both, ${moneyText(30000)} in and ${moneyText(30000)} out, so its balance does not move. The other ${moneyText(26300)} is written off, and no figure changes for it.</span></div>
-<p class="xs faint" style="margin:0">Only this group: what you and Ana owe each other anywhere else stays as it is. Taking the write-off back makes her owe the ${moneyText(26300)} again; the crossing stays, as a payment you can undo on its own.</p>
+<div class="alert neutral">${iconSvg("info")}<span><b>This squares Night out with Ana Ruiz.</b> Your ${moneyText(30000)} share of what Ana Ruiz paid is crossed against what they owe you: it becomes your expense, dated each of those expenses, in the category you choose, and ${moneyText(30000)} of what they owe you counts as paid. The account records both, ${moneyText(30000)} in and ${moneyText(30000)} out, so its balance does not move. The other ${moneyText(26300)} is written off, and no figure changes for it.</span></div>
+<p class="xs faint" style="margin:0">Only this group: what you and Ana Ruiz owe each other anywhere else stays as it is. Taking the write-off back makes them owe the ${moneyText(26300)} again; the crossing stays, as a payment you can undo on its own.</p>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn danger solid lg" style="flex:1.4">Write off ${moneyText(26300)}</button></div>`,
-    "Square Night out with Ana",
+    "Square Night out with Ana Ruiz",
   );
 
 const archiveCrossingSheet = () =>
   fullWrap(
     `<div class="alert warning">${iconSvg("triangle-alert")}<span><b>${moneyText(52600)} is still owed to you.</b> Archiving writes it off: Ana’s ${moneyText(26300)} and Beto’s ${moneyText(26300)}. The amount stays counted as yours, exactly as it is today.</span></div>
-<p class="small muted" style="margin:0">You also owe Ana ${moneyText(30000)} here, so archiving squares that first: your share of Concert tickets is crossed against what she owes you and becomes your expense, recorded in and out of one account so its balance does not move.</p>
+<p class="small muted" style="margin:0">You also owe Ana Ruiz here, so archiving crosses that against what they owe you first: your share of their expenses becomes your expense, recorded in and out of one account so its balance does not move. What you owe beyond what they owe you here stays owed.</p>
 ${crossFields()}
 <p class="xs faint" style="margin:0">Only this group: what you owe each other in other groups stays as it is. Nothing is deleted, and an archived group stays readable.</p>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn danger solid lg" style="flex:1.6">Archive and write off ${moneyText(52600)}</button></div>`,

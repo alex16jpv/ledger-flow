@@ -16,15 +16,20 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **Why in the client, as two queued writes:** the server already has both — a settle-up from a group
   covers that group first, and a write-off stores what is open when it lands — so the crossing then the
   write-off, in that order through the outbox, give the same result with no change to the API, to the
-  parity fixtures or to sync, and they work with no network like every other write here.
+  parity fixtures or to sync, and they work with no network like every other write here. The
+  write-off and the archive name the crossing payments in `dependsOn`, so a held payment holds them
+  too instead of letting them land first.
 - **Alternative:** one server endpoint doing both in one transaction. Rejected for now: it would mean
   a new route, a refactor of the settle-up's transaction and new fixtures for the same figures. The
   cost of the two writes is that they are not atomic: if the crossing were refused when it syncs, the
-  write-off would still land, as the old gross one; both are visible and undone on their own.
+  write-off would still land, as the old gross one; both are visible and undone on their own — except
+  after an archive, where a write-off cannot be undone until the group is restored.
 - **Alternative:** forgiving both debts without a crossing. Rejected by him: the categories would not
   come out exact.
 - **Consequence:** taking a write-off back makes them owe what was written off again; the crossing
-  stays as a payment, undone from its own row.
+  stays as a payment, undone from its own row. Somebody already written off is not crossed again on
+  archive (the server leaves existing write-offs as they are). Writing off from a movement's delete
+  sheet stays one tap only when there is nothing to cross (`writeOffWithoutCrossing`).
 
 ## 2026-10-03 · The bar of a group you joined is net too (T-245)
 

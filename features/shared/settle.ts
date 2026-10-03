@@ -170,8 +170,19 @@ export function settleParty(
   person: PartyView,
 ): SettleParty {
   if (person.contactId === null) return guestParty(section, view, person);
-  const party = settlePerson(section, person.contactId);
-  if (!party) return guestParty(section, view, person);
+  const party =
+    settlePerson(section, person.contactId) ??
+    partyOf(section, {
+      key: person.key,
+      contactId: person.contactId,
+      expenseId: null,
+      name: person.name,
+      color: person.color,
+      owedToYou: person.owesYou,
+      youOwe: person.youOwe,
+      surplus: person.surplus,
+      groups: [{ id: view.group.id, name: view.group.name }],
+    });
   return { ...party, scope: scopeOf(view, person) };
 }
 
@@ -267,4 +278,10 @@ export function planCrossing(party: SettleParty): SettlePlan | null {
     refunded: 0,
     groupId: scope.groupId,
   };
+}
+
+// Writing off while deleting a movement is one tap only for a sole debtor owed nothing back.
+export function writeOffWithoutCrossing(people: readonly PartyView[]): PartyView | undefined {
+  const [only, ...rest] = people.filter((one) => one.owesYou > 0);
+  return only && rest.length === 0 && only.youOwe === 0 ? only : undefined;
 }

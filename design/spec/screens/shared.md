@@ -434,18 +434,20 @@ way, which is true in both directions.
 **`Write off`** answers the owner's worry, and the answer is that there is nothing to do: no figure
 changes, because the money was counted as his from the day he paid it. The sheet says exactly that.
 It writes off **what is still open**, so somebody who paid part of it keeps that part, and their row
-becomes `Written off`.
+becomes `Written off`. The sheet says what the group becomes: once nobody is left owing — by paying
+or by being written off — the group is `Settled`. It can be undone until the group is archived.
 
 **Writing off somebody you also owe squares the group** (`#write-off-crossing`, T-244, the owner's
 decision): afterwards nobody owes anybody in it. What you owe them there is crossed against what they
 owe you — a two-way settle-up from that group with no money changing hands, so your share of each line
-they paid becomes **your expense**, dated that line, in the category the sheet asks for, recorded in and
-out of the account it asks for so no balance moves — and only what is left of their debt is written
-off. That is why the sheet asks for an account and a category only then. **Only that group**: what the
-two of you owe each other elsewhere stays as it is. `Write off` is offered only to somebody who owes
-you net in the group; somebody you owe more is somebody you pay. Taking the write-off back makes them
-owe what was written off again; the crossing stays, as a payment that is undone on its own. The sheet says what the group becomes: once nobody is left owing — by paying
-or by being written off — the group is `Settled`. It can be undone until the group is archived.
+they paid becomes **your expense**, dated that line, in the category the sheet asks for, recorded in
+and out of the account it asks for so no balance moves — and only what is left of their debt is
+written off. That is why the sheet asks for an account and a category only then. **Only that group**:
+what the two of you owe each other elsewhere stays as it is. `Write off` is offered only to somebody
+who owes you net in the group; somebody you owe more is somebody you pay. Taking the write-off back
+makes them owe what was written off again; the crossing stays, as a payment that is undone on its own.
+The shortcut that writes somebody off while deleting a movement is offered only when there is nothing
+to cross.
 
 **Archiving a group with people still owing writes those amounts off on your behalf**, so the
 confirmation says what it will do and what it will not: the amount stays counted as yours, nothing is

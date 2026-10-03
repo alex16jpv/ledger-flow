@@ -14,6 +14,7 @@ import { ArchiveGroupSheet, WriteOffSheet } from "./WriteOffSheet";
 
 const ANA = "k1";
 const BETO = "k2";
+const CARLA = "k3";
 const fetchMock = vi.fn<typeof fetch>();
 const pagination = { limit: 100, offset: 0, total: 1, hasMore: false, nextCursor: null };
 const bank = account({ id: "banco", name: "Bancolombia" });
@@ -78,18 +79,24 @@ const withTotals = (row: SyncSharedGroup): SharedGroup => ({
 });
 
 // Ana owes you 60,000 of the food and you owe her 30,000 of the tickets; Beto owes you 40,000.
-function nightOut() {
+// With Carla: she owes you 40,000 of the food and you owe her 10,000 of a taxi she paid.
+function nightOut({ carla = false } = {}) {
   const rows: SharedLedgerRows = {
     groups: [withTotals(sharedGroup({ id: "g1", name: "Night out" }))],
     expenses: [
       sharedExpense({
         id: "s1",
         description: "Food",
-        amount: 160_000,
+        amount: carla ? 200_000 : 160_000,
         split: {
           mode: "EQUAL",
           guests: null,
-          shares: [share(null, 60_000), share(ANA, 60_000), share(BETO, 40_000)],
+          shares: [
+            share(null, 60_000),
+            share(ANA, 60_000),
+            share(BETO, 40_000),
+            ...(carla ? [share(CARLA, 40_000)] : []),
+          ],
         },
       }),
       sharedExpense({
@@ -100,6 +107,22 @@ function nightOut() {
         paidByContactId: ANA,
         split: { mode: "EQUAL", guests: null, shares: [share(null, 30_000), share(ANA, 30_000)] },
       }),
+      ...(carla
+        ? [
+            sharedExpense({
+              id: "s3",
+              description: "Taxi",
+              date: "2026-08-15T20:00:00.000Z",
+              amount: 20_000,
+              paidByContactId: CARLA,
+              split: {
+                mode: "EQUAL" as const,
+                guests: null,
+                shares: [share(null, 10_000), share(CARLA, 10_000)],
+              },
+            }),
+          ]
+        : []),
     ],
     settlements: [],
     undone: [],
@@ -109,6 +132,7 @@ function nightOut() {
   const section = sectionOf(rows, [
     contact({ id: ANA, name: "Ana Ruiz" }),
     contact({ id: BETO, name: "Beto Cano" }),
+    contact({ id: CARLA, name: "Carla Díaz" }),
   ]);
   const [view] = section.groups;
   if (!view) throw new Error("no group");
@@ -175,7 +199,10 @@ describe("writing somebody off", () => {
     ).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Write off $40,000" }));
 
-    expect(onConfirm).toHaveBeenCalledWith({ contactId: BETO, expenseId: null, amount: 40_000 });
+    expect(onConfirm).toHaveBeenCalledWith({
+      owing: [{ contactId: BETO, expenseId: null, amount: 40_000 }],
+      crossings: [],
+    });
     expect(settlementsPosted()).toEqual([]);
   });
 
@@ -202,7 +229,10 @@ describe("writing somebody off", () => {
     await userEvent.click(confirm);
 
     await waitFor(() => {
-      expect(onConfirm).toHaveBeenCalledWith({ contactId: ANA, expenseId: null, amount: 30_000 });
+      expect(onConfirm).toHaveBeenCalledWith({
+        owing: [{ contactId: ANA, expenseId: null, amount: 30_000 }],
+        crossings: [expect.any(String)],
+      });
     });
     expect(settlementsPosted()).toEqual([
       expect.objectContaining({
@@ -213,6 +243,30 @@ describe("writing somebody off", () => {
         categories: [{ expenseId: "s2", categoryId: "cat-life" }],
       }),
     ]);
+  });
+
+  it("records the crossing once, however fast the button is pressed twice", async () => {
+    const { section, view, ana } = nightOut();
+    const onConfirm = vi.fn();
+    render(
+      <WriteOffSheet
+        open
+        section={section}
+        view={view}
+        person={ana}
+        pending={false}
+        onConfirm={onConfirm}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await chooseAccountAndCategory();
+    await userEvent.dblClick(screen.getByRole("button", { name: "Write off $30,000" }));
+
+    await waitFor(() => {
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+    expect(settlementsPosted()).toHaveLength(1);
   });
 });
 
@@ -237,11 +291,57 @@ describe("archiving a group", () => {
     await userEvent.click(confirm);
 
     await waitFor(() => {
-      expect(onConfirm).toHaveBeenCalledWith([
-        { contactId: ANA, expenseId: null, amount: 30_000 },
-        { contactId: BETO, expenseId: null, amount: 40_000 },
-      ]);
+      expect(onConfirm).toHaveBeenCalledWith({
+        owing: [
+          { contactId: ANA, expenseId: null, amount: 30_000 },
+          { contactId: BETO, expenseId: null, amount: 40_000 },
+        ],
+        crossings: [expect.any(String)],
+      });
     });
     expect(settlementsPosted()).toHaveLength(1);
+  });
+
+  it("squares everybody you also owe, one payment each, before writing off the rest", async () => {
+    const { section, view } = nightOut({ carla: true });
+    const onConfirm = vi.fn();
+    render(
+      <ArchiveGroupSheet
+        open
+        section={section}
+        view={view}
+        pending={false}
+        onConfirm={onConfirm}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/You also owe Ana Ruiz and Carla Díaz here/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^Where both are recorded/ }));
+    await userEvent.click(
+      await within(await openSheet("Account")).findByRole("option", { name: /Bancolombia/ }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Category for the expenses this records/ }),
+    );
+    await userEvent.click(
+      await within(await openSheet("Category")).findByRole("option", { name: /Lifestyle/ }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Archive and write off $100,000" }));
+
+    await waitFor(() => {
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+    expect(settlementsPosted()).toEqual([
+      expect.objectContaining({ contactId: ANA, collected: 30_000, paid: 30_000 }),
+      expect.objectContaining({ contactId: CARLA, collected: 10_000, paid: 10_000 }),
+    ]);
+    expect(onConfirm.mock.calls[0]?.[0]).toMatchObject({
+      owing: [
+        { contactId: ANA, amount: 30_000 },
+        { contactId: BETO, amount: 40_000 },
+        { contactId: CARLA, amount: 30_000 },
+      ],
+    });
   });
 });
