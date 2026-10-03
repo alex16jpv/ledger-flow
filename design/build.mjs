@@ -5196,6 +5196,11 @@ ${note}${creates}
   );
 };
 
+const groupSettleSummary = (name, group, inGroup, total) =>
+  `<div class="inset stack-sm" style="gap:8px">
+<div class="hstack" style="justify-content:space-between"><span class="small" style="font-weight:600">${name} owes you in ${group}</span><span class="amount" style="font-weight:600">${money(inGroup)}</span></div>
+<div class="hstack" style="justify-content:space-between;border-top:1px solid var(--border);padding-top:8px"><span class="small muted">Across every group, ${name} owes you</span><span class="amount">${money(total)}</span></div></div>`;
+
 const settleUp = (kind = "full") => {
   if (kind === "owe") {
     return fullWrap(
@@ -5225,23 +5230,40 @@ const settleUp = (kind = "full") => {
   }
   if (kind === "partial") {
     return fullWrap(
-      `<div class="inset hstack" style="justify-content:space-between"><span class="small muted">Beto owes you</span><span class="amount">${money(526300)}</span></div>
+      `${groupSettleSummary("Beto", "Cartagena trip", 500000, 526300)}
 <div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">200,000</span><span class="caret"></span></div>
 <button class="picker">${tile("banknote", "GRAY", "sm")}<span class="body"><span class="lbl">Where it lands</span><span class="val">Nowhere here · cash in hand</span></span>${iconSvg("chevron-down", "sm")}</button>
 <div class="alert warning">${iconSvg("triangle-alert")}<span><b>No movement, and no balance changes.</b> You told us the cash never reached an account you keep here. The expenses still fall by ${moneyText(200000)}, because that money did come back to you.</span></div>
-<div class="stack-sm" style="gap:6px"><span class="small muted">It covers, oldest expense first — Flights is already paid:</span>
+<div class="stack-sm" style="gap:6px"><span class="small muted">It covers Cartagena trip first, oldest expense first — Flights is already paid:</span>
 <div class="hstack" style="justify-content:space-between"><span class="small">Cartagena trip · Hotel <span class="faint">Aug 30</span></span><span class="amount small">${money(200000)}</span></div>
-<span class="xs faint">Beto stays <b>Partially paid</b>, with ${moneyText(326300)} left.</span></div>
+<span class="xs faint">Beto stays <b>Partially paid</b> here, with ${moneyText(300000)} left in Cartagena trip; Night out does not move.</span></div>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Record payment</button></div>`,
       "Record a payment from Beto",
     );
   }
+  if (kind === "beyond") {
+    return fullWrap(
+      `${groupSettleSummary("Beto", "Cartagena trip", 500000, 526300)}
+<div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">510,000</span><span class="caret"></span></div>
+<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">Where it arrives</span><span class="val">Bancolombia</span></span>${iconSvg("chevron-down", "sm")}</button>
+<div class="alert neutral">${iconSvg("info")}<span><b>This is not income.</b> It lowers each expense in the month it happened.</span></div>
+<div class="stack-sm" style="gap:6px"><span class="small muted">It covers Cartagena trip first, and the rest goes to what Beto owes you elsewhere, oldest expense first:</span>
+<div class="hstack" style="justify-content:space-between"><span class="small">Cartagena trip · Hotel <span class="faint">Aug 30</span></span><span class="amount small">${money(350000)}</span></div>
+<div class="hstack" style="justify-content:space-between"><span class="small">Cartagena trip · Dinner at La Cevichería <span class="faint">Sep 2</span></span><span class="amount small">${money(90000)}</span></div>
+<div class="hstack" style="justify-content:space-between"><span class="small">Cartagena trip · Boat to Barú <span class="faint">Sep 8</span></span><span class="amount small">${money(40000)}</span></div>
+<div class="hstack" style="justify-content:space-between"><span class="small">Cartagena trip · Taxi to the airport <span class="faint">Sep 12</span></span><span class="amount small">${money(20000)}</span></div>
+<div class="hstack" style="justify-content:space-between"><span class="small">Night out · Drinks <span class="faint">Sep 20</span></span><span class="amount small">${money(10000)}</span></div></div>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Record payment</button></div>`,
+      "Settle up with Beto",
+    );
+  }
   return fullWrap(
-    `<div class="inset hstack" style="justify-content:space-between"><span class="small muted">Beto owes you</span><span class="amount">${money(526300)}</span></div>
-<div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">526,300</span><span class="caret"></span></div>
+    `${groupSettleSummary("Beto", "Cartagena trip", 500000, 526300)}
+<div class="amount-input" style="padding:8px 0 4px"><span class="cur">$</span><span class="num">500,000</span><span class="caret"></span></div>
 <button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">Where it arrives</span><span class="val">Bancolombia</span></span>${iconSvg("chevron-down", "sm")}</button>
 <button class="picker">${tile("calendar", "GRAY", "sm")}<span class="body"><span class="lbl">Date</span><span class="val">Today · September 22</span></span>${iconSvg("chevron-down", "sm")}</button>
-<div class="alert neutral">${iconSvg("info")}<span><b>This is not income.</b> It lowers each expense in the month it happened: ${moneyText(500000)} in Cartagena trip, over August and September, and ${moneyText(26300)} in Night out.</span></div>
+<div class="alert neutral">${iconSvg("info")}<span><b>This is not income.</b> It lowers each expense in the month it happened: ${moneyText(500000)} in Cartagena trip, over August and September.</span></div>
+<p class="xs faint" style="margin:0">It settles Cartagena trip. Send less and it stays in this group; send more and the rest covers what Beto owes you elsewhere, oldest expense first.</p>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.4">Mark as paid</button></div>`,
     "Settle up with Beto",
   );
@@ -5251,8 +5273,7 @@ const settleUpWho = () =>
   fullWrap(
     `<p class="small muted" style="margin:0">This group has more than one person with something open, so it asks before it settles.</p>
 <div class="list card flush">
-${personRow("Ana Ruiz", "Cartagena trip", 26300, "owes you")}
-${personRow("Beto Cano", "Cartagena trip", 526300, "owes you")}
+${personRow("Beto Cano", "Cartagena trip", 500000, "owes you")}
 ${personRow("Diego Pardo", "Cartagena trip", 60000, "you owe")}
 </div>
 <p class="xs faint" style="margin:0">A row that reaches exactly one person opens the sheet straight away: a list of one is a question with one answer.</p>`,
@@ -7738,7 +7759,7 @@ const PAGES = [
       plate(
         "settle-up",
         "Settle up",
-        "The money coming back. It is not income: it arrives in an account, it carries no category, and it lowers each expense in the month that expense happened rather than today.",
+        "The money coming back. Opened from a group, it proposes what is open in that group and shows what the person owes across every group. It is not income: it arrives in an account, it carries no category, and it lowers each expense in the month that expense happened rather than today.",
         groupDetail({ sheet: settleUp("full") }),
         { added: "2026-09-20" },
       ),
@@ -7759,14 +7780,21 @@ const PAGES = [
       plate(
         "record-a-payment",
         "A partial payment, and cash outside the app",
-        "Part of it, in cash that never reached an account kept here. No movement and no balance change — and the sheet says that plainly — but the expenses still fall, because the money did come back. What it covers is imputed oldest expense first, which is why Beto can be Partially paid in the group and fully paid on its first expense.",
+        "Part of it, in cash that never reached an account kept here. No movement and no balance change — and the sheet says that plainly — but the expenses still fall, because the money did come back. Paid from a group, it covers that group first, oldest expense first, which is why Beto can be Partially paid in the group and fully paid on its first expense, and why Night out does not move.",
         groupDetail({ sheet: settleUp("partial") }),
         { added: "2026-09-20" },
       ),
       plate(
+        "settle-up-beyond-the-group",
+        "Paying more than the group",
+        "Opened from a group, the sheet proposes what is open <b>in that group</b> and says what the person owes across every group. More than that settles the group first and the rest goes to what they owe elsewhere, oldest expense first. Less stays in the group. From the person (<b>People</b>), nothing is first: it covers the oldest expense, whichever group it is in.",
+        groupDetail({ sheet: settleUp("beyond") }),
+        { added: "2026-10-03" },
+      ),
+      plate(
         "settle-up-who",
         "Settle up · who first",
-        "A door that can reach more than one counterparty asks before it settles: the group's own <b>Settle up</b> and a shared expense's list everybody with something open, with the net and the word for its direction, and open the sheet on the one that is picked.",
+        "A door that can reach more than one counterparty asks before it settles: the group's own <b>Settle up</b> and a shared expense's list everybody with something open in that group, with what is open there and the word for its direction, and open the sheet on the one that is picked.",
         groupDetail({ sheet: settleUpWho() }),
         { added: "2026-09-21" },
       ),

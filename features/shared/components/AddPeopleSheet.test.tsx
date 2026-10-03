@@ -113,6 +113,7 @@ function open() {
       settlements: [],
       undone: [],
       dropped: [],
+      unstored: new Set(),
     },
     contacts,
   );

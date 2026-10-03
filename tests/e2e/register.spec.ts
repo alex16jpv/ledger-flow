@@ -1,8 +1,12 @@
-import { expect, test, uniqueEmail } from "../fixtures";
+import { expect, type Page, test, uniqueEmail } from "../fixtures";
 import { TEST_CAPTCHA } from "../mailpit";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
+
+// A streamed form that renders again on the client keeps its hidden server copy for a frame.
+const field = (page: Page, label: string) =>
+  page.getByLabel(label, { exact: true }).filter({ visible: true });
 
 test("registration needs the consent box, then lands on onboarding", async ({ page }) => {
   await page.goto("/register");
@@ -10,8 +14,8 @@ test("registration needs the consent box, then lands on onboarding", async ({ pa
   const submit = page.getByRole("button", { name: "Create account" });
   await expect(submit).toBeDisabled();
   await page.getByRole("textbox", { name: "Name" }).fill("Register E2E");
-  await page.getByLabel("Email", { exact: true }).fill(uniqueEmail("register"));
-  await page.getByLabel("Password", { exact: true }).fill("LedgerFlow!2026");
+  await field(page, "Email").fill(uniqueEmail("register"));
+  await field(page, "Password").fill("LedgerFlow!2026");
   await expect(page.getByText(/Detected from your region/)).toBeVisible();
   await page.getByRole("checkbox").check({ force: true });
   await expect(submit).toBeEnabled();
@@ -29,8 +33,8 @@ test("a taken email shows the inline error with a sign-in link", async ({ page, 
   await request.post("/api/auth/logout", { headers: { origin: APP } });
   await page.goto("/register");
   await page.getByRole("textbox", { name: "Name" }).fill("Someone");
-  await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill("LedgerFlow!2026");
+  await field(page, "Email").fill(email);
+  await field(page, "Password").fill("LedgerFlow!2026");
   await page.getByRole("checkbox").check({ force: true });
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByText(/This email already has an account/)).toBeVisible({
@@ -62,8 +66,8 @@ test("a deleted account comes back only with the password it had", async ({ page
 
   const signUp = async (withPassword: string) => {
     await page.getByRole("textbox", { name: "Name" }).fill("After");
-    await page.getByLabel("Email", { exact: true }).fill(email);
-    await page.getByLabel("Password", { exact: true }).fill(withPassword);
+    await field(page, "Email").fill(email);
+    await field(page, "Password").fill(withPassword);
     await page.getByRole("checkbox").check({ force: true });
     await page.getByRole("button", { name: "Create account" }).click();
   };

@@ -27,6 +27,8 @@ export interface SharedLedgerRows {
   undone: Settlement[];
   // Expenses a movement took with it: the queue names them, and a mark needs their group.
   dropped: SharedExpense[];
+  // Payments still in the queue, which the server will record after every one it holds.
+  unstored: ReadonlySet<string>;
 }
 
 const totalsOf = (view: SharedGroupView): SharedGroup["totals"] => ({
@@ -71,6 +73,20 @@ async function inBatches<T, R>(rows: readonly T[], of: (row: T) => Promise<R>): 
   return done;
 }
 
+// The payments the server has not recorded yet: it will put them after every one it holds.
+export async function queuedPayments(db: VaultDb): Promise<ReadonlySet<string>> {
+  const queued = await db.getAllFromIndex(
+    "outbox",
+    "entity",
+    IDBKeyRange.bound(["settlement"], ["settlement", []]),
+  );
+  return new Set(
+    queued
+      .filter((operation) => operation.action === "create")
+      .map((operation) => operation.entityId),
+  );
+}
+
 async function fromServer(): Promise<SharedLedgerRows> {
   const groups = await drain<SharedGroupList["data"][number]>("/shared-groups", {
     includeArchived: "true",
@@ -81,15 +97,23 @@ async function fromServer(): Promise<SharedLedgerRows> {
     ),
     drain<SettlementList["data"][number]>("/settlements"),
   ]);
-  return { groups, expenses: expenses.flat(), settlements, undone: [], dropped: [] };
+  return {
+    groups,
+    expenses: expenses.flat(),
+    settlements,
+    undone: [],
+    dropped: [],
+    unstored: new Set(),
+  };
 }
 
 // The feed sends the group as stored; `totals` and `status` are worked out on every read, here too.
 async function fromMirror(db: VaultDb): Promise<SharedLedgerRows> {
-  const [groups, expenses, settlements] = await Promise.all([
+  const [groups, expenses, settlements, unstored] = await Promise.all([
     db.getAll("sharedGroups"),
     db.getAll("sharedExpenses"),
     db.getAll("settlements"),
+    queuedPayments(db),
   ]);
   const live = {
     expenses: expenses.filter((record) => record.deleted === 0).map((record) => record.row),
@@ -98,6 +122,7 @@ async function fromMirror(db: VaultDb): Promise<SharedLedgerRows> {
   const ledger = deriveShared({
     groups: groups.map((record) => record.row),
     ...live,
+    unstored,
   });
   const views = new Map(ledger.groups.map((view) => [view.id, view]));
   return {
@@ -108,6 +133,7 @@ async function fromMirror(db: VaultDb): Promise<SharedLedgerRows> {
     ...live,
     undone: settlements.filter((record) => record.deleted === 1).map((record) => record.row),
     dropped: expenses.filter((record) => record.deleted === 1).map((record) => record.row),
+    unstored,
   };
 }
 

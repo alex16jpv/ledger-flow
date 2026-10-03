@@ -41,6 +41,41 @@ export const test = base.extend({
 export const uniqueEmail = (tag: string): string =>
   `e2e-${tag}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}@ledgerflow.test`;
 
+// tools/e2e-backend.mjs seeds the 1st of this month in Bogota unless SEED_TODAY says another day,
+// and the seed describes that month from the 22nd on and the one before it otherwise.
+export interface SeedMonth {
+  key: string;
+  first: string;
+  last: string;
+  name: string;
+  short: string;
+  days: number;
+}
+
+export function seedMonth(monthsBefore = 0): SeedMonth {
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+  }).format(new Date());
+  const [year = 0, month = 0, day = 1] = (process.env.SEED_TODAY ?? `${today}-01`)
+    .split("-")
+    .map(Number);
+  const at = new Date(Date.UTC(year, month - 1 - (day >= 22 ? 0 : 1) - monthsBefore, 1));
+  const days = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 0)).getUTCDate();
+  const key = at.toISOString().slice(0, 7);
+  const label = (options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat("en-US", { timeZone: "UTC", ...options }).format(at);
+  return {
+    key,
+    first: `${key}-01`,
+    last: `${key}-${String(days)}`,
+    name: label({ month: "long", year: "numeric" }),
+    short: label({ month: "short" }),
+    days,
+  };
+}
+
 export {
   type APIRequestContext,
   type BrowserContext,

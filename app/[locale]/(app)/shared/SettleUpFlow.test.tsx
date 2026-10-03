@@ -32,12 +32,26 @@ const group: SharedGroup = {
   },
 };
 
-// Ana still owes her share; Beto handed over more than his and is owed the rest back.
-function section() {
+// Ana still owes her share; Beto paid his and fronted a line of yours.
+function section(older: ReturnType<typeof sharedExpense>[] = []) {
   return sectionOf(
     {
-      groups: [group],
+      groups: [group, { ...group, id: "g0", name: "Last month" }],
       expenses: [
+        ...older,
+        sharedExpense({
+          id: "s2",
+          amount: 40_000,
+          paidByContactId: "k2",
+          split: {
+            mode: "EQUAL",
+            guests: null,
+            shares: [
+              share({ party: "USER", amount: 20_000 }),
+              share({ contactId: "k2", amount: 20_000 }),
+            ],
+          },
+        }),
         sharedExpense({
           id: "s1",
           amount: 90_000,
@@ -55,11 +69,12 @@ function section() {
       settlements: [
         settlement({
           counterparty: { kind: "CONTACT", contactId: "k2", expenseId: null },
-          collected: 50_000,
+          collected: 30_000,
         }),
       ],
       undone: [],
       dropped: [],
+      unstored: new Set(),
     },
     [contact({ id: "k1", name: "Ana Ruiz" }), contact({ id: "k2", name: "Beto Cano" })],
   );
@@ -81,5 +96,35 @@ describe("SettleUpFlow", () => {
     const beto = screen.getByRole("button", { name: /Beto Cano/ });
     expect(within(beto).getByText("you owe")).toBeVisible();
     expect(within(beto).getByText(/20,000/)).toBeVisible();
+  });
+
+  // Each row says what its sheet proposes: what is open in this group, never the total elsewhere.
+  it("shows each person's figure in this group, in this group's direction", () => {
+    const shared = section([
+      sharedExpense({
+        id: "s0",
+        groupId: "g0",
+        date: "2026-07-10T20:00:00.000Z",
+        amount: 100_000,
+        paidByContactId: "k1",
+        split: {
+          mode: "EQUAL",
+          guests: null,
+          shares: [
+            share({ party: "USER", amount: 50_000 }),
+            share({ contactId: "k1", amount: 50_000 }),
+          ],
+        },
+      }),
+    ]);
+    const view = shared.groups.find((one) => one.group.id === "g1");
+    if (!view) throw new Error("the group has a view");
+    renderWithProviders(
+      <SettleUpFlow section={shared} view={view} parties={view.people} open onClose={vi.fn()} />,
+    );
+
+    const ana = screen.getByRole("button", { name: /Ana Ruiz/ });
+    expect(within(ana).getByText("owes you")).toBeVisible();
+    expect(within(ana).getByText(/30,000/)).toBeVisible();
   });
 });

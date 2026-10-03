@@ -192,9 +192,10 @@ that list opens the one thing that can be done to it: undoing it** (`#undo-a-pay
 
 **A payment row says what a payment knows**: which way it went, **the net that changed hands** — one
 payment can settle both directions at once, and a row has one figure — the day, and whether it was
-cash the app never saw. It does not name an account or a group, and that is not an omission — a
-payment carries neither. It **belongs to the person**, covering the oldest line first across every
-group shared with them, and the account it touched belongs to the movement it wrote. That movement's
+cash the app never saw. It does not name an account or a group, and that is not an omission — it
+carries no account, and the group it was made from only decides what it covers first. It **belongs to
+the person**: that group first, if it was made from one, then the oldest line across every group
+shared with them, and the account it touched belongs to the movement it wrote. That movement's
 own row is where both are read ([transactions.md](transactions.md)).
 
 **A person is not an account**, and this screen says so at the bottom in one line: a person has no
@@ -320,15 +321,26 @@ than somewhere accidental. This is not decoration: the server and the offline pr
 produce the same shares to the peso, or a difference appears that nobody can explain — which is what
 the parity fixtures in `lib/local/derive` exist to prevent.
 
-## Getting paid, and paying (`#settle-up`, `#settle-up-both-ways`, `#record-a-payment`, `#pay-somebody-back`)
+## Getting paid, and paying (`#settle-up`, `#settle-up-both-ways`, `#record-a-payment`, `#settle-up-beyond-the-group`, `#pay-somebody-back`)
 
 **One sheet**, `Settle up`, reached from a person's row, from a group, or from a shared expense.
 `Mark as paid` and `Record a payment` are the same sheet with the amount prefilled full or left to
-type. It settles **everything open between you and one counterparty**, and it says what it covers.
+type. It settles with **one counterparty**, and it says what it covers.
+
+**Where it is opened from decides what it proposes** (T-240, T-241). From a person (`People`), it
+proposes **everything open between you**, in every group. From a group — its own `Settle up`, a
+person's row in it, or a shared expense of it — it proposes **what is open in that group**, and the
+summary also says what the person owes **across every group**, so the bigger figure is in view but is
+never the one prefilled. Settling a new group cannot then mark an old one paid by accident. The
+amount stays editable up to the whole of what is open between you. If the group and the total point
+in opposite directions (Beto owes you here, you owe him more elsewhere), **the group decides**: the
+sheet settles the group in its direction and the total is only stated. Above that limit the field says which
+one it is: the open between you, or, when the group's figure is the limit, the open in that group. A
+person with nothing open in the group is not offered by its doors; they are settled from `People`.
 
 **A door that reaches more than one counterparty asks who first** (`#settle-up-who`): the group's own
-`Settle up`, and a shared expense's, list everybody with something open — their name and the net, with
-the word for its direction — and open the sheet on the one that is picked. A row that reaches exactly
+`Settle up`, and a shared expense's, list everybody with something open in that group — their name
+and what is open there, with the word for its direction — and open the sheet on the one that is picked. A row that reaches exactly
 one person opens the sheet straight away, because a list of one is a question with one answer.
 
 A counterparty is **a person or a guest block**. For a person that means every group; for a block it
@@ -338,9 +350,13 @@ otherwise.
 
 - **Money coming back is not income.** It arrives in an account, carries no category, and is excluded
   from Stats and from Budgets — the shape `ADJUSTMENT` already has. It is drawn neutral, never green.
-- **What a payment covers is imputed oldest expense first.** That is why somebody can read
-  `Partially paid` in a group and `Paid` on its first expense, and the sheet lists what it covers so
-  the rule is visible rather than inferred. **A payment belongs to the person, not to the expense it
+- **A payment made from a group covers that group first** (`#settle-up-beyond-the-group`), oldest
+  expense first; less than the group stays in the group, and only what is beyond it goes to what they
+  owe elsewhere, oldest expense first. **A payment made from the person has no group first**: it covers
+  the oldest expense, whichever group it is in. That is why somebody can read `Partially paid` in a
+  group and `Paid` on its first expense, and the sheet lists what it covers so the rule is visible
+  rather than inferred. The payment remembers the group it was made from, so the rule still holds
+  every time it is worked out again. **A payment belongs to the person, not to the expense it
   landed on**: deleting an expense, or editing its split, re-imputes every payment over what is left,
   and each expense it touches says so in its history. Nothing about a payment is ever undone by
   editing an expense — that is what makes the rule safe to store.
@@ -395,9 +411,9 @@ from:
 - **What does not move:** no expense leaves a group, nobody leaves a group, and **a write-off stays a
   write-off**. Undoing a payment is about one payment.
 - **What is worked out again:** everything else that person has paid is imputed again over the lines
-  still open, oldest first. That is the same rule as ever — a payment belongs to the person, not to
-  the expense it landed on — and it is why this is safe to offer rather than something to be afraid
-  of.
+  still open — each payment its own group first, if it was made from one, then oldest first. That
+  is the same rule as ever — a payment belongs to the person, not to the expense it landed on — and
+  it is why this is safe to offer rather than something to be afraid of.
 
 **A payment made from a loan paid off since cannot be undone** (T-156): giving that money back would
 leave the loan above zero. The sheet closes and the `danger` toast of the movement's detail says what
@@ -693,7 +709,7 @@ What each write touches:
 
 | Waiting in the queue                                                                                             | Marks                                                                                                                                                                                                                                                  |
 | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **A payment with somebody**, or undoing one                                                                      | That person: their net on `People`, the lead figure of their screen, their row in **every** group shared with them — a payment covers the oldest line first, across all of them — and those groups' figures                                            |
+| **A payment with somebody**, or undoing one                                                                      | That person: their net on `People`, the lead figure of their screen, their row in **every** group shared with them — a payment covers the group it was made from first, then the oldest line, across all of them — and those groups' figures           |
 | **An expense** added, recorded or re-split                                                                       | Its group: the group's row, its header and the figure of everybody in it. And **everybody in it, everywhere**: a new or re-split share changes which of their lines their payments cover first, so their nets and every group they are in move with it |
 | **A change to the group itself** — created, edited, people added or taken out, a write-off, archived or restored | The same as an expense                                                                                                                                                                                                                                 |
 | **A movement in a group** whose amount, date or description was edited, or that was deleted                      | The same as an expense: the server writes the movement's expense in the same request, so the expense's row carries the badge, or its group's figures the mark once it has left the list                                                                |

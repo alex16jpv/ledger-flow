@@ -14,7 +14,8 @@ state, what still counts as yours, and the bar of what has come back of everythi
 to you. Every figure is added in minor units (`toCents`/`fromCents`), here and on the screens that
 add or subtract two of these figures. A group's party carries its `net` within that group only; what
 a `Settle up` would move with them, surplus and other groups included, is `settleParty` in
-`settle.ts`, and the sheet that asks who to settle with shows that. Guest blocks are parties to
+`settle.ts`, which also carries that group's own figures as its `scope`, and the sheet that asks who
+to settle with shows the scope. Guest blocks are parties to
 collect from but never rows on `People`; one line closes the arithmetic there instead. See
 `DECISIONS.md` (T-121) for why this is one read and not one list per screen.
 
@@ -38,7 +39,7 @@ account or a category, so a person can be added, renamed or archived with no net
 reads the queue against the section and answers which rows **are** a queued write — they carry
 `SyncBadge` and "Saved on this device" — and which figures **include** one, which carry `Projected`.
 A write marks what it touches and nothing else: a payment marks its person and every group shared with
-them, because it covers the oldest line first across all of them; an expense or a change to a group
+them, because past the group it was made from it covers the oldest line first across all of them; an expense or a change to a group
 marks that group and everybody in it, and those people in every other group too, since a new share
 changes which lines their payments cover first; a person added or renamed marks only their own row. `Owed to
 you` and `You owe` are marked together whenever anything is. A payment undone on this device is no
@@ -53,8 +54,17 @@ resolves the default itself, and carrying one is exactly what sets `customSplit`
 loose movement creates a shared group of one, because there is one concept and not two.
 
 **Settling up.** `settle.ts` is the sheet's model: what one counterparty owes you, what you owe them,
-the open lines in both directions, and what a given amount covers — imputed **oldest expense first**
-with `impute` (`lib/local/derive`), which is the server's own rule. The sheet asks for **what changes
+the open lines in both directions, and what a given amount covers — imputed with `imputeCounterparty`
+(`lib/local/derive`), which is the server's own rule, the new payment going after every one before it.
+**Where the sheet is opened decides what it proposes** (T-241). A group's door — the group's own
+`Settle up`, a person's row in it, a shared expense of it — carries the group as the party's `scope`:
+it prefills what is open with them **in that group**, takes their direction from it even when the
+total points the other way, accepts up to everything open between you in that direction, and sends the
+group's id, so the payment covers that group first and only the rest goes to the oldest line elsewhere.
+The summary still states the total across every group, and a group's doors offer only who has
+something open in that group. **The People door has no scope**: it proposes
+everything open between you and covers the oldest line, whichever group it is in. A block of guests
+lives in one expense and never sends a group. The sheet asks for **what changes
 hands**, and both halves are recorded only once that squares it: a smaller amount covers what they owe
 you first, and what you owe them is recorded only when that is square. Paying somebody back is not a
 payment from your ledger's side — it is **one expense of yours per line**, dated that line and in a

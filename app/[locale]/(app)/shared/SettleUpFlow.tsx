@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { List, RowBody, RowButton, RowMeta, RowRight, RowTitle } from "@/components/ui/Row";
 import { Sheet } from "@/components/ui/Sheet";
 import type { GroupView, PartyView, SharedSection } from "@/features/shared/ledger";
-import { settleableAmount, settleParty } from "@/features/shared/settle";
+import { isInbound, settleableAmount, settleParty } from "@/features/shared/settle";
 
 import { SettleUpSheet } from "./SettleUpSheet";
 
@@ -57,7 +57,7 @@ export function SettleUpFlow({
                       <span>{one.name}</span>
                     </RowTitle>
                     <RowMeta
-                      items={[t(party.net >= 0 ? "people.owesYouWord" : "people.youOweWord")]}
+                      items={[t(isInbound(party) ? "people.owesYouWord" : "people.youOweWord")]}
                     />
                   </RowBody>
                   <RowRight>

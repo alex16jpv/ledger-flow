@@ -18,7 +18,7 @@ import {
 } from "@/lib/testing/vault";
 import type { SharedGroup, SharedShare, SyncSharedGroup } from "@/types/api";
 
-import { SharedExpenseCard } from "./SharedExpenseCard";
+import { owingParties, SharedExpenseCard } from "./SharedExpenseCard";
 
 const ANA = "k1";
 const fetchMock = vi.fn<typeof fetch>();
@@ -93,6 +93,7 @@ function render(collected: number) {
       groups: [withTotals(sharedGroup({ id: "g1", name: "Night out" }))],
       undone: [],
       dropped: [],
+      unstored: new Set(),
       expenses: [expense],
       settlements:
         collected > 0
@@ -152,6 +153,7 @@ function renderWithGuests() {
       groups: [withTotals(sharedGroup({ id: "g1", name: "Night out" }))],
       undone: [],
       dropped: [],
+      unstored: new Set(),
       expenses: [withGuests],
       settlements: [
         settlement({
@@ -249,5 +251,48 @@ describe("the shared card of a movement", () => {
         true,
       );
     });
+  });
+
+  // A group's door settles what is open in that group: money owed elsewhere, or paid ahead, is People's.
+  it("offers to settle only with somebody who has something open in this group", () => {
+    const elsewhere = sharedExpense({
+      id: "s2",
+      groupId: "g2",
+      date: "2026-09-01T20:00:00.000Z",
+      amount: 100_000,
+      split: expense.split,
+    });
+    const section = (collected: number) =>
+      sectionOf(
+        {
+          groups: [
+            withTotals(sharedGroup({ id: "g1", name: "Night out" })),
+            withTotals(sharedGroup({ id: "g2", name: "Trip" })),
+          ],
+          undone: [],
+          dropped: [],
+          unstored: new Set(),
+          expenses: [expense, elsewhere],
+          settlements: [
+            settlement({
+              id: "p1",
+              counterparty: { kind: "CONTACT", contactId: ANA, expenseId: null },
+              groupId: "g1",
+              collected,
+            }),
+          ],
+        },
+        [contact({ id: ANA, name: "Ana Ruiz" })],
+      );
+    const owing = (collected: number) => {
+      const shared = section(collected);
+      const view = shared.groups.find((one) => one.group.id === "g1");
+      if (!view) throw new Error("no group");
+      return owingParties(shared, view, expense).map((one) => one.name);
+    };
+
+    expect(owing(20_000)).toEqual(["Ana Ruiz"]);
+    expect(owing(50_000)).toEqual([]);
+    expect(owing(120_000)).toEqual([]);
   });
 });

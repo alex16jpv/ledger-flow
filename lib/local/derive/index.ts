@@ -26,9 +26,9 @@ export {
 export { fromCents, runningTotals, sumAmounts, toCents } from "./money";
 export { type PeriodDefinition, type ResolvedPeriod, resolvePeriod } from "./period";
 export {
+  type CounterpartyImputation,
   deriveShared,
-  type Imputation,
-  impute,
+  imputeCounterparty,
   type LedgerExpense,
   type LedgerGroup,
   type LedgerSettlement,
@@ -36,6 +36,7 @@ export {
   partyKey,
   type PersonState,
   resolveShares,
+  type SettledPayment,
   type SharedGroupView,
   type SharedLedger,
   type SharedPerson,

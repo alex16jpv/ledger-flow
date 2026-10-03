@@ -14,6 +14,7 @@ import {
 import type { SharedSplit } from "@/types/api";
 
 import { setCurrentVault } from "../repository/read";
+import { readSharedLedger } from "../repository/shared";
 import {
   accountRecord,
   profileRecord,
@@ -234,11 +235,64 @@ describe("writing a shared group with no network", () => {
 });
 
 describe("recording a payment with no network", () => {
+  // Recorded first though dated after, People's covers the oldest line; Comer's then finds only its newer one.
+  it("sends the group it was paid from, and imputes it after every payment the server holds", async () => {
+    const vault = await vaultWith();
+    for (const group of [sharedGroup({ id: "g-cine" }), sharedGroup({ id: "g-comer" })]) {
+      await vault.db.put("sharedGroups", sharedGroupRecord(group));
+    }
+    const lines = [
+      { id: "breakfast", groupId: "g-comer", date: "2026-08-02T12:00:00.000Z" },
+      { id: "cine", groupId: "g-cine", date: "2026-08-05T12:00:00.000Z" },
+      { id: "lunch", groupId: "g-comer", date: "2026-08-08T12:00:00.000Z" },
+    ];
+    for (const line of lines) {
+      await vault.db.put(
+        "sharedExpenses",
+        sharedExpenseRecord(sharedExpense({ ...line, amount: 20_000, split: equal(20_000) })),
+      );
+    }
+    await vault.db.put(
+      "settlements",
+      settlementRecord(
+        settlement({
+          id: "p-people",
+          counterparty: { kind: "CONTACT", contactId: ANA, expenseId: null },
+          collected: 10_000,
+          createdAt: "2099-01-01T00:00:00.000Z",
+        }),
+      ),
+    );
+    reportOnline(false);
+
+    const payment = await recordSettlement({
+      groupId: "g-comer",
+      counterparty: { contactId: ANA, expenseId: null },
+      date: "2026-09-20T12:00:00.000Z",
+      collected: 10_000,
+      paid: 0,
+      outsideApp: true,
+      accountId: null,
+      lines: [],
+      refunded: 0,
+    });
+
+    expect(payment.groupId).toBe("g-comer");
+    const [operation] = await pendingOperations(vault.db);
+    expect(operation?.payload).toMatchObject({ body: { groupId: "g-comer", collected: 10_000 } });
+    const rows = await readSharedLedger();
+    expect([...(rows.unstored ?? [])]).toEqual([payment.id]);
+    expect(
+      Object.fromEntries(rows.groups.map((group) => [group.id, group.totals.owedToYou])),
+    ).toEqual({ "g-cine": 10_000, "g-comer": 0 });
+  });
+
   it("projects the payment, the movement it writes and the balance it moves", async () => {
     const vault = await vaultWith();
     reportOnline(false);
 
     const payment = await recordSettlement({
+      groupId: null,
       counterparty: { contactId: ANA, expenseId: null },
       date: "2026-09-20T12:00:00.000Z",
       collected: 60_000,
@@ -276,6 +330,7 @@ describe("recording a payment with no network", () => {
     reportOnline(false);
 
     await recordSettlement({
+      groupId: null,
       counterparty: { contactId: ANA, expenseId: null },
       date: "2026-09-20T12:00:00.000Z",
       collected: 60_000,
@@ -311,6 +366,7 @@ describe("recording a payment with no network", () => {
     const vault = await vaultWith();
     reportOnline(false);
     const payment = await recordSettlement({
+      groupId: null,
       counterparty: { contactId: ANA, expenseId: null },
       date: "2026-09-20T12:00:00.000Z",
       collected: 60_000,
@@ -357,6 +413,7 @@ describe("recording a payment with no network", () => {
     );
     reportOnline(false);
     const payment = await recordSettlement({
+      groupId: null,
       counterparty: { contactId: ANA, expenseId: null },
       date: "2026-09-20T12:00:00.000Z",
       collected: 0,
@@ -396,6 +453,7 @@ describe("recording a payment with no network", () => {
     const vault = await vaultWith();
     reportOnline(false);
     const payment = await recordSettlement({
+      groupId: null,
       counterparty: { contactId: ANA, expenseId: null },
       date: "2026-09-20T12:00:00.000Z",
       collected: 60_000,
@@ -425,6 +483,7 @@ describe("recording a payment with no network", () => {
     const vault = await vaultWith();
     reportOnline(false);
     const payment = await recordSettlement({
+      groupId: null,
       counterparty: { contactId: ANA, expenseId: null },
       date: "2026-09-20T12:00:00.000Z",
       collected: 60_000,
@@ -447,6 +506,7 @@ describe("recording a payment with no network", () => {
     reportOnline(false);
 
     await recordSettlement({
+      groupId: null,
       counterparty: { contactId: ANA, expenseId: null },
       date: "2026-09-20T12:00:00.000Z",
       collected: 200_000,
@@ -487,6 +547,7 @@ describe("recording a payment with no network", () => {
     );
 
     await recordSettlement({
+      groupId: null,
       id: "p1",
       counterparty: { contactId: ANA, expenseId: null },
       date: "2026-09-20T12:00:00.000Z",
@@ -543,6 +604,7 @@ describe("what a payment puts on the wire", () => {
     answerBatch(fetchMock);
 
     await recordSettlement({
+      groupId: null,
       id: "p1",
       counterparty: { contactId: ANA, expenseId: null },
       date: "2026-09-20T12:00:00.000Z",
@@ -582,6 +644,7 @@ describe("what a payment puts on the wire", () => {
     answerBatch(fetchMock);
 
     await recordSettlement({
+      groupId: null,
       id: "p2",
       counterparty: { contactId: null, expenseId: "e4" },
       date: "2026-09-20T12:00:00.000Z",
@@ -607,6 +670,7 @@ describe("what a payment puts on the wire", () => {
     reportOnline(false);
 
     await recordSettlement({
+      groupId: null,
       counterparty: { contactId: ANA, expenseId: null },
       date: "2026-09-20T12:00:00.000Z",
       collected: 0,
@@ -632,6 +696,7 @@ describe("what a payment puts on the wire", () => {
     reportOnline(false);
 
     await recordSettlement({
+      groupId: null,
       counterparty: { contactId: ANA, expenseId: null },
       date: "2026-09-20T12:00:00.000Z",
       collected: 0,
@@ -653,6 +718,7 @@ describe("what a pull sees while the group's write is still queued", () => {
     const vault = await vaultWith();
     reportOnline(false);
     const payment = await recordSettlement({
+      groupId: null,
       counterparty: { contactId: ANA, expenseId: null },
       date: "2026-09-20T12:00:00.000Z",
       collected: 60_000,

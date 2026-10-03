@@ -758,6 +758,67 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/auth/email/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo an email change, from the old address
+         * @description "Undo the change" of `email-change-requested` (`/{locale}/undo#token=…`), for whoever holds the address the account had. It works for 7 days and once, even after the change was confirmed, and brings back an account deleted since. The account goes back to that address (confirmed), any change still waiting is cancelled, every session and device token is revoked, and the password stops working: `password-reset-after-undo` takes a code and a link to that address, which `/auth/password/reset` redeems. The undo links issued after it stop working, with the addresses they kept; an earlier one still works, so the first link an owner received always wins. No `new-sign-in` and no `password-changed` are sent.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UndoEmailChangeInput"];
+                };
+            };
+            responses: {
+                /** @description The change is undone */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EmailChangeUndone"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), or a link that no longer works: used, past its 7 days, or stopped by the undo of an earlier link (code LINK_INVALID) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many attempts from this IP (code RATE_LIMITED) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/email/verify": {
         parameters: {
             query?: never;
@@ -848,7 +909,7 @@ export type paths = {
         put?: never;
         /**
          * Login and obtain a JWT token
-         * @description Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or register and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded.
+         * @description Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or register and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded. A login whose `deviceToken` is not one this account's email gave since its last password reset, undo or logout-all emails `new-sign-in` to that email, when it is confirmed.
          */
         post: {
             parameters: {
@@ -988,7 +1049,7 @@ export type paths = {
         put?: never;
         /**
          * Revoke every session of the authenticated user
-         * @description Bumps the user's token version, so every outstanding refresh token stops working (subsequent refreshes fail with 401 REFRESH_REVOKED).
+         * @description Bumps the user's token version, so every outstanding refresh token stops working (subsequent refreshes fail with 401 REFRESH_REVOKED), and forgets every device: a login with a device token issued before emails `new-sign-in`. The answer's `deviceToken` is this device's new one, issued after that.
          */
         post: {
             parameters: {
@@ -1005,7 +1066,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Message"];
+                        "application/json": components["schemas"]["LoggedOutEverywhere"];
                     };
                 };
                 /** @description Missing, invalid or expired access token */
@@ -1106,7 +1167,7 @@ export type paths = {
         put?: never;
         /**
          * Choose a new password with the emailed code or link
-         * @description Either the address and the 6-digit code, or the link's token alone (it names the account). Sets the password, signs out every other device (every refresh and device token issued before stops working), confirms the account's email, and answers a session like a login. Using a code or the link spends every code of that request. A code takes five tries. When the account had never confirmed its email and holds accounts or transactions, the answer's `user.keepOrStartFresh` is set: ask "Keep what's in this account?" before opening anything (`POST /users/{id}/keep-or-start-fresh`).
+         * @description Either the address and the 6-digit code, or the link's token alone (it names the account). Sets the password, signs out every other device (every refresh and device token issued before stops working), confirms the account's email, and answers a session like a login. Using a code or the link spends every code of that request. A code takes five tries. When the account had never confirmed its email and holds accounts or transactions, the answer's `user.keepOrStartFresh` is set: ask "Keep what's in this account?" before opening anything (`POST /users/{id}/keep-or-start-fresh`). A change of email that was waiting is cancelled, and `password-changed` goes to the address. The code of `password-reset-after-undo` is redeemed here as well.
          */
         post: {
             parameters: {
@@ -3576,7 +3637,8 @@ export type paths = {
         put?: never;
         /**
          * Settle up with one person, or with one block of guests
-         * @description One payment, with both halves: `collected` is what came back to you and `paid` is what you handed over. **What it covers is imputed to the oldest line first**, across every group you share with them, and the answer says line by line what it covered.
+         * @description One payment, with both halves: `collected` is what came back to you and `paid` is what you handed over. **What it covers is imputed to the oldest open line first**, across every group you share with them, and the answer says line by line what it covered.
+         *     **A payment from a group (`groupId`) covers that group's open lines first**, oldest first, and only what is left goes to the oldest open lines of every other group. `groupId` is a shared group of yours, archived ones included; the person does not have to be in it any more, and a group with no line of theirs simply puts nothing first. Only a payment with a person can name one. Payments are imputed one at a time **in the order they were recorded** (`createdAt`, then `id`), so a new one never moves what an earlier one covers, except for what a refund gives back: that comes off the newest money they gave you first.
          *     **Money coming back is not income.** It arrives in `accountId` as a `SETTLEMENT`, carries no category and is out of Stats and of the budgets — the shape an `ADJUSTMENT` already has. What it covers comes off what counts as yours on each line it lands on, **in the month that line happened**, and every movement it touches says so in its history.
          *     **Paying somebody back is not that movement: it is your expense**, one for each line you cover, with that line's description, dated that line, and with the category you give — one in `categoryId` for all of them, or one per line in `categories`. The shared layer carries no categories, so there is none to take. Whatever is left of `paid` once every line you owe is covered is a **refund** of what they paid ahead, and that is a `SETTLEMENT` leaving the account: you never spent it, so it carries no category either.
          *     **`outsideApp` is cash the app never saw**: no movement is written and no balance moves, and what is owed falls all the same, because that money did change hands.
@@ -3613,7 +3675,7 @@ export type paths = {
                         "application/json": components["schemas"]["SettlementResult"];
                     };
                 };
-                /** @description Validation error (code VALIDATION), more than you owe them and more than they paid ahead (code SETTLEMENT_OVER_PAID), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), a date more than 24h ahead (code FUTURE_DATE), an archived category (code CATEGORY_ARCHIVED) or one of another type (code CATEGORY_TYPE_MISMATCH) */
+                /** @description Validation error (code VALIDATION, also for `groupId` beside `expenseId`), more than you owe them and more than they paid ahead (code SETTLEMENT_OVER_PAID), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), a date more than 24h ahead (code FUTURE_DATE), an archived category (code CATEGORY_ARCHIVED) or one of another type (code CATEGORY_TYPE_MISMATCH) */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -3631,7 +3693,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description The contact, the expense or the account is not the caller's (uniform for missing and not owned) */
+                /** @description The contact, the expense, the shared group (`groupId`) or the account is not the caller's (uniform for missing and not owned) */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -6246,7 +6308,7 @@ export type paths = {
         };
         /**
          * Update a user
-         * @description Changing `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again. `currency` can only change while the user has no accounts (mono-currency mode). The email does not change here: a body with `email` is refused whole, before its password or its fields are checked, and nothing is written; it changes through `POST /users/{id}/email-change`, once the new address confirms it.
+         * @description Changing `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again — cancels a change of email that waits, and emails `password-changed` when the account's email is confirmed. `currency` can only change while the user has no accounts (mono-currency mode). The email does not change here: a body with `email` is refused whole, before its password or its fields are checked, and nothing is written; it changes through `POST /users/{id}/email-change`, once the new address confirms it.
          */
         put: {
             parameters: {
@@ -6314,7 +6376,7 @@ export type paths = {
         post?: never;
         /**
          * Delete a user
-         * @description Requires `currentPassword`: a hijacked 15-minute access token must not be able to delete the account. Soft delete: the account and its financial history are kept, and registering again with the same email and the password it had reactivates it.
+         * @description Requires `currentPassword`: a hijacked 15-minute access token must not be able to delete the account. Soft delete: the account and its financial history are kept, and registering again with the same email and the password it had reactivates it. Emails `account-deleted` when the email is confirmed. An undo link sent before (7 days) still brings the account back, at the address it went to.
          */
         delete: {
             parameters: {
@@ -6395,7 +6457,7 @@ export type paths = {
         put?: never;
         /**
          * Ask to move the account to a new email
-         * @description Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION).
+         * @description Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION). When the account's email is confirmed, `email-change-requested` goes to it too, naming the new address, with "Undo the change" (`/{locale}/undo#token=…`, POST /auth/email/undo) for 7 days, and the change is saved only once that notice went (an old address that refuses all email does not stop it); while that link works the old address stays the account's, and another account's register or change of email to it is EMAIL_TAKEN.
          */
         post: {
             parameters: {
@@ -6467,7 +6529,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Too many requests (code RATE_LIMITED; `Retry-After` in seconds): password guesses for this account, from this IP, from this device or IP in the hour, for this account (five verification or email-change emails a day), or for this address — one a minute and five a day */
+                /** @description Too many requests (code RATE_LIMITED; `Retry-After` in seconds): password guesses for this account, from this IP, from this device or IP in the hour, for this account (five verification or email-change emails a day), or for this address — one a minute and five a day — which counts the old address's `email-change-requested` too, as does the day's cap of security emails. Nothing was saved */
                 429: {
                     headers: {
                         [name: string]: unknown;
@@ -6476,7 +6538,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description The email could not be sent (code EMAIL_SEND_FAILED), or the captcha could not be checked (code CAPTCHA_UNAVAILABLE). Nothing was saved */
+                /** @description The email to the new address, or the notice to the confirmed old one, could not be sent (code EMAIL_SEND_FAILED), or the captcha could not be checked (code CAPTCHA_UNAVAILABLE). Nothing was saved */
                 503: {
                     headers: {
                         [name: string]: unknown;
@@ -7027,6 +7089,8 @@ export type components = {
             contactId?: string;
             /** Format: uuid */
             expenseId?: string;
+            /** Format: uuid */
+            groupId?: string | null;
             /** Format: date-time */
             date: string;
             collected?: number;
@@ -7148,6 +7212,15 @@ export type components = {
             /** @description Seconds before Resend can go again. */
             resendAfterSeconds: number;
             emailChange: components["schemas"]["EmailChange"];
+        };
+        EmailChangeUndone: {
+            /**
+             * Format: email
+             * @description The address the account is back at: the one the link reached, where the code to choose a new password went.
+             */
+            email: string;
+            /** @description Whether that code was accepted for delivery (or may still arrive). False when it could not go: Forgot your password? for this address is the way in. */
+            codeSent: boolean;
         };
         ErrorResponse: {
             /** @example NotFoundError */
@@ -7276,6 +7349,11 @@ export type components = {
             locale: "en" | "es";
             currency: string;
             timezone: string;
+        };
+        LoggedOutEverywhere: {
+            message: string;
+            /** @description This device's new device token, issued after every earlier one was forgotten: keep it in place of the old one. Absent when the account is gone. */
+            deviceToken?: string;
         };
         LoginInput: {
             /** Format: email */
@@ -7480,6 +7558,11 @@ export type components = {
                  */
                 expenseId: string | null;
             };
+            /**
+             * Format: uuid
+             * @description The shared group it was paid from, whose open lines it covered before any other; null for a payment from People and for older payments.
+             */
+            groupId: string | null;
             /** Format: date-time */
             date: string;
             /** @description What came back to you. */
@@ -7495,7 +7578,10 @@ export type components = {
              * @description Set when the payment was undone. A read never answers one, but the change feed does: it is how a device learns the payment is gone.
              */
             deletedAt: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When it was recorded, which is the order payments are imputed in (the id breaks a tie), never `date`.
+             */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
@@ -7519,7 +7605,7 @@ export type components = {
         };
         SettlementResult: {
             settlement: components["schemas"]["Settlement"];
-            /** @description Oldest line first, which is the order it was imputed in. */
+            /** @description In the order it was imputed: the lines of the group it was paid from first, then the rest, each oldest line first. */
             covered: components["schemas"]["SettlementCoverage"][];
             /** @description What you handed over that covered no line: their money going back to them. */
             refunded: number;
@@ -8087,6 +8173,9 @@ export type components = {
             /** @description The other rows this write rewrote, empty when it touched none. A queued write on one of them guarded by `previousUpdatedAt` may be guarded by `updatedAt` instead: nothing else moved it in between. */
             restamped: components["schemas"]["Restamp"][];
         };
+        UndoEmailChangeInput: {
+            token: string;
+        };
         UpdateAccountInput: {
             name?: string;
             /** @enum {string} */
@@ -8315,6 +8404,7 @@ export type DeleteUserInput = components['schemas']['DeleteUserInput'];
 export type EmailChange = components['schemas']['EmailChange'];
 export type EmailChangeConfirmed = components['schemas']['EmailChangeConfirmed'];
 export type EmailChangeSent = components['schemas']['EmailChangeSent'];
+export type EmailChangeUndone = components['schemas']['EmailChangeUndone'];
 export type ErrorResponse = components['schemas']['ErrorResponse'];
 export type ForgotPasswordAccepted = components['schemas']['ForgotPasswordAccepted'];
 export type ForgotPasswordInput = components['schemas']['ForgotPasswordInput'];
@@ -8325,6 +8415,7 @@ export type JoinedGroup = components['schemas']['JoinedGroup'];
 export type JoinedGroupList = components['schemas']['JoinedGroupList'];
 export type JoinedParticipant = components['schemas']['JoinedParticipant'];
 export type KeepOrStartFreshInput = components['schemas']['KeepOrStartFreshInput'];
+export type LoggedOutEverywhere = components['schemas']['LoggedOutEverywhere'];
 export type LoginInput = components['schemas']['LoginInput'];
 export type Message = components['schemas']['Message'];
 export type MessageWithRestamps = components['schemas']['MessageWithRestamps'];
@@ -8380,6 +8471,7 @@ export type Transaction = components['schemas']['Transaction'];
 export type TransactionConflict = components['schemas']['TransactionConflict'];
 export type TransactionList = components['schemas']['TransactionList'];
 export type TransactionWithRestamps = components['schemas']['TransactionWithRestamps'];
+export type UndoEmailChangeInput = components['schemas']['UndoEmailChangeInput'];
 export type UpdateAccountInput = components['schemas']['UpdateAccountInput'];
 export type UpdateBudgetInput = components['schemas']['UpdateBudgetInput'];
 export type UpdateCategoryInput = components['schemas']['UpdateCategoryInput'];
