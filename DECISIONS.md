@@ -12,8 +12,10 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   still owe her net (`deriveJoined`). It was gross: with a line of yours in the group it read
   `$0 paid of $39,166` under a header saying you owe her `$32,100`.
 - **Why:** the owner chose net for his own groups (T-243) and for this one when asked; the header is net.
-- **Consequence:** the bar is drawn only while you owe her net or have paid something net, like the
-  owner's.
+- **Consequence:** the bar is drawn only while you owe her net or have paid something net, its total
+  keeps what she wrote off as the owner's does, and your state (on the row and on your own line under
+  People) reads net too: square with her is `Paid`, not `Partially paid`. Money she handed you first is
+  netted against what you send, the same price the owner's bar pays.
 
 ## 2026-10-03 · A group's bar counts what came back net, like what is still owed (T-243)
 
@@ -28,7 +30,10 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **Alternative:** gross from the start (`$0 paid of $78,332`). Rejected by him: it is not the money
   that reaches your account, and the sentence under the bar is net.
 - **Consequence:** the total only moves when the debt does (a line, a split, a write-off, or paying
-  somebody a line they fronted), never because somebody paid. `countsAsYours` still uses the gross
+  somebody a line they fronted before they pay you). That last one is the price of net: money you
+  handed them first is netted against what they send, so the total grows when you pay and comes back
+  when they do. Counting what came back without that netting breaks the common case instead: a
+  two-way settle-up records their whole share and yours, and only the difference moves. `countsAsYours` still uses the gross
   figure, because it is about the movements.
 
 ## 2026-10-03 · A payment names the groups it covered, not every group shared with the person (T-242)

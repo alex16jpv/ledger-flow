@@ -92,6 +92,66 @@ describe("deriveJoined", () => {
     expect(bar(80000)).toEqual({ paidToOwner: 50000, owedToOwner: 50000 });
   });
 
+  const twoWays = (yours: number, theirs: number) =>
+    deriveJoined(
+      joinedGroup(),
+      [
+        line("food", [share(null, 80000), share("k2", 80000, yours)]),
+        line("taxi", [share(null, 30000, theirs), share("k2", 30000)], { paidByContactId: "k2" }),
+      ],
+      [],
+    );
+
+  it("reads a partial payment, and somebody square, net of what she owes you", () => {
+    expect(twoWays(30000, 0)).toMatchObject({
+      paidToOwner: 30000,
+      owedToOwner: 50000,
+      state: "PARTIALLY_PAID",
+    });
+    // 50,000 paid of her 80,000 with her 30,000 still open: square, so Paid, not Partially paid.
+    const square = twoWays(50000, 0);
+    expect(square).toMatchObject({ net: 0, state: "PAID" });
+    expect(square.people.find((one) => one.contactId === "k2")?.state).toBe("PAID");
+  });
+
+  it("draws no bar while she owes you more than you owe her", () => {
+    const standing = deriveJoined(
+      joinedGroup(),
+      [
+        line("food", [share(null, 30000), share("k2", 30000)]),
+        line("taxi", [share(null, 100000), share("k2", 100000)], { paidByContactId: "k2" }),
+      ],
+      [],
+    );
+    expect(standing).toMatchObject({ paidToOwner: 0, owedToOwner: 0 });
+  });
+
+  it("keeps what she wrote off in the bar's total, like the owner's", () => {
+    const group = joinedGroup({
+      writeOffs: [
+        {
+          kind: "CONTACT",
+          contactId: "k2",
+          expenseId: null,
+          amount: 60000,
+          at: "2026-09-22T10:00:00.000Z",
+        },
+      ],
+    });
+    const food = line("food", [share(null, 80000), share("k2", 80000, 20000)]);
+    expect(deriveJoined(group, [food], [])).toMatchObject({
+      paidToOwner: 20000,
+      owedToOwner: 80000,
+      state: "WRITTEN_OFF",
+    });
+  });
+
+  // Decided net: money she handed you first is netted against what you send, so the total moves then.
+  it("nets what she paid you first against what you send", () => {
+    expect(twoWays(0, 30000)).toMatchObject({ paidToOwner: 0, owedToOwner: 80000 });
+    expect(twoWays(50000, 30000)).toMatchObject({ paidToOwner: 20000, owedToOwner: 50000 });
+  });
+
   it("gives what she wrote off no line to add, and moves nothing", () => {
     const group = joinedGroup({
       writeOffs: [

@@ -127,6 +127,18 @@ export function deriveJoined(
   const mine = me === null ? null : personOf(me);
   const net = toCents(mine?.open ?? 0) - ownerOwes;
   const paidNet = Math.max(0, toCents(mine?.paid ?? 0) - paidBackByOwner + Math.min(0, net));
+  const forgivenMine = me === null ? 0 : (people.get(me)?.open ?? 0) - toCents(mine?.open ?? 0);
+  const netState: PersonState = !mine
+    ? "PAID"
+    : mine.state === "WRITTEN_OFF"
+      ? "WRITTEN_OFF"
+      : net <= 0
+        ? mine.share > 0
+          ? "PAID"
+          : (mine.state ?? "PAID")
+        : paidNet > 0
+          ? "PARTIALLY_PAID"
+          : "NOT_PAID";
   const lines = rows.map((expense): JoinedLine => {
     const share = shareOf(expense, me);
     const yours = share ? toCents(share.amount) : 0;
@@ -170,15 +182,17 @@ export function deriveJoined(
     ownerOwes: fromCents(ownerOwes),
     net: fromCents(net),
     paidToOwner: fromCents(paidNet),
-    owedToOwner: fromCents(paidNet + Math.max(0, net)),
-    state: mine?.state ?? "PAID",
+    owedToOwner: fromCents(paidNet + Math.max(0, net) + forgivenMine),
+    state: netState,
     dateFrom: stamp(dates[0]),
     dateTo: stamp(dates.at(-1)),
     lines,
     people: group.participants.map((participant) =>
       participant.contactId === null
         ? { contactId: null, share: fromCents(sharesOfOwner(rows)), paid: 0, open: 0, state: null }
-        : personOf(participant.contactId),
+        : participant.contactId === me
+          ? { ...personOf(participant.contactId), state: netState }
+          : personOf(participant.contactId),
     ),
     ready: lines.filter((line) => line.state === "PAID").map((line) => line.id),
   };
