@@ -3,6 +3,7 @@ import type { SessionUser } from "@/lib/session/api";
 import type {
   EmailVerified,
   ForgotPasswordAccepted,
+  PasswordResetDone,
   ResetPasswordInput,
   RestoreLinkUsed,
   SignUpInput,
@@ -54,7 +55,7 @@ export function requestResetCode(email: string, captcha: string): Promise<Forgot
   });
 }
 
-export type ResetSession = SessionUser & { restored?: boolean };
+export type ResetSession = SessionUser & Partial<Pick<PasswordResetDone, "restored">>;
 
 export function resetPassword(input: ResetPasswordInput): Promise<ResetSession> {
   return api<ResetSession>("/auth/reset", { method: "POST", body: input });

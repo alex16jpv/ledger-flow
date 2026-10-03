@@ -33,7 +33,7 @@ import { useRequestEmailChange } from "@/lib/session/email-change";
 import { emailFailure, RETRY_AFTER_FALLBACK_SECONDS } from "@/lib/session/email-failure";
 import { sessionKeys } from "@/lib/session/keys";
 
-import { fetchSessionUser } from "../hooks";
+import { failureKey, fetchSessionUser } from "../hooks";
 import { changeEmailSchema, type ChangeEmailValues } from "../schemas";
 import { ConfirmEmailForm, type Final, openingOf } from "./ConfirmEmailForm";
 import { PasswordInput } from "./PasswordInput";
@@ -61,16 +61,16 @@ export function ConfirmToContinueView({ onSignOut }: ConfirmToContinueViewProps)
   useEffect(() => {
     if (unauthorized) {
       router.replace(`${LOGIN_PATH}?${REAUTH_PARAM}=1&next=${CONFIRM_TO_CONTINUE_PATH}`);
-    } else if (offline || (user && !user.emailConfirmationRequired)) {
+    } else if ((offline && !user) || (user && !user.emailConfirmationRequired)) {
       router.replace(APP_HOME_PATH);
     }
   }, [unauthorized, offline, user, router]);
 
-  if (session.isError && !unauthorized && !offline) {
+  if (session.isError && !user && !unauthorized && !offline) {
     return (
       <div className="flex flex-col gap-5">
         <AuthHeading title={t("auth.confirmRequired.title")} />
-        <Alert tone="danger">{t("auth.sendFailed")}</Alert>
+        <Alert tone="danger">{t(failureKey(session.error))}</Alert>
         <Button size="lg" block onClick={() => void session.refetch()}>
           {t("common.retry")}
         </Button>

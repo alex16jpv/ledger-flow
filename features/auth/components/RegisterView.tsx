@@ -12,10 +12,10 @@ import { isAppLocale } from "@/lib/i18n/routing";
 import type { PendingSignUp } from "../api";
 import { useForgetPendingSignUp, usePendingSignUp } from "../hooks";
 import { RegisterCodeForm } from "./RegisterCodeForm";
-import { RegisterForm, type TypedSignUp } from "./RegisterForm";
+import { RegisterForm, type SignUpNotice, type TypedSignUp } from "./RegisterForm";
 
 type Stage =
-  | { kind: "form"; typed?: Partial<TypedSignUp>; expired?: boolean }
+  | { kind: "form"; typed?: Partial<TypedSignUp>; notice?: SignUpNotice }
   | { kind: "code"; pending: PendingSignUp; typed: Partial<TypedSignUp> };
 
 const bold = (chunks: React.ReactNode) => <b className="font-semibold text-text">{chunks}</b>;
@@ -60,7 +60,10 @@ export function RegisterView() {
             setStage({ kind: "form", typed: current.typed });
           }}
           onExpired={() => {
-            setStage({ kind: "form", typed: current.typed, expired: true });
+            setStage({ kind: "form", typed: current.typed, notice: "expired" });
+          }}
+          onTaken={() => {
+            setStage({ kind: "form", typed: current.typed, notice: "taken" });
           }}
           onDone={() => {
             router.replace(ONBOARDING_PATH);
@@ -76,7 +79,7 @@ export function RegisterView() {
       <RegisterForm
         locale={isAppLocale(locale) ? locale : "en"}
         typed={current.typed}
-        expired={current.expired}
+        notice={current.notice}
         onSent={(pending, typed) => {
           setStage({ kind: "code", pending, typed });
         }}

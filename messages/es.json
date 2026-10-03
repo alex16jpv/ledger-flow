@@ -182,7 +182,11 @@
         "title": "Ese registro ya terminó.",
         "body": "Dura 24 horas, y un Crear cuenta más reciente con el mismo correo lo reemplaza. Vuelve a llenar el formulario para recibir un código nuevo."
       },
-      "offline": "Crear tu cuenta necesita conexión."
+      "offline": "Crear tu cuenta necesita conexión.",
+      "taken": {
+        "title": "Ese correo ya tiene una cuenta.",
+        "body": "Se creó mientras esperabas tu código. Entra con él, o usa aquí otro correo."
+      }
     },
     "offline": "Sin conexión.",
     "sendFailed": "Algo falló de nuestro lado. No cambió nada: inténtalo de nuevo.",

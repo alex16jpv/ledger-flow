@@ -69,6 +69,23 @@ export async function readVerifyEmail(
   return { code, link };
 }
 
+interface Listed {
+  messages: { Subject: string; Created: string }[];
+}
+
+// The subjects of what reached an address since a moment: other specs email the same addresses.
+export async function subjectsSince(
+  request: APIRequestContext,
+  to: string,
+  since: number,
+): Promise<string[]> {
+  const response = await request.get(
+    `${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`,
+  );
+  const { messages } = (await response.json()) as Listed;
+  return messages.filter((message) => Date.parse(message.Created) >= since).map((m) => m.Subject);
+}
+
 export async function readRestoreLink(request: APIRequestContext, to: string): Promise<string> {
   const link = linkIn(await readLatestText(request, to, "restore"), "restore");
   if (!link) throw new Error(`no restore link in the email to ${to}`);

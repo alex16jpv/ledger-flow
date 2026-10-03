@@ -1,5 +1,5 @@
 import { expect, type Page, test, uniqueEmail } from "../fixtures";
-import { readVerifyEmail, signUpWithCode } from "../mailpit";
+import { readVerifyEmail, signUpWithCode, subjectsSince } from "../mailpit";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -54,11 +54,13 @@ test("Create account sends a code, and the account exists once it is typed", asy
 // The seed's address has an account and no sign-up of its own a minute ago, so its brake is free.
 test("an address with an account reads the same, and no code it can type creates anything", async ({
   page,
+  request,
 }) => {
   test.skip(
     test.info().project.name === "mobile",
     "one sign-up a minute per address, and both projects would ask for the same one",
   );
+  const since = Date.now() - 1_000;
   await page.goto("/register");
   await fillTheForm(page, SEED_EMAIL, "Someone-else!2026");
   await page.getByRole("button", { name: "Create account" }).click();
@@ -67,6 +69,12 @@ test("an address with an account reads the same, and no code it can type creates
   });
   await expect(page.getByText(SEED_EMAIL)).toBeVisible();
   await expect(page.getByText(/already has an account/)).toHaveCount(0);
+  await expect
+    .poll(() => subjectsSince(request, SEED_EMAIL, since))
+    .toContain("You already have a Ledger Flow account");
+  expect(await subjectsSince(request, SEED_EMAIL, since)).not.toContain(
+    "Finish creating your Ledger Flow account",
+  );
 
   await page.getByLabel("6-digit code").fill("000000");
   await page.getByRole("button", { name: "Create account" }).click();

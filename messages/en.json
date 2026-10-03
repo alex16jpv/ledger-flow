@@ -182,7 +182,11 @@
         "title": "That sign-up is over.",
         "body": "It lasts 24 hours, and a newer Create account with the same email replaces it. Fill in the form again to get a new code."
       },
-      "offline": "Creating your account needs a connection."
+      "offline": "Creating your account needs a connection.",
+      "taken": {
+        "title": "That email has an account now.",
+        "body": "It was created while you were waiting for your code. Sign in with it, or use another email here."
+      }
     },
     "offline": "You’re offline.",
     "sendFailed": "Something went wrong on our side. Nothing changed: try again.",

@@ -70,7 +70,7 @@
 
 ## Finish creating your account
 
-`#create-account-code`, `#create-account-wrong-code`, `#create-account-expired`
+`#create-account-code`, `#create-account-wrong-code`, `#create-account-expired`, `#create-account-taken`
 
 The step after Create account, in the same frame and at the same address, so a reload lands on it again
 for as long as its 24 hours run.
@@ -102,6 +102,10 @@ for as long as its 24 hours run.
   newer Create account with the same email replaces it. Fill in the form again to get a new code." A
   reload after the 24 hours lands on the plain form, because the browser forgot the sign-up with them.
   A code typed for a sign-up that is over is a bad code like any other.
+- **The email has an account now** (`#create-account-taken`, `EMAIL_TAKEN` on the code): another account got the
+  address between Create account and the code — only whoever holds the code can learn it. The step goes back
+  to the form with the email in place and a `warning` alert, "**That email has an account now.** It was created
+  while you were waiting for your code. Sign in with it, or use another email here."
 
 ## Restore your account?
 

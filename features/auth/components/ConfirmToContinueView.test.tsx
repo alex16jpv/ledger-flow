@@ -89,9 +89,13 @@ function renderView(onSignOut = vi.fn()) {
 
 describe("ConfirmToContinueView", () => {
   it("sends a code, confirms it and lets the account back in", async () => {
-    serve(me(), {
+    let user = me();
+    serve(() => user, {
       "/api/auth/resend": () => json({ resendAfterSeconds: 60 }, { status: 202 }),
-      "/api/auth/verify": () => json({ message: "Email confirmed" }),
+      "/api/auth/verify": () => {
+        user = me({ emailVerified: true, emailConfirmationRequired: false, confirmBy: null });
+        return json({ message: "Email confirmed" });
+      },
     });
     renderView();
     expect(
@@ -184,6 +188,26 @@ describe("ConfirmToContinueView", () => {
     const onSignOut = renderView();
     await userEvent.click(await screen.findByRole("button", { name: "Sign out" }));
     expect(onSignOut).toHaveBeenCalledWith(expect.objectContaining({ id: "u1" }), 0);
+  });
+
+  it("stays when the connection drops after the server said the step is needed", async () => {
+    serve(me());
+    renderView();
+    await screen.findByRole("heading", { name: "Confirm your email to continue" });
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    reportOnline(false);
+    window.dispatchEvent(new Event("focus"));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Confirm your email to continue" })).toBeVisible();
+  });
+
+  it("opens the app when it cannot ask and knows nothing yet", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    renderView();
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith("/home");
+    });
   });
 
   it("goes back to the app when the account no longer needs it", async () => {

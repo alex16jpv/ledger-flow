@@ -179,7 +179,7 @@ describe("RegisterForm", () => {
 
   it("says a sign-up that is over and comes back with what was typed, but not the password", async () => {
     renderForm(vi.fn(), {
-      expired: true,
+      notice: "expired",
       typed: { name: "John Doe", email: "john.doe@example.com" },
     });
     expect(await screen.findByText("That sign-up is over.")).toBeInTheDocument();

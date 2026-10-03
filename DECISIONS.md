@@ -25,6 +25,10 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   so a deadline that passes with the app open closes the door at the next request instead of at the
   next `/me`. The step reuses the code form of the confirm sheet, split out of it
   (`ConfirmEmailForm`).
+- **The step stays once the server has said it is needed**, even if the connection drops while it is on
+  screen: only a visit that cannot ask and knows nothing yet goes to the app, which opens the copy as it
+  would offline. And a burst of `EMAIL_CONFIRMATION_REQUIRED` asks `/me` once (`cancelRefetch: false`),
+  not once per request. Both came from the independent review.
 - **The outbox holds its queue on `EMAIL_CONFIRMATION_REQUIRED`** as it does on a dead session: paused,
   nothing undone and nothing retried. On the ordinary routes any other 4xx undoes the write, and the
   owner's decision 17 is that the device's changes wait and sync once the email is confirmed.

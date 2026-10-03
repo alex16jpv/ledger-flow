@@ -139,6 +139,19 @@ describe("RegisterView", () => {
     expect(token).toHaveBeenCalledTimes(1);
   });
 
+  it("goes back to the form when the email got an account while the code was on its way", async () => {
+    serve({
+      "GET /api/auth/sign-up": () => json(PENDING),
+      "POST /api/auth/sign-up/confirm": () =>
+        json({ code: "EMAIL_TAKEN", message: "taken" }, { status: 409 }),
+    });
+    renderView();
+    await userEvent.type(await screen.findByLabelText("6-digit code"), "482719");
+    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    expect(await screen.findByText("That email has an account now.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toHaveValue(EMAIL);
+  });
+
   it("starts the countdown again after a Resend", async () => {
     serve({
       "GET /api/auth/sign-up": () => json(PENDING),

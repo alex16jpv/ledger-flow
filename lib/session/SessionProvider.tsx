@@ -84,10 +84,9 @@ export function SessionProvider({
     };
   }, []);
 
-  // The deadline can pass with the app open: any request that meets it has the profile read again.
   useEffect(() => {
     setConfirmationRequiredHandler(() => {
-      void queryClient.invalidateQueries({ queryKey: sessionKeys.me() });
+      void queryClient.invalidateQueries({ queryKey: sessionKeys.me() }, { cancelRefetch: false });
     });
     return () => {
       setConfirmationRequiredHandler(null);

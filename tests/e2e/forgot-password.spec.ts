@@ -21,7 +21,10 @@ async function emptyAccount(request: APIRequestContext, tag: string): Promise<st
 
 async function askForCode(page: Page, email: string): Promise<void> {
   await page.getByRole("button", { name: "Send code" }).click();
-  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+  // The server holds every answer to a floor of about two seconds, which a loaded run stretches.
+  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(page.getByText(email)).toBeVisible();
 }
 

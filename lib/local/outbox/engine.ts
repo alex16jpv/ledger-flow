@@ -56,7 +56,6 @@ export type DrainReport = Map<number, DrainOutcome>;
 
 export const EMPTY_REPORT: DrainReport = new Map();
 
-// T-239: past the deadline the server says no to the account, not to the write, and the queue waits.
 const isConfirmationRequired = (error: unknown): boolean =>
   error instanceof ApiError && error.code === "EMAIL_CONFIRMATION_REQUIRED";
 
@@ -91,7 +90,6 @@ const isIdTaken = (error: unknown): boolean =>
 const isUnauthorized = (error: unknown): boolean =>
   error instanceof ApiError && error.status === 401;
 
-// Neither a dead session nor a closed door is a slow network: retrying would only knock again.
 const holdsTheQueue = (error: unknown): boolean =>
   isUnauthorized(error) || isConfirmationRequired(error);
 

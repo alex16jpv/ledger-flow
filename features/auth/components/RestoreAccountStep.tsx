@@ -9,7 +9,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { RateLimitAlert } from "@/components/ui/RateLimitAlert";
 import { Tile } from "@/components/ui/Tile";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError, type ErrorMessageKey, presentError } from "@/lib/api/errors";
 import { useCalendarDay } from "@/lib/i18n/useCalendarDay";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOffline } from "@/lib/network/useOffline";
@@ -19,7 +19,7 @@ import type { DeletedAccount } from "@/types/api";
 import { retryAfterOf, useRestoreDeletedAccount } from "../hooks";
 import type { LoginValues } from "../schemas";
 
-type Failure = "wrongPassword" | "failed" | null;
+type Failure = "wrongPassword" | "failed" | ErrorMessageKey | null;
 
 const bold = (chunks: React.ReactNode) => <b className="font-semibold text-text">{chunks}</b>;
 
@@ -38,6 +38,7 @@ export function RestoreAccountStep({
 }: RestoreAccountStepProps) {
   const t = useTranslations("auth.login");
   const tAuth = useTranslations("auth");
+  const tRoot = useTranslations();
   const offline = useOffline();
   const calendarDay = useCalendarDay();
   const restore = useRestoreDeletedAccount();
@@ -51,8 +52,9 @@ export function RestoreAccountStep({
     } catch (error) {
       const wait = retryAfterOf(error);
       if (wait !== null) setRetryAfter(wait);
-      else
-        setFailure(error instanceof ApiError && error.status === 401 ? "wrongPassword" : "failed");
+      else if (error instanceof ApiError && error.status === 401) setFailure("wrongPassword");
+      else if (error instanceof ApiError && error.status >= 500) setFailure("failed");
+      else setFailure(presentError(error).messageKey);
     }
   };
 
@@ -79,6 +81,9 @@ export function RestoreAccountStep({
       )}
       {failure === "wrongPassword" && <Alert tone="danger">{t("invalidCredentials")}</Alert>}
       {failure === "failed" && <Alert tone="danger">{t("restore.failed")}</Alert>}
+      {failure !== null && failure !== "failed" && failure !== "wrongPassword" && (
+        <Alert tone="danger">{tRoot(failure)}</Alert>
+      )}
       {retryAfter !== null && (
         <RateLimitAlert
           retryAfterSeconds={retryAfter}

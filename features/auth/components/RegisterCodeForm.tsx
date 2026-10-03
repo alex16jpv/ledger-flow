@@ -34,6 +34,7 @@ interface RegisterCodeFormProps {
   resendAfterSeconds: number;
   onChangeEmail: () => void;
   onExpired: () => void;
+  onTaken: () => void;
   onDone: (session: SessionUser) => void;
 }
 
@@ -41,6 +42,7 @@ export function RegisterCodeForm({
   resendAfterSeconds,
   onChangeEmail,
   onExpired,
+  onTaken,
   onDone,
 }: RegisterCodeFormProps) {
   const t = useTranslations();
@@ -76,6 +78,7 @@ export function RegisterCodeForm({
       if (wait !== null) setConfirmRetryAfter(wait);
       else if (error instanceof ApiError && error.code === "SIGN_UP_CODE_INVALID")
         setRejectedCode(typed);
+      else if (error instanceof ApiError && error.code === "EMAIL_TAKEN") onTaken();
       else setFailure(failureKey(error));
     }
   });

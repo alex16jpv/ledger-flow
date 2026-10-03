@@ -218,7 +218,9 @@ async function signedIn(
   { upstream, requestId }: Forwarded,
   extraCookies: CookieSpec[] = [],
 ): Promise<NextResponse> {
-  const tokens = await readBackendJson<PasswordResetDone>(upstream);
+  const tokens = await readBackendJson<AuthTokens & Partial<Pick<PasswordResetDone, "restored">>>(
+    upstream,
+  );
   if (!tokens) return emptyAnswer(path);
   const extra = typeof tokens.restored === "boolean" ? { restored: tokens.restored } : {};
   const response = sessionResponse(tokens, tokens.user, upstream.status, requestId, extra);
@@ -262,7 +264,6 @@ function signUpExpired(): NextResponse {
 const typedEmail = (body: unknown): string =>
   isFields(body) && typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
 
-// The token never reaches the page: it stays in this browser's cookie, with the address it went to.
 export function startSignUp(request: NextRequest): Promise<NextResponse> {
   return withBackend(async () => {
     const forwarded = await forwardAuthRequest("/auth/sign-up", request, { sendDeviceToken: true });
@@ -328,7 +329,6 @@ export function resendSignUp(request: NextRequest): Promise<NextResponse> {
   });
 }
 
-// A browser that forgot its sign-up holds a code for nothing: the one answer of every bad code.
 export function confirmSignUp(request: NextRequest): Promise<NextResponse> {
   return withBackend(async () => {
     const denied = untrustedOriginResponse(request);

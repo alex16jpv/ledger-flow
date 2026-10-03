@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
-import { ApiError, type ErrorMessageKey, presentError } from "@/lib/api/errors";
+import { ApiError, type ErrorMessageKey, NetworkError, presentError } from "@/lib/api/errors";
 import { noteSessionStarted, withFreshSession } from "@/lib/api/refresh";
 import { readSessionMarker } from "@/lib/auth/marker";
 import { APP_HOME_PATH, CONFIRM_TO_CONTINUE_PATH } from "@/lib/auth/routes";
@@ -42,7 +42,7 @@ export const RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
 export type FailureKey = "auth.sendFailed" | ErrorMessageKey;
 
 export function failureKey(error: unknown): FailureKey {
-  return error instanceof ApiError && error.status < 500
+  return (error instanceof ApiError && error.status < 500) || error instanceof NetworkError
     ? presentError(error).messageKey
     : "auth.sendFailed";
 }
@@ -72,7 +72,6 @@ export function useRestoreDeletedAccount() {
   return useMutation({ mutationFn: restoreDeletedAccount, onSuccess: syncFromNowOn });
 }
 
-// An account past its deadline signs in as ever, and the frame's step is the only door it has.
 export function pathAfterSignIn(user: SessionProfile, next: string): string {
   return user.emailConfirmationRequired ? CONFIRM_TO_CONTINUE_PATH : next;
 }

@@ -31,14 +31,16 @@ const noSlot = () => undefined;
 
 export type TypedSignUp = Omit<SignUpValues, "password" | "captcha" | "locale">;
 
+export type SignUpNotice = "expired" | "taken";
+
 interface RegisterFormProps {
   locale: AppLocale;
   typed?: Partial<TypedSignUp>;
-  expired?: boolean;
+  notice?: SignUpNotice;
   onSent: (pending: PendingSignUp, typed: TypedSignUp) => void;
 }
 
-export function RegisterForm({ locale, typed, expired = false, onSent }: RegisterFormProps) {
+export function RegisterForm({ locale, typed, notice, onSent }: RegisterFormProps) {
   const t = useTranslations();
   const registerMutation = useStartSignUp();
   const defaults = useDeviceDefaults();
@@ -99,9 +101,7 @@ export function RegisterForm({ locale, typed, expired = false, onSent }: Registe
   const code = failure instanceof ApiError ? failure.code : null;
   const humanRefused = humanFailed || code === "CAPTCHA_INVALID";
   const serverError =
-    failure !== null &&
-    code !== "CAPTCHA_UNAVAILABLE" &&
-    !(failure instanceof ApiError && failure.status < 500);
+    failure instanceof ApiError && failure.status >= 500 && code !== "CAPTCHA_UNAVAILABLE";
   const otherFailure =
     failure && !serverError && !humanRefused && retryAfter === null ? presentError(failure) : null;
   const blocked = retryAfter !== null;
@@ -119,9 +119,14 @@ export function RegisterForm({ locale, typed, expired = false, onSent }: Registe
           {t("auth.register.unavailable.body")}
         </Alert>
       )}
-      {expired && !failure && (
+      {notice === "expired" && !failure && (
         <Alert tone="warning" icon={Clock} title={t("auth.register.expired.title")}>
           {t("auth.register.expired.body")}
+        </Alert>
+      )}
+      {notice === "taken" && !failure && (
+        <Alert tone="warning" title={t("auth.register.taken.title")}>
+          {t("auth.register.taken.body")}
         </Alert>
       )}
       {serverError && <Alert tone="danger">{t("auth.register.serverError")}</Alert>}

@@ -89,7 +89,7 @@ describe("LoginView", () => {
     await userEvent.click(screen.getByRole("button", { name: "Restore account" }));
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith({ pathname: "/home", query: { restored: "1" } });
+      expect(replace).toHaveBeenCalledWith("/home?restored=1");
     });
     expect(sentTo("/api/auth/login/restore")).toEqual([{ email: EMAIL, password: PASSWORD }]);
   });
@@ -112,6 +112,17 @@ describe("LoginView", () => {
     reportOnline(false);
     expect(await screen.findByText("Restoring needs a connection.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Restore account" })).toBeDisabled();
+  });
+
+  it("says a lost connection is not a failure on our side", async () => {
+    await signInToDeletedAccount(() => {
+      throw new TypeError("Failed to fetch");
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Restore account" }));
+    expect(
+      await screen.findByText("You seem to be offline. Try again when you’re connected."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Nothing was restored/)).not.toBeInTheDocument();
   });
 
   it("opens the confirmation step instead of the app for an account past its deadline", async () => {

@@ -1080,11 +1080,13 @@ const register = (state = "") => {
       ? `<div class="alert warning">${iconSvg("triangle-alert")}<span><b>You can’t create an account here.</b> It needs Cloudflare’s check, which this version of the app doesn’t have.</span></div>`
       : state == "expired"
         ? `<div class="alert warning">${iconSvg("clock")}<span><b>That sign-up is over.</b> It lasts 24 hours, and a newer Create account with the same email replaces it. Fill in the form again to get a new code.</span></div>`
-        : "";
+        : state == "taken"
+          ? `<div class="alert warning">${iconSvg("triangle-alert")}<span><b>That email has an account now.</b> It was created while you were waiting for your code. Sign in with it, or use another email here.</span></div>`
+          : "";
   const blocked = state == "unavailable";
   return authFrame(`<div class="stack" style="gap:20px">
 <div class="stack-sm" style="text-align:center"><h1 class="h1">Create account</h1><p class="muted" style="margin:0">Under a minute. No card needed.</p></div>${unavailable}
-<div class="stack">${field("Name", state == "expired" ? null : "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
+<div class="stack">${field("Name", state == "expired" || state == "taken" ? null : "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
 <div class="field"><span class="label">Language</span><button class="picker">${tile("globe", "TEAL", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">English</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">The language of your account. You can change it any time in Settings.</span></div>
 <div class="field"><span class="label">Currency</span><button class="picker">${tile("coins", "GREEN", "sm")}<span class="body"><span class="lbl">Detected from your region</span><span class="val">COP · Colombian peso</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">Used for all your accounts. It locks once you create your first account.</span></div>
 <div class="field"><span class="label">Time zone</span><button class="picker">${tile("globe", "BLUE", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">America/Bogota · GMT−5</span></span>${iconSvg("chevron-down", "sm")}</button></div></div>
@@ -7044,6 +7046,13 @@ const PAGES = [
         "Create account · the sign-up is over",
         "Resend code answered SIGN_UP_EXPIRED: 24 hours passed, or a newer Create account with the same email replaced it. The step goes back to the form with the email in place.",
         register("expired"),
+        { added: "2026-10-03" },
+      ),
+      plate(
+        "create-account-taken",
+        "Create account · the email has an account now",
+        "EMAIL_TAKEN on the code: another account got the address between Create account and the code. Only whoever holds the code learns it. The step goes back to the form.",
+        register("taken"),
         { added: "2026-10-03" },
       ),
       plate(

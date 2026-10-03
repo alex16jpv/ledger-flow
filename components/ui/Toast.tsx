@@ -21,7 +21,6 @@ export interface ToastOptions {
   action?: { label: ReactNode; onClick: () => void };
   tone?: "default" | "danger";
   durationMs?: number;
-  // A notice nobody asked for waits for the toast on screen instead of replacing it.
   polite?: boolean;
 }
 

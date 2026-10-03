@@ -47,11 +47,7 @@ export function LoginView() {
           setRestoring(null);
         }}
         onRestored={({ user }) => {
-          router.replace(
-            user.emailConfirmationRequired
-              ? pathAfterSignIn(user, APP_HOME_PATH)
-              : { pathname: APP_HOME_PATH, query: { restored: "1" } },
-          );
+          router.replace(pathAfterSignIn(user, `${APP_HOME_PATH}?restored=1`));
         }}
       />
     );

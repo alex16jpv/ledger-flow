@@ -3,7 +3,7 @@ import "server-only";
 import type { CookieSpec } from "./cookies";
 
 export const SIGN_UP_COOKIE = "__Secure-sign-up";
-export const SIGN_UP_COOKIE_PATH = "/api/auth/sign-up";
+const SIGN_UP_COOKIE_PATH = "/api/auth/sign-up";
 
 export interface PendingSignUp {
   token: string;
@@ -12,7 +12,6 @@ export interface PendingSignUp {
   resendAt: number;
 }
 
-// The browser that typed the password keeps its sign-up for the 24 hours the server holds it, and only here.
 export function signUpCookie(pending: PendingSignUp, now = Date.now()): CookieSpec {
   return {
     name: SIGN_UP_COOKIE,
