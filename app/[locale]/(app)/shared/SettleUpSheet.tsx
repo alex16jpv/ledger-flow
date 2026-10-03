@@ -9,6 +9,7 @@ import { Amount } from "@/components/ui/Amount";
 import { AmountInput } from "@/components/ui/AmountInput";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { cn } from "@/components/ui/cn";
 import { DateField } from "@/components/ui/DateTimeField";
 import { Field } from "@/components/ui/Field";
 import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
@@ -17,11 +18,15 @@ import { AccountPicker } from "@/features/accounts/components/AccountPicker";
 import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
 import { useRecordSettlement } from "@/features/shared/hooks";
 import {
+  capIsTheGroup,
   hasSomethingToSettle,
+  isInbound,
   planSettlement,
   settleableAmount,
+  settleCap,
   type SettleParty,
   type SettlePlan,
+  type SettleScope,
 } from "@/features/shared/settle";
 import { presentError } from "@/lib/api/errors";
 import { dayKey, localNoon } from "@/lib/format/dates";
@@ -39,15 +44,19 @@ export interface SettleUpSheetProps {
   onWriteOff?: () => void;
 }
 
-function Summary({ party }: { party: SettleParty }) {
-  const t = useTranslations("shared.settle");
-  const both = party.owedToYou > 0 && party.youOwe > 0;
-  const line = (label: string, amount: number) => (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="text-sm text-text-3">{label}</span>
+function line(label: string, amount: number, strong = false) {
+  return (
+    <div className={cn("flex items-baseline justify-between gap-3", strong && "font-semibold")}>
+      <span className={cn("text-sm", !strong && "text-text-3")}>{label}</span>
       <Amount value={amount} signed={false} />
     </div>
   );
+}
+
+function Summary({ party }: { party: SettleParty }) {
+  const t = useTranslations("shared.settle");
+  if (party.scope) return <GroupSummary party={party} scope={party.scope} />;
+  const both = party.owedToYou > 0 && party.youOwe > 0;
   return (
     <Card className="flex flex-col gap-2">
       {party.owedToYou > 0 && line(t("owesYou", { name: party.name }), party.owedToYou)}
@@ -64,13 +73,51 @@ function Summary({ party }: { party: SettleParty }) {
   );
 }
 
-function Coverage({ plan }: { plan: SettlePlan }) {
+function GroupSummary({ party, scope }: { party: SettleParty; scope: SettleScope }) {
+  const t = useTranslations("shared.settle");
+  const both = scope.owedToYou > 0 && scope.youOwe > 0;
+  const where = { name: party.name, group: scope.groupName };
+  return (
+    <Card className="flex flex-col gap-2">
+      {scope.owedToYou > 0 && line(t("owesYouIn", where), scope.owedToYou, !both)}
+      {scope.youOwe > 0 && line(t("youOweIn", where), scope.youOwe, !both)}
+      {both && (
+        <div className="flex items-baseline justify-between gap-3 border-t border-border pt-2 font-semibold">
+          <span className="text-sm">
+            {isInbound(party) ? t("theySend", { name: party.name }) : t("youSend")}
+          </span>
+          <Amount value={settleableAmount(party)} signed={false} />
+        </div>
+      )}
+      <div className="flex items-baseline justify-between gap-3 border-t border-border pt-2">
+        <span className="text-sm text-text-3">
+          {party.net > 0
+            ? t("acrossOwesYou", { name: party.name })
+            : party.net < 0
+              ? t("acrossYouOwe", { name: party.name })
+              : t("acrossEven")}
+        </span>
+        {party.net !== 0 && <Amount value={Math.abs(party.net)} signed={false} />}
+      </div>
+    </Card>
+  );
+}
+
+function Coverage({ party, plan }: { party: SettleParty; plan: SettlePlan }) {
   const t = useTranslations("shared.settle");
   const dates = useDates();
   if (plan.covers.length === 0) return null;
+  const { scope } = party;
+  const inGroup = plan.covers.some((one) => one.groupId === scope?.groupId);
+  const label =
+    !scope || !inGroup
+      ? t("covers")
+      : plan.covers.some((one) => one.groupId !== scope.groupId)
+        ? t("coversBeyond", { group: scope.groupName, name: party.name })
+        : t("coversGroup", { group: scope.groupName });
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-sm text-text-3">{t("covers")}</span>
+      <span className="text-sm text-text-3">{label}</span>
       {plan.covers.map((line) => (
         <div key={line.expenseId} className="flex items-baseline justify-between gap-3 text-sm">
           <span className="min-w-0 truncate">
@@ -84,15 +131,31 @@ function Coverage({ plan }: { plan: SettlePlan }) {
   );
 }
 
+function GroupFirst({ party, scope }: { party: SettleParty; scope: SettleScope }) {
+  const t = useTranslations("shared.settle");
+  const where = { group: scope.groupName, name: party.name };
+  const more = toCents(settleCap(party)) > toCents(settleableAmount(party));
+  return (
+    <p className="text-xs text-text-3">
+      {!more
+        ? t("groupFirst", where)
+        : isInbound(party)
+          ? t("groupFirstMoreIn", where)
+          : t("groupFirstMoreOut", where)}
+    </p>
+  );
+}
+
 export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpSheetProps) {
   const t = useTranslations();
   const money = useMoney();
   const dates = useDates();
   const toast = useToast();
   const record = useRecordSettlement();
-  const inbound = party.net >= 0;
-  const most = settleableAmount(party);
-  const [amount, setAmount] = useState<number | null>(most);
+  const inbound = isInbound(party);
+  const proposed = settleableAmount(party);
+  const most = settleCap(party);
+  const [amount, setAmount] = useState<number | null>(proposed);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [outside, setOutside] = useState(false);
   const [categoryId, setCategoryId] = useState<string | null>(null);
@@ -109,18 +172,26 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
   const missingCategory = plan.yourLines.some((line) => !(perLine[line.expenseId] ?? categoryId));
   // Two people owing each other the same net to nothing, and that settle-up is still a settle-up.
   const ready =
-    (cash > 0 || (most === 0 && hasSomethingToSettle(party))) &&
+    (cash > 0 || (proposed === 0 && hasSomethingToSettle(party))) &&
     !over &&
     (outside || accountId !== null) &&
     (!needsCategory || !missingCategory) &&
     !record.isPending;
   const error = record.error ? presentError(record.error) : null;
+  const overMessage =
+    party.scope && capIsTheGroup(party)
+      ? t("shared.settle.overGroup", {
+          amount: money.format(most),
+          group: party.scope.groupName,
+        })
+      : t("shared.settle.over", { amount: money.format(most) });
 
   async function settle() {
     if (!ready) return;
     try {
       await record.mutateAsync({
         counterparty: { contactId: party.contactId, expenseId: party.expenseId },
+        groupId: plan.groupId,
         date: localNoon(day, timeZone).toISOString(),
         collected: plan.collected,
         paid: plan.paid,
@@ -149,7 +220,7 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
       layout="full"
       open={open}
       onClose={onClose}
-      unsaved={toCents(cash) !== toCents(most)}
+      unsaved={toCents(cash) !== toCents(proposed)}
       title={
         inbound
           ? t("shared.settle.title", { name: party.name })
@@ -176,10 +247,7 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
     >
       <div className="flex flex-col gap-4">
         <Summary party={party} />
-        <Field
-          label={t("shared.settle.amount")}
-          error={over ? t("shared.settle.over", { amount: money.format(most) }) : undefined}
-        >
+        <Field label={t("shared.settle.amount")} error={over ? overMessage : undefined}>
           <Card className="p-0 pb-3">
             <AmountInput
               label={t("shared.settle.amount")}
@@ -275,19 +343,27 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
             {t("shared.settle.notIncomeBody")}
           </Alert>
         )}
+        {party.scope && proposed > 0 && toCents(cash) === toCents(proposed) && (
+          <GroupFirst party={party} scope={party.scope} />
+        )}
         {plan.refunded > 0 && (
           <p className="text-sm text-text-3">
             {t("shared.settle.refunded", { amount: money.format(plan.refunded) })}
           </p>
         )}
-        <Coverage plan={plan} />
-        {toCents(cash) < toCents(most) && party.youOwe > 0 && party.owedToYou > 0 && (
-          <p className="text-xs text-text-3">{t("shared.settle.partialFirst")}</p>
-        )}
+        <Coverage party={party} plan={plan} />
+        {!party.scope &&
+          toCents(cash) < toCents(most) &&
+          party.youOwe > 0 &&
+          party.owedToYou > 0 && (
+            <p className="text-xs text-text-3">{t("shared.settle.partialFirst")}</p>
+          )}
         {onWriteOff && (
           <Button variant="ghost" size="sm" className="self-start px-0" onClick={onWriteOff}>
             <Ban {...iconProps("sm")} />
-            {t("shared.settle.writeOff", { amount: money.format(party.owedToYou) })}
+            {t("shared.settle.writeOff", {
+              amount: money.format((party.scope ?? party).owedToYou),
+            })}
           </Button>
         )}
       </div>

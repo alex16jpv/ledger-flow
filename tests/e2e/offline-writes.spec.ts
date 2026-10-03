@@ -161,7 +161,7 @@ test("a settle-up with no network moves every figure, and the server's movement 
     data: {
       type: "EXPENSE",
       amount: spent,
-      date: "2026-09-20T20:00:00.000Z",
+      date: new Date().toISOString(),
       description: "Dinner",
       fromAccountId: account?.id,
       categoryId: ((await categories.json()) as { data: { id: string }[] }).data[0]?.id,
@@ -246,7 +246,7 @@ test("a new amount on a split movement with no network splits its group again, a
     data: {
       type: "EXPENSE",
       amount: 100_000,
-      date: "2026-09-20T20:00:00.000Z",
+      date: new Date().toISOString(),
       description: "Dinner",
       fromAccountId: account?.id,
     },

@@ -102,10 +102,14 @@ stored rows. The rules it reproduces to the minor unit are the backend's own
 
 - a split is `floor(total × its parts ÷ all the parts)` and the odd minor unit goes **whole to
   whoever fronted it**, in every mode, so the result never depends on the order of the rows;
-- a payment belongs to the **person**, not to the line: it covers the **oldest line first** across
-  every group shared with them, ties broken by expense id;
+- a payment belongs to the **person**, not to the line: it covers the **oldest open line first**
+  across every group shared with them, ties broken by expense id — and one paid from a group
+  (`groupId`) covers **that group's open lines first**. Payments are imputed one at a time in the
+  order the server recorded them (`createdAt`, then id), and one still in the queue goes after every
+  stored one, because that is where the server will put it (`unstored`, read from the outbox). A row
+  the mirror kept from before payments carried a group has no `groupId`, and is read as paid from none;
 - what you hand over covers your own lines first, and whatever is left of it is their money going
-  back, so it comes off what they gave you **before** any of that is imputed;
+  back, so it comes off what they gave you, **newest payment first**, before any of that is imputed;
 - what a movement counts as yours is `amount − what came back`, and `ADJUSTMENT` and `SETTLEMENT` are
   excluded from spending **by their type**, never by that figure;
 - a write-off gives up on what was open when it was decided — the ceiling is stored on the group —

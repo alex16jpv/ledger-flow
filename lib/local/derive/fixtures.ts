@@ -167,6 +167,8 @@ export interface FixtureSettlement {
   key: string;
   id: string;
   counterparty: { kind: "CONTACT" | "GUESTS"; contactId: string | null; expenseId: string | null };
+  // The group it was paid from, whose open lines it covers before any other.
+  groupId: string | null;
   date: string;
   collected: number;
   paid: number;
@@ -174,6 +176,8 @@ export interface FixtureSettlement {
   // An instruction to whoever seeds the fixture, not an API field: no feed carries it.
   afterWriteOffs: boolean;
   deletedAt: string | null;
+  // Only its order matters: payments are imputed in the order they were recorded, the id breaking a tie.
+  createdAt: string;
 }
 
 export interface ExpectedPerson {

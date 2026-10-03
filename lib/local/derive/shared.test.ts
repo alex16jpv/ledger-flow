@@ -4,7 +4,7 @@ import {
   carriedExpense,
   countsAsYours,
   deriveShared,
-  impute,
+  imputeCounterparty,
   type LedgerExpense,
   type LedgerSettlement,
   resolveShares,
@@ -37,6 +37,8 @@ const expense = (over: Partial<LedgerExpense> & Pick<LedgerExpense, "id">): Ledg
 });
 
 const paid = (over: Partial<LedgerSettlement> = {}): LedgerSettlement => ({
+  id: "p1",
+  createdAt: "2026-09-01T12:00:00.000Z",
   counterparty: { kind: "CONTACT", contactId: "ana", expenseId: null },
   collected: 0,
   paid: 0,
@@ -155,40 +157,217 @@ describe("the split", () => {
 });
 
 describe("the imputation", () => {
+  const line = (key: string, day: string, owed: number, groupId: string | null = null) => ({
+    key,
+    date: `2026-08-${day}T12:00:00-05:00`,
+    owed,
+    groupId,
+  });
+  const payment = (
+    id: string,
+    over: Partial<{ createdAt: string | null; collected: number; paid: number }> & {
+      groupId?: string | null;
+    } = {},
+  ) => ({
+    id,
+    createdAt: `2026-09-01T12:0${id.slice(-1)}:00.000Z`,
+    collected: 0,
+    paid: 0,
+    groupId: null,
+    ...over,
+  });
+
+  // The rule before payments carried a group: everything they gave pooled over the oldest line.
+  function pooled(
+    theirLines: { key: string; date: string; owed: number }[],
+    yourLines: { key: string; date: string; owed: number }[],
+    collected: number,
+    paidOut: number,
+  ) {
+    const fill = (lines: typeof theirLines, pool: number) => {
+      let left = Math.max(0, pool);
+      const settled = new Map<string, number>();
+      for (const one of [...lines].sort(
+        (a, b) => Date.parse(a.date) - Date.parse(b.date) || (a.key < b.key ? -1 : 1),
+      )) {
+        const covered = Math.min(one.owed, left);
+        settled.set(one.key, covered);
+        left -= covered;
+      }
+      return { settled, surplus: left };
+    };
+    const yours = fill(yourLines, paidOut);
+    const theirs = fill(theirLines, collected - yours.surplus);
+    return {
+      theirs: theirs.settled,
+      yours: yours.settled,
+      surplus: { theirs: theirs.surplus, yours: Math.max(0, yours.surplus - collected) },
+    };
+  }
+
   it("covers the oldest line first, whatever order it is handed them in", () => {
-    const lines = [
-      { key: "b", date: "2026-08-06T12:00:00-05:00", owed: 5000 },
-      { key: "a", date: "2026-08-01T12:00:00-05:00", owed: 5000 },
-    ];
-    expect([...impute(lines, 5000).settled]).toEqual([
+    const lines = [line("b", "06", 5000), line("a", "01", 5000)];
+    const once = payment("p1", { collected: 5000 });
+    expect([...imputeCounterparty(lines, [], [once]).theirs]).toEqual([
       ["a", 5000],
       ["b", 0],
     ]);
-    expect([...impute([...lines].reverse(), 5000).settled]).toEqual([
+    expect([...imputeCounterparty([...lines].reverse(), [], [once]).theirs]).toEqual([
       ["a", 5000],
       ["b", 0],
     ]);
   });
 
   it("breaks a tie on the same instant by id, so two devices agree", () => {
-    const lines = [
-      { key: "s2", date: "2026-08-06T12:00:00-05:00", owed: 5000 },
-      { key: "s1", date: "2026-08-06T12:00:00-05:00", owed: 5000 },
-    ];
-    expect(impute(lines, 5000).settled.get("s1")).toBe(5000);
-    expect(impute([...lines].reverse(), 5000).settled.get("s1")).toBe(5000);
+    const lines = [line("s2", "06", 5000), line("s1", "06", 5000)];
+    const once = payment("p1", { collected: 5000 });
+    expect(imputeCounterparty(lines, [], [once]).theirs.get("s1")).toBe(5000);
+    expect(imputeCounterparty([...lines].reverse(), [], [once]).theirs.get("s1")).toBe(5000);
   });
 
   it("leaves what nothing was owed for on the counter", () => {
-    expect(impute([{ key: "a", date: "2026-08-01T12:00:00-05:00", owed: 5000 }], 8000)).toEqual({
-      settled: new Map([["a", 5000]]),
-      surplus: 3000,
+    expect(
+      imputeCounterparty([line("a", "01", 5000)], [], [payment("p1", { collected: 8000 })]),
+    ).toEqual({
+      theirs: new Map([["a", 5000]]),
+      yours: new Map(),
+      surplus: { theirs: 3000, yours: 0 },
     });
+  });
+
+  it("is the pooled rule exactly when no payment names a group", () => {
+    const theirs = [line("a", "01", 30000), line("b", "05", 20000), line("c", "09", 15000)];
+    const yours = [line("y1", "03", 12000), line("y2", "07", 8000)];
+    const payments = [
+      payment("p1", { collected: 25000 }),
+      payment("p2", { collected: 10000, paid: 4000 }),
+      payment("p3", { paid: 30000 }),
+      payment("p4", { collected: 18000 }),
+    ];
+    const total = (key: "collected" | "paid") => payments.reduce((sum, one) => sum + one[key], 0);
+    expect(imputeCounterparty(theirs, yours, payments)).toEqual(
+      pooled(theirs, yours, total("collected"), total("paid")),
+    );
+  });
+
+  it("covers the group a payment was made from first, though another group's line is older", () => {
+    const lines = [line("cine", "01", 20000, "g-cine"), line("comer", "10", 20000, "g-comer")];
+    const imputed = imputeCounterparty(
+      lines,
+      [],
+      [payment("p1", { collected: 30000, groupId: "g-comer" })],
+    );
+    expect([...imputed.theirs]).toEqual([
+      ["cine", 10000],
+      ["comer", 20000],
+    ]);
+  });
+
+  it("imputes in the order payments were recorded, never by their date or their place in the list", () => {
+    const lines = [
+      line("breakfast", "02", 10000, "g-comer"),
+      line("cine", "05", 10000, "g-cine"),
+      line("lunch", "08", 10000, "g-comer"),
+    ];
+    const fromPeople = payment("p1", { collected: 10000, createdAt: "2026-09-01T12:04:00.000Z" });
+    const fromComer = payment("p2", {
+      collected: 10000,
+      groupId: "g-comer",
+      createdAt: "2026-09-01T12:05:00.000Z",
+    });
+    const expected = [
+      ["breakfast", 10000],
+      ["cine", 0],
+      ["lunch", 10000],
+    ];
+    expect([...imputeCounterparty(lines, [], [fromComer, fromPeople]).theirs]).toEqual(expected);
+    expect([...imputeCounterparty(lines, [], [fromPeople, fromComer]).theirs]).toEqual(expected);
+  });
+
+  it("puts a payment the server has not stored yet after every stored one", () => {
+    const lines = [line("old", "01", 10000, "g-a"), line("new", "09", 10000, "g-b")];
+    const queued = payment("p0", { collected: 10000, groupId: "g-b", createdAt: null });
+    const stored = payment("p9", { collected: 10000, createdAt: "2026-12-31T12:00:00.000Z" });
+    expect([...imputeCounterparty(lines, [], [queued, stored]).theirs]).toEqual([
+      ["old", 10000],
+      ["new", 10000],
+    ]);
+    const alone = imputeCounterparty(lines, [], [{ ...queued, collected: 5000 }, stored]);
+    expect([...alone.theirs]).toEqual([
+      ["old", 10000],
+      ["new", 5000],
+    ]);
+  });
+
+  it("gives back what you handed over beyond your lines out of their newest money first", () => {
+    const theirs = [line("a", "01", 10000, "g-a"), line("b", "05", 10000, "g-b")];
+    const yours = [line("y", "03", 5000, "g-a")];
+    const imputed = imputeCounterparty(theirs, yours, [
+      payment("p1", { collected: 10000, groupId: "g-b" }),
+      payment("p2", { collected: 10000, groupId: "g-a" }),
+      payment("p3", { paid: 12000 }),
+    ]);
+    expect([...imputed.yours]).toEqual([["y", 5000]]);
+    expect([...imputed.theirs]).toEqual([
+      ["a", 3000],
+      ["b", 10000],
+    ]);
+    expect(imputed.surplus).toEqual({ theirs: 0, yours: 0 });
+  });
+
+  it("says what you handed back beyond everything they ever gave you", () => {
+    const imputed = imputeCounterparty(
+      [line("a", "01", 10000)],
+      [],
+      [payment("p1", { collected: 4000 }), payment("p2", { paid: 9000 })],
+    );
+    expect(imputed.theirs.get("a")).toBe(0);
+    expect(imputed.surplus).toEqual({ theirs: 0, yours: 5000 });
   });
 });
 
 describe("what a payment leaves behind", () => {
   const group = { id: "g1", writeOffs: [] };
+
+  it("puts a payment still in the queue after every stored one, whatever the device clock says", () => {
+    const line = (id: string, groupId: string, day: string) =>
+      expense({
+        id,
+        groupId,
+        date: `2026-08-${day}T12:00:00-05:00`,
+        amount: 20000,
+        split: {
+          mode: "EQUAL",
+          guests: null,
+          shares: [share({ amount: 10000 }), contact("ana", 10000)],
+        },
+      });
+    const rows = [
+      line("breakfast", "comer", "02"),
+      line("cine", "cine", "05"),
+      line("lunch", "comer", "08"),
+    ];
+    const settlements = [
+      paid({
+        id: "queued",
+        collected: 10000,
+        groupId: "comer",
+        createdAt: "2026-09-01T12:00:00.000Z",
+      }),
+      paid({ id: "stored", collected: 10000, createdAt: "2026-09-02T12:00:00.000Z" }),
+    ];
+    const groups = [
+      { id: "comer", writeOffs: [] },
+      { id: "cine", writeOffs: [] },
+    ];
+    const owed = (unstored: ReadonlySet<string>) =>
+      deriveShared({ groups, expenses: rows, settlements, unstored }).collected.get(
+        "cine|contact:ana",
+      );
+
+    expect(owed(new Set())).toBe(10000);
+    expect(owed(new Set(["queued"]))).toBe(0);
+  });
 
   it("takes what came back off the movement, and nothing else", () => {
     const rows = [
@@ -202,6 +381,7 @@ describe("what a payment leaves behind", () => {
       }),
     ];
     const ledger = deriveShared({
+      unstored: new Set(),
       groups: [group],
       expenses: rows,
       settlements: [paid({ collected: 20000 })],
@@ -222,9 +402,10 @@ describe("what a payment leaves behind", () => {
     });
     // She paid 60,000 for a 50,000 share and you gave the 10,000 back: nothing pre-pays anything.
     const ledger = deriveShared({
+      unstored: new Set(),
       groups: [group],
       expenses: [theirs],
-      settlements: [paid({ collected: 60000 }), paid({ paid: 10000 })],
+      settlements: [paid({ collected: 60000 }), paid({ id: "p2", paid: 10000 })],
     });
     expect(ledger.cameBack.get("s1")).toBe(50000);
     expect(ledger.groups[0]?.people[0]).toMatchObject({ owesYou: 0, surplus: 0, state: "PAID" });
@@ -232,6 +413,7 @@ describe("what a payment leaves behind", () => {
 
   it("leaves what somebody paid ahead as a surplus, never as collected", () => {
     const ledger = deriveShared({
+      unstored: new Set(),
       groups: [group],
       expenses: [
         expense({
@@ -264,7 +446,12 @@ describe("giving up on what somebody owes", () => {
   const written = { id: "g1", writeOffs: [{ contactId: "ana", expenseId: null, amount: 50000 }] };
 
   it("moves no figure of yours and clears what is owed", () => {
-    const ledger = deriveShared({ groups: [written], expenses: rows, settlements: [] });
+    const ledger = deriveShared({
+      unstored: new Set(),
+      groups: [written],
+      expenses: rows,
+      settlements: [],
+    });
     expect(ledger.cameBack.get("s1")).toBe(0);
     expect(ledger.groups[0]).toMatchObject({ owedToYou: 0, writtenOff: 50000, status: "SETTLED" });
     expect(ledger.groups[0]?.people[0]?.state).toBe("WRITTEN_OFF");
@@ -272,6 +459,7 @@ describe("giving up on what somebody owes", () => {
 
   it("keeps the ceiling it was decided against, so paying later lowers what it gives up", () => {
     const ledger = deriveShared({
+      unstored: new Set(),
       groups: [written],
       expenses: rows,
       settlements: [paid({ collected: 20000 })],
@@ -307,6 +495,7 @@ describe("the cases one fixture cannot hold", () => {
       },
     });
     const ledger = deriveShared({
+      unstored: new Set(),
       groups: [group],
       expenses: [dinner, tickets],
       settlements: [paid({ collected: 60000, paid: 30000 })],
@@ -340,9 +529,10 @@ describe("the cases one fixture cannot hold", () => {
     });
     // She paid 50,000, you handed 20,000 back: it comes off what she gave you, not off the next line.
     const ledger = deriveShared({
+      unstored: new Set(),
       groups: [group],
       expenses: [first, later],
-      settlements: [paid({ collected: 50000 }), paid({ paid: 20000 })],
+      settlements: [paid({ collected: 50000 }), paid({ id: "p2", paid: 20000 })],
     });
 
     expect(ledger.cameBack.get("s1")).toBe(30000);
@@ -370,7 +560,12 @@ describe("the cases one fixture cannot hold", () => {
         },
       }),
     ];
-    const ledger = deriveShared({ groups: [group], expenses: rows, settlements: [] });
+    const ledger = deriveShared({
+      unstored: new Set(),
+      groups: [group],
+      expenses: rows,
+      settlements: [],
+    });
     expect(ledger.cameBack.has("s2")).toBe(false);
     expect(ledger.groups[0]).toMatchObject({ amount: 100000, owedToYou: 50000 });
   });
@@ -388,7 +583,12 @@ describe("the cases one fixture cannot hold", () => {
       }),
     ];
     const written = { id: "g1", writeOffs: [{ contactId: null, expenseId: "s1", amount: 86956 }] };
-    const ledger = deriveShared({ groups: [written], expenses: rows, settlements: [] });
+    const ledger = deriveShared({
+      unstored: new Set(),
+      groups: [written],
+      expenses: rows,
+      settlements: [],
+    });
     expect(ledger.groups[0]).toMatchObject({ owedToYou: 0, writtenOff: 86956, status: "SETTLED" });
     expect(ledger.groups[0]?.people[0]).toMatchObject({
       key: "guests:s1",
@@ -432,6 +632,7 @@ describe("the cases one fixture cannot hold", () => {
     });
     // What you hand over covers only the lines that person fronted.
     const ledger = deriveShared({
+      unstored: new Set(),
       groups: [group],
       expenses: [mine, hers, his],
       settlements: [paid({ paid: 30000 })],

@@ -17,6 +17,7 @@ import { StateBadge } from "@/features/shared/components/parts";
 import { useDeleteSettlement, useSharedPending } from "@/features/shared/hooks";
 import type { GroupView, PartyView, SharedSection } from "@/features/shared/ledger";
 import { partyPending } from "@/features/shared/pending";
+import { hasSomethingToSettle, settleParty } from "@/features/shared/settle";
 import { presentError } from "@/lib/api/errors";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
@@ -98,8 +99,7 @@ export function owingParties(
 ): PartyView[] {
   const keys = new Set(sharesOf(section, view, expense).map((one) => one.key));
   return view.people.filter(
-    (person) =>
-      keys.has(person.key) && (person.owesYou > 0 || person.youOwe > 0 || person.surplus > 0),
+    (person) => keys.has(person.key) && hasSomethingToSettle(settleParty(section, view, person)),
   );
 }
 

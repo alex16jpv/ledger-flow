@@ -26,10 +26,12 @@ export type LedgerExpense = Pick<
   "id" | "groupId" | "date" | "amount" | "paidByContactId" | "split" | "deletedAt"
 >;
 
+// A row the mirror kept from before payments carried a group has none: it was paid from no group.
 export type LedgerSettlement = Pick<
   Settlement,
-  "counterparty" | "collected" | "paid" | "deletedAt"
->;
+  "id" | "counterparty" | "collected" | "paid" | "deletedAt" | "createdAt"
+> &
+  Partial<Pick<Settlement, "groupId">>;
 
 export type SplitMode = SharedSplit["mode"];
 
@@ -232,26 +234,108 @@ export interface OwedLine {
   date: string;
   // Whole minor units, never negative.
   owed: number;
+  groupId: string | null;
 }
 
-export interface Imputation {
-  settled: Map<string, number>;
-  // What the pool could not cover: money held that nothing is owed for.
-  surplus: number;
+export interface SettledPayment {
+  id: string;
+  // Null only on a payment the server has not stored yet, which goes after every stored one.
+  createdAt: string | null;
+  // Whole minor units.
+  collected: number;
+  paid: number;
+  groupId: string | null;
 }
+
+export interface CounterpartyImputation {
+  theirs: Map<string, number>;
+  yours: Map<string, number>;
+  surplus: {
+    // What they handed over that no line of theirs is owed for.
+    theirs: number;
+    // What you handed back beyond everything they ever gave you.
+    yours: number;
+  };
+}
+
+interface PaidIn {
+  amount: number;
+  groupId: string | null;
+}
+
+const byKey = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 const oldestFirst = (a: OwedLine, b: OwedLine): number =>
-  Date.parse(a.date) - Date.parse(b.date) || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
+  Date.parse(a.date) - Date.parse(b.date) || byKey(a.key, b.key);
 
-export function impute(lines: readonly OwedLine[], pool: number): Imputation {
-  let left = Math.max(0, pool);
-  const settled = new Map<string, number>();
-  for (const line of [...lines].sort(oldestFirst)) {
-    const covered = Math.min(Math.max(0, line.owed), left);
-    settled.set(line.key, covered);
-    left -= covered;
+const recordedAt = (payment: SettledPayment): number =>
+  payment.createdAt === null ? Number.MAX_SAFE_INTEGER : Date.parse(payment.createdAt);
+
+const creationOrder = (a: SettledPayment, b: SettledPayment): number =>
+  recordedAt(a) - recordedAt(b) || byKey(a.id, b.id);
+
+function imputeInOrder(
+  lines: readonly OwedLine[],
+  payments: readonly PaidIn[],
+): { settled: Map<string, number>; surplus: number } {
+  const ordered = [...lines].sort(oldestFirst);
+  const open = ordered.map((line) => Math.max(0, line.owed));
+  const everyLine = [...ordered.keys()];
+  let firstOpen = 0;
+  let surplus = 0;
+  for (const payment of payments) {
+    let left = Math.max(0, payment.amount);
+    while (firstOpen < open.length && open[firstOpen] === 0) firstOpen += 1;
+    const ownGroup =
+      payment.groupId === null
+        ? []
+        : everyLine.filter((i) => ordered[i]?.groupId === payment.groupId);
+    for (const i of [...ownGroup, ...everyLine.slice(firstOpen)]) {
+      if (left === 0) break;
+      const covered = Math.min(open[i] ?? 0, left);
+      open[i] = (open[i] ?? 0) - covered;
+      left -= covered;
+    }
+    surplus += left;
   }
-  return { settled, surplus: left };
+  return {
+    settled: new Map(ordered.map((line, i) => [line.key, Math.max(0, line.owed) - (open[i] ?? 0)])),
+    surplus,
+  };
+}
+
+function withoutNewest(payments: readonly PaidIn[], amount: number): PaidIn[] {
+  let left = Math.max(0, amount);
+  return [...payments]
+    .reverse()
+    .map((payment) => {
+      const kept = Math.max(0, payment.amount);
+      const taken = Math.min(kept, left);
+      left -= taken;
+      return { ...payment, amount: kept - taken };
+    })
+    .reverse();
+}
+
+// The backend's `imputeCounterparty`, unit for unit: the parity fixtures hold the two together.
+export function imputeCounterparty(
+  theirLines: readonly OwedLine[],
+  yourLines: readonly OwedLine[],
+  payments: readonly SettledPayment[],
+): CounterpartyImputation {
+  const ordered = [...payments].sort(creationOrder);
+  const yours = imputeInOrder(
+    yourLines,
+    ordered.map((one) => ({ amount: one.paid, groupId: one.groupId })),
+  );
+  const collected = ordered.map((one) => ({ amount: one.collected, groupId: one.groupId }));
+  const theirs = imputeInOrder(theirLines, withoutNewest(collected, yours.surplus));
+  const theyGave = collected.reduce((sum, one) => sum + Math.max(0, one.amount), 0);
+  return {
+    theirs: theirs.settled,
+    yours: yours.settled,
+    surplus: { theirs: theirs.surplus, yours: Math.max(0, yours.surplus - theyGave) },
+  };
 }
 
 export type PersonState = "NOT_PAID" | "PARTIALLY_PAID" | "PAID" | "WRITTEN_OFF";
@@ -286,6 +370,8 @@ export interface SharedLedgerInput {
   groups: readonly LedgerGroup[];
   expenses: readonly LedgerExpense[];
   settlements: readonly LedgerSettlement[];
+  // The payments still waiting in the queue: the server will record them after every stored one.
+  unstored: ReadonlySet<string>;
 }
 
 export interface SharedLedger {
@@ -325,6 +411,7 @@ function imputeEverything(
   expenses: readonly LedgerExpense[],
   settlements: readonly LedgerSettlement[],
   parties: ReadonlySet<string>,
+  unstored: ReadonlySet<string>,
 ): Settled {
   const owed = new Map<string, Owed>();
   const linesOf = (key: string): Owed => {
@@ -339,45 +426,42 @@ function imputeEverything(
     const mine = expense.paidByContactId === null;
     for (const share of expense.split.shares) {
       const key = shareKey(expense, share);
-      if (mine && key !== null) {
-        linesOf(key).theyOwe.push({
-          key: expense.id,
-          date: expense.date,
-          owed: toCents(share.amount),
-        });
-      }
+      const line = {
+        key: expense.id,
+        date: expense.date,
+        owed: toCents(share.amount),
+        groupId: expense.groupId,
+      };
+      if (mine && key !== null) linesOf(key).theyOwe.push(line);
       if (mine || !isYours(share)) continue;
       const payer = `contact:${expense.paidByContactId}`;
-      if (parties.has(payer)) {
-        linesOf(payer).youOwe.push({
-          key: expense.id,
-          date: expense.date,
-          owed: toCents(share.amount),
-        });
-      }
+      if (parties.has(payer)) linesOf(payer).youOwe.push(line);
     }
   }
 
-  const pools = new Map<string, { theyOwe: number; youOwe: number }>();
+  const paymentsOf = new Map<string, SettledPayment[]>();
   for (const one of settlements) {
     const key = partyKey(one.counterparty);
-    const pool = pools.get(key) ?? { theyOwe: 0, youOwe: 0 };
-    pool.theyOwe += toCents(one.collected);
-    pool.youOwe += toCents(one.paid);
-    pools.set(key, pool);
+    const payment: SettledPayment = {
+      id: one.id,
+      createdAt: unstored.has(one.id) ? null : one.createdAt,
+      collected: toCents(one.collected),
+      paid: toCents(one.paid),
+      groupId: one.groupId ?? null,
+    };
+    const held = paymentsOf.get(key);
+    if (held) held.push(payment);
+    else paymentsOf.set(key, [payment]);
   }
 
   const covered = new Map<string, number>();
   const ahead = new Map<string, number>();
   for (const key of parties) {
     const lines = owed.get(key) ?? { theyOwe: [], youOwe: [] };
-    const pool = pools.get(key) ?? { theyOwe: 0, youOwe: 0 };
-    // What is left of what you handed over is their money back, and it comes off their pool first.
-    const yours = impute(lines.youOwe, pool.youOwe);
-    const theirs = impute(lines.theyOwe, pool.theyOwe - yours.surplus);
-    ahead.set(key, theirs.surplus);
-    for (const [expenseId, amount] of theirs.settled) covered.set(`${expenseId}|${key}`, amount);
-    for (const [expenseId, amount] of yours.settled) covered.set(`user|${expenseId}`, amount);
+    const imputed = imputeCounterparty(lines.theyOwe, lines.youOwe, paymentsOf.get(key) ?? []);
+    ahead.set(key, imputed.surplus.theirs);
+    for (const [expenseId, amount] of imputed.theirs) covered.set(`${expenseId}|${key}`, amount);
+    for (const [expenseId, amount] of imputed.yours) covered.set(`user|${expenseId}`, amount);
   }
 
   return { covered, ahead };
@@ -499,7 +583,7 @@ export function deriveShared(input: SharedLedgerInput): SharedLedger {
     }
   }
 
-  const settled = imputeEverything(expenses, settlements, parties);
+  const settled = imputeEverything(expenses, settlements, parties, input.unstored);
 
   const cameBack = new Map<string, number>();
   const collected = new Map<string, number>();

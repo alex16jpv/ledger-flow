@@ -403,6 +403,8 @@ export interface SettledLine {
 export interface NewSettlement {
   id?: string;
   counterparty: { contactId: string | null; expenseId: string | null };
+  // The group it is paid from, whose open lines it covers first; never one for a block of guests.
+  groupId: string | null;
   date: string;
   collected: number;
   paid: number;
@@ -514,6 +516,7 @@ const settlementBody = (input: NewSettlement, id: string): CreateSettlementInput
   id,
   ...(input.counterparty.contactId ? { contactId: input.counterparty.contactId } : {}),
   ...(input.counterparty.expenseId ? { expenseId: input.counterparty.expenseId } : {}),
+  ...(input.groupId ? { groupId: input.groupId } : {}),
   date: input.date,
   ...(input.collected > 0 ? { collected: exact(input.collected) } : {}),
   ...(input.paid > 0 ? { paid: exact(input.paid) } : {}),
@@ -557,6 +560,7 @@ export function recordSettlement(input: NewSettlement): Promise<Settlement> {
             contactId: input.counterparty.contactId,
             expenseId: input.counterparty.expenseId,
           },
+          groupId: input.groupId,
           date: input.date,
           collected: input.collected,
           paid: input.paid,

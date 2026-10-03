@@ -2,7 +2,7 @@
 
 # lag-money-manager API endpoints
 
-Version 1.0.0 · 90 operations · 116 schemas.
+Version 1.0.0 · 91 operations · 119 schemas.
 
 Regenerate with `npm run gen:api-types` against a running backend. The client never calls these
 URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), which adds the
@@ -11,7 +11,7 @@ URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), wh
 | Group                           | Operations |
 | ------------------------------- | ---------- |
 | [Accounts](#accounts)           | 7          |
-| [Auth](#auth)                   | 13         |
+| [Auth](#auth)                   | 14         |
 | [Budgets](#budgets)             | 8          |
 | [Categories](#categories)       | 7          |
 | [Contacts](#contacts)           | 6          |
@@ -186,6 +186,7 @@ Idempotent - restoring an already-active account returns it unchanged.
 | `POST /auth/email/confirm-change` | bearer | Move the account to the new email with its code or link        |
 | `POST /auth/email/not-me`         | public | Delete, for good, an account that used somebody else's address |
 | `POST /auth/email/resend`         | bearer | Email a new code to confirm the account's email                |
+| `POST /auth/email/undo`           | public | Undo an email change, from the old address                     |
 | `POST /auth/email/verify`         | bearer | Confirm the account's email with the emailed code or link      |
 | `POST /auth/login`                | public | Login and obtain a JWT token                                   |
 | `POST /auth/logout`               | public | Revoke the refresh token's session family (per-device logout)  |
@@ -249,6 +250,22 @@ Send code and Resend code of the sheet that confirms the email. Sends `verify-em
 | `429`  | `ErrorResponse`        | Too many requests (code RATE_LIMITED; `Retry-After` in seconds): from this IP, from this device or IP in the hour, for this account (five a day), or for this address — one a minute and five a day |
 | `503`  | `ErrorResponse`        | The email could not be sent, or may not have gone (code EMAIL_SEND_FAILED), or the captcha could not be checked (code CAPTCHA_UNAVAILABLE). A code that was live before still works                 |
 
+### `POST /auth/email/undo`
+
+"Undo the change" of `email-change-requested` (`/{locale}/undo#token=…`), for whoever holds the address the account had. It works for 7 days and once, even after the change was confirmed, and brings back an account deleted since. The account goes back to that address (confirmed), any change still waiting is cancelled, every session and device token is revoked, and the password stops working: `password-reset-after-undo` takes a code and a link to that address, which `/auth/password/reset` redeems. The undo links issued after it stop working, with the addresses they kept; an earlier one still works, so the first link an owner received always wins. No `new-sign-in` and no `password-changed` are sent.
+
+No token required.
+
+**Body** `UndoEmailChangeInput` (required)
+
+**Responses**
+
+| Status | Schema              | Description                                                                                                                                              |
+| ------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `EmailChangeUndone` | The change is undone                                                                                                                                     |
+| `400`  | `ErrorResponse`     | Validation error (code VALIDATION), or a link that no longer works: used, past its 7 days, or stopped by the undo of an earlier link (code LINK_INVALID) |
+| `429`  | `ErrorResponse`     | Too many attempts from this IP (code RATE_LIMITED)                                                                                                       |
+
 ### `POST /auth/email/verify`
 
 Either `{ code }`, with the session (`Authorization`) of the account the code went to, or `{ token }` from the email's link (`/{locale}/verify#token=…`) with no session: it names the account. A code takes five tries and works for 24 hours; asking for another cancels it once the new email is accepted. Confirming is not spent: an account already confirmed answers 200 for its code and for its link, so tapping the link after typing the code reads "Email confirmed". A link for an address the account no longer has is LINK_INVALID, and so is one replaced by a newer code, even once the account is confirmed: only the newest email's link answers 200. Confirming ends the wait of the invitations addressed to it: they reach the change feed on the next pull.
@@ -267,7 +284,7 @@ Either `{ code }`, with the session (`Authorization`) of the account the code we
 
 ### `POST /auth/login`
 
-Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or register and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded.
+Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or register and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded. A login whose `deviceToken` is not one this account's email gave since its last password reset, undo or logout-all emails `new-sign-in` to that email, when it is confirmed.
 
 No token required.
 
@@ -301,14 +318,14 @@ No token required.
 
 ### `POST /auth/logout-all`
 
-Bumps the user's token version, so every outstanding refresh token stops working (subsequent refreshes fail with 401 REFRESH_REVOKED).
+Bumps the user's token version, so every outstanding refresh token stops working (subsequent refreshes fail with 401 REFRESH_REVOKED), and forgets every device: a login with a device token issued before emails `new-sign-in`. The answer's `deviceToken` is this device's new one, issued after that.
 
 **Responses**
 
-| Status | Schema          | Description                              |
-| ------ | --------------- | ---------------------------------------- |
-| `200`  | `Message`       | All sessions revoked                     |
-| `401`  | `ErrorResponse` | Missing, invalid or expired access token |
+| Status | Schema                | Description                              |
+| ------ | --------------------- | ---------------------------------------- |
+| `200`  | `LoggedOutEverywhere` | All sessions revoked                     |
+| `401`  | `ErrorResponse`       | Missing, invalid or expired access token |
 
 ### `POST /auth/password/forgot`
 
@@ -329,7 +346,7 @@ No token required.
 
 ### `POST /auth/password/reset`
 
-Either the address and the 6-digit code, or the link's token alone (it names the account). Sets the password, signs out every other device (every refresh and device token issued before stops working), confirms the account's email, and answers a session like a login. Using a code or the link spends every code of that request. A code takes five tries. When the account had never confirmed its email and holds accounts or transactions, the answer's `user.keepOrStartFresh` is set: ask "Keep what's in this account?" before opening anything (`POST /users/{id}/keep-or-start-fresh`).
+Either the address and the 6-digit code, or the link's token alone (it names the account). Sets the password, signs out every other device (every refresh and device token issued before stops working), confirms the account's email, and answers a session like a login. Using a code or the link spends every code of that request. A code takes five tries. When the account had never confirmed its email and holds accounts or transactions, the answer's `user.keepOrStartFresh` is set: ask "Keep what's in this account?" before opening anything (`POST /users/{id}/keep-or-start-fresh`). A change of email that was waiting is cancelled, and `password-changed` goes to the address. The code of `password-reset-after-undo` is redeemed here as well.
 
 No token required.
 
@@ -1163,7 +1180,8 @@ Newest first, keyset over `(date, id)`. Narrow it to one counterparty with `cont
 
 ### `POST /settlements`
 
-One payment, with both halves: `collected` is what came back to you and `paid` is what you handed over. **What it covers is imputed to the oldest line first**, across every group you share with them, and the answer says line by line what it covered.
+One payment, with both halves: `collected` is what came back to you and `paid` is what you handed over. **What it covers is imputed to the oldest open line first**, across every group you share with them, and the answer says line by line what it covered.
+**A payment from a group (`groupId`) covers that group's open lines first**, oldest first, and only what is left goes to the oldest open lines of every other group. `groupId` is a shared group of yours, archived ones included; the person does not have to be in it any more, and a group with no line of theirs simply puts nothing first. Only a payment with a person can name one. Payments are imputed one at a time **in the order they were recorded** (`createdAt`, then `id`), so a new one never moves what an earlier one covers, except for what a refund gives back: that comes off the newest money they gave you first.
 **Money coming back is not income.** It arrives in `accountId` as a `SETTLEMENT`, carries no category and is out of Stats and of the budgets — the shape an `ADJUSTMENT` already has. What it covers comes off what counts as yours on each line it lands on, **in the month that line happened**, and every movement it touches says so in its history.
 **Paying somebody back is not that movement: it is your expense**, one for each line you cover, with that line's description, dated that line, and with the category you give — one in `categoryId` for all of them, or one per line in `categories`. The shared layer carries no categories, so there is none to take. Whatever is left of `paid` once every line you owe is covered is a **refund** of what they paid ahead, and that is a `SETTLEMENT` leaving the account: you never spent it, so it carries no category either.
 **`outsideApp` is cash the app never saw**: no movement is written and no balance moves, and what is owed falls all the same, because that money did change hands.
@@ -1173,14 +1191,14 @@ Accepts a client-minted `id`, with the usual replay.
 
 **Responses**
 
-| Status | Schema             | Description                                                                                                                                                                                                                                                                                                                          |
-| ------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `200`  | `SettlementResult` | Replay of a payment already recorded with this client-minted id                                                                                                                                                                                                                                                                      |
-| `201`  | `SettlementResult` | The payment, and what it covered                                                                                                                                                                                                                                                                                                     |
-| `400`  | `ErrorResponse`    | Validation error (code VALIDATION), more than you owe them and more than they paid ahead (code SETTLEMENT_OVER_PAID), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), a date more than 24h ahead (code FUTURE_DATE), an archived category (code CATEGORY_ARCHIVED) or one of another type (code CATEGORY_TYPE_MISMATCH) |
-| `401`  | `ErrorResponse`    | Unauthorized                                                                                                                                                                                                                                                                                                                         |
-| `404`  | `ErrorResponse`    | The contact, the expense or the account is not the caller's (uniform for missing and not owned)                                                                                                                                                                                                                                      |
-| `409`  | `ErrorResponse`    | The client-minted id is already in use (code ID_TAKEN)                                                                                                                                                                                                                                                                               |
+| Status | Schema             | Description                                                                                                                                                                                                                                                                                                                                                                 |
+| ------ | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SettlementResult` | Replay of a payment already recorded with this client-minted id                                                                                                                                                                                                                                                                                                             |
+| `201`  | `SettlementResult` | The payment, and what it covered                                                                                                                                                                                                                                                                                                                                            |
+| `400`  | `ErrorResponse`    | Validation error (code VALIDATION, also for `groupId` beside `expenseId`), more than you owe them and more than they paid ahead (code SETTLEMENT_OVER_PAID), decimals in a `ZeroDecimalCurrency` (code AMOUNT_PRECISION), a date more than 24h ahead (code FUTURE_DATE), an archived category (code CATEGORY_ARCHIVED) or one of another type (code CATEGORY_TYPE_MISMATCH) |
+| `401`  | `ErrorResponse`    | Unauthorized                                                                                                                                                                                                                                                                                                                                                                |
+| `404`  | `ErrorResponse`    | The contact, the expense, the shared group (`groupId`) or the account is not the caller's (uniform for missing and not owned)                                                                                                                                                                                                                                               |
+| `409`  | `ErrorResponse`    | The client-minted id is already in use (code ID_TAKEN)                                                                                                                                                                                                                                                                                                                      |
 
 ### `GET /settlements/{id}`
 
@@ -2128,7 +2146,7 @@ The profile, and while its email is not confirmed, what the sheet that confirms 
 
 ### `PUT /users/{id}`
 
-Changing `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again. `currency` can only change while the user has no accounts (mono-currency mode). The email does not change here: a body with `email` is refused whole, before its password or its fields are checked, and nothing is written; it changes through `POST /users/{id}/email-change`, once the new address confirms it.
+Changing `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again — cancels a change of email that waits, and emails `password-changed` when the account's email is confirmed. `currency` can only change while the user has no accounts (mono-currency mode). The email does not change here: a body with `email` is refused whole, before its password or its fields are checked, and nothing is written; it changes through `POST /users/{id}/email-change`, once the new address confirms it.
 
 **Path**
 
@@ -2150,7 +2168,7 @@ Changing `password` requires `currentPassword` (re-authentication) and revokes e
 
 ### `DELETE /users/{id}`
 
-Requires `currentPassword`: a hijacked 15-minute access token must not be able to delete the account. Soft delete: the account and its financial history are kept, and registering again with the same email and the password it had reactivates it.
+Requires `currentPassword`: a hijacked 15-minute access token must not be able to delete the account. Soft delete: the account and its financial history are kept, and registering again with the same email and the password it had reactivates it. Emails `account-deleted` when the email is confirmed. An undo link sent before (7 days) still brings the account back, at the address it went to.
 
 **Path**
 
@@ -2172,7 +2190,7 @@ Requires `currentPassword`: a hijacked 15-minute access token must not be able t
 
 ### `POST /users/{id}/email-change`
 
-Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION).
+Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION). When the account's email is confirmed, `email-change-requested` goes to it too, naming the new address, with "Undo the change" (`/{locale}/undo#token=…`, POST /auth/email/undo) for 7 days, and the change is saved only once that notice went (an old address that refuses all email does not stop it); while that link works the old address stays the account's, and another account's register or change of email to it is EMAIL_TAKEN.
 
 **Path**
 
@@ -2184,16 +2202,16 @@ Save changes with a new email in Password & email. Nothing moves yet: the accoun
 
 **Responses**
 
-| Status | Schema            | Description                                                                                                                                                                                                                                                                |
-| ------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `202`  | `EmailChangeSent` | The email was accepted for delivery, or may have gone, and the change waits for its code. `resendAfterSeconds` is the countdown before Resend                                                                                                                              |
-| `400`  | `ErrorResponse`   | Validation error, the account's own email among them (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID)                                                                                                                                     |
-| `401`  | `ErrorResponse`   | Missing, invalid or expired access token, or a wrong `currentPassword` (code CURRENT_PASSWORD_INVALID)                                                                                                                                                                     |
-| `404`  | `ErrorResponse`   | User not found (or not the authenticated user's id)                                                                                                                                                                                                                        |
-| `409`  | `ErrorResponse`   | The address belongs to another account, a deleted one included (code EMAIL_TAKEN)                                                                                                                                                                                          |
-| `422`  | `ErrorResponse`   | The address does not accept our emails: it bounced or complained before, or the provider refused it (code EMAIL_SEND_FAILED). Nothing was saved                                                                                                                            |
-| `429`  | `ErrorResponse`   | Too many requests (code RATE_LIMITED; `Retry-After` in seconds): password guesses for this account, from this IP, from this device or IP in the hour, for this account (five verification or email-change emails a day), or for this address — one a minute and five a day |
-| `503`  | `ErrorResponse`   | The email could not be sent (code EMAIL_SEND_FAILED), or the captcha could not be checked (code CAPTCHA_UNAVAILABLE). Nothing was saved                                                                                                                                    |
+| Status | Schema            | Description                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `202`  | `EmailChangeSent` | The email was accepted for delivery, or may have gone, and the change waits for its code. `resendAfterSeconds` is the countdown before Resend                                                                                                                                                                                                                                                         |
+| `400`  | `ErrorResponse`   | Validation error, the account's own email among them (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID)                                                                                                                                                                                                                                                                |
+| `401`  | `ErrorResponse`   | Missing, invalid or expired access token, or a wrong `currentPassword` (code CURRENT_PASSWORD_INVALID)                                                                                                                                                                                                                                                                                                |
+| `404`  | `ErrorResponse`   | User not found (or not the authenticated user's id)                                                                                                                                                                                                                                                                                                                                                   |
+| `409`  | `ErrorResponse`   | The address belongs to another account, a deleted one included (code EMAIL_TAKEN)                                                                                                                                                                                                                                                                                                                     |
+| `422`  | `ErrorResponse`   | The address does not accept our emails: it bounced or complained before, or the provider refused it (code EMAIL_SEND_FAILED). Nothing was saved                                                                                                                                                                                                                                                       |
+| `429`  | `ErrorResponse`   | Too many requests (code RATE_LIMITED; `Retry-After` in seconds): password guesses for this account, from this IP, from this device or IP in the hour, for this account (five verification or email-change emails a day), or for this address — one a minute and five a day — which counts the old address's `email-change-requested` too, as does the day's cap of security emails. Nothing was saved |
+| `503`  | `ErrorResponse`   | The email to the new address, or the notice to the confirmed old one, could not be sent (code EMAIL_SEND_FAILED), or the captcha could not be checked (code CAPTCHA_UNAVAILABLE). Nothing was saved                                                                                                                                                                                                   |
 
 ### `DELETE /users/{id}/email-change`
 

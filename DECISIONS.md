@@ -5,6 +5,50 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-03 · A payment from a group proposes and covers that group first (T-241, the front of T-240)
+
+- **Context:** the settle-up sheet prefilled everything open with the person across every group, from
+  any door, and the server covered the oldest line first. Settling a new group could mark an old one
+  paid by accident, and the money landed on the oldest lines instead of the group being settled. The
+  backend's T-240 lets `POST /settlements` (and `settlement:create`) carry `groupId`, and imputes each
+  payment one at a time in the order it was recorded, its group's open lines first.
+- **The door decides, and the owner decided how.** A group's door (the group's `Settle up`, a person's
+  row in it, a shared expense of it) gives the party a `scope`: that person's open figures in that
+  group. It prefills the group's net, takes the group's direction even when the total points the other
+  way ("manda el grupo actual", the owner's call), accepts up to everything open between you in that
+  direction (the group at least), and sends `groupId`. The amount equal to the group's net records both
+  halves of the group; equal to the total, in the same direction, both halves of everything; anything
+  else is one half in the group's direction. The People door keeps no scope and sends no group, and a
+  block of guests never does (its one expense is all there is, and the server refuses it).
+- **A group's door offers only who has something open in that group.** The group's row action, its
+  `Settle up` list and a shared expense's list all ask `hasSomethingToSettle` of the scoped party, so
+  somebody paid in this group who owes you in another, or who paid you ahead, is settled from People.
+  Before, such a row opened the sheet on the total, which is the bug this fixes; a paid-ahead refund
+  from a group door is the one thing that moved, and it is raised with the owner.
+- **The `over` message names the limit that applies**: the group's figure when the total points the
+  other way or is smaller (`capIsTheGroup`), everything open between you otherwise.
+- **One imputation, ported unit for unit.** `imputeCounterparty` in `lib/local/derive/shared.ts` is the
+  backend's `sharedImputation.ts`: payments by `createdAt` then id, each covering its group's open lines
+  and then the oldest, the refund trimmed off the newest money first. The section derives with it, and
+  the sheet previews with it by imputing the new payment alone over the lines still open, which is
+  where the server puts it: last. A payment still in the queue has no server `createdAt`, so both
+  mirror readers (the section and the movements' `countsAsYours`) hand `deriveShared` the ids the
+  outbox still has to create (`queuedPayments`, a required `unstored`) and they go after every stored
+  one, the same place the server will give them. Two queued payments to one person are ordered by id
+  between themselves, as the server's tie-break does; the queue's own order would only differ after a
+  re-mint.
+- **No mirror version bump.** The mirror keeps the server's rows whole, so `groupId` arrives with the
+  next page of the feed; a row kept from before has none, which means paid from no group, and is read
+  that way. Re-pulling every device for a field whose absence is already the right answer would cost
+  a full snapshot for nothing.
+- Alternatives: proposing the total and letting the user type the group's figure (the bug itself);
+  following the total's direction when it disagrees with the group (the owner chose the group); faking
+  a far-future `createdAt` on a queued payment so it sorts last (a stored field that lies).
+- **Consequence:** `SettleParty.scope`, `SettlePlan.groupId`, `isInbound` and `settleCap` in
+  `settle.ts`; `NewSettlement.groupId` in the outbox. `types/api.d.ts` regenerated against the T-240
+  backend, which also brings what that backend's main already had (T-211's undo of an email change),
+  so the contract check stays green.
+
 ## 2026-09-28 · A new email waits for its code, through named BFF routes (T-222)
 
 - **The email leaves `PUT /users/:id`.** Save changes with a new address asks `POST
