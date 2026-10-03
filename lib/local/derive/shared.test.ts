@@ -231,6 +231,7 @@ describe("the imputation", () => {
     ).toEqual({
       theirs: new Map([["a", 5000]]),
       yours: new Map(),
+      groupsReached: new Map([["p1", []]]),
       surplus: { theirs: 3000, yours: 0 },
     });
   });
@@ -245,7 +246,8 @@ describe("the imputation", () => {
       payment("p4", { collected: 18000 }),
     ];
     const total = (key: "collected" | "paid") => payments.reduce((sum, one) => sum + one[key], 0);
-    expect(imputeCounterparty(theirs, yours, payments)).toEqual(
+    const imputed = imputeCounterparty(theirs, yours, payments);
+    expect({ theirs: imputed.theirs, yours: imputed.yours, surplus: imputed.surplus }).toEqual(
       pooled(theirs, yours, total("collected"), total("paid")),
     );
   });
@@ -261,6 +263,79 @@ describe("the imputation", () => {
       ["cine", 10000],
       ["comer", 20000],
     ]);
+  });
+
+  it("says which groups each payment lowered a line in, its own first, and none for money nothing was owed for", () => {
+    const lines = [line("cine", "01", 20000, "g-cine"), line("comer", "10", 20000, "g-comer")];
+    const yours = [line("teatro", "03", 5000, "g-teatro")];
+    const imputed = imputeCounterparty(lines, yours, [
+      payment("p1", {
+        collected: 20000,
+        groupId: "g-comer",
+        createdAt: "2026-09-01T12:00:00.000Z",
+      }),
+      payment("p2", { collected: 25000, createdAt: "2026-09-01T12:01:00.000Z" }),
+      payment("p3", { paid: 5000, createdAt: "2026-09-01T12:02:00.000Z" }),
+      payment("p4", { collected: 1000, createdAt: "2026-09-01T12:03:00.000Z" }),
+    ]);
+    expect(imputed.groupsReached).toEqual(
+      new Map([
+        ["p1", ["g-comer"]],
+        ["p2", ["g-cine"]],
+        ["p3", ["g-teatro"]],
+        ["p4", []],
+      ]),
+    );
+    const spilling = imputeCounterparty(
+      lines,
+      [],
+      [payment("p1", { collected: 30000, groupId: "g-comer" })],
+    );
+    expect(spilling.groupsReached.get("p1")).toEqual(["g-comer", "g-cine"]);
+  });
+
+  it("names a group once when one payment lowers lines both ways in it, theirs first", () => {
+    const theirs = [line("food", "02", 10000, "g-trip"), line("cine", "04", 10000, "g-cine")];
+    const yours = [line("tickets", "03", 4000, "g-trip"), line("taxi", "05", 4000, "g-cab")];
+    const imputed = imputeCounterparty(theirs, yours, [
+      payment("p1", { collected: 20000, paid: 8000, groupId: "g-trip" }),
+    ]);
+    expect(imputed.groupsReached.get("p1")).toEqual(["g-trip", "g-cine", "g-cab"]);
+  });
+
+  it("names what a payment covers once a refund has come off its newest money", () => {
+    const lines = [line("a", "01", 10000, "g-a"), line("b", "05", 10000, "g-b")];
+    const imputed = imputeCounterparty(
+      lines,
+      [],
+      [
+        payment("p1", { collected: 10000, createdAt: "2026-09-01T12:00:00.000Z" }),
+        payment("p2", { collected: 10000, groupId: "g-b", createdAt: "2026-09-01T12:01:00.000Z" }),
+        payment("p3", { paid: 10000, createdAt: "2026-09-01T12:02:00.000Z" }),
+      ],
+    );
+    expect(imputed.theirs.get("b")).toBe(0);
+    expect(imputed.groupsReached).toEqual(
+      new Map([
+        ["p1", ["g-a"]],
+        ["p2", []],
+        ["p3", []],
+      ]),
+    );
+  });
+
+  it("names for a payment still in the queue what it covers after every stored one", () => {
+    const lines = [line("old", "01", 10000, "g-a"), line("new", "09", 10000, "g-b")];
+    const imputed = imputeCounterparty(
+      lines,
+      [],
+      [
+        payment("p0", { collected: 10000, groupId: "g-a", createdAt: null }),
+        payment("p9", { collected: 10000, createdAt: "2026-12-31T12:00:00.000Z" }),
+      ],
+    );
+    expect(imputed.groupsReached.get("p9")).toEqual(["g-a"]);
+    expect(imputed.groupsReached.get("p0")).toEqual(["g-b"]);
   });
 
   it("imputes in the order payments were recorded, never by their date or their place in the list", () => {

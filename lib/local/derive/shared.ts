@@ -250,6 +250,8 @@ export interface SettledPayment {
 export interface CounterpartyImputation {
   theirs: Map<string, number>;
   yours: Map<string, number>;
+  // By payment id, in the order it reached them.
+  groupsReached: Map<string, string[]>;
   surplus: {
     // What they handed over that no line of theirs is owed for.
     theirs: number;
@@ -277,13 +279,16 @@ const creationOrder = (a: SettledPayment, b: SettledPayment): number =>
 function imputeInOrder(
   lines: readonly OwedLine[],
   payments: readonly PaidIn[],
-): { settled: Map<string, number>; surplus: number } {
+): { settled: Map<string, number>; surplus: number; reached: OwedLine[][] } {
   const ordered = [...lines].sort(oldestFirst);
   const open = ordered.map((line) => Math.max(0, line.owed));
   const everyLine = [...ordered.keys()];
   let firstOpen = 0;
   let surplus = 0;
+  const reached: OwedLine[][] = [];
   for (const payment of payments) {
+    const lowered: OwedLine[] = [];
+    reached.push(lowered);
     let left = Math.max(0, payment.amount);
     while (firstOpen < open.length && open[firstOpen] === 0) firstOpen += 1;
     const ownGroup =
@@ -295,12 +300,15 @@ function imputeInOrder(
       const covered = Math.min(open[i] ?? 0, left);
       open[i] = (open[i] ?? 0) - covered;
       left -= covered;
+      const line = ordered[i];
+      if (covered > 0 && line) lowered.push(line);
     }
     surplus += left;
   }
   return {
     settled: new Map(ordered.map((line, i) => [line.key, Math.max(0, line.owed) - (open[i] ?? 0)])),
     surplus,
+    reached,
   };
 }
 
@@ -331,9 +339,22 @@ export function imputeCounterparty(
   const collected = ordered.map((one) => ({ amount: one.collected, groupId: one.groupId }));
   const theirs = imputeInOrder(theirLines, withoutNewest(collected, yours.surplus));
   const theyGave = collected.reduce((sum, one) => sum + Math.max(0, one.amount), 0);
+  const groupsReached = new Map(
+    ordered.map((one, i) => [
+      one.id,
+      [
+        ...new Set(
+          [...(theirs.reached[i] ?? []), ...(yours.reached[i] ?? [])].flatMap((line) =>
+            line.groupId === null ? [] : [line.groupId],
+          ),
+        ),
+      ],
+    ]),
+  );
   return {
     theirs: theirs.settled,
     yours: yours.settled,
+    groupsReached,
     surplus: { theirs: theirs.surplus, yours: Math.max(0, yours.surplus - theyGave) },
   };
 }
@@ -380,6 +401,7 @@ export interface SharedLedger {
   // What each share has been settled by, keyed `<expenseId>|<party key>`.
   collected: Map<string, number>;
   groups: SharedGroupView[];
+  groupsReached: Map<string, string[]>;
 }
 
 export const partyKey = (party: { contactId: string | null; expenseId: string | null }): string =>
@@ -400,6 +422,7 @@ interface Settled {
   // `<expenseId>|<party key>` for what they owe you, `user|<expenseId>` for what you owe them.
   covered: Map<string, number>;
   ahead: Map<string, number>;
+  groupsReached: Map<string, string[]>;
 }
 
 interface Owed {
@@ -456,15 +479,17 @@ function imputeEverything(
 
   const covered = new Map<string, number>();
   const ahead = new Map<string, number>();
+  const groupsReached = new Map<string, string[]>();
   for (const key of parties) {
     const lines = owed.get(key) ?? { theyOwe: [], youOwe: [] };
     const imputed = imputeCounterparty(lines.theyOwe, lines.youOwe, paymentsOf.get(key) ?? []);
     ahead.set(key, imputed.surplus.theirs);
     for (const [expenseId, amount] of imputed.theirs) covered.set(`${expenseId}|${key}`, amount);
     for (const [expenseId, amount] of imputed.yours) covered.set(`user|${expenseId}`, amount);
+    for (const [id, groups] of imputed.groupsReached) groupsReached.set(id, groups);
   }
 
-  return { covered, ahead };
+  return { covered, ahead, groupsReached };
 }
 
 function viewOf(
@@ -617,6 +642,7 @@ export function deriveShared(input: SharedLedgerInput): SharedLedger {
   return {
     cameBack,
     collected,
+    groupsReached: settled.groupsReached,
     groups: input.groups.map((group) => viewOf(group, byGroup.get(group.id) ?? [], settled)),
   };
 }

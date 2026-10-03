@@ -53,6 +53,7 @@ export interface SharedSection {
   collected: ReadonlyMap<string, number>;
   // What has come back for each expense you fronted: the figure its movement loses.
   cameBack: ReadonlyMap<string, number>;
+  groupsReached: ReadonlyMap<string, readonly string[]>;
   contacts: number;
   settlements: Settlement[];
   undone: Settlement[];
@@ -237,6 +238,7 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     groups,
     collected: ledger.collected,
     cameBack: ledger.cameBack,
+    groupsReached: ledger.groupsReached,
     contacts: contacts.filter((row) => row.archivedAt === null).length,
     settlements: [...rows.settlements].sort(newestFirst),
     undone: rows.undone,
@@ -258,17 +260,19 @@ export const groupView = (section: SharedSection, id: string): GroupView | undef
 export const personView = (section: SharedSection, contactId: string): PersonView | undefined =>
   section.people.find((view) => view.contactId === contactId);
 
+const reachedOrOwn = (
+  reached: readonly string[],
+  own: string | null | undefined,
+): readonly string[] => (reached.length > 0 || !own ? reached : [own]);
+
 export function sharedLookup(section: SharedSection): SharedLookup {
   const expenses = new Map<string, SharedExpenseLookup>();
-  const names = new Map<string, { name: string; groups: Set<string> }>();
+  const names = new Map<string, string>();
+  const groupNames = new Map<string, string>();
   // A person keeps their name once the group is settled, archived, or they are: People holds them.
-  for (const person of section.people) {
-    names.set(`contact:${person.contactId}`, {
-      name: person.name,
-      groups: new Set(person.groups.map((group) => group.name)),
-    });
-  }
+  for (const person of section.people) names.set(`contact:${person.contactId}`, person.name);
   for (const view of section.groups) {
+    groupNames.set(view.group.id, view.group.name);
     for (const expense of view.expenses) {
       expenses.set(expense.id, {
         yourShare: expense.split.shares.find(isYours)?.amount ?? 0,
@@ -277,16 +281,18 @@ export function sharedLookup(section: SharedSection): SharedLookup {
       });
     }
     for (const person of view.people) {
-      if (person.contactId !== null) continue;
-      const held = names.get(person.key) ?? { name: person.name, groups: new Set<string>() };
-      held.groups.add(view.group.name);
-      names.set(person.key, held);
+      if (person.contactId === null && !names.has(person.key)) names.set(person.key, person.name);
     }
   }
   const payments = new Map<string, SharedPaymentLookup>();
   for (const one of section.settlements) {
-    const held = names.get(partyKey(one.counterparty));
-    payments.set(one.id, { name: held?.name ?? "", groups: [...(held?.groups ?? [])] });
+    payments.set(one.id, {
+      name: names.get(partyKey(one.counterparty)) ?? "",
+      groups: reachedOrOwn(section.groupsReached.get(one.id) ?? [], one.groupId).flatMap((id) => {
+        const name = groupNames.get(id);
+        return name === undefined ? [] : [name];
+      }),
+    });
   }
   return { expenses, payments };
 }

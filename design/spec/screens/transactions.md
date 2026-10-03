@@ -195,8 +195,12 @@ sheet, besides the red stripe.
 
 The fifth kind of movement, and the list has to show it: money arrived in an account, so a list that
 hid it would not explain the balance. It reads as what it is — a `hand-coins` tile, the person's name,
-a **Payment** badge, the shared group underneath, and the amount **neutral with a `+`**. It
-is not income: no category, out of Stats and out of Budgets, exactly like an adjustment, and never
+a **Payment** badge, the shared group underneath, and the amount **neutral with a `+`**. The group
+underneath is **the one the payment lowered a line in** — or each of them when it covered more than
+one, the group it was made from first when it covered any of it — never every group shared with that
+person (T-242). Money that covered no line (paid ahead, or given back) names the group it was made
+from, and nothing when it was made from the person. Because what a payment covers is worked out again
+whenever a line changes, so are the groups it names. It is not income: no category, out of Stats and out of Budgets, exactly like an adjustment, and never
 green ([shared.md](shared.md)).
 
 **It goes both ways.** Giving somebody back what they paid ahead of their share leaves an account, so
@@ -210,7 +214,8 @@ else, and a type in the form that the form cannot correctly create is the contra
 undo for Transfer categories.
 
 **Its detail reads as a payment** — the `hand-coins` tile of its row, the counterparty's name, and the
-shared groups it settled on a badge — and **offers no Edit and no Delete** (`#payment-detail`): the money belongs to the payment, and
+shared groups it settled on a badge, the same groups as its row — and **offers no Edit and no Delete**
+(`#payment-detail`): the money belongs to the payment, and
 the server refuses to move it on its own. The screen says that in one line rather than offering two
 buttons that always fail — and under that line it offers **the door that does exist**, `Undo the
 payment`, which is the same sheet the person's `Payments` list opens and takes this movement with it

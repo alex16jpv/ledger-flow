@@ -192,6 +192,15 @@ test("settling up from a group proposes that group and leaves an older group ope
   expect(payment?.groupId).toBe(trip.id);
   await page.goto(`/shared/groups/${nightOut.id}`);
   await expect(page.getByText("Nothing paid yet · owes you $26,300")).toBeVisible();
+
+  // T-242: the payment names the group it covered, not every group shared with Beto.
+  await page.goto("/transactions");
+  const row = page.getByRole("button", { name: /^Beto Cano/ });
+  await expect(row).toContainText("Cartagena trip");
+  await expect(row).not.toContainText("Night out");
+  await row.click();
+  await expect(page.getByText("Cartagena trip", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Night out/)).toHaveCount(0);
 });
 
 test("adding somebody to a group that exists shows the whole result before it happens", async ({
