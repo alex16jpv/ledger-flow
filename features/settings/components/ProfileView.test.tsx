@@ -269,15 +269,17 @@ describe("ProfileView", () => {
   });
 
   it("shows the address that waits, with Enter code, Resend and Cancel change", async () => {
+    // Stamped here, not when the file loads: a busy run would otherwise read the countdown below 0:40.
+    const fresh = { ...waiting, resendAvailableAt: new Date(Date.now() + 42_000).toISOString() };
     fetchMock.mockImplementation((input, init) => {
       const url = urlOf(input);
       if (url.startsWith("/api/auth/me"))
-        return Promise.resolve(json({ user: { ...user, emailChange: waiting } }));
+        return Promise.resolve(json({ user: { ...user, emailChange: fresh } }));
       if (url === "/api/auth/change-email" && init?.method === "DELETE")
         return Promise.resolve(json({ message: "Nothing waits" }));
       return Promise.resolve(json({}));
     });
-    renderView(vi.fn(), { ...user, emailChange: waiting });
+    renderView(vi.fn(), { ...user, emailChange: fresh });
     expect(screen.getByText(/Waiting for confirmation at/)).toHaveTextContent(
       "Waiting for confirmation at new@ledgerflow.test",
     );
