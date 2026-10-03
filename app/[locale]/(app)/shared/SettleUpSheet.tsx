@@ -15,7 +15,6 @@ import { Field } from "@/components/ui/Field";
 import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { AccountPicker } from "@/features/accounts/components/AccountPicker";
-import { CategoryPicker } from "@/features/categories/components/CategoryPicker";
 import { useRecordSettlement } from "@/features/shared/hooks";
 import {
   capIsTheGroup,
@@ -35,6 +34,13 @@ import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { toCents } from "@/lib/local/derive/money";
+
+import {
+  categoryOf,
+  LineCategories,
+  type LineCategoriesValue,
+  missingCategory,
+} from "./LineCategories";
 
 export interface SettleUpSheetProps {
   party: SettleParty;
@@ -149,7 +155,6 @@ function GroupFirst({ party, scope }: { party: SettleParty; scope: SettleScope }
 export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpSheetProps) {
   const t = useTranslations();
   const money = useMoney();
-  const dates = useDates();
   const toast = useToast();
   const record = useRecordSettlement();
   const inbound = isInbound(party);
@@ -158,8 +163,10 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
   const [amount, setAmount] = useState<number | null>(proposed);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [outside, setOutside] = useState(false);
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [perLine, setPerLine] = useState<Record<string, string>>({});
+  const [categories, setCategories] = useState<LineCategoriesValue>({
+    categoryId: null,
+    perLine: {},
+  });
   const { timeZone } = useFormatSettings();
   const [openedAt] = useState(() => new Date());
   const [chosenDay, setDay] = useState<string | null>(null);
@@ -169,13 +176,12 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
   const plan = planSettlement(party, cash);
   const over = toCents(cash) > toCents(most);
   const needsCategory = plan.yourLines.length > 0 && !outside;
-  const missingCategory = plan.yourLines.some((line) => !(perLine[line.expenseId] ?? categoryId));
   // Two people owing each other the same net to nothing, and that settle-up is still a settle-up.
   const ready =
     (cash > 0 || (proposed === 0 && hasSomethingToSettle(party))) &&
     !over &&
     (outside || accountId !== null) &&
-    (!needsCategory || !missingCategory) &&
+    (!needsCategory || !missingCategory(categories, plan.yourLines)) &&
     !record.isPending;
   const error = record.error ? presentError(record.error) : null;
   const overMessage =
@@ -205,7 +211,7 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
               date: line.date,
               description: line.description,
               amount: line.covered,
-              categoryId: perLine[line.expenseId] ?? categoryId ?? "",
+              categoryId: categoryOf(categories, line) ?? "",
             })),
       });
       toast.show({ message: t("shared.settle.recorded") });
@@ -284,43 +290,7 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
           }}
         />
         {needsCategory && (
-          <div className="flex flex-col gap-3">
-            <CategoryPicker
-              type="EXPENSE"
-              label={
-                plan.yourLines.length === 1
-                  ? t("shared.settle.categoryFor", {
-                      amount: money.format(plan.yourLines[0]?.covered ?? 0),
-                      description:
-                        plan.yourLines[0]?.description ?? t("shared.settle.noDescription"),
-                    })
-                  : t("shared.settle.category")
-              }
-              value={categoryId}
-              allowCreate={false}
-              onChange={(category) => {
-                setCategoryId(category.id);
-                setPerLine({});
-              }}
-            />
-            {plan.yourLines.length > 1 &&
-              plan.yourLines.map((line) => (
-                <CategoryPicker
-                  key={line.expenseId}
-                  type="EXPENSE"
-                  label={t("shared.settle.categoryForLine", {
-                    amount: money.format(line.covered),
-                    description: line.description ?? t("shared.settle.noDescription"),
-                    date: dates.formatDay(new Date(line.date)),
-                  })}
-                  value={perLine[line.expenseId] ?? categoryId}
-                  allowCreate={false}
-                  onChange={(category) => {
-                    setPerLine((held) => ({ ...held, [line.expenseId]: category.id }));
-                  }}
-                />
-              ))}
-          </div>
+          <LineCategories lines={plan.yourLines} value={categories} onChange={setCategories} />
         )}
         {outside ? (
           <Alert tone="warning" title={t("shared.settle.outsideTitle")}>
@@ -362,7 +332,7 @@ export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpShee
           <Button variant="ghost" size="sm" className="self-start px-0" onClick={onWriteOff}>
             <Ban {...iconProps("sm")} />
             {t("shared.settle.writeOff", {
-              amount: money.format((party.scope ?? party).owedToYou),
+              amount: money.format(party.scope ? party.scope.net : party.owedToYou),
             })}
           </Button>
         )}

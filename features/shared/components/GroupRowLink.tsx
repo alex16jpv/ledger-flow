@@ -63,7 +63,7 @@ export function GroupRowLink({ view, pending }: { view: GroupView; pending: Shar
               <Progress
                 thin
                 plain
-                value={view.collected}
+                value={view.netBack}
                 max={view.barTotal}
                 color={group.color}
                 label={t("barLabel", { name: group.name })}
@@ -72,7 +72,7 @@ export function GroupRowLink({ view, pending }: { view: GroupView; pending: Shar
             </Projected>
             <span className="text-xs text-text-3">
               {t("bar", {
-                paid: money.format(view.collected),
+                paid: money.format(view.netBack),
                 total: money.format(view.barTotal),
               })}
             </span>

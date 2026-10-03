@@ -7,11 +7,13 @@ import {
   capIsTheGroup,
   hasSomethingToSettle,
   isInbound,
+  planCrossing,
   planSettlement,
   settleableAmount,
   settleCap,
   settleParty,
   settlePerson,
+  writeOffWithoutCrossing,
 } from "./settle";
 
 const ANA = "k1";
@@ -475,5 +477,52 @@ describe("settling from a group", () => {
       ["n1", 26_300],
       ["t1", 173_700],
     ]);
+  });
+});
+
+describe("squaring a group before a write-off", () => {
+  it("crosses what you owe them there against what they owe you, and nothing elsewhere", () => {
+    const rows = twoGroups();
+    rows.expenses.push(betoPaid("t3", "g2", 100_000, "2026-09-05T20:00:00.000Z"));
+    rows.expenses.push(betoPaid("n2", "g1", 20_000, "2026-08-11T20:00:00.000Z"));
+
+    const plan = planCrossing(fromGroup(rows, "g2"));
+
+    expect(plan).toMatchObject({ collected: 100_000, paid: 100_000, cash: 0, refunded: 0 });
+    expect(plan?.groupId).toBe("g2");
+    expect(coverage(plan?.yourLines ?? [])).toEqual([["t3", 100_000]]);
+    expect(coverage(plan?.covers ?? [])).toEqual([["t1", 100_000]]);
+  });
+
+  it("crosses nothing where you owe them nothing, or outside a group", () => {
+    expect(planCrossing(fromGroup(twoGroups(), "g2"))).toBeNull();
+    expect(planCrossing(partyFor(nightOut(), ANA))).toBeNull();
+  });
+});
+
+describe("writing off while deleting a movement", () => {
+  const person = (contactId: string, owesYou: number, youOwe: number) => ({
+    key: `contact:${contactId}`,
+    contactId,
+    expenseId: null,
+    name: contactId,
+    color: null,
+    share: 0,
+    paid: 0,
+    owesYou,
+    youOwe,
+    net: owesYou - youOwe,
+    surplus: 0,
+    state: "NOT_PAID" as const,
+  });
+
+  it("is one tap only for a sole debtor you owe nothing back", () => {
+    expect(writeOffWithoutCrossing([person(ANA, 60_000, 0), person(BETO, 0, 0)])?.contactId).toBe(
+      ANA,
+    );
+    expect(writeOffWithoutCrossing([person(ANA, 60_000, 30_000)])).toBeUndefined();
+    expect(
+      writeOffWithoutCrossing([person(ANA, 60_000, 0), person(BETO, 10_000, 0)]),
+    ).toBeUndefined();
   });
 });

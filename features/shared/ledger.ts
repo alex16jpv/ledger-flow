@@ -26,7 +26,7 @@ export interface GroupView {
   group: SharedGroup;
   expenses: SharedExpense[];
   countsAsYours: number;
-  collected: number;
+  netBack: number;
   writtenOff: number;
   owed: number;
   youOwe: number;
@@ -53,6 +53,7 @@ export interface SharedSection {
   collected: ReadonlyMap<string, number>;
   // What has come back for each expense you fronted: the figure its movement loses.
   cameBack: ReadonlyMap<string, number>;
+  groupsReached: ReadonlyMap<string, readonly string[]>;
   contacts: number;
   settlements: Settlement[];
   undone: Settlement[];
@@ -137,12 +138,14 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     const fronted = expenses
       .filter((expense) => expense.paidByContactId === null)
       .reduce((cents, expense) => cents + toCents(expense.amount), 0);
-    const paidBack = expenses
-      .filter((expense) => expense.paidByContactId !== null)
-      .reduce(
-        (cents, expense) => cents + toCents(ledger.collected.get(`${expense.id}|user`) ?? 0),
-        0,
-      );
+    const paidBackTo = new Map<string, number>();
+    for (const expense of expenses) {
+      if (expense.paidByContactId === null) continue;
+      const key = partyKey({ contactId: expense.paidByContactId, expenseId: null });
+      const covered = toCents(ledger.collected.get(`${expense.id}|user`) ?? 0);
+      paidBackTo.set(key, (paidBackTo.get(key) ?? 0) + covered);
+    }
+    const paidBack = [...paidBackTo.values()].reduce((cents, one) => cents + one, 0);
     const people = view.people.map((person): PartyView => {
       const contact = person.contactId === null ? undefined : byId.get(person.contactId);
       const held = tally.get(person.key) ?? { share: 0, paid: 0 };
@@ -163,15 +166,27 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
       };
     });
     const owed = people.reduce((cents, person) => cents + Math.max(0, toCents(person.net)), 0);
+    const netBack = people.reduce(
+      (cents, person) =>
+        cents +
+        Math.max(
+          0,
+          toCents(person.paid) -
+            (paidBackTo.get(person.key) ?? 0) +
+            Math.min(0, toCents(person.net)),
+        ),
+      0,
+    );
+    const youOwe = people.reduce((cents, person) => cents + Math.max(0, -toCents(person.net)), 0);
     groups.push({
       group,
       expenses: [...expenses].sort(newestFirst),
       countsAsYours: fromCents(fronted - toCents(view.collected) + paidBack),
-      collected: view.collected,
+      netBack: fromCents(netBack),
       writtenOff: view.writtenOff,
       owed: fromCents(owed),
-      youOwe: view.youOwe,
-      barTotal: fromCents(toCents(view.collected) + owed + toCents(view.writtenOff)),
+      youOwe: fromCents(youOwe),
+      barTotal: fromCents(netBack + owed + toCents(view.writtenOff)),
       people,
       you: { share: fromCents(yours) },
     });
@@ -237,6 +252,7 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     groups,
     collected: ledger.collected,
     cameBack: ledger.cameBack,
+    groupsReached: ledger.groupsReached,
     contacts: contacts.filter((row) => row.archivedAt === null).length,
     settlements: [...rows.settlements].sort(newestFirst),
     undone: rows.undone,
@@ -258,17 +274,19 @@ export const groupView = (section: SharedSection, id: string): GroupView | undef
 export const personView = (section: SharedSection, contactId: string): PersonView | undefined =>
   section.people.find((view) => view.contactId === contactId);
 
+const reachedOrOwn = (
+  reached: readonly string[],
+  own: string | null | undefined,
+): readonly string[] => (reached.length > 0 || !own ? reached : [own]);
+
 export function sharedLookup(section: SharedSection): SharedLookup {
   const expenses = new Map<string, SharedExpenseLookup>();
-  const names = new Map<string, { name: string; groups: Set<string> }>();
+  const names = new Map<string, string>();
+  const groupNames = new Map<string, string>();
   // A person keeps their name once the group is settled, archived, or they are: People holds them.
-  for (const person of section.people) {
-    names.set(`contact:${person.contactId}`, {
-      name: person.name,
-      groups: new Set(person.groups.map((group) => group.name)),
-    });
-  }
+  for (const person of section.people) names.set(`contact:${person.contactId}`, person.name);
   for (const view of section.groups) {
+    groupNames.set(view.group.id, view.group.name);
     for (const expense of view.expenses) {
       expenses.set(expense.id, {
         yourShare: expense.split.shares.find(isYours)?.amount ?? 0,
@@ -277,16 +295,18 @@ export function sharedLookup(section: SharedSection): SharedLookup {
       });
     }
     for (const person of view.people) {
-      if (person.contactId !== null) continue;
-      const held = names.get(person.key) ?? { name: person.name, groups: new Set<string>() };
-      held.groups.add(view.group.name);
-      names.set(person.key, held);
+      if (person.contactId === null && !names.has(person.key)) names.set(person.key, person.name);
     }
   }
   const payments = new Map<string, SharedPaymentLookup>();
   for (const one of section.settlements) {
-    const held = names.get(partyKey(one.counterparty));
-    payments.set(one.id, { name: held?.name ?? "", groups: [...(held?.groups ?? [])] });
+    payments.set(one.id, {
+      name: names.get(partyKey(one.counterparty)) ?? "",
+      groups: reachedOrOwn(section.groupsReached.get(one.id) ?? [], one.groupId).flatMap((id) => {
+        const name = groupNames.get(id);
+        return name === undefined ? [] : [name];
+      }),
+    });
   }
   return { expenses, payments };
 }

@@ -279,6 +279,22 @@ export interface WriteOffTarget {
   expenseId: string | null;
 }
 
+// A write-off that squares the group lands after the payments that crossed it, or it forgives too much.
+const after = async (
+  tx: WriteTransaction,
+  change: LocalChange,
+  settlements: readonly string[],
+) => ({
+  ...change,
+  dependsOn: [
+    ...change.dependsOn,
+    ...(await dependenciesOf(
+      tx,
+      settlements.map((id) => ({ entity: "settlement" as const, id })),
+    )),
+  ],
+});
+
 type StoredWriteOff = SyncSharedGroup["writeOffs"][number];
 
 const samePartyAs = (target: WriteOffTarget) => (one: StoredWriteOff) =>
@@ -302,7 +318,11 @@ const writeOffBody = (target: WriteOffTarget): WriteOffInput =>
     : { expenseId: target.expenseId };
 
 // The ceiling is what was open when you decided, which is what the server stores with it.
-export function writeOffParty(target: WriteOffTarget, amount: number): Promise<SyncSharedGroup> {
+export function writeOffParty(
+  target: WriteOffTarget,
+  amount: number,
+  crossings: readonly string[] = [],
+): Promise<SyncSharedGroup> {
   return write<SyncSharedGroup>({
     local: {
       entity: "sharedGroup",
@@ -322,10 +342,11 @@ export function writeOffParty(target: WriteOffTarget, amount: number): Promise<S
           amount,
           at: occurredAt,
         };
-        return projectGroup(tx, target.groupId, {
+        const change = await projectGroup(tx, target.groupId, {
           ...group,
           writeOffs: [...group.writeOffs.filter((one) => !samePartyAs(target)(one)), entry],
         });
+        return after(tx, change, crossings);
       },
     },
     optimistic: groupBack(target.groupId),
@@ -355,9 +376,15 @@ export interface ArchivedGroup {
   id: string;
   // What each party still owes when you archive: the server writes it off on your behalf.
   owing: { contactId: string | null; expenseId: string | null; amount: number }[];
+  // The payments that squared the group first, which the archive waits on.
+  crossings?: string[];
 }
 
-export function archiveSharedGroup({ id, owing }: ArchivedGroup): Promise<SyncSharedGroup> {
+export function archiveSharedGroup({
+  id,
+  owing,
+  crossings = [],
+}: ArchivedGroup): Promise<SyncSharedGroup> {
   return write<SyncSharedGroup>({
     local: {
       entity: "sharedGroup",
@@ -372,7 +399,7 @@ export function archiveSharedGroup({ id, owing }: ArchivedGroup): Promise<SyncSh
               (party) => party.contactId === one.contactId && party.expenseId === one.expenseId,
             ),
         );
-        return projectGroup(tx, id, {
+        const change = await projectGroup(tx, id, {
           ...group,
           archivedAt: occurredAt,
           writeOffs: [
@@ -386,6 +413,7 @@ export function archiveSharedGroup({ id, owing }: ArchivedGroup): Promise<SyncSh
             })),
           ],
         });
+        return after(tx, change, crossings);
       },
     },
     optimistic: groupBack(id),
