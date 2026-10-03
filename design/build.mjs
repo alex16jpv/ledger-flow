@@ -1332,7 +1332,7 @@ ${row("repeat", "GRAY", "Bancolombia → Savings", "Transfer", 1000000, "transfe
 ${row("car", "BLUE", "Uber to work", "18:10 · Visa Gold", 18400)}
 <div class="day-head"><span>Sunday 20</span><span class="amount">${settlement ? money(132600, "−") : money(272600, "−")}</span></div>
 ${settlement ? row("hand-coins", "GRAY", "Beto Cano", "10:15 · Bancolombia", 300000, "settlement", { badges: `<span class="badge">${iconSvg("hand-coins")}Payment</span>`, sub: "Cartagena trip" }) : ""}
-${settlement ? row("hand-coins", "GRAY", "Ana Ruiz", "10:20 · Bancolombia", 160000, "settlementOut", { badges: `<span class="badge">${iconSvg("hand-coins")}Payment</span>`, sub: "Cartagena trip · money back to her" }) : ""}
+${settlement ? row("hand-coins", "GRAY", "Ana Ruiz", "10:20 · Bancolombia", 160000, "settlementOut", { badges: `<span class="badge">${iconSvg("hand-coins")}Payment</span>`, sub: "Cartagena trip" }) : ""}
 ${row("utensils", "ORANGE", "Carulla groceries", "Bancolombia", 78900, "expense", { badges: `<span class="badge">${iconSvg("users")}Shared</span>`, sub: "Your share $26,300" })}
 ${row("scale", "NONE", "Balance adjustment · Cash", "Reconciliation", 7500, "adjustment", { badges: '<span class="badge">Adjustment</span>' })}
 ${row("zap", "AMBER", "EPM electricity", "Bancolombia", 186200)}

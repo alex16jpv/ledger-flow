@@ -2,7 +2,7 @@ import type { SharedLedgerRows } from "@/lib/local/repository";
 import { contact, settlement, sharedExpense, sharedGroup } from "@/lib/testing/vault";
 import type { SharedGroup, SharedShare, SyncSharedGroup } from "@/types/api";
 
-import { sectionOf } from "./ledger";
+import { sectionOf, sharedLookup } from "./ledger";
 
 const ANA = "k1";
 const BETO = "k2";
@@ -337,5 +337,53 @@ describe("the section a screen reads", () => {
     expect(section.guests).toEqual({ owed: 0.3, groupCount: 1 });
     expect(section.owedToYou).toBe(0.3);
     expect(section.youOwe).toBe(0.1);
+  });
+
+  it("names on a payment only the groups it lowered a line in, not every group shared with that person", () => {
+    const rows = nightOut();
+    rows.groups = [...rows.groups, withTotals(sharedGroup({ id: "g2", name: "Wings" }))];
+    rows.expenses = [
+      ...rows.expenses,
+      sharedExpense({
+        id: "s4",
+        groupId: "g2",
+        description: "Wings",
+        date: "2026-09-25T12:00:00.000Z",
+        amount: 48_000,
+        split: equalSplit(48_000, [null, BETO]),
+      }),
+    ];
+    const beto = { kind: "CONTACT" as const, contactId: BETO, expenseId: null };
+    rows.settlements = [
+      settlement({ id: "p1", counterparty: beto, collected: 24_000, groupId: "g2" }),
+      settlement({ id: "p2", counterparty: beto, collected: 70_000, groupId: "g2" }),
+      settlement({ id: "p3", counterparty: beto, collected: 5_000 }),
+    ];
+    const { payments } = sharedLookup(sectionOf(rows, contacts));
+
+    expect(payments.get("p1")).toEqual({ name: "Beto Cano", groups: ["Wings"] });
+    expect(payments.get("p2")?.groups).toEqual(["Night out"]);
+    expect(payments.get("p3")?.groups).toEqual([]);
+  });
+
+  it("names the group a payment was made from when it covered no line, and nothing for one with nobody owing", () => {
+    const rows = nightOut();
+    const beto = { kind: "CONTACT" as const, contactId: BETO, expenseId: null };
+    rows.settlements = [
+      settlement({ id: "p1", counterparty: beto, collected: 60_000, groupId: "g1" }),
+      settlement({ id: "p2", counterparty: beto, collected: 5_000, groupId: "g1" }),
+      settlement({ id: "p3", counterparty: beto, collected: 5_000 }),
+      settlement({
+        id: "p4",
+        counterparty: { kind: "CONTACT", contactId: "k9", expenseId: null },
+        collected: 1_000,
+      }),
+    ];
+    const { payments } = sharedLookup(sectionOf(rows, contacts));
+
+    expect(payments.get("p1")?.groups).toEqual(["Night out"]);
+    expect(payments.get("p2")?.groups).toEqual(["Night out"]);
+    expect(payments.get("p3")?.groups).toEqual([]);
+    expect(payments.get("p4")?.groups).toEqual([]);
   });
 });

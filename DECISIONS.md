@@ -5,6 +5,22 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-03 · A payment names the groups it covered, not every group shared with the person (T-242)
+
+- **Context:** the owner, after T-241 shipped: a payment's row and its detail badge listed both groups he
+  shares with Sebas, though that payment was only for one of them. `sharedLookup` named the person's
+  groups, which was all it could know while a payment was imputed as part of one pool.
+- **Decision:** since T-240 a payment is imputed on its own, in creation order, so `imputeCounterparty`
+  also reports, per payment, the groups it lowered a line in (its own group first, then in the order it
+  reached them, theirs before yours), and the lookup names those. **A payment that covered no line** —
+  paid ahead, or given back — names the group it was made from, and nothing if it was made from People:
+  the owner's words were that this payment "is only for" the group it was settled in.
+- **Consequence:** the names are derived, like the figures: a line added, edited or deleted later, or a
+  later refund that comes off a payment's money, can change which groups an older payment names, and
+  that is what "where the adjustment was applied" means today. Rejected: storing the groups on the
+  payment when it is recorded, a second fact to keep in step with the imputation that would go stale
+  the first time a line changed.
+
 ## 2026-10-03 · A payment from a group proposes and covers that group first (T-241, the front of T-240)
 
 - **Context:** the settle-up sheet prefilled everything open with the person across every group, from
