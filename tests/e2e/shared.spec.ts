@@ -35,7 +35,7 @@ async function anExpense(request: Request, amount: number, description: string) 
     data: {
       type: "EXPENSE",
       amount,
-      date: "2026-09-20T20:00:00.000Z",
+      date: new Date().toISOString(),
       description,
       fromAccountId: ((await accounts.json()) as { id: string }).id,
       categoryId: ((await categories.json()) as { data: { id: string }[] }).data[0]?.id,
