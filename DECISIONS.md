@@ -5,6 +5,22 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-03 · A group's bar counts what came back net, like what is still owed (T-243)
+
+- **Decision:** the bar of a group, on its detail and on its row, is `netBack` of
+  `owed + netBack + writtenOff`. `netBack` adds, per person, what came back from them minus what you
+  handed them on the lines they fronted and minus what you still owe them in the group, never below
+  zero; without that last cap, a payment that covers their lines here and goes on to another group
+  would fill a bar for a group where you owe them. The row's `You owe` badge is net the same way.
+- **Why:** the total added what was collected gross to what is still owed net, so it grew while people
+  paid: three people with two fronting a line read `$0 paid of $64,200` and ended at
+  `$78,332 paid of $78,332`. The spec already said net; the owner chose net when asked.
+- **Alternative:** gross from the start (`$0 paid of $78,332`). Rejected by him: it is not the money
+  that reaches your account, and the sentence under the bar is net.
+- **Consequence:** the total only moves when the debt does (a line, a split, a write-off, or paying
+  somebody a line they fronted), never because somebody paid. `countsAsYours` still uses the gross
+  figure, because it is about the movements.
+
 ## 2026-10-03 · A payment names the groups it covered, not every group shared with the person (T-242)
 
 - **Context:** the owner, after T-241 shipped: a payment's row and its detail badge listed both groups he

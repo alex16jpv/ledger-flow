@@ -26,7 +26,7 @@ export interface GroupView {
   group: SharedGroup;
   expenses: SharedExpense[];
   countsAsYours: number;
-  collected: number;
+  netBack: number;
   writtenOff: number;
   owed: number;
   youOwe: number;
@@ -138,12 +138,14 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     const fronted = expenses
       .filter((expense) => expense.paidByContactId === null)
       .reduce((cents, expense) => cents + toCents(expense.amount), 0);
-    const paidBack = expenses
-      .filter((expense) => expense.paidByContactId !== null)
-      .reduce(
-        (cents, expense) => cents + toCents(ledger.collected.get(`${expense.id}|user`) ?? 0),
-        0,
-      );
+    const paidBackTo = new Map<string, number>();
+    for (const expense of expenses) {
+      if (expense.paidByContactId === null) continue;
+      const key = partyKey({ contactId: expense.paidByContactId, expenseId: null });
+      const covered = toCents(ledger.collected.get(`${expense.id}|user`) ?? 0);
+      paidBackTo.set(key, (paidBackTo.get(key) ?? 0) + covered);
+    }
+    const paidBack = [...paidBackTo.values()].reduce((cents, one) => cents + one, 0);
     const people = view.people.map((person): PartyView => {
       const contact = person.contactId === null ? undefined : byId.get(person.contactId);
       const held = tally.get(person.key) ?? { share: 0, paid: 0 };
@@ -164,15 +166,27 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
       };
     });
     const owed = people.reduce((cents, person) => cents + Math.max(0, toCents(person.net)), 0);
+    const netBack = people.reduce(
+      (cents, person) =>
+        cents +
+        Math.max(
+          0,
+          toCents(person.paid) -
+            (paidBackTo.get(person.key) ?? 0) +
+            Math.min(0, toCents(person.net)),
+        ),
+      0,
+    );
+    const youOwe = people.reduce((cents, person) => cents + Math.max(0, -toCents(person.net)), 0);
     groups.push({
       group,
       expenses: [...expenses].sort(newestFirst),
       countsAsYours: fromCents(fronted - toCents(view.collected) + paidBack),
-      collected: view.collected,
+      netBack: fromCents(netBack),
       writtenOff: view.writtenOff,
       owed: fromCents(owed),
-      youOwe: view.youOwe,
-      barTotal: fromCents(toCents(view.collected) + owed + toCents(view.writtenOff)),
+      youOwe: fromCents(youOwe),
+      barTotal: fromCents(netBack + owed + toCents(view.writtenOff)),
       people,
       you: { share: fromCents(yours) },
     });
