@@ -278,7 +278,7 @@ function GroupHero({ view, projected }: { view: GroupView; projected: boolean })
             <Progress
               thin
               plain
-              value={view.collected}
+              value={view.netBack}
               max={view.barTotal}
               color={group.color}
               label={t("shared.groups.barLabel", { name: group.name })}
@@ -287,7 +287,7 @@ function GroupHero({ view, projected }: { view: GroupView; projected: boolean })
           </Projected>
           <span className="text-xs text-text-3">
             {t("shared.groups.bar", {
-              paid: money.format(view.collected),
+              paid: money.format(view.netBack),
               total: money.format(view.barTotal),
             })}
           </span>

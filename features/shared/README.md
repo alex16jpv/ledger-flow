@@ -11,8 +11,9 @@ live expense and every live payment in one query, and `ledger.ts` turns them int
 with `deriveShared` (`lib/local/derive`), the same arithmetic the parity fixtures hold against the
 server. `sectionOf` is pure and tested on its own: the net per person, a group's people with their
 state, what still counts as yours, and the bar of what has come back of everything that was ever owed
-to you. Every figure is added in minor units (`toCents`/`fromCents`), here and on the screens that
-add or subtract two of these figures. A group's party carries its `net` within that group only; what
+to you, both net of what you owe each person, so its total holds while they pay. Every figure is
+added in minor units (`toCents`/`fromCents`), here and on the screens that add or subtract two of
+these figures. A group's party carries its `net` within that group only; what
 a `Settle up` would move with them, surplus and other groups included, is `settleParty` in
 `settle.ts`, which also carries that group's own figures as its `scope`, and the sheet that asks who
 to settle with shows the scope. Guest blocks are parties to

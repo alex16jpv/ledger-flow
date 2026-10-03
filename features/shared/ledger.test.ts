@@ -120,7 +120,7 @@ describe("the section a screen reads", () => {
     const [view] = section.groups;
 
     expect(view?.countsAsYours).toBe(120_000);
-    expect(view?.collected).toBe(60_000);
+    expect(view?.netBack).toBe(60_000);
     expect(view?.people.find((one) => one.contactId === BETO)).toMatchObject({
       state: "PAID",
       owesYou: 0,
@@ -232,6 +232,75 @@ describe("the section a screen reads", () => {
     ).toEqual([30_000, 30_000]);
   });
 
+  it("fills the bar with what came back net of what you paid them, so its total holds", () => {
+    const paying = (collected: number, paid: number) => {
+      const rows = nightOut();
+      rows.settlements = [
+        settlement({
+          id: "p1",
+          counterparty: { kind: "CONTACT", contactId: ANA, expenseId: null },
+          collected,
+          paid,
+        }),
+      ];
+      const [view] = sectionOf(rows, contacts).groups;
+      return { netBack: view?.netBack, barTotal: view?.barTotal, owed: view?.owed };
+    };
+
+    // Ana sends the 30,000 net: 60,000 of hers comes back and 30,000 of yours goes to her.
+    expect(paying(60_000, 30_000)).toEqual({ netBack: 30_000, barTotal: 90_000, owed: 60_000 });
+    expect(paying(20_000, 0)).toEqual({ netBack: 20_000, barTotal: 90_000, owed: 70_000 });
+  });
+
+  it("keeps the bar's total when a payment covers her lines here and the rest elsewhere", () => {
+    const rows = nightOut();
+    rows.groups = [...rows.groups, withTotals(sharedGroup({ id: "g2", name: "Lunch" }))];
+    rows.expenses = [
+      ...rows.expenses,
+      sharedExpense({
+        id: "s4",
+        groupId: "g2",
+        description: "Lunch",
+        amount: 200_000,
+        split: equalSplit(200_000, [null, ANA]),
+      }),
+    ];
+    // 60,000 covers her two lines of the night out and 30,000 goes to the lunch; you still owe her 30,000.
+    rows.settlements = [
+      settlement({
+        id: "p1",
+        counterparty: { kind: "CONTACT", contactId: ANA, expenseId: null },
+        collected: 90_000,
+        groupId: "g1",
+      }),
+    ];
+    const [night] = sectionOf(rows, contacts).groups;
+
+    expect(night).toMatchObject({
+      netBack: 30_000,
+      owed: 60_000,
+      barTotal: 90_000,
+      youOwe: 30_000,
+    });
+  });
+
+  it("says what you owe in a group net of what they owe you", () => {
+    const rows = nightOut();
+    rows.groups = [withTotals(sharedGroup({ id: "g1", name: "Night out" }))];
+    rows.expenses = [
+      sharedExpense({ id: "s1", amount: 120_000, split: equalSplit(120_000, [null, ANA]) }),
+      sharedExpense({
+        id: "s2",
+        amount: 200_000,
+        paidByContactId: ANA,
+        split: equalSplit(200_000, [null, ANA]),
+      }),
+    ];
+    const [view] = sectionOf(rows, contacts).groups;
+
+    expect(view).toMatchObject({ owed: 0, youOwe: 40_000, barTotal: 0 });
+  });
+
   // The other direction: what you handed over on a line they fronted is not money that came back.
   it("takes what you paid them off what you owe, and never off what they owe you", () => {
     const rows = nightOut();
@@ -247,7 +316,7 @@ describe("the section a screen reads", () => {
     const ana = view?.people.find((one) => one.contactId === ANA);
 
     expect(ana).toMatchObject({ owesYou: 60_000, youOwe: 0, paid: 0 });
-    expect(view?.collected).toBe(0);
+    expect(view?.netBack).toBe(0);
     // Paying her back is an expense of yours and it is this outing's cost: 180,000 + 30,000.
     expect(view?.countsAsYours).toBe(210_000);
     expect(section.people.find((one) => one.contactId === ANA)?.net).toBe(60_000);

@@ -87,8 +87,9 @@ group. The header carries the **range of its expenses**, and nothing on the scre
 not the figures, not the list, not a filter.
 
 The header leads with **what still counts as yours**, with the total and your share under it as
-context, then the bar of what has been collected, then the one sentence that explains the gap — what is
-still owed and what was written off. Then `Settle up` as the one primary action, and under it
+context, then the bar — the same net quantity as on its row in the list, so its total holds while
+people pay — then the one sentence that explains the gap: what is still owed and what was written
+off. Then `Settle up` as the one primary action, and under it
 `Add expense`, `Add people`, `Edit` and `Archive`.
 
 **`Add expense` has three ways in and they are one sheet** (`#record-a-new-expense`). It opens the
