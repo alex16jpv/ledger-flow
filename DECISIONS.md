@@ -5,6 +5,44 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-03 · Writing off somebody you also owe squares the group with a crossing (T-244)
+
+- **Decision:** the owner's: a write-off leaves nobody owing in that group, and only that group. What
+  you owe them there is crossed against what they owe you as a two-way settle-up from the group
+  (`collected` = `paid` = the smaller of the two), recorded in an account he picks so your share of
+  their lines becomes your expense in a category he picks, and only the rest is written off. The
+  account records both halves and its balance does not move. Archiving squares everybody the same way.
+  `Write off` is offered only to somebody who owes you net in the group.
+- **Why in the client, as two queued writes:** the server already has both — a settle-up from a group
+  covers that group first, and a write-off stores what is open when it lands — so the crossing then the
+  write-off, in that order through the outbox, give the same result with no change to the API, to the
+  parity fixtures or to sync, and they work with no network like every other write here. The
+  write-off and the archive name the crossing payments in `dependsOn`, so a held payment holds them
+  too instead of letting them land first.
+- **Alternative:** one server endpoint doing both in one transaction. Rejected for now: it would mean
+  a new route, a refactor of the settle-up's transaction and new fixtures for the same figures. The
+  cost of the two writes is that they are not atomic: if the crossing were refused when it syncs, the
+  write-off would still land, as the old gross one; both are visible and undone on their own — except
+  after an archive, where a write-off cannot be undone until the group is restored.
+- **Alternative:** forgiving both debts without a crossing. Rejected by him: the categories would not
+  come out exact.
+- **Consequence:** taking a write-off back makes them owe what was written off again; the crossing
+  stays as a payment, undone from its own row. Somebody already written off is not crossed again on
+  archive (the server leaves existing write-offs as they are). Writing off from a movement's delete
+  sheet stays one tap only when there is nothing to cross (`writeOffWithoutCrossing`).
+
+## 2026-10-03 · The bar of a group you joined is net too (T-245)
+
+- **Decision:** on a group somebody shared with you, the bar is what you paid her net of what she paid
+  you back on the lines you fronted, capped by what she still owes you there, of that plus what you
+  still owe her net (`deriveJoined`). It was gross: with a line of yours in the group it read
+  `$0 paid of $39,166` under a header saying you owe her `$32,100`.
+- **Why:** the owner chose net for his own groups (T-243) and for this one when asked; the header is net.
+- **Consequence:** the bar is drawn only while you owe her net or have paid something net, its total
+  keeps what she wrote off as the owner's does, and your state (on the row and on your own line under
+  People) reads net too: square with her is `Paid`, not `Partially paid`. Money she handed you first is
+  netted against what you send, the same price the owner's bar pays.
+
 ## 2026-10-03 · A group's bar counts what came back net, like what is still owed (T-243)
 
 - **Decision:** the bar of a group, on its detail and on its row, is `netBack` of
@@ -18,7 +56,10 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **Alternative:** gross from the start (`$0 paid of $78,332`). Rejected by him: it is not the money
   that reaches your account, and the sentence under the bar is net.
 - **Consequence:** the total only moves when the debt does (a line, a split, a write-off, or paying
-  somebody a line they fronted), never because somebody paid. `countsAsYours` still uses the gross
+  somebody a line they fronted before they pay you). That last one is the price of net: money you
+  handed them first is netted against what they send, so the total grows when you pay and comes back
+  when they do. Counting what came back without that netting breaks the common case instead: a
+  two-way settle-up records their whole share and yours, and only the difference moves. `countsAsYours` still uses the gross
   figure, because it is about the movements.
 
 ## 2026-10-03 · A payment names the groups it covered, not every group shared with the person (T-242)

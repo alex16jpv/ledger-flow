@@ -187,12 +187,14 @@ export function useDeleteSettlement() {
 export interface WriteOffVariables extends WriteOffTarget {
   // What is still open when you give up, which is the ceiling the decision stores.
   amount: number;
+  crossings?: string[];
 }
 
 export function useWriteOff() {
   const invalidate = useSharedInvalidation();
   return useMutation({
-    mutationFn: ({ amount, ...target }: WriteOffVariables) => writeOffParty(target, amount),
+    mutationFn: ({ amount, crossings, ...target }: WriteOffVariables) =>
+      writeOffParty(target, amount, crossings),
     onSuccess: invalidate,
   });
 }

@@ -72,14 +72,23 @@ import { EditSplitSheet } from "../../EditSplitSheet";
 import { SettleUpFlow } from "../../SettleUpFlow";
 import { TransactionPickerSheet } from "../../TransactionPickerSheet";
 import { WhatChangesSheet } from "../../WhatChangesSheet";
-import { ArchiveGroupSheet, UndoWriteOffSheet, WriteOffSheet } from "../../WriteOffSheet";
+import type { Squared } from "../../WriteOffSheet";
 
-// Two taps behind the screen it belongs to, and 220 kB gz is the screen's budget (T-139).
+// Two taps behind the screen it belongs to, and 230 kB gz is the screen's budget (T-139).
 const PaidByOtherSheet = dynamic(() =>
   import("@/features/shared/components/PaidByOtherSheet").then((module) => module.PaidByOtherSheet),
 );
 const InviteSheet = dynamic(() =>
   import("@/features/shared/components/InviteSheet").then((module) => module.InviteSheet),
+);
+const WriteOffSheet = dynamic(() =>
+  import("../../WriteOffSheet").then((module) => module.WriteOffSheet),
+);
+const ArchiveGroupSheet = dynamic(() =>
+  import("../../WriteOffSheet").then((module) => module.ArchiveGroupSheet),
+);
+const UndoWriteOffSheet = dynamic(() =>
+  import("../../WriteOffSheet").then((module) => module.UndoWriteOffSheet),
 );
 
 function useNoteOf(view: GroupView): (person: PartyView) => string {
@@ -641,14 +650,15 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
       {writingOff && (
         <WriteOffSheet
           open
+          section={section}
           view={view}
           person={writingOff}
           pending={writeOff.isPending}
           onClose={() => {
             setWritingOff(null);
           }}
-          onConfirm={() => {
-            void forgive(writingOff);
+          onConfirm={(squared) => {
+            void forgive(writingOff, squared);
           }}
         />
       )}
@@ -698,13 +708,14 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
       {archiving && (
         <ArchiveGroupSheet
           open
+          section={section}
           view={view}
           pending={archive.isPending}
           onClose={() => {
             setArchiving(false);
           }}
-          onConfirm={() => {
-            void archiveIt();
+          onConfirm={(squared) => {
+            void archiveIt(squared);
           }}
         />
       )}
@@ -730,13 +741,14 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
     }
   }
 
-  async function forgive(person: PartyView) {
+  async function forgive(person: PartyView, { owing, crossings }: Squared) {
     try {
       await writeOff.mutateAsync({
         groupId: view.group.id,
         contactId: person.contactId,
         expenseId: person.expenseId,
-        amount: person.owesYou,
+        amount: owing[0]?.amount ?? 0,
+        crossings,
       });
       setWritingOff(null);
       toast.show({ message: t("shared.writeOff.done", { name: person.name }) });
@@ -761,18 +773,9 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
     }
   }
 
-  async function archiveIt() {
+  async function archiveIt({ owing, crossings }: Squared) {
     try {
-      await archive.mutateAsync({
-        id: view.group.id,
-        owing: view.people
-          .filter((person) => person.owesYou > 0)
-          .map((person) => ({
-            contactId: person.contactId,
-            expenseId: person.expenseId,
-            amount: person.owesYou,
-          })),
-      });
+      await archive.mutateAsync({ id: view.group.id, owing, crossings });
       setArchiving(false);
       toast.show({ message: t("shared.archiveGroup.done", { name: view.group.name }) });
     } catch (error) {

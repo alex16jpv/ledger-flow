@@ -5291,6 +5291,33 @@ const archiveGroupSheet = () =>
     "Archive Cartagena trip?",
   );
 
+const crossFields = () =>
+  `<button class="picker">${tile("landmark", "BLUE", "sm")}<span class="body"><span class="lbl">Where both are recorded</span><span class="val">Bancolombia</span></span>${iconSvg("chevron-down", "sm")}</button>
+<button class="picker">${tile("ticket", "PINK", "sm")}<span class="body"><span class="lbl">Category for your $30,000 of Concert tickets</span><span class="val">Lifestyle</span></span>${iconSvg("chevron-down", "sm")}</button>`;
+
+const writeOffCrossingSheet = () =>
+  fullWrap(
+    `<div class="inset stack-sm" style="gap:8px">
+<div class="hstack" style="justify-content:space-between"><span class="small muted">Ana Ruiz owes you in Night out</span><span class="amount">${money(56300)}</span></div>
+<div class="hstack" style="justify-content:space-between"><span class="small muted">You owe Ana Ruiz in Night out</span><span class="amount">${money(30000)}</span></div>
+<div class="hstack" style="justify-content:space-between;border-top:1px solid var(--border);padding-top:8px"><span class="small" style="font-weight:600">Written off</span><span class="amount" style="font-weight:600">${money(26300)}</span></div></div>
+${crossFields()}
+<div class="alert neutral">${iconSvg("info")}<span><b>This squares Night out with Ana Ruiz.</b> Your ${moneyText(30000)} share of what Ana Ruiz paid is crossed against what they owe you: it becomes your expense, dated each of those expenses, in the category you choose, and ${moneyText(30000)} of what they owe you counts as paid. The account records both, ${moneyText(30000)} in and ${moneyText(30000)} out, so its balance does not move. The other ${moneyText(26300)} is written off, and no figure changes for it.</span></div>
+<p class="xs faint" style="margin:0">Only this group: what you and Ana Ruiz owe each other anywhere else stays as it is. Taking the write-off back makes them owe the ${moneyText(26300)} again; the crossing stays, as a payment you can undo on its own.</p>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn danger solid lg" style="flex:1.4">Write off ${moneyText(26300)}</button></div>`,
+    "Square Night out with Ana Ruiz",
+  );
+
+const archiveCrossingSheet = () =>
+  fullWrap(
+    `<div class="alert warning">${iconSvg("triangle-alert")}<span><b>${moneyText(52600)} is still owed to you.</b> Archiving writes it off: Ana’s ${moneyText(26300)} and Beto’s ${moneyText(26300)}. The amount stays counted as yours, exactly as it is today.</span></div>
+<p class="small muted" style="margin:0">You also owe Ana Ruiz here, so archiving crosses that against what they owe you first: your share of their expenses becomes your expense, recorded in and out of one account so its balance does not move. What you owe beyond what they owe you here stays owed.</p>
+${crossFields()}
+<p class="xs faint" style="margin:0">Only this group: what you owe each other in other groups stays as it is. Nothing is deleted, and an archived group stays readable.</p>
+<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn danger solid lg" style="flex:1.6">Archive and write off ${moneyText(52600)}</button></div>`,
+    "Archive Night out",
+  );
+
 const nightOut = ({ sheet = "" } = {}) => {
   const mine = (name, icon, color, total, yours, custom = false) =>
     `<a class="row" href="#">${tile(icon, color)}<span class="body"><span class="title"><span class="truncate">${name}</span>${custom ? `<span class="badge">${iconSvg("split")}Custom split</span>` : ""}</span><span class="meta">Sep 20 · you paid</span></span><span class="right">${amount(total, "expense")}<span class="sub">Your share ${moneyText(yours)}</span></span></a>`;
@@ -7522,6 +7549,13 @@ const PAGES = [
         { added: "2026-09-20" },
       ),
       plate(
+        "write-off-crossing",
+        "Writing off somebody you also owe",
+        "Ana paid the tickets and you paid the rest, so in Night out she owes you $56,300 and you owe her $30,000. Writing her off squares this group: nobody owes anybody in it afterwards. Your $30,000 is crossed against what she owes you, exactly as a two-way settle-up would do it with no money changing hands — it becomes your expense, dated the tickets, in the category you choose, recorded in and out of one account so no balance moves — and only the $26,300 left is written off. <b>Only this group</b>: what the two of you owe each other elsewhere stays.",
+        nightOut({ sheet: writeOffCrossingSheet() }),
+        { added: "2026-10-03" },
+      ),
+      plate(
         "archived",
         "An archived group",
         "It stays readable, and the way back is here: what was owed was written off when it was archived, and the amount stays counted as yours. Restoring does not take the write-offs back — each one is undone on its own, once the group is open again.",
@@ -7534,6 +7568,13 @@ const PAGES = [
         "Archiving is the one action that writes off on your behalf, so it says exactly what it will do and what it will not: the amount stays counted as yours, and nothing is deleted.",
         groupDetail({ sheet: archiveGroupSheet() }),
         { added: "2026-09-20" },
+      ),
+      plate(
+        "archive-crossing",
+        "Archiving a group where you also owe somebody",
+        "Archiving writes off what is owed to you, and it squares the group first wherever the debt goes both ways: your share of a line somebody else paid is crossed against what they owe you, with the same account and category the write-off asks for. What you owe somebody beyond what they owe you here is not yours to write off, and it stays.",
+        nightOut({ sheet: archiveCrossingSheet() }),
+        { added: "2026-10-03" },
       ),
     ],
   },

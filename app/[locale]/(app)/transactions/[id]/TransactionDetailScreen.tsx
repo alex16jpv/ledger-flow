@@ -37,6 +37,7 @@ import {
   useWriteOff,
 } from "@/features/shared/hooks";
 import { type PartyView, sharedLookup } from "@/features/shared/ledger";
+import { writeOffWithoutCrossing } from "@/features/shared/settle";
 import { DeleteTransactionSheet } from "@/features/transactions/components/DeleteTransactionSheet";
 import {
   type TransactionLookups,
@@ -117,11 +118,10 @@ export function TransactionDetailScreen({ id }: { id: string }) {
   const addedFrom = joined.view?.rows.groups.find((one) => one.id === row?.importedFromGroupId);
   const group = shared.section?.groups.find((one) => one.group.id === row?.sharedGroupId);
   const expense = group?.expenses.find((one) => one.id === row?.sharedExpenseId);
-  const debtors =
+  const onlyDebtor =
     shared.section && group && expense
-      ? owingParties(shared.section, group, expense).filter((one) => one.owesYou > 0)
-      : [];
-  const onlyDebtor = debtors.length === 1 ? debtors[0] : undefined;
+      ? writeOffWithoutCrossing(owingParties(shared.section, group, expense))
+      : undefined;
   // Its money belongs to the payment, so the payment is the door, and this is where it is found.
   const payment = shared.section?.settlements.find((one) => one.id === row?.sharedSettlementId);
   const paymentGroups = lookups.shared?.payments.get(row?.sharedSettlementId ?? "")?.groups ?? [];
@@ -504,7 +504,6 @@ export function TransactionDetailScreen({ id }: { id: string }) {
             : undefined
         }
         onWriteOff={
-          // Only when one person is left owing is "write it off" a single, unambiguous act.
           onlyDebtor && group
             ? () => {
                 setConfirming(false);

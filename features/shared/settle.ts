@@ -170,8 +170,19 @@ export function settleParty(
   person: PartyView,
 ): SettleParty {
   if (person.contactId === null) return guestParty(section, view, person);
-  const party = settlePerson(section, person.contactId);
-  if (!party) return guestParty(section, view, person);
+  const party =
+    settlePerson(section, person.contactId) ??
+    partyOf(section, {
+      key: person.key,
+      contactId: person.contactId,
+      expenseId: null,
+      name: person.name,
+      color: person.color,
+      owedToYou: person.owesYou,
+      youOwe: person.youOwe,
+      surplus: person.surplus,
+      groups: [{ id: view.group.id, name: view.group.name }],
+    });
   return { ...party, scope: scopeOf(view, person) };
 }
 
@@ -247,4 +258,30 @@ export function planSettlement(party: SettleParty, cash: number): SettlePlan {
     refunded: fromCents(toCents(paid) - assigned),
     groupId,
   };
+}
+
+// Squaring a group before a write-off: what you owe them there crossed against what they owe you.
+export function planCrossing(party: SettleParty): SettlePlan | null {
+  const { scope } = party;
+  if (!scope) return null;
+  const crossed = Math.min(toCents(scope.owedToYou), toCents(scope.youOwe));
+  if (crossed <= 0) return null;
+  const imputed = imputeCounterparty(owedLines(party.theyOwe), owedLines(party.yourLines), [
+    { id: "", createdAt: null, collected: crossed, paid: crossed, groupId: scope.groupId },
+  ]);
+  return {
+    collected: fromCents(crossed),
+    paid: fromCents(crossed),
+    cash: 0,
+    covers: covered(party.theyOwe, imputed.theirs, scope.groupId),
+    yourLines: covered(party.yourLines, imputed.yours, scope.groupId),
+    refunded: 0,
+    groupId: scope.groupId,
+  };
+}
+
+// Writing off while deleting a movement is one tap only for a sole debtor owed nothing back.
+export function writeOffWithoutCrossing(people: readonly PartyView[]): PartyView | undefined {
+  const [only, ...rest] = people.filter((one) => one.owesYou > 0);
+  return only && rest.length === 0 && only.youOwe === 0 ? only : undefined;
 }

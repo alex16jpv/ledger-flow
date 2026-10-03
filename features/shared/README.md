@@ -119,7 +119,12 @@ in, which is the only place a block is read at all.
 
 **Giving up moves no figure.** A write-off stores the decision and the ceiling that was open when it
 was taken; archiving a group writes off what is still owed on your behalf. Neither touches a figure of
-yours: that money was counted as yours from the day it left the account.
+yours: that money was counted as yours from the day it left the account. **Writing off somebody you
+also owe squares the group first** (T-244): `planCrossing` (`settle.ts`) crosses what you owe them
+there against what they owe you, and `WriteOffSheet` records it as a two-way settle-up from that group
+with no money changing hands — your share of their lines becomes your expense, in the account and
+category it asks for — before the write-off of what is left. Archiving does the same for everybody it
+squares. Other groups are not touched.
 
 **Letting somebody in is an invitation, and every write of one needs a connection.** An invitation is
 addressed to the email of a contact who is in the group; nothing is emailed, and it waits in the other

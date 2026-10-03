@@ -437,9 +437,23 @@ It writes off **what is still open**, so somebody who paid part of it keeps that
 becomes `Written off`. The sheet says what the group becomes: once nobody is left owing — by paying
 or by being written off — the group is `Settled`. It can be undone until the group is archived.
 
+**Writing off somebody you also owe squares the group** (`#write-off-crossing`, T-244, the owner's
+decision): afterwards nobody owes anybody in it. What you owe them there is crossed against what they
+owe you — a two-way settle-up from that group with no money changing hands, so your share of each line
+they paid becomes **your expense**, dated that line, in the category the sheet asks for, recorded in
+and out of the account it asks for so no balance moves — and only what is left of their debt is
+written off. That is why the sheet asks for an account and a category only then. **Only that group**:
+what the two of you owe each other elsewhere stays as it is. `Write off` is offered only to somebody
+who owes you net in the group; somebody you owe more is somebody you pay. Taking the write-off back
+makes them owe what was written off again; the crossing stays, as a payment that is undone on its own.
+The shortcut that writes somebody off while deleting a movement is offered only when there is nothing
+to cross.
+
 **Archiving a group with people still owing writes those amounts off on your behalf**, so the
 confirmation says what it will do and what it will not: the amount stays counted as yours, nothing is
-deleted, and the group stays readable.
+deleted, and the group stays readable. **Where a debt goes both ways it squares it first**
+(`#archive-crossing`), with the same crossing and the same account and category as the write-off;
+what you owe somebody beyond what they owe you there is not yours to write off, and it stays.
 
 **An archived group is read, not worked** (`#archived`): its detail keeps every figure and its
 history, says in one line what archiving did, and offers `Restore` in place of the actions — there is
@@ -603,7 +617,8 @@ with you, Shared opens on `Shared groups`.
 The header leads with **where you stand with the person who shared it**: `You owe Ana $80,000`,
 `Ana owes you $40,000` or `Square with Ana`. It is drawn neutral, with a word for the direction, like
 every debt between people. Under it, as context, come the total and your share, and the bar of what you
-have paid of what you owe her. **`Counts as yours` does not lead here**: nothing of this group is in your
+have paid of what you owe her, both net of what she owes you on the lines you paid, so its total holds
+while you pay — the same reading as the owner's bar. **`Counts as yours` does not lead here**: nothing of this group is in your
 ledger until you add it, and what you add is an ordinary expense of yours.
 
 **People**, one row each, named by decision 28: **the owner and anybody who joined go by the name on
