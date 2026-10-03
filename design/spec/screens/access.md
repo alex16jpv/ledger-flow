@@ -15,6 +15,14 @@
   429 (`#sign-in-rate-limited`) shows a `warning` alert with a countdown computed from `Retry-After` or
   from the 15-minute window, and the button stays disabled while it runs.
 
+  **The right password of a deleted account** opens [Restore your account?](#restore-your-account)
+  instead of signing in, and **an account from before email existed, past its deadline**, opens
+  [Confirm your email to continue](#confirm-your-email-to-continue). A wrong password reads the same
+  "Wrong email or password" whatever the account is: nothing on this screen says that an address has an
+  account, a deleted one or none. **After Delete my account** the app lands here with an `info` alert
+  (`#sign-in-after-deleting`), "**Your account was deleted.** It's kept until October 28, 2026: signing in
+  before then restores it."
+
   **On a device that already holds someone's data the email arrives written** and the focus goes to the
   password, which is the only thing missing (P-37): coming back to sync is not a first sign-in, and the
   screen must not ask for what the device already knows. It stays an ordinary editable field, so another
@@ -34,16 +42,15 @@
   (a picker with what `Intl.NumberFormat().resolvedOptions()` detected, with help explaining the later
   lock) and the time zone (a picker with `Intl.DateTimeFormat().resolvedOptions().timeZone`).
 
-  Signing up returns tokens, so it goes straight into onboarding. `reactivated: true`
-  (`#account-reactivated`) skips onboarding, because accounts already exist, and lands on Home with an
-  `info` alert, "Welcome back…". The server reactivates a deleted account only with the password it
-  had (T-153); with any other one it answers like a live account. A 409 `EMAIL_TAKEN`
-  (`#create-account-email-taken`) shows an inline error under the email, "This email already has an
-  account. **Sign in** or **reset your password**. If you deleted it, sign up with the password it had to
-  bring it back.", both bold parts being links that carry the email over. Resetting is how the owner of
-  an inbox takes back an address somebody else registered and never confirmed: the code reaches the
-  inbox, not the one who typed it. A 500 shows "Your account may
-  already have been created: try signing in before signing up again."
+  **Create account creates nothing yet** (the owner's decision 16 of 2026-09-28): it sends the code, and
+  the account exists once that code is typed, on [its step](#finish-creating-your-account). What was
+  typed waits on the server for 24 hours, and a new Create account with the same address replaces it.
+  **It answers the same for every address**, so it never tells who has an account: when the address
+  already has one, live or deleted, the step reads exactly the same and the inbox gets
+  `account-exists` instead of the code ([emails.md](emails.md)). So there is no "email taken" error any
+  more, and a deleted account is not brought back from here: that is Sign in's job. A `5xx` is the
+  `danger` alert "Something went wrong on our side. Nothing was created: try again.", with everything
+  typed kept.
 
   **Creating an account needs [the check](#cloudflares-check)**: the server creates none without it. A
   deployment with no Cloudflare site key, such as a preview, cannot run it, so there the screen opens
@@ -61,11 +68,93 @@
   swatches) or "Not now". Both steps can be picked up again from Home
   if they are skipped.
 
+## Finish creating your account
+
+`#create-account-code`, `#create-account-wrong-code`
+
+The step after Create account, in the same frame and at the same address, so a reload lands on it again
+for as long as its 24 hours run.
+
+- "Check your email" and "We sent an email to **{email}**. Type the 6-digit code in it to finish creating
+  your account.", then the code field ([components.md](../components.md), 37), **Create account**, and
+  the Resend block of Forgot your password? below: the countdown, **Resend code** (with [the
+  check](#cloudflares-check)), and "Not there? Check your spam folder. Wrong address? **Change it**",
+  which goes back to the form with everything in place except the password.
+- **The same words for every address.** "We sent an email" is true for both: the code, or
+  `account-exists` for an address that has an account. **Every bad code gets the one answer**
+  (`#create-account-wrong-code`), the reset's: "That code doesn't work. It may be mistyped, out of date or
+  replaced by a newer one: check the last email we sent, or ask for a new code." — with two answers,
+  "expired" would only exist for the addresses without an account. Create account waits until the code
+  changes.
+- **The email's button** finishes it too, in any browser (`/verify`, [below](#pages-reached-from-an-email)),
+  but it signs nobody in: that browser proved the inbox, not the password. The code step, still open
+  here, then signs in with the same code, because confirming twice changes nothing — but only in the
+  browser that holds the pending sign-up, the one where the password was typed: the code alone never
+  signs anyone in.
+- **Done:** the account exists and this device is signed in with its device token, so onboarding opens
+  and no `new-sign-in` is sent. Busy, failing, offline and too many requests read as in Forgot your
+  password?, and **a send that failed is never shown** on Create account or on Resend, for the same
+  reason: only the branch with no account could fail differently. Whoever waits for a code that does
+  not come has Resend, and "Not there? Check your spam folder.".
+
+## Restore your account?
+
+`#restore-your-account`
+
+After Sign in with the right password of an account deleted in the last 30 days (the owner's decision
+20). A step of the frame, not the app: nothing of the account opens before the answer.
+
+- An `archive-restore` tile, "Restore your account?" and "You deleted this account on **September 28,
+  2026**. It's kept until **October 28, 2026**, and then erased for good." Then "Restoring brings back
+  everything in it, as it was. The shared groups you left when you deleted it stay left."
+- **Restore account** (primary) signs in and opens Home with the toast "Account restored", and the inbox
+  gets `account-restored` ([emails.md](emails.md)). **Not now** goes back to Sign in and the account stays
+  deleted, with its date unchanged.
+- The two dates come in the answer to the sign-in, which only a right password gets, so they tell nothing
+  to anyone who does not already hold the account.
+- **Busy, failing and offline** read as in Forgot your password?: the button's spinner, the `danger`
+  alert for a `5xx` with nothing restored, and offline the `warning` alert "You're offline. Restoring
+  needs a connection." with the button disabled.
+- **The copies on devices.** Delete account removes this device's copy as signing out does, keeping
+  what it had not sent the way "Sign out and keep them" keeps it ([settings.md](settings.md)). Another
+  device that was offline keeps recording into its queue; when it reconnects its session is gone, Sign in
+  comes first, and this step decides: Restore account sends the queue, **Not now** leaves it on that
+  device, as after any sign-out, until the account is restored there or the device's data is deleted.
+  After the erasure nothing can take it: the queue waits and says it can't be sent, and only "Delete
+  everything on this device" clears it.
+
+## Confirm your email to continue
+
+`#confirm-email-required`, `#confirm-email-required-code`
+
+For an account from before email existed that did not confirm by its deadline (the owner's decision 17:
+14 days from the email that announced it, [states.md](states.md) `#confirm-your-email`). **Its data is
+untouched**: this is only the door. After Sign in, and whenever an open app learns it from `/me`, the
+frame shows this step instead of the app, and the app opens nothing of the account until it is done.
+
+- "Confirm your email to continue" and "Ledger Flow now asks every account to confirm its email. Nothing
+  in your account has changed: once you confirm, you're back in." Then "We'll send a 6-digit code to
+  **{email}**." and **Send code** (with the check), which turns the step into the code shape
+  (`#confirm-email-required-code`): the code field, **Confirm**, and the Resend block — the same words as
+  the sheet of [states.md](states.md), whose rules for a wrong or used-up code, a failed send and too
+  many requests apply here as they are.
+- **"Wrong address? Change it"** turns the step into a form of its own
+  (`#confirm-email-required-change`): "Use another email", the new address and **Current password**, and
+  **Send code**, which asks for the change as Profile & security does ([settings.md](settings.md)) and
+  answers the same way for every address; its code step is this step's code shape for the new address,
+  and confirming it confirms the account. Its errors are Profile & security's. Under everything, **Sign
+  out**, which with changes waiting on the device opens "You have unsent changes" first
+  ([settings.md](settings.md) `#sign-out-with-unsent-changes`).
+- **Offline**, a device that already holds the account's copy opens it as always, because it cannot know
+  about the deadline until it reaches the server; what it records waits in the queue. The first time the
+  server answers, this step takes over and says, when the queue has something, "**3 changes on this
+  device** are kept and sync once you confirm." Nothing is lost and nothing is sent before.
+
 ## Forgot your password? (`/forgot`)
 
 - **Asking** (`#forgot-password`): the frame of Sign in; "Forgot your password?", "Type your account's
   email and we'll send a code to it so you can choose a new password.", the email — carried over from
-  Sign in or from the 409 when one was typed there, empty when arriving from an email's `/forgot` link
+  Sign in when one was typed there, empty when arriving from an email's `/forgot` link
   —, **Send code** and "Back to sign in". [Cloudflare's check](#cloudflares-check) runs when Send code is
   pressed.
 - **The code and the new password, together** (`#forgot-password-code`): "Check your email" and "If
@@ -81,8 +170,9 @@
   Check your spam folder. Wrong address? **Change it**", which goes back to the first step with the email
   in place. The countdown comes from the answer to Send code, which says the same for every address.
 - **The same answer for every address.** Send code always lands on that step with the same words,
-  whether the address has a live account, a deleted one or none, and the server holds a floor on the time
-  it takes. Nothing on these two steps may tell them apart: not a word, not a delay, not a failed send —
+  whether the address has a live account, one deleted in the last 30 days or none, and the server holds a
+  floor on the time it takes. **A deleted account gets the code too** (the owner's decision 20), and
+  choosing the new password restores it. Nothing on these two steps may tell them apart: not a word, not a delay, not a failed send —
   it is never shown here, because it can only happen to an address that exists —, and not a code error.
   So **every bad code gets the one answer**, `RESET_CODE_INVALID`: mistyped, expired, replaced by a newer
   one, used up by five tries, or asked for an address with no account. Two answers — "wrong" and
@@ -115,9 +205,10 @@
   password out of range is the field's error, "Between 8 and 128 characters."; a `RATE_LIMITED` on Save
   is the countdown alert above the button.
 - **Done:** the answer is a session, as with Sign in. The app opens on Home with the toast "Password
-  changed. Every other device was signed out." — unless the account had never confirmed its email
-  ([below](#keep-whats-in-this-account)). What other devices had not sent waits for its owner there, as
-  after any sign-out.
+  changed. Every other device was signed out.", or "Account restored. Every other device was signed out."
+  when the reset brought a deleted account back, which the answer says only now that the inbox has been
+  proven. What other devices had not sent waits for its owner there, as after any sign-out. The devices
+  are not forgotten (the owner's approval E): signing in again on one of them sends no `new-sign-in`.
 - **A second factor**, the day two-step verification exists, is one more step between the code and the
   new password. T-214 draws it.
 
@@ -126,7 +217,8 @@
 `#create-account-human-check`, `#human-check-failed`, `#confirm-email-human-check`, `#create-account-unavailable`
 
 Cloudflare Turnstile guards what sends an email or creates an account, and nothing else: **Create
-account**; **Send code** in Forgot your password? and **Resend code** on its code step; **Send code** and
+account** and **Resend code** on its code step; **Send code** in Forgot your password? and **Resend code**
+on its code step; **Send code** and **Resend code** in Confirm your email to continue; **Send code** and
 **Resend code** in the sheet that confirms the email ([states.md](states.md)); and **Save changes** with
 a new email and **Resend** on the card of the pending address ([settings.md](settings.md)). **It is
 invisible**: it runs when the button is pressed, and the request leaves with its token. **Only when
@@ -146,41 +238,6 @@ it goes.
   moment of sending, never kept and never queued offline.
 - The privacy policy names Cloudflare among the processors (T-220).
 
-## Keep what's in this account? (`/keep-or-start-fresh`)
-
-`#keep-or-start-fresh`, `#start-fresh`, `#start-fresh-details`
-
-Only after a reset of an account that **had never confirmed its email and has something in it** (the
-owner's decision 12 of 2026-09-26): whoever created it may not have been the owner of the inbox. An
-account with no accounts and no transactions skips it, because there is nothing to keep. It is a step of
-the frame between the reset and the app, not a sheet over the app, and **the app opens nothing of the
-account before the answer**: no copy is downloaded to the device until it is known which account stays.
-
-- "Keep what's in this account?" and "Your email is confirmed now. Until today it never was, so someone
-  else could have created this account with your address." A card with three facts that help tell:
-  **Created**, **Accounts** and **Transactions**, a date and two counts — never a name, because what
-  somebody else typed is not shown as if it were ours. Then "Keep it if you created it and never got
-  around to confirming the email. Start fresh if you didn't: nothing somebody else put in it stays with
-  you."
-- **Keep it** is the primary, because the usual case is an owner who forgot both the password and the
-  confirmation; it opens the app. **Start fresh** asks first (`#start-fresh`): a `danger` alert,
-  "Everything in this account is **deleted for good**: its accounts, transactions, budgets and
-  categories, and it leaves every shared group. Your email and the password you just chose stay.", with
-  **Delete everything and start** (solid `danger`) and **Go back**. It leaves each shared group the way
-  Leave does ([shared.md](shared.md)): the others keep the person and the money as it stood.
-- **Then "Your details"** (`#start-fresh-details`): name, language, currency and time zone, as in Create
-  account and detected the same way, with "A fresh start takes nothing from before, not even the name.
-  You can change these later in Settings." — whoever created the account typed the old ones — and
-  **Continue**, into onboarding as a new account. The currency is free again, since no account exists.
-- **Nothing is erased until Continue.** Delete everything and start only opens Your details; Continue
-  sends the choice and the details as one request, because the server erases the account and writes
-  its new profile together, and there is never an account with an empty profile in between. Each step
-  has its own address (`?step=confirm`, `?step=details`), so Back returns to the one before, and the
-  language chip keeps the step.
-- **Asked once, and answered for sure:** the server keeps the question open until it has an answer, so
-  closing the page and opening the app again lands here, and so does signing in on another device. The
-  three facts come with the question.
-
 ## Pages reached from an email
 
 Every link in an email lands on a page in this frame that **does nothing until its one button is
@@ -190,21 +247,23 @@ says what the tap does, because the page cannot ask the server about a token wit
 it out of the address bar before anything else and keeps it in memory, exactly as `/reset` above. None
 needs a session. The frame's language chip changes only the page, never the account.
 
-| Path             | Ready                                                                                                                                                                                                                                                                                                                                                                                                                                            | Done                                                                                                                                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/verify`        | `#verify-link`: "Confirm your email", "Use the button to confirm that the address this email reached belongs to your Ledger Flow account." · **Confirm email**                                                                                                                                                                                                                                                                                   | `#verify-link-done`: a `mail-check` tile, "Email confirmed", "You can invite people to Shared and accept their invitations." · **Open Ledger Flow**                                                 |
-| `/confirm-email` | `#confirm-new-email-link`: "Move your account to this address?", "Your account's email becomes the address this message reached, and your other devices are signed out. From now on you sign in with it." · **Confirm new email**                                                                                                                                                                                                                | `#confirm-new-email-link-done`: a `mail-check` tile, "Your email changed", "Every other device was signed out. Sign in with this address from now on." · **Open Ledger Flow**                       |
-| `/not-me`        | `#not-me-link`: "Delete the account that used your address?", "Somebody signed up to Ledger Flow with this address and never confirmed it. This deletes that account and everything in it, for good, and frees your address.", and a `warning` alert, "**If you signed up yourself, don't.** Use the code or the Confirm email button in the same message instead." · **Delete that account** (solid `danger`) · **Don't delete it** (→ Sign in) | `#not-me-link-done`: a `user-x` tile, "That account is gone", "Your address is free: you can create your own account with it." · **Create account**                                                 |
-| `/undo`          | `#undo-link`: "Undo the change?", "Your account's email goes back to this address, even if the change was already confirmed.", and a `warning` alert, "Every device is signed out and **your current password stops working**. We'll email you a code to choose a new one." · **Undo the change**                                                                                                                                                | `#undo-link-done`: an `undo-2` tile, "Change undone", "Every device was signed out. We sent a code to this address so you can choose a new password: it works for 30 minutes." · **Enter the code** |
-| `/reset`         | `#choose-new-password`, above                                                                                                                                                                                                                                                                                                                                                                                                                    | A session, above                                                                                                                                                                                    |
+| Path             | Ready                                                                                                                                                                                                                                                                                                                  | Done                                                                                                                                                                                                                                                                                                                                  |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/verify`        | `#verify-link`: "Confirm your email", "Use the button to confirm that this address is yours." · **Confirm email**                                                                                                                                                                                                      | For a sign-up, `#verify-link-account-ready`: a `mail-check` tile, "Your account is ready", "Sign in with this email and the password you chose." · **Sign in**. For an account from before email existed, `#verify-link-done`: a `mail-check` tile, "Email confirmed", "Nothing else changes in your account." · **Open Ledger Flow** |
+| `/confirm-email` | `#confirm-new-email-link`: "Move your account to this address?", "Your account's email becomes the address this message reached, and your other devices are signed out. From now on you sign in with it." · **Confirm new email**                                                                                      | `#confirm-new-email-link-done`: a `mail-check` tile, "Your email changed", "Every other device was signed out. Sign in with this address from now on." · **Open Ledger Flow**                                                                                                                                                         |
+| `/undo`          | `#undo-link`: "Undo the change?", "Your account's email goes back to this address, even if the change was already confirmed.", and a `warning` alert, "Every device is signed out and **your current password stops working**. We'll email you a code to choose a new one." · **Undo the change**                      | `#undo-link-done`: an `undo-2` tile, "Change undone", "Every device was signed out. We sent a code to this address so you can choose a new password: it works for 30 minutes." · **Enter the code**                                                                                                                                   |
+| `/restore`       | `#restore-link`: "Restore your account?", "Your account was deleted. This brings it back with everything in it, except the shared groups it left.", and a `warning` alert, "Every device is signed out and **your current password stops working**. We'll email you a code to choose a new one." · **Restore account** | `#restore-link-done`: an `archive-restore` tile, "Account restored", "Every device was signed out. We sent a code to this address so you can choose a new password: it works for 30 minutes." · **Enter the code**                                                                                                                    |
+| `/reset`         | `#choose-new-password`, above                                                                                                                                                                                                                                                                                          | A session, above                                                                                                                                                                                                                                                                                                                      |
 
 - **Open Ledger Flow** goes to Home when this browser holds the account's session and to Sign in when it
   does not. `/confirm-email` keeps whatever session this browser had — the request carries it and gets
   fresh tokens back — and signs out every other device.
-- **`/not-me` erases**: the account and everything in it are removed, not archived as Delete account
-  does, so no sign-up with the old password can bring it back, and no `account-deleted` is sent. Its
-  token belongs to that account **and** that address: it stops working when the account's address
-  changes or is confirmed.
+- **`/verify` finishes a sign-up without signing in**: the tap proves the inbox, and a session also
+  needs the password, which is why Sign in follows. The answer says which of its two cases it was.
+- **`/restore` works like `/undo`**, for an account deleted in the last 30 days (the owner's decision
+  20): it is for whoever did not delete it, so it signs everyone out and stops the password, and it does
+  so **even if the account was restored meanwhile** — by the person who deleted it, who knows the
+  password. **Enter the code** opens the code screen of Forgot your password?, as `/undo` does.
 - **`/undo` undoes an email change**, today the only change a notice can undo; when passkeys and two-step
   verification exist, T-214 adds their words. **Enter the code** opens the code screen of Forgot your
   password? for the original address — the undo's answer names it, since whoever tapped holds that inbox
@@ -212,25 +271,24 @@ needs a session. The frame's language chip changes only the page, never the acco
 - **`/confirm-email` when the address was taken meanwhile** (`EMAIL_TAKEN`,
   `#confirm-new-email-link-taken`): a neutral `circle-alert` tile, "That address now belongs to another
   account", "Your account keeps its current email." · **Open Ledger Flow**.
-- The Spanish buttons are the emails' words where they share one: «Confirmar correo», «Confirmar correo
-  nuevo», «Deshacer el cambio»; and «Eliminar esa cuenta», «No la elimines», «Abrir Ledger Flow»,
-  «Escribir el código».
+- The Spanish buttons are the emails' words where they share one: «Confirmar correo», «Confirmar nuevo
+  correo», «Deshacer el cambio», «Restaurar la cuenta», «Entrar»; and «Abrir Ledger Flow», «Escribir el
+  código».
 
 **A link that no longer works** (`#link-no-longer-works`): used, expired, or cancelled by a newer one.
 The server answers the three with one code, `LINK_INVALID`, and the page does not tell them apart: a
 neutral tile, "This link no longer works", its own line, and a way on.
 
-| Path             | Line                                                                                                                     | Way on                                                     |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| `/verify`        | "A confirmation link works for 24 hours and only once, and asking for another code cancels it."                          | **Open Ledger Flow**, where the stripe offers a new code   |
-| `/confirm-email` | The same.                                                                                                                | **Open Ledger Flow**, where Password & email offers Resend |
-| `/not-me`        | "It only works while the account is unconfirmed. If you didn't confirm it, Forgot your password? takes it back for you." | **Forgot your password?**                                  |
-| `/undo`          | "An undo link works for 7 days and only once. If something still looks wrong, Forgot your password? signs everyone out." | **Forgot your password?**                                  |
-| `/reset`         | "A password link works for 30 minutes and only once, and asking for another code cancels it."                            | **Ask for a new code**                                     |
+| Path             | Line                                                                                                                                                                                                                                                                                                  | Way on                                                                                                                                |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `/verify`        | From `sign-up`: "A sign-up link works for 24 hours and only once. Start again from Create account." From `verify-email`: "A confirmation link works for 24 hours and only once, and asking for another code cancels it." From a deadline email: "This link worked until its deadline, and only once." | **Create account** for a sign-up; otherwise **Open Ledger Flow**, where the stripe or Confirm your email to continue offer a new code |
+| `/confirm-email` | The same.                                                                                                                                                                                                                                                                                             | **Open Ledger Flow**, where Password & email offers Resend                                                                            |
+| `/undo`          | "An undo link works for 7 days and only once. If something still looks wrong, Forgot your password? signs everyone out."                                                                                                                                                                              | **Forgot your password?**                                                                                                             |
+| `/restore`       | "A restore link works for 7 days and only once. Until the account is erased, Forgot your password? restores it too."                                                                                                                                                                                  | **Forgot your password?**                                                                                                             |
+| `/reset`         | "A password link works for 30 minutes and only once, and asking for another code cancels it."                                                                                                                                                                                                         | **Ask for a new code**                                                                                                                |
 
 **An account that is already confirmed** is not a dead link on `/verify`: whoever confirmed with the code
-and then taps the link sees "Email confirmed". On `/not-me` it is the line of the table, because the
-account is somebody's now.
+and then taps the link sees "Your account is ready" or "Email confirmed".
 
 **Busy, failing, offline and too many requests** read as in Forgot your password?: the button's spinner
 while the request is out, so a double tap can never spend the token and then report it dead; the `danger`

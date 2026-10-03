@@ -562,7 +562,9 @@ and these three signs are theirs.
 
 **Sending, accepting and seeing new invitations wait for a confirmed email** (the owner's decision 3 of
 2026-09-26): an invitation takes the sender's address to somebody else, and it finds the person by
-theirs, so both have to be proven. Groups already joined are not touched. It ends the risk accepted on
+theirs, so both have to be proven. Groups already joined are not touched. Since the owner's decision 16 of
+2026-09-28 only an account from before email existed can be unconfirmed, and only until its deadline
+([states.md](states.md) `#confirm-your-email`); a new account is confirmed from its first minute. It ends the risk accepted on
 2026-09-22, that whoever registered somebody else's address received what was sent to it.
 
 - **Inviting:** the sheet opens with a `warning` alert, "**Confirm your email to invite people.** An

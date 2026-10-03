@@ -12,7 +12,8 @@ eyebrows:
   zone; Appearance with palette · mode; **Notifications**, "What reaches you, and where", which opens
   the page specified in [notifications.md](notifications.md); Categories.
 - **Security** — Password & email; Active sessions with a count. **While the email is not confirmed**
-  (`#settings-email-not-confirmed`), Password & email reads "Your email isn't confirmed yet" with a
+  (`#settings-email-not-confirmed`) — only an account from before email existed, until its deadline —,
+  Password & email reads "Confirm your email by October 12" with a
   `warning` badge, "Not confirmed". This row is where the confirmation is never hidden: the stripe's ✕
   puts that one away ([states.md](states.md) `#confirm-your-email`).
 - **Your data** — the user's rights: access, rectification, erasure and withdrawal of consent; the
@@ -210,7 +211,8 @@ drops `Android` from the user agent — is still an Android: a Linux user agent 
   agent (smartphone, laptop, monitor), "This device" for the current refresh family or a "Sign out"
   button (`DELETE /auth/sessions/:id`, idempotent), last activity and expiry; and "Sign out all other
   sessions" (`POST /auth/logout-all`) — the confirmation warns that this device will have to sign in
-  again too. **Below 600px the row's three facts do not fit on one line**, so the activity takes its
+  again too, and that every device is forgotten: each one gets one `new-sign-in` email the next time it
+  signs in ([emails.md](emails.md)). **Below 600px the row's three facts do not fit on one line**, so the activity takes its
   own line and the two dates share the next one, with no dot between them and the row's own dot only
   from 600px up; and "Sign out" becomes icon-only, keeping the device in its accessible name. Nothing
   in the row is ever truncated: measured at 375px, the three facts on one line showed 73% of their
@@ -220,8 +222,8 @@ drops `Android` from the user agent — is still an Android: a Linux user agent 
   password changes; `CURRENT_PASSWORD_INVALID` shows inline; success brings a toast and a token refresh.
   **An email not confirmed** (`#profile-and-security-not-confirmed`) carries a `warning` badge, "Not
   confirmed", beside the field's label — inside the field it would collide with a long address —, and
-  the help "Confirm it to invite people to Shared and to be invited.
-  **Confirm it**", which opens the code sheet of [states.md](states.md).
+  the help "Confirm it by October 12 to keep signing in as usual, and to invite people to Shared and be
+  invited. **Confirm it**", which opens the code sheet of [states.md](states.md).
 
   **A new address counts only once it is confirmed** (`#profile-and-security-pending-email`, T-222).
   The field's help is "A new address gets a code first: the change happens once you confirm it, and then
@@ -240,8 +242,11 @@ drops `Android` from the user agent — is still an Android: a Linux user agent 
 
   - **A new name or password saved with it goes after the address is asked for**, with the same current
     password: if the address is refused, nothing is saved.
-  - **Refused before anything is sent**, under the field: an address another account holds, "This email
-    already has an account."; one that takes none of our email (`EMAIL_SEND_FAILED` with `422`: it
+  - **An address another account holds is not refused** (the owner's decision 16: nothing may tell
+    whether an address has an account): the card shows the change waiting, as for any address, and that
+    inbox gets `email-change-taken` instead of the code ([emails.md](emails.md)). The change never
+    confirms, and goes after its 24 hours.
+  - **Refused before anything is sent**, under the field: an address that takes none of our email (`EMAIL_SEND_FAILED` with `422`: it
     bounced or complained before, or the provider refused it), "We can't send email to this address.
     Check it, or use another one." (`#profile-and-security-new-email-refused`). A send that failed on our
     side (`503`) is the `danger` alert "We couldn't send the email. Try again in a few minutes.", and a
@@ -259,9 +264,14 @@ drops `Android` from the user agent — is still an Android: a Linux user agent 
 - **Currency and time zone** (sheets): a searchable list of ISO 4217 codes with local names; when
   locked, a read-only sheet with the `CURRENCY_LOCKED` explanation. Time zone: a searchable IANA list
   with offsets; saving refreshes the token so budgets and stats use the new one immediately.
-- **Delete account** (`#delete-account`): a `danger` alert with the guarantee that the data is kept and
-  the account comes back by signing up again with the same email and this password, a **Current
-  password** field (help "So nobody else can delete your account.") and a solid `danger` button,
-  disabled until the field has something. The password is the confirmation: a stolen session cannot
-  delete the account (T-153). A wrong one (`CURRENT_PASSWORD_INVALID`, `#delete-account-wrong-password`)
-  is an error under the field. `DELETE /users/:id` leads back to sign-in with a message.
+- **Delete account** (`#delete-account`): the only way an account is deleted (the owner's decision 19 of
+  2026-09-28). A `danger` alert, "Your account and everything in it are kept for **30 days**, until
+  **October 28, 2026**, and then **erased for good**. Until then, signing in with your email and password
+  restores it. You leave your shared groups now, and restoring doesn't bring you back into them. You'll
+  be signed out now." — the date is today plus 30 days, in the account's time zone and language —, a
+  **Current password** field (help "So nobody else can delete your account.") and a solid `danger`
+  button, disabled until the field has something. The password is the confirmation: a stolen session
+  cannot delete the account (T-153), and a confirmed inbox is told at once with `account-deleted`, whose
+  **Restore account** is the way back for whoever did not delete it ([emails.md](emails.md)). A wrong one
+  (`CURRENT_PASSWORD_INVALID`, `#delete-account-wrong-password`) is an error under the field. Deleting
+  leads to Sign in with its `info` alert ([access.md](access.md) `#sign-in-after-deleting`).

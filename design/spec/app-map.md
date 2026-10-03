@@ -14,12 +14,14 @@ is `noindex`.
 ## Access
 
 ✅ Sign in · ✅ Sign up (name, email, password, currency suggested by `Intl` and confirmable, detected
-time zone) · ✅ reactivation notice (`reactivated: true`) · ✅ the 429 state; ⬜ "a 500 while signing
-up → try signing in" (copy only) · ✅ drawn, not built yet (T-204; the backend is T-207, T-209, T-221 and T-211):
-forgotten password (`/forgot`, the code with the new password, `/reset`), Cloudflare's check, "keep or
-start fresh" after recovering an account never confirmed, the pages reached from an email (`/verify`,
-`/confirm-email`, `/not-me`, `/undo`), and confirming the email (a stripe, a code sheet, Settings and
-the invitations of Shared).
+time zone) · ✅ the 429 state · ✅ drawn, not built yet (T-204; the backend is T-207, T-209, T-221 and T-211):
+forgotten password (`/forgot`, the code with the new password, `/reset`), Cloudflare's check, the pages
+reached from an email (`/verify`, `/confirm-email`, `/undo`), and confirming the email (a stripe, a code
+sheet, Settings and the invitations of Shared) · ✅ drawn, not built yet (T-237, the owner's decisions 16
+to 20): the code step that creates the account, "Restore your account?" after signing in to a deleted
+one, "Confirm your email to continue" past the deadline of an account from before email, `/restore`,
+and Delete account kept 30 days. Gone with T-237: the reactivation notice of Sign up, its "email taken"
+error, "keep or start fresh" and `/not-me`.
 
 ✅ A two-step onboarding after signing up: the first account, with its opening balance, then the total
 monthly budget.
@@ -142,7 +144,7 @@ Preferences (**language**: follow the device / English / Español, English by de
 locked state and the `CURRENCY_LOCKED` explanation; time zone, which refreshes the token after a
 change) · Appearance (palette, light/dark/system) · Active sessions (`GET`/`DELETE /auth/sessions`,
 "sign out all") · Categories (a shortcut) · Data (export 🔮, import 🔮, visible rows badged "soon") ·
-Sign out · Delete account (soft delete, explaining reactivation). 🔮 A currency per account, transfers
+Sign out · Delete account (kept 30 days, then erased; signing in before then restores it). 🔮 A currency per account, transfers
 across currencies, scheduled transactions.
 
 ## System states (across the whole app) ✅

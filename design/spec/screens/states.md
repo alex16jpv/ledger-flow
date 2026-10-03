@@ -55,27 +55,29 @@ server fails and when something has to be confirmed.
   version, so a phone that never reloads the app still finds one. It never reloads on its own. Until
   T-196 it was a five-second toast, which a Saved replaced and which was never shown again: the
   alternatives are on `variants.html`.
-- **Confirm your email** (`#confirm-your-email`, T-210): while the account's email is not confirmed —
-  a new account, or one from before the app sent email — an **amber stripe** in the slot of the sync
-  stripes ([sync-stripes.md](sync-stripes.md), state `verify`, the last in their order): `mail`,
-  "**Confirm your email.**" and "You need it to invite people to Shared and to be invited.", with
-  **Confirm** and a ✕ ("Not now"). Nothing else waits for it: the account works as it always did, and
-  there is no deadline (the owner's decisions 2, 3 and 4 of 2026-09-26). The ✕ is kept in memory only, so
+- **Confirm your email** (`#confirm-your-email`, T-210, T-237): only an account from before the app sent
+  email can be unconfirmed, because a new one exists only once its code is typed (the owner's decision
+  16 of 2026-09-28). Until its deadline — 14 days from the `confirm-deadline` email (decision 17) — an
+  **amber stripe** in the slot of the sync stripes ([sync-stripes.md](sync-stripes.md), state `verify`,
+  the last in their order): `mail`, "**Confirm your email by October 12.**" and "After that, signing in
+  asks for a code first. Nothing in your account changes.", with **Confirm** and a ✕ ("Not now"). Until
+  then the account works as it always did, except invitations ([shared.md](shared.md)); after it,
+  [Confirm your email to continue](access.md#confirm-your-email-to-continue) takes the place of the app.
+  The date comes from `/me`, in the account's time zone and language. The ✕ is kept in memory only, so
   the stripe comes back the next time the app is loaded from scratch — not every time it comes back to the
   screen, as the new-version stripe does: this one asks something of the person, and asking at every
   return would nag. Meanwhile Settings › Password & email always says it ([settings.md](settings.md)).
 
   **Confirm opens the sheet "Confirm your email".** Which of its two shapes comes from `/me`, which says
   whether a code is live, when the last one went and when another can go:
-  - **A code is live** (`#confirm-email-code`) — right after signing up, or sent in the last 24 hours and
-    not used up: "We sent a 6-digit code to **{email}**. It works for 24 hours.", the code field
+  - **A code is live** (`#confirm-email-code`) — sent in the last 24 hours and not used up: "We sent a 6-digit code to **{email}**. It works for 24 hours.", the code field
     ([components.md](../components.md), 37), **Confirm**, and the Resend block of the reset
     ([access.md](access.md)): "You can resend it in 0:42" as plain text, then **Resend code**, and "Not
     there? Check your spam folder. Wrong address? **Change it**", which goes to Profile & security, where
     a mistyped address is corrected.
-  - **No code is live** (`#confirm-email-send`) — every account from before email existed, one whose
-    code expired or was used up, and one whose first email failed at sign-up: "We'll send a 6-digit code
-    to **{email}**." with **Send code** instead.
+  - **No code is live** (`#confirm-email-send`) — the usual case, since the deadline email carries a link
+    and no code, and also after a code expired or was used up: "We'll send a 6-digit code to
+    **{email}**." with **Send code** instead.
   - Send code and Resend carry Cloudflare's check, in its place above the button
     (`#confirm-email-human-check`, [access.md](access.md)).
   - **Wrong code** (`#confirm-email-wrong-code`): "That code isn't right. Check the last email we sent."
